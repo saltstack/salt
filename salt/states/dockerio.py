@@ -504,10 +504,9 @@ def loaded(name, tag='latest', source=None, source_hash='', force=False):
         return _ret_status(name=name, comment=comment)
 
     tmp_filename = salt.utils.mkstemp()
-    __salt__['state.single']('file.managed',
-                             name=tmp_filename,
-                             source=source,
-                             source_hash=source_hash)
+    __states__['file.managed'](name=tmp_filename,
+                               source=source,
+                               source_hash=source_hash)
     changes = {}
 
     if image_infos['status']:

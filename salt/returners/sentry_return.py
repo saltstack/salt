@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Salt returner that report execution results back to sentry. The returner will
+Salt returner that reports execution results back to sentry. The returner will
 inspect the payload to identify errors and flag them as such.
 
 Pillar needs something like:
@@ -22,8 +22,8 @@ Pillar needs something like:
 
 and https://pypi.python.org/pypi/raven installed
 
-The tags list (optional) specifies grains items that will be used as sentry tags, allowing tagging of events
-in the sentry ui.
+The tags list (optional) specifies grains items that will be used as sentry
+tags, allowing tagging of events in the sentry ui.
 '''
 from __future__ import absolute_import
 
@@ -47,14 +47,15 @@ __virtualname__ = 'sentry'
 
 def __virtual__():
     if not has_raven:
-        return False
+        return False, 'Could not import sentry returner; ' \
+                      'raven python client is not installed.'
     return __virtualname__
 
 
 def returner(ret):
     '''
-    Log outcome to sentry. The returner tries to identify errors and report them as such. All other
-    messages will be reported at info level.
+    Log outcome to sentry. The returner tries to identify errors and report
+    them as such. All other messages will be reported at info level.
     '''
     def connect_sentry(message, result):
         '''
@@ -92,13 +93,19 @@ def returner(ret):
             )
         except KeyError as missing_key:
             logger.error(
-                'Sentry returner need config {0!r} in pillar'.format(
+                'Sentry returner need config \'{0}\' in pillar'.format(
                     missing_key
                 )
             )
         else:
             try:
-                client.capture('raven.events.Message', message=message, data=data, extra=sentry_data, tags=tags)
+                client.capture(
+                    'raven.events.Message',
+                    message=message,
+                    data=data,
+                    extra=sentry_data,
+                    tags=tags
+                )
             except Exception as err:
                 logger.error(
                     'Can\'t send message to sentry: {0}'.format(err),

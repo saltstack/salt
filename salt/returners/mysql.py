@@ -114,6 +114,15 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return mysql --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return mysql --return_kwargs '{"db": "another-salt"}'
+
 '''
 from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
@@ -145,7 +154,8 @@ __virtualname__ = 'mysql'
 
 def __virtual__():
     if not HAS_MYSQL:
-        return False
+        return False, 'Could not import mysql returner; ' \
+                      'mysql python client is not installed.'
     return True
 
 
@@ -302,7 +312,7 @@ def save_load(jid, load, minions=None):
             pass
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''

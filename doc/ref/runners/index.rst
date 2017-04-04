@@ -1,6 +1,8 @@
-============
-Salt Runners
-============
+.. _runners:
+
+=======
+Runners
+=======
 
 Salt runners are convenience applications executed with the salt-run command.
 
@@ -10,11 +12,6 @@ Salt master itself instead of remote Salt minions.
 A Salt runner can be a simple client call or a complex application.
 
 .. seealso:: :ref:`The full list of runners <all-salt.runners>`
-
-.. toctree::
-    :hidden:
-
-    all/index
 
 Writing Salt Runners
 --------------------
@@ -65,7 +62,7 @@ A custom runner may send its own progress event by using the
 .. code-block:: python
 
     if display_progress:
-        __jid_event__.fire_event({'message': 'A progress message', 'progress')
+        __jid_event__.fire_event({'message': 'A progress message'}, 'progress')
 
 The above would produce output on the console reading: ``A progress message``
 as well as an event on the event similar to:
@@ -87,24 +84,20 @@ and will only be fired onto the event bus.
 Synchronous vs. Asynchronous
 ----------------------------
 
-A runner may be fired asychronously which will immediately return control. In
+A runner may be fired asynchronously which will immediately return control. In
 this case, no output will be display to the user if ``salt-run`` is being used
-from the command-line. If used programatically, no results will be returned.
+from the command-line. If used programmatically, no results will be returned.
 If results are desired, they must be gathered either by firing events on the
 bus from the runner and then watching for them or by some other means.
 
 .. note::
 
-    When running a runner in asyncronous mode, the ``--progress`` flag will
+    When running a runner in asynchronous mode, the ``--progress`` flag will
     not deliver output to the salt-run CLI. However, progress events will
     still be fired on the bus.
 
 In synchronous mode, which is the default, control will not be returned until
 the runner has finished executing.
-
-
-
-
 
 To add custom runners, put them in a directory and add it to
 :conf_master:`runner_dirs` in the master configuration file.

@@ -50,7 +50,7 @@ from salt.modules.dockerng import (
     STOP_TIMEOUT,
     VALID_CREATE_OPTS,
     _validate_input,
-    _get_repo_tag
+    _get_repo_tag,
 )
 # pylint: enable=no-name-in-module,import-error
 import salt.utils
@@ -240,6 +240,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 ret.update({item: {'old': actual_ports,
                                    'new': desired_ports}})
             continue
+
         elif item == 'volumes':
             if actual_data is None:
                 actual_data = []
@@ -411,6 +412,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             # sometimes `[]`. We have to deal with it.
             if bool(actual_data) != bool(data):
                 ret.update({item: {'old': actual_data, 'new': data}})
+
         elif item == 'labels':
             if actual_data is None:
                 actual_data = {}
@@ -426,6 +428,23 @@ def _compare(actual, create_kwargs, defaults_from_image):
             if actual_data != data:
                 ret.update({item: {'old': actual_data, 'new': data}})
                 continue
+
+        elif item == 'security_opt':
+            if actual_data is None:
+                actual_data = []
+            if data is None:
+                data = []
+            actual_data = sorted(set(actual_data))
+            desired_data = sorted(set(data))
+            log.trace('dockerng.running ({0}): munged actual value: {1}'
+                      .format(item, actual_data))
+            log.trace('dockerng.running ({0}): munged desired value: {1}'
+                      .format(item, desired_data))
+            if actual_data != desired_data:
+                ret.update({item: {'old': actual_data,
+                                   'new': desired_data}})
+            continue
+
         elif item in ('cmd', 'command', 'entrypoint'):
             if (actual_data is None and item not in create_kwargs and
                     _image_get(config['image_path'])):
@@ -465,6 +484,19 @@ def _compare(actual, create_kwargs, defaults_from_image):
     return ret
 
 
+def _find_volume(name):
+    '''
+    Find volume by name on minion
+    '''
+    docker_volumes = __salt__['dockerng.volumes']()['Volumes']
+    if docker_volumes:
+        volumes = [v for v in docker_volumes if v['Name'] == name]
+        if volumes:
+            return volumes[0]
+
+    return None
+
+
 def _get_defaults_from_image(image_id):
     return __salt__['dockerng.inspect_image'](image_id)
 
@@ -481,6 +513,8 @@ def image_present(name,
     Docker registry, built from a Dockerfile, or loaded from a saved image.
     Image names can be specified either using ``repo:tag`` notation, or just
     the repo name (in which case a tag of ``latest`` is assumed).
+    Repo identifier is mandatory, we don't assume the default repository
+    is docker hub.
 
     If neither of the ``build`` or ``load`` arguments are used, then Salt will
     pull from the :ref:`configured registries <docker-authentication>`. If the
@@ -1398,6 +1432,14 @@ def running(name,
         .. note::
 
             This option requires Docker 1.2.0 or newer.
+    privileged
+        Give extended privileges to container.
+
+        .. code-block:: yaml
+            foo:
+              docker.running:
+                - image: bar/baz:lates
+                - privileged: True
 
     extra_hosts
         Additional hosts to add to the container's /etc/hosts file. Can be
@@ -1442,6 +1484,31 @@ def running(name,
         .. note::
 
             This option requires Docker 1.5.0 or newer.
+
+    ulimits
+        List of ulimits. These limits should be passed in
+        the format ``<ulimit_name>:<soft_limit>:<hard_limit>``, with the hard
+        limit being optional.
+
+        .. versionadded:: 2016.3.6,2016.11.4,Nitrogen
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - ulimits: nofile=1024:1024,nproc=60
+
+        Ulimits can be passed as a YAML list instead of a comma-separated list:
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - ulimits:
+                  - nofile=1024:1024
+                  - nproc=60
 
     labels
         Add Metadata to the container. Can be a list of strings/dictionaries
@@ -2046,6 +2113,11 @@ def absent(name, force=False):
                           'forcibly remove it')
         return ret
 
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = ('Container \'{0}\' will be removed'.format(name))
+        return ret
+
     try:
         ret['changes']['removed'] = __salt__['dockerng.rm'](name, force=force)
     except Exception as exc:
@@ -2253,10 +2325,12 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
            'comment': ''}
     if salt.utils.is_dictlist(driver_opts):
         driver_opts = salt.utils.repack_dictlist(driver_opts)
-    volumes = __salt__['dockerng.volumes']()['Volumes']
-    if volumes is not None:
-        volumes = [v for v in volumes if v['Name'] == name]
-    if not volumes:
+    volume = _find_volume(name)
+    if not volume:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = ('The volume \'{0}\' will be created'.format(name))
+            return ret
         try:
             ret['changes']['created'] = __salt__['dockerng.create_volume'](
                 name, driver=driver, driver_opts=driver_opts)
@@ -2268,14 +2342,20 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
             result = True
             ret['result'] = result
             return ret
-    # volume exits, check if driver is the same.
-    volume = volumes[0]
+    # volume exists, check if driver is the same.
     if driver is not None and volume['Driver'] != driver:
         if not force:
             ret['comment'] = "Driver for existing volume '{0}' ('{1}')" \
                              " does not match specified driver ('{2}')" \
                              " and force is False".format(
                                  name, volume['Driver'], driver)
+            ret['result'] = None if __opts__['test'] else False
+            return ret
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = "The volume '{0}' will be replaced with a" \
+                             " new one using the driver '{1}'".format(
+                                 name, volume)
             return ret
         try:
             ret['changes']['removed'] = __salt__['dockerng.remove_volume'](name)
@@ -2296,7 +2376,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
                 ret['result'] = result
                 return ret
 
-    ret['result'] = True
+    ret['result'] = None if __opts__['test'] else True
     ret['comment'] = 'Volume \'{0}\' already exists.'.format(name)
     return ret
 
@@ -2305,7 +2385,7 @@ def volume_absent(name, driver=None):
     '''
     Ensure that a volume is absent.
 
-    .. versionadded:: 2015.8.4
+    .. versionadded:: 2015.8.4,
 
     name
         Name of the volume
@@ -2323,8 +2403,8 @@ def volume_absent(name, driver=None):
            'result': False,
            'comment': ''}
 
-    volumes = [v for v in __salt__['dockerng.volumes']()['Volumes'] if v['Name'] == name]
-    if not volumes:
+    volume = _find_volume(name)
+    if not volume:
         ret['result'] = True
         ret['comment'] = 'Volume \'{0}\' already absent'.format(name)
         return ret
@@ -2347,6 +2427,9 @@ def mod_watch(name, sfun=None, **kwargs):
             watch_kwargs['send_signal'] = True
             watch_kwargs['force'] = False
         return running(name, **watch_kwargs)
+
+    if sfun == 'stopped':
+        return stopped(name, **salt.utils.clean_kwargs(**kwargs))
 
     if sfun == 'image_present':
         # Force image to be updated

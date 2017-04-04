@@ -52,7 +52,7 @@ def present(name,
     '''
     Ensure that the named group is present with the specified privileges
     Please note that the user/group notion in postgresql is just abstract, we
-    have roles, where users can be seens as roles with the LOGIN privilege
+    have roles, where users can be seen as roles with the ``LOGIN`` privilege
     and groups the others.
 
     name
@@ -84,14 +84,13 @@ def present(name,
         Should the new group be allowed to initiate streaming replication
 
     password
-        The Group's password
+        The group's password
         It can be either a plain string or a md5 postgresql hashed password::
 
             'md5{MD5OF({password}{role}}'
 
-        If encrypted is None or True, the password will be automatically
-        encrypted to the previous
-        format if it is not already done.
+        If encrypted is ``None`` or ``True``, the password will be automatically
+        encrypted to the previous format if it is not already done.
 
     refresh_password
         Password refresh flag
@@ -114,7 +113,7 @@ def present(name,
         .. versionadded:: 0.17.0
 
     db_user
-        database username if different from config or defaul
+        database username if different from config or default
 
     db_password
         user password if any password for a specified user

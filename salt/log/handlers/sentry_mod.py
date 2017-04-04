@@ -116,7 +116,16 @@ def setup_handlers():
     dsn = get_config_value('dsn')
     if dsn is not None:
         try:
-            dsn_config = raven.load(dsn)
+            # support raven ver 5.5.0
+            from raven.transport import TransportRegistry, default_transports
+            from raven.utils.urlparse import urlparse
+            transport_registry = TransportRegistry(default_transports)
+            url = urlparse(dsn)
+            if not transport_registry.supported_scheme(url.scheme):
+                raise ValueError('Unsupported Sentry DSN scheme: {0}'.format(url.scheme))
+            dsn_config = {}
+            conf_extras = transport_registry.compute_scope(url, dsn_config)
+            dsn_config.update(conf_extras)
             options.update({
                 'project': dsn_config['SENTRY_PROJECT'],
                 'servers': dsn_config['SENTRY_SERVERS'],
@@ -135,7 +144,7 @@ def setup_handlers():
         if config_value is None and key not in options:
             log.debug(
                 'The required \'sentry_handler\' configuration key, '
-                '{0!r}, is not properly configured. Not configuring '
+                '\'{0}\', is not properly configured. Not configuring '
                 'the sentry logging handler.'.format(key)
             )
             return

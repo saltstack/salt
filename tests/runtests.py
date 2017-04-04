@@ -8,11 +8,12 @@ Discover all instances of unittest.TestCase in this directory.
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
-import tempfile
 import time
 
 # Import salt libs
 from integration import TestDaemon, TMP  # pylint: disable=W0403
+from integration import SYS_TMP_DIR, INTEGRATION_TEST_DIR
+from integration import CODE_DIR as SALT_ROOT
 import salt.utils
 
 if not salt.utils.is_windows():
@@ -22,8 +23,6 @@ if not salt.utils.is_windows():
 from salttesting.parser import PNUM, print_header
 from salttesting.parser.cover import SaltCoverageTestingParser
 
-TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
-SALT_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 XML_OUTPUT_DIR = os.environ.get(
     'SALT_XML_TEST_REPORTS_DIR',
     os.path.join(TMP, 'xml-test-reports')
@@ -33,14 +32,24 @@ HTML_OUTPUT_DIR = os.environ.get(
     os.path.join(TMP, 'html-test-reports')
 )
 
-
+TEST_DIR = os.path.dirname(INTEGRATION_TEST_DIR)
 try:
     if SALT_ROOT:
         os.chdir(SALT_ROOT)
 except OSError as err:
     print('Failed to change directory to salt\'s source: {0}'.format(err))
 
-REQUIRED_OPEN_FILES = 3072
+# Soft and hard limits on max open filehandles
+MAX_OPEN_FILES = {
+    'integration': {
+        'soft_limit': 3072,
+        'hard_limit': 4096,
+    },
+    'unit': {
+        'soft_limit': 1024,
+        'hard_limit': 2048,
+    },
+}
 
 
 class SaltTestsuiteParser(SaltCoverageTestingParser):
@@ -137,6 +146,14 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Run salt/renderers/*.py tests'
+        )
+        self.test_selection_group.add_option(
+            '--minion',
+            '--minion-tests',
+            dest='minion',
+            default=False,
+            action='store_true',
+            help='Run tests for minion'
         )
         self.test_selection_group.add_option(
             '--returners',
@@ -236,6 +253,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 self.options.fileserver,
                 self.options.wheel,
                 self.options.api,
+                self.options.minion,
                 os.geteuid() != 0,
                 not self.options.run_destructive)):
             self.error(
@@ -251,8 +269,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.state, self.options.runners,
                     self.options.loader, self.options.name,
                     self.options.outputter, self.options.cloud_provider_tests,
-                    self.options.fileserver, self.options.wheel,
-                    self.options.api, self.options.returners, self.options.renderers)):
+                    self.options.fileserver,
+                    self.options.wheel,
+                    self.options.api,
+                    self.options.minion,
+                    self.options.returners,
+                    self.options.renderers)):
             self.options.module = True
             self.options.cli = True
             self.options.client = True
@@ -268,6 +290,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.options.fileserver = True
             self.options.wheel = True
             self.options.api = True
+            self.options.minion = True
 
         self.start_coverage(
             branch=True,
@@ -291,7 +314,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
     def start_daemons_only(self):
         if not salt.utils.is_windows():
-            self.prep_filehandles()
+            self.set_filehandle_limits('integration')
         try:
             print_header(
                 ' * Setting up Salt daemons for interactive use',
@@ -334,32 +357,51 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             while True:
                 time.sleep(1)
 
-    def prep_filehandles(self):
-        smax_open_files, hmax_open_files = resource.getrlimit(
-            resource.RLIMIT_NOFILE
-        )
-        if smax_open_files < REQUIRED_OPEN_FILES:
+    def set_filehandle_limits(self, limits='integration'):
+        '''
+        Set soft and hard limits on open file handles at required thresholds
+        for integration tests or unit tests
+        '''
+        # Get current limits
+        prev_soft, prev_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+        # Get required limits
+        min_soft = MAX_OPEN_FILES[limits]['soft_limit']
+        min_hard = MAX_OPEN_FILES[limits]['hard_limit']
+
+        # Check minimum required limits
+        set_limits = False
+        if prev_soft < min_soft:
+            soft = min_soft
+            set_limits = True
+        else:
+            soft = prev_soft
+
+        if prev_hard < min_hard:
+            hard = min_hard
+            set_limits = True
+        else:
+            hard = prev_hard
+
+        # Increase limits
+        if set_limits:
             print(
-                ' * Max open files setting is too low({0}) for running the '
-                'tests'.format(smax_open_files)
+                ' * Max open files settings is too low (soft: {0}, hard: {1}) '
+                'for running the tests'.format(prev_soft, prev_hard)
             )
             print(
-                ' * Trying to raise the limit to {0}'.format(REQUIRED_OPEN_FILES)
+                ' * Trying to raise the limits to soft: '
+                '{0}, hard: {1}'.format(soft, hard)
             )
-            if hmax_open_files < 4096:
-                hmax_open_files = 4096  # Decent default?
             try:
-                resource.setrlimit(
-                    resource.RLIMIT_NOFILE,
-                    (REQUIRED_OPEN_FILES, hmax_open_files)
-                )
+                resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
             except Exception as err:
                 print(
-                    'ERROR: Failed to raise the max open files setting -> '
+                    'ERROR: Failed to raise the max open files settings -> '
                     '{0}'.format(err)
                 )
                 print('Please issue the following command on your console:')
-                print('  ulimit -n {0}'.format(REQUIRED_OPEN_FILES))
+                print('  ulimit -n {0}'.format(soft))
                 self.exit()
             finally:
                 print('~' * getattr(self.options, 'output_columns', PNUM))
@@ -393,6 +435,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                  self.options.wheel or
                  self.options.cloud_provider_tests or
                  self.options.api or
+                 self.options.minion or
                  named_tests):
             # We're either not running any of runners, state, module and client
             # tests, or, we're only running unittests by passing --unit or by
@@ -400,7 +443,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             # We don't need the tests daemon running
             return [True]
         if not salt.utils.is_windows():
-            self.prep_filehandles()
+            self.set_filehandle_limits('integration')
 
         try:
             print_header(
@@ -416,8 +459,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.shell, self.options.state,
                     self.options.loader, self.options.outputter,
                     self.options.name, self.options.cloud_provider_tests,
-                    self.options.api, self.options.returners, self.options.renderers,
-                    self.options.fileserver, self.options.wheel]):
+                    self.options.api,
+                    self.options.renderers,
+                    self.options.returners,
+                    self.options.fileserver,
+                    self.options.wheel,
+                    self.options.minion]):
             return status
 
         with TestDaemon(self):
@@ -458,6 +505,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('returners', 'Returners'))
             if self.options.renderers:
                 status.append(self.run_integration_suite('renderers', 'Renderers'))
+            if self.options.minion:
+                status.append(self.run_integration_suite('minion', 'Minion'))
         return status
 
     def run_unit_tests(self):
@@ -478,6 +527,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         status = []
         if self.options.unit:
+            # MacOS needs more open filehandles for running unit test suite
+            self.set_filehandle_limits('unit')
+
             results = self.run_suite(
                 os.path.join(TEST_DIR, 'unit'), 'Unit', '*_test.py'
             )
@@ -502,7 +554,7 @@ def main():
         parser = SaltTestsuiteParser(
             TEST_DIR,
             xml_output_dir=XML_OUTPUT_DIR,
-            tests_logfile=os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
+            tests_logfile=os.path.join(SYS_TMP_DIR, 'salt-runtests.log')
         )
         parser.parse_args()
 

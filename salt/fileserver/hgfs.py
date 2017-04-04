@@ -82,7 +82,7 @@ def __virtual__():
         return False
     if __opts__['hgfs_branch_method'] not in VALID_BRANCH_METHODS:
         log.error(
-            'Invalid hgfs_branch_method {0!r}. Valid methods are: {1}'
+            'Invalid hgfs_branch_method \'{0}\'. Valid methods are: {1}'
             .format(__opts__['hgfs_branch_method'], VALID_BRANCH_METHODS)
         )
         return False
@@ -217,7 +217,7 @@ def init():
                                     per_remote_defaults['branch_method'])
             if branch_method not in VALID_BRANCH_METHODS:
                 log.error(
-                    'Invalid branch_method {0!r} for remote {1}. Valid '
+                    'Invalid branch_method \'{0}\' for remote {1}. Valid '
                     'branch methods are: {2}. This remote will be ignored.'
                     .format(branch_method, repo_url,
                             ', '.join(VALID_BRANCH_METHODS))
@@ -228,7 +228,7 @@ def init():
             for param in (x for x in per_remote_conf
                           if x not in PER_REMOTE_OVERRIDES):
                 log.error(
-                    'Invalid configuration parameter {0!r} for remote {1}. '
+                    'Invalid configuration parameter \'{0}\' for remote {1}. '
                     'Valid parameters are: {2}. See the documentation for '
                     'further information.'.format(
                         param, repo_url, ', '.join(PER_REMOTE_OVERRIDES)
@@ -687,6 +687,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             pass
         fnd['rel'] = path
         fnd['path'] = dest
+        fnd['stat'] = list(os.stat(dest))
         repo['repo'].close()
         return fnd
     return fnd
@@ -698,9 +699,9 @@ def serve_file(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -728,9 +729,9 @@ def file_hash(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -761,9 +762,9 @@ def _file_lists(load, form):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -808,9 +809,9 @@ def _get_file_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -852,9 +853,9 @@ def _get_dir_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 

@@ -29,7 +29,10 @@ log = logging.getLogger(__name__)
 # TODO: rename
 class AESPubClientMixin(object):
     def _verify_master_signature(self, payload):
-        if payload.get('sig') and self.opts.get('sign_pub_messages'):
+        if self.opts.get('sign_pub_messages'):
+            if not payload.get('sig', False):
+                raise salt.crypt.AuthenticationError('Message signing is enabled but the payload has no signature.')
+
             # Verify that the signature is valid
             master_pubkey_path = os.path.join(self.opts['pki_dir'], 'minion_master.pub')
             if not salt.crypt.verify_signature(master_pubkey_path, payload['load'], payload.get('sig')):
@@ -60,10 +63,15 @@ class AESReqServerMixin(object):
         '''
         Pre-fork we need to create the zmq router device
         '''
-        salt.master.SMaster.secrets['aes'] = {'secret': multiprocessing.Array(ctypes.c_char,
-                                                            salt.crypt.Crypticle.generate_key_string()),
-                                              'reload': salt.crypt.Crypticle.generate_key_string,
-                                              }
+        if 'aes' not in salt.master.SMaster.secrets:
+            # TODO: This is still needed only for the unit tests
+            # 'tcp_test.py' and 'zeromq_test.py'. Fix that. In normal
+            # cases, 'aes' is already set in the secrets.
+            salt.master.SMaster.secrets['aes'] = {
+                'secret': multiprocessing.Array(ctypes.c_char,
+                              salt.crypt.Crypticle.generate_key_string()),
+                'reload': salt.crypt.Crypticle.generate_key_string
+            }
 
     def post_fork(self, _, __):
         self.serial = salt.payload.Serial(self.opts)

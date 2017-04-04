@@ -6,27 +6,24 @@ Linode is a public cloud host with a focus on Linux instances.
 
 Starting with the 2015.8.0 release of Salt, the Linode driver uses Linode's
 native REST API. There are no external dependencies required to use the
-Linode driver.
+Linode driver, other than a Linode account.
 
-Configuration
-=============
+
+Provider Configuration
+======================
 Linode requires a single API key, but the default root password for new
-instances also needs to be set:
+instances also needs to be set. The password needs to be eight characters
+and contain lowercase, uppercase, and numbers.
+
+Set up the provider cloud configuration file at ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/*.conf``.
 
 .. code-block:: yaml
 
-    # Note: This example is for /etc/salt/cloud.providers or any file in the
-    # /etc/salt/cloud.providers.d/ directory.
-
     my-linode-config:
-      apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
-      password: F00barbaz
-      ssh_pubkey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKHEOLLbeXgaqRQT9NBAopVz366SdYc0KKX33vAnq+2R user@host
-      ssh_key_file: ~/.ssh/id_ed25519
+      apikey: 'asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf'
+      password: 'F00barbaz'
       driver: linode
-
-The password needs to be 8 characters and contain lowercase, uppercase, and
-numbers.
 
 .. note::
     .. versionchanged:: 2015.8.0
@@ -37,13 +34,11 @@ numbers.
     provides the underlying functionality to connect to a cloud host, while cloud profiles continue
     to use ``provider`` to refer to provider configurations that you define.
 
-Profiles
-========
 
-Cloud Profiles
-~~~~~~~~~~~~~~
-Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
-``/etc/salt/cloud.profiles.d/`` directory:
+Profile Configuration
+=====================
+Linode profiles require a ``provider``, ``size``, ``image``, and ``location``. Set up an initial profile
+at ``/etc/salt/cloud.profiles`` or in the ``/etc/salt/cloud.profiles.d/`` directory:
 
 .. code-block:: yaml
 
@@ -53,6 +48,25 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
       image: CentOS 7
       location: London, England, UK
 
+The profile can be realized now with a salt command:
+
+.. code-block:: bash
+
+    salt-cloud -p linode_1024 linode-instance
+
+This will create an salt minion instance named ``linode-instance`` in Linode. If the command was
+executed on the salt-master, its Salt key will automatically be signed on the master.
+
+Once the instance has been created with a salt-minion installed, connectivity to
+it can be verified with Salt:
+
+.. code-block:: bash
+
+    salt linode-instance test.ping
+
+
+Listing Sizes
+-------------
 Sizes can be obtained using the ``--list-sizes`` option for the ``salt-cloud``
 command:
 
@@ -65,24 +79,37 @@ command:
             ----------
             Linode 1024:
                 ----------
-                bandwidth:
-                    2000
-                disk:
-                    49152
-                driver:
-                get_uuid:
-                id:
+                AVAIL:
+                    ----------
+                    10:
+                        500
+                    2:
+                        500
+                    3:
+                        500
+                    4:
+                        500
+                    6:
+                        500
+                    7:
+                        500
+                    8:
+                        500
+                    9:
+                        500
+                CORES:
                     1
-                name:
+                DISK:
+                    24
+                HOURLY:
+                    0.015
+                LABEL:
                     Linode 1024
-                price:
-                    20.0
-                ram:
-                    1024
-                uuid:
-                    03e18728ce4629e2ac07c9cbb48afffb8cb499c4
     ...SNIP...
 
+
+Listing Images
+--------------
 Images can be obtained using the ``--list-images`` option for the ``salt-cloud``
 command:
 
@@ -93,25 +120,25 @@ command:
         ----------
         linode:
             ----------
-            Arch Linux 2013.06:
+            Arch Linux 2015.02:
                 ----------
-                driver:
-                extra:
-                    ----------
-                    64bit:
-                        1
-                    pvops:
-                        1
-                get_uuid:
-                id:
-                    112
-                name:
-                    Arch Linux 2013.06
-                uuid:
-                    8457f92eaffc92b7666b6734a96ad7abe1a8a6dd
+                CREATE_DT:
+                    2015-02-20 14:17:16.0
+                DISTRIBUTIONID:
+                    138
+                IS64BIT:
+                    1
+                LABEL:
+                    Arch Linux 2015.02
+                MINIMAGESIZE:
+                    800
+                REQUIRESPVOPSKERNEL:
+                    1
     ...SNIP...
 
 
+Listing Locations
+-----------------
 Locations can be obtained using the ``--list-locations`` option for the ``salt-cloud``
 command:
 
@@ -124,23 +151,92 @@ command:
             ----------
             Atlanta, GA, USA:
                 ----------
-                abbreviation:
+                ABBR:
                     atlanta
-                id:
+                DATACENTERID:
                     4
-            Dallas, TX, USA:
-                ----------
-                abbreviation:
-                    dallas
-                id:
-                    2
+                LOCATION:
+                    Atlanta, GA, USA
     ...SNIP...
+
+
+Linode Specific Settings
+========================
+There are several options outlined below that can be added to either the Linode
+provider of profile configuration files. Some options are mandatory and are
+properly labeled below but typically also include a hard-coded default.
+
+image
+-----
+Image is used to define what Operating System image should be used for the
+instance. Examples are ``Ubuntu 14.04 LTS`` and ``CentOS 7``. This option should
+be specified in the profile config. Required.
+
+location
+--------
+Location is used to define which Linode data center the instance will reside in.
+Required.
+
+size
+----
+Size is used to define the instance's "plan type" which includes memory, storage,
+and price. Required.
+
+assign_private_ip
+-----------------
+.. versionadded:: 2016.3.0
+
+Assigns a private IP address to a Linode when set to True. Default is False.
+
+private_ip
+----------
+Deprecated in favor of `assign_private_ip`_ in Salt 2016.3.0.
+
+ssh_interface
+-------------
+.. versionadded:: 2016.3.0
+
+Specify whether to use a public or private IP for the deploy script. Valid options
+are:
+
+* public_ips: The salt-master is hosted outside of Linode. Default.
+* private_ips: The salt-master is also hosted within Linode.
+
+If specifying ``private_ips``, the Linodes must be hosted within the same data
+center and have the Network Helper enabled on your entire account. The instance
+that is running the Salt-Cloud provisioning command must also have a private IP
+assigned to it.
+
+Newer accounts created on Linode have the Network Helper setting enabled by default,
+account-wide. Legacy accounts do not have this setting enabled by default. To enable
+the Network Helper on your Linode account, please see `Linode's Network Helper`_
+documentation.
+
+If you're running into problems, be sure to restart the instance that is running
+Salt Cloud after adding its own private IP address or enabling the Network
+Helper.
+
+.. _Linode's Network Helper: https://www.linode.com/docs/platform/network-helper
+
+clonefrom
+---------
+Setting the clonefrom option to a specified instance enables the new instance to be
+cloned from the named instance instead of being created from scratch. If using the
+clonefrom option, it is likely a good idea to also specify ``script_args: -C`` if a
+minion is already installed on the to-be-cloned instance. See the `Cloning`_ section
+below for more information.
 
 
 Cloning
 =======
+To clone a Linode, add a profile with a ``clonefrom`` key, and a ``script_args: -C``.
+``clonefrom`` should be the name of the Linode that is the source for the clone.
+``script_args: -C`` passes a -C to the salt-bootstrap script, which only configures
+the minion and doesn't try to install a new copy of salt-minion. This way the minion
+gets new keys and the keys get pre-seeded on the master, and the ``/etc/salt/minion``
+file has the right minion 'id:' declaration.
 
-When salt-cloud accesses Linode via linode-python it can clone machines.
+Cloning requires a post 2015-02-01 salt-bootstrap.
 
 It is safest to clone a stopped machine. To stop a machine run
 

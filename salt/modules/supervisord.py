@@ -59,7 +59,7 @@ def _ctl_cmd(cmd, name, conf_file, bin_env):
     ret.append(cmd)
     if name:
         ret.append(name)
-    return ' ' .join(ret)
+    return ret
 
 
 def _get_return(ret):
@@ -395,7 +395,7 @@ def options(name, conf_file=None):
     config = _read_config(conf_file)
     section_name = 'program:{0}'.format(name)
     if section_name not in config.sections():
-        raise CommandExecutionError('Process {0!r} not found'.format(name))
+        raise CommandExecutionError('Process \'{0}\' not found'.format(name))
     ret = {}
     for key, val in config.items(section_name):
         val = salt.utils.str_to_num(val.split(';')[0].strip())

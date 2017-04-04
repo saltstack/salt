@@ -620,6 +620,25 @@ class DockerngTestCase(TestCase):
                                   'state': {'new': 'stopped',
                                             'old': 'stopped'}})
 
+    def test_images_with_empty_tags(self):
+        """
+        docker 1.12 reports also images without tags with `null`.
+        """
+        client = Mock()
+        client.api_version = '1.24'
+        client.images = Mock(
+            return_value=[{'Id': 'sha256:abcde',
+                           'RepoTags': None},
+                          {'Id': 'sha256:abcdef'},
+                          {'Id': 'sha256:abcdefg',
+                           'RepoTags': ['image:latest']}])
+        with patch.dict(dockerng_mod.__context__,
+                        {'docker.client': client}):
+            dockerng_mod._clear_context()
+            result = dockerng_mod.images()
+        self.assertEqual(result,
+                         {'sha256:abcdefg': {'RepoTags': ['image:latest']}})
+
 
 if __name__ == '__main__':
     from integration import run_tests

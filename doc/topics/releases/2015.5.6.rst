@@ -2,8 +2,7 @@
 Salt 2015.5.6 Release Notes
 ===========================
 
-Version 2015.5.6 is a bugfix release for :doc:`2015.5.0
-</topics/releases/2015.5.0>`.
+Version 2015.5.6 is a bugfix release for :ref:`2015.5.0<release-2015-5-0>`.
 
 Security Fixes
 --------------
@@ -38,7 +37,7 @@ Changes:
 
 - **PR** `#27516`_: (*basepi*) [2015.5] Merge forward from 2014.7 to 2015.5
 
-- **PR** `#27472`_: (*cachedout*) Change recommeded schema for data field in mysql event table
+- **PR** `#27472`_: (*cachedout*) Change recommended schema for data field in mysql event table
 
 - **PR** `#27468`_: (*cachedout*) Fix 27351
 

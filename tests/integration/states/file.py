@@ -11,6 +11,7 @@ import glob
 import grp
 import os
 import pwd
+import sys
 import shutil
 import stat
 import tempfile
@@ -674,6 +675,32 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(name):
                 shutil.rmtree(name, ignore_errors=True)
 
+    def test_recurse_specific_env_in_url(self):
+        '''
+        file.recurse passing __env__
+        '''
+        name = os.path.join(integration.TMP, 'recurse_dir_prod_env')
+        ret = self.run_state('file.recurse',
+                             name=name,
+                             source='salt://holy?saltenv=prod')
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
+        finally:
+            if os.path.isdir(name):
+                shutil.rmtree(name, ignore_errors=True)
+
+        name = os.path.join(integration.TMP, 'recurse_dir_prod_env')
+        ret = self.run_state('file.recurse',
+                             name=name,
+                             source='salt://holy?saltenv=prod')
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
+        finally:
+            if os.path.isdir(name):
+                shutil.rmtree(name, ignore_errors=True)
+
     def test_test_recurse(self):
         '''
         file.recurse test interface
@@ -1109,6 +1136,35 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             os.remove(path_test)
 
+    def test_serialize(self):
+        '''
+        Test to ensure that file.serialize returns a data structure that's
+        both serialized and formatted properly
+        '''
+        path_test = os.path.join(integration.TMP, 'test_serialize')
+        ret = self.run_state('file.serialize',
+                name=path_test,
+                dataset={'name': 'naive',
+                    'description': 'A basic test',
+                    'a_list': ['first_element', 'second_element'],
+                    'finally': 'the last item'},
+                formatter='json')
+
+        with salt.utils.fopen(path_test, 'r') as fp_:
+            serialized_file = fp_.read()
+
+        expected_file = '''{
+  "a_list": [
+    "first_element",
+    "second_element"
+  ],
+  "description": "A basic test",
+  "finally": "the last item",
+  "name": "naive"
+}
+'''
+        self.assertEqual(serialized_file, expected_file)
+
     def test_replace_issue_18841_omit_backup(self):
         '''
         Test the (mis-)behaviour of file.replace as described in #18841:
@@ -1177,6 +1233,11 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # write a line to file
             with salt.utils.fopen(name, 'w+') as fp_:
                 fp_.write('comment_me')
+
+            # Look for changes with test=True: return should be "None" at the first run
+            ret = self.run_state('file.comment', test=True, name=name, regex='^comment')
+            self.assertSaltNoneReturn(ret)
+
             # comment once
             ret = self.run_state('file.comment', name=name, regex='^comment')
             # result is positive
@@ -1192,6 +1253,11 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # line is still commented
             with salt.utils.fopen(name, 'r') as fp_:
                 self.assertTrue(fp_.read().startswith('#comment'))
+
+            # Test previously commented file returns "True" now and not "None" with test=True
+            ret = self.run_state('file.comment', test=True, name=name, regex='^comment')
+            self.assertSaltTrueReturn(ret)
+
         finally:
             os.remove(name)
 
@@ -1278,7 +1344,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     def test_append_issue_1864_makedirs(self):
         '''
-        file.append but create directories if needed as an option
+        file.append but create directories if needed as an option, and create
+        the file if it doesn't exist
         '''
         fname = 'append_issue_1864_makedirs'
         name = os.path.join(integration.TMP, fname)
@@ -1320,6 +1387,54 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(
                 os.path.join(integration.TMP, 'issue_1864'),
+                ignore_errors=True
+            )
+
+    def test_prepend_issue_27401_makedirs(self):
+        '''
+        file.prepend but create directories if needed as an option, and create
+        the file if it doesn't exist
+        '''
+        fname = 'prepend_issue_27401'
+        name = os.path.join(integration.TMP, fname)
+        try:
+            self.assertFalse(os.path.exists(name))
+        except AssertionError:
+            os.remove(name)
+        try:
+            # Non existing file get's touched
+            if os.path.isfile(name):
+                # left over
+                os.remove(name)
+            ret = self.run_state(
+                'file.prepend', name=name, text='cheese', makedirs=True
+            )
+            self.assertSaltTrueReturn(ret)
+        finally:
+            if os.path.isfile(name):
+                os.remove(name)
+
+        # Nested directory and file get's touched
+        name = os.path.join(integration.TMP, 'issue_27401', fname)
+        try:
+            ret = self.run_state(
+                'file.prepend', name=name, text='cheese', makedirs=True
+            )
+            self.assertSaltTrueReturn(ret)
+        finally:
+            if os.path.isfile(name):
+                os.remove(name)
+
+        try:
+            # Parent directory exists but file does not and makedirs is False
+            ret = self.run_state(
+                'file.prepend', name=name, text='cheese'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(name))
+        finally:
+            shutil.rmtree(
+                os.path.join(integration.TMP, 'issue_27401'),
                 ignore_errors=True
             )
 
@@ -1761,6 +1876,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     ('Something went really wrong while testing this sls:'
                     ' {0}').format(repr(ret))
                 )
+            # difflib produces different output on python 2.6 than on >=2.7
+            if sys.version_info < (2, 7):
+                utf_diff = '---  \n+++  \n@@ -1,1 +1,3 @@\n'
+            else:
+                utf_diff = '--- \n+++ \n@@ -1 +1,3 @@\n'
+            utf_diff += '+\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89\n \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98\n+\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89\n'
             # using unicode.encode('utf-8') we should get the same as
             # an utf-8 string
             expected = {
@@ -1776,7 +1897,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     'name': '{0}'.format(test_file),
                     '__run_num__': 1,
                     'comment': 'File {0} updated'.format(test_file),
-                    'diff': 'Replace binary file with text file'
+                    'diff': utf_diff
                 },
                 ('file_|-some-utf8-file-exists_|-{0}'
                 '_|-exists').format(test_file): {
@@ -1877,7 +1998,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
             self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, 'root')
             self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
-            self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, 'root')
+            if salt.utils.which('id'):
+                root_group = self.run_function('user.primary_group', ['root'])
+                self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, root_group)
         finally:
             if os.path.isdir(tmp_dir):
                 shutil.rmtree(tmp_dir)
@@ -1968,10 +2091,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 context={'foo': 'Hello world!'}
             )
             self.assertSaltFalseReturn(ret)
-            self.assertEqual(
+            self.assertIn(
+                ('Source file cannot be the same as destination'),
                 ret[next(iter(ret))]['comment'],
-                ('Unable to manage file: Source file cannot be the same as '
-                    'destination')
             )
         finally:
             os.remove(source)

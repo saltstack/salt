@@ -13,7 +13,14 @@ if six.PY3:
     import ipaddress
 else:
     import salt.ext.ipaddress as ipaddress
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
+
+# Fix included in py2-ipaddress for 32bit architectures
+# Except that xrange only supports machine integers, not longs, so...
+def long_range(start, end):
+    while start < end:
+        yield start
+        start += 1
 
 # Import salt libs
 import salt.utils
@@ -102,7 +109,7 @@ def __virtual__():
     '''
     if salt.utils.which('ipset'):
         return True
-    return False
+    return (False, 'The ipset execution modules cannot be loaded: ipset binary not in path.')
 
 
 def _ipset_cmd():
@@ -430,12 +437,12 @@ def check(set=None, entry=None, family='ipv4'):
 
             if settype == 'hash:ip':
                 if _entry_extra:
-                    entries = [' '.join([str(ipaddress.ip_address(ip)), ' '.join(_entry_extra)]) for ip in range(
+                    entries = [' '.join([str(ipaddress.ip_address(ip)), ' '.join(_entry_extra)]) for ip in long_range(
                         ipaddress.ip_address(start),
                         ipaddress.ip_address(end) + 1
                     )]
                 else:
-                    entries = [' '.join([str(ipaddress.ip_address(ip))]) for ip in range(
+                    entries = [' '.join([str(ipaddress.ip_address(ip))]) for ip in long_range(
                         ipaddress.ip_address(start),
                         ipaddress.ip_address(end) + 1
                     )]

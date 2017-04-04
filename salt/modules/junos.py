@@ -44,7 +44,8 @@ def __virtual__():
     if HAS_JUNOS and 'proxy' in __opts__:
         return __virtualname__
     else:
-        return False
+        return (False, 'The junos module could not be \
+                loaded: junos-eznc or proxy could not be loaded.')
 
 
 def facts_refresh():

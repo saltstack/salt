@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Send a message to Slack
-=========================
+=======================
 
 This state is useful for sending messages to Slack during state runs.
 
@@ -25,6 +25,12 @@ The api key can be specified in the master or minion configuration like below:
 
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
+# Import Salt libs
+from salt.exceptions import SaltInvocationError
+
 
 def __virtual__():
     '''
@@ -37,7 +43,8 @@ def post_message(name,
                  channel,
                  from_name,
                  message,
-                 api_key=None):
+                 api_key=None,
+                 icon=None):
     '''
     Send a message to a Slack channel.
 
@@ -69,6 +76,9 @@ def post_message(name,
     api_key
         The api key for Slack to use for authentication,
         if not specified in the configuration options of master or minion.
+
+    icon
+        URL to an image to use as the icon for this message
     '''
     ret = {'name': name,
            'changes': {},
@@ -92,17 +102,21 @@ def post_message(name,
         ret['comment'] = 'Slack message is missing: {0}'.format(message)
         return ret
 
-    result = __salt__['slack.post_message'](
-        channel=channel,
-        message=message,
-        from_name=from_name,
-        api_key=api_key,
-    )
-
-    if result:
-        ret['result'] = True
-        ret['comment'] = 'Sent message: {0}'.format(name)
+    try:
+        result = __salt__['slack.post_message'](
+            channel=channel,
+            message=message,
+            from_name=from_name,
+            api_key=api_key,
+            icon=icon,
+        )
+    except SaltInvocationError as sie:
+        ret['comment'] = 'Failed to send message ({0}): {1}'.format(sie, name)
     else:
-        ret['comment'] = 'Failed to send message: {0}'.format(name)
+        if isinstance(result, bool) and result:
+            ret['result'] = True
+            ret['comment'] = 'Sent message: {0}'.format(name)
+        else:
+            ret['comment'] = 'Failed to send message ({0}): {1}'.format(result['message'], name)
 
     return ret

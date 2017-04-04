@@ -51,9 +51,9 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     __opts__['grains'] = __grains__
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -111,6 +111,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -181,6 +182,7 @@ def low(data, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -247,6 +249,7 @@ def high(data, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -324,6 +327,7 @@ def highstate(test=None, **kwargs):
     # Check for errors
     for chunk in chunks:
         if not isinstance(chunk, dict):
+            __context__['retcode'] = 1
             return chunks
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
@@ -342,6 +346,7 @@ def highstate(test=None, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -415,6 +420,7 @@ def top(topfn, test=None, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -491,9 +497,9 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
     __opts__['grains'] = __grains__
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -523,6 +529,56 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
     if errors:
         return errors
     return high_data
+
+
+def show_low_sls(mods, saltenv='base', test=None, env=None, **kwargs):
+    '''
+    Display the low state data from a specific sls or list of sls files on the
+    master
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.show_sls core,edit.vim dev
+    '''
+    __pillar__.update(kwargs.get('pillar', {}))
+    __opts__['grains'] = __grains__
+    if env is not None:
+        salt.utils.warn_until(
+            'Carbon',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
+    opts = copy.copy(__opts__)
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    else:
+        opts['test'] = __opts__.get('test', None)
+    st_ = salt.client.ssh.state.SSHHighState(
+            __opts__,
+            __pillar__,
+            __salt__,
+            __context__['fileclient'])
+    if isinstance(mods, string_types):
+        mods = mods.split(',')
+    high_data, errors = st_.render_highstate({saltenv: mods})
+    high_data, ext_errors = st_.state.reconcile_extend(high_data)
+    errors += ext_errors
+    errors += st_.state.verify_high(high_data)
+    if errors:
+        return errors
+    high_data, req_in_errors = st_.state.requisite_in(high_data)
+    errors += req_in_errors
+    high_data = st_.state.apply_exclude(high_data)
+    # Verify that the high data is structurally sound
+    if errors:
+        return errors
+    ret = st_.state.compile_high_data(high_data)
+    return ret
 
 
 def show_top():
@@ -640,6 +696,7 @@ def single(fun, name, test=None, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
 
     # Copy the tar down

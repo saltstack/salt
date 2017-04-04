@@ -7,7 +7,6 @@ Define some generic socket functions for network modules
 from __future__ import absolute_import
 import os
 import re
-import shlex
 import socket
 import logging
 from string import ascii_letters, digits
@@ -25,6 +24,10 @@ except ImportError:
 # Import salt libs
 import salt.utils
 from salt._compat import subprocess, ipaddress
+
+# inet_pton does not exist in Windows, this is a workaround
+if salt.utils.is_windows():
+    from salt.ext import win_inet_pton  # pylint: disable=unused-import
 
 log = logging.getLogger(__name__)
 
@@ -54,22 +57,24 @@ def isportopen(host, port):
     return out
 
 
-def host_to_ip(host):
+def host_to_ips(host):
     '''
-    Returns the IP address of a given hostname
+    Returns a list of IP addresses of a given hostname or None if not found.
     '''
+    ips = []
     try:
-        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(
-            host, 0, socket.AF_UNSPEC, socket.SOCK_STREAM)[0]
-
-        if family == socket.AF_INET:
-            ip, port = sockaddr
-        elif family == socket.AF_INET6:
-            ip, port, flow_info, scope_id = sockaddr
-
+        for family, socktype, proto, canonname, sockaddr in socket.getaddrinfo(
+                host, 0, socket.AF_UNSPEC, socket.SOCK_STREAM):
+            if family == socket.AF_INET:
+                ip, port = sockaddr
+            elif family == socket.AF_INET6:
+                ip, port, flow_info, scope_id = sockaddr
+            ips.append(ip)
+        if not ips:
+            ips = None
     except Exception:
-        ip = None
-    return ip
+        ips = None
+    return ips
 
 
 def _filter_localhost_names(name_list):
@@ -590,7 +595,10 @@ def _interfaces_ifconfig(out):
                     if not salt.utils.is_sunos():
                         ipv6scope = mmask6.group(3) or mmask6.group(4)
                         addr_obj['scope'] = ipv6scope.lower() if ipv6scope is not None else ipv6scope
-                if addr_obj['address'] != '::' and addr_obj['prefixlen'] != 0:  # SunOS sometimes has ::/0 as inet6 addr when using addrconf
+                # SunOS sometimes has ::/0 as inet6 addr when using addrconf
+                if not salt.utils.is_sunos() \
+                        or addr_obj['address'] != '::' \
+                        and addr_obj['prefixlen'] != 0:
                     data['inet6'].append(addr_obj)
         data['up'] = updown
         if iface in ret:
@@ -916,13 +924,13 @@ def ip_in_subnet(addr, cidr):
     '''
     Returns True if given IP is within specified subnet, otherwise False
 
-    .. deprecated:: Boron
+    .. deprecated:: Carbon
        Use :py:func:`~salt.utils.network.in_subnet` instead
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'Support for \'ip_in_subnet\' has been deprecated and will be removed '
-        'in Salt Boron. Please use \'in_subnet\' instead.'
+        'in Salt Carbon. Please use \'in_subnet\' instead.'
     )
 
     return in_subnet(cidr, addr)
@@ -1176,7 +1184,7 @@ def _freebsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        cmd = shlex.split('sockstat -4 -c -p {0}'.format(port))
+        cmd = salt.utils.shlex_split('sockstat -4 -c -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))

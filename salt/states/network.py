@@ -108,6 +108,14 @@ all interfaces are ignored unless specified.
         - proto: dhcp
         - bridge: br0
 
+    eth5:
+      network.managed:
+        - enabled: True
+        - type: eth
+        - proto: dhcp
+        - noifupdown: True  # Do not restart the interface
+                            # you need to reboot/reconfigure manualy
+
     bond0:
       network.managed:
         - type: bond
@@ -390,20 +398,22 @@ def managed(name, type, enabled=True, **kwargs):
                         if second.get('label', '') == 'name':
                             interface_status = True
         if enabled:
-            if interface_status:
-                if ret['changes']:
-                    # Interface should restart to validate if it's up
-                    __salt__['ip.down'](name, type)
+            if 'noifupdown' not in kwargs:
+                if interface_status:
+                    if ret['changes']:
+                        # Interface should restart to validate if it's up
+                        __salt__['ip.down'](name, type)
+                        __salt__['ip.up'](name, type)
+                        ret['changes']['status'] = 'Interface {0} restart to validate'.format(name)
+                        return ret
+                else:
                     __salt__['ip.up'](name, type)
-                    ret['changes']['status'] = 'Interface {0} restart to validate'.format(name)
-                    return ret
-            else:
-                __salt__['ip.up'](name, type)
-                ret['changes']['status'] = 'Interface {0} is up'.format(name)
+                    ret['changes']['status'] = 'Interface {0} is up'.format(name)
         else:
-            if interface_status:
-                __salt__['ip.down'](name, type)
-                ret['changes']['status'] = 'Interface {0} down'.format(name)
+            if 'noifupdown' not in kwargs:
+                if interface_status:
+                    __salt__['ip.down'](name, type)
+                    ret['changes']['status'] = 'Interface {0} down'.format(name)
     except Exception as error:
         ret['result'] = False
         ret['comment'] = str(error)
@@ -523,6 +533,10 @@ def system(name, **kwargs):
             apply_net_settings = True
             ret['changes']['network_settings'] = '\n'.join(diff)
     except AttributeError as error:
+        ret['result'] = False
+        ret['comment'] = str(error)
+        return ret
+    except KeyError as error:
         ret['result'] = False
         ret['comment'] = str(error)
         return ret

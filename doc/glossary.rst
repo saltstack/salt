@@ -73,6 +73,17 @@ Glossary
         The collection of states to be applied to a system. *See also*:
         :ref:`state layers <state-layers-highstate>`.
 
+    Idempotent
+        An action that ensures the system is in a well-known state regardless
+        of the system's state before the action is applied.  A corollary to
+        this is that applying the action multiple times results in no changes
+        to the system.  State module functions should be idempotent.  Some
+        state module functions, such as :mod:`cmd.run <salt.states.cmd.run>`
+        are not idempotent by default but can be made idempotent with the
+        proper use of requisites such as :ref:```unless`` <unless-requisite>`
+        and :ref:```onlyif`` <onlyif-requisite>`.  For more information, *see*
+        `wikipedia <https://en.wikipedia.org/wiki/Idempotent>`_.
+
     Jinja
         A templating language which allows variables and simple logic to be
         dynamically inserted into static text files when they are rendered.
@@ -90,7 +101,8 @@ Glossary
         or stored externally.
 
     Job ID
-        A unique identifier to represent a given :term:`job`.
+        A unique identifier to represent a given :term:`job`.  This is often
+        shortened to JID.
 
     Low State
         The collection of processed states after requisites and order are
@@ -111,7 +123,7 @@ Glossary
     Mine
         A facility to collect arbitrary data from minions and store that data
         on the master. This data is then available to all other minions.
-        [Sometimes referred to as Salt Mine.] *See also*: :ref:`Salt Mine
+        (Sometimes referred to as Salt Mine.) *See also*: :ref:`Salt Mine
         <salt-mine>`.
 
     Minion

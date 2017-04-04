@@ -1,8 +1,8 @@
-.. _spm_development:
+.. _spm-development:
 
-======================
-SPM Developmnent Guide
-======================
+=====================
+SPM Development Guide
+=====================
 This document discusses developing additional code for SPM.
 
 

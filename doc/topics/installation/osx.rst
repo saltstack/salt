@@ -1,30 +1,44 @@
+.. _macos-installation:
+
 ====
 OS X
 ====
 
-Dependency Installation
------------------------
+Installation from the Official SaltStack Repository
+===================================================
 
-It should be noted that Homebrew explicitly discourages the `use of sudo`_:
+**Latest stable build from the selected branch**:
+|osxdownload|
 
-    Homebrew is designed to work without using sudo. You can decide to use it but we strongly recommend not to do so. If you have used sudo and run into a bug then it is likely to be the cause. Please don’t file a bug report unless you can reproduce it after reinstalling Homebrew from scratch without using sudo
+The output of ``md5 <salt pkg>`` should match the contents of the
+corresponding md5 file.
 
-So when using Homebrew, if you want support from the Homebrew community, install this way:
+`Earlier builds from supported branches <https://repo.saltstack.com/osx/>`__
+
+`Archived builds from unsupported branches <https://repo.saltstack.com/osx/archive/>`__
+
+Installation from Homebrew
+==========================
 
 .. code-block:: bash
 
     brew install saltstack
 
+It should be noted that Homebrew explicitly discourages the `use of sudo`_:
+
+    Homebrew is designed to work without using sudo. You can decide to use it but we strongly recommend not to do so. If you have used sudo and run into a bug then it is likely to be the cause. Please don’t file a bug report unless you can reproduce it after reinstalling Homebrew from scratch without using sudo
+
 .. _use of sudo: https://github.com/Homebrew/homebrew/blob/master/share/doc/homebrew/FAQ.md#sudo
 
-
-
-When using MacPorts, install this way:
+Installation from MacPorts
+==========================
 
 .. code-block:: bash
 
     sudo port install salt
 
+Installation from Pip
+=====================
 When only using the OS X system's pip, install this way:
 
 .. code-block:: bash
@@ -32,9 +46,21 @@ When only using the OS X system's pip, install this way:
     sudo pip install salt
 
 Salt-Master Customizations
---------------------------
+==========================
+.. note::
+    Salt master on OS X is not tested or supported by SaltStack. See `SaltStack Platform Support <https://saltstack.com/product-support-lifecycle/>`_ for more information.
 
-To run salt-master on OS X, the root user maxfiles limit must be increased:
+To run salt-master on OS X, sudo add this configuration option to the /etc/salt/master file:
+
+.. code-block:: bash
+
+    max_open_files: 8192
+
+On versions previous to OS X 10.10 (Yosemite), increase the root user maxfiles limit:
+
+.. code-block:: bash
+
+    sudo launchctl limit maxfiles 4096 8192
 
 .. note::
 
@@ -42,16 +68,6 @@ To run salt-master on OS X, the root user maxfiles limit must be increased:
     default limits are sufficient in all but the most extreme scenarios.
     Overriding these values with the setting below will cause system
     instability!
-
-.. code-block:: bash
-
-    sudo launchctl limit maxfiles 4096 8192
-
-And sudo add this configuration option to the /etc/salt/master file:
-
-.. code-block:: bash
-
-    max_open_files: 8192
 
 Now the salt-master should run without errors:
 
@@ -62,4 +78,5 @@ Now the salt-master should run without errors:
 Post-installation tasks
 =======================
 
-Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
+Now go to the :ref:`Configuring Salt<configuring-salt>` page.
+

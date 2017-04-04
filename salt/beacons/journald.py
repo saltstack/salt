@@ -90,5 +90,7 @@ def beacon(config):
                         n_flag += 1
             if n_flag == len(config[name]):
                 # Match!
-                ret.append(salt.utils.cloud.simple_types_filter(cur))
+                sub = salt.utils.cloud.simple_types_filter(cur)
+                sub.update({'tag': name})
+                ret.append(sub)
     return ret

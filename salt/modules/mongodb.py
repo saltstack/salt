@@ -42,7 +42,7 @@ def __virtual__():
     if HAS_MONGODB:
         return 'mongodb'
     else:
-        return False
+        return (False, 'The mongodb execution module cannot be loaded: the pymongo library is not available.')
 
 
 def _connect(user=None, password=None, host=None, port=None, database='admin'):

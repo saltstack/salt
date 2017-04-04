@@ -216,8 +216,9 @@ def main(argv):  # pylint: disable=W0613
     # Yes, the flush() is necessary.
     sys.stdout.write(OPTIONS.delimiter + '\n')
     sys.stdout.flush()
-    sys.stderr.write(OPTIONS.delimiter + '\n')
-    sys.stderr.flush()
+    if not OPTIONS.tty:
+        sys.stderr.write(OPTIONS.delimiter + '\n')
+        sys.stderr.flush()
     if OPTIONS.cmd_umask is not None:
         old_umask = os.umask(OPTIONS.cmd_umask)
     if OPTIONS.tty:

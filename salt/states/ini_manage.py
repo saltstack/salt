@@ -8,8 +8,6 @@ Manage ini files
 :depends: re
 :platform: all
 
-use section as DEFAULT_IMPLICIT if your ini file does not have any section
-for example /etc/sysctl.conf
 '''
 
 
@@ -18,7 +16,7 @@ __virtualname__ = 'ini'
 
 def __virtual__():
     '''
-    Only load if the mysql module is available
+    Only load if the ini module is available
     '''
     return __virtualname__ if 'ini.set_option' in __salt__ else False
 
@@ -47,29 +45,28 @@ def options_present(name, sections=None):
            'comment': 'No anomaly detected'
            }
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = ('ini file {0} shall be validated for presence of '
-                          'given options under their respective '
-                          'sections').format(name)
+        ret['result'] = True
+        ret['comment'] = ''
+        for section in sections or {}:
+            section_name = ' in section ' + section if section != 'DEFAULT_IMPLICIT' else ''
+            for key in sections[section]:
+                cur_value = __salt__['ini.get_option'](name, section, key)
+                if cur_value == str(sections[section][key]):
+                    ret['comment'] += 'Key {0}{1} unchanged.\n'.format(key, section_name)
+                    continue
+                ret['comment'] += 'Changed key {0}{1}.\n'.format(key, section_name)
+                ret['result'] = None
+        if ret['comment'] == '':
+            ret['comment'] = 'No changes detected.'
         return ret
-    for section in sections or {}:
-        for key in sections[section]:
-            current_value = __salt__['ini.get_option'](name,
-                                                       section,
-                                                       key)
-            # Test if the change is necessary
-            if current_value == str(sections[section][key]):
-                continue
-
-            ret['changes'] = __salt__['ini.set_option'](name,
-                                                        sections)
-            if 'error' in ret['changes']:
-                ret['result'] = False
-                ret['comment'] = 'Errors encountered. {0}'.\
-                    format(ret['changes'])
-                ret['changes'] = {}
-            else:
-                ret['comment'] = 'Changes take effect'
+    changes = __salt__['ini.set_option'](name, sections)
+    if 'error' in changes:
+        ret['result'] = False
+        ret['comment'] = 'Errors encountered. {0}'.format(changes['error'])
+        ret['changes'] = {}
+    else:
+        ret['comment'] = 'Changes take effect'
+        ret['changes'] = changes
     return ret
 
 
@@ -78,7 +75,7 @@ def options_absent(name, sections=None):
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
-          ini.options_present:
+          ini.options_absent:
             - sections:
                 test:
                   - testkey
@@ -97,22 +94,29 @@ def options_absent(name, sections=None):
            'comment': 'No anomaly detected'
            }
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = ('ini file {0} shall be validated for absence of '
-                          'given options under their respective '
-                          'sections').format(name)
+        ret['result'] = True
+        ret['comment'] = ''
+        for section in sections or {}:
+            section_name = ' in section ' + section if section != 'DEFAULT_IMPLICIT' else ''
+            for key in sections[section]:
+                cur_value = __salt__['ini.get_option'](name, section, key)
+                if not cur_value:
+                    ret['comment'] += 'Key {0}{1} does not exist.\n'.format(key, section_name)
+                    continue
+                ret['comment'] += 'Deleted key {0}{1}.\n'.format(key, section_name)
+                ret['result'] = None
+        if ret['comment'] == '':
+            ret['comment'] = 'No changes detected.'
         return ret
-    for section in sections or {}:
-        for key in sections[section]:
-            current_value = __salt__['ini.remove_option'](name,
-                                                          section,
-                                                          key)
+    sections = sections or {}
+    for section, keys in sections.iteritems():
+        for key in keys:
+            current_value = __salt__['ini.remove_option'](name, section, key)
             if not current_value:
                 continue
             if section not in ret['changes']:
                 ret['changes'].update({section: {}})
-            ret['changes'][section].update({key: {'before': current_value,
-                                                  'after': None}})
+            ret['changes'][section].update({key: current_value})
             ret['comment'] = 'Changes take effect'
     return ret
 
@@ -124,11 +128,11 @@ def sections_present(name, sections=None):
         /home/saltminion/api-paste.ini:
           ini.sections_present:
             - sections:
-                test:
-                  testkey: testval
-                  secondoption: secondvalue
-                test1:
-                  testkey1: 'testval121'
+                - section_one
+                - section_two
+
+    This will only create empty sections. To also create options, use
+    options_present state
 
     options present in file and not specified in sections will be deleted
     changes dict will contain the sections that changed
@@ -139,26 +143,31 @@ def sections_present(name, sections=None):
            'comment': 'No anomaly detected'
            }
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = ('ini file {0} shall be validated for '
-                          'presence of given sections with the '
-                          'exact contents').format(name)
+        ret['result'] = True
+        ret['comment'] = ''
+        for section in sections or {}:
+            cur_section = __salt__['ini.get_section'](name, section)
+            if cmp(dict(sections[section]), cur_section) == 0:
+                ret['comment'] += 'Section unchanged {0}.\n'.format(section)
+                continue
+            elif cur_section:
+                ret['comment'] += 'Changed existing section {0}.\n'.format(section)
+            else:
+                ret['comment'] += 'Created new section {0}.\n'.format(section)
+            ret['result'] = None
+        if ret['comment'] == '':
+            ret['comment'] = 'No changes detected.'
         return ret
-    for section in sections or {}:
-        cur_section = __salt__['ini.get_section'](name, section)
-        if _same(cur_section, sections[section]):
-            continue
-        __salt__['ini.remove_section'](name, section)
-        changes = __salt__['ini.set_option'](name, {section:
-                                                    sections[section]},
-                                                    summary=False)
-        if 'error' in changes:
-            ret['result'] = False
-            ret['changes'] = 'Errors encountered'
-            return ret
-        ret['changes'][section] = {'before': {section: cur_section},
-                                   'after': changes['changes']}
-        ret['comment'] = 'Changes take effect'
+    section_to_update = {}
+    for section_name in sections or []:
+        section_to_update.update({section_name: {}})
+    changes = __salt__['ini.set_option'](name, section_to_update)
+    if 'error' in changes:
+        ret['result'] = False
+        ret['changes'] = 'Errors encountered {0}'.format(changes['error'])
+        return ret
+    ret['changes'] = changes
+    ret['comment'] = 'Changes take effect'
     return ret
 
 
@@ -181,39 +190,22 @@ def sections_absent(name, sections=None):
            'comment': 'No anomaly detected'
            }
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = ('ini file {0} shall be validated for absence of '
-                          'given sections').format(name)
+        ret['result'] = True
+        ret['comment'] = ''
+        for section in sections or []:
+            cur_section = __salt__['ini.get_section'](name, section)
+            if not cur_section:
+                ret['comment'] += 'Section {0} does not exist.\n'.format(section)
+                continue
+            ret['comment'] += 'Deleted section {0}.\n'.format(section)
+            ret['result'] = None
+        if ret['comment'] == '':
+            ret['comment'] = 'No changes detected.'
         return ret
     for section in sections or []:
         cur_section = __salt__['ini.remove_section'](name, section)
         if not cur_section:
             continue
-        ret['changes'][section] = {'before': cur_section,
-                                   'after': None}
+        ret['changes'][section] = cur_section
         ret['comment'] = 'Changes take effect'
     return ret
-
-
-def _same(dict1, dict2):
-    diff = _DictDiffer(dict1, dict2)
-    return not (diff.added() or diff.removed() or diff.changed())
-
-
-class _DictDiffer(object):
-    def __init__(self, current_dict, past_dict):
-        self.current_dict = current_dict
-        self.past_dict = past_dict
-        self.set_current = set(current_dict)
-        self.set_past = set(past_dict)
-        self.intersect = self.set_current.intersection(self.set_past)
-
-    def added(self):
-        return self.set_current - self.intersect
-
-    def removed(self):
-        return self.set_past - self.intersect
-
-    def changed(self):
-        return set(o for o in self.intersect if
-                   self.past_dict[o] != self.current_dict[o])

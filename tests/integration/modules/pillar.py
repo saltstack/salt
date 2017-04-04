@@ -119,7 +119,6 @@ class PillarModuleTest(integration.ModuleCase):
         from pillar.items
         '''
         get_items = self.run_function('pillar.items')
-        self.assertDictContainsSubset({'info': 'bar'}, get_items)
         self.assertDictContainsSubset({'monty': 'python'}, get_items)
         self.assertDictContainsSubset(
             {'knights': ['Lancelot', 'Galahad', 'Bedevere', 'Robin']},

@@ -102,6 +102,10 @@ def latest(name,
                     ('{0} doesn\'t exist and is set to be checked out.').format(target))
         svn_cmd = 'svn.diff'
         opts += ('-r', 'HEAD')
+
+        if trust:
+            opts += ('--trust-server-cert',)
+
         out = __salt__[svn_cmd](cwd, target, user, username, password, *opts)
         return _neutral_test(
                 ret,

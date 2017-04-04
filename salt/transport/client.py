@@ -105,7 +105,7 @@ class AsyncReqChannel(AsyncChannel):
             return salt.transport.zeromq.AsyncZeroMQReqChannel(opts, **kwargs)
         elif ttype == 'raet':
             import salt.transport.raet
-            return salt.transport.raet.AsyncRAETReqChannel(opts, **kwargs)
+            return salt.transport.raet.RAETReqChannel(opts, **kwargs)
         elif ttype == 'tcp':
             if not cls._resolver_configured:
                 # TODO: add opt to specify number of resolver threads

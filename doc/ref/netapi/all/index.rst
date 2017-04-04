@@ -1,8 +1,8 @@
 .. _all-netapi-modules:
 
-===========================
-Full list of netapi modules
-===========================
+==============
+netapi modules
+==============
 
 .. toctree::
     :maxdepth: 2

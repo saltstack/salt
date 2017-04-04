@@ -247,6 +247,25 @@ class ServiceTestCase(TestCase):
             ):
                 self.assertDictEqual(service.dead("salt", False), ret[4])
 
+    def test_dead_with_missing_service(self):
+        '''
+        Tests the case in which a service.dead state is executed on a state
+        which does not exist.
+
+        See https://github.com/saltstack/salt/issues/37511
+        '''
+        name = 'thisisnotarealservice'
+        with patch.dict(service.__salt__,
+                        {'service.available': MagicMock(return_value=False)}):
+            ret = service.dead(name=name)
+            self.assertDictEqual(
+                ret,
+                {'changes': {},
+                 'comment': 'The named service {0} is not available'.format(name),
+                 'result': True,
+                 'name': name}
+            )
+
     def test_enabled(self):
         '''
             Test to verify that the service is enabled

@@ -120,6 +120,7 @@ class Serial(object):
                          'This often happens when trying to read a file not in binary mode'
                          'To see message payload, enable debug logging and retry. Exception: {0}'.format(exc))
             log.debug('Msgpack deserialization failure on message: {0}'.format(msg))
+            gc.collect()
             raise
         finally:
             gc.enable()

@@ -207,6 +207,21 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        # Test for issue: https://github.com/saltstack/salt/issues/19651
+        data = self.run_salt('-G "companions:*:susan" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion:', data)
+        self.assertNotIn('sub_minion', data)
+        # Test to ensure wildcard at end works correctly
+        data = self.run_salt('-G "companions:one:*" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion:', data)
+        self.assertNotIn('sub_minion', data)
+        # Test to ensure multiple wildcards works correctly
+        data = self.run_salt('-G "companions:*:*" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion:', data)
+        self.assertIn('sub_minion', data)
 
     def test_regrain(self):
         '''
@@ -298,9 +313,11 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         Test to see if we're not auto-adding '*' and 'sys.doc' to the call
         '''
         data = self.run_salt('-d -t 20')
-        self.assertIn('user.add:', data)
+        if data:
+            self.assertIn('user.add:', data)
         data = self.run_salt('"*" -d -t 20')
-        self.assertIn('user.add:', data)
+        if data:
+            self.assertIn('user.add:', data)
         data = self.run_salt('"*" -d user -t 20')
         self.assertIn('user.add:', data)
         data = self.run_salt('"*" sys.doc -d user -t 20')
@@ -352,7 +369,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             )
             self.assertEqual(ret[2], 2)
         finally:
-            os.chdir(old_cwd)
+            self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 

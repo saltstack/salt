@@ -1,3 +1,5 @@
+.. _tutorial-multi-master:
+
 =====================
 Multi Master Tutorial
 =====================
@@ -150,6 +152,6 @@ reason otherwise exists to keep them inconsistent.
 These access control options include but are not limited to:
 
 - external_auth
-- client_acl
+- publisher_acl
 - peer
 - peer_run

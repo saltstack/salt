@@ -40,9 +40,11 @@ def __virtual__():
     '''
     Only work on Debian and when systemd isn't running
     '''
-    if __grains__['os'] in ('Debian', 'Raspbian') and not salt.utils.systemd.booted(__context__):
+    if __grains__['os'] in ('Debian', 'Raspbian', 'Devuan') and not salt.utils.systemd.booted(__context__):
         return __virtualname__
-    return False
+    else:
+        return (False, 'The debian_service module could not be loaded: '
+                'unsupported OS family and/or systemd running.')
 
 
 def _service_cmd(*args):
@@ -263,7 +265,8 @@ def enable(name, **kwargs):
         if int(osmajor) >= 6:
             cmd = 'insserv {0} && '.format(_cmd_quote(name)) + cmd
     except ValueError:
-        if osmajor == 'testing/unstable' or osmajor == 'unstable':
+        osrel = _osrel()
+        if osrel == 'testing/unstable' or osrel == 'unstable' or osrel.endswith("/sid"):
             cmd = 'insserv {0} && '.format(_cmd_quote(name)) + cmd
     return not __salt__['cmd.retcode'](cmd, python_shell=True)
 

@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 def __virtual__():
     if salt.utils.which('sensors'):
         return True
-    return False
+    return (False, 'sensors does not exist in the path')
 
 
 def sense(chip, fahrenheit=False):

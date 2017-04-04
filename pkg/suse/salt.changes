@@ -1,4 +1,253 @@
 -------------------------------------------------------------------
+Thu Oct 15 09:43:16 UTC 2015 - mrueckert@suse.de
+
+- update to 2015.8.1
+  - Add support for ``spm.d/*.conf`` configuration of SPM
+    (:issue:`27010`)
+  - Fix ``proxy`` grains breakage for non-proxy minions
+    (:issue:`27039`)
+  - Fix global key management for git state
+  - Fix passing http auth to ``util.http`` from ``state.file``
+    (:issue:`21917`)
+  - Fix ``multiprocessing: True`` in windows (on by default`)
+  - Add ``pkg.info`` to pkg modules
+  - Fix name of ``serial`` grain (this was accidentally renamed in
+    2015.8.0`)
+  - Merge config values from ``master.d``/``minion.d`` conf files
+    (rather than flat update`)
+  - Clean grains cache on grains sync (:issue:`19853`)
+  - Remove streamed response for fileclient to avoid HTTP
+    redirection problems (:issue:`27093`)
+  - Fixed incorrect warning about ``osrelease`` grain
+    (:issue:`27065`)
+  - Fix authentication via Salt-API with tokens (:issue:`27270`)
+  - Fix winrepo downloads from https locations (:issue:`27081`)
+  - Fix potential error with salt-call as non-root user
+    (:issue:`26889`)
+  - Fix global minion provider overrides (:issue:`27209`)
+  - Fix backward compatibility issues for pecl modules
+  - Fix Windows uninstaller to only remove ``./bin``, ``salt*``,
+    ``nssm.exe``, ``uninst.exe`` (:issue:`27383`)
+  - Fix misc issues with mongo returner.
+  - Add sudo option to cloud config files (:issue:`27398`)
+  - Fix regression in RunnerClient argument handling
+    (:issue:`25107`)
+  - Fix ``dockerng.running`` replacing creation hostconfig with
+    runtime hostconfig (:issue:`27265`)
+  - Fix dockerng.running replacing creation hostconfig with runtime
+    hostconfig (:issue:`27265`)
+  - Increased performance on boto asg/elb states due to
+    ``__states__`` integration
+  - Windows minion no longer requires powershell to restart
+    (:issue:`26629`)
+  - Fix x509 module to support recent versions of OpenSSL
+    (:issue:`27326`)
+  - Some issues with proxy minions were corrected.
+- drop salt-2015.8-backports-susemanager.diff: included in update
+- guard raet buildrequires with bcond_with raet and comment out the
+  recommends for salt-raet.
+
+-------------------------------------------------------------------
+Mon Oct 12 10:11:33 UTC 2015 - tampakrap@opensuse.org
+
+- remove pygit2 global recommends, it is only needed in the master
+- remove git-core, pygit2 should pull it as a dependency
+- add a (currently disabled) %check
+
+-------------------------------------------------------------------
+Mon Oct 12 10:08:57 UTC 2015 - toddrme2178@gmail.com
+
+- Add salt-2015.8-backports-susemanager.diff
+  Returns detailed information about a package
+
+-------------------------------------------------------------------
+Mon Oct 12 08:48:25 UTC 2015 - dmacvicar@suse.de
+
+- ifdef Recommends to build on RHEL based distros
+- use _initddir instead of _sysconfdir/init.d as
+  it works on both platforms.
+
+-------------------------------------------------------------------
+Mon Oct 12 08:19:45 UTC 2015 - dmacvicar@suse.de
+
+- allow to disable docs in preparation for building
+  on other platforms without all dependencies.
+
+-------------------------------------------------------------------
+Mon Oct 12 08:07:01 UTC 2015 - dmacvicar@suse.de
+
+- python-libnacl, python-ioflo are _not_ required to build the
+  package. They are anyways requires of python-raet, which is
+  also not required to build the package.
+
+-------------------------------------------------------------------
+Sat Oct 10 00:00:39 UTC 2015 - mrueckert@suse.de
+
+- merge (build)requires/recommends with requirements/*txt and
+  setup.py
+
+-------------------------------------------------------------------
+Fri Oct  9 23:35:05 UTC 2015 - mrueckert@suse.de
+
+- add raet subpackage which will pull all requires for it and
+  provides config snippets to enable it for the minion and master.
+
+-------------------------------------------------------------------
+Fri Oct  9 15:34:16 UTC 2015 - mrueckert@suse.de
+
+- add tmpfiles.d file
+
+-------------------------------------------------------------------
+Fri Oct  9 14:12:39 UTC 2015 - dmacvicar@suse.de
+
+- Remove requires on python-ioflo and python-libnacl
+  they will be pulled by python-raet,
+  which is optional.
+
+-------------------------------------------------------------------
+Fri Oct  9 12:12:48 UTC 2015 - dmacvicar@suse.de
+
+- python-raet is optional, so make it a Recommends
+
+-------------------------------------------------------------------
+Fri Oct  9 12:04:03 UTC 2015 - dmacvicar@suse.de
+
+- update backports patch from 2015.8 branch
+
+-------------------------------------------------------------------
+Wed Oct  7 20:06:19 UTC 2015 - mrueckert@suse.de
+
+- update use-forking-daemon.patch:
+  the original intention was to get rid of the python systemd
+  dependency. for this we do not have daemonize the whole process.
+  just switching to simple mode is enough.
+
+-------------------------------------------------------------------
+Wed Oct  7 19:15:54 UTC 2015 - mrueckert@suse.de
+
+- drop fdupes:
+  1. it broke python byte code handling
+  2. the only part of the package which would really benefit from
+     it would be the doc package. but given we only install the
+     files via %doc, we can not use it for that either.
+- reenable completions on distros newer than sle11
+- do not use _datarootdir, use _datadir instead.
+
+-------------------------------------------------------------------
+Wed Oct  7 14:34:18 UTC 2015 - mrueckert@suse.de
+
+- package all directories in /var/cache/salt and /etc/salt and 
+  have permissions set for non root salt master
+- update use-salt-user-for-master.patch:
+  - also patch the logrotate file to include the su option
+
+-------------------------------------------------------------------
+Tue Oct  6 12:27:49 UTC 2015 - mrueckert@suse.de
+
+- remove duplicated recommends
+- never require pygit2 and git. the master can run fine without.
+  always use recommends
+
+-------------------------------------------------------------------
+Tue Oct  6 11:36:13 UTC 2015 - tampakrap@opensuse.org
+
+- cleanup dependencies:
+  - remove a lot of unneeded buildrequires
+  - fdupes not present on SLE10
+  - python-certifi needed on SLE11
+  - python-zypp not needed any more
+  - python-pygit2 is not a global requirement
+  - convert python-pysqlite to recommends as it is not available on python <=2.7
+- sles_version -> suse_version
+- %exclude the cloud/deploy/*.sh scripts to fix build issue on SLE11
+
+-------------------------------------------------------------------
+Mon Oct  5 12:44:40 UTC 2015 - tampakrap@opensuse.org
+
+- Remove python-PyYAML from the dependencies list, as python-yaml is the same
+- Build the -completion subpackages in SLE11 as well
+- Add salt-proxy (by dmacvicar@suse.de)
+- Create salt user/group only in the -master subpkg
+
+-------------------------------------------------------------------
+Sat Oct  3 17:37:20 UTC 2015 - infroma@gmail.com
+
+- Fix typo in use-forking-daemon.patch, that prevented daemon loading
+
+-------------------------------------------------------------------
+Thu Oct  1 08:13:58 UTC 2015 - toddrme2178@gmail.com
+
+- Fix typo in Requires
+
+-------------------------------------------------------------------
+Tue Sep 29 09:11:38 UTC 2015 - toddrme2178@gmail.com
+
+- Cleanup requirements
+
+-------------------------------------------------------------------
+Wed Sep 23 18:06:52 UTC 2015 - aboe76@gmail.com
+
+- New Major release 2015.8.0
+
+  for more details:
+  http://docs.saltstack.com/en/latest/topics/releases/2015.8.0.html
+
+- Cleaned the spec file with spec-cleaner
+- Added the use-salt-user-for-master.patch see README.SUSE
+- Updated the files ownership with salt user
+- removed m2crypto depency
+
+-------------------------------------------------------------------
+Tue Sep 22 11:51:50 UTC 2015 - infroma@gmail.com
+
+- Removed fish dependency for fish completions.
+
+-------------------------------------------------------------------
+Tue Sep 22 11:12:47 UTC 2015 - infroma@gmail.com
+
+- Added fish completions.
+
+-------------------------------------------------------------------
+Mon Sep 21 08:58:31 UTC 2015 - tampakrap@opensuse.org
+
+- Support SLE11SP{3,4}, where the M2Crypto package is named python-m2crypto
+
+-------------------------------------------------------------------
+Tue Aug 18 06:58:18 UTC 2015 - aboe76@gmail.com
+
+- Updated to Bugfix release 2015.5
+
+  for more details:
+  https://github.com/saltstack/salt/blob/develop/doc/topics/releases/2015.5.5.rst
+
+- Add prereq, for user creation.
+- Add creation of salt user in preparation of running the salt-master daemon
+  as non-root user salt.
+  https://bugzilla.opensuse.org/show_bug.cgi?id=939831
+- Add README.SUSE with explanation and how to.
+
+-------------------------------------------------------------------
+Mon Jul 20 12:22:26 UTC 2015 - bwiedemann@suse.com
+
+- only require git-core to not pull in git-web and gitk
+
+-------------------------------------------------------------------
+Wed Jul  8 08:47:32 UTC 2015 - aboe76@gmail.com
+
+- New Bugfix release 2015.5.3
+
+  for more details:
+  http://docs.saltstack.com/en/latest/topics/releases/2015.5.3.html
+
+-------------------------------------------------------------------
+Thu Jun  4 19:46:19 UTC 2015 - aboe76@gmail.com
+
+- New Bugfix release 2015.5.2
+  
+  for more details:
+  http://docs.saltstack.com/en/latest/topics/releases/2015.5.2.html
+
+-------------------------------------------------------------------
 Sat May 23 18:31:44 UTC 2015 - aboe76@gmail.com
 
 - New Bugfix release 2015.5.1

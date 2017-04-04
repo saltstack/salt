@@ -87,7 +87,7 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
     bool) may be used to specify the UsePreviousValue option.
 
     notification_arns (list) – The Simple Notification Service (SNS) topic ARNs to publish stack related events.
-    You can find your SNS topic ARNs using the `SNS console`_ or your Command Line Interface (CLI).
+    You can find your SNS topic ARNs using the `SNS_console`_ or your Command Line Interface (CLI).
 
     disable_rollback (bool) – Indicates whether or not to rollback on failure.
 
@@ -132,7 +132,8 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
     profile (dict) - A dict with region, key and keyid, or a pillar key (string) that contains a dict with region, key
     and keyid.
 
-    .. _ sns_console: https://console.aws.amazon.com/sns
+    .. _`SNS_console`: https://console.aws.amazon.com/sns
+
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 

@@ -11,9 +11,10 @@ Package support for pkgin based systems, inspired from freebsdpkg module
 
 # Import python libs
 from __future__ import absolute_import
+import copy
+import logging
 import os
 import re
-import logging
 
 # Import salt libs
 import salt.utils
@@ -89,7 +90,8 @@ def __virtual__():
 
     if __grains__['os'] in supported and _check_pkgin():
         return __virtualname__
-    return False
+    return (False, 'The pkgin execution module cannot be loaded: only '
+            'available on {0} systems.'.format(', '.join(supported)))
 
 
 def _splitpkg(name):
@@ -132,6 +134,7 @@ def search(pkg_name):
 
 def latest_version(*names, **kwargs):
     '''
+    .. versionchanged: 2016.3.0
     Return the latest version of the named package available for upgrade or
     installation.
 
@@ -165,17 +168,22 @@ def latest_version(*names, **kwargs):
             output_loglevel='trace'
         )
         for line in out.splitlines():
-            p = line.split()  # pkgname-version status
-            if p and p[0] in ('=:', '<:', '>:'):
+            if _supports_regex():  # split on ;
+                p = line.split(';')
+            else:
+                p = line.split()  # pkgname-version status
+
+            if p and p[0] in ('=:', '<:', '>:', ''):
                 # These are explanation comments
                 continue
             elif p:
                 s = _splitpkg(p[0])
                 if s:
-                    if len(p) > 1 and p[1] == '<':
-                        pkglist[s[0]] = s[1]
-                    else:
-                        pkglist[s[0]] = ''
+                    if not s[0] in pkglist:
+                        if len(p) > 1 and p[1] == '<':
+                            pkglist[s[0]] = s[1]
+                        else:
+                            pkglist[s[0]] = ''
 
     if len(names) == 1 and pkglist:
         return pkglist[names[0]]
@@ -228,11 +236,12 @@ def refresh_db():
                 '{0}'.format(comment)
             )
 
-    return {}
+    return True
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
+    .. versionchanged: 2016.3.0
     List the packages currently installed as a dict::
 
         {'<package_name>': '<version>'}
@@ -248,6 +257,14 @@ def list_pkgs(versions_as_list=False, **kwargs):
     if any([salt.utils.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
 
     pkgin = _check_pkgin()
     if pkgin:
@@ -268,6 +285,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         __salt__['pkg_resource.add_pkg'](ret, pkg, ver)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -362,15 +380,30 @@ def install(name=None, refresh=False, fromrepo=None,
     args.extend(pkg_params)
 
     old = list_pkgs()
-    __salt__['cmd.run'](
+
+    out = __salt__['cmd.run_all'](
         '{0} {1}'.format(cmd, ' '.join(args)),
         env=env,
         output_loglevel='trace'
     )
+
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
 
     _rehash()
-    return salt.utils.compare_dicts(old, new)
+    return ret
 
 
 def upgrade():
@@ -399,17 +432,26 @@ def upgrade():
         return {}
 
     old = list_pkgs()
-    call = __salt__['cmd.run_all']('{0} -y fug'.format(pkgin))
+
+    cmd = [pkgin, '-y', 'fug']
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=False,
+                                   redirect_stderr=True)
+
     if call['retcode'] != 0:
         ret['result'] = False
-        if 'stderr' in call:
-            ret['comment'] += call['stderr']
-        if 'stdout' in call:
-            ret['comment'] += call['stdout']
-    else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        if call['stdout']:
+            ret['comment'] = call['stdout']
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret['changes'] = salt.utils.compare_dicts(old, new)
+
+    for field in ret.keys():
+        if not ret[field] or ret[field] == '':
+            del ret[field]
+
     return ret
 
 
@@ -471,10 +513,27 @@ def remove(name=None, pkgs=None, **kwargs):
     else:
         cmd = 'pkg_remove {0}'.format(for_remove)
 
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
-    new = list_pkgs()
+    out = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='trace'
+    )
 
-    return salt.utils.compare_dicts(old, new)
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def purge(name=None, pkgs=None, **kwargs):
@@ -537,35 +596,39 @@ def file_list(package):
     return ret
 
 
-def file_dict(package):
+def file_dict(*packages):
     '''
+    .. versionchanged: 2016.3.0
     List the files that belong to a package.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' pkg.file_list nginx
+        salt '*' pkg.file_dict nginx
+        salt '*' pkg.file_dict nginx varnish
     '''
     errors = []
     files = {}
-    files[package] = None
 
-    cmd = 'pkg_info -qL {0}'.format(package)
-    ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    for package in packages:
+        cmd = 'pkg_info -qL {0}'.format(package)
+        ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
-    for line in ret['stderr'].splitlines():
-        errors.append(line)
+        files[package] = []
+        for line in ret['stderr'].splitlines():
+            errors.append(line)
 
-    for line in ret['stdout'].splitlines():
-        if line.startswith('/'):
-            if files[package] is None:
-                files[package] = [line]
-            else:
+        for line in ret['stdout'].splitlines():
+            if line.startswith('/'):
                 files[package].append(line)
-        else:
-            continue  # unexpected string
+            else:
+                continue  # unexpected string
 
-    return {'errors': errors, 'files': files}
+    ret = {'errors': errors, 'files': files}
+    for field in ret.keys():
+        if not ret[field] or ret[field] == '':
+            del ret[field]
+    return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

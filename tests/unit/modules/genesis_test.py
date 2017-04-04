@@ -43,13 +43,26 @@ class GenesisTestCase(TestCase):
                                  {'Error': "Exception('foo',)"})
 
         with patch.object(genesis, '_bootstrap_yum', return_value='A'):
-            self.assertEqual(genesis.bootstrap('rpm', 'root', 'dir1'), 'A')
+            with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(),
+                                               'file.rmdir': MagicMock(),
+                                               'file.directory_exists': MagicMock()}):
+                with patch.dict(genesis.__salt__, {'disk.blkid': MagicMock(return_value={})}):
+                    self.assertEqual(genesis.bootstrap('rpm', 'root', 'dir'), None)
 
         with patch.object(genesis, '_bootstrap_deb', return_value='A'):
-            self.assertEqual(genesis.bootstrap('deb', 'root', 'dir1'), 'A')
+            with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(),
+                                               'file.rmdir': MagicMock(),
+                                               'file.directory_exists': MagicMock()}):
+                with patch.dict(genesis.__salt__, {'disk.blkid': MagicMock(return_value={})}):
+                    self.assertEqual(genesis.bootstrap('deb', 'root', 'dir'), None)
 
-        with patch.object(genesis, '_bootstrap_pacman', return_value='A'):
-            self.assertEqual(genesis.bootstrap('pacman', 'root', 'dir1'), 'A')
+        with patch.object(genesis, '_bootstrap_pacman', return_value='A') as pacman_patch:
+            with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(),
+                                               'file.rmdir': MagicMock(),
+                                               'file.directory_exists': MagicMock(),
+                                               'disk.blkid': MagicMock(return_value={})}):
+                genesis.bootstrap('pacman', 'root', 'dir')
+                pacman_patch.assert_called_with('root', img_format='dir', exclude_pkgs=[], pkgs=[])
 
     @patch('salt.utils.which', MagicMock(return_value=False))
     def test_avail_platforms(self):

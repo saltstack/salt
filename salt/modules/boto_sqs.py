@@ -5,7 +5,7 @@ Connection module for Amazon SQS
 .. versionadded:: 2014.7.0
 
 :configuration: This module accepts explicit sqs credentials but can also utilize
-    IAM roles assigned to the instance trough Instance Profiles. Dynamic
+    IAM roles assigned to the instance through Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
     configuration is necessary. More Information available at:
 
@@ -72,7 +72,7 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_sqs module could not be loaded: boto libraries not found')
     __utils__['boto.assign_funcs'](__name__, 'sqs', pack=__salt__)
     return True
 

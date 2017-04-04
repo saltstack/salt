@@ -21,7 +21,6 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.modules import monit
 
-
 # Globals
 monit.__salt__ = {}
 
@@ -93,6 +92,64 @@ class MonitTestCase(TestCase):
                          MagicMock(return_value='Process')}):
             self.assertEqual(monit.status('service'), 'No such service')
 
+    def test_reload(self):
+        '''
+        Test for Reload configuration
+        '''
+        mock = MagicMock(return_value=0)
+        with patch.dict(monit.__salt__, {'cmd.retcode': mock}):
+            self.assertTrue(monit.reload_())
+
+    def test_version(self):
+        '''
+        Test for Display version from monit -V
+        '''
+        mock = MagicMock(return_value="This is Monit version 5.14\nA\nB")
+        with patch.dict(monit.__salt__, {'cmd.run': mock}):
+            self.assertEqual(monit.version(), '5.14')
+
+    def test_id(self):
+        '''
+        Test for Display unique id
+        '''
+        mock = MagicMock(
+            return_value='Monit ID: d3b1aba48527dd599db0e86f5ad97120')
+        with patch.dict(monit.__salt__, {'cmd.run': mock}):
+            self.assertEqual(monit.id_(), 'd3b1aba48527dd599db0e86f5ad97120')
+
+    def test_reset_id(self):
+        '''
+        Test for Regenerate a unique id
+        '''
+        expected = {
+            'stdout': 'Monit id d3b1aba48527dd599db0e86f5ad97120 and ...'
+        }
+        mock = MagicMock(return_value=expected)
+        with patch.dict(monit.__salt__, {'cmd.run_all': mock}):
+            self.assertEqual(monit.id_(reset=True),
+                             'd3b1aba48527dd599db0e86f5ad97120')
+
+    def test_configtest(self):
+        '''
+        Test for Check configuration syntax
+        '''
+        excepted = {
+            'stdout': 'Control file syntax OK',
+            'retcode': 0,
+            'stderr': ''
+        }
+        mock = MagicMock(return_value=excepted)
+        with patch.dict(monit.__salt__, {'cmd.run_all': mock}):
+            self.assertTrue(monit.configtest()['result'])
+            self.assertEqual(monit.configtest()['comment'], 'Syntax OK')
+
+    def test_validate(self):
+        '''
+        Test for Check all services are monitored
+        '''
+        mock = MagicMock(return_value=0)
+        with patch.dict(monit.__salt__, {'cmd.retcode': mock}):
+            self.assertTrue(monit.validate())
 
 if __name__ == '__main__':
     from integration import run_tests

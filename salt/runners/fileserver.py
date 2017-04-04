@@ -37,11 +37,11 @@ def envs(backend=None, sources=False, outputter=None):
         salt-run fileserver.envs git
     '''
     fileserver = salt.fileserver.Fileserver(__opts__)
-    output = fileserver.envs(back=backend, sources=sources)
+    output = sorted(fileserver.envs(back=backend, sources=sources))
 
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the fileserver.envs runner has '
             'been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'
@@ -84,7 +84,7 @@ def file_list(saltenv='base', backend=None, outputter=None):
 
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the fileserver.file_list runner '
             'has been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'
@@ -127,7 +127,7 @@ def symlink_list(saltenv='base', backend=None, outputter=None):
 
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the fileserver.symlink_list '
             'runner has been deprecated. Please specify an outputter using '
             '--out. See the output of \'salt-run -h\' for more information.'
@@ -170,7 +170,7 @@ def dir_list(saltenv='base', backend=None, outputter=None):
 
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the fileserver.dir_list runner '
             'has been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'
@@ -218,7 +218,7 @@ def empty_dir_list(saltenv='base', backend=None, outputter=None):
 
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the fileserver.empty_dir_list '
             'runner has been deprecated. Please specify an outputter using '
             '--out. See the output of \'salt-run -h\' for more information.'

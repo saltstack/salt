@@ -7,7 +7,7 @@ Git Fileserver Backend Walkthrough
 .. note::
 
     This walkthrough assumes basic knowledge of Salt. To get up to speed, check
-    out the :doc:`Salt Walkthrough </topics/tutorials/walkthrough>`.
+    out the :ref:`Salt Walkthrough <tutorial-salt-walk-through>`.
 
 The gitfs backend allows Salt to serve files from git repositories. It can be
 enabled by adding ``git`` to the :conf_master:`fileserver_backend` list, and
@@ -78,9 +78,6 @@ Additionally, version 0.21.0 of pygit2 introduced a dependency on python-cffi_,
 which in turn depends on newer releases of libffi_. Upgrading libffi_ is not
 advisable as several other applications depend on it, so on older LTS linux
 releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
-While these are not packaged in the official repositories for Debian and
-Ubuntu, SaltStack is actively working on adding packages for these to our
-repositories_. The progress of this effort can be tracked here__.
 
 .. warning::
     pygit2_ is actively developed and :ref:`frequently makes
@@ -98,8 +95,58 @@ repositories_. The progress of this effort can be tracked here__.
 .. _libssh2: http://www.libssh2.org/
 .. _python-cffi: https://pypi.python.org/pypi/cffi
 .. _libffi: http://sourceware.org/libffi/
-.. _repositories: https://repo.saltstack.com
-.. __: https://github.com/saltstack/salt-pack/issues/70
+
+
+RedHat Pygit2 Issues
+~~~~~~~~~~~~~~~~~~~~
+
+The release of RedHat/CentOS 7.3 upgraded both ``python-cffi`` and
+``http-parser``, both of which are dependencies for pygit2_/libgit2_. Both
+pygit2_ and libgit2_ (which are from the EPEL repository and not managed
+directly by RedHat) need to be rebuilt against these updated dependencies.
+
+The below errors will show up in the master log if an incompatible
+``python-pygit2`` package is installed:
+
+.. code-block:: text
+
+    2017-02-10 09:07:34,892 [salt.utils.gitfs ][ERROR ][11211] Import pygit2 failed: CompileError: command 'gcc' failed with exit status 1
+    2017-02-10 09:07:34,907 [salt.utils.gitfs ][ERROR ][11211] gitfs is configured but could not be loaded, are pygit2 and libgit2 installed?
+    2017-02-10 09:07:34,907 [salt.utils.gitfs ][CRITICAL][11211] No suitable gitfs provider module is installed.
+    2017-02-10 09:07:34,912 [salt.master ][CRITICAL][11211] Master failed pre flight checks, exiting
+
+The below errors will show up in the master log if an incompatible ``libgit2``
+package is installed:
+
+.. code-block:: text
+
+    2017-02-15 18:04:45,211 [salt.utils.gitfs ][ERROR   ][6211] Error occurred fetching gitfs remote 'https://foo.com/bar.git': No Content-Type header in response
+
+As of 15 February 2017, ``python-pygit2`` has been rebuilt and is in the stable
+EPEL repository. However, ``libgit2`` remains broken (a `bug report`_ has been
+filed to get it rebuilt).
+
+In the meantime, you can work around this by downgrading ``http-parser``. To do
+this, go to `this page`_ and download the appropriate ``http-parser`` RPM for
+the OS architecture you are using (x86_64, etc.). Then downgrade using the
+``rpm`` command. For example:
+
+.. code-block:: bash
+
+    [root@784e8a8c5028 /]# curl --silent -O https://kojipkgs.fedoraproject.org//packages/http-parser/2.0/5.20121128gitcd01361.el7/x86_64/http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
+    [root@784e8a8c5028 /]# rpm -Uvh --oldpackage http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
+    Preparing...                          ################################# [100%]
+    Updating / installing...
+       1:http-parser-2.0-5.20121128gitcd01################################# [ 50%]
+    Cleaning up / removing...
+       2:http-parser-2.7.1-3.el7          ################################# [100%]
+
+A restart of the salt-master daemon may be required to allow http(s)
+repositories to continue to be fetched.
+
+.. _`this page`: https://koji.fedoraproject.org/koji/buildinfo?buildID=703753
+.. _`bug report`: https://bugzilla.redhat.com/show_bug.cgi?id=1422583
+
 
 GitPython
 ---------
@@ -379,7 +426,7 @@ In the example configuration above, the following is true:
 2. The first remote will serve all files in the repository. The second
    remote will only serve files from the ``salt`` directory (and its
    subdirectories). The third remote will only server files from the
-   ``other/salt`` directory (and its subdirectorys), while the fourth remote
+   ``other/salt`` directory (and its subdirectories), while the fourth remote
    will only serve files from the ``salt/states`` directory (and its
    subdirectories).
 
@@ -792,13 +839,30 @@ steps to this process:
          - 'salt/fileserver/gitfs/update':
            - /srv/reactor/update_fileserver.sls
 
-3. On the git server, add a `post-receive hook`_ with the following contents:
+3. On the git server, add a `post-receive hook`_
+
+   a. If the user executing `git push` is the same as the minion user, use the following hook:
+
+     .. code-block:: bash
+
+         #!/usr/bin/env sh
+         salt-call event.fire_master update salt/fileserver/gitfs/update
+
+   b. To enable other git users to run the hook after a `push`, use sudo in the hook script:
+
+     .. code-block:: bash
+
+         #!/usr/bin/env sh
+         sudo -u root salt-call event.fire_master update salt/fileserver/gitfs/update
+
+4. If using sudo in the git hook (above), the policy must be changed to permit all users to fire the event.
+   Add the following policy to the sudoers file on the git server.
 
    .. code-block:: bash
 
-       #!/usr/bin/env sh
-
-       salt-call event.fire_master update salt/fileserver/gitfs/update
+       Cmnd_Alias SALT_GIT_HOOK = /bin/salt-call event.fire_master update salt/fileserver/gitfs/update
+       Defaults!SALT_GIT_HOOK !requiretty
+       ALL ALL=(root) NOPASSWD: SALT_GIT_HOOK
 
 The ``update`` argument right after :mod:`event.fire_master
 <salt.modules.event.fire_master>` in this example can really be anything, as it
@@ -807,6 +871,9 @@ by this reactor.
 
 Similarly, the tag name ``salt/fileserver/gitfs/update`` can be replaced by
 anything, so long as the usage is consistent.
+
+The ``root`` user name in the hook script and sudo policy should be changed to
+match the user under which the minion is running.
 
 .. _`post-receive hook`: http://www.git-scm.com/book/en/Customizing-Git-Git-Hooks#Server-Side-Hooks
 
@@ -833,8 +900,8 @@ for documentation.
 Why aren't my custom modules/states/etc. syncing to my Minions?
 ===============================================================
 
-In versions 0.16.3 and older, when using the :doc:`git fileserver backend
-</topics/tutorials/gitfs>`, certain versions of GitPython may generate errors
+In versions 0.16.3 and older, when using the :mod:`git fileserver backend
+<salt.fileserver.gitfs>`, certain versions of GitPython may generate errors
 when fetching, which Salt fails to catch. While not fatal to the fetch process,
 these interrupt the fileserver update that takes place before custom types are
 synced, and thus interrupt the sync itself. Try disabling the git fileserver

@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function
 import math
 import time
 import copy
+from datetime import datetime, timedelta
 
 # Import salt libs
 import salt.client
@@ -50,17 +51,21 @@ class Batch(object):
         else:
             args.append(self.opts.get('expr_form', 'glob'))
 
-        ping_gen = self.local.cmd_iter(*args, **self.eauth)
+        ping_gen = self.local.cmd_iter(*args,
+                                       gather_job_timeout=self.opts['gather_job_timeout'],
+                                       **self.eauth)
 
+        # Broadcast to targets
         fret = set()
         try:
             for ret in ping_gen:
                 m = next(six.iterkeys(ret))
                 if m is not None:
                     fret.add(m)
-            return (list(fret), ping_gen)
         except StopIteration:
-            raise salt.exceptions.SaltClientError('No minions matched the target.')
+            if not self.quiet:
+                print_cli('No minions matched the target.')
+        return list(fret), ping_gen
 
     def get_bnum(self):
         '''
@@ -81,6 +86,14 @@ class Batch(object):
                 print_cli('Invalid batch data sent: {0}\nData must be in the '
                           'form of %10, 10% or 3'.format(self.opts['batch']))
 
+    def __update_wait(self, wait):
+        now = datetime.now()
+        i = 0
+        while i < len(wait) and wait[i] <= now:
+            i += 1
+        if i:
+            del wait[:i]
+
     def run(self):
         '''
         Execute the batch run
@@ -92,10 +105,16 @@ class Batch(object):
                 'list',
                 ]
         bnum = self.get_bnum()
+        # No targets to run
+        if not self.minions:
+            return
         to_run = copy.deepcopy(self.minions)
         active = []
         ret = {}
         iters = []
+        # wait the specified time before decide a job is actually done
+        bwait = self.opts.get('batch_wait', 0)
+        wait = []
 
         if self.options:
             show_jid = self.options.show_jid
@@ -115,12 +134,14 @@ class Batch(object):
         # Iterate while we still have things to execute
         while len(ret) < len(self.minions):
             next_ = []
-            if len(to_run) <= bnum and not active:
+            if bwait and wait:
+                self.__update_wait(wait)
+            if len(to_run) <= bnum - len(wait) and not active:
                 # last bit of them, add them all to next iterator
                 while to_run:
                     next_.append(to_run.pop())
             else:
-                for i in range(bnum - len(active)):
+                for i in range(bnum - len(active) - len(wait)):
                     if to_run:
                         minion_id = to_run.pop()
                         if isinstance(minion_id, dict):
@@ -141,6 +162,7 @@ class Batch(object):
                                 ret=self.opts.get('return', ''),
                                 show_jid=show_jid,
                                 verbose=show_verbose,
+                                gather_job_timeout=self.opts['gather_job_timeout'],
                                 **self.eauth)
                 # add it to our iterators and to the minion_tracker
                 iters.append(new_iter)
@@ -175,8 +197,9 @@ class Batch(object):
                                 break
                             continue
                         if self.opts.get('raw'):
-                            parts.update({part['id']: part})
-                            minion_tracker[queue]['minions'].remove(part['id'])
+                            parts.update({part['data']['id']: part})
+                            if part['data']['id'] in minion_tracker[queue]['minions']:
+                                minion_tracker[queue]['minions'].remove(part['data']['id'])
                         else:
                             parts.update(part)
                             for id in part.keys():
@@ -201,13 +224,14 @@ class Batch(object):
             for minion, data in six.iteritems(parts):
                 if minion in active:
                     active.remove(minion)
+                    if bwait:
+                        wait.append(datetime.now() + timedelta(seconds=bwait))
+                # Munge retcode into return data
+                if 'retcode' in data and isinstance(data['ret'], dict) and 'retcode' not in data['ret']:
+                    data['ret']['retcode'] = data['retcode']
                 if self.opts.get('raw'):
-                    yield data
-                elif self.opts.get('failhard'):
-                    # When failhard is passed, we need to return all data to include
-                    # the retcode to use in salt/cli/salt.py later. See issue #24996.
                     ret[minion] = data
-                    yield {minion: data}
+                    yield data
                 else:
                     ret[minion] = data['ret']
                     yield {minion: data['ret']}
@@ -232,3 +256,5 @@ class Batch(object):
                     for minion in minion_tracker[queue]['minions']:
                         if minion in active:
                             active.remove(minion)
+                            if bwait:
+                                wait.append(datetime.now() + timedelta(seconds=bwait))

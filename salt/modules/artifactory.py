@@ -114,6 +114,43 @@ def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, 
     return __save_artifact(snapshot_url, target_file, headers)
 
 
+def get_latest_release(artifactory_url, repository, group_id, artifact_id, packaging, target_dir='/tmp', target_file=None, classifier=None, username=None, password=None):
+    '''
+       Gets the latest release of the artifact
+
+       artifactory_url
+           URL of artifactory instance
+       repository
+           Release repository in artifactory to retrieve artifact from, for example: libs-releases
+       group_id
+           Group Id of the artifact
+       artifact_id
+           Artifact Id of the artifact
+       packaging
+           Packaging type (jar,war,ear,etc)
+       target_dir
+           Target directory to download artifact to (default: /tmp)
+       target_file
+           Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
+       classifier
+           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+       username
+           Artifactory username. Optional parameter.
+       password
+           Artifactory password. Optional parameter.
+       '''
+    log.debug('======================== MODULE FUNCTION: artifactory.get_latest_release(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)',
+              artifactory_url, repository, group_id, artifact_id, packaging, target_dir, classifier)
+    headers = {}
+    if username and password:
+        headers['Authorization'] = 'Basic {0}'.format(base64.encodestring('{0}:{1}'.format(username, password)).replace('\n', ''))
+    version = __find_latest_version(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, headers=headers)
+    release_url, file_name = _get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url, classifier)
+    target_file = __resolve_target_file(file_name, target_dir, target_file)
+
+    return __save_artifact(release_url, target_file, headers)
+
+
 def get_release(artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir='/tmp', target_file=None, classifier=None, username=None, password=None):
     '''
        Gets the specified release of the artifact
@@ -326,6 +363,35 @@ def _get_snapshot_version_metadata(artifactory_url, repository, group_id, artifa
     return {
         'snapshot_versions': extension_version_dict
     }
+
+
+def __get_latest_version_url(artifactory_url, repository, group_id, artifact_id):
+    group_url = __get_group_id_subpath(group_id)
+    # for released versions the suffix for the file is same as version
+    latest_version_url = '{artifactory_url}/api/search/latestVersion?g={group_url}&a={artifact_id}&repos={repository}'.format(
+                                 artifactory_url=artifactory_url,
+                                 repository=repository,
+                                 group_url=group_url,
+                                 artifact_id=artifact_id)
+    log.debug('latest_version_url=%s', latest_version_url)
+    return latest_version_url
+
+
+def __find_latest_version(artifactory_url, repository, group_id, artifact_id, headers):
+    latest_version_url = __get_latest_version_url(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id)
+    try:
+        request = urllib.request.Request(latest_version_url, None, headers)
+        version = urllib.request.urlopen(request).read()
+    except HTTPError as http_error:
+        message = 'Could not fetch data from url: {url}, HTTPError: {error}'
+        raise Exception(message.format(url=latest_version_url, error=http_error))
+
+    log.debug("Response of: %s", version)
+
+    if version is None or version == '':
+        raise ArtifactoryError('Unable to find release version')
+
+    return version
 
 
 def __save_artifact(artifact_url, target_file, headers):

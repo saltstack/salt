@@ -116,7 +116,7 @@ To start the Minion:
 
     systemctl start salt-minion.service
 
-Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
+Now go to the :ref:`Configuring Salt<configuring-salt>` page.
 
 .. _`Bootstrap Script`: https://github.com/saltstack/salt-bootstrap
 .. _`EPEL`: http://fedoraproject.org/wiki/EPEL

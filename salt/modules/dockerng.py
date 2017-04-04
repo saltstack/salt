@@ -55,6 +55,7 @@ be used, it is recommended to place this configuration in :ref:`Pillar
         email: <email_address>
         password: <password>
         username: <username>
+        reauth: <boolean>
 
 For example:
 
@@ -65,6 +66,22 @@ For example:
         email: foo@foo.com
         password: s3cr3t
         username: foo
+
+Reauth is an optional parameter that forces the docker login to reauthorize using
+the credentials passed in the pillar data. Defaults to false.
+
+.. versionadded:: 2016.3.5,2016.11.1
+
+For example:
+
+.. code-block:: yaml
+
+    docker-registries:
+      https://index.docker.io/v1/:
+        email: foo@foo.com
+        password: s3cr3t
+        username: foo
+        reauth: True
 
 Mulitiple registries can be configured. This can be done in one of two ways.
 The first way is to configure each registry under the ``docker-registries``
@@ -186,6 +203,14 @@ Functions
 Executing Commands Within a Running Container
 ---------------------------------------------
 
+.. note::
+    With the release of Docker 1.13.1, the Execution Driver has been removed.
+    Starting in versions 2016.3.6, 2016.11.4, and Nitrogen, Salt defaults to
+    using ``docker exec`` to run commands in containers, however for older Salt
+    releases it will be necessary to set the ``docker.exec_driver`` config
+    option to either ``docker-exec`` or ``nsenter`` for Docker versions 1.13.1
+    and newer.
+
 Multiple methods exist for executing commands within Docker containers:
 
 - lxc-attach_: Default for older versions of docker
@@ -247,7 +272,6 @@ import distutils.version  # pylint: disable=import-error,no-name-in-module,unuse
 import fnmatch
 import functools
 import gzip
-import inspect as inspect_module
 import json
 import logging
 import os
@@ -261,6 +285,7 @@ import time
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
+from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.decorators \
     import identical_signature_wrapper as _mimic_signature
 import salt.utils
@@ -271,10 +296,21 @@ import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import docker
-    import docker.utils
     HAS_DOCKER_PY = True
 except ImportError:
     HAS_DOCKER_PY = False
+
+# These next two imports are only necessary to have access to the needed
+# functions so that we can get argspecs for the container config, host config,
+# and networking config (see the get_client_args() function).
+try:
+    import docker.types
+except ImportError:
+    pass
+try:
+    import docker.utils
+except ImportError:
+    pass
 
 try:
     PY_VERSION = sys.version_info[0]
@@ -518,6 +554,12 @@ VALID_CREATE_OPTS = {
         'min_docker': (1, 5, 0),
         'default': '',
     },
+    'ulimits': {
+        'path': 'HostConfig:Ulimits',
+        'min_docker': (1, 6, 0),
+        'min_docker_py': (1, 2, 0),
+        'default': [],
+    },
 }
 
 
@@ -557,6 +599,17 @@ def __virtual__():
                 '.'.join(map(str, MIN_DOCKER_PY)),
                 '.'.join(map(str, docker_py_versioninfo))))
     return (False, 'Docker module could not get imported')
+
+
+class DockerJSONDecoder(json.JSONDecoder):
+    def decode(self, s, _w=None):
+        objs = []
+        for line in s.splitlines():
+            if not line:
+                continue
+            obj, _ = self.raw_decode(line)
+            objs.append(obj)
+        return objs
 
 
 def _get_docker_py_versioninfo():
@@ -722,7 +775,10 @@ def _get_client(timeout=None):
         - docker.url: URL to the docker service
         - docker.version: API version to use (default: "auto")
     '''
-    if 'docker.client' not in __context__:
+    # In some edge cases, the client instance is missing attributes. Don't use
+    # the cached client in those cases.
+    if 'docker.client' not in __context__ \
+            or not hasattr(__context__['docker.client'], 'timeout'):
         client_kwargs = {}
         for key, val in (('base_url', 'docker.url'),
                          ('version', 'docker.version')):
@@ -735,9 +791,15 @@ def _get_client(timeout=None):
             client_kwargs['base_url'] = os.environ.get('DOCKER_HOST')
 
         if 'version' not in client_kwargs:
+            # Let docker-py auto detect docker version incase
+            # it's not defined by user.
             client_kwargs['version'] = 'auto'
 
-        __context__['docker.client'] = docker.Client(**client_kwargs)
+        try:
+            # docker-py 2.0 renamed this client attribute
+            __context__['docker.client'] = docker.APIClient(**client_kwargs)
+        except AttributeError:
+            __context__['docker.client'] = docker.Client(**client_kwargs)
 
     # Set a new timeout if one was passed
     if timeout is not None and __context__['docker.client'].timeout != timeout:
@@ -798,10 +860,12 @@ def _get_exec_driver():
             __context__[contextkey] = from_config
             return from_config
 
-        # For old versions of docker, lxc was the only supported driver.
-        # This is a sane default.
-        driver = info().get('ExecutionDriver', 'lxc-')
-        if driver.startswith('lxc-'):
+        # The execution driver was removed in Docker 1.13.1, docker-exec is now
+        # the default.
+        driver = info().get('ExecutionDriver', 'docker-exec')
+        if driver == 'docker-exec':
+            __context__[contextkey] = driver
+        elif driver.startswith('lxc-'):
             __context__[contextkey] = 'lxc-attach'
         elif driver.startswith('native-') and HAS_NSENTER:
             __context__[contextkey] = 'nsenter'
@@ -940,7 +1004,8 @@ def _image_wrapper(attr, *args, **kwargs):
                     creds['username'],
                     password=creds['password'],
                     email=creds.get('email'),
-                    registry=registry)
+                    registry=registry,
+                    reauth=creds.get('reauth', False))
         except KeyError:
             raise SaltInvocationError(
                 err.format('Incomplete', ' for registry {0}'.format(registry))
@@ -1089,7 +1154,7 @@ def _error_detail(data, item):
     '''
     err = item['errorDetail']
     if 'code' in err:
-        msg = '{1}: {2}'.format(
+        msg = '{0}: {1}'.format(
             item['errorDetail']['code'],
             item['errorDetail']['message'],
         )
@@ -1179,7 +1244,7 @@ def _validate_input(kwargs,
         if isinstance(kwargs['command'], six.string_types):
             # Translate command into a list of strings
             try:
-                kwargs['command'] = shlex.split(kwargs['command'])
+                kwargs['command'] = salt.utils.shlex_split(kwargs['command'])
             except AttributeError:
                 pass
         try:
@@ -1323,7 +1388,7 @@ def _validate_input(kwargs,
         if isinstance(kwargs['entrypoint'], six.string_types):
             # Translate entrypoint into a list of strings
             try:
-                kwargs['entrypoint'] = shlex.split(kwargs['entrypoint'])
+                kwargs['entrypoint'] = salt.utils.shlex_split(kwargs['entrypoint'])
             except AttributeError:
                 pass
         try:
@@ -1359,7 +1424,7 @@ def _validate_input(kwargs,
                         )
                     if not isinstance(val, six.string_types):
                         raise SaltInvocationError(
-                            'Environment values must be strings {key}={val!r}'
+                            'Environment values must be strings {key}=\'{val}\''
                             .format(key=key, val=val))
                     repacked_env[key] = val
             kwargs['environment'] = repacked_env
@@ -1367,7 +1432,7 @@ def _validate_input(kwargs,
             for key, val in six.iteritems(kwargs['environment']):
                 if not isinstance(val, six.string_types):
                     raise SaltInvocationError(
-                        'Environment values must be strings {key}={val!r}'
+                        'Environment values must be strings {key}=\'{val}\''
                         .format(key=key, val=val))
         elif not isinstance(kwargs['environment'], dict):
             raise SaltInvocationError(
@@ -1736,6 +1801,44 @@ def _validate_input(kwargs,
             else:
                 kwargs['labels'] = salt.utils.repack_dictlist(kwargs['labels'])
 
+    def _valid_ulimits():  # pylint: disable=unused-variable
+        '''
+        Must be a string or list of strings with bind mount information
+        '''
+        if kwargs.get('ulimits') is None:
+            # No need to validate
+            return
+        err = (
+            'Invalid ulimits configuration. See the documentation for proper '
+            'usage.'
+        )
+        try:
+            _valid_dictlist('ulimits')
+            # If this was successful then assume the correct API value was
+            # passed on on the CLI and do not proceed with validation.
+            return
+        except SaltInvocationError:
+            pass
+        try:
+            _valid_stringlist('ulimits')
+        except SaltInvocationError:
+            raise SaltInvocationError(err)
+
+        new_ulimits = []
+        for ulimit in kwargs['ulimits']:
+            ulimit_name, comps = ulimit.strip().split('=', 1)
+            try:
+                comps = [int(x) for x in comps.split(':', 1)]
+            except ValueError:
+                raise SaltInvocationError(err)
+            if len(comps) == 1:
+                comps *= 2
+            soft_limit, hard_limit = comps
+            new_ulimits.append({'Name': ulimit_name,
+                                'Soft': soft_limit,
+                                'Hard': hard_limit})
+        kwargs['ulimits'] = new_ulimits
+
     # And now, the actual logic to perform the validation
     if 'docker.docker_version' not in __context__:
         # Have to call this func using the __salt__ dunder (instead of just
@@ -2063,9 +2166,11 @@ def images(verbose=False, **kwargs):
             if img_id is None:
                 continue
             for item in img:
-                img_state = 'untagged' \
-                    if img['RepoTags'] == ['<none>:<none>'] \
-                    else 'tagged'
+                img_state = ('untagged' if
+                             img['RepoTags'] in (
+                               ['<none>:<none>'],  # docker API <1.24
+                               None,  # docker API >=1.24
+                             ) else 'tagged')
                 bucket = __context__.setdefault('docker.images', {})
                 bucket = bucket.setdefault(img_state, {})
                 img_key = key_map.get(item, item)
@@ -2228,7 +2333,10 @@ def list_containers(**kwargs):
     '''
     ret = set()
     for item in six.itervalues(ps_(all=kwargs.get('all', False))):
-        for c_name in [x.lstrip('/') for x in item.get('Names', []) or []]:
+        names = item.get('Names')
+        if not names:
+            continue
+        for c_name in [x.lstrip('/') for x in names or []]:
             ret.add(c_name)
     return sorted(ret)
 
@@ -2245,8 +2353,7 @@ def list_tags():
     '''
     ret = set()
     for item in six.itervalues(images()):
-        for repo_tag in item['RepoTags']:
-            ret.add(repo_tag)
+        ret.update(set(item['RepoTags']))
     return sorted(ret)
 
 
@@ -2396,7 +2503,7 @@ def ps_(filters=None, **kwargs):
             continue
         for item in container:
             c_state = 'running' \
-                if container['Status'].lower().startswith('up ') \
+                if container.get('Status', '').lower().startswith('up ') \
                 else 'stopped'
             bucket = context_data.setdefault(c_state, {})
             c_key = key_map.get(item, item)
@@ -2951,11 +3058,11 @@ def create(image,
             if 'api_name' in val:
                 create_kwargs[val['api_name']] = create_kwargs.pop(key)
 
-    # Added to manage api change in 1.19.
-    # mem_limit and memswap_limit must be provided in host_config object
-    if salt.utils.version_cmp(version()['ApiVersion'], '1.18') == 1:
+    # API v1.15 introduced HostConfig parameter
+    # https://docs.docker.com/engine/reference/api/docker_remote_api_v1.15/#create-a-container
+    if salt.utils.version_cmp(version()['ApiVersion'], '1.15') > 0:
         client = __context__['docker.client']
-        host_config_args = inspect_module.getargspec(docker.utils.create_host_config).args
+        host_config_args = get_client_args()['host_config']
         create_kwargs['host_config'] = client.create_host_config(
             **dict((arg, create_kwargs.pop(arg, None)) for arg in host_config_args if arg != 'version')
         )
@@ -3453,7 +3560,9 @@ def build(path=None,
             .format(image)
         )
 
-    stream_data = [json.loads(x) for x in response]
+    stream_data = []
+    for line in response:
+        stream_data.extend(json.loads(line, cls=DockerJSONDecoder))
     errors = []
     # Iterate through API response and collect information
     for item in stream_data:
@@ -4958,8 +5067,12 @@ def _script(name,
         try:
             os.remove(path)
         except (IOError, OSError) as exc:
-            log.error('cmd.script: Unable to clean tempfile {0!r}: {1}'
-                      .format(path, exc))
+            log.error(
+                'cmd.script: Unable to clean tempfile \'{0}\': {1}'.format(
+                    path,
+                    exc
+                )
+            )
 
     path = salt.utils.mkstemp(dir='/tmp',
                               prefix='salt',
@@ -5447,3 +5560,81 @@ def script_retcode(name,
                    ignore_retcode=ignore_retcode,
                    use_vt=use_vt,
                    keep_env=keep_env)['retcode']
+
+
+def get_client_args():
+    '''
+    .. versionadded:: 2016.3.6,2016.11.4,Nitrogen
+
+    Returns the args for docker-py's `low-level API`_, organized by container
+    config, host config, and networking config.
+
+    .. _`low-level API`: http://docker-py.readthedocs.io/en/stable/api.html
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion docker.get_client_args
+    '''
+    try:
+        config_args = _argspec(docker.types.ContainerConfig.__init__).args
+    except AttributeError:
+        try:
+            config_args = _argspec(docker.utils.create_container_config).args
+        except AttributeError:
+            raise CommandExecutionError(
+                'Failed to get create_container_config argspec'
+            )
+
+    try:
+        host_config_args = \
+            _argspec(docker.types.HostConfig.__init__).args
+    except AttributeError:
+        try:
+            host_config_args = _argspec(docker.utils.create_host_config).args
+        except AttributeError:
+            raise CommandExecutionError(
+                'Failed to get create_host_config argspec'
+            )
+
+    try:
+        endpoint_config_args = \
+            _argspec(docker.types.EndpointConfig.__init__).args
+    except AttributeError:
+        try:
+            endpoint_config_args = \
+                _argspec(docker.utils.utils.create_endpoint_config).args
+        except AttributeError:
+            try:
+                endpoint_config_args = \
+                    _argspec(docker.utils.create_endpoint_config).args
+            except AttributeError:
+                raise CommandExecutionError(
+                    'Failed to get create_endpoint_config argspec'
+                )
+
+    for arglist in (config_args, host_config_args, endpoint_config_args):
+        try:
+            # The API version is passed automagically by the API code that
+            # imports these classes/functions and is not an arg that we will be
+            # passing, so remove it if present.
+            arglist.remove('version')
+        except ValueError:
+            pass
+
+    # Remove any args in host or networking config from the main config dict.
+    # This keeps us from accidentally allowing args that have been moved from
+    # the container config to the host config (but are still accepted by
+    # create_container_config so warnings can be issued).
+    for arglist in (host_config_args, endpoint_config_args):
+        for item in arglist:
+            try:
+                config_args.remove(item)
+            except ValueError:
+                # Arg is not in config_args
+                pass
+
+    return {'config': config_args,
+            'host_config': host_config_args,
+            'networking_config': endpoint_config_args}

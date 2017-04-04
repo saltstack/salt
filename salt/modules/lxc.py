@@ -22,7 +22,7 @@ import time
 import shutil
 import re
 import random
-import distutils.version
+import distutils.version  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt
@@ -81,7 +81,7 @@ def __virtual__():
     #     return 'lxc'
     # return False
     #
-    return False
+    return (False, 'The lxc execution module cannot be loaded: the lxc-start binary is not in the path.')
 
 
 def get_root_path(path):
@@ -117,7 +117,7 @@ def version():
     '''
     k = 'lxc.version'
     if not __context__.get(k, None):
-        cversion = __salt__['cmd.run_all']('lxc-ls --version')
+        cversion = __salt__['cmd.run_all']('lxc-info --version')
         if not cversion['retcode']:
             ver = distutils.version.LooseVersion(cversion['stdout'])
             if ver < distutils.version.LooseVersion('1.0'):
@@ -561,7 +561,7 @@ def _get_profile(key, old_key, name, **kwargs):
                     'lxc.{1}:{0}'.format(name, old_key), None)
             if profile_match is not None:
                 salt.utils.warn_until(
-                    'Boron',
+                    'Carbon',
                     'lxc.{1} has been deprecated, please configure LXC '
                     'container profiles under lxc.{0} instead'.format(
                         key, old_key))
@@ -879,6 +879,10 @@ def _network_conf(conf_tuples=None, **kwargs):
 def _get_lxc_default_data(**kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = {}
+    for k in ['utsname', 'rootfs']:
+        val = kwargs.get(k, None)
+        if val is not None:
+            ret['lxc.{0}'.format(k)] = val
     autostart = kwargs.get('autostart')
     # autostart can have made in kwargs, but with the None
     # value which is invalid, we need an explicit boolean
@@ -1322,7 +1326,7 @@ def init(name,
     profile = get_container_profile(copy.deepcopy(profile))
     if bool(nic) and nic is not _marker:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'nic\' argument to \'lxc.init\' has been deprecated, '
             'please use \'network_profile\' instead.'
         )
@@ -1338,7 +1342,7 @@ def init(name,
         pass
     else:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'clone\' argument to \'lxc.init\' has been deprecated, '
             'please use \'clone_from\' instead.'
         )
@@ -1381,8 +1385,8 @@ def init(name,
     clone_from = select('clone_from')
     if password and password_encrypted is None:
         salt.utils.warn_until(
-            'Boron',
-            'Starting with the Boron release, passwords passed to the '
+            'Carbon',
+            'Starting with the Carbon release, passwords passed to the '
             '\'lxc.init\' function will be assumed to be hashed, unless '
             'password_encrypted=False. Please keep this in mind.'
         )
@@ -1391,7 +1395,8 @@ def init(name,
     # If using a volume group then set up to make snapshot cow clones
     if vgname and not clone_from:
         try:
-            clone_from = _get_base(vgname=vgname, profile=profile, **kwargs)
+            kwargs['vgname'] = vgname
+            clone_from = _get_base(profile=profile, **kwargs)
         except (SaltInvocationError, CommandExecutionError) as exc:
             ret['comment'] = exc.strerror
             if changes:
@@ -2094,7 +2099,7 @@ def clone(name,
         cmd += ' -B {0}'.format(backing)
         if backing not in ('dir', 'overlayfs'):
             if size:
-                cmd += ' --fssize {0}'.format(size)
+                cmd += ' -L {0}'.format(size)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     # please do not merge extra conflicting stuff
     # inside those two line (ret =, return)
@@ -2429,7 +2434,7 @@ def start(name, **kwargs):
     _ensure_exists(name, path=path)
     if kwargs.get('restart', False):
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'restart\' argument to \'lxc.start\' has been deprecated, '
             'please use \'lxc.restart\' instead.'
         )
@@ -3727,7 +3732,7 @@ def run_cmd(name,
         Use :mod:`lxc.run <salt.modules.lxc.run>` instead
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'lxc.run_cmd has been deprecated, please use one of the lxc.run '
         'functions (or lxc.retcode). See the documentation for more '
         'information.'
@@ -4549,6 +4554,8 @@ def reconfigure(name,
                 bridge=None,
                 gateway=None,
                 autostart=None,
+                utsname=None,
+                rootfs=None,
                 path=None,
                 **kwargs):
     '''
@@ -4558,6 +4565,16 @@ def reconfigure(name,
 
     name
         Name of the container.
+    utsname
+        utsname of the container.
+
+        .. versionadded:: 2016.3.0
+
+    rootfs
+        rootfs of the container.
+
+        .. versionadded:: 2016.3.0
+
     cpu
         Select a random number of cpu cores and assign it to the cpuset, if the
         cpuset option is set then this option will be ignored
@@ -4624,9 +4641,13 @@ def reconfigure(name,
         autostart = select('autostart', autostart)
     else:
         autostart = 'keep'
+    if not utsname:
+        utsname = select('utsname', utsname)
     if os.path.exists(path):
         old_chunks = read_conf(path, out_format='commented')
         make_kw = salt.utils.odict.OrderedDict([
+            ('utsname', utsname),
+            ('rootfs', rootfs),
             ('autostart', autostart),
             ('cpu', cpu),
             ('gateway', gateway),

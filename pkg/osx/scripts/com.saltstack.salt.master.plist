@@ -22,5 +22,12 @@
         <key>NumberOfFiles</key>
         <integer>100000</integer>
     </dict>
+    <!-- uncomment the lines below to debug launchd issues -->
+    <!--
+    <key>StandardOutPath</key>
+    <string>/tmp/salt-minion.out</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/salt-minion.err</string>
+    -->
   </dict>
 </plist>

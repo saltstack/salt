@@ -1,3 +1,5 @@
+.. _masterless-quickstart:
+
 ==========================
 Salt Masterless Quickstart
 ==========================
@@ -52,6 +54,11 @@ minion is configured to not gather this data from the master.
 
 Now the salt minion will not look for a master and will assume that the local
 system has all of the file and pillar resources.
+
+Configuration which resided in the
+:ref:`master configuration <configuration-salt-master>` (e.g. ``/etc/salt/master``)
+should be moved to the :ref:`minion configuration <configuration-salt-minion>`
+since the minion does not read the master configuration.
 
 .. note::
 
@@ -130,5 +137,4 @@ It then examines the ``webserver.sls`` file and finds the ``apache`` state, whic
 installs the Apache package.
 
 The minion should now have Apache installed, and the next step is to begin
-learning how to write
-:doc:`more complex states</topics/tutorials/states_pt1>`.
+learning how to write :ref:`more complex states<states-tutorial>`.

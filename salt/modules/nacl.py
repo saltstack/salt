@@ -78,6 +78,31 @@ Or do something interesting with grains like:
         '{{ opts['id'] }}':
             - {{ role }}
         {%- endif %}
+
+Multi-line text items like certificates require a bit of extra work. You have to strip the new lines
+and replace them with '/n' characters. Certificates specifically require some leading white space when
+calling nacl.enc so that the '--' in the first line (commonly -----BEGIN CERTIFICATE-----) doesn't get
+interpreted as an argument to nacl.enc. For instance if you have a certificate file that lives in cert.crt:
+
+.. code-block:: bash
+
+    cert=$(cat cert.crt |awk '{printf "%s\\n",$0} END {print ""}'); salt-run nacl.enc "  $cert"
+
+Pillar data should look the same, even though the secret will be quite long. However, when calling
+multiline encrypted secrets from pillar in a state, use the following format to avoid issues with /n
+creating extra whitespace at the beginning of each line in the cert file:
+
+.. code-block:: yaml
+
+    secret.txt:
+        file.managed:
+            - template: jinja
+            - user: user
+            - group: group
+            - mode: 700
+            - contents: "{{- salt['pillar.get']('secret') }}"
+
+The '{{-' will tell jinja to strip the whitespace from the beginning of each of the new lines.
 '''
 
 from __future__ import absolute_import

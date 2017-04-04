@@ -109,6 +109,10 @@ def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
         merged = merge_aggregate(obj_a, obj_b)
     elif strategy == 'overwrite':
         merged = merge_overwrite(obj_a, obj_b, merge_lists)
+    elif strategy == 'none':
+        # If we do not want to merge, there is only one pillar passed, so we can safely use the default recurse,
+        # we just do not want to log an error
+        merged = merge_recurse(obj_a, obj_b)
     else:
         log.warning('Unknown merging strategy \'{0}\', '
                     'fallback to recurse'.format(strategy))

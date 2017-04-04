@@ -9,6 +9,7 @@ import sys
 import salt.utils.job
 from salt.ext.six import string_types
 from salt.utils import parsers, print_cli
+from salt.utils.args import yamlify_arg
 from salt.utils.verify import verify_log
 from salt.exceptions import (
         SaltClientError,
@@ -43,76 +44,23 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             # process is run with the -a flag
             skip_perm_errors = self.options.eauth != ''
 
-            local = salt.client.get_local_client(
+            self.local_client = salt.client.get_local_client(
                 self.get_config_file_path(),
-                skip_perm_errors=skip_perm_errors)
+                skip_perm_errors=skip_perm_errors,
+                auto_reconnect=True)
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return
 
         if self.options.batch or self.options.static:
-            import salt.cli.batch
-            eauth = {}
-            if 'token' in self.config:
-                eauth['token'] = self.config['token']
-
-            # If using eauth and a token hasn't already been loaded into
-            # kwargs, prompt the user to enter auth credentials
-            if 'token' not in eauth and self.options.eauth:
-                resolver = salt.auth.Resolver(self.config)
-                res = resolver.cli(self.options.eauth)
-                if self.options.mktoken and res:
-                    tok = resolver.token_cli(
-                            self.options.eauth,
-                            res
-                            )
-                    if tok:
-                        eauth['token'] = tok.get('token', '')
-                if not res:
-                    sys.stderr.write('ERROR: Authentication failed\n')
-                    sys.exit(2)
-                eauth.update(res)
-                eauth['eauth'] = self.options.eauth
-
-            if self.options.static:
-
-                if not self.options.batch:
-                    self.config['batch'] = '100%'
-
-                try:
-                    batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
-                except salt.exceptions.SaltClientError as exc:
-                    sys.exit(2)
-
-                ret = {}
-
-                for res in batch.run():
-                    ret.update(res)
-
-                self._output_ret(ret, '')
-
-            else:
-                try:
-                    batch = salt.cli.batch.Batch(self.config, eauth=eauth, parser=self.options)
-                except salt.exceptions.SaltClientError as exc:
-                    # We will print errors to the console further down the stack
-                    sys.exit(1)
-                # Printing the output is already taken care of in run() itself
-                for res in batch.run():
-                    if self.options.failhard:
-                        for ret in six.itervalues(res):
-                            retcode = salt.utils.job.get_retcode(ret)
-                            if retcode != 0:
-                                sys.stderr.write(
-                                    '{0}\nERROR: Minions returned with non-zero exit code.\n'.format(
-                                        res
-                                    )
-                                )
-                                sys.exit(retcode)
-
+            # _run_batch() will handle all output and
+            # exit with the appropriate error condition
+            # Execution will not continue past this point
+            # in batch mode.
+            self._run_batch()
         else:
             if self.options.timeout <= 0:
-                self.options.timeout = local.opts['timeout']
+                self.options.timeout = self.local_client.opts['timeout']
 
             kwargs = {
                 'tgt': self.config['tgt'],
@@ -142,12 +90,20 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             if getattr(self.options, 'return_config'):
                 kwargs['ret_config'] = getattr(self.options, 'return_config')
 
+            if getattr(self.options, 'return_kwargs'):
+                kwargs['ret_kwargs'] = yamlify_arg(
+                        getattr(self.options, 'return_kwargs'))
+
+            if getattr(self.options, 'module_executors'):
+                kwargs['module_executors'] = yamlify_arg(getattr(self.options, 'module_executors'))
+
             if getattr(self.options, 'metadata'):
-                kwargs['metadata'] = getattr(self.options, 'metadata')
+                kwargs['metadata'] = yamlify_arg(
+                        getattr(self.options, 'metadata'))
 
             # If using eauth and a token hasn't already been loaded into
             # kwargs, prompt the user to enter auth credentials
-            if 'token' not in kwargs and self.options.eauth:
+            if 'token' not in kwargs and 'key' not in kwargs and self.options.eauth:
                 resolver = salt.auth.Resolver(self.config)
                 res = resolver.cli(self.options.eauth)
                 if self.options.mktoken and res:
@@ -164,20 +120,20 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 kwargs['eauth'] = self.options.eauth
 
             if self.config['async']:
-                jid = local.cmd_async(**kwargs)
+                jid = self.local_client.cmd_async(**kwargs)
                 print_cli('Executed command with job ID: {0}'.format(jid))
                 return
             retcodes = []
             try:
                 # local will be None when there was an error
                 errors = []
-                if local:
+                if self.local_client:
                     if self.options.subset:
-                        cmd_func = local.cmd_subset
+                        cmd_func = self.local_client.cmd_subset
                         kwargs['sub'] = self.options.subset
                         kwargs['cli'] = True
                     else:
-                        cmd_func = local.cmd_cli
+                        cmd_func = self.local_client.cmd_cli
 
                     if self.options.progress:
                         kwargs['progress'] = True
@@ -196,7 +152,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     elif self.config['fun'] == 'sys.doc':
                         ret = {}
                         out = ''
-                        for full_ret in local.cmd_cli(**kwargs):
+                        for full_ret in self.local_client.cmd_cli(**kwargs):
                             ret_, out, retcode = self._format_ret(full_ret)
                             ret.update(ret_)
                         self._output_ret(ret, out)
@@ -232,6 +188,72 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)
+                sys.exit(11)
+
+    def _run_batch(self):
+        import salt.cli.batch
+        eauth = {}
+        if 'token' in self.config:
+            eauth['token'] = self.config['token']
+
+        # If using eauth and a token hasn't already been loaded into
+        # kwargs, prompt the user to enter auth credentials
+        if 'token' not in eauth and self.options.eauth:
+            resolver = salt.auth.Resolver(self.config)
+            res = resolver.cli(self.options.eauth)
+            if self.options.mktoken and res:
+                tok = resolver.token_cli(
+                        self.options.eauth,
+                        res
+                        )
+                if tok:
+                    eauth['token'] = tok.get('token', '')
+            if not res:
+                sys.stderr.write('ERROR: Authentication failed\n')
+                sys.exit(2)
+            eauth.update(res)
+            eauth['eauth'] = self.options.eauth
+
+        if self.options.static:
+
+            if not self.options.batch:
+                self.config['batch'] = '100%'
+
+            try:
+                batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
+            except salt.exceptions.SaltClientError as exc:
+                sys.exit(2)
+
+            ret = {}
+
+            for res in batch.run():
+                ret.update(res)
+
+            self._output_ret(ret, '')
+
+        else:
+            try:
+                batch = salt.cli.batch.Batch(self.config, eauth=eauth, parser=self.options)
+            except salt.exceptions.SaltClientError as exc:
+                # We will print errors to the console further down the stack
+                sys.exit(1)
+            # Printing the output is already taken care of in run() itself
+            retcode = 0
+            for res in batch.run():
+                for ret in six.itervalues(res):
+                    job_retcode = salt.utils.job.get_retcode(ret)
+                    if job_retcode > retcode:
+                        # Exit with the highest retcode we find
+                        retcode = job_retcode
+                    if self.options.failhard:
+                        if retcode != 0:
+                            sys.stderr.write(
+                                '{0}\nERROR: Minions returned with non-zero exit code.\n'.format(
+                                    res
+                                )
+                            )
+                            sys.exit(retcode)
+            sys.exit(retcode)
 
     def _print_errors_summary(self, errors):
         if errors:
@@ -239,8 +261,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             print_cli('---------------------------')
             print_cli('Errors')
             print_cli('---------------------------')
-            for minion in errors:
-                print_cli(self._format_error(minion))
+            for error in errors:
+                print_cli(self._format_error(error))
 
     def _print_returns_summary(self, ret):
         '''
@@ -251,10 +273,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         not_return_minions = []
         not_response_minions = []
         not_connected_minions = []
+        failed_minions = []
         for each_minion in ret:
-            minion_ret = ret[each_minion]
-            if isinstance(minion_ret, dict) and 'ret' in minion_ret:
-                minion_ret = ret[each_minion].get('ret')
+            minion_ret = ret[each_minion].get('ret')
             if (
                     isinstance(minion_ret, string_types)
                     and minion_ret.startswith("Minion did not return")
@@ -267,6 +288,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 not_return_minions.append(each_minion)
             else:
                 return_counter += 1
+                if salt.utils.job.get_retcode(ret[each_minion]):
+                    failed_minions.append(each_minion)
         print_cli('\n')
         print_cli('-------------------------------------------')
         print_cli('Summary')
@@ -274,11 +297,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         print_cli('# of minions targeted: {0}'.format(return_counter + not_return_counter))
         print_cli('# of minions returned: {0}'.format(return_counter))
         print_cli('# of minions that did not return: {0}'.format(not_return_counter))
+        print_cli('# of minions with errors: {0}'.format(len(failed_minions)))
         if self.options.verbose:
             if not_connected_minions:
                 print_cli('Minions not connected: {0}'.format(" ".join(not_connected_minions)))
             if not_response_minions:
                 print_cli('Minions not responding: {0}'.format(" ".join(not_response_minions)))
+            if failed_minions:
+                print_cli('Minions with failures: {0}'.format(" ".join(failed_minions)))
         print_cli('-------------------------------------------')
 
     def _progress_end(self, out):
@@ -346,13 +372,18 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         if isinstance(ret, str):
             self.exit(2, '{0}\n'.format(ret))
         for host in ret:
-            if ret[host] == 'Minion did not return. [Not connected]':
+            if isinstance(ret[host], string_types) \
+                    and (ret[host].startswith("Minion did not return")
+                         or ret[host] == 'VALUE TRIMMED'):
                 continue
             for fun in ret[host]:
-                if fun not in docs:
-                    if ret[host][fun]:
-                        docs[fun] = ret[host][fun]
-        for fun in sorted(docs):
-            salt.output.display_output(fun + ':', 'nested', self.config)
-            print_cli(docs[fun])
-            print_cli('')
+                if fun not in docs and ret[host][fun]:
+                    docs[fun] = ret[host][fun]
+        if self.options.output:
+            for fun in sorted(docs):
+                salt.output.display_output({fun: docs[fun]}, 'nested', self.config)
+        else:
+            for fun in sorted(docs):
+                print_cli('{0}:'.format(fun))
+                print_cli(docs[fun])
+                print_cli('')

@@ -76,7 +76,7 @@ Syndic with Multimaster lets you connect a syndic to multiple masters to provide
 an additional layer of redundancy in a syndic configuration.
 
 Higher level masters should first be configured in a multimaster configuration.
-See :doc:`Multimaster Tutorial </topics/tutorials/multimaster>`.
+See :ref:`Multimaster Tutorial <tutorial-multi-master>`.
 
 On the syndic, the :conf_master:`syndic_master` option is populated with
 a list of the higher level masters.
@@ -167,6 +167,16 @@ daemon until the data reaches the Master or Syndic node that issued the command.
 
 Syndic wait
 ===========
+
+``syndic_wait`` is a master configuration file setting that specifies the number of
+seconds the Salt client should wait for additional syndics to check in with their
+lists of expected minions before giving up. This value defaults to ``5`` seconds.
+
+The ``syndic_wait`` setting is necessary because the higher-level master does not
+have a way of knowing which minions are below the syndics. The higher-level master
+has its own list of expected minions and the masters below them have their own lists
+as well, so the Salt client does not how long to wait for all returns. The
+``syndic_wait`` option allows time for all minions to return to the Salt client.
 
 .. note::
 

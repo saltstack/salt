@@ -5,7 +5,7 @@ Send a message to PushOver
 
 This state is useful for sending messages to PushOver during state runs.
 
-.. versionadded:: Lithium
+.. versionadded:: 2015.5.0
 
 .. code-block:: yaml
 

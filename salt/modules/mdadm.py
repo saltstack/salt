@@ -31,9 +31,9 @@ def __virtual__():
     mdadm provides raid functions for Linux
     '''
     if __grains__['kernel'] != 'Linux':
-        return False
+        return (False, 'The mdadm execution module cannot be loaded: only available on Linux.')
     if not salt.utils.which('mdadm'):
-        return False
+        return (False, 'The mdadm execution module cannot be loaded: the mdadm binary is not in the path.')
     return __virtualname__
 
 

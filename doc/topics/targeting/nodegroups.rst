@@ -5,7 +5,7 @@ Node groups
 ===========
 
 Nodegroups are declared using a compound target specification. The compound
-target documentation can be found :doc:`here <compound>`.
+target documentation can be found :ref:`here <targeting-compound>`.
 
 The :conf_master:`nodegroups` master config file parameter is used to define
 nodegroups. Here's an example nodegroup configuration within
@@ -25,8 +25,8 @@ nodegroups. Here's an example nodegroup configuration within
 .. note::
 
     The ``L`` within group1 is matching a list of minions, while the ``G`` in
-    group2 is matching specific grains. See the :doc:`compound matchers
-    <compound>` documentation for more details.
+    group2 is matching specific grains. See the :ref:`compound matchers
+    <targeting-compound>` documentation for more details.
 
 .. versionadded:: 2015.8.0
 
@@ -52,7 +52,7 @@ To match a nodegroup on the CLI, use the ``-N`` command-line option:
 
 .. note::
 
-    The ``N@`` classifier cannot be used in compound mathes within the CLI or
+    The ``N@`` classifier cannot be used in compound matches within the CLI or
     :term:`top file`, it is only recognized in the :conf_master:`nodegroups`
     master config file parameter.
 

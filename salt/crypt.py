@@ -8,17 +8,21 @@ authenticating peers
 from __future__ import absolute_import, print_function
 import os
 import sys
+import copy
 import time
 import hmac
+import base64
 import hashlib
 import logging
+import stat
 import traceback
 import binascii
 import weakref
 import getpass
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 # Import third party libs
+import salt.ext.six as six
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 try:
     from Crypto.Cipher import AES, PKCS1_OAEP
     from Crypto.Hash import SHA
@@ -60,8 +64,11 @@ def dropfile(cachedir, user=None):
             log.info('AES key rotation already requested')
             return
 
+        if os.path.isfile(dfn) and not os.access(dfn, os.W_OK):
+            os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
         with salt.utils.fopen(dfn, 'wb+') as fp_:
             fp_.write('')
+        os.chmod(dfn, stat.S_IRUSR)
         if user:
             try:
                 import pwd
@@ -384,6 +391,19 @@ class AsyncAuth(object):
             self._authenticate_future.set_result(True)
         else:
             self.authenticate()
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls, copy.deepcopy(self.opts, memo), io_loop=None)
+        memo[id(self)] = result
+        for key in self.__dict__:
+            if key in ('io_loop',):
+                # The io_loop has a thread Lock which will fail to be deep
+                # copied. Skip it because it will just be recreated on the
+                # new copy.
+                continue
+            setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
+        return result
 
     @property
     def creds(self):
@@ -842,7 +862,8 @@ class AsyncAuth(object):
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         m_pub_exists = os.path.isfile(m_pub_fn)
         if m_pub_exists and master_pub and not self.opts['open_mode']:
-            local_master_pub = salt.utils.fopen(m_pub_fn).read()
+            with salt.utils.fopen(m_pub_fn) as fp_:
+                local_master_pub = fp_.read()
 
             if payload['pub_key'].replace('\n', '').replace('\r', '') != \
                     local_master_pub.replace('\n', '').replace('\r', ''):
@@ -892,7 +913,8 @@ class AsyncAuth(object):
                 if not m_pub_exists:
                     # the minion has not received any masters pubkey yet, write
                     # the newly received pubkey to minion_master.pub
-                    salt.utils.fopen(m_pub_fn, 'wb+').write(payload['pub_key'])
+                    with salt.utils.fopen(m_pub_fn, 'wb+') as fp_:
+                        fp_.write(payload['pub_key'])
                 return self.extract_aes(payload, master_pub=False)
 
     def _finger_fail(self, finger, master_key):
@@ -1140,7 +1162,10 @@ class Crypticle(object):
     @classmethod
     def generate_key_string(cls, key_size=192):
         key = os.urandom(key_size // 8 + cls.SIG_SIZE)
-        return key.encode('base64').replace('\n', '')
+        b64key = base64.b64encode(key)
+        if six.PY3:
+            b64key = b64key.decode('utf-8')
+        return b64key.replace('\n', '')
 
     @classmethod
     def extract_keys(cls, key_string, key_size):

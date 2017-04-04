@@ -32,7 +32,7 @@ class ClientACLTestCase(TestCase):
         '''
         test user_is_blacklisted
         '''
-        client_acl = acl.ClientACL(self.blacklist)
+        client_acl = acl.PublisherACL(self.blacklist)
 
         self.assertTrue(client_acl.user_is_blacklisted('joker'))
         self.assertTrue(client_acl.user_is_blacklisted('penguin'))
@@ -44,7 +44,7 @@ class ClientACLTestCase(TestCase):
         '''
         test cmd_is_blacklisted
         '''
-        client_acl = acl.ClientACL(self.blacklist)
+        client_acl = acl.PublisherACL(self.blacklist)
 
         self.assertTrue(client_acl.cmd_is_blacklisted('cmd.run'))
         self.assertTrue(client_acl.cmd_is_blacklisted('test.fib'))

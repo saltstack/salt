@@ -32,8 +32,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return __virtualname__
-    else:
-        return False
+    return (False, "Module win_groupadd: module only works on Windows systems")
 
 
 def add(name, gid=None, system=False):

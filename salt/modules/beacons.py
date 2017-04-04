@@ -9,12 +9,16 @@ Module for managing the Salt beacons on a minion
 # Import Python libs
 from __future__ import absolute_import
 import difflib
+import logging
 import os
 import yaml
 
+# Import Salt libs
 import salt.utils
+import salt.utils.event
+from salt.ext.six.moves import map
 
-import logging
+# Get logging started
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
@@ -37,6 +41,7 @@ def list_(return_yaml=True):
         salt '*' beacons.list
 
     '''
+    beacons = None
 
     try:
         eventer = salt.utils.event.get_event('minion', opts=__opts__)
@@ -144,7 +149,7 @@ def modify(name, beacon_data, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' beacon.modify ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
+        salt '*' beacons.modify ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
     '''
 
     ret = {'comment': '',
@@ -374,6 +379,16 @@ def disable(**kwargs):
     return ret
 
 
+def _get_beacon_config_dict(beacon_config):
+    beacon_config_dict = {}
+    if isinstance(beacon_config, list):
+        list(map(beacon_config_dict.update, beacon_config))
+    else:
+        beacon_config_dict = beacon_config
+
+    return beacon_config_dict
+
+
 def enable_beacon(name, **kwargs):
     '''
     Enable beacon on the minion
@@ -412,7 +427,9 @@ def enable_beacon(name, **kwargs):
                 event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_enabled_complete', wait=30)
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
-                    if 'enabled' in beacons[name] and beacons[name]['enabled']:
+                    beacon_config_dict = _get_beacon_config_dict(beacons[name])
+
+                    if 'enabled' in beacon_config_dict and beacon_config_dict['enabled']:
                         ret['result'] = True
                         ret['comment'] = 'Enabled beacon {0} on minion.'.format(name)
                     else:
@@ -463,9 +480,11 @@ def disable_beacon(name, **kwargs):
                 event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_disabled_complete', wait=30)
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
-                    if 'enabled' in beacons[name] and not beacons[name]['enabled']:
+                    beacon_config_dict = _get_beacon_config_dict(beacons[name])
+
+                    if 'enabled' in beacon_config_dict and not beacon_config_dict['enabled']:
                         ret['result'] = True
-                        ret['comment'] = 'Disabled beacon on minion.'
+                        ret['comment'] = 'Disabled beacon {0} on minion.'.format(name)
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to disable beacon on minion.'

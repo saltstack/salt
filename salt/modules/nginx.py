@@ -28,7 +28,7 @@ def __virtual__():
     '''
     if __detect_os():
         return True
-    return False
+    return (False, 'The nginx execution module cannot be loaded: nginx is not installed.')
 
 
 def version():

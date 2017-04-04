@@ -115,16 +115,25 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
         value.strip('0123456789abcdefABCDEF:') is not '':
         raise salt.exceptions.SaltInvocationError('value must be precomputed hash')
 
-    lhash = M2Crypto.m2.x509v3_lhash()                      # pylint: disable=no-member
-    ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)          # pylint: disable=no-member
-    #ctx not zeroed
-    _fix_ctx(ctx, issuer)
-
-    x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value)  # pylint: disable=no-member
+    try:
+        ctx = M2Crypto.m2.x509v3_set_nconf()
+        _fix_ctx(ctx, issuer)
+        if ctx is None:
+            raise MemoryError(
+                'Not enough memory when creating a new X509 extension')
+        x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(None, ctx, name, value)
+        lhash = None
+    except AttributeError:
+        lhash = M2Crypto.m2.x509v3_lhash()                      # pylint: disable=no-member
+        ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)          # pylint: disable=no-member
+        #ctx not zeroed
+        _fix_ctx(ctx, issuer)
+        x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value)  # pylint: disable=no-member
     #ctx,lhash freed
 
     if x509_ext_ptr is None:
-        raise Exception
+        raise M2Crypto.X509.X509Error(
+            "Cannot create X509_Extension with name '{0}' and value '{1}'".format(name, value))
     x509_ext = M2Crypto.X509.X509_Extension(x509_ext_ptr, _pyfree)
     x509_ext.set_critical(critical)
     return x509_ext
@@ -139,7 +148,7 @@ def _parse_openssl_req(csr_filename):
     '''
     cmd = ('openssl req -text -noout -in {0}'.format(csr_filename))
 
-    output = __salt__['cmd.run_stderr'](cmd)
+    output = __salt__['cmd.run_stdout'](cmd)
 
     output = re.sub(r': rsaEncryption', ':', output)
     output = re.sub(r'[0-9a-f]{2}:', '', output)
@@ -159,14 +168,15 @@ def _get_csr_extensions(csr):
     csrtempfile.flush()
     csryaml = _parse_openssl_req(csrtempfile.name)
     csrtempfile.close()
-    try:
+    if csryaml and 'Requested Extensions' in csryaml['Certificate Request']['Data']:
         csrexts = csryaml['Certificate Request']['Data']['Requested Extensions']
-    except TypeError:
-        csrexts = {}
 
-    for short_name, long_name in six.iteritems(EXT_NAME_MAPPINGS):
-        if long_name in csrexts:
-            ret[short_name] = csrexts[long_name]
+        if not csrexts:
+            return ret
+
+        for short_name, long_name in six.iteritems(EXT_NAME_MAPPINGS):
+            if long_name in csrexts:
+                ret[short_name] = csrexts[long_name]
 
     return ret
 
@@ -179,7 +189,7 @@ def _parse_openssl_crl(crl_filename):
     '''
     cmd = ('openssl crl -text -noout -in {0}'.format(crl_filename))
 
-    output = __salt__['cmd.run_stderr'](cmd)
+    output = __salt__['cmd.run_stdout'](cmd)
 
     crl = {}
     for line in output.split('\n'):
@@ -627,9 +637,11 @@ def write_pem(text, path, pem_type=None):
 
         salt '*' x509.write_pem "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." path=/etc/pki/mycert.crt
     '''
+    old_umask = os.umask(0o77)
     text = get_pem_entry(text, pem_type=pem_type)
     with salt.utils.fopen(path, 'w') as fp_:
         fp_.write(text)
+    os.umask(old_umask)
     return 'PEM written to {0}'.format(path)
 
 
@@ -670,7 +682,7 @@ def create_private_key(path=None, text=False, bits=2048):
 
 def create_crl(path=None, text=False, signing_private_key=None,
         signing_cert=None, revoked=None, include_expired=False,
-        days_valid=100):
+        days_valid=100, digest=''):
     '''
     Create a CRL
 
@@ -713,6 +725,9 @@ def create_crl(path=None, text=False, signing_private_key=None,
 
     days_valid:
         The number of days that the CRL should be valid. This sets the Next Update field in the CRL.
+    digest:
+        The digest to use for signing the CRL.
+        This has no effect on versions of pyOpenSSL less than 0.14
 
     .. note
 
@@ -730,7 +745,6 @@ def create_crl(path=None, text=False, signing_private_key=None,
     '''
     # pyOpenSSL is required for dealing with CSLs. Importing inside these functions because
     # Client operations like creating CRLs shouldn't require pyOpenSSL
-    # Note due to current limitations in pyOpenSSL it is impossible to specify a digest
     # For signing the CRL. This will hopefully be fixed soon: https://github.com/pyca/pyopenssl/pull/161
     import OpenSSL
     crl = OpenSSL.crypto.CRL()
@@ -774,7 +788,11 @@ def create_crl(path=None, text=False, signing_private_key=None,
     key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
             get_pem_entry(signing_private_key))
 
-    crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid)
+    try:
+        crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid, digest=bytes(digest))
+    except TypeError:
+        log.warning('Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used.')
+        crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid)
 
     if text:
         return crltext
@@ -893,7 +911,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
                 - x509.sign_remote_certificate
 
     subject properties:
-        Any of the values below can be incldued to set subject properties
+        Any of the values below can be included to set subject properties
         Any other subject properties supported by OpenSSL should also work.
 
         C:
@@ -956,7 +974,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
     extensions:
         The following arguments set X509v3 Extension values. If the value starts with ``critical ``,
-        the extension will be marked as critical
+        the extension will be marked as critical.
 
         Some special extensions are ``subjectKeyIdentifier`` and ``authorityKeyIdentifier``.
 
@@ -1090,7 +1108,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         # Remove system entries in kwargs
         # Including listen_in and preqreuired because they are not included in STATE_INTERNAL_KEYWORDS
         # for salt 2014.7.2
-        for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['listen_in', 'preqrequired']:
+        for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
 
         cert_txt = __salt__['publish.publish'](tgt=ca_server,
@@ -1119,7 +1137,6 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
             kwargs[prop] = default
 
     cert = M2Crypto.X509.X509()
-    subject = cert.get_subject()
 
     # X509 Version 3 has a value of 2 in the field.
     # Version 2 has a value of 1.
@@ -1147,10 +1164,12 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     if 'csr' in kwargs:
         kwargs['public_key'] = kwargs['csr']
         csr = _get_request_obj(kwargs['csr'])
-        subject = csr.get_subject()
+        cert.set_subject(csr.get_subject())
         csrexts = read_csr(kwargs['csr'])['X509v3 Extensions']
 
     cert.set_pubkey(get_public_key(kwargs['public_key'], asObj=True))
+
+    subject = cert.get_subject()
 
     for entry, num in six.iteritems(subject.nid):                  # pylint: disable=unused-variable
         if entry in kwargs:
@@ -1224,6 +1243,9 @@ def create_csr(path=None, text=False, **kwargs):
     text:
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
+    algorithm:
+        The hashing algorithm to be used for signing this request. Defaults to sha256.
+
     kwargs:
         The subject, extension and version arguments from
         :mod:`x509.create_certificate <salt.modules.x509.create_certificate>` can be used.
@@ -1242,10 +1264,23 @@ def create_csr(path=None, text=False, **kwargs):
 
     csr = M2Crypto.X509.Request()
     subject = csr.get_subject()
+
+    for prop, default in six.iteritems(CERT_DEFAULTS):
+        if prop not in kwargs:
+            kwargs[prop] = default
+
     csr.set_version(kwargs['version'] - 1)
 
+    if 'private_key' not in kwargs and 'public_key' in kwargs:
+        kwargs['private_key'] = kwargs['public_key']
+        log.warning("OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key")
+
+    if 'private_key' not in kwargs not in kwargs:
+        raise salt.exceptions.SaltInvocationError('private_key is required')
+
     if 'public_key' not in kwargs:
-        raise salt.exceptions.SaltInvocationError('public_key is required')
+        kwargs['public_key'] = kwargs['private_key']
+
     csr.set_pubkey(get_public_key(kwargs['public_key'], asObj=True))
 
     for entry, num in six.iteritems(subject.nid):                  # pylint: disable=unused-variable
@@ -1254,7 +1289,7 @@ def create_csr(path=None, text=False, **kwargs):
 
     extstack = M2Crypto.X509.X509_Extension_Stack()
     for extname, extlongname in six.iteritems(EXT_NAME_MAPPINGS):
-        if extname not in kwargs or extlongname not in kwargs:
+        if extname not in kwargs and extlongname not in kwargs:
             continue
 
         extval = kwargs[extname] or kwargs[extlongname]
@@ -1273,6 +1308,8 @@ def create_csr(path=None, text=False, **kwargs):
         extstack.push(ext)
 
     csr.add_extensions(extstack)
+
+    csr.sign(_get_private_key_obj(kwargs['private_key']), kwargs['algorithm'])
 
     if path:
         return write_pem(text=csr.as_pem(), path=path,

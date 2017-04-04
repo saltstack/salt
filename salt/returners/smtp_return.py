@@ -58,6 +58,14 @@ To use the alternative configuration, append '--return_config alternative' to th
 
     salt '*' test.ping --return smtp --return_config alternative
 
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return smtp --return_kwargs '{"to": "user@domain.com"}'
+
 An easy way to test the SMTP returner is to use the development SMTP server
 built into Python. The command below will start a single-threaded SMTP server
 that prints any email it receives to the console.
@@ -94,7 +102,9 @@ __virtualname__ = 'smtp'
 
 
 def __virtual__():
-    return __virtualname__
+    if HAS_GNUPG:
+        return __virtualname__
+    return False, 'Could not import smtp returner; gnupg is not installed.'
 
 
 def _get_options(ret=None):

@@ -4,7 +4,7 @@
 Manage the Windows registry
 ===========================
 
-The read_key and set_key functions will be updated in Boron to reflect proper
+The read_key and set_key functions will be updated in Carbon to reflect proper
 registry usage. The registry has three main components. Hives, Keys, and Values.
 
 -----
@@ -35,6 +35,7 @@ Values/Entries are name/data pairs. There can be many values in a key. The
 # Import python libs
 from __future__ import absolute_import
 import logging
+from salt.ext.six.moves import range
 
 # Import third party libs
 try:
@@ -105,7 +106,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_WINDOWS_MODULES:
         return __virtualname__
-    return False
+    return (False, 'reg execution module failed to load: either the system is not Windows or the _winreg python library not available.')
 
 
 def _key_exists(hive, key, use_32bit_registry=False):
@@ -142,11 +143,58 @@ def broadcast_change():
     return not bool(res)
 
 
+def list_keys(hive, key=None, use_32bit_registry=False):
+    '''
+    Enumerates the subkeys in a registry key or hive.
+
+    :param str hive: The name of the hive. Can be one of the following
+
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
+
+    :param str key: The key (looks like a path) to the value name. If a key is
+        not passed, the keys under the hive will be returned.
+
+    :param bool use_32bit_registry: Accesses the 32bit portion of the registry
+        on 64 bit installations. On 32bit machines this is ignored.
+
+    :return: A list of keys/subkeys under the hive or key.
+    :rtype: list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' reg.list_keys HKLM 'SOFTWARE'
+    '''
+    registry = Registry()
+    hkey = registry.hkeys[hive]
+    access_mask = registry.registry_32[use_32bit_registry]
+
+    subkeys = []
+    try:
+        handle = _winreg.OpenKey(hkey, key, 0, access_mask)
+
+        for i in range(_winreg.QueryInfoKey(handle)[0]):
+            subkey = _winreg.EnumKey(handle, i)
+            subkeys.append(subkey)
+
+        handle.Close()
+
+    except WindowsError as exc:  # pylint: disable=E0602
+        log.debug(exc)
+        log.debug('Cannot find key: {0}\\{1}'.format(hive, key))
+        return False, 'Cannot find key: {0}\\{1}'.format(hive, key)
+
+    return subkeys
+
+
 def read_key(hkey, path, key=None, use_32bit_registry=False):
     '''
     .. important::
         The name of this function is misleading and will be changed to reflect
-        proper usage in the Boron release of Salt. The path option will be removed
+        proper usage in the Carbon release of Salt. The path option will be removed
         and the key will be the actual key. See the following issue:
 
         https://github.com/saltstack/salt/issues/25618
@@ -156,7 +204,7 @@ def read_key(hkey, path, key=None, use_32bit_registry=False):
         name. If key is not passed, this function will return the default value for
         the key.
 
-        In the Boron release this function will be removed in favor of read_value.
+        In the Carbon release this function will be removed in favor of read_value.
 
     Read registry key value
 
@@ -176,10 +224,10 @@ def read_key(hkey, path, key=None, use_32bit_registry=False):
            'vdata': None,
            'success': True}
 
-    if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.read_value to read a registry '
+    if key:  # This if statement will be removed in Carbon
+        salt.utils.warn_until('Carbon', 'Use reg.read_value to read a registry '
                                        'value. This functionality will be '
-                                       'removed in Salt Boron')
+                                       'removed in Salt Carbon')
         return read_value(hive=hkey,
                           key=path,
                           vname=key,
@@ -196,28 +244,28 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
 
     :param str hive: The name of the hive. Can be one of the following
 
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
 
     :param str key: The key (looks like a path) to the value name.
 
     :param str vname: The value name. These are the individual name/data pairs
-    under the key. If not passed, the key (Default) value will be returned
+      under the key. If not passed, the key (Default) value will be returned
 
     :param bool use_32bit_registry: Accesses the 32bit portion of the registry
-    on 64 bit installations. On 32bit machines this is ignored.
+      on 64 bit installations. On 32bit machines this is ignored.
 
     :return: A dictionary containing the passed settings as well as the
-    value_data if successful. If unsuccessful, sets success to False
+      value_data if successful. If unsuccessful, sets success to False
+
+    :rtype: dict
 
     If vname is not passed:
 
     - Returns the first unnamed value (Default) as a string.
     - Returns none if first unnamed value is empty.
     - Returns False if key not found.
-
-    :rtype: dict
 
     CLI Example:
 
@@ -273,7 +321,7 @@ def set_key(hkey,
     '''
     .. important ::
         The name of this function is misleading and will be changed to reflect
-        proper usage in the Boron release of Salt. The path option will be removed
+        proper usage in the Carbon release of Salt. The path option will be removed
         and the key will be the actual key. See the following issue:
 
         https://github.com/saltstack/salt/issues/25618
@@ -283,7 +331,7 @@ def set_key(hkey,
         name. If key is not passed, this function will return the default value for
         the key.
 
-        In the Boron release this function will be removed in favor of set_value.
+        In the Carbon release this function will be removed in favor of set_value.
 
     Set a registry key
 
@@ -296,10 +344,10 @@ def set_key(hkey,
         salt '*' reg.set_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97' REG_DWORD
     '''
 
-    if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.set_value to set a registry '
+    if key:  # This if statement will be removed in Carbon
+        salt.utils.warn_until('Carbon', 'Use reg.set_value to set a registry '
                                        'value. This functionality will be '
-                                       'removed in Salt Boron')
+                                       'removed in Salt Carbon')
         return set_value(hive=hkey,
                          key=path,
                          vname=key,
@@ -326,35 +374,36 @@ def set_value(hive,
 
     :param str hive: The name of the hive. Can be one of the following
 
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
 
     :param str key: The key (looks like a path) to the value name.
 
     :param str vname: The value name. These are the individual name/data pairs
-    under the key. If not passed, the key (Default) value will be set.
+      under the key. If not passed, the key (Default) value will be set.
 
     :param str vdata: The value data to be set.
 
     :param str vtype: The value type. Can be one of the following:
 
-    - REG_BINARY
-    - REG_DWORD
-    - REG_EXPAND_SZ
-    - REG_MULTI_SZ
-    - REG_SZ
+        - REG_BINARY
+        - REG_DWORD
+        - REG_EXPAND_SZ
+        - REG_MULTI_SZ
+        - REG_SZ
 
     :param bool reflection: A boolean value indicating that the value should
-    also be set in the Wow6432Node portion of the registry. Only applies to 64
-    bit Windows. This setting is ignored for 32 bit Windows.
+      also be set in the Wow6432Node portion of the registry. Only applies to 64
+      bit Windows. This setting is ignored for 32 bit Windows.
 
     .. deprecated:: 2015.8.2
-       Use `use_32bit_registry` instead. The parameter seems to have no effect
+       Use ``use_32bit_registry`` instead. The parameter seems to have no effect
        since Windows 7 / Windows 2008R2 removed support for reflection. The
-       parameter will be removed in Boron.
+       parameter will be removed in Carbon.
 
     :return: Returns True if successful, False if not
+
     :rtype: bool
 
     CLI Example:
@@ -392,7 +441,7 @@ def create_key(hkey,
     '''
     .. important ::
         The name of this function is misleading and will be changed to reflect
-        proper usage in the Boron release of Salt. The path option will be removed
+        proper usage in the Carbon release of Salt. The path option will be removed
         and the key will be the actual key. See the following issue:
 
         https://github.com/saltstack/salt/issues/25618
@@ -402,7 +451,7 @@ def create_key(hkey,
         If key is not passed, this function will return the default value for the
         key.
 
-        In the Boron release path will be removed and key will be the path. You will
+        In the Carbon release path will be removed and key will be the path. You will
         not pass value.
 
     Create a registry key
@@ -413,10 +462,10 @@ def create_key(hkey,
 
         salt '*' reg.create_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97'
     '''
-    if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.set_value to create a registry '
+    if key:  # This if statement will be removed in Carbon
+        salt.utils.warn_until('Carbon', 'Use reg.set_value to create a registry '
                                        'value. This functionality will be '
-                                       'removed in Salt Boron')
+                                       'removed in Salt Carbon')
         return set_value(hive=hkey,
                          key=path,
                          vname=key,
@@ -435,7 +484,7 @@ def delete_key(hkey,
     '''
     .. important::
         The name of this function is misleading and will be changed to reflect
-        proper usage in the Boron release of Salt. The path option will be removed
+        proper usage in the Carbon release of Salt. The path option will be removed
         and the key will be the actual key. See the following issue:
 
         https://github.com/saltstack/salt/issues/25618
@@ -445,7 +494,7 @@ def delete_key(hkey,
         name. If key is not passed, this function will return the default value for
         the key.
 
-        In the Boron release path will be removed and key will be the path.
+        In the Carbon release path will be removed and key will be the path.
         reflection will also be removed.
 
     Delete a registry key
@@ -457,38 +506,39 @@ def delete_key(hkey,
         salt '*' reg.delete_key HKEY_CURRENT_USER 'SOFTWARE\\Salt'
 
     :param str hkey: (will be changed to hive) The name of the hive. Can be one
-    of the following
+      of the following
 
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
 
     :param str path: (will be changed to key) The key (looks like a path) to
-    remove.
+      remove.
 
-    :param str key: (used incorrectly) Will be removed in Boron
+    :param str key: (used incorrectly) Will be removed in Carbon
 
     :param bool reflection: A boolean value indicating that the value should
-    also be removed from the Wow6432Node portion of the registry. Only applies
-    to 64 bit Windows. This setting is ignored for 32 bit Windows.
+      also be removed from the Wow6432Node portion of the registry. Only applies
+      to 64 bit Windows. This setting is ignored for 32 bit Windows.
 
-    Only applies to delete value. If the key parameter is passed, this function
-    calls delete_value instead. Will be changed in Boron.
+      Only applies to delete value. If the key parameter is passed, this function
+      calls delete_value instead. Will be changed in Carbon.
 
     :param bool force: A boolean value indicating that all subkeys should be
-    removed as well. If this is set to False (default) and there are subkeys,
-    the delete_key function will fail.
+      removed as well. If this is set to False (default) and there are subkeys,
+      the delete_key function will fail.
 
     :return: Returns True if successful, False if not. If force=True, the
-    results of delete_key_recursive are returned.
+      results of delete_key_recursive are returned.
+
     :rtype: bool
     '''
 
-    if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron',
+    if key:  # This if statement will be removed in Carbon
+        salt.utils.warn_until('Carbon',
                               'Variable names will be changed to match Windows '
                               'Registry terminology. These changes will be '
-                              'made in Boron')
+                              'made in Carbon')
         return delete_value(hive=hkey,
                             key=path,
                             vname=key,
@@ -525,14 +575,15 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
 
     :param hive: The name of the hive. Can be one of the following
 
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
 
     :param key: The key to remove (looks like a path)
 
     :return: A dictionary listing the keys that deleted successfully as well as
     those that failed to delete.
+
     :rtype: dict
 
     The following example will remove ``salt`` and all its subkeys from the
@@ -602,25 +653,26 @@ def delete_value(hive, key, vname=None, reflection=True, use_32bit_registry=Fals
 
     :param str hive: The name of the hive. Can be one of the following
 
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
 
     :param str key: The key (looks like a path) to the value name.
 
     :param str vname: The value name. These are the individual name/data pairs
-    under the key. If not passed, the key (Default) value will be deleted.
+      under the key. If not passed, the key (Default) value will be deleted.
 
     :param bool reflection: A boolean value indicating that the value should
-    also be set in the Wow6432Node portion of the registry. Only applies to 64
-    bit Windows. This setting is ignored for 32 bit Windows.
+      also be set in the Wow6432Node portion of the registry. Only applies to 64
+      bit Windows. This setting is ignored for 32 bit Windows.
 
     .. deprecated:: 2015.8.2
-       Use `use_32bit_registry` instead. The parameter seems to have no effect
-       since Windows 7 / Windows 2008R2 removed support for reflection. The
-       parameter will be removed in Boron.
+       Use ``use_32bit_registry`` instead. The parameter seems to have no effect
+       since Windows 7 / Windows 2008R2 removed support for reflection. This
+       parameter will be removed in Carbon.
 
     :return: Returns True if successful, False if not
+
     :rtype: bool
 
     CLI Example:

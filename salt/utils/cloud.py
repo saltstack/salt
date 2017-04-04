@@ -5,6 +5,7 @@ Utility functions for salt.cloud
 
 # Import python libs
 from __future__ import absolute_import
+import errno
 import os
 import sys
 import stat
@@ -195,7 +196,7 @@ def remove_key(pki_dir, id_):
     key = os.path.join(pki_dir, 'minions', id_)
     if os.path.isfile(key):
         os.remove(key)
-        log.debug('Deleted {0!r}'.format(key))
+        log.debug('Deleted \'{0}\''.format(key))
 
 
 def rename_key(pki_dir, id_, new_id):
@@ -213,14 +214,13 @@ def minion_config(opts, vm_):
     Return a minion's configuration for the provided options and VM
     '''
 
-    # Let's get a copy of the salt minion default options
-    minion = copy.deepcopy(salt.config.DEFAULT_MINION_OPTS)
-    # Some default options are Null, let's set a reasonable default
-    minion.update(
-        log_level='info',
-        log_level_logfile='info',
-        hash_type='sha256'
-    )
+    # Don't start with a copy of the default minion opts; they're not always
+    # what we need. Some default options are Null, let's set a reasonable default
+    minion = {
+        'master': 'salt',
+        'log_level': 'info',
+        'hash_type': 'sha256',
+    }
 
     # Now, let's update it to our needs
     minion['id'] = vm_['name']
@@ -309,11 +309,14 @@ def bootstrap(vm_, opts):
         }
 
     key_filename = salt.config.get_cloud_config_value(
-        'key_filename', vm_, opts, search_global=False, default=None
+        'key_filename', vm_, opts, search_global=False,
+        default=salt.config.get_cloud_config_value(
+            'ssh_keyfile', vm_, opts, search_global=False, default=None
+        )
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined ssh_keyfile {0!r} does not exist'.format(
+            'The defined ssh_keyfile \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -354,6 +357,33 @@ def bootstrap(vm_, opts):
 
     if 'file_transport' not in opts:
         opts['file_transport'] = vm_.get('file_transport', 'sftp')
+
+    # If we haven't generated any keys yet, do so now.
+    if 'pub_key' not in vm_ and 'priv_key' not in vm_:
+        log.debug('Generating keys for \'{0[name]}\''.format(vm_))
+
+        vm_['priv_key'], vm_['pub_key'] = gen_keys(
+            salt.config.get_cloud_config_value(
+                'keysize',
+                vm_,
+                opts
+            )
+        )
+
+        key_id = vm_.get('name')
+        if 'append_domain' in vm_:
+            key_id = '.'.join([key_id, vm_['append_domain']])
+
+        accept_key(
+            opts['pki_dir'], vm_['pub_key'], key_id
+        )
+
+    if 'os' not in vm_:
+        vm_['os'] = salt.config.get_cloud_config_value(
+            'script',
+            vm_,
+            opts
+        )
 
     # NOTE: deploy_kwargs is also used to pass inline_script variable content
     #       to run_inline_script function
@@ -652,8 +682,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         return True
     # Let the user know that his gateway is good!
     log.debug(
-        'Gateway {0} on port {1} '
-        'is reachable.'.format(
+        'Gateway {0} on port {1} is reachable.'.format(
             test_ssh_host, test_ssh_port
         )
     )
@@ -677,6 +706,8 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
             '-oChallengeResponseAuthentication=no',
             # Make sure public key authentication is enabled
             '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
@@ -693,7 +724,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         ' '.join(ssh_args), gateway['ssh_gateway_user'], ssh_gateway,
         ssh_gateway_port, pipes.quote(command)
     )
-    log.debug('SSH command: {0!r}'.format(cmd))
+    log.debug('SSH command: \'{0}\''.format(cmd))
 
     kwargs = {'display_ssh_output': False,
               'password': gateway.get('ssh_gateway_password', None)}
@@ -801,7 +832,8 @@ def wait_for_winrm(host, port, username, password, timeout=900):
         trycount += 1
         try:
             s = winrm.Session(host, auth=(username, password), transport='ssl')
-            s.protocol.set_timeout(15)
+            if hasattr(s.protocol, 'set_timeout'):
+                s.protocol.set_timeout(15)
             log.trace('WinRM endpoint url: {0}'.format(s.url))
             r = s.run_cmd('sc query winrm')
             if r.status_code == 0:
@@ -855,7 +887,7 @@ def validate_windows_cred(host,
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     password=None, key_filename=None, maxtries=15,
                     trysleep=1, display_ssh_output=True, gateway=None,
-                    known_hosts_file='/dev/null'):
+                    known_hosts_file='/dev/null', hard_timeout=None):
     '''
     Wait until ssh connection can be accessed via password or ssh key
     '''
@@ -869,7 +901,9 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                       'password_retries': maxtries,
                       'timeout': ssh_timeout,
                       'display_ssh_output': display_ssh_output,
-                      'known_hosts_file': known_hosts_file}
+                      'known_hosts_file': known_hosts_file,
+                      'ssh_timeout': ssh_timeout,
+                      'hard_timeout': hard_timeout}
             if gateway:
                 kwargs['ssh_gateway'] = gateway['ssh_gateway']
                 kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
@@ -878,7 +912,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
             if key_filename:
                 if not os.path.isfile(key_filename):
                     raise SaltCloudConfigError(
-                        'The defined key_filename {0!r} does not exist'.format(
+                        'The defined key_filename \'{0}\' does not exist'.format(
                             key_filename
                         )
                     )
@@ -1174,7 +1208,7 @@ def deploy_script(host,
     deploy_command = os.path.join(tmp_dir, 'deploy.sh')
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined key_filename {0!r} does not exist'.format(
+            'The defined key_filename \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -1187,6 +1221,7 @@ def deploy_script(host,
     log.debug('Deploying {0} at {1}'.format(host, starttime))
 
     known_hosts_file = kwargs.get('known_hosts_file', '/dev/null')
+    hard_timeout = opts.get('hard_timeout', None)
 
     if wait_for_port(host=host, port=port, gateway=gateway):
         log.debug('SSH port {0} on {1} is available'.format(port, host))
@@ -1195,7 +1230,7 @@ def deploy_script(host,
                            ssh_timeout=ssh_timeout,
                            display_ssh_output=display_ssh_output,
                            gateway=gateway, known_hosts_file=known_hosts_file,
-                           maxtries=maxtries):
+                           maxtries=maxtries, hard_timeout=hard_timeout):
 
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
@@ -1223,8 +1258,7 @@ def deploy_script(host,
 
             if root_cmd('test -e \'{0}\''.format(tmp_dir), tty, sudo,
                         allow_failure=True, **ssh_kwargs):
-                ret = root_cmd(('sh -c "( mkdir -p \'{0}\' &&'
-                                ' chmod 700 \'{0}\' )"').format(tmp_dir),
+                ret = root_cmd(('sh -c "( mkdir -p -m 700 \'{0}\' )"').format(tmp_dir),
                                tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
@@ -1236,7 +1270,7 @@ def deploy_script(host,
                 if len(comps) > 0:
                     if len(comps) > 1 or comps[0] != 'tmp':
                         ret = root_cmd(
-                            'chown {0} \'{1}\''.format(username, tmp_dir),
+                            'chown {0} "{1}"'.format(username, tmp_dir),
                             tty, sudo, **ssh_kwargs
                         )
                         if ret:
@@ -1293,7 +1327,7 @@ def deploy_script(host,
                                tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
-                        'Cant set perms on {0}/minion.pem'.format(tmp_dir))
+                        'Can\'t set perms on {0}/minion.pem'.format(tmp_dir))
             if minion_pub:
                 ssh_file(opts, '{0}/minion.pub'.format(tmp_dir), minion_pub, ssh_kwargs)
 
@@ -1371,7 +1405,7 @@ def deploy_script(host,
                 )
                 if ret:
                     raise SaltCloudSystemExit(
-                        'Cant set perms on {0}'.format(
+                        'Can\'t set perms on {0}'.format(
                             preseed_minion_keys_tempdir))
                 if ssh_kwargs['username'] != 'root':
                     root_cmd(
@@ -1397,7 +1431,7 @@ def deploy_script(host,
                     )
                     if ret:
                         raise SaltCloudSystemExit(
-                            'Cant set owneship for {0}'.format(
+                            'Can\'t set ownership for {0}'.format(
                                 preseed_minion_keys_tempdir))
 
             # The actual deploy script
@@ -1411,7 +1445,7 @@ def deploy_script(host,
                     tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
-                        'Cant set perms on {0}/deploy.sh'.format(tmp_dir))
+                        'Can\'t set perms on {0}/deploy.sh'.format(tmp_dir))
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             queue = None
@@ -1482,11 +1516,11 @@ def deploy_script(host,
                     )
                 if root_cmd(deploy_command, tty, sudo, **ssh_kwargs) != 0:
                     raise SaltCloudSystemExit(
-                        'Executing the command {0!r} failed'.format(
+                        'Executing the command \'{0}\' failed'.format(
                             deploy_command
                         )
                     )
-                log.debug('Executed command {0!r}'.format(deploy_command))
+                log.debug('Executed command \'{0}\''.format(deploy_command))
 
                 # Remove the deploy script
                 if not keep_tmp:
@@ -1669,15 +1703,14 @@ def run_inline_script(host,
             # TODO: write some tests ???
             # TODO: check edge cases (e.g. ssh gateways, salt deploy disabled, etc.)
             if root_cmd('test -e \\"{0}\\"'.format(tmp_dir), tty, sudo,
-                        allow_failure=True, **ssh_kwargs):
-                if inline_script:
-                    log.debug('Found inline script to execute.')
-                    for cmd_line in inline_script:
-                        log.info("Executing inline command: " + str(cmd_line))
-                        ret = root_cmd('sh -c "( {0} )"'.format(cmd_line),
-                                       tty, sudo, allow_failure=True, **ssh_kwargs)
-                        if ret:
-                            log.info("[" + str(cmd_line) + "] Output: " + str(ret))
+                        allow_failure=True, **ssh_kwargs) and inline_script:
+                log.debug('Found inline script to execute.')
+                for cmd_line in inline_script:
+                    log.info("Executing inline command: " + str(cmd_line))
+                    ret = root_cmd('sh -c "( {0} )"'.format(cmd_line),
+                                   tty, sudo, allow_failure=True, **ssh_kwargs)
+                    if ret:
+                        log.info("[" + str(cmd_line) + "] Output: " + str(ret))
 
     # TODO: ensure we send the correct return value
     return True
@@ -1711,7 +1744,7 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
 
 def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
     if error_msg is None:
-        error_msg = 'A wrong password has been issued while establishing ssh session'
+        error_msg = 'A wrong password has been issued while establishing ssh session.'
     password_retries = kwargs.get('password_retries', 3)
     try:
         stdout, stderr = None, None
@@ -1748,13 +1781,12 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
                     raise SaltCloudPasswordError(error_msg)
             # 0.0125 is really too fast on some systems
             time.sleep(0.5)
-        if proc.exitstatus != 0:
-            if allow_failure is False:
-                raise SaltCloudSystemExit(
-                    'Command {0!r} failed. Exit code: {1}'.format(
-                        cmd, proc.exitstatus
-                    )
+        if proc.exitstatus != 0 and allow_failure is False:
+            raise SaltCloudSystemExit(
+                'Command \'{0}\' failed. Exit code: {1}'.format(
+                    cmd, proc.exitstatus
                 )
+            )
         return proc.exitstatus
     except vt.TerminalException as err:
         trace = traceback.format_exc()
@@ -1769,95 +1801,117 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
     '''
     Use scp or sftp to copy a file to a server
     '''
-    if contents is not None:
-        tmpfh, tmppath = tempfile.mkstemp()
-        with salt.utils.fopen(tmppath, 'w') as tmpfile:
-            tmpfile.write(contents)
+    file_to_upload = None
+    try:
+        if contents is not None:
+            try:
+                tmpfd, file_to_upload = tempfile.mkstemp()
+                os.write(tmpfd, contents)
+            finally:
+                try:
+                    os.close(tmpfd)
+                except OSError as exc:
+                    if exc.errno != errno.EBADF:
+                        raise exc
 
-    log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
+        log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
 
-    ssh_args = [
-        # Don't add new hosts to the host key database
-        '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, i.e., non-existing
-        '-oUserKnownHostsFile=/dev/null',
-        # Don't re-use the SSH connection. Less failures.
-        '-oControlPath=none'
-    ]
+        ssh_args = [
+            # Don't add new hosts to the host key database
+            '-oStrictHostKeyChecking=no',
+            # Set hosts key database path to /dev/null, i.e., non-existing
+            '-oUserKnownHostsFile=/dev/null',
+            # Don't re-use the SSH connection. Less failures.
+            '-oControlPath=none'
+        ]
 
-    if local_file is not None:
-        tmppath = local_file
-        if os.path.isdir(local_file):
-            ssh_args.append('-r')
+        if local_file is not None:
+            file_to_upload = local_file
+            if os.path.isdir(local_file):
+                ssh_args.append('-r')
 
-    if 'key_filename' in kwargs:
-        # There should never be both a password and an ssh key passed in, so
-        ssh_args.extend([
-            # tell SSH to skip password authentication
-            '-oPasswordAuthentication=no',
-            '-oChallengeResponseAuthentication=no',
-            # Make sure public key authentication is enabled
-            '-oPubkeyAuthentication=yes',
-            # No Keyboard interaction!
-            '-oKbdInteractiveAuthentication=no',
-            # Also, specify the location of the key file
-            '-i {0}'.format(kwargs['key_filename'])
-        ])
+        if 'key_filename' in kwargs:
+            # There should never be both a password and an ssh key passed in, so
+            ssh_args.extend([
+                # tell SSH to skip password authentication
+                '-oPasswordAuthentication=no',
+                '-oChallengeResponseAuthentication=no',
+                # Make sure public key authentication is enabled
+                '-oPubkeyAuthentication=yes',
+                # do only use the provided identity file
+                '-oIdentitiesOnly=yes',
+                # No Keyboard interaction!
+                '-oKbdInteractiveAuthentication=no',
+                # Also, specify the location of the key file
+                '-i {0}'.format(kwargs['key_filename'])
+            ])
 
-    if 'port' in kwargs:
-        ssh_args.append('-oPort={0}'.format(kwargs['port']))
+        if 'port' in kwargs:
+            ssh_args.append('-oPort={0}'.format(kwargs['port']))
 
-    if 'ssh_gateway' in kwargs:
-        ssh_gateway = kwargs['ssh_gateway']
-        ssh_gateway_port = 22
-        ssh_gateway_key = ''
-        ssh_gateway_user = 'root'
-        if ':' in ssh_gateway:
-            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
-        if 'ssh_gateway_port' in kwargs:
-            ssh_gateway_port = kwargs['ssh_gateway_port']
-        if 'ssh_gateway_key' in kwargs:
-            ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
-        if 'ssh_gateway_user' in kwargs:
-            ssh_gateway_user = kwargs['ssh_gateway_user']
+        if 'ssh_gateway' in kwargs:
+            ssh_gateway = kwargs['ssh_gateway']
+            ssh_gateway_port = 22
+            ssh_gateway_key = ''
+            ssh_gateway_user = 'root'
+            if ':' in ssh_gateway:
+                ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+            if 'ssh_gateway_port' in kwargs:
+                ssh_gateway_port = kwargs['ssh_gateway_port']
+            if 'ssh_gateway_key' in kwargs:
+                ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
+            if 'ssh_gateway_user' in kwargs:
+                ssh_gateway_user = kwargs['ssh_gateway_user']
 
-        ssh_args.append(
-            # Setup ProxyCommand
-            '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
-                # Don't add new hosts to the host key database
-                '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, i.e., non-existing
-                '-oUserKnownHostsFile=/dev/null',
-                # Don't re-use the SSH connection. Less failures.
-                '-oControlPath=none',
-                ssh_gateway_key,
-                ssh_gateway_user,
-                ssh_gateway,
-                ssh_gateway_port
+            ssh_args.append(
+                # Setup ProxyCommand
+                '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
+                    # Don't add new hosts to the host key database
+                    '-oStrictHostKeyChecking=no',
+                    # Set hosts key database path to /dev/null, i.e., non-existing
+                    '-oUserKnownHostsFile=/dev/null',
+                    # Don't re-use the SSH connection. Less failures.
+                    '-oControlPath=none',
+                    ssh_gateway_key,
+                    ssh_gateway_user,
+                    ssh_gateway,
+                    ssh_gateway_port
+                )
+            )
+
+        try:
+            if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
+                ipaddr = '[{0}]'.format(kwargs['hostname'])
+            else:
+                ipaddr = kwargs['hostname']
+        except socket.error:
+            ipaddr = kwargs['hostname']
+
+        if file_to_upload is None:
+            log.warning(
+                'No source file to upload. Please make sure that either file '
+                'contents or the path to a local file are provided.'
+            )
+        cmd = (
+            'scp {0} {1} {2[username]}@{4}:{3} || '
+            'echo "put {1} {3}" | sftp {0} {2[username]}@{4} || '
+            'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
+                ' '.join(ssh_args), file_to_upload, kwargs, dest_path, ipaddr
             )
         )
 
-    try:
-        if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
-            ipaddr = '[{0}]'.format(kwargs['hostname'])
-        else:
-            ipaddr = kwargs['hostname']
-    except socket.error:
-        ipaddr = kwargs['hostname']
-
-    cmd = (
-        'scp {0} {1} {2[username]}@{4}:{3} || '
-        'echo "put {1} {3}" | sftp {0} {2[username]}@{4} || '
-        'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
-            ' '.join(ssh_args), tmppath, kwargs, dest_path, ipaddr
-        )
-    )
-
-    log.debug('SCP command: {0!r}'.format(cmd))
-    retcode = _exec_ssh_cmd(cmd,
-                            error_msg='Failed to upload file {0!r}: {1}\n{2}',
-                            password_retries=3,
-                            **kwargs)
+        log.debug('SCP command: \'{0}\''.format(cmd))
+        retcode = _exec_ssh_cmd(cmd,
+                                error_msg='Failed to upload file \'{0}\': {1}\n{2}',
+                                password_retries=3,
+                                **kwargs)
+    finally:
+        if contents is not None:
+            try:
+                os.remove(file_to_upload)
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    raise exc
     return retcode
 
 
@@ -1880,89 +1934,111 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     if kwargs is None:
         kwargs = {}
 
-    if contents is not None:
-        tmpfh, tmppath = tempfile.mkstemp()
-        with salt.utils.fopen(tmppath, 'w') as tmpfile:
-            tmpfile.write(contents)
-
-    if local_file is not None:
-        tmppath = local_file
-        if os.path.isdir(local_file):
-            put_args = ['-r']
-
-    log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs.get('hostname')))
-
-    ssh_args = [
-        # Don't add new hosts to the host key database
-        '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, i.e., non-existing
-        '-oUserKnownHostsFile=/dev/null',
-        # Don't re-use the SSH connection. Less failures.
-        '-oControlPath=none'
-    ]
-    if 'key_filename' in kwargs:
-        # There should never be both a password and an ssh key passed in, so
-        ssh_args.extend([
-            # tell SSH to skip password authentication
-            '-oPasswordAuthentication=no',
-            '-oChallengeResponseAuthentication=no',
-            # Make sure public key authentication is enabled
-            '-oPubkeyAuthentication=yes',
-            # No Keyboard interaction!
-            '-oKbdInteractiveAuthentication=no',
-            # Also, specify the location of the key file
-            '-oIdentityFile={0}'.format(kwargs['key_filename'])
-        ])
-
-    if 'port' in kwargs:
-        ssh_args.append('-oPort={0}'.format(kwargs['port']))
-
-    if 'ssh_gateway' in kwargs:
-        ssh_gateway = kwargs['ssh_gateway']
-        ssh_gateway_port = 22
-        ssh_gateway_key = ''
-        ssh_gateway_user = 'root'
-        if ':' in ssh_gateway:
-            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
-        if 'ssh_gateway_port' in kwargs:
-            ssh_gateway_port = kwargs['ssh_gateway_port']
-        if 'ssh_gateway_key' in kwargs:
-            ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
-        if 'ssh_gateway_user' in kwargs:
-            ssh_gateway_user = kwargs['ssh_gateway_user']
-
-        ssh_args.append(
-            # Setup ProxyCommand
-            '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
-                # Don't add new hosts to the host key database
-                '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, i.e., non-existing
-                '-oUserKnownHostsFile=/dev/null',
-                # Don't re-use the SSH connection. Less failures.
-                '-oControlPath=none',
-                ssh_gateway_key,
-                ssh_gateway_user,
-                ssh_gateway,
-                ssh_gateway_port
-            )
-        )
-
+    file_to_upload = None
     try:
-        if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
-            ipaddr = '[{0}]'.format(kwargs['hostname'])
-        else:
-            ipaddr = kwargs['hostname']
-    except socket.error:
-        ipaddr = kwargs['hostname']
+        if contents is not None:
+            try:
+                tmpfd, file_to_upload = tempfile.mkstemp()
+                os.write(tmpfd, contents)
+            finally:
+                try:
+                    os.close(tmpfd)
+                except OSError as exc:
+                    if exc.errno != errno.EBADF:
+                        raise exc
 
-    cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{5}'.format(
-        ' '.join(put_args), tmppath, dest_path, ' '.join(ssh_args), kwargs, ipaddr
-    )
-    log.debug('SFTP command: {0!r}'.format(cmd))
-    retcode = _exec_ssh_cmd(cmd,
-                            error_msg='Failed to upload file {0!r}: {1}\n{2}',
-                            password_retries=3,
-                            **kwargs)
+        if local_file is not None:
+            file_to_upload = local_file
+            if os.path.isdir(local_file):
+                put_args = ['-r']
+
+        log.debug('Uploading {0} to {1} (sftp)'.format(dest_path, kwargs.get('hostname')))
+
+        ssh_args = [
+            # Don't add new hosts to the host key database
+            '-oStrictHostKeyChecking=no',
+            # Set hosts key database path to /dev/null, i.e., non-existing
+            '-oUserKnownHostsFile=/dev/null',
+            # Don't re-use the SSH connection. Less failures.
+            '-oControlPath=none'
+        ]
+        if 'key_filename' in kwargs:
+            # There should never be both a password and an ssh key passed in, so
+            ssh_args.extend([
+                # tell SSH to skip password authentication
+                '-oPasswordAuthentication=no',
+                '-oChallengeResponseAuthentication=no',
+                # Make sure public key authentication is enabled
+                '-oPubkeyAuthentication=yes',
+                # do only use the provided identity file
+                '-oIdentitiesOnly=yes',
+                # No Keyboard interaction!
+                '-oKbdInteractiveAuthentication=no',
+                # Also, specify the location of the key file
+                '-oIdentityFile={0}'.format(kwargs['key_filename'])
+            ])
+
+        if 'port' in kwargs:
+            ssh_args.append('-oPort={0}'.format(kwargs['port']))
+
+        if 'ssh_gateway' in kwargs:
+            ssh_gateway = kwargs['ssh_gateway']
+            ssh_gateway_port = 22
+            ssh_gateway_key = ''
+            ssh_gateway_user = 'root'
+            if ':' in ssh_gateway:
+                ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+            if 'ssh_gateway_port' in kwargs:
+                ssh_gateway_port = kwargs['ssh_gateway_port']
+            if 'ssh_gateway_key' in kwargs:
+                ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
+            if 'ssh_gateway_user' in kwargs:
+                ssh_gateway_user = kwargs['ssh_gateway_user']
+
+            ssh_args.append(
+                # Setup ProxyCommand
+                '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
+                    # Don't add new hosts to the host key database
+                    '-oStrictHostKeyChecking=no',
+                    # Set hosts key database path to /dev/null, i.e., non-existing
+                    '-oUserKnownHostsFile=/dev/null',
+                    # Don't re-use the SSH connection. Less failures.
+                    '-oControlPath=none',
+                    ssh_gateway_key,
+                    ssh_gateway_user,
+                    ssh_gateway,
+                    ssh_gateway_port
+                )
+            )
+
+        try:
+            if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
+                ipaddr = '[{0}]'.format(kwargs['hostname'])
+            else:
+                ipaddr = kwargs['hostname']
+        except socket.error:
+            ipaddr = kwargs['hostname']
+
+        if file_to_upload is None:
+            log.warning(
+                'No source file to upload. Please make sure that either file '
+                'contents or the path to a local file are provided.'
+            )
+        cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{5}'.format(
+            ' '.join(put_args), file_to_upload, dest_path, ' '.join(ssh_args), kwargs, ipaddr
+        )
+        log.debug('SFTP command: \'{0}\''.format(cmd))
+        retcode = _exec_ssh_cmd(cmd,
+                                error_msg='Failed to upload file \'{0}\': {1}\n{2}',
+                                password_retries=3,
+                                **kwargs)
+    finally:
+        if contents is not None:
+            try:
+                os.remove(file_to_upload)
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    raise exc
     return retcode
 
 
@@ -2069,11 +2145,15 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
             '-oChallengeResponseAuthentication=no',
             # Make sure public key authentication is enabled
             '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
             '-i {0}'.format(kwargs['key_filename'])
         ])
+    if 'ssh_timeout' in kwargs:
+        ssh_args.extend(['-oConnectTimeout={0}'.format(kwargs['ssh_timeout'])])
 
     if 'ssh_gateway' in kwargs:
         ssh_gateway = kwargs['ssh_gateway']
@@ -2120,7 +2200,13 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     logging_command = cmd + logging_command
     cmd = cmd + pipes.quote(command)
 
-    log.debug('SSH command: {0!r}'.format(logging_command))
+    hard_timeout = kwargs.get('hard_timeout')
+    if hard_timeout is not None:
+        logging_command = 'timeout {0} {1}'.format(hard_timeout, logging_command)
+        cmd = 'timeout {0} {1}'.format(hard_timeout, cmd)
+
+    log.debug('SSH command: \'{0}\''.format(logging_command))
+
     retcode = _exec_ssh_cmd(cmd, allow_failure=allow_failure, **kwargs)
     return retcode
 
@@ -2263,7 +2349,7 @@ def wait_for_ip(update_callback,
     duration = timeout
     while True:
         log.debug(
-            'Waiting for VM IP. Giving up in 00:{0:02d}:{1:02d}'.format(
+            'Waiting for VM IP. Giving up in 00:{0:02d}:{1:02d}.'.format(
                 int(timeout // 60),
                 int(timeout % 60)
             )
@@ -2271,21 +2357,23 @@ def wait_for_ip(update_callback,
         data = update_callback(*update_args, **update_kwargs)
         if data is False:
             log.debug(
-                'update_callback has returned False which is considered a '
-                'failure. Remaining Failures: {0}'.format(max_failures)
+                '\'update_callback\' has returned \'False\', which is '
+                'considered a failure. Remaining Failures: {0}.'.format(
+                    max_failures
+                )
             )
             max_failures -= 1
             if max_failures <= 0:
                 raise SaltCloudExecutionFailure(
-                    'Too much failures occurred while waiting for '
-                    'the IP address'
+                    'Too many failures occurred while waiting for '
+                    'the IP address.'
                 )
         elif data is not None:
             return data
 
         if timeout < 0:
             raise SaltCloudExecutionTimeout(
-                'Unable to get IP for 00:{0:02d}:{1:02d}'.format(
+                'Unable to get IP for 00:{0:02d}:{1:02d}.'.format(
                     int(duration // 60),
                     int(duration % 60)
                 )
@@ -2298,7 +2386,7 @@ def wait_for_ip(update_callback,
             if interval > timeout:
                 interval = timeout + 1
             log.info('Interval multiplier in effect; interval is '
-                     'now {0}s'.format(interval))
+                     'now {0}s.'.format(interval))
 
 
 def simple_types_filter(data):
@@ -2510,9 +2598,8 @@ def request_minion_cachedir(
     if base is None:
         base = __opts__['cachedir']
 
-    if not fingerprint:
-        if pubkey is not None:
-            fingerprint = salt.utils.pem_finger(key=pubkey, sum_type=(opts and opts.get('hash_type') or 'sha256'))
+    if not fingerprint and pubkey is not None:
+        fingerprint = salt.utils.pem_finger(key=pubkey, sum_type=(opts and opts.get('hash_type') or 'sha256'))
 
     init_cachedir(base)
 
@@ -2760,13 +2847,13 @@ def update_bootstrap(config, url=None):
                 os.makedirs(entry)
             except (OSError, IOError) as err:
                 log.info(
-                    'Failed to create directory {0!r}'.format(entry)
+                    'Failed to create directory \'{0}\''.format(entry)
                 )
                 continue
 
         if not is_writeable(entry):
             log.debug(
-                'The {0!r} is not writeable. Continuing...'.format(
+                'The \'{0}\' is not writeable. Continuing...'.format(
                     entry
                 )
             )
@@ -2852,8 +2939,6 @@ def missing_node_cache(prov_dir, node_list, provider, opts):
     for node in os.listdir(prov_dir):
         cached_nodes.append(os.path.splitext(node)[0])
 
-    log.debug(sorted(cached_nodes))
-    log.debug(sorted(node_list))
     for node in cached_nodes:
         if node not in node_list:
             delete_minion_cachedir(node, provider, opts)
@@ -2886,8 +2971,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
     if node is None:
         return
-    path = os.path.join(prov_dir, node)
-    path = '{0}.p'.format(path)
+    path = '{0}.p'.format(os.path.join(prov_dir, node))
 
     if not os.path.exists(path):
         event_data = _strip_cache_events(new_data, opts)
@@ -2962,8 +3046,10 @@ def _salt_cloud_force_ascii(exc):
         raise TypeError('Can\'t handle {0}'.format(exc))
 
     unicode_trans = {
-        u'\xa0': u' ',  # Convert non-breaking space to space
-        u'\u2013': u'-',  # Convert en dash to dash
+        # Convert non-breaking space to space
+        u'\xa0': u' ',
+        # Convert en dash to dash
+        u'\u2013': u'-',
     }
 
     if exc.object[exc.start:exc.end] in unicode_trans:
@@ -3086,3 +3172,42 @@ def get_salt_interface(vm_, opts):
         )
 
     return salt_host
+
+
+def check_key_path_and_mode(provider, key_path):
+    '''
+    Checks that the key_path exists and the key_mode is either 0400 or 0600.
+
+    Returns True or False.
+
+    .. versionadded:: 2016.3.0
+
+    provider
+        The provider name that the key_path to check belongs to.
+
+    key_path
+        The key_path to ensure that it exists and to check adequate permissions
+        against.
+    '''
+    if not os.path.exists(key_path):
+        log.error(
+            'The key file \'{0}\' used in the \'{1}\' provider configuration '
+            'does not exist.\n'.format(
+                key_path,
+                provider
+            )
+        )
+        return False
+
+    key_mode = str(oct(stat.S_IMODE(os.stat(key_path).st_mode)))
+    if key_mode not in ('0400', '0600'):
+        log.error(
+            'The key file \'{0}\' used in the \'{1}\' provider configuration '
+            'needs to be set to mode 0400 or 0600.\n'.format(
+                key_path,
+                provider
+            )
+        )
+        return False
+
+    return True

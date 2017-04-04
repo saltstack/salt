@@ -6,9 +6,9 @@ Nova class
 # Import Python libs
 from __future__ import absolute_import, with_statement
 from distutils.version import LooseVersion
-import time
 import inspect
 import logging
+import time
 
 # Import third party libs
 import salt.ext.six as six
@@ -24,6 +24,14 @@ try:
     import novaclient.extension
     import novaclient.base
     HAS_NOVA = True
+except ImportError:
+    pass
+
+HAS_KEYSTONEAUTH = False
+try:
+    import keystoneauth1.loading
+    import keystoneauth1.session
+    HAS_KEYSTONEAUTH = True
 except ImportError:
     pass
 # pylint: enable=import-error
@@ -164,6 +172,15 @@ def get_entry(dict_, key, value, raise_error=True):
     return {}
 
 
+def get_entry_multi(dict_, pairs, raise_error=True):
+    for entry in dict_:
+        if all([entry[key] == value for key, value in pairs]):
+            return entry
+    if raise_error is True:
+        raise SaltCloudSystemExit('Unable to find {0} in {1}.'.format(pairs, dict_))
+    return {}
+
+
 def sanatize_novaclient(kwargs):
     variables = (
         'username', 'api_key', 'project_id', 'auth_url', 'insecure',
@@ -196,11 +213,79 @@ class SaltNova(object):
         region_name=None,
         password=None,
         os_auth_plugin=None,
+        use_keystoneauth=False,
         **kwargs
     ):
         '''
         Set up nova credentials
         '''
+        if all([use_keystoneauth, HAS_KEYSTONEAUTH]):
+            self._new_init(username=username,
+                           project_id=project_id,
+                           auth_url=auth_url,
+                           region_name=region_name,
+                           password=password,
+                           os_auth_plugin=os_auth_plugin,
+                           **kwargs)
+        else:
+            self._old_init(username=username,
+                           project_id=project_id,
+                           auth_url=auth_url,
+                           region_name=region_name,
+                           password=password,
+                           os_auth_plugin=os_auth_plugin,
+                           **kwargs)
+
+    def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, **kwargs):
+        if auth is None:
+            auth = {}
+
+        loader = keystoneauth1.loading.get_plugin_loader(os_auth_plugin or 'password')
+
+        self.client_kwargs = kwargs.copy()
+        self.kwargs = auth.copy()
+        if not self.extensions:
+            if hasattr(OpenStackComputeShell, '_discover_extensions'):
+                self.extensions = OpenStackComputeShell()._discover_extensions('2.0')
+            else:
+                self.extensions = client.discover_extensions('2.0')
+            for extension in self.extensions:
+                extension.run_hooks('__pre_parse_args__')
+            self.client_kwargs['extensions'] = self.extensions
+
+        self.kwargs['username'] = username
+        self.kwargs['project_name'] = project_id
+        self.kwargs['auth_url'] = auth_url
+        self.kwargs['password'] = password
+        if auth_url.endswith('3'):
+            self.kwargs['user_domain_name'] = kwargs.get('user_domain_name', 'default')
+            self.kwargs['project_domain_name'] = kwargs.get('project_domain_name', 'default')
+
+        self.client_kwargs['region_name'] = region_name
+        self.client_kwargs['service_type'] = 'compute'
+
+        if hasattr(self, 'extensions'):
+            # needs an object, not a dictionary
+            self.kwargstruct = KwargsStruct(**self.client_kwargs)
+            for extension in self.extensions:
+                extension.run_hooks('__post_parse_args__', self.kwargstruct)
+            self.client_kwargs = self.kwargstruct.__dict__
+
+        # Requires novaclient version >= 2.6.1
+        self.version = str(kwargs.get('version', 2))
+
+        self.client_kwargs = sanatize_novaclient(self.client_kwargs)
+        options = loader.load_from_options(**self.kwargs)
+        self.session = keystoneauth1.session.Session(auth=options)
+        conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
+        self.kwargs['auth_token'] = conn.client.session.get_token()
+        self.catalog = conn.client.session.get('/auth/catalog', endpoint_filter={'service_type': 'identity'}).json().get('catalog', [])
+        if conn.client.get_endpoint(service_type='identity').endswith('v3'):
+            self._v3_setup(region_name)
+        else:
+            self._v2_setup(region_name)
+
+    def _old_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, **kwargs):
         self.kwargs = kwargs.copy()
         if not self.extensions:
             if hasattr(OpenStackComputeShell, '_discover_extensions'):
@@ -254,6 +339,33 @@ class SaltNova(object):
         self.kwargs['auth_token'] = conn.client.auth_token
         self.catalog = conn.client.service_catalog.catalog['access']['serviceCatalog']
 
+        self._v2_setup(region_name)
+
+    def _v3_setup(self, region_name):
+        if region_name is not None:
+            servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
+            self.kwargs['bypass_url'] = get_entry_multi(
+                servers_endpoints,
+                [('region', region_name), ('interface', 'public')]
+            )['url']
+
+        self.compute_conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
+
+        volume_endpoints = get_entry(self.catalog, 'type', 'volume', raise_error=False).get('endpoints', {})
+        if volume_endpoints:
+            if region_name is not None:
+                self.kwargs['bypass_url'] = get_entry_multi(
+                    volume_endpoints,
+                    [('region', region_name), ('interface', 'public')]
+                )['url']
+
+            self.volume_conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
+            if hasattr(self, 'extensions'):
+                self.expand_extensions()
+        else:
+            self.volume_conn = None
+
+    def _v2_setup(self, region_name):
         if region_name is not None:
             servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
             self.kwargs['bypass_url'] = get_entry(
@@ -771,6 +883,22 @@ class SaltNova(object):
                 pass
         return ret
 
+    def server_list_min(self):
+        '''
+        List minimal information about servers
+        '''
+        nt_ks = self.compute_conn
+        ret = {}
+        for item in nt_ks.servers.list(detailed=False):
+            try:
+                ret[item.name] = {
+                    'id': item.id,
+                    'status': 'Running'
+                }
+            except TypeError:
+                pass
+        return ret
+
     def server_list_detailed(self):
         '''
         Detailed list of servers
@@ -968,13 +1096,110 @@ class SaltNova(object):
         nets = nt_ks.virtual_interfaces.create(networkid, serverid)
         return nets
 
+    def floating_ip_pool_list(self):
+        '''
+        List all floating IP pools
+
+        .. versionadded:: 2016.3.0
+        '''
+        nt_ks = self.compute_conn
+        pools = nt_ks.floating_ip_pools.list()
+        response = {}
+        for pool in pools:
+            response[pool.name] = {
+                'name': pool.name,
+            }
+        return response
+
+    def floating_ip_list(self):
+        '''
+        List floating IPs
+
+        .. versionadded:: 2016.3.0
+        '''
+        nt_ks = self.compute_conn
+        floating_ips = nt_ks.floating_ips.list()
+        response = {}
+        for floating_ip in floating_ips:
+            response[floating_ip.ip] = {
+                'ip': floating_ip.ip,
+                'fixed_ip': floating_ip.fixed_ip,
+                'id': floating_ip.id,
+                'instance_id': floating_ip.instance_id,
+                'pool': floating_ip.pool
+            }
+        return response
+
+    def floating_ip_show(self, ip):
+        '''
+        Show info on specific floating IP
+
+        .. versionadded:: 2016.3.0
+        '''
+        nt_ks = self.compute_conn
+        floating_ips = nt_ks.floating_ips.list()
+        for floating_ip in floating_ips:
+            if floating_ip.ip == ip:
+                return floating_ip
+        return {}
+
+    def floating_ip_create(self, pool=None):
+        '''
+        Allocate a floating IP
+
+        .. versionadded:: 2016.3.0
+        '''
+        nt_ks = self.compute_conn
+        floating_ip = nt_ks.floating_ips.create(pool)
+        response = {
+            'ip': floating_ip.ip,
+            'fixed_ip': floating_ip.fixed_ip,
+            'id': floating_ip.id,
+            'instance_id': floating_ip.instance_id,
+            'pool': floating_ip.pool
+        }
+        return response
+
+    def floating_ip_delete(self, floating_ip):
+        '''
+        De-allocate a floating IP
+
+        .. versionadded:: 2016.3.0
+        '''
+        ip = self.floating_ip_show(floating_ip)
+        nt_ks = self.compute_conn
+        return nt_ks.floating_ips.delete(ip)
+
+    def floating_ip_associate(self, server_name, floating_ip):
+        '''
+        Associate floating IP address to server
+
+        .. versionadded:: 2016.3.0
+        '''
+        nt_ks = self.compute_conn
+        server_ = self.server_by_name(server_name)
+        server = nt_ks.servers.get(server_.__dict__['id'])
+        server.add_floating_ip(floating_ip)
+        return self.floating_ip_list()[floating_ip]
+
+    def floating_ip_disassociate(self, server_name, floating_ip):
+        '''
+        Disassociate a floating IP from server
+
+        .. versionadded:: 2016.3.0
+        '''
+        nt_ks = self.compute_conn
+        server_ = self.server_by_name(server_name)
+        server = nt_ks.servers.get(server_.__dict__['id'])
+        server.remove_floating_ip(floating_ip)
+        return self.floating_ip_list()[floating_ip]
+
 # The following is a list of functions that need to be incorporated in the
 # nova module. This list should be updated as functions are added.
 #
 # absolute-limits     Print a list of absolute limits for a user
 # actions             Retrieve server actions.
 # add-fixed-ip        Add new IP address to network.
-# add-floating-ip     Add a floating IP address to a server.
 # aggregate-add-host  Add the host to the specified aggregate.
 # aggregate-create    Create a new aggregate with the specified details.
 # aggregate-delete    Delete the aggregate by its id.
@@ -1004,11 +1229,6 @@ class SaltNova(object):
 #                     and name.
 # endpoints           Discover endpoints that get returned from the
 #                     authenticate services
-# floating-ip-create  Allocate a floating IP for the current tenant.
-# floating-ip-delete  De-allocate a floating IP.
-# floating-ip-list    List floating ips for this tenant.
-# floating-ip-pool-list
-#                     List all floating ip pools.
 # get-vnc-console     Get a vnc console to a server.
 # host-action         Perform a power action on a host.
 # host-update         Update host settings.
@@ -1023,7 +1243,6 @@ class SaltNova(object):
 # reboot              Reboot a server.
 # rebuild             Shutdown, re-image, and re-boot a server.
 # remove-fixed-ip     Remove an IP address from a server.
-# remove-floating-ip  Remove a floating IP address from a server.
 # rename              Rename a server.
 # rescue              Rescue a server.
 # resize              Resize a server.

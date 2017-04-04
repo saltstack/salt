@@ -8,7 +8,7 @@ Proxy minion for managing a Chronos cluster.
 Dependencies
 ------------
 
-- :doc:`chronos execution module (salt.modules.chronos) </ref/modules/all/salt.modules.chronos>`
+- :mod:`chronos execution module (salt.modules.chronos) <salt.modules.chronos>`
 
 Pillar
 ------

@@ -93,7 +93,7 @@ def query(name, match=None, match_type='string', status=None, **kwargs):
                 ret['result'] = False
                 ret['comment'] += ' Match text "{0}" was not found.'.format(match)
         elif match_type == 'pcre':
-            if re.search(match, data['text']):
+            if re.search(match, data.get('text', '')):
                 ret['result'] = True
                 ret['comment'] += ' Match pattern "{0}" was found.'.format(match)
             else:
@@ -109,7 +109,7 @@ def query(name, match=None, match_type='string', status=None, **kwargs):
             ret['comment'] += 'Status {0} was not found, as specified.'.format(status)
             ret['result'] = False
 
-    if __opts__['test'] and ret['result'] is True:
+    if __opts__['test'] is True:
         ret['result'] = None
         ret['comment'] += ' (TEST MODE'
         if 'test_url' in kwargs:

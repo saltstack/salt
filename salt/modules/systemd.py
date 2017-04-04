@@ -52,7 +52,11 @@ def __virtual__():
     if __grains__['kernel'] == 'Linux' \
             and salt.utils.systemd.booted(__context__):
         return __virtualname__
-    return False
+    return (
+        False,
+        'The systemd execution module failed to load: only available on Linux '
+        'systems which have been booted with systemd.'
+    )
 
 
 def _canonical_unit_name(name):
@@ -60,9 +64,44 @@ def _canonical_unit_name(name):
     Build a canonical unit name treating unit names without one
     of the valid suffixes as a service.
     '''
+    if not isinstance(name, six.string_types):
+        name = str(name)
     if any(name.endswith(suffix) for suffix in VALID_UNIT_TYPES):
         return name
     return '%s.service' % name
+
+
+def _check_available(name):
+    '''
+    Returns boolean telling whether or not the named service is available
+    '''
+    _status = _systemctl_status(name)
+    sd_version = salt.utils.systemd.version(__context__)
+    if sd_version is not None and sd_version >= 231:
+        # systemd 231 changed the output of "systemctl status" for unknown
+        # services, and also made it return an exit status of 4. If we are on
+        # a new enough version, check the retcode, otherwise fall back to
+        # parsing the "systemctl status" output.
+        # See: https://github.com/systemd/systemd/pull/3385
+        # Also: https://github.com/systemd/systemd/commit/3dced37
+        return 0 <= _status['retcode'] < 4
+
+    out = _status['stdout'].lower()
+    if 'could not be found' in out:
+        # Catch cases where the systemd version is < 231 but the return code
+        # and output changes have been backported (e.g. RHEL 7.3).
+        return False
+
+    for line in salt.utils.itertools.split(out, '\n'):
+        match = re.match(r'\s+loaded:\s+(\S+)', line)
+        if match:
+            ret = match.group(1) != 'not-found'
+            break
+    else:
+        raise CommandExecutionError(
+            'Failed to get information on unit \'%s\'' % name
+        )
+    return ret
 
 
 def _check_for_unit_changes(name):
@@ -166,7 +205,7 @@ def _get_sysv_services():
     try:
         sysv_services = os.listdir(INITSCRIPT_PATH)
     except OSError as exc:
-        if exc.errno == errno.EEXIST:
+        if exc.errno == errno.ENOENT:
             pass
         elif exc.errno == errno.EACCES:
             log.error(
@@ -264,9 +303,10 @@ def _systemctl_status(name):
     contextkey = 'systemd._systemctl_status.%s' % name
     if contextkey in __context__:
         return __context__[contextkey]
-    __context__[contextkey] = __salt__['cmd.run'](
+    __context__[contextkey] = __salt__['cmd.run_all'](
         _systemctl_cmd('status', name),
         python_shell=False,
+        redirect_stderr=True,
         ignore_retcode=True
     )
     return __context__[contextkey]
@@ -292,7 +332,7 @@ def _untracked_custom_unit_found(name):
     '''
     unit_path = os.path.join('/etc/systemd/system',
                              _canonical_unit_name(name))
-    return os.access(unit_path, os.R_OK) and not available(name)
+    return os.access(unit_path, os.R_OK) and not _check_available(name)
 
 
 def _unit_file_changed(name):
@@ -300,7 +340,7 @@ def _unit_file_changed(name):
     Returns True if systemctl reports that the unit file has changed, otherwise
     returns False.
     '''
-    return "'systemctl daemon-reload'" in _systemctl_status(name).lower()
+    return "'systemctl daemon-reload'" in _systemctl_status(name)['stdout'].lower()
 
 
 def systemctl_reload():
@@ -475,17 +515,8 @@ def available(name):
 
         salt '*' service.available sshd
     '''
-    out = _systemctl_status(name).lower()
-    for line in salt.utils.itertools.split(out, '\n'):
-        match = re.match(r'\s+loaded:\s+(\S+)', line)
-        if match:
-            ret = match.group(1) != 'not-found'
-            break
-    else:
-        raise CommandExecutionError(
-            'Failed to get information on unit \'%s\'' % name
-        )
-    return ret
+    _check_for_unit_changes(name)
+    return _check_available(name)
 
 
 def missing(name):
@@ -579,7 +610,10 @@ def mask(name, runtime=False):
                                   redirect_stderr=True)
 
     if out['retcode'] != 0:
-        raise CommandExecutionError('Failed to mask service \'%s\'' % name)
+        raise CommandExecutionError(
+            'Failed to mask service \'%s\'' % name,
+            info=out['stdout']
+        )
 
     return True
 
@@ -632,8 +666,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    if _untracked_custom_unit_found(name) or _unit_file_changed(name):
-        systemctl_reload()
+    _check_for_unit_changes(name)
     unmask(name)
     return __salt__['cmd.retcode'](
         _systemctl_cmd('start', name, systemd_scope=True),
@@ -757,8 +790,8 @@ def force_reload(name):
 # established by Salt's service management states.
 def status(name, sig=None):  # pylint: disable=unused-argument
     '''
-    Return the status for a service via systemd, returns a bool
-    whether the service is running.
+    Return the status for a service via systemd, returns ``True`` if the
+    service is running and ``False`` if it is not.
 
     CLI Example:
 
@@ -856,7 +889,7 @@ def disable(name, **kwargs):  # pylint: disable=unused-argument
     return __salt__['cmd.retcode'](
         _systemctl_cmd('disable', name, systemd_scope=True),
         python_shell=False,
-        ignore_recode=True) == 0
+        ignore_retcode=True) == 0
 
 
 # The unused kwargs argument is required to maintain consistency with the API
@@ -888,13 +921,15 @@ def enabled(name, **kwargs):  # pylint: disable=unused-argument
         # string will be non-empty.
         if bool(__salt__['cmd.run'](cmd, python_shell=False)):
             return True
-    else:
+    elif name in _get_sysv_services():
         return _sysv_enabled(name)
+
+    return False
 
 
 def disabled(name):
     '''
-    Return if the named service is disabled to start on boot
+    Return if the named service is disabled from starting on boot
 
     CLI Example:
 
@@ -916,7 +951,9 @@ def show(name):
         salt '*' service.show <service name>
     '''
     ret = {}
-    for line in __salt__['cmd.run'](_systemctl_cmd('show', name)).splitlines():
+    out = __salt__['cmd.run'](_systemctl_cmd('show', name),
+                              python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         comps = line.split('=')
         name = comps[0]
         value = '='.join(comps[1:])
@@ -944,11 +981,10 @@ def execs():
 
         salt '*' service.execs
     '''
-    execs_ = {}
+    ret = {}
     for service in get_all():
         data = show(service)
         if 'ExecStart' not in data:
             continue
-        execs_[service] = data['ExecStart']['path']
-
-    return execs_
+        ret[service] = data['ExecStart']['path']
+    return ret

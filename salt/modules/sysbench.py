@@ -19,7 +19,7 @@ def __virtual__():
     # finding the path of the binary
     if salt.utils.which('sysbench'):
         return 'sysbench'
-    return False
+    return (False, 'The sysbench execution module failed to load: the sysbench binary is not in the path.')
 
 
 def _parser(result):

@@ -28,14 +28,14 @@ SaltStack the company does make proprietary products which use Salt and its libr
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
 
 I think I found a bug! What should I do?
------------------------------------------
+----------------------------------------
 
 The salt-users mailing list as well as the salt IRC channel can both be helpful
 resources to confirm if others are seeing the issue and to assist with
 immediate debugging.
 
 To report a bug to the Salt project, please follow the instructions in
-:doc:`reporting a bug </topics/development/reporting_bugs>`.
+:ref:`reporting a bug <reporting-bugs>`.
 
 
 What ports should I open on my firewall?
@@ -43,7 +43,7 @@ What ports should I open on my firewall?
 
 Minions need to be able to connect to the Master on TCP ports 4505 and 4506.
 Minions do not need any inbound ports open. More detailed information on
-firewall settings can be found :doc:`here </topics/tutorials/firewall>`.
+firewall settings can be found :ref:`here <firewall>`.
 
 I'm seeing weird behavior (including but not limited to packages not installing their users properly)
 -----------------------------------------------------------------------------------------------------
@@ -147,17 +147,29 @@ should be opened on our tracker_, with the following information:
 Why aren't my custom modules/states/etc. available on my Minions?
 -----------------------------------------------------------------
 
-Custom modules are only synced to Minions when :mod:`state.apply
-<salt.modules.state.apply_>`, :mod:`saltutil.sync_modules
-<salt.modules.saltutil.sync_modules>`, or :mod:`saltutil.sync_all
-<salt.modules.saltutil.sync_all>` is run. Similarly, custom states are only
-synced to Minions when :mod:`state.apply <salt.modules.state.apply_>`,
+Custom modules are synced to Minions when
+:mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>`,
+or :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
+Custom modules are also synced by :mod:`state.apply` when run without
+any arguments.
+
+
+Similarly, custom states are synced to Minions
+when :mod:`state.apply <salt.modules.state.apply_>`,
 :mod:`saltutil.sync_states <salt.modules.saltutil.sync_states>`, or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
+
+Custom states are also synced by :mod:`state.apply<salt.modules.state.apply_>`
+when run without any arguments.
 
 Other custom types (renderers, outputters, etc.) have similar behavior, see the
 documentation for the :mod:`saltutil <salt.modules.saltutil>` module for more
 information.
+
+:ref:`This reactor example <minion-start-reactor>` can be used to automatically
+sync custom types when the minion connects to the master, to help with this
+chicken-and-egg issue.
+
 
 Module ``X`` isn't available, even though the shell command it uses is installed. Why?
 --------------------------------------------------------------------------------------
@@ -200,7 +212,7 @@ Does Salt support backing up managed files?
 -------------------------------------------
 
 Yes. Salt provides an easy to use addition to your file.managed states that
-allow you to back up files via :doc:`backup_mode </ref/states/backup_mode>`,
+allow you to back up files via :ref:`backup_mode <file-state-backups>`,
 backup_mode can be configured on a per state basis, or in the minion config
 (note that if set in the minion config this would simply be the default
 method to use, you still need to specify that the file should be backed up!).
@@ -304,8 +316,8 @@ process.
 Windows
 *******
 
-For Windows machines, restarting the minion at can be accomplished by
-adding the following state:
+For Windows machines, restarting the minion can be accomplished using the
+following state:
 
 .. code-block:: yaml
 

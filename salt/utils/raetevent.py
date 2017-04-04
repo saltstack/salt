@@ -46,6 +46,7 @@ class RAETEvent(object):
         self.stack = None
         self.ryn = 'manor'  # remote yard name
         self.connected = False
+        self.cpub = False
         self.__prep_stack(listen)
 
     def __prep_stack(self, listen):
@@ -132,6 +133,7 @@ class RAETEvent(object):
             self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
             self.stack.serviceAll()
             self.connected = True
+            self.cpub = True
         except Exception:
             pass
 
@@ -148,7 +150,8 @@ class RAETEvent(object):
         '''
         return raw
 
-    def get_event(self, wait=5, tag='', match_type=None, full=False, no_block=None):
+    def get_event(self, wait=5, tag='', match_type=None, full=False, no_block=None,
+                  auto_reconnect=False):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
@@ -191,12 +194,12 @@ class RAETEvent(object):
                 return None
             return msg
 
-    def iter_events(self, tag='', full=False):
+    def iter_events(self, tag='', full=False, auto_reconnect=False):
         '''
         Creates a generator that continuously listens for events
         '''
         while True:
-            data = self.get_event(tag=tag, full=full)
+            data = self.get_event(tag=tag, full=full, auto_reconnect=auto_reconnect)
             if data is None:
                 continue
             yield data
@@ -211,7 +214,7 @@ class RAETEvent(object):
             raise ValueError('Empty tag.')
 
         if not isinstance(data, MutableMapping):  # data must be dict
-            raise ValueError('Dict object expected, not "{0!r}".'.format(data))
+            raise ValueError('Dict object expected, not \'{0}\'.'.format(data))
         route = {'dst': (None, self.ryn, 'event_fire'),
                  'src': (None, self.stack.local.name, None)}
         msg = {'route': route, 'tag': tag, 'data': data}
@@ -249,6 +252,12 @@ class RAETEvent(object):
                                        'job'))
                 except Exception:
                     pass
+
+    def close_pub(self):
+        '''
+        Here for compatability
+        '''
+        return
 
     def destroy(self):
         if hasattr(self, 'stack'):

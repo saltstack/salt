@@ -55,7 +55,7 @@ def __virtual__():
     '''
     if HAS_PORTAGE and __grains__['os'] == 'Gentoo':
         return __virtualname__
-    return False
+    return (False, 'The ebuild execution module cannot be loaded: either the system is not Gentoo or the portage python library is not available.')
 
 
 def _vartree():
@@ -103,12 +103,11 @@ def _process_emerge_err(stdout, stderr):
     Used to parse emerge output to provide meaningful output when emerge fails
     '''
     ret = {}
-    changes = {}
     rexp = re.compile(r'^[<>=][^ ]+/[^ ]+ [^\n]+', re.M)
 
     slot_conflicts = re.compile(r'^[^ \n]+/[^ ]+:[^ ]', re.M).findall(stderr)
     if slot_conflicts:
-        changes['slot conflicts'] = slot_conflicts
+        ret['slot conflicts'] = slot_conflicts
 
     blocked = re.compile(r'(?m)^\[blocks .+\] '
                          r'([^ ]+/[^ ]+-[0-9]+[^ ]+)'
@@ -119,19 +118,18 @@ def _process_emerge_err(stdout, stderr):
 
     # If there were blocks and emerge could not resolve it.
     if blocked and unsatisfied:
-        changes['blocked'] = blocked
+        ret['blocked'] = blocked
 
     sections = re.split('\n\n', stderr)
     for section in sections:
         if 'The following keyword changes' in section:
-            changes['keywords'] = rexp.findall(section)
+            ret['keywords'] = rexp.findall(section)
         elif 'The following license changes' in section:
-            changes['license'] = rexp.findall(section)
+            ret['license'] = rexp.findall(section)
         elif 'The following USE changes' in section:
-            changes['use'] = rexp.findall(section)
+            ret['use'] = rexp.findall(section)
         elif 'The following mask changes' in section:
-            changes['mask'] = rexp.findall(section)
-    ret['changes'] = {'Needed changes': changes}
+            ret['mask'] = rexp.findall(section)
     return ret
 
 
@@ -161,7 +159,7 @@ def check_db(*names, **kwargs):
     ret = {}
     for name in names:
         if name in ret:
-            log.warning('pkg.check_db: Duplicate package name {0!r} '
+            log.warning('pkg.check_db: Duplicate package name \'{0}\' '
                         'submitted'.format(name))
             continue
         if '/' not in name:
@@ -600,7 +598,7 @@ def install(name=None,
             if fromrepo is not None:
                 version_num += '::{0}'.format(fromrepo)
             if uses is not None:
-                version_num += '["{0}"]'.format('","'.join(uses))
+                version_num += '[{0}]'.format(','.join(uses))
             pkg_params = {name: version_num}
 
     if pkg_params is None or len(pkg_params) == 0:
@@ -637,8 +635,6 @@ def install(name=None,
                     keyword, gt_lt, eq, verstr = match.groups()
                     prefix = gt_lt or ''
                     prefix += eq or ''
-                    # We need to delete quotes around use flag list elements
-                    verstr = verstr.replace("'", "")
                     # If no prefix characters were supplied and verstr contains a version, use '='
                     if len(verstr) > 0 and verstr[0] != ':' and verstr[0] != '[':
                         prefix = prefix or '='
@@ -649,16 +645,16 @@ def install(name=None,
                     target = '{0}'.format(param)
 
                 if '[' in target:
-                    old = __salt__['portage_config.get_flags_from_package_conf']('use', target[1:-1])
-                    __salt__['portage_config.append_use_flags'](target[1:-1])
-                    new = __salt__['portage_config.get_flags_from_package_conf']('use', target[1:-1])
+                    old = __salt__['portage_config.get_flags_from_package_conf']('use', target)
+                    __salt__['portage_config.append_use_flags'](target)
+                    new = __salt__['portage_config.get_flags_from_package_conf']('use', target)
                     if old != new:
                         changes[param + '-USE'] = {'old': old, 'new': new}
-                    target = target[:target.rfind('[')] + '"'
+                    target = target[:target.rfind('[')]
 
                 if keyword is not None:
                     __salt__['portage_config.append_to_package_conf']('accept_keywords',
-                                                                        target[1:-1],
+                                                                        target,
                                                                         ['~ARCH'])
                     changes[param + '-ACCEPT_KEYWORD'] = {'old': '', 'new': '~ARCH'}
 
@@ -671,8 +667,8 @@ def install(name=None,
                         all_uses = __salt__['portage_config.get_cleared_flags'](param)
                         if _flags_changed(*all_uses):
                             changes[param] = {'version': inst_v,
-                                                'old': {'use': all_uses[0]},
-                                                'new': {'use': all_uses[1]}}
+                                              'old': {'use': all_uses[0]},
+                                              'new': {'use': all_uses[1]}}
                 targets.append(target)
     else:
         targets = pkg_params
@@ -690,11 +686,21 @@ def install(name=None,
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
                                    python_shell=False)
-    __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
-        return _process_emerge_err(call['stdout'], call['stderr'])
+        needed_changes = _process_emerge_err(call['stdout'], call['stderr'])
+    else:
+        needed_changes = []
+
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     changes.update(salt.utils.compare_dicts(old, new))
+
+    if needed_changes:
+        raise CommandExecutionError(
+            'Error occurred installing package(s)',
+            info={'needed changes': needed_changes, 'changes': changes}
+        )
+
     return changes
 
 
@@ -773,11 +779,22 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
                                    python_shell=False)
-    __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
-        return _process_emerge_err(call['stdout'], call['stderr'])
+        needed_changes = _process_emerge_err(call['stdout'], call['stderr'])
+    else:
+        needed_changes = []
+
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if needed_changes:
+        raise CommandExecutionError(
+            'Problem encountered updating package(s)',
+            info={'needed_changes': needed_changes, 'changes': ret}
+        )
+
+    return ret
 
 
 def upgrade(refresh=True, binhost=None, backtrack=3):
@@ -823,18 +840,17 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
     '''
     ret = {'changes': {},
            'result': True,
-           'comment': '',
-           }
+           'comment': ''}
 
     if salt.utils.is_true(refresh):
         refresh_db()
 
     if binhost == 'try':
-        bin_opts = '--getbinpkg'
+        bin_opts = ['--getbinpkg']
     elif binhost == 'force':
-        bin_opts = '--getbinpkgonly'
+        bin_opts = ['--getbinpkgonly']
     else:
-        bin_opts = ''
+        bin_opts = []
 
     old = list_pkgs()
     cmd = []
@@ -849,22 +865,23 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
                 '--newuse',
                 '--deep'])
     if bin_opts:
-        cmd.append(bin_opts)
+        cmd.extend(bin_opts)
     cmd.append('@world')
 
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
-                                   python_shell=False)
+                                   python_shell=False,
+                                   redirect_stderr=True)
+
     if call['retcode'] != 0:
         ret['result'] = False
-        if 'stderr' in call:
-            ret['comment'] += call['stderr']
-        if 'stdout' in call:
-            ret['comment'] += call['stdout']
-    else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        if call['stdout']:
+            ret['comment'] = call['stdout']
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret['changes'] = salt.utils.compare_dicts(old, new)
+
     return ret
 
 
@@ -943,12 +960,28 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
                 '--unmerge',
                 '--quiet-unmerge-warn'])
     cmd.extend(targets)
-    __salt__['cmd.run_all'](cmd,
-                            output_loglevel='trace',
-                            python_shell=False)
+
+    out = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='trace',
+        python_shell=False
+    )
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def purge(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
@@ -1047,7 +1080,7 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
     else:
         targets = [x for x in pkg_params if x in old]
 
-    cmd = 'emerge --ask n --quiet --depclean {0}'.format(' '.join(targets))
+    cmd = ['emerge', '--ask', 'n', '--quiet', '--depclean'] + targets
     __salt__['cmd.run_all'](cmd,
                             output_loglevel='trace',
                             python_shell=False)

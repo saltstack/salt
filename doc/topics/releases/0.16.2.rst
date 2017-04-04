@@ -4,7 +4,7 @@ Salt 0.16.2 Release Notes
 
 :release: 2013-08-01
 
-Version 0.16.2 is a bugfix release for :doc:`0.16.0 </topics/releases/0.16.0>`,
+Version 0.16.2 is a bugfix release for :ref:`0.16.0 <release-0-16-0>`,
 and contains a number of fixes.
 
 Windows
@@ -26,7 +26,7 @@ Grains
 
 Pillar
 ------
-- Don't try to load :doc:`git_pillar </ref/pillar/all/salt.pillar.git_pillar>`
+- Don't try to load :mod:`git_pillar <salt.pillar.git_pillar>`
   if not enabled in master config (:issue:`6052`)
 - Functions :mod:`pillar.item <salt.modules.pillar.item>` and
   :mod:`pillar.items <salt.modules.pillar.items>` added for parity with
@@ -143,7 +143,7 @@ pip
 
 MySQL
 -----
-- Allow specification of :doc:`MySQL </ref/modules/all/salt.modules.mysql>`
+- Allow specification of :mod:`MySQL <salt.modules.mysql>`
   connection arguments via the CLI, overriding/bypassing minion config params
 - Allow :mod:`mysql_user.present <salt.states.mysql_user.present>` states to
   set a passwordless login (:issue:`5550`)
@@ -159,16 +159,16 @@ PostgreSQL
 
 Miscellaneous
 -------------
-- Don't allow :doc:`npm states </ref/states/all/salt.states.npm>` to be used if
-  :doc:`npm module </ref/modules/all/salt.modules.npm>` is not available
+- Don't allow :mod:`npm states <salt.states.npm>` to be used if
+  :mod:`npm module <salt.modules.npm>` is not available
 - Fixed :mod:`alternatives.install <salt.states.alternatives.install>` states
   for which the target is a symlink (:issue:`6162`)
-- Fixed traceback in :doc:`sysbench module
-  </ref/modules/all/salt.modules.sysbench>` (:issue:`6175`)
+- Fixed traceback in :mod:`sysbench module
+  <salt.modules.sysbench>` (:issue:`6175`)
 - Fixed traceback in job cache
 - Fixed tempfile cleanup for windows
-- Fixed issue where SLS files using the :doc:`pydsl renderer
-  </ref/renderers/all/salt.renderers.pydsl>` were not being run
+- Fixed issue where SLS files using the :mod:`pydsl renderer
+  <salt.renderers.pydsl>` were not being run
 - Fixed issue where returners were being passed incorrect information
   (:issue:`5518`)
 - Fixed traceback when numeric args are passed to :mod:`cmd.script
@@ -179,7 +179,7 @@ Miscellaneous
   <salt.states.supervisord.running>` states are run with ``test=True``
   (:issue:`6053`)
 - Fixed tracebacks when Salt encounters problems running rbenv (:issue:`5888`)
-- Only make the :doc:`monit module </ref/modules/all/salt.modules.monit>`
+- Only make the :mod:`monit module <salt.modules.monit>`
   available if monit binary is present (:issue:`5871`)
 - Fixed incorrect behavior of :mod:`img.mount_image
   <salt.modules.img.mount_image>`
@@ -189,7 +189,7 @@ Miscellaneous
 - Fixed tracebacks when Salt encounters problems running gem (:issue:`5886`)
 - Fixed incorrect behavior of :mod:`selinux.boolean
   <salt.states.selinux.boolean>` states (:issue:`5912`)
-- :doc:`RabbitMQ </ref/modules/all/salt.modules.rabbitmq>`: Quote passwords to
+- :mod:`RabbitMQ <salt.modules.rabbitmq>`: Quote passwords to
   avoid symbols being interpolated by the shell (:issue:`6338`)
 - Fixed tracebacks in :mod:`extfs.mkfs <salt.modules.extfs.mkfs>` and
   :mod:`extfs.tune <salt.modules.extfs.tune>` (:issue:`6462`)

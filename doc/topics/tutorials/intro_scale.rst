@@ -1,3 +1,5 @@
+.. _tutorial-salt-at-scale:
+
 ===================
 Using Salt at scale
 ===================

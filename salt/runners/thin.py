@@ -15,7 +15,8 @@ from __future__ import absolute_import
 import salt.utils.thin
 
 
-def generate(extra_mods='', overwrite=False, so_mods=''):
+def generate(extra_mods='', overwrite=False, so_mods='',
+             python2_bin='python2', python3_bin='python3'):
     '''
     Generate the salt-thin tarball and print the location of the tarball
     Optional additional mods to include (e.g. mako) can be supplied as a comma
@@ -34,4 +35,30 @@ def generate(extra_mods='', overwrite=False, so_mods=''):
     if conf_mods:
         extra_mods = ','.join([conf_mods, extra_mods])
 
-    return salt.utils.thin.gen_thin(__opts__['cachedir'], extra_mods, overwrite, so_mods)
+    return salt.utils.thin.gen_thin(__opts__['cachedir'],
+                                    extra_mods,
+                                    overwrite,
+                                    so_mods,
+                                    python2_bin,
+                                    python3_bin)
+
+
+def generate_min(extra_mods='', overwrite=False, so_mods='',
+             python2_bin='python2', python3_bin='python3'):
+    '''
+    Generate the salt-thin tarball and print the location of the tarball
+    Optional additional mods to include (e.g. mako) can be supplied as a comma
+    delimited string.  Permits forcing an overwrite of the output file as well.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run thin.generate_min
+    '''
+    return salt.utils.thin.gen_min(__opts__['cachedir'],
+                                   extra_mods,
+                                   overwrite,
+                                   so_mods,
+                                   python2_bin,
+                                   python3_bin)

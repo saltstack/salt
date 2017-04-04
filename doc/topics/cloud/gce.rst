@@ -1,3 +1,5 @@
+.. _cloud-getting-started-gce:
+
 ==========================================
 Getting Started With Google Compute Engine
 ==========================================
@@ -583,7 +585,7 @@ Load Balancer
 Compute Engine possess a load-balancer feature for splitting traffic across
 multiple instances. Please reference the
 `documentation <https://developers.google.com/compute/docs/load-balancing/>`_
-for a more complete discription.
+for a more complete description.
 
 The load-balancer functionality is slightly different than that described
 in Google's documentation.  The concept of *TargetPool* and *ForwardingRule*

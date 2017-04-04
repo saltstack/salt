@@ -21,7 +21,9 @@ log = logging.getLogger(__file__)
 
 def __virtual__():
     # only valid in proxy minions for now
-    return salt.utils.is_proxy() and 'proxy' in __opts__
+    if salt.utils.is_proxy() and 'proxy' in __opts__:
+        return True
+    return (False, 'The marathon execution module cannot be loaded: this only works in proxy minions.')
 
 
 def _base_url():

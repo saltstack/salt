@@ -86,7 +86,7 @@ class SSHClient(object):
                 expr_form,
                 kwarg,
                 **kwargs)
-        for ret in ssh.run_iter():
+        for ret in ssh.run_iter(jid=kwargs.get('jid', None)):
             yield ret
 
     def cmd(
@@ -113,7 +113,7 @@ class SSHClient(object):
                 kwarg,
                 **kwargs)
         final = {}
-        for ret in ssh.run_iter():
+        for ret in ssh.run_iter(jid=kwargs.get('jid', None)):
             final.update(ret)
         return final
 

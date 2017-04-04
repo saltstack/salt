@@ -9,7 +9,6 @@ import os
 import re
 import sys
 import uuid
-import shlex
 import string
 
 # Import salt libs
@@ -27,7 +26,7 @@ def __virtual__():
     Only load the module if iptables is installed
     '''
     if not salt.utils.which('iptables'):
-        return False
+        return (False, 'The iptables execution module cannot be loaded: iptables not installed.')
 
     return True
 
@@ -406,39 +405,13 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     for after_jump_argument in after_jump_arguments:
         if after_jump_argument in kwargs:
             value = kwargs[after_jump_argument]
-            if any(ws_char in str(value) for ws_char in string.whitespace):
+            if value in (None, ''):  # options without arguments
+                after_jump.append('--{0}'.format(after_jump_argument))
+            elif any(ws_char in str(value) for ws_char in string.whitespace):
                 after_jump.append('--{0} "{1}"'.format(after_jump_argument, value))
             else:
                 after_jump.append('--{0} {1}'.format(after_jump_argument, value))
             del kwargs[after_jump_argument]
-
-    if 'log' in kwargs:
-        after_jump.append('--log {0} '.format(kwargs['log']))
-        del kwargs['log']
-
-    if 'log-level' in kwargs:
-        after_jump.append('--log-level {0} '.format(kwargs['log-level']))
-        del kwargs['log-level']
-
-    if 'log-prefix' in kwargs:
-        after_jump.append('--log-prefix {0} '.format(kwargs['log-prefix']))
-        del kwargs['log-prefix']
-
-    if 'log-tcp-sequence' in kwargs:
-        after_jump.append('--log-tcp-sequence {0} '.format(kwargs['log-tcp-sequence']))
-        del kwargs['log-tcp-sequence']
-
-    if 'log-tcp-options' in kwargs:
-        after_jump.append('--log-tcp-options {0} '.format(kwargs['log-tcp-options']))
-        del kwargs['log-tcp-options']
-
-    if 'log-ip-options' in kwargs:
-        after_jump.append('--log-ip-options {0} '.format(kwargs['log-ip-options']))
-        del kwargs['log-ip-options']
-
-    if 'log-uid' in kwargs:
-        after_jump.append('--log-uid {0} '.format(kwargs['log-uid']))
-        del kwargs['log-uid']
 
     for item in kwargs:
         rule.append(maybe_add_negation(item))
@@ -776,6 +749,9 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
         return 'Error: Rule needs to be specified'
 
     wait = '--wait' if _has_option('--wait', family) else ''
+    returnCheck = check(table, chain, rule, family)
+    if isinstance(returnCheck, bool) and returnCheck:
+        return False
     cmd = '{0} {1} -t {2} -A {3} {4}'.format(
             _iptables_cmd(family), wait, table, chain, rule)
     out = __salt__['cmd.run'](cmd)
@@ -826,6 +802,9 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
             position = 1
 
     wait = '--wait' if _has_option('--wait', family) else ''
+    returnCheck = check(table, chain, rule, family)
+    if isinstance(returnCheck, bool) and returnCheck:
+        return False
     cmd = '{0} {1} -t {2} -I {3} {4} {5}'.format(
             _iptables_cmd(family), wait, table, chain, position, rule)
     out = __salt__['cmd.run'](cmd)
@@ -928,7 +907,7 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
             ret[table][chain]['rules'] = []
             ret[table][chain]['rules_comment'] = {}
         elif line.startswith('-A'):
-            args = shlex.split(line)
+            args = salt.utils.shlex_split(line)
             index = 0
             while index + 1 < len(args):
                 swap = args[index] == '!' and args[index + 1].startswith('-')

@@ -14,7 +14,7 @@ def __virtual__():
     '''
     if salt.utils.which('riak'):
         return True
-    return False
+    return (False, 'The riak execution module failed to load: the riak binary is not in the path.')
 
 
 def __execute_cmd(name, cmd):

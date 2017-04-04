@@ -54,10 +54,16 @@ SCHEDULE_CONF = [
         'cron',
         'until',
         'after',
+        'return_config',
+        'return_kwargs',
+        'run_on_start'
 ]
 
 
-def list_(show_all=False, where=None, return_yaml=True):
+def list_(show_all=False,
+          show_disabled=True,
+          where=None,
+          return_yaml=True):
     '''
     List the jobs currently scheduled on the minion
 
@@ -67,7 +73,12 @@ def list_(show_all=False, where=None, return_yaml=True):
 
         salt '*' schedule.list
 
+        # Show all jobs including hidden internal jobs
         salt '*' schedule.list show_all=True
+
+        # Hide disabled jobs from list of jobs
+        salt '*' schedule.list show_disabled=False
+
     '''
 
     schedule = {}
@@ -111,6 +122,11 @@ def list_(show_all=False, where=None, return_yaml=True):
             if schedule[job][item] == 'false':
                 schedule[job][item] = False
 
+        # if the job is disabled and show_disabled is False, skip job
+        if not show_disabled and not schedule[job]['enabled']:
+            del schedule[job]
+            continue
+
         if '_seconds' in schedule[job]:
             # if _seconds is greater than zero
             # then include the original back in seconds.
@@ -118,7 +134,7 @@ def list_(show_all=False, where=None, return_yaml=True):
             # original item didn't include it.
             if schedule[job]['_seconds'] > 0:
                 schedule[job]['seconds'] = schedule[job]['_seconds']
-            else:
+            elif 'seconds' in schedule[job]:
                 del schedule[job]['seconds']
 
             # remove _seconds from the listing
@@ -344,7 +360,7 @@ def build_schedule_item(name, **kwargs):
             schedule[name]['splay'] = kwargs['splay']
 
     for item in ['range', 'when', 'once', 'once_fmt', 'cron', 'returner',
-            'return_config', 'until', 'enabled']:
+                 'return_config', 'return_kwargs', 'until', 'run_on_start']:
         if item in kwargs:
             schedule[name][item] = kwargs[item]
 

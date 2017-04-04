@@ -2,26 +2,35 @@
 '''
 Return salt data via slack
 
-.. versionadded:: 2015.5.0
+..  versionadded:: 2015.5.0
 
 The following fields can be set in the minion conf file::
+
+.. code-block:: yaml
 
     slack.channel (required)
     slack.api_key (required)
     slack.username (required)
     slack.as_user (required to see the profile picture of your bot)
     slack.profile (optional)
+    slack.changes(optional, only show changes and failed states)
+    slack.yaml_format(optional, format the json in yaml format)
+
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location:
+
+.. code-block:: yaml
 
     slack.channel
     slack.api_key
     slack.username
     slack.as_user
 
-Slack settings may also be configured as::
+Slack settings may also be configured as:
+
+.. code-block:: yaml
 
     slack:
         channel: RoomName
@@ -35,8 +44,8 @@ Slack settings may also be configured as::
         from_name: user@email.com
 
     slack_profile:
-        api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        from_name: user@email.com
+        slack.api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        slack.from_name: user@email.com
 
     slack:
         profile: slack_profile
@@ -57,21 +66,31 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return slack --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return slack --return_kwargs '{"channel": "#random"}'
+
 '''
 from __future__ import absolute_import
 
 # Import Python libs
+import yaml
 import pprint
 import logging
 import urllib
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin  # pylint: disable=import-error,no-name-in-module
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Libs
 import salt.returners
+import salt.utils.slack
 
 log = logging.getLogger(__name__)
 
@@ -90,6 +109,8 @@ def _get_options(ret=None):
              'username': 'username',
              'as_user': 'as_user',
              'api_key': 'api_key',
+             'changes': 'changes',
+             'yaml_format': 'yaml_format',
              }
 
     profile_attr = 'slack_profile'
@@ -119,103 +140,6 @@ def __virtual__():
     return __virtualname__
 
 
-def _query(function,
-           api_key=None,
-           args=None,
-           method='GET',
-           header_dict=None,
-           data=None):
-    '''
-    Slack object method function to construct and execute on the API URL.
-
-    :param api_key:     The Slack api key.
-    :param function:    The Slack api function to perform.
-    :param method:      The HTTP method, e.g. GET or POST.
-    :param data:        The data to be sent for POST method.
-    :return:            The json response from the API call or False.
-    '''
-    query_params = {}
-
-    ret = {'message': '',
-           'res': True}
-
-    slack_functions = {
-        'rooms': {
-            'request': 'channels.list',
-            'response': 'channels',
-        },
-        'users': {
-            'request': 'users.list',
-            'response': 'members',
-        },
-        'message': {
-            'request': 'chat.postMessage',
-            'response': 'channel',
-        },
-    }
-
-    if not api_key:
-        try:
-            options = __salt__['config.option']('slack')
-            if not api_key:
-                api_key = options.get('api_key')
-        except (NameError, KeyError, AttributeError):
-            log.error('No Slack api key found.')
-            ret['message'] = 'No Slack api key found.'
-            ret['res'] = False
-            return ret
-
-    api_url = 'https://slack.com'
-    base_url = _urljoin(api_url, '/api/')
-    path = slack_functions.get(function).get('request')
-    url = _urljoin(base_url, path, False)
-
-    if not isinstance(args, dict):
-        query_params = {}
-    query_params['token'] = api_key
-
-    if header_dict is None:
-        header_dict = {}
-
-    if method != 'POST':
-        header_dict['Accept'] = 'application/json'
-
-    result = salt.utils.http.query(
-        url,
-        method,
-        params=query_params,
-        data=data,
-        decode=True,
-        status=True,
-        header_dict=header_dict,
-        opts=__opts__,
-    )
-
-    if result.get('status', None) == salt.ext.six.moves.http_client.OK:
-        _result = result['dict']
-        response = slack_functions.get(function).get('response')
-        if 'error' in _result:
-            ret['message'] = _result['error']
-            ret['res'] = False
-            return ret
-        ret['message'] = _result.get(response)
-        return ret
-    elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
-        return True
-    else:
-        log.debug(url)
-        log.debug(query_params)
-        log.debug(data)
-        log.debug(result)
-        _result = result['dict']
-        if 'error' in _result:
-            ret['message'] = _result['error']
-            ret['res'] = False
-            return ret
-        ret['message'] = _result.get(response)
-        return ret
-
-
 def _post_message(channel,
                   message,
                   username,
@@ -239,11 +163,11 @@ def _post_message(channel,
     parameters['text'] = '```' + message + '```'  # pre-formatted, fixed-width text
 
     # Slack wants the body on POST to be urlencoded.
-    result = _query(function='message',
-                    api_key=api_key,
-                    method='POST',
-                    header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
-                    data=urllib.urlencode(parameters))
+    result = salt.utils.slack.query(function='message',
+                                    api_key=api_key,
+                                    method='POST',
+                                    header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
+                                    data=urllib.urlencode(parameters))
 
     log.debug('result {0}'.format(result))
     if result:
@@ -263,6 +187,8 @@ def returner(ret):
     username = _options.get('username')
     as_user = _options.get('as_user')
     api_key = _options.get('api_key')
+    changes = _options.get('changes')
+    yaml_format = _options.get('yaml_format')
 
     if not channel:
         log.error('slack.channel not defined in salt config')
@@ -280,6 +206,15 @@ def returner(ret):
         log.error('slack.api_key not defined in salt config')
         return
 
+    returns = ret.get('return')
+    if changes is True:
+        returns = dict((key, value) for key, value in returns.items() if value['result'] is not True or value['changes'])
+
+    if yaml_format is True:
+        returns = yaml.dump(returns)
+    else:
+        returns = pprint.pformat(returns)
+
     message = ('id: {0}\r\n'
                'function: {1}\r\n'
                'function args: {2}\r\n'
@@ -289,7 +224,7 @@ def returner(ret):
                     ret.get('fun'),
                     ret.get('fun_args'),
                     ret.get('jid'),
-                    pprint.pformat(ret.get('return')))
+                    returns)
 
     slack = _post_message(channel,
                           message,

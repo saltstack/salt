@@ -38,7 +38,7 @@ def jid_dir(jid, cachedir, sum_type):
     Return the jid_dir for the given job id
     '''
     salt.utils.warn_until(
-    'Boron',
+    'Carbon',
     'All job_cache management has been moved into the local_cache '
     'returner, this util function will be removed-- please use '
     'the returner'
@@ -53,7 +53,7 @@ def jid_load(jid, cachedir, sum_type, serial='msgpack'):
     Return the load data for a given job id
     '''
     salt.utils.warn_until(
-                    'Boron',
+                    'Carbon',
                     'Getting the load has been moved into the returner interface '
                     'please get the data from the master_job_cache '
                 )

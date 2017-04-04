@@ -197,7 +197,7 @@ class StateModuleTest(integration.ModuleCase,
         testfile = os.path.join(integration.TMP, 'issue-1876')
         sls = self.run_function('state.sls', mods='issue-1876')
         self.assertIn(
-            'ID {0!r} in SLS \'issue-1876\' contains multiple state '
+            'ID \'{0}\' in SLS \'issue-1876\' contains multiple state '
             'declarations of the same type'.format(testfile),
             sls
         )

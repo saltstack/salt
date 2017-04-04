@@ -1,3 +1,4 @@
+:orphan:
 .. _ext-processes:
 
 ===============================
@@ -15,14 +16,14 @@ it is possible to configure it to start additional custom processes.
 
 This is useful if a dedicated process is needed that should run throughout
 the life of the Salt master. For periodic independent tasks, a
-:doc:`scheduled runner <../jobs/schedule.rst>` may be more appropriate.
+:ref:`scheduled runner <scheduling-jobs>` may be more appropriate.
 
 Processes started in this way will be restarted if they die and will be
 killed when the Salt master is shut down.
 
 
 Example Configuration
-======================
+=====================
 
 Processes are declared in the master config file with the `ext_processes`
 option. Processes will be started in the order they are declared.

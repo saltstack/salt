@@ -63,7 +63,7 @@ def system(name, utc=True):
     except (SaltInvocationError, CommandExecutionError) as exc:
         ret['result'] = False
         ret['comment'] = (
-            'Unable to compare desrired timezone {0!r} to system timezone: {1}'
+            'Unable to compare desired timezone {0!r} to system timezone: {1}'
             .format(name, exc)
         )
         return ret

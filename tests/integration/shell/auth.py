@@ -19,6 +19,7 @@ from salttesting.helpers import (
 ensure_in_syspath('../../')
 
 # Import salt libs
+import salt.utils
 from salt.utils.pycrypto import gen_hash
 import integration
 
@@ -76,11 +77,18 @@ class AuthTest(integration.ShellCase):
 
     def test_pam_auth_valid_user(self):
         '''
-        test pam auth mechanism is working with a valid user
+        test that pam auth mechanism works with a valid user
         '''
         password, hashed_pwd = gen_password()
-        self.run_call("shadow.set_password {0} '{1}'".format(self.userA, hashed_pwd))
 
+        # set user password
+        set_pw_cmd = "shadow.set_password {0} '{1}'".format(
+                self.userA,
+                password if salt.utils.is_darwin() else hashed_pwd
+        )
+        self.run_call(set_pw_cmd)
+
+        # test user auth against pam
         cmd = ('-a pam "*" test.ping '
                '--username {0} --password {1}'.format(self.userA, password))
         resp = self.run_salt(cmd)
@@ -101,11 +109,19 @@ class AuthTest(integration.ShellCase):
 
     def test_pam_auth_valid_group(self):
         '''
-        test pam auth mechanism success for a valid group
+        test that pam auth mechanism works for a valid group
         '''
         password, hashed_pwd = gen_password()
-        self.run_call("shadow.set_password {0} '{1}'".format(self.userB, hashed_pwd))
 
+        # set user password
+        set_pw_cmd = "shadow.set_password {0} '{1}'".format(
+                self.userB,
+                password if salt.utils.is_darwin() else hashed_pwd
+        )
+        self.run_call(set_pw_cmd)
+
+        # test group auth against pam: saltadm is not configured in
+        # external_auth, but saltops is and saldadm is a member of saltops
         cmd = ('-a pam "*" test.ping '
                '--username {0} --password {1}'.format(self.userB, password))
         resp = self.run_salt(cmd)

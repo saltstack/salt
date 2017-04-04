@@ -6,7 +6,7 @@
     VT Helper
 
     This module provides the SSHConnection to expose an SSH connection object
-    allowing users to programatically execute commands on a remote server using
+    allowing users to programmatically execute commands on a remote server using
     Salt VT.
 '''
 from __future__ import absolute_import

@@ -24,7 +24,8 @@ from salt.modules import slack_notify
 
 # Globals
 slack_notify.__salt__ = {}
-RET_DICT = {'res': False, 'message': 'No Slack api key found.'}
+slack_notify.__opts__ = {}
+RET_DICT = {'res': False, 'message': 'invalid_auth'}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -38,7 +39,7 @@ class SlackNotifyTestCase(TestCase):
         '''
         Test if it list all Slack rooms.
         '''
-        mock = MagicMock(return_value='')
+        mock = MagicMock(return_value='fake_key')
         with patch.dict(slack_notify.__salt__, {'config.get': mock}):
             self.assertDictEqual(slack_notify.list_rooms(), RET_DICT)
 
@@ -48,7 +49,7 @@ class SlackNotifyTestCase(TestCase):
         '''
         Test if it list all Slack users.
         '''
-        mock = MagicMock(return_value='')
+        mock = MagicMock(return_value='fake_key')
         with patch.dict(slack_notify.__salt__, {'config.get': mock}):
             self.assertDictEqual(slack_notify.list_users(), RET_DICT)
 
@@ -58,7 +59,7 @@ class SlackNotifyTestCase(TestCase):
         '''
         Test if it find a room by name and return it.
         '''
-        mock = MagicMock(return_value='')
+        mock = MagicMock(return_value='fake_key')
         with patch.dict(slack_notify.__salt__, {'config.get': mock}):
             self.assertFalse(slack_notify.find_room(name="random"))
 
@@ -68,7 +69,7 @@ class SlackNotifyTestCase(TestCase):
         '''
         Test if it find a user by name and return it.
         '''
-        mock = MagicMock(return_value='')
+        mock = MagicMock(return_value='fake_key')
         with patch.dict(slack_notify.__salt__, {'config.get': mock}):
             self.assertFalse(slack_notify.find_user(name="SALT"))
 
@@ -78,7 +79,7 @@ class SlackNotifyTestCase(TestCase):
         '''
         Test if it send a message to a Slack channel.
         '''
-        mock = MagicMock(return_value='')
+        mock = MagicMock(return_value='fake_key')
         with patch.dict(slack_notify.__salt__, {'config.get': mock}):
             self.assertDictEqual(slack_notify.post_message
                                  (channel="Development Room",

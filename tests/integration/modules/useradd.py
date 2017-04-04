@@ -16,12 +16,18 @@ from salttesting.helpers import (
 ensure_in_syspath('../../')
 
 # Import salt libs
+import salt.utils
 import integration
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
+@destructiveTest
+@skipIf(os.geteuid() != 0, 'you must be root to run these tests')
+# Only run on linux for now until or if we can figure out a way to use
+# __grains__ inside of useradd.__virtual__
+@skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
 class UseraddModuleTest(integration.ModuleCase):
 
     def setUp(self):
@@ -40,8 +46,6 @@ class UseraddModuleTest(integration.ModuleCase):
             for x in range(size)
         )
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     @requires_system_grains
     def test_groups_includes_primary(self, grains=None):
         # Let's create a user, which usually creates the group matching the
@@ -83,6 +87,27 @@ class UseraddModuleTest(integration.ModuleCase):
 
         except AssertionError:
             self.run_function('user.delete', [uname, True, True])
+            raise
+
+    def test_linux_user_primary_group(self, grains=None):
+        '''
+        Tests the primary_group function
+        '''
+        name = 'saltyuser'
+
+        # Create a user to test primary group function
+        if self.run_function('user.add', [name]) is not True:
+            self.run_function('user.delete', [name])
+            self.skipTest('Failed to create a user')
+
+        try:
+            # Test useradd.primary_group
+            primary_group = self.run_function('user.primary_group', [name])
+            uid_info = self.run_function('user.info', [name])
+            self.assertIn(primary_group, uid_info['groups'])
+
+        except:
+            self.run_function('user.delete', [name])
             raise
 
 

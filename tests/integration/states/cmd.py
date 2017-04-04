@@ -162,7 +162,7 @@ class CMDTest(integration.ModuleCase,
         state_filename = state_name + '.sls'
         state_file = os.path.join(STATE_DIR, state_filename)
 
-        saltines_key = 'cmd_|-saltines_|-/bin/true_|-run'
+        saltines_key = 'cmd_|-saltines_|-echo_|-run'
         biscuits_key = 'cmd_|-biscuits_|-echo hello_|-wait'
 
         try:
@@ -170,7 +170,7 @@ class CMDTest(integration.ModuleCase,
                 fp_.write(textwrap.dedent('''\
                 saltines:
                   cmd.run:
-                    - name: /bin/true
+                    - name: echo
                     - cwd: /
                     - stateful: True
 

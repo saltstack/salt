@@ -13,6 +13,7 @@ the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/scaleway.conf``:
 
 .. code-block:: yaml
+
     scaleway-config:
       # Scaleway organization and token
       access_key: 0e604a2c-aea6-4081-acb2-e1d1258ef95c
@@ -181,7 +182,7 @@ def get_image(server_):
         if server_image in (images[image]['name'], images[image]['id']):
             return images[image]['id']
     raise SaltCloudNotFound(
-        'The specified image, {0!r}, could not be found.'.format(server_image)
+        'The specified image, \'{0}\', could not be found.'.format(server_image)
     )
 
 
@@ -305,9 +306,9 @@ def create(server_):
 
     ret.update(data)
 
-    log.info('Created BareMetal server {0[name]!r}'.format(server_))
+    log.info('Created BareMetal server \'{0[name]}\''.format(server_))
     log.debug(
-        '{0[name]!r} BareMetal server creation details:\n{1}'.format(
+        '\'{0[name]}\' BareMetal server creation details:\n{1}'.format(
             server_, pprint.pformat(data)
         )
     )
@@ -364,7 +365,7 @@ def query(method='servers', server_id=None, command=None, args=None,
     if request.status_code > 299:
         raise SaltCloudSystemExit(
             'An error occurred while querying Scaleway. HTTP Code: {0}  '
-            'Error: {1!r}'.format(
+            'Error: \'{1}\''.format(
                 request.status_code,
                 request.text
             )
@@ -410,8 +411,8 @@ def _get_node(name):
             return list_nodes_full()[name]
         except KeyError:
             log.debug(
-                'Failed to get the data for the node {0!r}. Remaining '
-                'attempts {1}'.format(
+                'Failed to get the data for node \'{0}\'. Remaining '
+                'attempts: {1}'.format(
                     name, attempt
                 )
             )
@@ -425,6 +426,7 @@ def destroy(name, call=None):
 
     CLI Example:
     .. code-block:: bash
+
         salt-cloud --destroy mymachine
     '''
     if call == 'function':
