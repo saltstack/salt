@@ -1612,7 +1612,7 @@ def mediatype_delete(mediatypeids, **connection_args):
         return ret
 
 
-def mediatype_update(mediatypeid, name=False, mediatype=False,  **connection_args):
+def mediatype_update(mediatypeid, name=False, mediatype=False, **connection_args):
     '''
     Update existing mediatype.
     NOTE: This function accepts all standard mediatype properties: keyword argument names differ depending on your
