@@ -1489,6 +1489,166 @@ def hostinterface_update(interfaceid, **connection_args):
         return ret
 
 
+def mediatype_get(name=None, mediatypeids=None, **connection_args):
+    '''
+    Retrieve mediatypes according to the given parameters.
+
+    Args:
+        name:         Name or description of the mediatype
+        mediatypeids: ids of the mediatypes
+
+        optional connection_args:
+                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
+                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
+                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+
+                all optional mediatype.get parameters: keyword argument names differ depending on your zabbix version, see:
+
+                https://www.zabbix.com/documentation/2.2/manual/api/reference/mediatype/get
+
+    Returns:
+        Array with mediatype details, False if no mediatype found or on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.mediatype_get name='Email'
+        salt '*' zabbix.mediatype_get mediatypeids="['1', '2', '3']"
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'mediatype.get'
+            params = {"output": "extend", "filter": {}}
+            if name:
+                params['filter'].setdefault('description', name)
+            if mediatypeids:
+                params.setdefault('mediatypeids', mediatypeids)
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result'] if len(ret['result']) > 0 else False
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def mediatype_create(name, mediatype, **connection_args):
+    '''
+    Create new mediatype.
+    NOTE: This function accepts all standard mediatype properties: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/3.0/manual/api/reference/mediatype/object
+
+    :param mediatype: media type - 0: email, 1: script, 2: sms, 3: Jabber, 100: Ez Texting
+    :param exec_path: exec path - Required for script and Ez Texting types, see Zabbix API docs
+    :param gsm_modem: exec path - Required for sms type, see Zabbix API docs
+    :param smtp_email: email address from which notifications will be sent, required for email type
+    :param smtp_helo: SMTP HELO, required for email type
+    :param smtp_server: SMTP server, required for email type
+    :param status: whether the media type is enabled - 0: enabled, 1: disabled
+    :param username: authentication user, required for Jabber and Ez Texting types
+    :param passwd: authentication password, required for Jabber and Ez Texting types
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    return: ID of the created mediatype.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.mediatype_create 'Email' 0 smtp_email='noreply@example.com'
+        smtp_server='mailserver.example.com' smtp_helo='zabbix.example.com'
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'mediatype.create'
+            params = {"description": name}
+            params['type'] = mediatype
+            params = _params_extend(params, _ignore_name=True, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['mediatypeid']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def mediatype_delete(mediatypeids, **connection_args):
+    '''
+    Delete mediatype
+
+
+    :param interfaceids: IDs of the mediatypes to delete
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: ID of deleted mediatype, False on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.mediatype_delete 3
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'mediatype.delete'
+            if isinstance(mediatypeids, list):
+                params = mediatypeids
+            else:
+                params = [mediatypeids]
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['mediatypeids']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def mediatype_update(mediatypeid, name=False, mediatype=False, **connection_args):
+    '''
+    Update existing mediatype.
+    NOTE: This function accepts all standard mediatype properties: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/3.0/manual/api/reference/mediatype/object
+
+    :param mediatypeid: ID of the mediatype to update
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: IDs of the updated mediatypes, False on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.usergroup_update 8 name="Email update"
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'mediatype.update'
+            params = {"mediatypeid": mediatypeid}
+            if name:
+                params['description'] = name
+            if mediatype:
+                params['type'] = mediatype
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['mediatypeids']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
 def template_get(name=None, host=None, templateids=None, **connection_args):
     '''
     Retrieve templates according to the given parameters.
