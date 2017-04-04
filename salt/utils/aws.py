@@ -238,10 +238,16 @@ def sig4(method, endpoint, params, prov_dict,
 
     amzdate = timenow.strftime('%Y%m%dT%H%M%SZ')
     datestamp = timenow.strftime('%Y%m%d')
-
     new_headers = {}
+
+    # Create payload hash (hash of the request body content). For GET
+    # requests, the payload is an empty string ('').
+    if not payload_hash:
+        payload_hash = hashlib.sha256(data).hexdigest()
+
     new_headers['X-Amz-date'] = amzdate
     new_headers['host'] = endpoint
+    new_headers['x-amz-content-sha256'] = payload_hash
     a_canonical_headers = []
     a_signed_headers = []
     if isinstance(headers, dict):
@@ -259,11 +265,6 @@ def sig4(method, endpoint, params, prov_dict,
     signed_headers = ';'.join(a_signed_headers)
 
     algorithm = 'AWS4-HMAC-SHA256'
-
-    # Create payload hash (hash of the request body content). For GET
-    # requests, the payload is an empty string ('').
-    if not payload_hash:
-        payload_hash = hashlib.sha256(data).hexdigest()
 
     # Combine elements to create create canonical request
     canonical_request = '\n'.join((
@@ -309,7 +310,6 @@ def sig4(method, endpoint, params, prov_dict,
             signature,
         )
 
-    new_headers['x-amz-content-sha256'] = payload_hash
     new_headers['Authorization'] = authorization_header
 
     requesturl = '{0}?{1}'.format(requesturl, querystring)
