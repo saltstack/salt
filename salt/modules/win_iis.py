@@ -1902,7 +1902,7 @@ def set_webapp_settings(name, site, settings):
             availSetStr = ', '.join(availableSettings)
             log.error("Unexpected setting: %s ", setting)
             log.error("Available settings: %s", availSetStr)
-            msg="Unexpected setting:" + setting + " Available settings:" + availSetStr
+            msg = "Unexpected setting:" + setting + " Available settings:" + availSetStr
             raise SaltInvocationError(msg)
 
     # Check if settings already configured
