@@ -13,9 +13,9 @@ import random
 # Import 3rd-party libs
 try:
     try:
-        import Cryptodome.Random as CRand # pylint: disable=E0611
+        import Cryptodome.Random as CRand  # pylint: disable=E0611
     except ImportError:
-        import Crypto.Random as CRand # pylint: disable=E0611
+        import Crypto.Random as CRand  # pylint: disable=E0611
     HAS_RANDOM = True
 except ImportError:
     HAS_RANDOM = False
