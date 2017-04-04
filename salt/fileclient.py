@@ -1163,7 +1163,7 @@ class RemoteClient(Client):
             data = self.channel.send(load, raw=True)
             if six.PY3:
                 # Sometimes the source is local (eg when using
-                # 'salt.filesystem.FSChan'), in which case the keys are
+                # 'salt.fileserver.FSChan'), in which case the keys are
                 # already strings. Sometimes the source is remote, in which
                 # case the keys are bytes due to raw mode. Standardize on
                 # strings for the top-level keys to simplify things.
