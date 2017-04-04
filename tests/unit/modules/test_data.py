@@ -41,15 +41,19 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'load' function tests: 1
 
-    @patch('salt.utils.fopen', MagicMock(return_value=True))
     @patch('salt.payload.Serial.load', MagicMock(return_value=True))
     def test_load(self):
         '''
         Test if it return all of the data in the minion datastore
         '''
+        mocked_fopen = MagicMock(return_value=True)
+        mocked_fopen.__enter__ = MagicMock(return_value=mocked_fopen)
+        mocked_fopen.__exit__ = MagicMock()
         mock = MagicMock(return_value='/')
-        with patch.dict(data.__opts__, {'cachedir': mock}):
-            self.assertTrue(data.load())
+        with patch('salt.utils.fopen', MagicMock(return_value=mocked_fopen)):
+            with patch('salt.payload.Serial.loads', MagicMock(return_value=True)):
+                with patch.dict(data.__opts__, {'cachedir': mock}):
+                    self.assertTrue(data.load())
 
     # 'dump' function tests: 3
 
