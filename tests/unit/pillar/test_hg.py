@@ -15,18 +15,19 @@ from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.paths import TMP
 
-import tests.integration as integration
 
 COMMIT_USER_NAME = 'test_user'
 # file contents
 PILLAR_CONTENT = {'gna': 'hello'}
 FILE_DATA = {
-     'top.sls': {'base': {'*': ['user']}},
-     'user.sls': PILLAR_CONTENT
+    'top.sls': {'base': {'*': ['user']}},
+    'user.sls': PILLAR_CONTENT
 }
 
 # Import Salt Libs
+import salt.utils
 import salt.pillar.hg_pillar as hg_pillar
 HGLIB = hg_pillar.hglib
 
@@ -38,7 +39,7 @@ class HgPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModule
     maxDiff = None
 
     def setup_loader_modules(self):
-        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        self.tmpdir = tempfile.mkdtemp(dir=TMP)
         self.addCleanup(shutil.rmtree, self.tmpdir)
         cachedir = os.path.join(self.tmpdir, 'cachedir')
         os.makedirs(os.path.join(cachedir, 'hg_pillar'))
@@ -65,7 +66,7 @@ class HgPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModule
         os.makedirs(hg_repo)
         subprocess.check_call(['hg', 'init', hg_repo])
         for filename in FILE_DATA:
-            with open(os.path.join(hg_repo, filename), 'w') as data_file:
+            with salt.utils.fopen(os.path.join(hg_repo, filename), 'w') as data_file:
                 yaml.dump(FILE_DATA[filename], data_file)
         subprocess.check_call(['hg', 'ci', '-A', '-R', hg_repo, '-m', 'first commit', '-u', COMMIT_USER_NAME])
         return hg_repo

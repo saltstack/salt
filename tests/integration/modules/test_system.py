@@ -108,7 +108,7 @@ class SystemModuleTest(ModuleCase):
                 log.debug('Comparing hwclock to sys clock')
                 with os.fdopen(rpipeFd, "r") as rpipe:
                     with os.fdopen(wpipeFd, "w") as wpipe:
-                        with open(os.devnull, "r") as nulFd:
+                        with salt.utils.fopen(os.devnull, "r") as nulFd:
                             p = subprocess.Popen(args=['hwclock', '--compare'],
                                 stdin=nulFd, stdout=wpipeFd, stderr=subprocess.PIPE)
                             p.communicate()

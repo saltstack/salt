@@ -79,10 +79,11 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_sha256_is_default_for_master(self):
         fpath = tempfile.mktemp()
         try:
-            salt.utils.fopen(fpath, 'w').write(
-                "root_dir: /\n"
-                "key_logfile: key\n"
-            )
+            with salt.utils.fopen(fpath, 'w') as wfh:
+                wfh.write(
+                    "root_dir: /\n"
+                    "key_logfile: key\n"
+                )
             config = sconfig.master_config(fpath)
             self.assertEqual(config['hash_type'], 'sha256')
         finally:
@@ -92,10 +93,11 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_sha256_is_default_for_minion(self):
         fpath = tempfile.mktemp()
         try:
-            salt.utils.fopen(fpath, 'w').write(
-                "root_dir: /\n"
-                "key_logfile: key\n"
-            )
+            with salt.utils.fopen(fpath, 'w') as wfh:
+                wfh.write(
+                    "root_dir: /\n"
+                    "key_logfile: key\n"
+                )
             config = sconfig.minion_config(fpath)
             self.assertEqual(config['hash_type'], 'sha256')
         finally:
@@ -359,13 +361,15 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             # Create some kown files.
             for f in 'abc':
                 fpath = os.path.join(tempdir, f)
-                salt.utils.fopen(fpath, 'w').write(f)
+                with salt.utils.fopen(fpath, 'w') as wfh:
+                    wfh.write(f)
 
-            salt.utils.fopen(fpath, 'w').write(
-                'file_roots:\n'
-                '  base:\n'
-                '    - {0}'.format(os.path.join(tempdir, '*'))
-            )
+            with salt.utils.fopen(fpath, 'w') as wfh:
+                wfh.write(
+                    'file_roots:\n'
+                    '  base:\n'
+                    '    - {0}'.format(os.path.join(tempdir, '*'))
+                )
             config = sconfig.master_config(fpath)
             base = config['file_roots']['base']
             self.assertEqual(set(base), set([
@@ -387,13 +391,15 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             # Create some kown files.
             for f in 'abc':
                 fpath = os.path.join(tempdir, f)
-                salt.utils.fopen(fpath, 'w').write(f)
+                with salt.utils.fopen(fpath, 'w') as wfh:
+                    wfh.write(f)
 
-            salt.utils.fopen(fpath, 'w').write(
-                'pillar_roots:\n'
-                '  base:\n'
-                '    - {0}'.format(os.path.join(tempdir, '*'))
-            )
+            with salt.utils.fopen(fpath, 'w') as wfh:
+                wfh.write(
+                    'pillar_roots:\n'
+                    '  base:\n'
+                    '    - {0}'.format(os.path.join(tempdir, '*'))
+                )
             config = sconfig.master_config(fpath)
             base = config['pillar_roots']['base']
             self.assertEqual(set(base), set([
@@ -415,13 +421,15 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             # Create some kown files.
             for f in 'abc':
                 fpath = os.path.join(tempdir, f)
-                salt.utils.fopen(fpath, 'w').write(f)
+                with salt.utils.fopen(fpath, 'w') as wfh:
+                    wfh.write(f)
 
-            salt.utils.fopen(fpath, 'w').write(
-                'file_roots:\n'
-                '  base:\n'
-                '    - {0}'.format(os.path.join(tempdir, '*'))
-            )
+            with salt.utils.fopen(fpath, 'w') as wfh:
+                wfh.write(
+                    'file_roots:\n'
+                    '  base:\n'
+                    '    - {0}'.format(os.path.join(tempdir, '*'))
+                )
             config = sconfig.minion_config(fpath)
             base = config['file_roots']['base']
             self.assertEqual(set(base), set([
@@ -443,13 +451,15 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             # Create some kown files.
             for f in 'abc':
                 fpath = os.path.join(tempdir, f)
-                salt.utils.fopen(fpath, 'w').write(f)
+                with salt.utils.fopen(fpath, 'w') as wfh:
+                    wfh.write(f)
 
-            salt.utils.fopen(fpath, 'w').write(
-                'pillar_roots:\n'
-                '  base:\n'
-                '    - {0}'.format(os.path.join(tempdir, '*'))
-            )
+            with salt.utils.fopen(fpath, 'w') as wfh:
+                wfh.write(
+                    'pillar_roots:\n'
+                    '  base:\n'
+                    '    - {0}'.format(os.path.join(tempdir, '*'))
+                )
             config = sconfig.minion_config(fpath)
             base = config['pillar_roots']['base']
             self.assertEqual(set(base), set([

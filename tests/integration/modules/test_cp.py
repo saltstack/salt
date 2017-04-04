@@ -515,7 +515,7 @@ class CPModuleTest(ModuleCase):
 
     def test_push(self):
         log_to_xfer = os.path.join(paths.TMP, uuid.uuid4().hex)
-        open(log_to_xfer, 'w').close()
+        open(log_to_xfer, 'w').close()  # pylint: disable=resource-leakage
         try:
             self.run_function('cp.push', [log_to_xfer])
             tgt_cache_file = os.path.join(

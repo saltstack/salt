@@ -34,6 +34,7 @@ FILE_DATA = {
              }
 
 # Import Salt Libs
+import salt.utils
 from salt.pillar import Pillar
 import salt.pillar.git_pillar as git_pillar
 
@@ -80,7 +81,7 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
         os.makedirs(repo)
         subprocess.check_call(['git', 'init', repo])
         for filename in FILE_DATA:
-            with open(os.path.join(repo, filename), 'w') as data_file:
+            with salt.utils.fopen(os.path.join(repo, filename), 'w') as data_file:
                 yaml.dump(FILE_DATA[filename], data_file)
 
         subprocess.check_call(['git', 'add', '.'], cwd=repo)

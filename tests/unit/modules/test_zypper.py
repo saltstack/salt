@@ -20,7 +20,11 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
+import salt.utils
+import salt.modules.zypper as zypper
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
 from salt.ext.six.moves import configparser
 import salt.ext.six as six
 
@@ -40,11 +44,14 @@ def get_test_data(filename):
     '''
     Return static test data
     '''
-    return open(os.path.join(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'zypp'), filename)).read()
+    with salt.utils.fopen(
+            os.path.join(
+                os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)), 'zypp'), filename)) as rfh:
+        return rfh.read()
 
 
 # Import Salt Libs
-import salt.modules.zypper as zypper
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

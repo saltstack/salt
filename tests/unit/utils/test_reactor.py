@@ -8,6 +8,7 @@ import os
 
 from contextlib import contextmanager
 
+import salt.utils
 from salt.utils.process import clean_proc
 import salt.utils.reactor as reactor
 
@@ -44,7 +45,7 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
         self.opts = self.get_temp_config('master')
         self.tempdir = tempfile.mkdtemp(dir=TMP)
         self.sls_name = os.path.join(self.tempdir, 'test.sls')
-        with open(self.sls_name, 'w') as fh:
+        with salt.utils.fopen(self.sls_name, 'w') as fh:
             fh.write('''
 update_fileserver:
   runner.fileserver.update

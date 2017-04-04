@@ -803,7 +803,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.addCleanup(lambda: shutil.rmtree(directory))
 
         wrong_file = os.path.join(directory, "wrong")
-        with open(wrong_file, "w") as fp:
+        with salt.utils.fopen(wrong_file, "w") as fp:
             fp.write("foo")
         good_file = os.path.join(directory, "bar")
 
@@ -838,7 +838,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.addCleanup(lambda: shutil.rmtree(directory))
 
         wrong_file = os.path.join(directory, "wrong")
-        with open(wrong_file, "w") as fp:
+        with salt.utils.fopen(wrong_file, "w") as fp:
             fp.write("foo")
         good_file = os.path.join(directory, "bar")
 
@@ -874,7 +874,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.addCleanup(lambda: shutil.rmtree(directory))
 
         wrong_file = os.path.join(directory, "wrong")
-        with open(wrong_file, "w") as fp:
+        with salt.utils.fopen(wrong_file, "w") as fp:
             fp.write("foo")
         good_file = os.path.join(directory, "bar")
 

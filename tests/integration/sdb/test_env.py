@@ -23,7 +23,8 @@ class EnvTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.state_name = 'test_sdb_env'
         self.state_file_name = self.state_name + '.sls'
         self.state_file_set_var = os.path.join(STATE_DIR, self.state_file_name)
-        salt.utils.fopen(self.state_file_set_var, 'w').write(textwrap.dedent('''\
+        with salt.utils.fopen(self.state_file_set_var, 'w') as wfh:
+            wfh.write(textwrap.dedent('''\
                 set some env var:
                   cmd.run:
                     - name: echo {{ salt['sdb.set']('sdb://osenv/foo', 'bar') }}

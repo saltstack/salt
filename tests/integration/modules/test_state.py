@@ -1233,7 +1233,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         testfile = os.path.join(TMP, 'retry_file')
         time.sleep(30)
-        open(testfile, 'a').close()
+        open(testfile, 'a').close()  # pylint: disable=resource-leakage
 
     def test_retry_option_eventual_success(self):
         '''

@@ -30,7 +30,8 @@ class MinionBlackoutTestCase(ModuleCase):
         '''
         setup minion blackout mode
         '''
-        salt.utils.fopen(BLACKOUT_PILLAR, 'w').write(blackout_data)
+        with salt.utils.fopen(BLACKOUT_PILLAR, 'w') as wfh:
+            wfh.write(blackout_data)
         self.run_function('saltutil.refresh_pillar')
         sleep(5)  # wait for minion to enter blackout mode
 

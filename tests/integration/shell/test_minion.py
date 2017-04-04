@@ -204,7 +204,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         default_dir = os.path.join(sysconf_dir, 'default')
         if not os.path.exists(default_dir):
             os.makedirs(default_dir)
-        with open(os.path.join(default_dir, 'salt'), 'w') as defaults:
+        with salt.utils.fopen(os.path.join(default_dir, 'salt'), 'w') as defaults:
             # Test suites is quite slow - extend the timeout
             defaults.write(
                 'TIMEOUT=60\n'

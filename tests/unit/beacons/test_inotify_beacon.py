@@ -7,6 +7,7 @@ import shutil
 import tempfile
 
 # Salt libs
+import salt.utils
 from salt.beacons import inotify
 
 # Salt testing libs
@@ -46,7 +47,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = inotify.beacon(config)
         self.assertEqual(ret, [])
 
-        with open(path, 'r') as f:
+        with salt.utils.fopen(path, 'r') as f:
             pass
         ret = inotify.beacon(config)
         self.assertEqual(len(ret), 1)
@@ -58,13 +59,13 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = inotify.beacon(config)
         self.assertEqual(ret, [])
         fp = os.path.join(self.tmpdir, 'tmpfile')
-        with open(fp, 'w') as f:
+        with salt.utils.fopen(fp, 'w') as f:
             pass
         ret = inotify.beacon(config)
         self.assertEqual(len(ret), 1)
         self.assertEqual(ret[0]['path'], fp)
         self.assertEqual(ret[0]['change'], 'IN_CREATE')
-        with open(fp, 'r') as f:
+        with salt.utils.fopen(fp, 'r') as f:
             pass
         ret = inotify.beacon(config)
         self.assertEqual(ret, [])
@@ -74,7 +75,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = inotify.beacon(config)
         self.assertEqual(ret, [])
         fp = os.path.join(self.tmpdir, 'tmpfile')
-        with open(fp, 'w') as f:
+        with salt.utils.fopen(fp, 'w') as f:
             pass
         ret = inotify.beacon(config)
         self.assertEqual(len(ret), 2)
@@ -82,7 +83,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]['change'], 'IN_CREATE')
         self.assertEqual(ret[1]['path'], fp)
         self.assertEqual(ret[1]['change'], 'IN_OPEN')
-        with open(fp, 'r') as f:
+        with salt.utils.fopen(fp, 'r') as f:
             pass
         ret = inotify.beacon(config)
         self.assertEqual(len(ret), 1)
@@ -95,12 +96,12 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         dp2 = os.path.join(dp1, 'subdir2')
         os.mkdir(dp2)
         fp = os.path.join(dp2, 'tmpfile')
-        with open(fp, 'w') as f:
+        with salt.utils.fopen(fp, 'w') as f:
             pass
         config = {self.tmpdir: {'mask': ['open'], 'recurse': True}}
         ret = inotify.beacon(config)
         self.assertEqual(ret, [])
-        with open(fp) as f:
+        with salt.utils.fopen(fp) as f:
             pass
         ret = inotify.beacon(config)
         self.assertEqual(len(ret), 3)
@@ -126,7 +127,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]['path'], dp2)
         self.assertEqual(ret[0]['change'], 'IN_CREATE|IN_ISDIR')
         fp = os.path.join(dp2, 'tmpfile')
-        with open(fp, 'w') as f:
+        with salt.utils.fopen(fp, 'w') as f:
             pass
         ret = inotify.beacon(config)
         self.assertEqual(len(ret), 1)

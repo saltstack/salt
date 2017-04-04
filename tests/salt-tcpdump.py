@@ -33,7 +33,7 @@ tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4505 and "tcp[tcpflags] & tcp-ac
 For Port 4506
 tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4506 and "tcp[tcpflags] & tcp-ack == 0"
 '''
-
+# pylint: disable=resource-leakage
 # Import Python Libs
 from __future__ import absolute_import, print_function
 import socket

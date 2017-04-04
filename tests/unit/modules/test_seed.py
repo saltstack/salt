@@ -18,6 +18,7 @@ from tests.support.mock import (
 
 
 # Import Salt Libs
+import salt.utils
 import salt.utils.odict
 import salt.modules.seed as seed
 
@@ -37,7 +38,7 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
             ddd['b'] = 'b'
             ddd['a'] = 'b'
             data = seed.mkconfig(ddd, approve_key=False)
-            with open(data['config']) as fic:
+            with salt.utils.fopen(data['config']) as fic:
                 fdata = fic.read()
                 self.assertEqual(fdata, 'b: b\na: b\nmaster: foo\n')
 

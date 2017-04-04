@@ -11,6 +11,7 @@ from tests.support.unit import TestCase
 from tests.support.helpers import destructiveTest
 
 import salt.config
+import salt.utils
 import salt.spm
 
 _TMP_SPM = tempfile.mkdtemp()
@@ -109,7 +110,7 @@ class SPMTest(TestCase):
             dirname, _ = os.path.split(path)
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
-            with open(path, 'w') as f:
+            with salt.utils.fopen(path, 'w') as f:
                 f.write(contents)
         return fdir
 
@@ -125,7 +126,8 @@ class SPMTest(TestCase):
         for path, contents in _F1['contents']:
             path = os.path.join(__opts__['file_roots']['base'][0], _F1['definition']['name'], path)
             assert os.path.exists(path)
-            assert open(path, 'r').read() == contents
+            with salt.utils.fopen(path, 'r') as rfh:
+                assert rfh.read() == contents
         # Check database
         self.client.run(['info', _F1['definition']['name']])
         lines = self.ui._status[-1].split('\n')
