@@ -35,7 +35,7 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
         uinfo = self.run_function('user.info', [user])
 
         venv_dir = os.path.join(
-            RUNTIME_VARS.TMP, 'issue-1959-virtualenv-runas'
+            RUNTIME_VARS.SYS_TMP_DIR, 'issue-1959-virtualenv-runas'
         )
         try:
             ret = self.run_function(
