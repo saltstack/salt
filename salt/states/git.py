@@ -1431,6 +1431,7 @@ def latest(name,
             return _uptodate(ret, target, _format_comments(comments))
     else:
         if os.path.isdir(target):
+            target_contents = os.listdir(target)
             if force_clone:
                 # Clone is required, and target directory exists, but the
                 # ``force`` option is enabled, so we need to clear out its
@@ -1449,22 +1450,25 @@ def latest(name,
                     'place (force_clone=True set in git.latest state)'
                     .format(target, name)
                 )
-                try:
-                    if os.path.islink(target):
-                        os.unlink(target)
-                    else:
-                        salt.utils.rm_rf(target)
-                except OSError as exc:
+                removal_errors = {}
+                for target_object in target_contents:
+                    try:
+                        salt.utils.rm_rf(target_object)
+                    except OSError as exc:
+                        removal_errors[target_object] = exc
+                if removal_errors:
+                    err_strings = [
+                        '  {}\n    {}'.format(k, v) for k, v in removal_errors.items()
+                    ]
                     return _fail(
                         ret,
-                        'Unable to remove {0}: {1}'.format(target, exc),
+                        'Unable to remove:'.format('\n'.join(err_strings),
                         comments
                     )
-                else:
-                    ret['changes']['forced clone'] = True
+                ret['changes']['forced clone'] = True
             # Clone is required, but target dir exists and is non-empty. We
             # can't proceed.
-            elif os.listdir(target):
+            elif target_content:
                 return _fail(
                     ret,
                     'Target \'{0}\' exists, is non-empty and is not a git '
