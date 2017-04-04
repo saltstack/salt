@@ -16,6 +16,7 @@ import socket
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
+from tests.support.paths import TMP
 from tests.support.helpers import (
     requires_network,
     TestsLoggingHandler
@@ -29,7 +30,6 @@ from tests.support.mock import (
 
 # Import salt libs
 import salt.utils
-import tests.integration as integration
 from salt.utils.verify import (
     check_user,
     verify_env,
@@ -91,7 +91,7 @@ class TestVerify(TestCase):
 
     @skipIf(sys.platform.startswith('win'), 'No verify_env Windows')
     def test_verify_env(self):
-        root_dir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        root_dir = tempfile.mkdtemp(dir=TMP)
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
         verify_env([var_dir], getpass.getuser())
         self.assertTrue(os.path.exists(var_dir))
