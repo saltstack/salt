@@ -135,13 +135,6 @@ def cert(name,
         log.debug('Certificate {0} will be renewed'.format(cert_file))
         cmd.append('--renew-by-default')
         renew = True
-    # else:
-    #     return {
-    #         'result': None,
-    #         'comment': 'Certificate {0} does not need renewal'.format(cert_file),
-    #         'not_after': expires(name)
-    #     }
-
     if server:
         cmd.append('--server {0}'.format(server))
 
