@@ -57,7 +57,7 @@ def gen_shell(opts, **kwargs):
             shell = saltwinshell.Shell(opts, **kwargs)
         except ImportError:
             log.error('The saltwinshell library is not available')
-            sys.exit(1)
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
     else:
         shell = Shell(opts, **kwargs)
     return shell
