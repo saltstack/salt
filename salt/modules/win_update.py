@@ -89,10 +89,8 @@ def __virtual__():
         'The \'win_update\' module is deprecated, and will be removed in Salt '
         '{version}. Please use the \'win_wua\' module instead.'
     )
-
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return True
-
     return (False, "Module win_update: module has failed dependencies or is not on Windows client")
 
 
