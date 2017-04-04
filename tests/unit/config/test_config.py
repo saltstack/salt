@@ -15,6 +15,8 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
+from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
@@ -22,7 +24,6 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 import salt.minion
 import salt.utils
 import salt.utils.network
-import tests.integration as integration
 from salt.syspaths import CONFIG_DIR
 from salt import config as sconfig
 from salt.exceptions import (
@@ -73,7 +74,7 @@ def _salt_configuration_error(filename):
     raise SaltConfigurationError('Configuration error in {0}'.format(filename))
 
 
-class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
+class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_sha256_is_default_for_master(self):
         fpath = tempfile.mktemp()
@@ -119,7 +120,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
                 os.unlink(fpath)
 
     def test_common_prefix_stripping(self):
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             root_dir = os.path.join(tempdir, 'foo', 'bar')
             os.makedirs(root_dir)
@@ -138,7 +139,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
     def test_load_master_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
@@ -182,7 +183,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
     def test_load_minion_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
@@ -225,7 +226,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
     def test_load_client_config_from_environ_var(self):
         original_environ = os.environ.copy()
         try:
-            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+            tempdir = tempfile.mkdtemp(dir=TMP)
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
 
@@ -282,7 +283,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
 
     def test_issue_5970_minion_confd_inclusion(self):
         try:
-            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+            tempdir = tempfile.mkdtemp(dir=TMP)
             minion_config = os.path.join(tempdir, 'minion')
             minion_confd = os.path.join(tempdir, 'minion.d')
             os.makedirs(minion_confd)
@@ -317,7 +318,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
 
     def test_master_confd_inclusion(self):
         try:
-            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+            tempdir = tempfile.mkdtemp(dir=TMP)
             master_config = os.path.join(tempdir, 'master')
             master_confd = os.path.join(tempdir, 'master.d')
             os.makedirs(master_confd)
@@ -353,7 +354,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
     def test_master_file_roots_glob(self):
         # Config file and stub file_roots.
         fpath = tempfile.mktemp()
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
             for f in 'abc':
@@ -381,7 +382,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
     def test_master_pillar_roots_glob(self):
         # Config file and stub pillar_roots.
         fpath = tempfile.mktemp()
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
             for f in 'abc':
@@ -409,7 +410,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
     def test_minion_file_roots_glob(self):
         # Config file and stub file_roots.
         fpath = tempfile.mktemp()
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
             for f in 'abc':
@@ -437,7 +438,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
     def test_minion_pillar_roots_glob(self):
         # Config file and stub pillar_roots.
         fpath = tempfile.mktemp()
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
             for f in 'abc':
@@ -976,7 +977,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
     def test_load_cloud_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
@@ -1019,7 +1020,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixin):
                 shutil.rmtree(tempdir)
 
     def test_deploy_search_path_as_string(self):
-        temp_conf_dir = os.path.join(integration.TMP, 'issue-8863')
+        temp_conf_dir = os.path.join(TMP, 'issue-8863')
         config_file_path = os.path.join(temp_conf_dir, 'cloud')
         deploy_dir_path = os.path.join(temp_conf_dir, 'test-deploy.d')
         try:
