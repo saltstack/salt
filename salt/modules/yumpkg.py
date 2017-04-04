@@ -19,6 +19,7 @@ from __future__ import absolute_import
 import contextlib
 import copy
 import fnmatch
+import glob
 import itertools
 import logging
 import os
@@ -907,6 +908,25 @@ def list_upgrades(refresh=True, **kwargs):
 list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
 
 
+def list_downloaded():
+    '''
+    List prefetched packages downloaded by Yum in the local disk.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_downloaded
+    '''
+    CACHE_DIR = '/var/cache/yum/'
+
+    ret = {}
+    for package_path in glob.glob(os.path.join(CACHE_DIR, '*/*/*/packages/*.rpm')):
+        pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)
+        ret.setdefault(pkg_info['name'], {})[pkg_info['version']] = package_path
+    return ret
+
+
 def info_installed(*names):
     '''
     .. versionadded:: 2015.8.1
@@ -1194,10 +1214,10 @@ def install(name=None,
             log.warning('"version" parameter will be ignored for multiple '
                         'package targets')
 
-    old = list_pkgs(versions_as_list=False)
+    old = list_pkgs(versions_as_list=False) if not downloadonly else list_downloaded()
     # Use of __context__ means no duplicate work here, just accessing
     # information already in __context__ from the previous call to list_pkgs()
-    old_as_list = list_pkgs(versions_as_list=True)
+    old_as_list = list_pkgs(versions_as_list=True) if not downloadonly else list_downloaded()
 
     to_install = []
     to_downgrade = []
@@ -1485,7 +1505,7 @@ def install(name=None,
                 errors.append(out['stdout'])
 
     __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs(versions_as_list=False)
+    new = list_pkgs(versions_as_list=False) if not downloadonly else list_downloaded()
 
     ret = salt.utils.compare_dicts(old, new)
 
