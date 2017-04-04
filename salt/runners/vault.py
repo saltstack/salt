@@ -114,7 +114,7 @@ def _get_policies(minion_id, config):
                                  'policies',
                                  ['saltstack/minion/{minion}', 'saltstack/minions']
                                 )
-    mappings = {'minion': minion_id, 'grains': grains}
+    mappings = {'minion': minion_id, 'grains': grains or {}}
 
     policies = []
     for pattern in policy_patterns:
