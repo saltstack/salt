@@ -12,6 +12,32 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 default_conf = '/etc/logadm.conf'
+option_toggles = {
+    '-c': 'copy_and_truncate',
+    '-l': 'localtime',
+    '-N': 'skip_missing',
+}
+option_flags = {
+    '-A': ['age', None],
+    '-C': ['count', 10],
+    '-a': ['post_command', None],
+    '-b': ['pre_command', None],
+    '-e': ['mail_addr', None],
+    '-E': ['expire_command', None],
+    '-g': ['group', None],
+    '-m': ['mode', None],
+    '-M': ['rename_command', "/bin/mv $file$nfile"],
+    '-o': ['owner', None],
+    '-p': ['period', None],
+    '-P': ['timestmp', None],
+    '-R': ['old_created_command', None],
+    '-s': ['size', None],
+    '-S': ['max_size', None],
+    '-t': ['template', None],
+    '-T': ['pattern', None],
+    '-w': ['entryname', None],
+    '-z': ['compress_count', None],
+}
 
 
 def __virtual__():
@@ -43,7 +69,7 @@ def _parse_conf(conf_file=default_conf):
 
 def show_conf(conf_file=default_conf, name=None):
     '''
-    Show parsed configuration
+    Show configuration
 
     .. versionchanged:: Nitrogen
 
@@ -67,6 +93,70 @@ def show_conf(conf_file=default_conf, name=None):
         return {name: 'not found in {}'.format(conf_file)}
     else:
         return cfg
+
+
+def list_conf(conf_file=default_conf, name=None):
+    '''
+    Show parsed configuration
+
+    .. versionadded:: Nitrogen
+
+    conf_file : string
+        path to logadm.conf, defaults to /etc/logadm.conf
+    name : string
+        optional show only a single entry
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' logadm.list_conf
+        salt '*' logadm.list_conf log_file=/var/log/syslog
+    '''
+    cfg = show_conf(conf_file, name)
+    cfg_parsed = []
+
+    ## parse all options
+    for log in cfg:
+        log_cfg = {}
+        options = cfg[log].split()  # FIXME: brakes quotations
+        if len(options) == 0:
+            continue
+
+        # handle toggle options
+        for opt in option_toggles:
+            log_cfg[option_toggles[opt]] = opt in options
+            if opt in options:
+                options.remove(opt)
+
+        # handle flag options
+        for opt in option_flags:
+            if opt in options:
+                opt_val = None
+                if len(options) > options.index(opt):
+                    opt_val = options[options.index(opt)+1]
+                log_cfg[option_flags[opt][0]] = opt_val
+                options.remove(opt)
+                if opt_val:
+                    options.remove(opt_val)
+            else:
+                log_cfg[option_flags[opt][0]] = option_flags[opt][1]
+
+        # handle log file
+        if log.startswith('/'):
+            log_cfg['log_file'] = log
+        else:
+            log_cfg['entryname'] = log
+            if options[0].startswith('/'):
+                log_cfg['log_file'] = options[0]
+                del options[0]
+
+        # handle unknown options
+        log_cfg['aditional_options'] = " ".join(options) if len(options) else None
+
+        cfg_parsed.append(log_cfg)
+
+    return cfg_parsed
 
 
 def rotate(name,
