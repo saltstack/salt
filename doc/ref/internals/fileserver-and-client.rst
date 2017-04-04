@@ -104,3 +104,12 @@ This client is now used exclusively by Pillar. This used to be used when
 written to allow minions with ``file_client: local`` to access the full set of
 backends. This class will probably be renamed at some point as it is often
 confused with ``salt.client.LocalClient``.
+
+
+The :mod:`cp <salt.modules.cp>` Module
+--------------------------------------
+
+Most of the user-facing interaction with the fileclient happens via the
+:mod:`cp <salt.modules.cp>` module. The functions in this module instantiate a
+fileclient instance (if one is not already saved to the ``__context__``
+dunder) and run fileclient functions.
