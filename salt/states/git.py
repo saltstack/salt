@@ -1469,7 +1469,7 @@ def latest(name,
                 ret['changes']['forced clone'] = True
             # Clone is required, but target dir exists and is non-empty. We
             # can't proceed.
-            elif target_content:
+            elif target_contents:
                 return _fail(
                     ret,
                     'Target \'{0}\' exists, is non-empty and is not a git '
