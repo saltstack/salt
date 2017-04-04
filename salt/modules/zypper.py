@@ -15,6 +15,7 @@ Package support for openSUSE via the zypper package manager
 # Import python libs
 from __future__ import absolute_import
 import copy
+import glob
 import logging
 import re
 import os
@@ -1034,7 +1035,7 @@ def install(name=None,
     else:
         targets = pkg_params
 
-    old = list_pkgs()
+    old = list_pkgs() if not downloadonly else list_downloaded()
     downgrades = []
     if fromrepo:
         fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
@@ -1072,7 +1073,7 @@ def install(name=None,
         __zypper__(no_repo_failure=ignore_repo_failure).call(*cmd)
 
     __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
+    new = list_pkgs() if not downloadonly else list_downloaded()
     ret = salt.utils.compare_dicts(old, new)
 
     if errors:
@@ -1773,6 +1774,26 @@ def download(*packages, **kwargs):
     raise CommandExecutionError(
         'Unable to download packages: {0}'.format(', '.join(packages))
     )
+
+
+def list_downloaded():
+    '''
+    List prefetched packages downloaded by Zypper in the local disk.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_downloaded
+    '''
+    CACHE_DIR = '/var/cache/zypp/packages/'
+
+    ret = {}
+    # Zypper storage is repository_tag/arch/package-version.rpm
+    for package_path in glob.glob(os.path.join(CACHE_DIR, '*/*/*.rpm')):
+        pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)
+        ret.setdefault(pkg_info['name'], {})[pkg_info['version']] = package_path
+    return ret
 
 
 def diff(*paths):
