@@ -50,7 +50,7 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
-            self.assertSaltTrueReturn(self.run_state('user.absent', name=user))
+            self.assertSaltTrueReturn(self.run_state('user.absent', name=user, purge=True))
 
     def test_issue_2594_non_invalidated_cache(self):
         # Testing virtualenv directory
