@@ -67,7 +67,7 @@ def version():
         salt '*' hadoop.version
     '''
     module = 'version'
-    out = _hadoop_cmd(module, True).splitlines()[0].split()
+    out = _hadoop_cmd(module, True).split()
     return out[1]
 
 
