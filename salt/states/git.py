@@ -1612,7 +1612,7 @@ def latest(name,
                 for target_object in target_contents:
                     target_path = os.path.join(target, target_object)
                     try:
-                        salt.utils.rm_rf(target)
+                        salt.utils.rm_rf(target_path)
                     except OSError as exc:
                         removal_errors[target_path] = exc
                 if removal_errors:
