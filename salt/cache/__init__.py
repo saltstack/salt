@@ -289,6 +289,8 @@ class MemCache(Cache):
             for key, data in list(storage.items()):
                 if data[0] + expire < now:
                     del storage[key]
+                else:
+                    break
 
     def _get_storage_id(self):
         fun = '{0}.storage_id'.format(self.driver)
@@ -315,7 +317,7 @@ class MemCache(Cache):
         if record is not None and record[0] + self.expire >= now:
             if self.debug:
                 self.hit += 1
-                log.trace('MemCache stats (call/hit/rate): '
+                log.debug('MemCache stats (call/hit/rate): '
                           '{0}/{1}/{2}'.format(self.call,
                                                self.hit,
                                                float(self.hit) / self.call))
@@ -326,6 +328,11 @@ class MemCache(Cache):
 
         # Have no value for the key or value is expired
         data = super(MemCache, self).fetch(bank, key)
+        if len(self.storage) >= self.max:
+            if self.cleanup:
+                MemCache.__cleanup(self.expire)
+            if len(self.storage) >= self.max:
+                self.storage.popitem(last=False)
         self.storage[(bank, key)] = [now, data]
         return data
 
@@ -335,7 +342,7 @@ class MemCache(Cache):
         if len(self.storage) >= self.max:
             if self.cleanup:
                 MemCache.__cleanup(self.expire)
-            else:
+            if len(self.storage) >= self.max:
                 self.storage.popitem(last=False)
         self.storage[(bank, key)] = [time.time(), data]
 
