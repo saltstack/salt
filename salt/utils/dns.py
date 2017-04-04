@@ -218,29 +218,6 @@ def _rec2data(*rdata):
     return ' '.join(rdata)
 
 
-def _lookup_gai(name, rdtype, timeout=None):
-    '''
-    Use Python's socket interface to lookup addresses
-    :param name: Name of record to search
-    :param rdtype: A or AAAA
-    :param timeout: ignored
-    :return: [] of addresses or False if error
-    '''
-    sock_t = {
-        'A':    socket.AF_INET,
-        'AAAA': socket.AF_INET6
-    }[rdtype]
-
-    if timeout:
-        log.warn('Ignoring timeout on gai resolver; fix resolv.conf to do that')
-
-    try:
-        addresses = [sock[4][0] for sock in socket.getaddrinfo(name, None, sock_t, 0, socket.SOCK_RAW)]
-        return addresses
-    except socket.gaierror:
-        return False
-
-
 def _lookup_dig(name, rdtype, timeout=None, servers=None, secure=None):
     '''
     Use dig to lookup addresses
@@ -264,12 +241,13 @@ def _lookup_dig(name, rdtype, timeout=None, servers=None, secure=None):
 
     cmd = __salt__['cmd.run_all'](cmd + str(name), python_shell=False, output_loglevel='quiet')
 
-    # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warning('dig returned ({0}): {1}'.format(
-            cmd['retcode'], cmd['stderr']
+            cmd['retcode'], cmd['stderr'].strip(string.whitespace + ';')
         ))
         return False
+    elif not cmd['stdout']:
+        return []
 
     validated = False
     res = []
@@ -342,6 +320,29 @@ def _lookup_drill(name, rdtype, timeout=None, servers=None, secure=None):
         return False
     else:
         return res
+
+
+def _lookup_gai(name, rdtype, timeout=None):
+    '''
+    Use Python's socket interface to lookup addresses
+    :param name: Name of record to search
+    :param rdtype: A or AAAA
+    :param timeout: ignored
+    :return: [] of addresses or False if error
+    '''
+    sock_t = {
+        'A':    socket.AF_INET,
+        'AAAA': socket.AF_INET6
+    }[rdtype]
+
+    if timeout:
+        log.warn('Ignoring timeout on gai resolver; fix resolv.conf to do that')
+
+    try:
+        addresses = [sock[4][0] for sock in socket.getaddrinfo(name, None, sock_t, 0, socket.SOCK_RAW)]
+        return addresses
+    except socket.gaierror:
+        return False
 
 
 def _lookup_host(name, rdtype, timeout=None, server=None):
