@@ -23,6 +23,8 @@ import salt.utils.atomicfile
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {'list': 'ls'}
+
 
 def __cachedir(kwargs=None):
     if kwargs and 'cachedir' in kwargs:
