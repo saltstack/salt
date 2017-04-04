@@ -9,5 +9,7 @@ AIX Fixes
 =========
 
 Added module execution support for user and group
+Added module execution support for network and status
+Added module execution support for disk.iostat
 
 
