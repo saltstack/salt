@@ -27,11 +27,7 @@ import functools
 # Import 3rd-party libs
 import psutil  # pylint: disable=3rd-party-module-not-gated
 import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-if six.PY2:
-    import __builtin__ as pybuiltins  # pylint: disable=incompatible-py3-code,import-error
-else:
-    import builtins as pybuiltins  # pylint: disable=import-error
+from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,redefined-builtin
 try:
     from pytestsalt.utils import get_unused_localhost_port  # pylint: disable=unused-import
 except ImportError:
@@ -47,7 +43,7 @@ except ImportError:
 
 # Import Salt Tests Support libs
 from tests.support.unit import skip, _id
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
 
@@ -222,6 +218,7 @@ class RedirectStdStreams(object):
         self.__stdout = stdout
         self.__stderr = stderr
         self.__redirected = False
+        self.patcher = patch.multiple(sys, stderr=self.__stderr, stdout=self.__stdout)
 
     def __enter__(self):
         self.redirect()
@@ -235,8 +232,7 @@ class RedirectStdStreams(object):
         self.old_stdout.flush()
         self.old_stderr = sys.stderr
         self.old_stderr.flush()
-        sys.stdout = self.__stdout
-        sys.stderr = self.__stderr
+        self.patcher.start()
         self.__redirected = True
 
     def unredirect(self):
@@ -254,9 +250,7 @@ class RedirectStdStreams(object):
         except ValueError:
             # already closed?
             pass
-
-        sys.stdout = self.old_stdout
-        sys.stderr = self.old_stderr
+        self.patcher.stop()
 
     def flush(self):
         if self.__redirected:
@@ -425,13 +419,13 @@ class ForceImportErrorOn(object):
                 self.__module_names[modname] = set(entry[1:])
             else:
                 self.__module_names[entry] = None
+        self.patcher = patch.object(builtins, '__import__', self.__fake_import__)
 
     def patch_import_function(self):
-        self.__original_import = pybuiltins.__import__
-        pybuiltins.__import__ = self.__fake_import__
+        self.patcher.start()
 
     def restore_import_funtion(self):
-        pybuiltins.__import__ = self.__original_import
+        self.patcher.stop()
 
     def __fake_import__(self, name, globals_, locals_, fromlist, level=-1):
         if name in self.__module_names:
