@@ -10,13 +10,15 @@ Connection module for Apache Libcloud DNS management
     .. code-block:: yaml
 
         libcloud_dns:
-          profile1:
-            driver: godaddy
-            key: 2orgk34kgk34g
-          profile2:
-            driver: route53
-            key: blah
-            secret: blah
+            profile_test1:
+              driver: cloudflare
+              key: 12345
+              secret: mysecret
+            profile_test2:
+              driver: godaddy
+              key: 12345
+              secret: mysecret
+              shopper_id: 12345
 
 :depends: apache-libcloud
 '''
@@ -68,12 +70,14 @@ def __init__(opts):
 def _get_driver(profile):
     config = __salt__['config.option']('libcloud_dns')[profile]
     cls = get_driver(config['driver'])
-    key = config.get('key')
-    secret = config.get('secret', None)
-    secure = config.get('secure', True)
-    host = config.get('host', None)
-    port = config.get('port', None)
-    return cls(key, secret, secure, host, port)
+    args = config
+    del args['driver']
+    args['key'] = config.get('key')
+    args['secret'] = config.get('secret', None)
+    args['secure'] = config.get('secure', True)
+    args['host'] = config.get('host', None)
+    args['port'] = config.get('port', None)
+    return cls(**args)
 
 
 def list_record_types(profile):
