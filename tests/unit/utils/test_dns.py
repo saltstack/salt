@@ -3,11 +3,12 @@
 from __future__ import print_function, absolute_import
 
 # Python
+import socket
 
 # Salt
 from salt._compat import ipaddress
 from salt.utils.odict import OrderedDict
-from salt.utils.dns import _to_port, _tree, _weighted_order, _data2rec, _data2rec_group
+from salt.utils.dns import _to_port, _tree, _weighted_order, _data2rec, _data2rec_group, _lookup_gai
 
 # Testing
 from tests.support.unit import skipIf, TestCase
@@ -20,7 +21,9 @@ ppr = pprint.PrettyPrinter(indent=2).pprint
 
 
 class DNShelpersCase(TestCase):
-
+    '''
+    Tests for the parser helpers
+    '''
     def test_port(self):
         for right in (1, 42, '123', 65535):
             self.assertEqual(_to_port(right), int(right))
@@ -139,4 +142,62 @@ class DNShelpersCase(TestCase):
         for rdata, res in zip(right, results):
             group = _data2rec_group(rschema, rdata, 'prio')
             self.assertEqual(group, res)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class DNSlookupsCase(TestCase):
+    '''
+    Test the lookup functions
+    '''
+
+    CMD_RETURN = {
+        'pid': 12345,
+        'retcode': 0,
+        'stderr': '',
+        'stdout': ''
+    }
+
+    RESULTS = {
+            'A': [
+                ['10.1.1.1'],
+                ['10.1.1.1', '10.2.2.2', '10.3.3.3'],
+            ],
+            'AAAA': [
+                ['2a00:a00:b01:c02:d03:e04:f05:111'],
+                ['2a00:a00:b01:c02:d03:e04:f05:111',
+                 '2a00:a00:b01:c02:d03:e04:f05:222',
+                 '2a00:a00:b01:c02:d03:e04:f05:333']
+            ]
+        }
+
+    def test_gai(self):
+        # wrong
+        with patch.object(socket, 'getaddrinfo', MagicMock(side_effect=socket.gaierror)):
+            for rec_t in ('A', 'AAAA'):
+                self.assertEqual(_lookup_gai('mockq', rec_t), False)
+
+        # example returns from getaddrinfo
+        right = {
+            'A': [
+                [(2, 3, 3, '', ('10.1.1.1', 0))],
+                [(2, 3, 3, '', ('10.1.1.1', 0)),
+                 (2, 3, 3, '', ('10.2.2.2', 0)),
+                 (2, 3, 3, '', ('10.3.3.3', 0))]
+            ],
+            'AAAA': [
+                [(10, 3, 3, '', ('2a00:a00:b01:c02:d03:e04:f05:111', 0, 0, 0))],
+                [(10, 3, 3, '', ('2a00:a00:b01:c02:d03:e04:f05:111', 0, 0, 0)),
+                 (10, 3, 3, '', ('2a00:a00:b01:c02:d03:e04:f05:222', 0, 0, 0)),
+                 (10, 3, 3, '', ('2a00:a00:b01:c02:d03:e04:f05:333', 0, 0, 0))]
+            ]
+        }
+        for rec_t, tests in right.items():
+            for mock_return, test_res in zip(tests, self.RESULTS[rec_t]):
+                with patch.object(socket, 'getaddrinfo', MagicMock(return_value=mock_return)):
+                    self.assertEqual(_lookup_gai('mockq', rec_t), test_res)
+
+    def test_dig(self):
+
+
+        pass
 
