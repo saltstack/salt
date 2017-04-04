@@ -11,7 +11,7 @@ import os
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
-
+from tests.support.helpers import skip_if_not_root
 # Import salt libs
 from salt import minion
 from salt.utils import event
@@ -28,7 +28,7 @@ class MinionTestCase(TestCase):
         with patch.dict(__opts__, {'ipv6': False, 'master': float('127.0'), 'master_port': '4555', 'retry_dns': False}):
             self.assertRaises(SaltSystemExit, minion.resolve_dns, __opts__)
 
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @skip_if_not_root
     def test_sock_path_len(self):
         '''
         This tests whether or not a larger hash causes the sock path to exceed

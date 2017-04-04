@@ -12,13 +12,14 @@ import os
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import salt libs
 import salt.utils
 from salt.ext.six.moves import range
 
 
+@skip_if_not_root
 @skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
 class ShadowModuleTest(ModuleCase):
     '''
@@ -43,8 +44,6 @@ class ShadowModuleTest(ModuleCase):
                     **os_grain
                 )
             )
-        if salt.utils.get_uid(salt.utils.get_user()) != 0:
-            self.skipTest('Test requires root')
 
     def tearDown(self):
         '''

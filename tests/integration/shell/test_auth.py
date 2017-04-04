@@ -6,15 +6,13 @@
 
 # Import python libs
 from __future__ import absolute_import
-import os
 import pwd
 import grp
 import random
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import salt libs
 import salt.utils
@@ -42,6 +40,8 @@ def gen_password():
     return (password, hashed_pwd)
 
 
+@skip_if_not_root
+@destructiveTest
 class AuthTest(ShellCase):
     '''
     Test auth mechanisms
@@ -49,14 +49,10 @@ class AuthTest(ShellCase):
 
     _call_binary_ = 'salt'
 
-    is_not_root = os.geteuid() != 0
-
     userA = 'saltdev'
     userB = 'saltadm'
     group = 'saltops'
 
-    @destructiveTest
-    @skipIf(is_not_root, 'You must be logged in as root to run this test')
     def setUp(self):
         # This is a little wasteful but shouldn't be a problem
         for user in (self.userA, self.userB):
@@ -126,8 +122,6 @@ class AuthTest(ShellCase):
             'minion:' in resp
         )
 
-    @destructiveTest
-    @skipIf(is_not_root, 'You must be logged in as root to run this test')
     def test_zzzz_tearDown(self):
         for user in (self.userA, self.userB):
             if pwd.getpwnam(user):

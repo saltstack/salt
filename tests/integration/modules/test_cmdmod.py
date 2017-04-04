@@ -8,10 +8,10 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 from tests.support.helpers import (
     destructiveTest,
-    skip_if_binaries_missing
+    skip_if_binaries_missing,
+    skip_if_not_root
 )
 
 # Import salt libs
@@ -196,7 +196,7 @@ class CMDModuleTest(ModuleCase):
         result = self.run_function('cmd.run_stdout', [cmd]).strip()
         self.assertEqual(result, expected_result)
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_quotes_runas(self):
         '''
         cmd.run with quoted command

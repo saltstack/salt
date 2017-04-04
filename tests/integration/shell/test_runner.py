@@ -12,9 +12,9 @@ import shutil
 # Import Salt Testing libs
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
 from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.helpers import skip_if_not_root
 
 # Import 3rd-party libs
 import yaml
@@ -178,7 +178,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
             stdout=stdout, stderr=stderr
         )
 
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @skip_if_not_root
     def test_salt_run_with_eauth_all_args(self):
         '''
         test salt-run with eauth
@@ -193,7 +193,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
             self.assertEqual(expect, run_cmd)
         self._remove_user()
 
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @skip_if_not_root
     def test_salt_run_with_eauth_bad_passwd(self):
         '''
         test salt-run with eauth and bad password

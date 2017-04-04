@@ -18,6 +18,7 @@ import tempfile
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.paths import TMP
+from tests.support.helpers import skip_if_not_root
 
 # Import salt libs
 import salt.utils
@@ -87,7 +88,7 @@ class PipModuleTest(ModuleCase):
                 ret
             )
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_requirements_as_list_of_chains__sans_no_chown__cwd_set__absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
@@ -125,7 +126,7 @@ class PipModuleTest(ModuleCase):
             pprint.pprint(ret)
             raise
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_requirements_as_list_of_chains__sans_no_chown__cwd_not_set__absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
@@ -164,7 +165,7 @@ class PipModuleTest(ModuleCase):
             pprint.pprint(ret)
             raise
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_requirements_as_list__sans_no_chown__absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
@@ -195,7 +196,7 @@ class PipModuleTest(ModuleCase):
             pprint.pprint(ret)
             raise
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_requirements_as_list__sans_no_chown__non_absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
@@ -231,7 +232,7 @@ class PipModuleTest(ModuleCase):
             pprint.pprint(ret)
             raise
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_chained_requirements__sans_no_chown__absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
@@ -258,7 +259,7 @@ class PipModuleTest(ModuleCase):
             pprint.pprint(ret)
             raise
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_chained_requirements__sans_no_chown__non_absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
@@ -289,7 +290,7 @@ class PipModuleTest(ModuleCase):
             pprint.pprint(ret)
             raise
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_issue_4805_nested_requirements_user_no_chown(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 

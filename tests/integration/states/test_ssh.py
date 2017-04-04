@@ -10,13 +10,13 @@ import shutil
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import (
     destructiveTest,
     with_system_user,
-    skip_if_binaries_missing
+    skip_if_binaries_missing,
+    skip_if_not_root
 )
 
 # Import salt libs
@@ -159,7 +159,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
 class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     @with_system_user('issue_7409', on_existing='delete', delete=True)
     def test_issue_7409_no_linebreaks_between_keys(self, username):
 
@@ -196,7 +196,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
             )
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     @with_system_user('issue_10198', on_existing='delete', delete=True)
     def test_issue_10198_keyfile_from_another_env(self, username=None):
         userdetails = self.run_function('user.info', [username])

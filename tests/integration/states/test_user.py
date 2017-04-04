@@ -17,7 +17,7 @@ import grp
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, requires_system_grains
+from tests.support.helpers import destructiveTest, requires_system_grains, skip_if_not_root
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
@@ -36,7 +36,7 @@ else:
 
 
 @destructiveTest
-@skipIf(os.geteuid() != 0, 'you must be root to run this test')
+@skip_if_not_root
 class UserTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     test for user absent

@@ -10,7 +10,7 @@ import os
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.paths import TMP
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import salt libs
 import salt.utils
@@ -20,6 +20,7 @@ TEST_PKG_NAME = 'org.macports.MacPorts'
 TEST_PKG = os.path.join(TMP, 'MacPorts-2.3.4-10.11-ElCapitan.pkg')
 
 
+@skip_if_not_root
 class MacPkgutilModuleTest(ModuleCase):
     '''
     Validate the mac_pkgutil module
@@ -34,9 +35,6 @@ class MacPkgutilModuleTest(ModuleCase):
 
         if not salt.utils.which('pkgutil'):
             self.skipTest('Test requires pkgutil binary')
-
-        if salt.utils.get_uid(salt.utils.get_user()) != 0:
-            self.skipTest('Test requires root')
 
     def tearDown(self):
         '''

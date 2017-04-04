@@ -9,9 +9,8 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 from tests.support.paths import FILES
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
@@ -28,7 +27,7 @@ PASSWD = 'salttest'
 
 
 @destructiveTest
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+@skip_if_not_root
 class MacKeychainModuleTest(ModuleCase):
     '''
     Integration tests for the mac_keychain module

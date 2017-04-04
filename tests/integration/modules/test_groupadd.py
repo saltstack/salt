@@ -7,20 +7,23 @@ import random
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
+# Import 3rd-party libs
 from salt.ext.six.moves import range
-import salt.utils
 
 
+@skip_if_not_root
 class GroupModuleTest(ModuleCase):
     '''
     Validate the linux group system module
     '''
 
-    def __init__(self, arg):
-        super(self.__class__, self).__init__(arg)
+    def setUp(self):
+        '''
+        Get current settings
+        '''
+        super(GroupModuleTest, self).setUp()
         self._user = self.__random_string()
         self._user1 = self.__random_string()
         self._no_user = self.__random_string()
@@ -28,12 +31,6 @@ class GroupModuleTest(ModuleCase):
         self._no_group = self.__random_string()
         self._gid = 64989
         self._new_gid = 64998
-
-    def setUp(self):
-        '''
-        Get current settings
-        '''
-        super(GroupModuleTest, self).setUp()
         os_grain = self.run_function('grains.item', ['kernel'])
         if os_grain['kernel'] not in 'Linux':
             self.skipTest(
@@ -41,8 +38,6 @@ class GroupModuleTest(ModuleCase):
                     **os_grain
                 )
             )
-        if salt.utils.get_uid(salt.utils.get_user()) != 0:
-            self.skipTest('Tests requires root')
 
     @destructiveTest
     def tearDown(self):

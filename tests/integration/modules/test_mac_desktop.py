@@ -5,16 +5,14 @@ Integration tests for the mac_desktop execution module.
 
 # Import Python Libs
 from __future__ import absolute_import
-import os
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 
 @destructiveTest
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+@skip_if_not_root
 class MacDesktopTestCase(ModuleCase):
     '''
     Integration tests for the mac_desktop module.

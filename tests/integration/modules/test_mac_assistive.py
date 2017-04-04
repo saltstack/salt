@@ -5,18 +5,16 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import os
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 OSA_SCRIPT = '/usr/bin/osascript'
 
 
 @destructiveTest
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+@skip_if_not_root
 class MacAssistiveTest(ModuleCase):
     '''
     Integration tests for the mac_assistive module.

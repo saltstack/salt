@@ -22,7 +22,8 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
-    with_system_user
+    with_system_user,
+    skip_if_not_root
 )
 # Import salt libs
 from tests.support.case import ModuleCase
@@ -208,7 +209,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 shutil.rmtree(venv_dir)
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     @with_system_user('issue-6912', on_existing='delete', delete=True)
     def test_issue_6912_wrong_owner(self, username):
         venv_dir = os.path.join(

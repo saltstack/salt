@@ -11,7 +11,7 @@ import string
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import salt libs
 import salt.utils
@@ -32,9 +32,9 @@ SET_COMPUTER_NAME = __random_string()
 SET_SUBNET_NAME = __random_string()
 
 
-@skipIf(not salt.utils.is_darwin()
-        or not salt.utils.which('systemsetup')
-        or salt.utils.get_uid(salt.utils.get_user()) != 0, 'Test requirements not met')
+@skip_if_not_root
+@skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacSystemModuleTest(ModuleCase):
     '''
     Validate the mac_system module
