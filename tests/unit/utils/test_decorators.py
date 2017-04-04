@@ -8,7 +8,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 from salt.utils import decorators
 from salt.version import SaltStackVersion
 from salt.exceptions import CommandExecutionError, SaltConfigurationError
@@ -28,6 +29,7 @@ class DummyLogger(object):
         self._messages.append(msg)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DecoratorsTest(TestCase):
     '''
     Testing decorators.
@@ -61,8 +63,12 @@ class DecoratorsTest(TestCase):
             'new_function': self.new_function,
             '_new_function': self._new_function,
         }
+        self.addCleanup(delattr, self, 'globs')
         self.messages = list()
-        decorators.log = DummyLogger(self.messages)
+        self.addCleanup(delattr, self, 'messages')
+        patcher = patch.object(decorators, 'log', DummyLogger(self.messages))
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_is_deprecated_version_eol(self):
         '''

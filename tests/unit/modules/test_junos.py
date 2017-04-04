@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
+'''
+    :codeauthor: :email:`Rajvi Dhimar <rajvidhimar95@gmail.com>`
+'''
+# Import python libs
+from __future__ import absolute_import, print_function
 
-from __future__ import absolute_import
-from __future__ import print_function
-
-__author__ = "Rajvi Dhimar"
-
+# Import test libs
+from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
 from tests.support.mock import patch, mock_open
 from tests.support.unit import skipIf, TestCase
+
+# Import 3rd-party libs
 try:
     from lxml import etree
 except ImportError:
@@ -19,17 +23,24 @@ try:
     HAS_JUNOS = True
 except ImportError:
     HAS_JUNOS = False
+
+# Import salt modules
 import salt.modules.junos as junos
 
 
 @skipIf(not HAS_JUNOS, 'Missing dependencies')
-class Test_Junos_Module(TestCase):
+class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
 
-    def setUp(self):
-        junos.__proxy__ = {
-            'junos.conn': self.make_connect,
-            'junos.get_serialized_facts': self.get_facts}
-        junos.__salt__ = {'cp.get_template': self.mock_cp}
+    def setup_loader_modules(self):
+        return {
+            junos: {
+                '__proxy__': {
+                    'junos.conn': self.make_connect,
+                    'junos.get_serialized_facts': self.get_facts
+                },
+                '__salt__': {'cp.get_template': self.mock_cp}
+            }
+        }
 
     def mock_cp(self, *args, **kwargs):
         pass
@@ -45,6 +56,7 @@ class Test_Junos_Module(TestCase):
         self.dev.timeout = 30
         self.dev.bind(cu=Config)
         self.dev.bind(sw=SW)
+        self.addCleanup(delattr, self, 'dev')
         return self.dev
 
     def raise_exception(self, *args, **kwargs):
@@ -256,11 +268,11 @@ class Test_Junos_Module(TestCase):
         self.assertEqual(junos.facts(), ret)
 
     def test_facts_exception(self):
-        junos.__proxy__ = {'junos.get_serialized_facts': self.raise_exception}
-        ret = dict()
-        ret['message'] = 'Could not display facts due to "Test exception"'
-        ret['out'] = False
-        self.assertEqual(junos.facts(), ret)
+        with patch.dict(junos.__proxy__, {'junos.get_serialized_facts': self.raise_exception}):
+            ret = dict()
+            ret['message'] = 'Could not display facts due to "Test exception"'
+            ret['out'] = False
+            self.assertEqual(junos.facts(), ret)
 
     def test_set_hostname_without_args(self):
         ret = dict()
@@ -683,7 +695,7 @@ class Test_Junos_Module(TestCase):
         junos.ping('1.1.1.1')
         args = mock_execute.call_args
         rpc = '<ping><count>5</count><host>1.1.1.1</host></ping>'
-        self.assertEqual(etree.tostring(args[0][0]), rpc)
+        self.assertEqualXML(args[0][0], rpc)
 
     @patch('jnpr.junos.device.Device.execute')
     def test_ping_ttl(self, mock_execute):
@@ -699,7 +711,7 @@ class Test_Junos_Module(TestCase):
         junos.ping('1.1.1.1', **args)
         exec_args = mock_execute.call_args
         rpc = '<ping><count>5</count><host>1.1.1.1</host><ttl>3</ttl></ping>'
-        self.assertEqual(etree.tostring(exec_args[0][0]), rpc)
+        self.assertEqualXML(exec_args[0][0], rpc)
 
     @patch('jnpr.junos.device.Device.execute')
     def test_ping_exception(self, mock_execute):
@@ -1556,14 +1568,14 @@ class Test_Junos_Module(TestCase):
     # an external user.
 
     def test_virtual_proxy_unavailable(self):
-        junos.__opts__ = {}
-        res = (False, 'The junos module could not be \
-                loaded: junos-eznc or jxmlease or proxy could not be loaded.')
-        self.assertEqual(junos.__virtual__(), res)
+        with patch.dict(junos.__opts__, {}):
+            res = (False, 'The junos module could not be '
+                          'loaded: junos-eznc or jxmlease or proxy could not be loaded.')
+            self.assertEqual(junos.__virtual__(), res)
 
     def test_virtual_all_true(self):
-        junos.__opts__ = {'proxy': 'test'}
-        self.assertEqual(junos.__virtual__(), 'junos')
+        with patch.dict(junos.__opts__, {'proxy': 'test'}):
+            self.assertEqual(junos.__virtual__(), 'junos')
 
     def test_rpc_without_args(self):
         ret = dict()
@@ -1597,14 +1609,14 @@ class Test_Junos_Module(TestCase):
         exec_args = mock_execute.call_args
         expected_rpc = '<get-configuration dev_timeout="30" ' \
                        'format="xml"><configuration><system/></configuration></get-configuration>'
-        self.assertEqual(etree.tostring(exec_args[0][0]), expected_rpc)
+        self.assertEqualXML(exec_args[0][0], expected_rpc)
 
     @patch('jnpr.junos.device.Device.execute')
     def test_rpc_get_interface_information(self, mock_execute):
         junos.rpc('get-interface-information', format='json')
         args = mock_execute.call_args
         expected_rpc = '<get-interface-information format="json"/>'
-        self.assertEqual(etree.tostring(args[0][0]), expected_rpc)
+        self.assertEqualXML(args[0][0], expected_rpc)
         self.assertEqual(args[1], {'dev_timeout': 30})
 
     @patch('jnpr.junos.device.Device.execute')
@@ -1625,9 +1637,11 @@ class Test_Junos_Module(TestCase):
                 '__pub_ret': ''}
         junos.rpc('get-interface-information', format='text', **args)
         args = mock_execute.call_args
-        expected_rpc = '<get-interface-information format="text">' \
-                       '<terse/><interface-name>lo0</interface-name></get-interface-information>'
-        self.assertEqual(etree.tostring(args[0][0]), expected_rpc)
+        expected_rpc = (
+                '<get-interface-information format="text">'
+                '<terse/><interface-name>lo0</interface-name></get-interface-information>'
+        )
+        self.assertEqualXML(etree.tostring(args[0][0]), expected_rpc)
 
     @patch('salt.modules.junos.jxmlease.parse')
     @patch('salt.modules.junos.etree.tostring')

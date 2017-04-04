@@ -20,6 +20,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import io
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
@@ -29,6 +30,7 @@ from salt.modules.inspectlib.fsdb import CsvDB
 from salt.modules.inspectlib.entities import CsvDBEntity
 from salt.utils.odict import OrderedDict
 
+import salt.ext.six as six
 from salt.ext.six.moves import StringIO
 
 
@@ -40,8 +42,8 @@ def mock_open(data=None):
     :return:
     '''
     data = StringIO(data)
-    mock = MagicMock(spec=file)
-    handle = MagicMock(spec=file)
+    mock = MagicMock(spec=io.FileIO)
+    handle = MagicMock(spec=io.FileIO)
     handle.write.return_value = None
     handle.__enter__.return_value = data or handle
     mock.return_value = handle
@@ -101,7 +103,7 @@ class InspectorFSDBTestCase(TestCase):
         '''
         csvdb = CsvDB('/foobar')
         csvdb.open()
-        assert csvdb.list_tables() == ['test_db']
+        assert list(csvdb.list_tables()) == ['test_db']
         assert csvdb.is_closed() is False
 
     @patch("os.makedirs", MagicMock())
@@ -131,7 +133,26 @@ class InspectorFSDBTestCase(TestCase):
             csvdb.open()
             csvdb.create_table_from_object(FoobarEntity())
 
-        assert writable.data[0].strip() == "foo:int,bar:str,spam:float"
+        if six.PY2:
+            assert writable.data[0].strip() == "foo:int,bar:str,spam:float"
+        else:
+            # Order in PY3 is not the same for every run
+            writable_data = writable.data[0].strip()
+            assert_order_options = ['bar:str,foo:int,spam:float',
+                                    'bar:str,spam:float,foo:int',
+                                    'foo:int,spam:float,bar:str',
+                                    'foo:int,bar:str,spam:float',
+                                    'spam:float,foo:int,bar:str',
+                                    'spam:float,bar:str,foo:int']
+            while assert_order_options:
+                assert_option = assert_order_options.pop()
+                try:
+                    assert writable_data == assert_option
+                    break
+                except AssertionError:
+                    if not assert_order_options:
+                        raise
+                    continue
 
     @patch("os.makedirs", MagicMock())
     @patch("os.listdir", MagicMock(return_value=['test_db']))

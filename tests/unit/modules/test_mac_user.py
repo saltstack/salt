@@ -9,6 +9,7 @@ import grp
 import pwd
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
@@ -18,14 +19,13 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MacUserTestCase(TestCase):
+class MacUserTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for the salt.modules.mac_user modules
     '''
 
-    mac_user.__context__ = {}
-    mac_user.__grains__ = {}
-    mac_user.__salt__ = {}
+    def setup_loader_modules(self):
+        return {mac_user: {}}
 
     mock_pwall = [pwd.struct_passwd(('_amavisd', '*', 83, 83, 'AMaViS Daemon',
                                     '/var/virusmails', '/usr/bin/false')),
@@ -43,6 +43,11 @@ class MacUserTestCase(TestCase):
     mock_info_ret = {'shell': '/bin/bash', 'name': 'test', 'gid': 4376,
                      'groups': ['TEST_GROUP'], 'home': '/Users/foo',
                      'fullname': 'TEST USER', 'uid': 4376}
+
+    @classmethod
+    def tearDownClass(cls):
+        for attrname in ('mock_pwall', 'mock_pwnam', 'mock_getgrgid', 'mock_getgrall', 'mock_info_ret'):
+            delattr(cls, attrname)
 
     @skipIf(True, 'Waiting on some clarifications from bug report #10594')
     def test_flush_dscl_cache(self):

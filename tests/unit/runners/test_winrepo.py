@@ -7,10 +7,14 @@ import shutil
 import tempfile
 
 # Import Salt Testing Libs
-import tests.integration as integration
-from salt.runners import winrepo
-from tests.support.unit import skipIf
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.paths import TMP
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+
+# Import salt libs
+import salt.utils
+import salt.runners.winrepo as winrepo
 
 _WINREPO_SLS = r'''
 winscp_x86:
@@ -65,29 +69,32 @@ _WINREPO_GENREPO_DATA = {
     }
 }
 
-winrepo.__opts__ = {
-    'winrepo_cachefile': 'winrepo.p',
-    'renderer': 'yaml',
-    'renderer_blacklist': [],
-    'renderer_whitelist': []
-}
-winrepo.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinrepoTest(integration.ShellCase):
+class WinrepoTest(TestCase, LoaderModuleMockMixin):
     '''
     Test the winrepo runner
     '''
-    def setUp(self):
-        super(WinrepoTest, self).setUp()
-        self.winrepo_dir = tempfile.mkdtemp(dir=integration.TMP)
+    def setup_loader_modules(self):
+        self.winrepo_dir = tempfile.mkdtemp(dir=TMP)
         self.addCleanup(shutil.rmtree, self.winrepo_dir, ignore_errors=True)
-        self.extmods_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.extmods_dir = tempfile.mkdtemp(dir=TMP)
         self.addCleanup(shutil.rmtree, self.extmods_dir, ignore_errors=True)
         self.winrepo_sls_dir = os.path.join(self.winrepo_dir, 'repo_sls')
         os.mkdir(self.winrepo_sls_dir)
-        self.maxDiff = None
+        return {
+            winrepo: {
+                '__opts__': {
+                    'winrepo_cachefile': 'winrepo.p',
+                    'renderer': 'yaml',
+                    'renderer_blacklist': [],
+                    'renderer_whitelist': [],
+                    'file_roots': {'base': [self.winrepo_dir]},
+                    'winrepo_dir': self.winrepo_dir,
+                    'extension_modules': self.extmods_dir
+                }
+            }
+        }
 
     def test_genrepo(self):
         '''
@@ -95,11 +102,6 @@ class WinrepoTest(integration.ShellCase):
         '''
         sls_file = os.path.join(self.winrepo_sls_dir, 'wireshark.sls')
         # Add a winrepo SLS file
-        with open(sls_file, 'w') as fp_:
+        with salt.utils.fopen(sls_file, 'w') as fp_:
             fp_.write(_WINREPO_SLS)
-        with patch.dict(
-                winrepo.__opts__,
-                {'file_roots': {'base': [self.winrepo_dir]},
-                 'winrepo_dir': self.winrepo_dir,
-                 'extension_modules': self.extmods_dir}):
-            self.assertEqual(winrepo.genrepo(), _WINREPO_GENREPO_DATA)
+        self.assertEqual(winrepo.genrepo(), _WINREPO_GENREPO_DATA)

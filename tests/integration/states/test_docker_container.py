@@ -81,7 +81,7 @@ class DockerContainerTestCase(integration.ModuleCase,
         try:
             salt.utils.rm_rf(cls.image_build_rootdir)
         except OSError as exc:
-            if not exc.errno == errno.ENOENT:
+            if exc.errno != errno.ENOENT:
                 raise
 
     @classmethod

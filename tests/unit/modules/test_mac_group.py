@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import grp
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import MagicMock, patch
 
@@ -16,16 +17,21 @@ import salt.modules.mac_group as mac_group
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 
-class MacGroupTestCase(TestCase):
+class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for the salt.modules.mac_group module
     '''
 
-    mac_group.__context__ = {}
-    mac_group.__salt__ = {}
+    def setup_loader_modules(self):
+        return {mac_group: {}}
 
     mock_group = {'passwd': '*', 'gid': 0, 'name': 'test', 'members': ['root']}
     mock_getgrall = [grp.struct_group(('foo', '*', 20, ['test']))]
+
+    @classmethod
+    def tearDownClass(cls):
+        for attrname in ('mock_group', 'mock_getgrall'):
+            delattr(cls, attrname)
 
     # 'add' function tests: 6
 

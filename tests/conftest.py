@@ -15,15 +15,30 @@ import sys
 import stat
 import socket
 import logging
+from collections import namedtuple
 
-# Let's allow `integration` and `unit` to be importable
 TESTS_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
-if TESTS_DIR not in sys.path:
-    sys.path.insert(0, TESTS_DIR)
-
 CODE_DIR = os.path.dirname(TESTS_DIR)
+os.chdir(CODE_DIR)
+try:
+    # If we have a system-wide salt module imported, unload it
+    import salt
+    for module in list(sys.modules):
+        if module.startswith(('salt',)):
+            try:
+                if not sys.modules[module].__file__.startswith(CODE_DIR):
+                    sys.modules.pop(module)
+            except AttributeError:
+                continue
+    sys.path.insert(0, CODE_DIR)
+except ImportError:
+    sys.path.insert(0, CODE_DIR)
+
+# Import test libs
+import tests.support.paths  # pylint: disable=unused-import
+from tests.integration import TestDaemon
 
 # Import 3rd-party libs
 import pytest
@@ -137,6 +152,9 @@ def pytest_configure(config):
         'requires_network(only_local_network=False): Skip if no networking is set up. '
         'If \'only_local_network\' is \'True\', only the local network is checked.'
     )
+
+    # Transplant configuration
+    TestDaemon.transplant_configs(transport=config.getoption('--transport'))
 # <---- Register Markers ---------------------------------------------------------------------------------------------
 
 
@@ -334,7 +352,7 @@ if six.PY2:
 
         global file_spec
         if file_spec is None:
-            file_spec = file
+            file_spec = file  # pylint: disable=undefined-variable
 
         if mock is None:
             mock = _mock.MagicMock(name='open', spec=open)
@@ -541,9 +559,6 @@ def session_pillar_tree_root_dir(session_integration_files_dir):
 # ----- Custom Fixtures Definitions --------------------------------------------------------------------------------->
 @pytest.fixture(scope='session')
 def test_daemon(request):
-    from collections import namedtuple
-    from tests.integration import TestDaemon
-    from tests.support.parser import PNUM
     values = (('transport', request.config.getoption('--transport')),
               ('sysinfo', request.config.getoption('--sysinfo')),
               ('no_colors', request.config.getoption('--no-colors')),
@@ -552,11 +567,8 @@ def test_daemon(request):
     options = namedtuple('options', [n for n, v in values])(*[v for n, v in values])
     fake_parser = namedtuple('parser', 'options')(options)
 
-    # Transplant configuration
-    TestDaemon.transplant_configs(transport=fake_parser.options.transport)
-
-    tg = TestDaemon(fake_parser)
-    with tg:
+    test_daemon = TestDaemon(fake_parser)
+    with test_daemon:
         yield
     TestDaemon.clean()
 # <---- Custom Fixtures Definitions ----------------------------------------------------------------------------------

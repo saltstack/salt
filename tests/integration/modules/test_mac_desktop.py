@@ -10,12 +10,10 @@ import os
 # Import Salt Testing Libs
 import tests.integration as integration
 from tests.support.unit import skipIf
-from tests.support.helpers import (
-    destructiveTest,
-    requires_system_grains
-)
+from tests.support.helpers import destructiveTest
 
 
+@destructiveTest
 @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
 class MacDesktopTestCase(integration.ModuleCase):
     '''
@@ -34,17 +32,14 @@ class MacDesktopTestCase(integration.ModuleCase):
                 )
             )
 
-    @requires_system_grains
-    def test_get_output_volume(self, grains=None):
+    def test_get_output_volume(self):
         '''
         Tests the return of get_output_volume.
         '''
         ret = self.run_function('desktop.get_output_volume')
         self.assertIsNotNone(ret)
 
-    @destructiveTest
-    @requires_system_grains
-    def test_set_output_volume(self, grains=None):
+    def test_set_output_volume(self):
         '''
         Tests the return of set_output_volume.
         '''
@@ -59,9 +54,7 @@ class MacDesktopTestCase(integration.ModuleCase):
         # Set volume back to what it was before
         self.run_function('desktop.set_output_volume', [current_vol])
 
-    @destructiveTest
-    @requires_system_grains
-    def test_screensaver(self, grains=None):
+    def test_screensaver(self):
         '''
         Tests the return of the screensaver function.
         '''
@@ -69,9 +62,7 @@ class MacDesktopTestCase(integration.ModuleCase):
             self.run_function('desktop.screensaver')
         )
 
-    @destructiveTest
-    @requires_system_grains
-    def test_lock(self, grains=None):
+    def test_lock(self):
         '''
         Tests the return of the lock function.
         '''
@@ -79,9 +70,7 @@ class MacDesktopTestCase(integration.ModuleCase):
             self.run_function('desktop.lock')
         )
 
-    @destructiveTest
-    @requires_system_grains
-    def test_say(self, grains=None):
+    def test_say(self):
         '''
         Tests the return of the say function.
         '''

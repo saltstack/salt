@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
@@ -51,7 +52,10 @@ def _spf_side_effect(key, python_shell=False):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(dig.__virtual__() is False, 'Dig must be installed')
-class DigTestCase(TestCase):
+class DigTestCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {dig: {}}
 
     def test_check_ip(self):
         self.assertTrue(dig.check_ip('127.0.0.1'), msg='Not a valid ip address')
@@ -78,7 +82,6 @@ class DigTestCase(TestCase):
         )
 
     def test_a(self):
-        dig.__salt__ = {}
         dig_mock = MagicMock(
             return_value={
                 'pid': 3656,
@@ -104,7 +107,6 @@ class DigTestCase(TestCase):
             )
 
     def test_aaaa(self):
-        dig.__salt__ = {}
         dig_mock = MagicMock(
             return_value={
                 'pid': 25451,
@@ -121,7 +123,6 @@ class DigTestCase(TestCase):
 
     @patch('salt.modules.dig.A', MagicMock(return_value=['ns4.google.com.']))
     def test_ns(self):
-        dig.__salt__ = {}
         dig_mock = MagicMock(
             return_value={
                 'pid': 26136,
@@ -134,7 +135,6 @@ class DigTestCase(TestCase):
             self.assertEqual(dig.NS('google.com'), ['ns4.google.com.'])
 
     def test_spf(self):
-        dig.__salt__ = {}
         dig_mock = MagicMock(side_effect=_spf_side_effect)
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
             self.assertEqual(
@@ -147,7 +147,6 @@ class DigTestCase(TestCase):
         Test for SPF records which use the 'redirect' SPF mechanism
         https://en.wikipedia.org/wiki/Sender_Policy_Framework#Mechanisms
         '''
-        dig.__salt__ = {}
         dig_mock = MagicMock(side_effect=_spf_side_effect)
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
             self.assertEqual(
@@ -160,7 +159,6 @@ class DigTestCase(TestCase):
         Test for SPF records which use the 'include' SPF mechanism
         https://en.wikipedia.org/wiki/Sender_Policy_Framework#Mechanisms
         '''
-        dig.__salt__ = {}
         dig_mock = MagicMock(side_effect=_spf_side_effect)
         with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
             self.assertEqual(
@@ -169,7 +167,6 @@ class DigTestCase(TestCase):
             )
 
     def test_mx(self):
-        dig.__salt__ = {}
         dig_mock = MagicMock(
             return_value={
                 'pid': 27780,

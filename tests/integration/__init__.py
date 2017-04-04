@@ -123,6 +123,11 @@ atexit.register(cleanup_runtime_config_instance, RUNTIME_CONFIGS)
 
 _RUNTESTS_PORTS = {}
 
+if salt.utils.is_windows():
+    RUNNING_TESTS_USER = win32api.GetUserName()
+else:
+    RUNNING_TESTS_USER = pwd.getpwuid(os.getuid()).pw_name
+
 
 def get_unused_localhost_port():
     '''
@@ -685,14 +690,9 @@ class TestDaemon(object):
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
         shutil.copy(roster_path, TMP_CONF_DIR)
-        if salt.utils.is_windows():
-            with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
-                roster.write('  user: {0}\n'.format(win32api.GetUserName()))
-                roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
-        else:
-            with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
-                roster.write('  user: {0}\n'.format(pwd.getpwuid(os.getuid()).pw_name))
-                roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
+        with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
+            roster.write('  user: {0}\n'.format(RUNNING_TESTS_USER))
+            roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
         sys.stdout.write(
             ' {LIGHT_GREEN}STARTED!\n{ENDC}'.format(
                 **self.colors
@@ -742,11 +742,6 @@ class TestDaemon(object):
         os.makedirs(TMP_SYNDIC_MASTER_CONF_DIR)
         os.makedirs(TMP_SYNDIC_MINION_CONF_DIR)
         print(' * Transplanting configuration files to \'{0}\''.format(TMP_CONF_DIR))
-        if salt.utils.is_windows():
-            running_tests_user = win32api.GetUserName()
-        else:
-            running_tests_user = pwd.getpwuid(os.getuid()).pw_name
-
         tests_known_hosts_file = os.path.join(TMP_CONF_DIR, 'salt_ssh_known_hosts')
         with salt.utils.fopen(tests_known_hosts_file, 'w') as known_hosts:
             known_hosts.write('')
@@ -755,7 +750,7 @@ class TestDaemon(object):
         master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
         master_opts['known_hosts_file'] = tests_known_hosts_file
         master_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
-        master_opts['user'] = running_tests_user
+        master_opts['user'] = RUNNING_TESTS_USER
         master_opts['config_dir'] = TMP_CONF_DIR
         master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
         master_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'master')
@@ -771,7 +766,7 @@ class TestDaemon(object):
         # This minion connects to master
         minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'minion'))
         minion_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
-        minion_opts['user'] = running_tests_user
+        minion_opts['user'] = RUNNING_TESTS_USER
         minion_opts['config_dir'] = TMP_CONF_DIR
         minion_opts['root_dir'] = os.path.join(TMP, 'rootdir')
         minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
@@ -781,7 +776,7 @@ class TestDaemon(object):
         # This sub_minion also connects to master
         sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
         sub_minion_opts['cachedir'] = os.path.join(TMP, 'rootdir-sub-minion', 'cache')
-        sub_minion_opts['user'] = running_tests_user
+        sub_minion_opts['user'] = RUNNING_TESTS_USER
         sub_minion_opts['config_dir'] = TMP_SUB_MINION_CONF_DIR
         sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
         sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
@@ -791,7 +786,7 @@ class TestDaemon(object):
         # This is the master of masters
         syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
         syndic_master_opts['cachedir'] = os.path.join(TMP, 'rootdir-syndic-master', 'cache')
-        syndic_master_opts['user'] = running_tests_user
+        syndic_master_opts['user'] = RUNNING_TESTS_USER
         syndic_master_opts['config_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
         syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
@@ -985,7 +980,7 @@ class TestDaemon(object):
                     TMP_PRODENV_STATE_TREE,
                     TMP,
                     ],
-                   running_tests_user)
+                   RUNNING_TESTS_USER)
 
         cls.master_opts = master_opts
         cls.minion_opts = minion_opts
@@ -1300,6 +1295,42 @@ class AdaptedConfigurationTestCaseMixIn(object):
 
     __slots__ = ()
 
+    def get_temp_config(self, config_for, **config_overrides):
+        rootdir = tempfile.mkdtemp(dir=TMP)
+        self.addCleanup(shutil.rmtree, rootdir)
+        for key in ('cachedir', 'pki_dir', 'sock_dir'):
+            if key not in config_overrides:
+                config_overrides[key] = key
+        if 'log_file' not in config_overrides:
+            config_overrides['log_file'] = 'logs/{}.log'.format(config_for)
+        if 'user' not in config_overrides:
+            config_overrides['user'] = RUNNING_TESTS_USER
+        config_overrides['root_dir'] = rootdir
+
+        cdict = self.get_config(config_for, from_scratch=True)
+
+        if config_for in ('master', 'client_config'):
+            rdict = salt.config.apply_master_config(config_overrides, cdict)
+        if config_for == 'minion':
+            rdict = salt.config.apply_minion_config(config_overrides, cdict)
+
+        verify_env([os.path.join(rdict['pki_dir'], 'minions'),
+                    os.path.join(rdict['pki_dir'], 'minions_pre'),
+                    os.path.join(rdict['pki_dir'], 'minions_rejected'),
+                    os.path.join(rdict['pki_dir'], 'minions_denied'),
+                    os.path.join(rdict['cachedir'], 'jobs'),
+                    os.path.join(rdict['cachedir'], 'raet'),
+                    os.path.join(rdict['cachedir'], 'tokens'),
+                    os.path.join(rdict['root_dir'], 'cache', 'tokens'),
+                    os.path.join(rdict['pki_dir'], 'accepted'),
+                    os.path.join(rdict['pki_dir'], 'rejected'),
+                    os.path.join(rdict['pki_dir'], 'pending'),
+                    os.path.dirname(rdict['log_file']),
+                    rdict['sock_dir'],
+                   ],
+                   RUNNING_TESTS_USER)
+        return rdict
+
     def get_config(self, config_for, from_scratch=False):
         if from_scratch:
             if config_for in ('master', 'syndic_master'):
@@ -1354,6 +1385,20 @@ class AdaptedConfigurationTestCaseMixIn(object):
         Return the options used for the master
         '''
         return self.get_config('master')
+
+    @property
+    def minion_opts(self):
+        '''
+        Return the options used for the minion
+        '''
+        return self.get_config('minion')
+
+    @property
+    def sub_minion_opts(self):
+        '''
+        Return the options used for the sub_minion
+        '''
+        return self.get_config('sub_minion')
 
 
 class SaltMinionEventAssertsMixIn(object):
@@ -1487,20 +1532,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         ret = self.run_function('state.single', [function], **kwargs)
         return self._check_state_return(ret)
-
-    @property
-    def minion_opts(self):
-        '''
-        Return the options used for the minion
-        '''
-        return self.get_config('minion')
-
-    @property
-    def sub_minion_opts(self):
-        '''
-        Return the options used for the sub_minion
-        '''
-        return self.get_config('sub_minion')
 
     def _check_state_return(self, ret):
         if isinstance(ret, dict):
@@ -1829,7 +1860,7 @@ class SaltReturnAssertsMixIn(object):
         )
 
     def assertInSaltReturnRegexpMatches(self, ret, pattern, keys=()):
-        return self.assertRegexpMatches(
+        return self.assertRegex(
             self.__getWithinSaltReturn(ret, keys), pattern
         )
 

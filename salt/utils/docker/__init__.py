@@ -18,7 +18,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.args import get_function_argspec as _argspec
 
 # Import 3rd-party libs
-from salt.ext import six
+import salt.ext.six as six
 
 try:
     import docker
@@ -294,9 +294,20 @@ def translate_input(**kwargs):
         # the "ports" param.
         auto_ports = list(kwargs['port_bindings'])
         if auto_ports:
-            actual_ports = kwargs.setdefault('ports', [])
-            actual_ports.extend([x for x in auto_ports if x not in actual_ports])
+            actual_ports = []
             # Sort list to make unit tests more reliable
+            for port in auto_ports:
+                if port in actual_ports:
+                    continue
+                if isinstance(port, six.integer_types):
+                    actual_ports.append((port, 'tcp'))
+                else:
+                    port, proto = port.split('/')
+                    actual_ports.append((int(port), proto))
             actual_ports.sort()
+            actual_ports = [
+                port if proto == 'tcp' else '{}/{}'.format(port, proto) for (port, proto) in actual_ports
+            ]
+            kwargs.setdefault('ports', actual_ports)
 
     return kwargs, invalid, sorted(collisions)

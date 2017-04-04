@@ -8,19 +8,20 @@ import os
 
 from contextlib import contextmanager
 
-import tests.integration as integration
-
 from salt.utils.process import clean_proc
-from salt.utils import event
+import salt.utils.reactor as reactor
 
-from tests.support.mock import patch
+from tests.integration import AdaptedConfigurationTestCaseMixIn
+from tests.support.paths import TMP
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import patch, MagicMock
 
 
 @contextmanager
 def reactor_process(opts, reactor):
     opts = dict(opts)
     opts['reactor'] = reactor
-    proc = event.Reactor(opts)
+    proc = reactor.Reactor(opts)
     proc.start()
     try:
         if os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None:
@@ -33,15 +34,15 @@ def reactor_process(opts, reactor):
         clean_proc(proc)
 
 
-@contextmanager
 def _args_sideffect(*args, **kwargs):
     return args, kwargs
 
 
-class TestReactor(integration.ModuleCase):
+@skipIf(True, 'Skipping until its clear what and how is this supposed to be testing')
+class TestReactor(TestCase, AdaptedConfigurationTestCaseMixIn):
     def setUp(self):
-        self.opts = self.get_config('master', from_scratch=True)
-        self.tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        self.opts = self.get_temp_config('master')
+        self.tempdir = tempfile.mkdtemp(dir=TMP)
         self.sls_name = os.path.join(self.tempdir, 'test.sls')
         with open(self.sls_name, 'w') as fh:
             fh.write('''
@@ -52,6 +53,9 @@ update_fileserver:
     def tearDown(self):
         if os.path.isdir(self.tempdir):
             shutil.rmtree(self.tempdir)
+        del self.opts
+        del self.tempdir
+        del self.sls_name
 
     def test_basic(self):
         reactor_config = [
@@ -59,11 +63,11 @@ update_fileserver:
             {'salt/tagB': ['/srv/reactor/B.sls']},
             {'*': ['/srv/reactor/all.sls']},
         ]
-        wrap = event.ReactWrap(self.opts)
-        with patch('salt.utils.event.ReactWrap.local', _args_sideffect):
+        wrap = reactor.ReactWrap(self.opts)
+        with patch.object(reactor.ReactWrap, 'local', MagicMock(side_effect=_args_sideffect)):
             ret = wrap.run({'fun': 'test.ping',
-                          'state': 'local',
-                          'order': 1,
-                          'name': 'foo_action',
-                          '__id__': 'foo_action'})
+                            'state': 'local',
+                            'order': 1,
+                            'name': 'foo_action',
+                            '__id__': 'foo_action'})
             raise Exception(ret)

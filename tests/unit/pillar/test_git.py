@@ -18,10 +18,11 @@ import subprocess
 import yaml
 
 # Import Salt Testing libs
+from tests.integration import AdaptedConfigurationTestCaseMixIn
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
-
-import tests.integration as integration
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 COMMIT_USER_NAME = 'test_user'
 COMMIT_USER_EMAIL = 'someone@git.test'
@@ -39,29 +40,34 @@ import salt.pillar.git_pillar as git_pillar
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not git_pillar.HAS_GITPYTHON, 'no GitPython')
-class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
+class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMixin):
     'test git_pillar pillar'
     maxDiff = None
 
-    def setUp(self):
-        super(GitPillarTestCase, self).setUp()
-        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+    def setup_loader_modules(self):
+        self.tmpdir = tempfile.mkdtemp(dir=TMP)
         cachedir = os.path.join(self.tmpdir, 'cachedir')
         os.makedirs(os.path.join(cachedir, 'pillar_gitfs'))
         self.repo_path = self._create_repo()
-        git_pillar.__opts__ = {
-                'cachedir': cachedir,
-                'pillar_roots': {},
-                'hash_type': 'sha256',
-                'file_roots': {},
-                'state_top': 'top.sls',
-                'extension_modules': '',
-                'renderer': 'yaml_jinja',
-                'renderer_blacklist': [],
-                'renderer_whitelist': [],
-                'pillar_opts': False
+        return {
+            git_pillar: {
+                '__opts__': {
+                    'cachedir': cachedir,
+                    'pillar_roots': {},
+                    'hash_type': 'sha256',
+                    'file_roots': {},
+                    'state_top': 'top.sls',
+                    'extension_modules': '',
+                    'renderer': 'yaml_jinja',
+                    'renderer_blacklist': [],
+                    'renderer_whitelist': [],
+                    'pillar_opts': False
                 }
-        git_pillar.__grains__ = {}
+            }
+        }
+
+    def setUp(self):
+        super(GitPillarTestCase, self).setUp()
         git_pillar._update('master', 'file://{0}'.format(self.repo_path))
 
     def tearDown(self):
@@ -72,7 +78,7 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
         'create source Git repo in temp directory'
         repo = os.path.join(self.tmpdir, 'repo_pillar')
         os.makedirs(repo)
-        subprocess.check_call(["git", "init", repo])
+        subprocess.check_call(['git', 'init', repo])
         for filename in FILE_DATA:
             with open(os.path.join(repo, filename), 'w') as data_file:
                 yaml.dump(FILE_DATA[filename], data_file)
@@ -92,11 +98,11 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
 
     def test_base(self):
         'check direct call ``ext_pillar()`` interface'
-        git_pillar.__opts__['environment'] = None
-        mypillar = git_pillar.ext_pillar('myminion',
-                                         self.conf_line,
-                                         {})
-        self.assertEqual(PILLAR_CONTENT, mypillar)
+        with patch.dict(git_pillar.__opts__, {'environment': None}):
+            mypillar = git_pillar.ext_pillar('myminion',
+                                             self.conf_line,
+                                             {})
+            self.assertEqual(PILLAR_CONTENT, mypillar)
 
     def test_from_upper(self):
         '''Check whole calling stack from parent Pillar instance
@@ -108,13 +114,11 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
         all these pillar are called exactly in the same way (git is an
         exception for now), and don't recurse.
         '''
-        git_pillar.__opts__['ext_pillar'] = [
-            dict(git=self.conf_line)
-        ]
-        pil = Pillar(git_pillar.__opts__,
-                     git_pillar.__grains__,
-                     'myminion', None)
-        self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
+        with patch.dict(git_pillar.__opts__, {'ext_pillar': [dict(git=self.conf_line)]}):
+            pil = Pillar(git_pillar.__opts__,
+                         git_pillar.__grains__,
+                         'myminion', None)
+            self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
 
     def test_no_loop(self):
         '''Check that the reinstantiation of a pillar object does recurse.
@@ -147,38 +151,33 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
         repo2 = os.path.join(self.tmpdir, 'repo_pillar2')
         conf_line2 = 'master file://{0}'.format(repo2)
         subprocess.check_call(['git', 'clone', self.repo_path, repo2])
-        git_pillar.__opts__['ext_pillar'] = [
-            dict(git=self.conf_line),
-            dict(git=conf_line2),
-        ]
-        git_pillar._update(*conf_line2.split(None, 1))
+        with patch.dict(git_pillar.__opts__, {'ext_pillar': [dict(git=self.conf_line),
+                                                             dict(git=conf_line2)]}):
+            git_pillar._update(*conf_line2.split(None, 1))
 
-        pil = Pillar(git_pillar.__opts__,
-                     git_pillar.__grains__,
-                     'myminion', 'base')
+            pil = Pillar(git_pillar.__opts__,
+                         git_pillar.__grains__,
+                         'myminion', 'base')
 
-        orig_ext_pillar = pil.ext_pillars['git']
-        orig_ext_pillar.count = 0
+            orig_ext_pillar = pil.ext_pillars['git']
+            orig_ext_pillar.count = 0
 
-        def ext_pillar_count_calls(minion_id, repo_string, pillar_dirs):
-            orig_ext_pillar.count += 1
-            if orig_ext_pillar.count > 6:
-                # going all the way to an infinite loop is harsh on the
-                # test machine
-                raise RuntimeError("Infinite loop detected")
-            return orig_ext_pillar(minion_id, repo_string, pillar_dirs)
+            def ext_pillar_count_calls(minion_id, repo_string, pillar_dirs):
+                orig_ext_pillar.count += 1
+                if orig_ext_pillar.count > 6:
+                    # going all the way to an infinite loop is harsh on the
+                    # test machine
+                    raise RuntimeError('Infinite loop detected')
+                return orig_ext_pillar(minion_id, repo_string, pillar_dirs)
 
-        from salt.loader import LazyLoader
-        orig_getitem = LazyLoader.__getitem__
+            from salt.loader import LazyLoader
+            orig_getitem = LazyLoader.__getitem__
 
-        def __getitem__(self, key):
-            if key == 'git.ext_pillar':
-                return ext_pillar_count_calls
-            return orig_getitem(self, key)
+            def __getitem__(self, key):
+                if key == 'git.ext_pillar':
+                    return ext_pillar_count_calls
+                return orig_getitem(self, key)
 
-        try:
-            LazyLoader.__getitem__ = __getitem__
-            self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
-            self.assertTrue(orig_ext_pillar.count < 7)
-        finally:
-            LazyLoader.__getitem__ = orig_getitem
+            with patch.object(LazyLoader, '__getitem__', __getitem__):
+                self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
+                self.assertTrue(orig_ext_pillar.count < 7)

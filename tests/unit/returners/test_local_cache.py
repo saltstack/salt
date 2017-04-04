@@ -10,9 +10,11 @@ Unit tests for the Default Job Cache (local_cache).
 from __future__ import absolute_import
 import os
 import shutil
+import logging
 import tempfile
 
 # Import Salt Testing libs
+from tests.integration import AdaptedConfigurationTestCaseMixIn
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
@@ -25,7 +27,11 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.utils
+import salt.utils.jid
 import salt.returners.local_cache as local_cache
+import salt.ext.six as six
+
+log = logging.getLogger(__name__)
 
 TMP_CACHE_DIR = os.path.join(TMP, 'salt_test_job_cache')
 TMP_JID_DIR = os.path.join(TMP_CACHE_DIR, 'jobs')
@@ -158,3 +164,148 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
                 jid_file.write('this is a jid file')
 
         return temp_dir, jid_file_path
+
+
+class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMixin):
+    '''
+    Test the local cache returner
+    '''
+    def setup_loader_modules(self):
+        return {
+            local_cache: {
+                '__opts__': {
+                    'cachedir': self.TMP_CACHE_DIR,
+                    'keep_jobs': self.KEEP_JOBS
+                }
+            }
+        }
+
+    @classmethod
+    def setUpClass(cls):
+        cls.TMP_CACHE_DIR = os.path.join(TMP, 'rootdir', 'cache')
+        cls.JOBS_DIR = os.path.join(cls.TMP_CACHE_DIR, 'jobs')
+        cls.JID_DIR = os.path.join(cls.JOBS_DIR, '31', 'c56eed380a4e899ae12bc42563cfdfc53066fb4a6b53e2378a08ac49064539')
+        cls.JID_FILE = os.path.join(cls.JID_DIR, 'jid')
+        cls.JID_MINION_DIR = os.path.join(cls.JID_DIR, 'minion', 'return.p')
+        cls.JOB_CACHE_DIR_FILES = [cls.JID_FILE, cls.JID_MINION_DIR]
+        cls.KEEP_JOBS = 0.0000000010
+        cls.EMPTY_JID_DIR = []
+
+    @classmethod
+    def tearDownClass(cls):
+        for attrname in ('TMP_CACHE_DIR', 'JOBS_DIR', 'JID_DIR', 'JID_FILE', 'JID_MINION_DIR',
+                         'JOB_CACHE_DIR_FILES', 'KEEP_JOBS', 'EMPTY_JID_DIR'):
+            try:
+                attr_instance = getattr(cls, attrname)
+                if isinstance(attr_instance, six.string_types):
+                    if os.path.isdir(attr_instance):
+                        shutil.rmtree(attr_instance)
+                    elif os.path.isfile(attr_instance):
+                        os.unlink(attr_instance)
+                delattr(cls, attrname)
+            except AttributeError:
+                continue
+
+    def _check_dir_files(self, msg, contents, status='None'):
+        '''
+        helper method to ensure files or dirs
+        are either present or removed
+        '''
+        for content in contents:
+            log.debug('CONTENT {0}'.format(content))
+            if status == 'present':
+                check_job_dir = os.path.exists(content)
+            elif status == 'removed':
+                if os.path.exists(content):
+                    check_job_dir = False
+                else:
+                    check_job_dir = True
+            self.assertTrue(check_job_dir, msg=msg + content)
+
+    def _add_job(self):
+        '''
+        helper method to add job.
+        '''
+        # add the job.
+        opts = self.get_temp_config('master')
+        opts['cachedir'] = self.TMP_CACHE_DIR
+        load = {'fun_args': [], 'jid': '20160603132323715452',
+                'return': True, 'retcode': 0, 'success': True,
+                'cmd': '_return', 'fun': 'test.ping', 'id': 'minion'}
+
+        add_job = salt.utils.job.store_job(opts, load)
+        self.assertEqual(add_job, None)
+        self._check_dir_files('Dir/file does not exist: ',
+                              self.JOB_CACHE_DIR_FILES,
+                              status='present')
+
+    def test_clean_old_jobs(self):
+        '''
+        test to ensure jobs are removed from job cache
+        '''
+        self._add_job()
+
+        # remove job
+        self.assertEqual(local_cache.clean_old_jobs(), None)
+
+        self._check_dir_files('job cache was not removed: ',
+                              self.JOB_CACHE_DIR_FILES,
+                              status='removed')
+
+    def test_not_clean_new_jobs(self):
+        '''
+        test to ensure jobs are not removed when
+        jobs dir is new
+        '''
+        self._add_job()
+
+        with patch.dict(local_cache.__opts__, {'keep_jobs': 24}):
+            self.assertEqual(local_cache.clean_old_jobs(), None)
+
+            self._check_dir_files('job cache was removed: ',
+                                  self.JOB_CACHE_DIR_FILES,
+                                  status='present')
+
+    def test_empty_jid_dir(self):
+        '''
+        test to ensure removal of empty jid dir
+        '''
+        # add empty jid dir
+        new_jid_dir = os.path.join(self.JOBS_DIR, 'z0')
+        self.EMPTY_JID_DIR.append(new_jid_dir)
+        os.makedirs(new_jid_dir)
+
+        # This needed due to a race condition in Windows
+        # `os.makedirs` hasn't released the handle before
+        # `local_cache.clean_old_jobs` tries to delete the new_jid_dir
+        if salt.utils.is_windows():
+            import time
+            lock_dir = new_jid_dir + '.lckchk'
+            tries = 0
+            while True:
+                tries += 1
+                if tries > 10:
+                    break
+                # Rename the directory and name it back
+                # If it fails, the directory handle is not released, try again
+                # If it succeeds, break and continue test
+                try:
+                    os.rename(new_jid_dir, lock_dir)
+                    time.sleep(1)
+                    os.rename(lock_dir, new_jid_dir)
+                    break
+                except WindowsError:  # pylint: disable=E0602
+                    continue
+
+        # check dir exists
+        self._check_dir_files('new_jid_dir was not created',
+                              self.EMPTY_JID_DIR,
+                              status='present')
+
+        # remove job
+        self.assertEqual(local_cache.clean_old_jobs(), None)
+
+        # check jid dir is removed
+        self._check_dir_files('new_jid_dir was not removed',
+                              self.EMPTY_JID_DIR,
+                              status='removed')

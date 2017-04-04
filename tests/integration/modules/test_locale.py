@@ -8,7 +8,6 @@ import tests.integration as integration
 from tests.support.unit import skipIf
 from tests.support.helpers import (
     requires_salt_modules,
-    requires_system_grains,
     destructiveTest,
 )
 
@@ -25,22 +24,19 @@ def _find_new_locale(current_locale):
 @skipIf(salt.utils.is_windows(), 'minion is windows')
 @requires_salt_modules('locale')
 class LocaleModuleTest(integration.ModuleCase):
-    @requires_system_grains
-    def test_get_locale(self, grains):
+    def test_get_locale(self):
         locale = self.run_function('locale.get_locale')
         self.assertNotEqual(None, locale)
 
     @destructiveTest
-    @requires_system_grains
-    def test_gen_locale(self, grains):
+    def test_gen_locale(self):
         locale = self.run_function('locale.get_locale')
         new_locale = _find_new_locale(locale)
         ret = self.run_function('locale.gen_locale', [new_locale])
         self.assertEqual(True, ret)
 
     @destructiveTest
-    @requires_system_grains
-    def test_set_locale(self, grains):
+    def test_set_locale(self):
         original_locale = self.run_function('locale.get_locale')
         locale_to_set = _find_new_locale(original_locale)
         self.run_function('locale.gen_locale', [locale_to_set])

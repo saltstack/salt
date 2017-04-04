@@ -11,6 +11,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
+
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
@@ -20,18 +22,21 @@ import salt.modules.parted as parted
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PartedTestCase(TestCase):
+class PartedTestCase(TestCase, LoaderModuleMockMixin):
 
-    # Setup for each test function.
-
-    def setUp(self):
-        parted.__salt__ = {
-            'cmd.run': MagicMock(),
-            'cmd.run_stdout': MagicMock(),
+    def setup_loader_modules(self):
+        self.cmdrun = MagicMock()
+        self.cmdrun_stdout = MagicMock()
+        self.addCleanup(delattr, self, 'cmdrun')
+        self.addCleanup(delattr, self, 'cmdrun_stdout')
+        return {
+            parted: {
+                '__salt__': {
+                    'cmd.run': self.cmdrun,
+                    'cmd.run_stdout': self.cmdrun_stdout
+                }
+            }
         }
-        self.cmdrun = parted.__salt__['cmd.run']
-        self.cmdrun_stdout = parted.__salt__['cmd.run_stdout']
-        self.maxDiff = None
 
     # Test __virtual__ function for module registration
 

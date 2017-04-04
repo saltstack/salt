@@ -86,7 +86,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
              'pid': 54321},
         ])
         with patch.dict(systemd.__salt__, {'cmd.run_all': mock}):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 CommandExecutionError,
                 'Problem performing systemctl daemon-reload: Who knows why?',
                 systemd.systemctl_reload

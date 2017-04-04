@@ -5,10 +5,9 @@ from __future__ import absolute_import
 import json
 import logging
 import os
-import unittest
 
 # Import Salt Testing libs
-from tests.support.unit import skipIf
+from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
 import salt.ext.six as six
@@ -35,7 +34,7 @@ info = log.info
 
 
 @skipIf(salt.utils.virtualbox.HAS_LIBS is False, 'virtualbox has to be installed')
-class VirtualboxTestCase(unittest.TestCase):
+class VirtualboxTestCase(TestCase):
     def setUp(self):
         self.vbox = salt.utils.virtualbox.vb_get_box()
 
@@ -49,7 +48,7 @@ class VirtualboxTestCase(unittest.TestCase):
                 self.fail(e.message)
 
     def assertMachineDoesNotExist(self, name):
-        self.assertRaisesRegexp(Exception, "Could not find a registered machine", self.vbox.findMachine, name)
+        self.assertRaisesRegex(Exception, "Could not find a registered machine", self.vbox.findMachine, name)
 
 
 @skipIf(salt.utils.virtualbox.HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')

@@ -1226,6 +1226,8 @@ class Crypticle(object):
         aes_key, hmac_key = self.keys
         sig = data[-self.SIG_SIZE:]
         data = data[:-self.SIG_SIZE]
+        if six.PY3 and not isinstance(data, bytes):
+            data = salt.utils.to_bytes(data)
         mac_bytes = hmac.new(hmac_key, data, hashlib.sha256).digest()
         if len(mac_bytes) != len(sig):
             log.debug('Failed to authenticate message')

@@ -28,14 +28,6 @@ class StateModuleTest(integration.ModuleCase,
 
     maxDiff = None
 
-    @classmethod
-    def setUpClass(cls):
-        class CustomModuleCase(integration.ModuleCase):
-            def runTest(self, *args):
-                pass
-        mod_case = CustomModuleCase()
-        mod_case.run_function('saltutil.sync_all')
-
     def test_show_highstate(self):
         '''
         state.show_highstate

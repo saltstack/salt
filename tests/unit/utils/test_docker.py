@@ -25,29 +25,6 @@ import salt.utils.docker.translate as translate_funcs
 from salt.ext import six
 
 
-def test_skip_translate(testcase, name):
-    '''
-    Ensure that skip_translate is checked. This function is called from the
-    tearDown for the TranslateInputTestCase.
-
-    Note that the example arguments used are in many cases not valid input for
-    the Docker API, but these assertions confirm that we successfully skipped
-    translation (which is what we are actually testing).
-    '''
-    testcase.assertEqual(
-        docker_utils.translate_input(
-            **{name: 'foo', 'skip_translate': True}
-        ),
-        ({name: 'foo'}, {}, [])
-    )
-    testcase.assertEqual(
-        docker_utils.translate_input(
-            **{name: 'foo', 'skip_translate': [name]}
-        ),
-        ({name: 'foo'}, {}, [])
-    )
-
-
 def __test_stringlist(testcase, name):
     alias = salt.utils.docker.ALIASES_REVMAP.get(name)
     # Using file paths here because "volumes" must be passed through this
@@ -130,7 +107,7 @@ def __test_key_value(testcase, name, delimiter):
         )
 
 
-def test_bool(func):
+def assert_bool(func):
     '''
     Test a boolean value
     '''
@@ -166,7 +143,7 @@ def test_bool(func):
     return wrapper
 
 
-def test_int(func):
+def assert_int(func):
     '''
     Test an integer value
     '''
@@ -201,7 +178,7 @@ def test_int(func):
     return wrapper
 
 
-def test_string(func):
+def assert_string(func):
     '''
     Test that item is a string or is converted to one
     '''
@@ -239,7 +216,7 @@ def test_string(func):
     return wrapper
 
 
-def test_int_or_string(func):
+def assert_int_or_string(func):
     '''
     Test an integer or string value
     '''
@@ -269,7 +246,7 @@ def test_int_or_string(func):
     return wrapper
 
 
-def test_stringlist(func):
+def assert_stringlist(func):
     '''
     Test a comma-separated or Python list of strings
     '''
@@ -282,7 +259,7 @@ def test_stringlist(func):
     return wrapper
 
 
-def test_dict(func):
+def assert_dict(func):
     '''
     Dictionaries should be untouched, dictlists should be repacked and end up
     as a single dictionary.
@@ -322,7 +299,7 @@ def test_dict(func):
     return wrapper
 
 
-def test_cmd(func):
+def assert_cmd(func):
     '''
     Test for a string, or a comma-separated or Python list of strings. This is
     different from a stringlist in that we do not do any splitting. This
@@ -363,7 +340,7 @@ def test_cmd(func):
     return wrapper
 
 
-def test_key_colon_value(func):
+def assert_key_colon_value(func):
     '''
     Test a key/value pair with parameters passed as key:value pairs
     '''
@@ -376,7 +353,7 @@ def test_key_colon_value(func):
     return wrapper
 
 
-def test_key_equals_value(func):
+def assert_key_equals_value(func):
     '''
     Test a key/value pair with parameters passed as key=value pairs
     '''
@@ -391,7 +368,7 @@ def test_key_equals_value(func):
     return wrapper
 
 
-def test_device_rates(func):
+def assert_device_rates(func):
     '''
     Tests for device_{read,write}_{bps,iops}. The bps values have a "Rate"
     value expressed in bytes/kb/mb/gb, while the iops values have a "Rate"
@@ -564,7 +541,7 @@ class TranslateInputTestCase(TestCase):
             expected
         )
 
-    @test_bool
+    @assert_bool
     def test_auto_remove(self):
         '''
         Should be a bool or converted to one
@@ -610,7 +587,7 @@ class TranslateInputTestCase(TestCase):
             )
         )
 
-    @test_int
+    @assert_int
     def test_blkio_weight(self):
         '''
         Should be an int or converted to one
@@ -669,70 +646,70 @@ class TranslateInputTestCase(TestCase):
             )
         )
 
-    @test_stringlist
+    @assert_stringlist
     def test_cap_add(self):
         '''
         Should be a list of strings or converted to one
         '''
         pass
 
-    @test_stringlist
+    @assert_stringlist
     def test_cap_drop(self):
         '''
         Should be a list of strings or converted to one
         '''
         pass
 
-    @test_cmd
+    @assert_cmd
     def test_command(self):
         '''
         Can either be a string or a comma-separated or Python list of strings.
         '''
         pass
 
-    @test_string
+    @assert_string
     def test_cpuset_cpus(self):
         '''
         Should be a string or converted to one
         '''
         pass
 
-    @test_string
+    @assert_string
     def test_cpuset_mems(self):
         '''
         Should be a string or converted to one
         '''
         pass
 
-    @test_int
+    @assert_int
     def test_cpu_group(self):
         '''
         Should be an int or converted to one
         '''
         pass
 
-    @test_int
+    @assert_int
     def test_cpu_period(self):
         '''
         Should be an int or converted to one
         '''
         pass
 
-    @test_int
+    @assert_int
     def test_cpu_shares(self):
         '''
         Should be an int or converted to one
         '''
         pass
 
-    @test_bool
+    @assert_bool
     def test_detach(self):
         '''
         Should be a bool or converted to one
         '''
         pass
 
-    @test_device_rates
+    @assert_device_rates
     def test_device_read_bps(self):
         '''
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
@@ -740,7 +717,7 @@ class TranslateInputTestCase(TestCase):
         '''
         pass
 
-    @test_device_rates
+    @assert_device_rates
     def test_device_read_iops(self):
         '''
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
@@ -748,7 +725,7 @@ class TranslateInputTestCase(TestCase):
         '''
         pass
 
-    @test_device_rates
+    @assert_device_rates
     def test_device_write_bps(self):
         '''
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
@@ -756,7 +733,7 @@ class TranslateInputTestCase(TestCase):
         '''
         pass
 
-    @test_device_rates
+    @assert_device_rates
     def test_device_write_iops(self):
         '''
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
@@ -764,21 +741,21 @@ class TranslateInputTestCase(TestCase):
         '''
         pass
 
-    @test_stringlist
+    @assert_stringlist
     def test_devices(self):
         '''
         Should be a list of strings or converted to one
         '''
         pass
 
-    @test_stringlist
+    @assert_stringlist
     def test_dns_opt(self):
         '''
         Should be a list of strings or converted to one
         '''
         pass
 
-    @test_stringlist
+    @assert_stringlist
     def test_dns_search(self):
         '''
         Should be a list of strings or converted to one
@@ -843,21 +820,21 @@ class TranslateInputTestCase(TestCase):
             expected
         )
 
-    @test_stringlist
+    @assert_stringlist
     def test_domainname(self):
         '''
         Should be a list of strings or converted to one
         '''
         pass
 
-    @test_cmd
+    @assert_cmd
     def test_entrypoint(self):
         '''
         Can either be a string or a comma-separated or Python list of strings.
         '''
         pass
 
-    @test_key_equals_value
+    @assert_key_equals_value
     def test_environment(self):
         '''
         Can be passed in several formats but must end up as a dictionary
@@ -868,7 +845,7 @@ class TranslateInputTestCase(TestCase):
     def test_extra_hosts(self):
         '''
         Can be passed as a list of key:value pairs but can't be simply tested
-        using @test_key_colon_value since we need to test both with and without
+        using @assert_key_colon_value since we need to test both with and without
         IP address validation.
         '''
         expected = (
@@ -928,35 +905,35 @@ class TranslateInputTestCase(TestCase):
             expected
         )
 
-    @test_stringlist
+    @assert_stringlist
     def test_group_add(self):
         '''
         Should be a list of strings or converted to one
         '''
         pass
 
-    @test_string
+    @assert_string
     def test_hostname(self):
         '''
         Should be a string or converted to one
         '''
         pass
 
-    @test_string
+    @assert_string
     def test_ipc_mode(self):
         '''
         Should be a string or converted to one
         '''
         pass
 
-    @test_string
+    @assert_string
     def test_isolation(self):
         '''
         Should be a string or converted to one
         '''
         pass
 
-    @test_key_equals_value
+    @assert_key_equals_value
     def test_labels(self):
         '''
         Can be passed as a list of key=value pairs or a dictionary, and must
@@ -964,7 +941,7 @@ class TranslateInputTestCase(TestCase):
         '''
         pass
 
-    @test_key_colon_value
+    @assert_key_colon_value
     def test_links(self):
         '''
         Can be passed as a list of key:value pairs or a dictionary, and must
@@ -1007,7 +984,7 @@ class TranslateInputTestCase(TestCase):
             expected
         )
 
-    @test_key_equals_value
+    @assert_key_equals_value
     def test_lxc_conf(self):
         '''
         Can be passed as a list of key=value pairs or a dictionary, and must
@@ -1015,77 +992,77 @@ class TranslateInputTestCase(TestCase):
         '''
         pass
 
-    @test_string
+    @assert_string
     def test_mac_address(self):
         '''
         Should be a string or converted to one
         '''
         pass
 
-    @test_int_or_string
+    @assert_int_or_string
     def test_mem_limit(self):
         '''
         Should be a string or converted to one
         '''
         pass
 
-    @test_int
+    @assert_int
     def test_mem_swappiness(self):
         '''
         Should be an int or converted to one
         '''
         pass
 
-    @test_int_or_string
+    @assert_int_or_string
     def test_memswap_limit(self):
         '''
         Should be a string or converted to one
         '''
         pass
 
-    @test_string
+    @assert_string
     def test_name(self):
         '''
         Should be a string or converted to one
         '''
         pass
 
-    @test_bool
+    @assert_bool
     def test_network_disabled(self):
         '''
         Should be a bool or converted to one
         '''
         pass
 
-    @test_string
+    @assert_string
     def test_network_mode(self):
         '''
         Should be a string or converted to one
         '''
         pass
 
-    @test_bool
+    @assert_bool
     def test_oom_kill_disable(self):
         '''
         Should be a bool or converted to one
         '''
         pass
 
-    @test_int
+    @assert_int
     def test_oom_score_adj(self):
         '''
         Should be an int or converted to one
         '''
         pass
 
-    @test_string
+    @assert_string
     def test_pid_mode(self):
         '''
         Should be a string or converted to one
         '''
         pass
 
-    @test_int
+    @assert_int
     def test_pids_limit(self):
         '''
         Should be an int or converted to one
@@ -1109,17 +1086,17 @@ class TranslateInputTestCase(TestCase):
                 '3334/udp': ('10.4.5.6', 3334),
                 '5505/udp': ('10.7.8.9', 15505),
                 '5506/udp': ('10.7.8.9', 15506)},
-             'ports': [80, 3333, 4505, 4506,
-                       '3334/udp', '5505/udp', '5506/udp', '81/udp'],
+             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp'],
             },
             {}, []
         )
-        self.assertEqual(
-            docker_utils.translate_input(
-                port_bindings='10.1.2.3:8080:80,10.1.2.3:8888:80,10.4.5.6:3333:3333,10.7.8.9:14505-14506:4505-4506,10.1.2.3:8080:81/udp,10.1.2.3:8888:81/udp,10.4.5.6:3334:3334/udp,10.7.8.9:15505-15506:5505-5506/udp',
-            ),
-            expected
+        translated_input = docker_utils.translate_input(
+            port_bindings='10.1.2.3:8080:80,10.1.2.3:8888:80,10.4.5.6:3333:3333,'
+                          '10.7.8.9:14505-14506:4505-4506,10.1.2.3:8080:81/udp,'
+                          '10.1.2.3:8888:81/udp,10.4.5.6:3334:3334/udp,'
+                          '10.7.8.9:15505-15506:5505-5506/udp',
         )
+        self.assertEqual(translated_input, expected)
         self.assertEqual(
             docker_utils.translate_input(
                 port_bindings=[
@@ -1147,8 +1124,7 @@ class TranslateInputTestCase(TestCase):
                 '3334/udp': ('10.4.5.6',),
                 '5505/udp': ('10.7.8.9',),
                 '5506/udp': ('10.7.8.9',)},
-             'ports': [80, 3333, 4505, 4506,
-                       '3334/udp', '5505/udp', '5506/udp', '81/udp'],
+             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp'],
             },
             {}, []
         )
@@ -1184,8 +1160,7 @@ class TranslateInputTestCase(TestCase):
                                '3334/udp': 3334,
                                '5505/udp': 15505,
                                '5506/udp': 15506},
-             'ports': [80, 3333, 4505, 4506,
-                       '3334/udp', '5505/udp', '5506/udp', '81/udp'],
+             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp'],
             },
             {}, []
         )
@@ -1220,8 +1195,7 @@ class TranslateInputTestCase(TestCase):
                                '3334/udp': None,
                                '5505/udp': None,
                                '5506/udp': None},
-             'ports': [80, 3333, 4505, 4506,
-                       '3334/udp', '5505/udp', '5506/udp', '81/udp'],
+             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp'],
             },
             {}, []
         )
@@ -1255,9 +1229,8 @@ class TranslateInputTestCase(TestCase):
                                '19999/udp': None,
                                '20000/udp': None,
                                '20001/udp': None},
-             'ports': [80, 3333, 4505, 4506, 9999, 10000, 10001,
-                       '19999/udp', '20000/udp', '20001/udp',
-                       '3334/udp', '5505/udp', '5506/udp', '81/udp']
+             'ports': [80, '81/udp', 3333, '3334/udp', 4505, 4506, '5505/udp', '5506/udp',
+                       9999, 10000, 10001, '19999/udp', '20000/udp', '20001/udp']
             },
             {}, []
         )
@@ -1444,7 +1417,7 @@ class TranslateInputTestCase(TestCase):
         the port numbers must end up as integers. None of the decorators will
         suffice so this one must be tested specially.
         '''
-        expected = ({'ports': [1111, 2222, 4505, 4506, (3333, 'udp')]}, {}, [])
+        expected = ({'ports': [1111, 2222, (3333, 'udp'), 4505, 4506]}, {}, [])
         # Comma-separated list
         self.assertEqual(
             docker_utils.translate_input(ports='1111,2222/tcp,3333/udp,4505-4506'),
@@ -1486,21 +1459,21 @@ class TranslateInputTestCase(TestCase):
             )
         )
 
-    @test_bool
+    @assert_bool
     def test_privileged(self):
         '''
         Should be a bool or converted to one
         '''
         pass
 
-    @test_bool
+    @assert_bool
     def test_publish_all_ports(self):
         '''
         Should be a bool or converted to one
         '''
         pass
 
-    @test_bool
+    @assert_bool
     def test_read_only(self):
         '''
         Should be a bool or converted to one
@@ -1550,42 +1523,42 @@ class TranslateInputTestCase(TestCase):
                 ({}, {item: 'Only one policy is permitted'}, [])
             )
 
-    @test_stringlist
+    @assert_stringlist
     def test_security_opt(self):
         '''
         Should be a list of strings or converted to one
         '''
         pass
 
-    @test_int_or_string
+    @assert_int_or_string
     def test_shm_size(self):
         '''
         Should be a string or converted to one
         '''
         pass
 
-    @test_bool
+    @assert_bool
     def test_stdin_open(self):
         '''
         Should be a bool or converted to one
         '''
         pass
 
-    @test_string
+    @assert_string
     def test_stop_signal(self):
         '''
         Should be a string or converted to one
         '''
         pass
 
-    @test_int
+    @assert_int
     def test_stop_timeout(self):
         '''
         Should be an int or converted to one
         '''
         pass
 
-    @test_key_equals_value
+    @assert_key_equals_value
     def test_storage_opt(self):
         '''
         Can be passed in several formats but must end up as a dictionary
@@ -1593,7 +1566,7 @@ class TranslateInputTestCase(TestCase):
         '''
         pass
 
-    @test_key_equals_value
+    @assert_key_equals_value
     def test_sysctls(self):
         '''
         Can be passed in several formats but must end up as a dictionary
@@ -1601,7 +1574,7 @@ class TranslateInputTestCase(TestCase):
         '''
         pass
 
-    @test_dict
+    @assert_dict
     def test_tmpfs(self):
         '''
         Can be passed in several formats but must end up as a dictionary
@@ -1609,7 +1582,7 @@ class TranslateInputTestCase(TestCase):
         '''
         pass
 
-    @test_bool
+    @assert_bool
     def test_tty(self):
         '''
         Should be a bool or converted to one
@@ -1694,21 +1667,21 @@ class TranslateInputTestCase(TestCase):
             ({}, {'user': '\'-1\' is an invalid uid'}, [])
         )
 
-    @test_string
+    @assert_string
     def test_userns_mode(self):
         '''
         Should be a bool or converted to one
         '''
         pass
 
-    @test_string
+    @assert_string
     def test_volume_driver(self):
         '''
         Should be a bool or converted to one
         '''
         pass
 
-    @test_stringlist
+    @assert_stringlist
     def test_volumes(self):
         '''
         Should be a list of absolute paths
@@ -1727,14 +1700,14 @@ class TranslateInputTestCase(TestCase):
             )
         )
 
-    @test_stringlist
+    @assert_stringlist
     def test_volumes_from(self):
         '''
         Should be a list of strings or converted to one
         '''
         pass
 
-    @test_string
+    @assert_string
     def test_working_dir(self):
         '''
         Should be a single absolute path
@@ -1824,13 +1797,13 @@ class DockerTranslateHelperTestCase(TestCase):
         # Passing a port range
         self.assertEqual(translate_funcs._get_port_range('2222-2223'), (2222, 2223))
         # Error case: port range start is greater than end
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 r'Start of port range \(2222\) cannot be greater than end of '
                 r'port range \(2221\)'):
             translate_funcs._get_port_range('2222-2221')
         # Error case: non-numeric input
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 '\'2222-bar\' is non-numeric or an invalid port range'):
             translate_funcs._get_port_range('2222-bar')
