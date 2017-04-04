@@ -42,6 +42,7 @@ ARGS = None
 # pylint: disable=block-comment-should-start-with-cardinal-space
 #%%OPTS
 
+
 def is_windows():
     '''
     Simple function to return if a host is Windows or not

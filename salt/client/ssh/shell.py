@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 import re
 import os
+import sys
 import json
 import time
 import logging
@@ -58,7 +59,7 @@ def gen_shell(opts, **kwargs):
             log.error('The saltwinshell library is not available')
             sys.exit(1)
     else:
-        shell = Shell(opts, **args)
+        shell = Shell(opts, **kwargs)
     return shell
 
 
