@@ -113,3 +113,19 @@ Most of the user-facing interaction with the fileclient happens via the
 :mod:`cp <salt.modules.cp>` module. The functions in this module instantiate a
 fileclient instance (if one is not already saved to the ``__context__``
 dunder) and run fileclient functions.
+
+
+Updating the Fileserver
+-----------------------
+
+The master daemon spawns a process dedicated to routine maintenance tasks upon
+startup. This process runs an instance of ``salt.master.Maintenance``, which
+loops forever, running a series of functions and then sleeping for a length of
+time determined by the :conf_master:`loop_interval` config option. One of the
+maintenance tasks is to update the fileserver, and it essentially runs
+``salt.fileserver.Fileserver.update()``, which as we know from above will run
+all configured backends' ``update()`` functions, if present. This is now remote
+fileservers like ``git``, ``hg``, and ``svn`` stay up-to-date.
+
+For the local file_client (FSClient), since it does not interact with the
+master, upon spawning of its FSChan it will update the fileserver.
