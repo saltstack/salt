@@ -871,19 +871,22 @@ class TestDaemon(object):
             with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry), 'w') as fp_:
                 fp_.write(yaml.dump(computed_config, default_flow_style=False))
         sub_minion_computed_config = copy.deepcopy(sub_minion_opts)
-        salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'), 'w').write(
-            yaml.dump(sub_minion_computed_config, default_flow_style=False)
-        )
+        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'), 'w') as wfh:
+            wfh.write(
+                yaml.dump(sub_minion_computed_config, default_flow_style=False)
+            )
         shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'master'))
 
         syndic_master_computed_config = copy.deepcopy(syndic_master_opts)
-        salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w').write(
-            yaml.dump(syndic_master_computed_config, default_flow_style=False)
-        )
+        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w') as wfh:
+            wfh.write(
+                yaml.dump(syndic_master_computed_config, default_flow_style=False)
+            )
         syndic_computed_config = copy.deepcopy(syndic_opts)
-        salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w').write(
-            yaml.dump(syndic_computed_config, default_flow_style=False)
-        )
+        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w') as wfh:
+            wfh.write(
+                yaml.dump(syndic_computed_config, default_flow_style=False)
+            )
         shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'master'))
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
 
