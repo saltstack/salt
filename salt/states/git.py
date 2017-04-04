@@ -1452,17 +1452,18 @@ def latest(name,
                 )
                 removal_errors = {}
                 for target_object in target_contents:
+                    target_path = os.path.join(target, target_object)
                     try:
-                        salt.utils.rm_rf(target_object)
+                        salt.utils.rm_rf(target_path)
                     except OSError as exc:
-                        removal_errors[target_object] = exc
+                        removal_errors[target_path] = exc
                 if removal_errors:
                     err_strings = [
                         '  {}\n    {}'.format(k, v) for k, v in removal_errors.items()
                     ]
                     return _fail(
                         ret,
-                        'Unable to remove:'.format('\n'.join(err_strings),
+                        'Unable to remove:\n{}'.format('\n'.join(err_strings)),
                         comments
                     )
                 ret['changes']['forced clone'] = True
