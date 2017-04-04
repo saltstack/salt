@@ -241,7 +241,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             # Make a change to the repo by editing the file in the admin copy
             # of the repo and committing.
             head_pre = _head(admin_dir)
-            with open(os.path.join(admin_dir, 'LICENSE'), 'a') as fp_:
+            with salt.utils.fopen(os.path.join(admin_dir, 'LICENSE'), 'a') as fp_:
                 fp_.write('Hello world!')
             self.run_function(
                 'git.commit', [admin_dir, 'added a line'],

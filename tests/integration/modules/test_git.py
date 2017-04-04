@@ -91,7 +91,7 @@ class GitModuleTest(ModuleCase):
             dir_path = os.path.join(self.repo, dirname)
             _makedirs(dir_path)
             for filename in self.files:
-                with open(os.path.join(dir_path, filename), 'w') as fp_:
+                with salt.utils.fopen(os.path.join(dir_path, filename), 'w') as fp_:
                     fp_.write('This is a test file named ' + filename + '.')
         # Navigate to the root of the repo to init, stage, and commit
         os.chdir(self.repo)
@@ -124,7 +124,7 @@ class GitModuleTest(ModuleCase):
             ['git', 'checkout', '--quiet', '-b', self.branches[1]]
         )
         # Add a line to the file
-        with open(self.files[0], 'a') as fp_:
+        with salt.utils.fopen(self.files[0], 'a') as fp_:
             fp_.write('Added a line\n')
         # Commit the updated file
         subprocess.check_call(
@@ -152,7 +152,7 @@ class GitModuleTest(ModuleCase):
         files = [os.path.join(newdir_path, x) for x in self.files]
         files_relpath = [os.path.join(newdir, x) for x in self.files]
         for path in files:
-            with open(path, 'w') as fp_:
+            with salt.utils.fopen(path, 'w') as fp_:
                 fp_.write(
                     'This is a test file with relative path {0}.\n'
                     .format(path)
@@ -169,7 +169,7 @@ class GitModuleTest(ModuleCase):
         '''
         filename = 'quux'
         file_path = os.path.join(self.repo, filename)
-        with open(file_path, 'w') as fp_:
+        with salt.utils.fopen(file_path, 'w') as fp_:
             fp_.write('This is a test file named ' + filename + '.\n')
         ret = self.run_function('git.add', [self.repo, filename])
         self.assertEqual(ret, 'add \'{0}\''.format(filename))
@@ -310,7 +310,7 @@ class GitModuleTest(ModuleCase):
         filename = 'foo'
         commit_re_prefix = r'^\[master [0-9a-f]+\] '
         # Add a line
-        with open(os.path.join(self.repo, filename), 'a') as fp_:
+        with salt.utils.fopen(os.path.join(self.repo, filename), 'a') as fp_:
             fp_.write('Added a line\n')
         # Stage the file
         self.run_function('git.add', [self.repo, filename])
@@ -320,7 +320,7 @@ class GitModuleTest(ModuleCase):
         # Make sure the expected line is in the output
         self.assertTrue(bool(re.search(commit_re_prefix + commit_msg, ret)))
         # Add another line
-        with open(os.path.join(self.repo, filename), 'a') as fp_:
+        with salt.utils.fopen(os.path.join(self.repo, filename), 'a') as fp_:
             fp_.write('Added another line\n')
         # Commit the second file without staging
         commit_msg = 'Add another line to ' + filename
@@ -345,7 +345,7 @@ class GitModuleTest(ModuleCase):
                 ['git', 'config', '--global', '--remove-section', 'foo']
             )
             for cmd in cmds:
-                with open(os.devnull, 'w') as devnull:
+                with salt.utils.fopen(os.devnull, 'w') as devnull:
                     try:
                         subprocess.check_call(cmd, stderr=devnull)
                     except subprocess.CalledProcessError:
@@ -704,7 +704,7 @@ class GitModuleTest(ModuleCase):
         '''
         # Make a change to a different file than the one modifed in setUp
         file_path = os.path.join(self.repo, self.files[1])
-        with open(file_path, 'a') as fp_:
+        with salt.utils.fopen(file_path, 'a') as fp_:
             fp_.write('Added a line\n')
         # Commit the change
         self.assertTrue(
@@ -848,7 +848,7 @@ class GitModuleTest(ModuleCase):
         # TODO: test more stash actions
         '''
         file_path = os.path.join(self.repo, self.files[0])
-        with open(file_path, 'a') as fp_:
+        with salt.utils.fopen(file_path, 'a') as fp_:
             fp_.write('Temp change to be stashed')
         self.assertTrue(
             'ERROR' not in self.run_function('git.stash', [self.repo])
@@ -887,10 +887,10 @@ class GitModuleTest(ModuleCase):
             'untracked': ['thisisalsoanewfile']
         }
         for filename in changes['modified']:
-            with open(os.path.join(self.repo, filename), 'a') as fp_:
+            with salt.utils.fopen(os.path.join(self.repo, filename), 'a') as fp_:
                 fp_.write('Added a line\n')
         for filename in changes['new']:
-            with open(os.path.join(self.repo, filename), 'w') as fp_:
+            with salt.utils.fopen(os.path.join(self.repo, filename), 'w') as fp_:
                 fp_.write('This is a new file named ' + filename + '.')
             # Stage the new file so it shows up as a 'new' file
             self.assertTrue(
@@ -902,7 +902,7 @@ class GitModuleTest(ModuleCase):
         for filename in changes['deleted']:
             self.run_function('git.rm', [self.repo, filename])
         for filename in changes['untracked']:
-            with open(os.path.join(self.repo, filename), 'w') as fp_:
+            with salt.utils.fopen(os.path.join(self.repo, filename), 'w') as fp_:
                 fp_.write('This is a new file named ' + filename + '.')
         self.assertEqual(
             self.run_function('git.status', [self.repo]),
