@@ -47,11 +47,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                                 }
                             }
                         },
-                        'mixedcase': 'UP-low-UP',
-                        'dictlist': [
-                            {'foo': 'bar'},
-                            {'baz': 'qux'}
-                        ]
+                        'mixedcase': 'UP-low-UP'
                       }
 
     def tearDown(self):
@@ -93,6 +89,27 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                 log.debug('Expected:\n\t{0}\nGot\n\t{1}'.format(output, correct_output))
                 log.debug('Difference:\n\t{0}'.format(diff))
             self.assertEqual(output, correct_output)
+
+    def test_get_policies_for_nonexisting_minions(self):
+        minion_id = 'salt_master'
+        # For non-existing minions, or the master-minion, grains will be None
+        cases = {
+                    'no-tokens-to-replace': ['no-tokens-to-replace'],
+                    'single-dict:{minion}': ['single-dict:{0}'.format(minion_id)],
+                    'single-list:{grains[roles]}': []
+        }
+        with patch('salt.utils.minions.get_minion_data',
+                   MagicMock(return_value=(None, None, None))):
+            for case, correct_output in six.iteritems(cases):
+                test_config = {'policies': [case]}
+                output = vault._get_policies(minion_id, test_config)  # pylint: disable=protected-access
+                diff = set(output).symmetric_difference(set(correct_output))
+                if len(diff) != 0:
+                    log.debug('Test {0} failed'.format(case))
+                    log.debug('Expected:\n\t{0}\nGot\n\t{1}'.format(output, correct_output))
+                    log.debug('Difference:\n\t{0}'.format(diff))
+                self.assertEqual(output, correct_output)
+
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_get_policies(self):
