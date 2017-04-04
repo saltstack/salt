@@ -92,3 +92,14 @@ mysql.user: 'salt'
 mysql.pass: 'salt'
 mysql.db: 'salt'
 mysql.port: 3306
+
+libcloud_dns:
+  profile_test1:
+    driver: cloudflare
+    key: 12345
+    secret: mysecret
+  profile_test2:
+    driver: godaddy
+    key: 12345
+    secret: mysecret
+    shopper_id: 12345
