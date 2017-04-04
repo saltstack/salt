@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+import shlex
 
 # Import salt libs
 import salt.utils
@@ -18,25 +19,25 @@ option_toggles = {
     '-N': 'skip_missing',
 }
 option_flags = {
-    '-A': ['age', None],
-    '-C': ['count', 10],
-    '-a': ['post_command', None],
-    '-b': ['pre_command', None],
-    '-e': ['mail_addr', None],
-    '-E': ['expire_command', None],
-    '-g': ['group', None],
-    '-m': ['mode', None],
-    '-M': ['rename_command', "/bin/mv $file$nfile"],
-    '-o': ['owner', None],
-    '-p': ['period', None],
-    '-P': ['timestmp', None],
-    '-R': ['old_created_command', None],
-    '-s': ['size', None],
-    '-S': ['max_size', None],
-    '-t': ['template', None],
-    '-T': ['pattern', None],
-    '-w': ['entryname', None],
-    '-z': ['compress_count', None],
+    '-A': 'age',
+    '-C': 'count',
+    '-a': 'post_command',
+    '-b': 'pre_command',
+    '-e': 'mail_addr',
+    '-E': 'expire_command',
+    '-g': 'group',
+    '-m': 'mode',
+    '-M': 'rename_command',
+    '-o': 'owner',
+    '-p': 'period',
+    '-P': 'timestmp',
+    '-R': 'old_created_command',
+    '-s': 'size',
+    '-S': 'max_size',
+    '-t': 'template',
+    '-T': 'pattern',
+    '-w': 'entryname',
+    '-z': 'compress_count',
 }
 
 
@@ -83,10 +84,11 @@ def show_conf(conf_file=default_conf, name=None):
     .. code-block:: bash
 
         salt '*' logadm.show_conf
-        salt '*' logadm.show_conf log_file=/var/log/syslog
+        salt '*' logadm.show_conf name=/var/log/syslog
     '''
     cfg = _parse_conf(conf_file)
 
+    ## filter
     if name and name in cfg:
         return {name: cfg[name]}
     elif name:
@@ -95,7 +97,7 @@ def show_conf(conf_file=default_conf, name=None):
         return cfg
 
 
-def list_conf(conf_file=default_conf, name=None):
+def list_conf(conf_file=default_conf, log_file=None):
     '''
     Show parsed configuration
 
@@ -103,23 +105,23 @@ def list_conf(conf_file=default_conf, name=None):
 
     conf_file : string
         path to logadm.conf, defaults to /etc/logadm.conf
-    name : string
-        optional show only a single entry
+    log_file : string
+        optional show only one log file
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' logadm.list_conf
-        salt '*' logadm.list_conf log_file=/var/log/syslog
+        salt '*' logadm.list_conf log=/var/log/syslog
     '''
-    cfg = show_conf(conf_file, name)
-    cfg_parsed = []
+    cfg = _parse_conf(conf_file)
+    cfg_parsed = {}
 
     ## parse all options
     for log in cfg:
         log_cfg = {}
-        options = cfg[log].split()  # FIXME: brakes quotations
+        options = shlex.split(cfg[log])
         if len(options) == 0:
             continue
 
@@ -131,16 +133,15 @@ def list_conf(conf_file=default_conf, name=None):
 
         # handle flag options
         for opt in option_flags:
+            opt_val = None
             if opt in options:
-                opt_val = None
                 if len(options) > options.index(opt):
                     opt_val = options[options.index(opt)+1]
-                log_cfg[option_flags[opt][0]] = opt_val
                 options.remove(opt)
-                if opt_val:
-                    options.remove(opt_val)
-            else:
-                log_cfg[option_flags[opt][0]] = option_flags[opt][1]
+
+            log_cfg[option_flags[opt]] = opt_val
+            if opt_val:
+                options.remove(opt_val)
 
         # handle log file
         if log.startswith('/'):
@@ -152,11 +153,18 @@ def list_conf(conf_file=default_conf, name=None):
                 del options[0]
 
         # handle unknown options
-        log_cfg['aditional_options'] = " ".join(options) if len(options) else None
+        if len(options) > 0:
+            log_cfg['additional_options'] = " ".join(options)
 
-        cfg_parsed.append(log_cfg)
+        cfg_parsed[log_cfg['log_file'] if log_cfg['log_file'] else log_cfg['entryname']] = log_cfg
 
-    return cfg_parsed
+    ## filter
+    if log_file and log_file in cfg_parsed:
+        return {log_file: cfg_parsed[log_file]}
+    elif log_file:
+        return {log_file: 'not found in {}'.format(conf_file)}
+    else:
+        return cfg_parsed
 
 
 def rotate(name,
