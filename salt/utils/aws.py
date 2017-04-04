@@ -24,6 +24,7 @@ import re
 # Import Salt libs
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
+import salt.ext.six as six
 
 # Import 3rd-party libs
 try:
@@ -238,22 +239,20 @@ def sig4(method, endpoint, params, prov_dict,
     amzdate = timenow.strftime('%Y%m%dT%H%M%SZ')
     datestamp = timenow.strftime('%Y%m%d')
 
-    canonical_headers = 'host:{0}\nx-amz-date:{1}'.format(
-        endpoint,
-        amzdate,
-    )
+    headers_for_signing = {key: value for key, value in six.iteritems(headers) if re.match('x-amz-', key)}
+    headers_for_signing['x-amz-date'] = amzdate
 
-    signed_headers = 'host;x-amz-date'
-
-    if isinstance(headers, dict):
-        for header in sorted(headers.keys()):
-            canonical_headers += '\n{0}:{1}'.format(header, headers[header])
-            signed_headers += ';{0}'.format(header)
-    canonical_headers += '\n'
+    canonical_headers = 'host:{0}'.format(endpoint)
+    signed_headers = 'host'
 
     if token != '':
-        canonical_headers += 'x-amz-security-token:{0}\n'.format(token)
-        signed_headers += ';x-amz-security-token'
+        headers['x-amz-security-token'] = token
+
+    if isinstance(headers, dict):
+        for header in sorted(headers_for_signing.keys()):
+            canonical_headers += '\n{0}:{1}'.format(header, headers_for_signing[header])
+            signed_headers += ';{0}'.format(header)
+    canonical_headers += '\n'
 
     algorithm = 'AWS4-HMAC-SHA256'
 
