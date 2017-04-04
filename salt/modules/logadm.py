@@ -41,17 +41,32 @@ def _parse_conf(conf_file=default_conf):
     return ret
 
 
-def show_conf(conf_file=default_conf):
+def show_conf(conf_file=default_conf, name=None):
     '''
     Show parsed configuration
+
+    .. versionchanged:: Nitrogen
+
+    conf_file : string
+        path to logadm.conf, defaults to /etc/logadm.conf
+    name : string
+        optional show only a single entry
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' logadm.show_conf
+        salt '*' logadm.show_conf log_file=/var/log/syslog
     '''
-    return _parse_conf(conf_file)
+    cfg = _parse_conf(conf_file)
+
+    if name and name in cfg:
+        return {name: cfg[name]}
+    elif name:
+        return {name: 'not found in {}'.format(conf_file)}
+    else:
+        return cfg
 
 
 def rotate(name,
