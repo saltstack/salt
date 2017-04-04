@@ -110,7 +110,6 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                     log.debug('Difference:\n\t{0}'.format(diff))
                 self.assertEqual(output, correct_output)
 
-
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_get_policies(self):
         '''
