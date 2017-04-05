@@ -1562,6 +1562,29 @@ def _validate_opts(opts):
     return True
 
 
+def _validate_ssh_minion_opts(opts):
+    '''
+    Ensure we're not using any invalid ssh_minion_opts. We want to make sure
+    that the ssh_minion_opts does not override any pillar or fileserver options
+    inherited from the master config. To add other items, modify the if
+    statement in the for loop below.
+    '''
+    ssh_minion_opts = opts.get('ssh_minion_opts', {})
+    if not isinstance(ssh_minion_opts, dict):
+        log.error('Invalidly-formatted ssh_minion_opts')
+        opts.pop('ssh_minion_opts')
+
+    for opt_name in list(ssh_minion_opts):
+        if re.match('^[a-z0-9]+fs_', opt_name, flags=re.IGNORECASE) \
+                or 'pillar' in opt_name \
+                or opt_name in ('fileserver_backend',):
+            log.warning(
+                '\'%s\' is not a valid ssh_minion_opts parameter, ignoring',
+                opt_name
+            )
+            ssh_minion_opts.pop(opt_name)
+
+
 def _append_domain(opts):
     '''
     Append a domain to the existing id if it doesn't already exist
@@ -3110,6 +3133,7 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
     overrides.update(include_config(include, path, verbose=True),
                      exit_on_config_errors=exit_on_config_errors)
     opts = apply_master_config(overrides, defaults)
+    _validate_ssh_minion_opts(opts)
     _validate_opts(opts)
     # If 'nodegroups:' is uncommented in the master config file, and there are
     # no nodegroups defined, opts['nodegroups'] will be None. Fix this by
