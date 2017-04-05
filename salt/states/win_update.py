@@ -3,6 +3,9 @@
 Management of the windows update agent
 ======================================
 
+This module is being deprecated and will be removed in Salt Fluorine. Please use
+the ``win_wua`` state module instead.
+
 .. versionadded:: 2014.7.0
 
 Set windows updates to run by category. Default behavior is to install
@@ -454,10 +457,16 @@ def installed(name, categories=None, skips=None, retries=10):
         Number of retries to make before giving up. This is total, not per
         step.
     '''
+
     ret = {'name': name,
            'result': True,
            'changes': {},
            'comment': ''}
+    deprecation_msg = 'The \'win_update\' module is deprecated, and will be ' \
+                      'removed in Salt Fluorine. Please use the \'win_wua\' ' \
+                      'module instead.'
+    salt.utils.warn_until('Fluorine', deprecation_msg)
+    ret.setdefault('warnings', []).append(deprecation_msg)
     if not categories:
         categories = [name]
     log.debug('categories to search for are: {0}'.format(categories))
@@ -536,6 +545,13 @@ def downloaded(name, categories=None, skips=None, retries=10):
            'result': True,
            'changes': {},
            'comment': ''}
+
+    deprecation_msg = 'The \'win_update\' module is deprecated, and will be ' \
+                      'removed in Salt Fluorine. Please use the \'win_wua\' ' \
+                      'module instead.'
+    salt.utils.warn_until('Fluorine', deprecation_msg)
+    ret.setdefault('warnings', []).append(deprecation_msg)
+
     if not categories:
         categories = [name]
     log.debug('categories to search for are: {0}'.format(categories))

@@ -72,7 +72,10 @@ class WinUpdateTestCase(TestCase):
         ret = {'name': 'salt',
                'changes': {},
                'result': False,
-               'comment': ''}
+               'comment': '',
+               'warnings': ["The 'win_update' module is deprecated, and will "
+                            "be removed in Salt Fluorine. Please use the "
+                            "'win_wua' module instead."]}
 
         mock = MagicMock(side_effect=[['Saltstack', False, 5],
                                       ['Saltstack', True, 5],
@@ -105,7 +108,10 @@ class WinUpdateTestCase(TestCase):
         ret = {'name': 'salt',
                'changes': {},
                'result': False,
-               'comment': ''}
+               'comment': '',
+               'warnings': ["The 'win_update' module is deprecated, and will "
+                            "be removed in Salt Fluorine. Please use the "
+                            "'win_wua' module instead."]}
 
         mock = MagicMock(side_effect=[['Saltstack', False, 5],
                                       ['Saltstack', True, 5],
