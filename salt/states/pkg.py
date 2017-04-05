@@ -218,6 +218,100 @@ def _find_unpurge_targets(desired):
     ]
 
 
+def _find_download_targets(name=None,
+                           version=None,
+                           pkgs=None,
+                           normalize=True,
+                           ignore_epoch=False,
+                           **kwargs):
+    '''
+    Inspect the arguments to pkg.downloaded and discover what packages need to
+    be downloaded. Return a dict of packages to download.
+    '''
+    cur_pkgs = __salt__['pkg.list_downloaded']()
+    if pkgs:
+        to_download = _repack_pkgs(pkgs, normalize=normalize)
+
+        if not to_download:
+            # Badly-formatted SLS
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': 'Invalidly formatted pkgs parameter. See '
+                               'minion log.'}
+    else:
+        if normalize:
+            _normalize_name = \
+                __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+            to_download = {_normalize_name(name): version}
+        else:
+            to_download = {name: version}
+
+        cver = cur_pkgs.get(name, {})
+        if name in to_download:
+            # Package already downloaded, no need to download again
+            if cver and version in cver:
+                return {'name': name,
+                        'changes': {},
+                        'result': True,
+                        'comment': 'Version {0} of package \'{1}\' is already '
+                                   'downloaded'.format(version, name)}
+
+            # if cver is not an empty string, the package is already downloaded
+            elif cver and version is None:
+                # The package is downloaded
+                return {'name': name,
+                        'changes': {},
+                        'result': True,
+                        'comment': 'Package {0} is already '
+                                   'downloaded'.format(name)}
+
+    version_spec = False
+    # Find out which packages will be targeted in the call to pkg.install
+    # Check current downloaded versions against specified versions
+    targets = {}
+    problems = []
+    for pkgname, pkgver in six.iteritems(to_download):
+        cver = cur_pkgs.get(pkgname, {})
+        # Package not yet downloaded, so add to targets
+        if not cver:
+            targets[pkgname] = pkgver
+            continue
+        # No version specified but package is already downloaded
+        elif cver and not pkgver:
+            continue
+
+        version_spec = True
+        try:
+            oper, verstr = _get_comparison_spec(pkgver)
+        except CommandExecutionError as exc:
+            problems.append(exc.strerror)
+            continue
+
+        if not _fulfills_version_spec(cver.keys(), oper, verstr,
+                                      ignore_epoch=ignore_epoch):
+            targets[pkgname] = pkgver
+
+    if problems:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': ' '.join(problems)}
+
+    if not targets:
+        # All specified packages are already downloaded
+        msg = (
+            'All specified packages{0} are already downloaded'
+            .format(' (matching specified versions)' if version_spec else '')
+        )
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': msg}
+
+    return targets
+
+
 def _find_remove_targets(name=None,
                          version=None,
                          pkgs=None,
@@ -1722,6 +1816,79 @@ def installed(
            'comment': '\n'.join(comment)}
     if warnings:
         ret['comment'] += '\n' + '. '.join(warnings) + '.'
+    return ret
+
+
+def downloaded(name, version=None, pkgs=None, **kwargs):
+    '''
+    Ensure that the package is downloaded.
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        zsh:
+          pkg.downloaded:
+            - fromrepo: "myrepository"
+    '''
+    # It doesn't make sense here to received 'downloadonly' as kwargs
+    # as we're explicitely passing 'downloadonly=True' to execution module.
+    if 'downloadonly' in kwargs:
+        del kwargs['downloadonly']
+
+    if isinstance(pkgs, list) and len(pkgs) == 0:
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': 'No packages to download provided'}
+
+    # Only downloading not yet downloaded packages
+    targets = _find_download_targets(name, version, pkgs, **kwargs)
+    if isinstance(targets, dict) and 'result' in targets:
+        return targets
+    elif not isinstance(targets, dict):
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'An error was encountered while checking targets: '
+                           '{0}'.format(targets)}
+
+    comment = []
+    if __opts__['test']:
+        summary = ', '.join(targets)
+        comment.append('The following packages would be '
+                       'downloaded: {0}'.format(summary))
+        ret = {'name': name,
+               'changes': {},
+               'result': None,
+               'comment': '\n'.join(comment)}
+        return ret
+
+    changes = {'downloaded': {}}
+
+    try:
+        pkg_ret = __salt__['pkg.install'](name=name,
+                                          pkgs=pkgs,
+                                          version=version,
+                                          downloadonly=True,
+                                          **kwargs)
+        changes['downloaded'].update(pkg_ret)
+    except CommandExecutionError as exc:
+        ret = {'name': name, 'result': False}
+        if exc.info:
+            # Get information for state return from the exception.
+            ret['changes'] = exc.info.get('changes', {})
+            ret['comment'] = exc.strerror_without_changes
+        else:
+            ret['changes'] = {}
+            ret['comment'] = ('An error was encountered while downloading '
+                              'package(s): {0}'.format(exc))
+        return ret
+
+    ret = {'name': name,
+           'changes': changes,
+           'result': True,
+           'comment': '\n'.join(comment)}
     return ret
 
 
