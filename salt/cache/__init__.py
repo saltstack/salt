@@ -237,6 +237,8 @@ class Cache(object):
         fun = '{0}.ls'.format(self.driver)
         return self.modules[fun](bank, **self._kwargs)
 
+    list = ls
+
     def contains(self, bank, key=None):
         '''
         Checks if the specified bank contains the specified key.
