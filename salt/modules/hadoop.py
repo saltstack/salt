@@ -14,16 +14,46 @@ from __future__ import absolute_import
 # Import salt libs
 import salt.utils
 
-__authorized_modules__ = ['namenode', 'dfsadmin', 'dfs', 'fs']
+__authorized_modules__ = ['version', 'namenode', 'dfsadmin', 'dfs', 'fs']
 
 
 def __virtual__():
     '''
     Check if hadoop is present, then load the module
     '''
-    if salt.utils.which('hadoop'):
+    if salt.utils.which('hadoop') or salt.utils.which('hdfs'):
         return 'hadoop'
-    return (False, 'The hadoop execution module cannot be loaded: hadoop binary not in path.')
+    return (False, 'The hadoop execution module cannot be loaded: hadoop or hdfs binary not in path.')
+
+
+def _hadoop_cmd(module, command, *args):
+    '''
+       Hadoop/hdfs command wrapper
+
+       As Hadoop command has been deprecated this module will default
+       to use hdfs command and fall back to hadoop if it is not found
+
+       In order to prevent random execution the module name is checked
+
+       Follows hadoop command template:
+          hadoop module -command args
+       E.g.: hadoop dfs -ls /
+    '''
+    tool = 'hadoop'
+    if salt.utils.which('hdfs'):
+        tool = 'hdfs'
+
+    out = None
+    if module and command:
+        if module in __authorized_modules__:
+            mappings = {'tool': tool, 'module': module, 'command': command, 'args': ' '.join(args)}
+            cmd = '{tool} {module} -{command} {args}'.format(**mappings)
+            out = __salt__['cmd.run'](cmd, python_shell=False)
+        else:
+            return 'Error: Unknown module'
+    else:
+        return 'Error: Module and command not defined'
+    return out
 
 
 def version():
@@ -36,31 +66,9 @@ def version():
 
         salt '*' hadoop.version
     '''
-    cmd = 'hadoop version'
-    out = __salt__['cmd.run'](cmd).split()
+    module = 'version'
+    out = _hadoop_cmd(module, True).split()
     return out[1]
-
-
-def _hadoop_cmd(module, command, *args):
-    '''
-       Hadoop command wrapper
-
-       In order to prevent random execution the module name is checked
-
-       Follows hadoop command template:
-          hadoop module -command args
-       E.g.: hadoop dfs -ls /
-    '''
-    out = None
-    if module and command:
-        if module in __authorized_modules__:
-            cmd = 'hadoop {0} -{1} {2}'.format(module, command, ' '.join(args))
-            out = __salt__['cmd.run'](cmd, python_shell=False)
-        else:
-            return 'Error: Unknown module'
-    else:
-        return 'Error: Module and command not defined'
-    return out
 
 
 def dfs(command=None, *args):
@@ -89,15 +97,11 @@ def dfs_present(path):
 
         salt '*' hadoop.dfs_present /some_random_file
 
-
     Returns True if the file is present
     '''
-
     cmd_return = _hadoop_cmd('dfs', 'stat', path)
-    if 'No such file or directory' in cmd_return:
-        return False
-    else:
-        return True
+    match = 'No such file or directory'
+    return False if match in cmd_return else True
 
 
 def dfs_absent(path):
@@ -112,12 +116,9 @@ def dfs_absent(path):
 
     Returns True if the file is absent
     '''
-
     cmd_return = _hadoop_cmd('dfs', 'stat', path)
-    if 'No such file or directory' in cmd_return:
-        return True
-    else:
-        return False
+    match = 'No such file or directory'
+    return True if match in cmd_return else False
 
 
 def namenode_format(force=None):
