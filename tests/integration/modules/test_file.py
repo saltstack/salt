@@ -10,30 +10,31 @@ import shutil
 import sys
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
+from tests.support.paths import FILES, TMP
 
 # Import salt libs
 import salt.utils
 
 
-class FileModuleTest(integration.ModuleCase):
+class FileModuleTest(ModuleCase):
     '''
     Validate the file module
     '''
     def setUp(self):
-        self.myfile = os.path.join(integration.TMP, 'myfile')
+        self.myfile = os.path.join(TMP, 'myfile')
         with salt.utils.fopen(self.myfile, 'w+') as fp:
             fp.write('Hello\n')
-        self.mydir = os.path.join(integration.TMP, 'mydir/isawesome')
+        self.mydir = os.path.join(TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
             # left behind... Don't fail because of this!
             os.makedirs(self.mydir)
-        self.mysymlink = os.path.join(integration.TMP, 'mysymlink')
+        self.mysymlink = os.path.join(TMP, 'mysymlink')
         if os.path.islink(self.mysymlink):
             os.remove(self.mysymlink)
         os.symlink(self.myfile, self.mysymlink)
-        self.mybadsymlink = os.path.join(integration.TMP, 'mybadsymlink')
+        self.mybadsymlink = os.path.join(TMP, 'mybadsymlink')
         if os.path.islink(self.mybadsymlink):
             os.remove(self.mybadsymlink)
         os.symlink('/nonexistentpath', self.mybadsymlink)
@@ -120,8 +121,8 @@ class FileModuleTest(integration.ModuleCase):
             self.skipTest('patch is not installed')
 
         src_patch = os.path.join(
-            integration.FILES, 'file', 'base', 'hello.patch')
-        src_file = os.path.join(integration.TMP, 'src.txt')
+            FILES, 'file', 'base', 'hello.patch')
+        src_file = os.path.join(TMP, 'src.txt')
         with salt.utils.fopen(src_file, 'w+') as fp:
             fp.write('Hello\n')
 

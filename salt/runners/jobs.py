@@ -577,12 +577,14 @@ def _walk_through(job_dir, display_progress=False):
 
         for final in os.listdir(t_path):
             load_path = os.path.join(t_path, final, '.load.p')
-            job = serial.load(salt.utils.fopen(load_path, 'rb'))
+            with salt.utils.fopen(load_path, 'rb') as rfh:
+                job = serial.load(rfh)
 
             if not os.path.isfile(load_path):
                 continue
 
-            job = serial.load(salt.utils.fopen(load_path, 'rb'))
+            with salt.utils.fopen(load_path, 'rb') as rfh:
+                job = serial.load(rfh)
             jid = job['jid']
             if display_progress:
                 __jid_event__.fire_event(

@@ -7,22 +7,24 @@ import os
 import textwrap
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.paths import FILES
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
 
-STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
+STATE_DIR = os.path.join(FILES, 'file', 'base')
 
 
-class EnvTestCase(integration.ModuleCase,
-                  integration.SaltReturnAssertsMixIn):
+class EnvTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     def setUp(self):
         self.state_name = 'test_sdb_env'
         self.state_file_name = self.state_name + '.sls'
         self.state_file_set_var = os.path.join(STATE_DIR, self.state_file_name)
-        salt.utils.fopen(self.state_file_set_var, 'w').write(textwrap.dedent('''\
+        with salt.utils.fopen(self.state_file_set_var, 'w') as wfh:
+            wfh.write(textwrap.dedent('''\
                 set some env var:
                   cmd.run:
                     - name: echo {{ salt['sdb.set']('sdb://osenv/foo', 'bar') }}

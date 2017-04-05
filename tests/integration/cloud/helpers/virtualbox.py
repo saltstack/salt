@@ -7,15 +7,17 @@ import logging
 import os
 
 # Import Salt Testing libs
+import tests.integration.cloud.helpers
+from tests.support.case import ShellCase
 from tests.support.unit import TestCase, skipIf
+from tests.support.paths import FILES
 
 # Import Salt libs
 import salt.ext.six as six
-import tests.integration as integration
 import salt.utils.virtualbox
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = integration.cloud.helpers.random_name()
+INSTANCE_NAME = tests.integration.cloud.helpers.random_name()
 PROVIDER_NAME = "virtualbox"
 CONFIG_NAME = PROVIDER_NAME + "-config"
 PROFILE_NAME = PROVIDER_NAME + "-test"
@@ -25,12 +27,7 @@ BASE_BOX_NAME = "__temp_test_vm__"
 BOOTABLE_BASE_BOX_NAME = "SaltMiniBuntuTest"
 
 # Setup logging
-log = logging.getLogger()
-log_handler = logging.StreamHandler()
-log_handler.setLevel(logging.INFO)
-log.addHandler(log_handler)
-log.setLevel(logging.INFO)
-info = log.info
+log = logging.getLogger(__name__)
 
 
 @skipIf(salt.utils.virtualbox.HAS_LIBS is False, 'virtualbox has to be installed')
@@ -52,7 +49,7 @@ class VirtualboxTestCase(TestCase):
 
 
 @skipIf(salt.utils.virtualbox.HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')
-class VirtualboxCloudTestCase(integration.ShellCase):
+class VirtualboxCloudTestCase(ShellCase):
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         """
         Execute salt-cloud with json output and try to interpret it
@@ -60,10 +57,7 @@ class VirtualboxCloudTestCase(integration.ShellCase):
         @return:
         @rtype: dict
         """
-        config_path = os.path.join(
-            integration.FILES,
-            'conf'
-        )
+        config_path = os.path.join(FILES, 'conf')
         arg_str = '--out=json -c {0} {1}'.format(config_path, arg_str)
         # arg_str = "{0} --log-level=error".format(arg_str)
         log.debug("running salt-cloud with %s", arg_str)

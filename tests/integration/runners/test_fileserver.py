@@ -7,14 +7,14 @@ from __future__ import absolute_import
 import contextlib
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 
 # Import salt libs
 import salt.utils
 
 
-class FileserverTest(integration.ShellCase):
+class FileserverTest(ShellCase):
     '''
     Test the fileserver runner
     '''

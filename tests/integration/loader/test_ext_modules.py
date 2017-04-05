@@ -15,17 +15,18 @@ import os
 import time
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.paths import TMP
 
 
-class LoaderOverridesTest(integration.ModuleCase):
+class LoaderOverridesTest(ModuleCase):
 
     def test_overridden_internal(self):
         # To avoid a race condition on Windows, we need to make sure the
         # `override_test.py` file is present in the _modules directory before
         # trying to list all functions. This test may execute before the
         # minion has finished syncing down the files it needs.
-        module = os.path.join(integration.TMP, 'rootdir', 'cache', 'files',
+        module = os.path.join(TMP, 'rootdir', 'cache', 'files',
                               'base', '_modules', 'override_test.py')
         tries = 0
         while not os.path.exists(module):

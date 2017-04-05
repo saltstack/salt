@@ -8,7 +8,7 @@ import shutil
 import hashlib
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 import tests.support.paths as paths
 
 # Import salt libs
@@ -16,7 +16,7 @@ import salt.ext.six as six
 import salt.utils
 
 
-class CPModuleTest(integration.ModuleCase):
+class CPModuleTest(ModuleCase):
     '''
     Validate the cp module
     '''
@@ -515,7 +515,7 @@ class CPModuleTest(integration.ModuleCase):
 
     def test_push(self):
         log_to_xfer = os.path.join(paths.TMP, uuid.uuid4().hex)
-        open(log_to_xfer, 'w').close()
+        open(log_to_xfer, 'w').close()  # pylint: disable=resource-leakage
         try:
             self.run_function('cp.push', [log_to_xfer])
             tgt_cache_file = os.path.join(

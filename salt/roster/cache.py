@@ -164,7 +164,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         if 'host' in minion_res:
             ret[minion_id] = minion_res
         else:
-            log.warn('Could not determine host information for minion {0}'.format(minion_id))
+            log.warning('Could not determine host information for minion {0}'.format(minion_id))
 
     log.debug('Roster lookup result: {0}'.format(ret))
 
@@ -179,11 +179,11 @@ def _load_minion(minion_id, cache):
         raise LookupError
 
     if not grains:
-        log.warn('No grain data for minion id {0}'.format(minion_id))
+        log.warning('No grain data for minion id {0}'.format(minion_id))
         grains = {}
 
     if not pillar:
-        log.warn('No pillar data for minion id {0}'.format(minion_id))
+        log.warning('No pillar data for minion id {0}'.format(minion_id))
         pillar = {}
 
     addrs = {

@@ -7,7 +7,7 @@ Integration tests for Ruby Gem module
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
@@ -36,7 +36,7 @@ def check_status():
 @destructiveTest
 @skipIf(not salt.utils.which('gem'), 'Gem is not available')
 @skipIf(not check_status(), 'External source \'https://rubygems.org\' is not available')
-class GemModuleTest(integration.ModuleCase):
+class GemModuleTest(ModuleCase):
     '''
     Validate gem module
     '''

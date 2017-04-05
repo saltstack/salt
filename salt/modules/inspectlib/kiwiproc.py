@@ -24,6 +24,7 @@ import platform
 import socket
 
 # Import salt libs
+import salt.utils
 from salt.modules.inspectlib.exceptions import InspectorKiwiProcessorException
 
 # Import third party libs
@@ -144,13 +145,13 @@ class KiwiExporter(object):
         '''
         # Get real local users with the local passwords
         shadow = {}
-        for sh_line in open('/etc/shadow').read().split(os.linesep):
+        for sh_line in salt.utils.fopen('/etc/shadow').read().split(os.linesep):
             if sh_line.strip():
                 login, pwd = sh_line.split(":")[:2]
                 if pwd and pwd[0] not in '!*':
                     shadow[login] = {'p': pwd}
 
-        for ps_line in open('/etc/passwd').read().split(os.linesep):
+        for ps_line in salt.utils.fopen('/etc/passwd').read().split(os.linesep):
             if ps_line.strip():
                 ps_line = ps_line.strip().split(':')
                 if ps_line[0] in shadow:

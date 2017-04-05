@@ -29,20 +29,14 @@ from datetime import datetime, timedelta
 
 # Import salt testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import RedirectStdStreams
+from tests.support.helpers import RedirectStdStreams, requires_sshd_server
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTestCaseMixin
+from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
 
-# Try to import salt: needed for __salt_system_encoding__ reference
-try:
-    current_module_names = sys.modules.keys()
-    import salt  # pylint: disable=unused-import
-
-    for name in sys.modules:
-        if name not in current_module_names:
-            del sys.modules[name]
-except ImportError:
-    pass
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
 
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
@@ -300,7 +294,8 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                         # As a last resort, kill the process group
                         os.killpg(os.getpgid(process.pid), signal.SIGKILL)
                     except OSError as exc:
-                        if exc.errno != 3:
+                        if exc.errno != errno.ESRCH:
+                            # If errno is not "no such process", raise
                             raise
 
                     out = [
@@ -375,6 +370,14 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                         return out, []
             finally:
                 try:
+                    if os.path.exists(tmp_file.name):
+                        if isinstance(tmp_file.name, str):
+                            # tmp_file.name is an int when using SpooledTemporaryFiles
+                            # int types cannot be used with os.remove() in Python 3
+                            os.remove(tmp_file.name)
+                        else:
+                            # Clean up file handles
+                            tmp_file.close()
                     process.terminate()
                 except OSError as err:
                     # process already terminated
@@ -413,6 +416,144 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 pass
 
 
+class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
+    '''
+    Execute a test for a shell command
+    '''
+
+    _code_dir_ = CODE_DIR
+    _script_dir_ = SCRIPT_DIR
+    _python_executable_ = PYEXEC
+
+    def chdir(self, dirname):
+        try:
+            os.chdir(dirname)
+        except OSError:
+            os.chdir(INTEGRATION_TEST_DIR)
+
+    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
+        '''
+        Execute salt
+        '''
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt',
+                               arg_str,
+                               with_retcode=with_retcode,
+                               catch_stderr=catch_stderr,
+                               timeout=timeout)
+
+    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
+        '''
+        Execute salt-ssh
+        '''
+        arg_str = '-ldebug -W -c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(
+            self.get_config_dir(),
+            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
+            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
+            arg_str)
+        return self.run_script('salt-ssh',
+                               arg_str,
+                               with_retcode=with_retcode,
+                               catch_stderr=catch_stderr,
+                               timeout=timeout,
+                               raw=True)
+
+    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
+        '''
+        Execute salt-run
+        '''
+        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(config_dir or self.get_config_dir(),
+                                                               arg_str,
+                                                               timeout=timeout,
+                                                               async_flag=' --async' if async else '')
+        return self.run_script('salt-run',
+                               arg_str,
+                               with_retcode=with_retcode,
+                               catch_stderr=catch_stderr,
+                               timeout=60)
+
+    def run_run_plus(self, fun, *arg, **kwargs):
+        '''
+        Execute the runner function and return the return data and output in a dict
+        '''
+        # Late import
+        import salt.runner
+        import salt.output
+        ret = {'fun': fun}
+        from_scratch = bool(kwargs.pop('__reload_config', False))
+        # Have to create an empty dict and then update it, as the result from
+        # self.get_config() is an ImmutableDict which cannot be updated.
+        opts = {}
+        opts.update(self.get_config('client_config', from_scratch=from_scratch))
+        opts_arg = list(arg)
+        if kwargs:
+            opts_arg.append({'__kwarg__': True})
+            opts_arg[-1].update(kwargs)
+        opts.update({'doc': False, 'fun': fun, 'arg': opts_arg})
+        with RedirectStdStreams():
+            runner = salt.runner.Runner(opts)
+            ret['return'] = runner.run()
+            try:
+                ret['jid'] = runner.jid
+            except AttributeError:
+                ret['jid'] = None
+
+        # Compile output
+        # TODO: Support outputters other than nested
+        opts['color'] = False
+        opts['output_file'] = cStringIO()
+        try:
+            salt.output.display_output(ret['return'], opts=opts)
+            ret['out'] = opts['output_file'].getvalue().splitlines()
+        finally:
+            opts['output_file'].close()
+
+        return ret
+
+    def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
+        '''
+        Execute salt-key
+        '''
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt-key',
+                               arg_str,
+                               catch_stderr=catch_stderr,
+                               with_retcode=with_retcode,
+                               timeout=60)
+
+    def run_cp(self, arg_str, with_retcode=False, catch_stderr=False):
+        '''
+        Execute salt-cp
+        '''
+        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt-cp',
+                               arg_str,
+                               with_retcode=with_retcode,
+                               catch_stderr=catch_stderr,
+                               timeout=60)
+
+    def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
+        '''
+        Execute salt-call.
+        '''
+        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt-call',
+                               arg_str,
+                               with_retcode=with_retcode,
+                               catch_stderr=catch_stderr,
+                               timeout=60)
+
+    def run_cloud(self, arg_str, catch_stderr=False, timeout=30):
+        '''
+        Execute salt-cloud
+        '''
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt-cloud',
+                               arg_str,
+                               catch_stderr,
+                               timeout=timeout)
+
+
 class ModuleCase(TestCase, SaltClientTestCaseMixin):
     '''
     Execute a module function
@@ -425,8 +566,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=25,
-                     **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=25, **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
@@ -434,9 +574,15 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         know_to_return_none = (
             'file.chown', 'file.chgrp', 'ssh.recv_known_host'
         )
-        orig = self.client.cmd(
-            minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
-        )
+        if 'f_arg' in kwargs:
+            kwargs['arg'] = kwargs.pop('f_arg')
+        if 'f_timeout' in kwargs:
+            kwargs['timeout'] = kwargs.pop('f_timeout')
+        orig = self.client.cmd(minion_tgt,
+                               function,
+                               arg,
+                               timeout=timeout,
+                               kwarg=kwargs)
 
         if minion_tgt not in orig:
             self.skipTest(
@@ -454,9 +600,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
             )
 
         # Try to match stalled state functions
-        orig[minion_tgt] = self._check_state_return(
-            orig[minion_tgt], func=function
-        )
+        orig[minion_tgt] = self._check_state_return(orig[minion_tgt])
 
         return orig[minion_tgt]
 
@@ -467,19 +611,16 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         ret = self.run_function('state.single', [function], **kwargs)
         return self._check_state_return(ret)
 
-    def _check_state_return(self, ret, func='state.single'):
+    def _check_state_return(self, ret):
         if isinstance(ret, dict):
             # This is the supposed return format for state calls
             return ret
-
-        # Late import
-        import salt._compat
 
         if isinstance(ret, list):
             jids = []
             # These are usually errors
             for item in ret[:]:
-                if not isinstance(item, salt._compat.string_types):
+                if not isinstance(item, six.string_types):
                     # We don't know how to handle this
                     continue
                 match = STATE_FUNCTION_RUNNING_RE.match(item)
@@ -492,13 +633,11 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
 
                 jids.append(jid)
 
-                job_data = self.run_function(
-                    'saltutil.find_job', [jid]
-                )
+                job_data = self.run_function('saltutil.find_job', [jid])
                 job_kill = self.run_function('saltutil.kill_job', [jid])
                 msg = (
                     'A running state.single was found causing a state lock. '
-                    'Job details: {0!r}  Killing Job Returned: {1!r}'.format(
+                    'Job details: \'{0}\'  Killing Job Returned: \'{1}\''.format(
                         job_data, job_kill
                     )
                 )
@@ -527,15 +666,19 @@ class SyndicCase(TestCase, SaltClientTestCaseMixin):
         return orig['minion']
 
 
-class SSHCase(ShellTestCase):
+@requires_sshd_server
+class SSHCase(ShellCase):
     '''
     Execute a command via salt-ssh
     '''
     def _arg_str(self, function, arg):
         return '{0} {1}'.format(function, ' '.join(arg))
 
-    def run_function(self, function, arg=(), timeout=25, **kwargs):
-        ret = self.run_ssh(self._arg_str(function, arg))
+    def run_function(self, function, arg=(), timeout=90, **kwargs):
+        '''
+        We use a 90s timeout here, which some slower systems do end up needing
+        '''
+        ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout)
         try:
             return json.loads(ret)['localhost']
         except Exception:

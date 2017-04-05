@@ -7,17 +7,17 @@ from __future__ import absolute_import
 import json
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
 
 
 @skipIf(salt.utils.which('bower') is None, 'bower not installed')
-class BowerStateTest(integration.ModuleCase,
-                     integration.SaltReturnAssertsMixIn):
+class BowerStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
     def test_bower_installed_removed(self):

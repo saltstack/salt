@@ -12,21 +12,22 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-import tests.integration as integration
-from tests.support.unit import skipIf
+from tests.support.case import ModuleCase
+from tests.support.paths import FILES
+from tests.support.helpers import skip_if_not_root
 
 # Import salt libs
 import salt.utils
 
-STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
+STATE_DIR = os.path.join(FILES, 'file', 'base')
 
 
-class StateMatchTest(integration.ModuleCase):
+class StateMatchTest(ModuleCase):
     '''
     Validate the file state
     '''
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_issue_2167_ipcidr_no_AttributeError(self):
         subnets = self.run_function('network.subnets')
         self.assertTrue(len(subnets) > 0)

@@ -12,15 +12,16 @@ import os
 import time
 
 # Import Salt Testing libs
+from tests.support.case import ModuleCase
+from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 # Import salt libs
-import tests.integration as integration
-from salt.config import minion_config
-from salt.loader import grains
+import salt.config
+import salt.loader
 
 
-class LoaderGrainsTest(integration.ModuleCase):
+class LoaderGrainsTest(ModuleCase):
     '''
     Test the loader standard behavior with external grains
     '''
@@ -35,7 +36,7 @@ class LoaderGrainsTest(integration.ModuleCase):
         # `test_custom_grain2.py` file is present in the _grains directory
         # before trying to get the grains. This test may execute before the
         # minion has finished syncing down the files it needs.
-        module = os.path.join(integration.TMP, 'rootdir', 'cache', 'files',
+        module = os.path.join(TMP, 'rootdir', 'cache', 'files',
                               'base', '_grains', 'test_custom_grain2.py')
         tries = 0
         while not os.path.exists(module):
@@ -50,17 +51,18 @@ class LoaderGrainsTest(integration.ModuleCase):
 
 
 @skipIf(True, "needs a way to reload minion after config change")
-class LoaderGrainsMergeTest(integration.ModuleCase):
+class LoaderGrainsMergeTest(ModuleCase):
     '''
     Test the loader deep merge behavior with external grains
     '''
 
     def setUp(self):
-        self.opts = minion_config(None)
+        # XXX: This seems like it should become a unit test instead
+        self.opts = salt.config.minion_config(None)
         self.opts['grains_deep_merge'] = True
         self.assertTrue(self.opts['grains_deep_merge'])
         self.opts['disable_modules'] = ['pillar']
-        __grains__ = grains(self.opts)
+        __grains__ = salt.loader.grains(self.opts)
 
     def test_grains_merge(self):
         __grain__ = self.run_function('grains.item', ['a_custom'])
