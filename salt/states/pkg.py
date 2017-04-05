@@ -1821,7 +1821,47 @@ def installed(
 
 def downloaded(name, version=None, pkgs=None, **kwargs):
     '''
-    Ensure that the package is downloaded.
+    Ensure that the package is downloaded, and that it is the correct version
+    (if specified).
+
+    Currently supported for the following pkg providers:
+    :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
+
+    :param str name:
+        The name of the package to be downloaded. This parameter is ignored if
+        either "pkgs" is used. Additionally, please note that this option can
+        only be used to download packages from a software repository.
+
+    :param str version:
+        Download a specific version of a package.
+
+        .. important::
+            As of version 2015.8.7, for distros which use yum/dnf, packages
+            which have a version with a nonzero epoch (that is, versions which
+            start with a number followed by a colon must have the epoch included
+            when specifying the version number. For example:
+
+            .. code-block:: yaml
+
+                vim-enhanced:
+                  pkg.downloaded:
+                    - version: 2:7.4.160-1.el7
+
+            An **ignore_epoch** argument has been added to which causes the
+            epoch to be disregarded when the state checks to see if the desired
+            version was installed.
+
+            You can install a specific version when using the ``pkgs`` argument by
+            including the version after the package:
+
+            .. code-block:: yaml
+
+                common_packages:
+                  pkg.downloaded:
+                    - pkgs:
+                      - unzip
+                      - dos2unix
+                      - salt-minion: 2015.8.5-1.el6
 
     CLI Example:
 
@@ -1829,6 +1869,7 @@ def downloaded(name, version=None, pkgs=None, **kwargs):
 
         zsh:
           pkg.downloaded:
+            - version: 5.0.5-4.63
             - fromrepo: "myrepository"
     '''
     # It doesn't make sense here to received 'downloadonly' as kwargs
