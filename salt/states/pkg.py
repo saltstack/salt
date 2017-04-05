@@ -1905,15 +1905,14 @@ def downloaded(name, version=None, pkgs=None, **kwargs):
                'comment': '\n'.join(comment)}
         return ret
 
-    changes = {'downloaded': {}}
-
+    changes = {}
     try:
         pkg_ret = __salt__['pkg.install'](name=name,
                                           pkgs=pkgs,
                                           version=version,
                                           downloadonly=True,
                                           **kwargs)
-        changes['downloaded'].update(pkg_ret)
+        changes.update(pkg_ret)
     except CommandExecutionError as exc:
         ret = {'name': name, 'result': False}
         if exc.info:
@@ -1931,6 +1930,97 @@ def downloaded(name, version=None, pkgs=None, **kwargs):
            'result': True,
            'comment': '\n'.join(comment)}
     return ret
+
+
+def patched(name, advisory_ids=None, downloadonly=None, **kwargs):
+    '''
+    Ensure that packages related to certain advisory ids are installed.
+
+    Currently supported for the following pkg providers:
+    :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        issue-foo-fixed:
+          pkg.patched:
+            - advisory_ids:
+              - SUSE-SLE-SERVER-12-SP2-2017-185
+              - SUSE-SLE-SERVER-12-SP2-2017-150
+              - SUSE-SLE-SERVER-12-SP2-2017-120
+    '''
+    if isinstance(advisory_ids, list) and len(advisory_ids) == 0:
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': 'No advisory ids provided'}
+
+    targets = advisory_ids
+    comment = []
+    if __opts__['test']:
+        summary = ', '.join(targets)
+        comment.append('The following advisory patches would be '
+                       'downloaded: {0}'.format(summary))
+        ret = {'name': name,
+               'changes': {},
+               'result': None,
+               'comment': '\n'.join(comment)}
+        return ret
+
+    changes = {}
+    try:
+        pkg_ret = __salt__['pkg.install'](name=name,
+                                          advisory_ids=advisory_ids,
+                                          downloadonly=downloadonly,
+                                          **kwargs)
+        changes.update(pkg_ret)
+    except CommandExecutionError as exc:
+        ret = {'name': name, 'result': False}
+        if exc.info:
+            # Get information for state return from the exception.
+            ret['changes'] = exc.info.get('changes', {})
+            ret['comment'] = exc.strerror_without_changes
+        else:
+            ret['changes'] = {}
+            ret['comment'] = ('An error was encountered while downloading '
+                              'package(s): {0}'.format(exc))
+        return ret
+
+    if not changes:
+        status= 'downloaded' if downloadonly else 'installed'
+        comment.append('Related packages are already {}'.format(status))
+
+    ret = {'name': name,
+           'changes': changes,
+           'result': True,
+           'comment': '\n'.join(comment)}
+    return ret
+
+
+def patches_downloaded(name, advisory_ids=None, **kwargs):
+    '''
+    Ensure that packages related to certain advisory ids are downloaded.
+
+    Currently supported for the following pkg providers:
+    :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        preparing-to-fix-issues:
+          pkg.patches_downloaded:
+            - advisory_ids:
+              - SUSE-SLE-SERVER-12-SP2-2017-185
+              - SUSE-SLE-SERVER-12-SP2-2017-150
+              - SUSE-SLE-SERVER-12-SP2-2017-120
+    '''
+    # It doesn't make sense here to received 'downloadonly' as kwargs
+    # as we're explicitely passing 'downloadonly=True' to execution module.
+    if 'downloadonly' in kwargs:
+        del kwargs['downloadonly']
+    return patched(name=name, advisory_ids=advisory_ids, downloadonly=True, **kwargs)
 
 
 def latest(
