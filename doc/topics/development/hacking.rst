@@ -117,7 +117,7 @@ Edit the master config file:
 1.  Uncomment and change the ``user: root`` value to your own user.
 2.  Uncomment and change the ``root_dir: /`` value to point to
     ``/path/to/your/virtualenv``.
-3.  Uncomment and change the ``pki: /etc/salt/pki/master`` value to point to
+3.  Uncomment and change the ``pki_dir: /etc/salt/pki/master`` value to point to
     ``/path/to/your/virtualenv/etc/salt/pki/master``
 4.  If you are running version 0.11.1 or older, uncomment, and change the
     ``pidfile: /var/run/salt-master.pid`` value to point to
