@@ -24,7 +24,6 @@ import re
 # Import Salt libs
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
-import salt.ext.six as six
 
 # Import 3rd-party libs
 try:
