@@ -12,6 +12,7 @@ from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import patch
 from mock import Mock
 import errno
+from salt.ext.six.moves import range
 
 ensure_in_syspath('../')
 
