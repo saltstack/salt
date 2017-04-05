@@ -40,12 +40,17 @@ except ImportError:
 import tests.support.paths  # pylint: disable=unused-import
 from tests.integration import TestDaemon
 
-# Import 3rd-party libs
+# Import pytest libs
 import pytest
+from _pytest.terminal import TerminalReporter
+
+# Import 3rd-party libs
+import psutil
 import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
+from salt.utils.odict import OrderedDict
 
 # Define the pytest plugins we rely on
 pytest_plugins = ['pytest_catchlog', 'tempdir', 'helpers_namespace']  # pylint: disable=invalid-name
@@ -122,10 +127,62 @@ def pytest_addoption(parser):
         action='store_true',
         help='Disable colour printing.'
     )
+    output_options_group.addoption(
+        '--sys-stats',
+        default=False,
+        action='store_true',
+        help='Print System CPU and MEM statistics after each test execution.'
+    )
 # <---- CLI Options Setup --------------------------------------------------------------------------------------------
 
+# ----- CLI Terminal Reporter --------------------------------------------------------------------------------------->
+class SaltTerminalReporter(TerminalReporter):
+    def __init__(self, config):
+        TerminalReporter.__init__(self, config)
+
+    @pytest.hookimpl(trylast=True)
+    def pytest_sessionstart(self, session):
+        TerminalReporter.pytest_sessionstart(self, session)
+        self._session = session
+
+    def pytest_runtest_logreport(self, report):
+        TerminalReporter.pytest_runtest_logreport(self, report)
+        if self.verbosity <= 0:
+            return
+        if report.when != 'call':
+            return
+        if self.config.getoption('--sys-stats') is False:
+            return
+
+        test_daemon = getattr(self._session, 'test_daemon', None)
+        if self.verbosity == 1 or test_daemon is None:
+            line = ' [CPU:{0}%|MEM:{1}%]'.format(psutil.cpu_percent(),
+                                               psutil.virtual_memory().percent)
+            self._tw.write(line)
+            return
+        else:
+            if test_daemon is None:
+                return
+            self.ensure_newline()
+            template = ' {}  -  CPU: {:6.2f} %   MEM: {:6.2f} %   SWAP: {:6.2f} %\n'
+            self._tw.write(
+                template.format(
+                    '            System',
+                    psutil.cpu_percent(),
+                    psutil.virtual_memory().percent,
+                    psutil.swap_memory().percent
+                )
+            )
+            for name, psproc in self._session.stats_processes.items():
+                with psproc.oneshot():
+                    cpu = psproc.cpu_percent()
+                    mem = psproc.memory_percent('vms')
+                    swap = psproc.memory_percent('swap')
+                    self._tw.write(template.format(name, cpu, mem, swap))
+# <---- CLI Terminal Reporter ----------------------------------------------------------------------------------------
 
 # ----- Register Markers -------------------------------------------------------------------------------------------->
+@pytest.mark.trylast
 def pytest_configure(config):
     '''
     called after command line options have been parsed
@@ -152,6 +209,14 @@ def pytest_configure(config):
         'requires_network(only_local_network=False): Skip if no networking is set up. '
         'If \'only_local_network\' is \'True\', only the local network is checked.'
     )
+
+    # Register our terminal reporter
+    if not getattr(config, 'slaveinput', None):
+        standard_reporter = config.pluginmanager.getplugin('terminalreporter')
+        salt_reporter = SaltTerminalReporter(standard_reporter.config)
+
+        config.pluginmanager.unregister(standard_reporter)
+        config.pluginmanager.register(salt_reporter, 'terminalreporter')
 
     # Transplant configuration
     TestDaemon.transplant_configs(transport=config.getoption('--transport'))
@@ -568,7 +633,18 @@ def test_daemon(request):
     fake_parser = namedtuple('parser', 'options')(options)
 
     test_daemon = TestDaemon(fake_parser)
-    with test_daemon:
+    with test_daemon as test_daemon_running:
+        request.session.test_daemon = test_daemon_running
+        stats_processes = OrderedDict((
+            #('Log Server', test_daemon.log_server),
+            ('    Test Suite Run', psutil.Process(os.getpid())),
+            ('       Salt Master', psutil.Process(test_daemon.master_process.pid)),
+            ('       Salt Minion', psutil.Process(test_daemon.minion_process.pid)),
+            ('   Salt Sub Minion', psutil.Process(test_daemon.sub_minion_process.pid)),
+            ('Salt Syndic Master', psutil.Process(test_daemon.smaster_process.pid)),
+            ('       Salt Syndic', psutil.Process(test_daemon.syndic_process.pid)),
+        ))
+        request.session.stats_processes = stats_processes
         yield
     TestDaemon.clean()
 # <---- Custom Fixtures Definitions ----------------------------------------------------------------------------------
