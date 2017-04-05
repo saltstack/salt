@@ -93,8 +93,6 @@ import salt.utils
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
-import salt.loader
-from salt.template import compile_template
 
 # Import salt.cloud libs
 import salt.utils.cloud
@@ -1691,18 +1689,13 @@ def request_instance(vm_=None, call=None):
             with salt.utils.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
-    if userdata is not None:
-        render_opts = __opts__.copy()
-        render_opts.update(vm_)
-        renderer = __opts__.get('renderer', 'yaml_jinja')
-        rend = salt.loader.render(render_opts, {})
-        blacklist = __opts__['renderer_blacklist']
-        whitelist = __opts__['renderer_whitelist']
-        userdata = compile_template(
-            ':string:', rend, renderer, blacklist, whitelist, input_data=userdata,
-        )
+    userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
 
-        params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
+    if userdata is not None:
+        try:
+            params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
+        except Exception as exc:
+            log.exception('Failed to encode userdata: %s', exc)
 
     vm_size = config.get_cloud_config_value(
         'size', vm_, __opts__, search_global=False
