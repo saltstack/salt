@@ -211,8 +211,6 @@ import shutil
 import string
 import time
 import uuid
-import base64
-import errno
 import subprocess
 
 # Import Salt libs
