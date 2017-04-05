@@ -11,7 +11,7 @@
 # pylint: disable=repr-flag-used-in-string
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import sys
 import time
