@@ -145,19 +145,21 @@ class KiwiExporter(object):
         '''
         # Get real local users with the local passwords
         shadow = {}
-        for sh_line in salt.utils.fopen('/etc/shadow').read().split(os.linesep):
-            if sh_line.strip():
-                login, pwd = sh_line.split(":")[:2]
-                if pwd and pwd[0] not in '!*':
-                    shadow[login] = {'p': pwd}
+        with salt.utils.fopen('/etc/shadow') as rfh:
+            for sh_line in rfh.read().split(os.linesep):
+                if sh_line.strip():
+                    login, pwd = sh_line.split(":")[:2]
+                    if pwd and pwd[0] not in '!*':
+                        shadow[login] = {'p': pwd}
 
-        for ps_line in salt.utils.fopen('/etc/passwd').read().split(os.linesep):
-            if ps_line.strip():
-                ps_line = ps_line.strip().split(':')
-                if ps_line[0] in shadow:
-                    shadow[ps_line[0]]['h'] = ps_line[5]
-                    shadow[ps_line[0]]['s'] = ps_line[6]
-                    shadow[ps_line[0]]['g'] = self._get_user_groups(ps_line[0])
+        with salt.utils.fopen('/etc/passwd') as rfh:
+            for ps_line in rfh.read().split(os.linesep):
+                if ps_line.strip():
+                    ps_line = ps_line.strip().split(':')
+                    if ps_line[0] in shadow:
+                        shadow[ps_line[0]]['h'] = ps_line[5]
+                        shadow[ps_line[0]]['s'] = ps_line[6]
+                        shadow[ps_line[0]]['g'] = self._get_user_groups(ps_line[0])
 
         users_groups = []
         users_node = etree.SubElement(node, 'users')

@@ -91,7 +91,7 @@ def _publish_file(token, room, filepath, message='', api_url=None):
     headers['Authorization'] = "Bearer " + token
     msg = json.dumps({'message': message})
 
-    with open(filepath, 'rb') as rfh:
+    with salt.utils.fopen(filepath, 'rb') as rfh:
         payload = """\
 --boundary123456
 Content-Type: application/json; charset=UTF-8

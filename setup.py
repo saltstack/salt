@@ -5,7 +5,7 @@ The setup script for salt
 '''
 
 # pylint: disable=file-perms,ungrouped-imports,wrong-import-order,wrong-import-position,repr-flag-used-in-string
-# pylint: disable=3rd-party-local-module-not-gated
+# pylint: disable=3rd-party-local-module-not-gated,resource-leakage
 # pylint: disable=C0111,E1101,E1103,F0401,W0611,W0201,W0232,R0201,R0902,R0903
 
 # For Python 2.5.  A no-op on 2.6 and above.
