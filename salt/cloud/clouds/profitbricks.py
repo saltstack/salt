@@ -642,8 +642,9 @@ def get_public_keys(vm_):
                 )
             )
         ssh_keys = []
-        for key in salt.utils.fopen(key_filename).readlines():
-            ssh_keys.append(key)
+        with salt.utils.fopen(key_filename) as rfh:
+            for key in rfh.readlines():
+                ssh_keys.append(key)
 
         return ssh_keys
 
