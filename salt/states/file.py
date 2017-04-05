@@ -1083,7 +1083,7 @@ def _check_shortcut_ownership(path, user):
     Check if the shortcut ownership matches the specified user
     '''
     cur_user = _get_shortcut_ownership(path)
-    return (cur_user == user)
+    return cur_user == user
 
 
 def _set_shortcut_ownership(path, user):
@@ -1112,7 +1112,7 @@ def _shortcut_check(name,
     pchanges = {}
     if not os.path.exists(name):
         pchanges['new'] = name
-        return None, 'Shortcut {0!r} to {1!r} is set for creation'.format(
+        return None, 'Shortcut "{0}" to "{1}" is set for creation'.format(
             name, target
         ), pchanges
 
@@ -1135,12 +1135,12 @@ def _shortcut_check(name,
 
         if not all(state_checks):
             pchanges['change'] = name
-            return None, 'Shortcut {0!r} target is set to be changed to {1!r}'.format(
+            return None, 'Shortcut "{0}" target is set to be changed to "{1}"'.format(
                 name, target
             ), pchanges
         else:
             result = True
-            msg = 'The shortcut {0!r} is present'.format(name)
+            msg = 'The shortcut "{0}" is present'.format(name)
             if not _check_shortcut_ownership(name, user):
                 result = None
                 pchanges['ownership'] = '{0}'.format(_get_shortcut_ownership(name))
@@ -1151,10 +1151,10 @@ def _shortcut_check(name,
             return result, msg, pchanges
     else:
         if force:
-            return None, ('The link or directory {0!r} is set for removal to '
-                          'make way for a new shortcut targeting {1!r}'
+            return None, ('The link or directory "{0}" is set for removal to '
+                          'make way for a new shortcut targeting "{1}"'
                           .format(name, target)), pchanges
-        return False, ('Link or directory exists where the shortcut {0!r} '
+        return False, ('Link or directory exists where the shortcut "{0}" '
                        'should be. Did you mean to use force?'.format(name)), pchanges
 
 
@@ -6240,7 +6240,7 @@ def shortcut(
         else:
             return _error(
                 ret,
-                'Directory {0!r} for shortcut is not present'.format(
+                'Directory "{0}" for shortcut is not present'.format(
                     os.path.dirname(name)
                 )
             )
@@ -6263,7 +6263,7 @@ def shortcut(
                 else:
                     return _error(ret, (
                                             'Directory does not exist for'
-                                            ' backup at {0!r}'
+                                            ' backup at "{0}"'
                                         ).format(os.path.dirname(backupname)))
             os.rename(name, backupname)
             time.sleep(1)  # wait for asynchronous rename
@@ -6276,7 +6276,7 @@ def shortcut(
             # Otherwise throw an error
             return _error(ret, ((
                                     'Directory or symlink exists where the'
-                                    ' shortcut {0!r} should be'
+                                    ' shortcut "{0}" should be'
                                 ).format(name)))
 
     # This will just load the shortcut if it already exists
