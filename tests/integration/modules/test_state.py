@@ -1261,3 +1261,23 @@ class StateModuleTest(integration.ModuleCase,
         self.assertIn('Attempt 4:', state_run[retry_state]['comment'])
         self.assertNotIn('Attempt 15:', state_run[retry_state]['comment'])
         self.assertEqual(state_run[retry_state]['result'], True)
+
+    def test_issue_38683_require_order_failhard_combination(self):
+        '''
+        This tests the case where require, order, and failhard are all used together in a state definition.
+
+        Previously, the order option, which used in tandem with require and failhard, would cause the state
+        compiler to stacktrace. This exposed a logic error in the ``check_failhard`` function of the state
+        compiler. With the logic error resolved, this test should now pass.
+
+        See https://github.com/saltstack/salt/issues/38683 for more information.
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='requisites.require_order_failhard_combo'
+        )
+        state_id = 'test_|-b_|-b_|-fail_with_changes'
+
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'], 'Failure!')
+        self.assertFalse(state_run[state_id]['result'])

@@ -47,7 +47,10 @@ import tornado.concurrent
 
 # Import third party libs
 import salt.ext.six as six
-from Crypto.Cipher import PKCS1_OAEP
+try:
+    from Cryptodome.Cipher import PKCS1_OAEP
+except ImportError:
+    from Crypto.Cipher import PKCS1_OAEP
 
 log = logging.getLogger(__name__)
 

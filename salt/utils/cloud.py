@@ -55,6 +55,8 @@ except ImportError:
 import salt.crypt
 import salt.client
 import salt.config
+import salt.loader
+import salt.template
 import salt.utils
 import salt.utils.event
 from salt.utils import vt
@@ -3248,3 +3250,51 @@ def check_key_path_and_mode(provider, key_path):
         return False
 
     return True
+
+
+def userdata_template(opts, vm_, userdata):
+    '''
+    Use the configured templating engine to template the userdata file
+    '''
+    # No userdata, no need to template anything
+    if userdata is None:
+        return userdata
+
+    userdata_template = salt.config.get_cloud_config_value(
+        'userdata_template', vm_, opts, search_global=False, default=None
+    )
+    if userdata_template is False:
+        return userdata
+    # Use the cloud profile's userdata_template, otherwise get it from the
+    # master configuration file.
+    renderer = opts.get('userdata_template') \
+        if userdata_template is None \
+        else userdata_template
+    if renderer is None:
+        return userdata
+    else:
+        render_opts = opts.copy()
+        render_opts.update(vm_)
+        rend = salt.loader.render(render_opts, {})
+        blacklist = opts['renderer_blacklist']
+        whitelist = opts['renderer_whitelist']
+        templated = salt.template.compile_template(
+            ':string:',
+            rend,
+            renderer,
+            blacklist,
+            whitelist,
+            input_data=userdata,
+        )
+        if not isinstance(templated, six.string_types):
+            # template renderers like "jinja" should return a StringIO
+            try:
+                templated = ''.join(templated.readlines())
+            except AttributeError:
+                log.warning(
+                    'Templated userdata resulted in non-string result (%s), '
+                    'converting to string', templated
+                )
+                templated = str(templated)
+
+        return templated

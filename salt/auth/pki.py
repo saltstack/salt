@@ -22,7 +22,10 @@ import logging
 # Import third party libs
 # pylint: disable=import-error
 try:
-    from Crypto.Util import asn1
+    try:
+        from Cryptodome.Util import asn1
+    except ImportError:
+        from Crypto.Util import asn1
     import OpenSSL
     HAS_DEPS = True
 except ImportError:

@@ -984,11 +984,11 @@ VALID_OPTS = {
     'cache': str,
     # Enables a fast in-memory cache booster and sets the expiration time.
     'memcache_expire_seconds': int,
-    # Set a memcache limit in items per cache storage (driver+driver opts).
+    # Set a memcache limit in items (bank + key) per cache storage (driver + driver_opts).
     'memcache_max_items': int,
     # Each time a cache storage got full cleanup all the expired items not just the oldest one.
     'memcache_full_cleanup': bool,
-    # Enable collecting theh memcache stats and log it on `trace` log level.
+    # Enable collecting the memcache stats and log it on `debug` log level.
     'memcache_debug': bool,
 
     # Thin and minimal Salt extra modules
