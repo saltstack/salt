@@ -117,7 +117,7 @@ Edit the master config file:
 1.  Uncomment and change the ``user: root`` value to your own user.
 2.  Uncomment and change the ``root_dir: /`` value to point to
     ``/path/to/your/virtualenv``.
-3.  Uncomment and change the ``pki: /etc/salt/pki/master`` value to point to
+3.  Uncomment and change the ``pki_dir: /etc/salt/pki/master`` value to point to
     ``/path/to/your/virtualenv/etc/salt/pki/master``
 4.  If you are running version 0.11.1 or older, uncomment, and change the
     ``pidfile: /var/run/salt-master.pid`` value to point to
@@ -129,7 +129,7 @@ Edit the minion config file:
 
 1.  Repeat the edits you made in the master config for the ``user`` and
     ``root_dir`` values as well as any port changes.
-2.  Uncomment and change the ``pki: /etc/salt/pki/minion`` value to point to
+2.  Uncomment and change the ``pki_dir: /etc/salt/pki/minion`` value to point to
     ``/path/to/your/virtualenv/etc/salt/pki/minion``
 3.  If you are running version 0.11.1 or older, uncomment, and change the
     ``pidfile: /var/run/salt-minion.pid`` value to point to
