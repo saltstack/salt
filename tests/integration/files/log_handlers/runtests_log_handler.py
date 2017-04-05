@@ -36,7 +36,7 @@ def __virtual__():
 
 
 def setup_handlers():
-    queue = Queue()
+    queue = Queue(5000)
     handler = salt.log.setup.QueueHandler(queue)
     handler.setLevel(1)
     process_queue_thread = threading.Thread(target=process_queue, args=(__opts__['runtests_log_port'], queue))
