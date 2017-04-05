@@ -53,6 +53,9 @@ try:
 except ImportError:
     HAS_SQLITE3 = False
 
+# Import salt libs
+import salt.ext.six as six
+
 # Import third party libs
 import msgpack
 
