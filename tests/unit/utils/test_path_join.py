@@ -46,7 +46,6 @@ class PathJoinTestCase(TestCase):
         ((r'c:\\', r'\temp', r'\foo'), 'c:\\temp\\foo'),
         (('c:', r'\temp', r'\foo', 'bar'), 'c:\\temp\\foo\\bar'),
         (('c:', r'\temp', r'\foo\bar'), 'c:\\temp\\foo\\bar'),
-        (('c', r'\temp', r'\foo\bar'), 'c:\\temp\\foo\\bar')
     )
 
     @skipIf(True, 'Skipped until properly mocked')

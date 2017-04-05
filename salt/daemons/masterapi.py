@@ -457,7 +457,7 @@ class RemoteFuncs(object):
                 states=False,
                 rend=False)
         self.__setup_fileserver()
-        self.cache = salt.cache.Cache(opts)
+        self.cache = salt.cache.factory(opts)
 
     def __setup_fileserver(self):
         '''

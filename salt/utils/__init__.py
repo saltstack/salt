@@ -17,6 +17,7 @@ import json
 import logging
 import numbers
 import os
+import posixpath
 import random
 import re
 import shlex
@@ -40,7 +41,6 @@ from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-
 # pylint: disable=redefined-builtin
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
-from salt.ext.six.moves import map
 from stat import S_IMODE
 # pylint: enable=import-error,redefined-builtin
 
@@ -912,21 +912,32 @@ def backup_minion(path, bkroot):
         os.chmod(bkpath, fstat.st_mode)
 
 
-def path_join(*parts):
+def path_join(*parts, **kwargs):
     '''
     This functions tries to solve some issues when joining multiple absolute
     paths on both *nix and windows platforms.
 
     See tests/unit/utils/path_join_test.py for some examples on what's being
     talked about here.
+
+    The "use_posixpath" kwarg can be be used to force joining using poxixpath,
+    which is useful for Salt fileserver paths on Windows masters.
     '''
     if six.PY3:
         new_parts = []
         for part in parts:
             new_parts.append(to_str(part))
         parts = new_parts
+
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    use_posixpath = kwargs.pop('use_posixpath', False)
+    if kwargs:
+        invalid_kwargs(kwargs)
+
+    pathlib = posixpath if use_posixpath else os.path
+
     # Normalize path converting any os.sep as needed
-    parts = [os.path.normpath(p) for p in parts]
+    parts = [pathlib.normpath(p) for p in parts]
 
     try:
         root = parts.pop(0)
@@ -937,14 +948,9 @@ def path_join(*parts):
     if not parts:
         ret = root
     else:
-        if is_windows():
-            if len(root) == 1:
-                root += ':'
-            root = root.rstrip(os.sep) + os.sep
-
         stripped = [p.lstrip(os.sep) for p in parts]
         try:
-            ret = os.path.join(root, *stripped)
+            ret = pathlib.join(root, *stripped)
         except UnicodeDecodeError:
             # This is probably Python 2 and one of the parts contains unicode
             # characters in a bytestring. First try to decode to the system
@@ -954,13 +960,13 @@ def path_join(*parts):
             except NameError:
                 enc = sys.stdin.encoding or sys.getdefaultencoding()
             try:
-                ret = os.path.join(root.decode(enc),
+                ret = pathlib.join(root.decode(enc),
                                    *[x.decode(enc) for x in stripped])
             except UnicodeDecodeError:
                 # Last resort, try UTF-8
-                ret = os.path.join(root.decode('UTF-8'),
+                ret = pathlib.join(root.decode('UTF-8'),
                                    *[x.decode('UTF-8') for x in stripped])
-    return os.path.normpath(ret)
+    return pathlib.normpath(ret)
 
 
 def pem_finger(path=None, key=None, sum_type='sha256'):

@@ -9,5 +9,54 @@ AIX Fixes
 =========
 
 Added module execution support for user and group
+Added module execution support for timezone
+Added module execution support for network and status
+Added module execution support for beacon.status
+Added module execution support for disk.iostat
 
 
+Minion Data Cache Fixes
+=======================
+
+Added Memcache booster for the minion data cache.
+Memcache is an additional cache layer that keeps a limited amount of data
+fetched from the minion data cache for a limited period of time in memory that
+makes cache operations faster. It doesn't make much sence for the ``localfs``
+cache driver but helps for more complex drivers like ``consul``.
+For more details see ``memcache_expire_seconds`` and other ``memcache_*``
+options in the master config reverence.
+
+Salt-Cloud Fixes
+================
+
+2016.11.0 added support for templating userdata files for the :mod:`ec2
+<salt.cloud.clouds.ec2>` driver, using the :conf_master:`renderer` option from
+the master config file. However, as the default renderer first evaluates jinja
+templating, followed by loading the data as a YAML dictionary, this results in
+unpredictable results when userdata files are comprised of non-YAML data (which
+they generally are).
+
+2016.11.4 fixes this by only templating the userdata_file when it is explicitly
+configured to do so. This is done by adding a new optional parameter to the
+cloud profile called ``userdata_template``. This option is used in the same way
+as the ``template`` argument in :py:func:`file.managed
+<salt.states.file.managed>` states, it is simply set to the desired templating
+renderer:
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      # Pass userdata to the instance to be created
+      userdata_file: /etc/salt/my-userdata-file
+      userdata_template: jinja
+
+If no ``userdata_template``  option is set in the cloud profile, then
+salt-cloud will check for the presence of the master configuration parameter
+:conf_master:`userdata_renderer`. If this is also not set, then no templating
+will be performed on the userdata_file.
+
+In addition, the other cloud drivers which support setting a ``userdata_file``
+(:mod:`azurearm <salt.cloud.clouds.azurearm>`, :mod:`nova
+<salt.cloud.clouds.nova>`, and :mod:`openstack <salt.cloud.clouds.openstack>`)
+have had templating support added to bring them to feature parity with the ec2
+driver's implementation of the ``userdata_file`` option.

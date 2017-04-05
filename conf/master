@@ -133,6 +133,14 @@
 
 # Cache subsystem module to use for minion data cache.
 #cache: localfs
+# Enables a fast in-memory cache booster and sets the expiration time.
+#memcache_expire_seconds: 0
+# Set a memcache limit in items (bank + key) per cache storage (driver + driver_opts).
+#memcache_max_items: 1024
+# Each time a cache storage got full cleanup all the expired items not just the oldest one.
+#memcache_full_cleanup: False
+# Enable collecting the memcache stats and log it on `debug` log level.
+#memcache_debug: False
 
 # Store all returns in the given returner.
 # Setting this option requires that any returner-specific configuration also
