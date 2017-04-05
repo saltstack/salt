@@ -2,7 +2,7 @@
 '''
 Module for running windows updates.
 
-This module is being deprecated and will be removed in Salt Flourine. Please use
+This module is being deprecated and will be removed in Salt Fluorine. Please use
 the ``win_wua`` module instead.
 
 :depends:   - win32com
@@ -87,7 +87,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         salt.utils.warn_until(
-            'Flourine',
+            'Fluorine',
             'The \'win_update\' module is being deprecated and will be removed '
             'in Salt {version}. Please use the \'win_wua\' module instead.'
         )

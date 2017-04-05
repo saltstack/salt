@@ -3,7 +3,7 @@
 Management of the windows update agent
 ======================================
 
-This module is being deprecated and will be removed in Salt Flourine. Please use
+This module is being deprecated and will be removed in Salt Fluorine. Please use
 the ``win_wua`` state module instead.
 
 .. versionadded:: 2014.7.0
