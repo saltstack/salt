@@ -56,6 +56,7 @@ def sync_all(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     ret['utils'] = sync_utils(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['sdb'] = sync_sdb(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['cache'] = sync_cache(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['tops'] = sync_tops(saltenv=saltenv)
     return ret
 
 
@@ -397,6 +398,25 @@ def sync_sdb(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
     return salt.utils.extmods.sync(__opts__, 'sdb', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
                                    extmod_blacklist=extmod_blacklist)[0]
+
+
+def sync_tops(saltenv='base'):
+    '''
+    .. versionadded:: 2016.3.7,2016.11.4,Nitrogen
+
+    Sync master_tops modules from ``salt://_tops`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run saltutil.sync_tops
+    '''
+    return salt.utils.extmods.sync(__opts__, 'tops', saltenv=saltenv)[0]
 
 
 def sync_cache(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
