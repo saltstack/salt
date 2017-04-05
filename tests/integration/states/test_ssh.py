@@ -9,25 +9,26 @@ import os
 import shutil
 
 # Import Salt Testing libs
-import tests.integration as integration
-from tests.support.unit import skipIf
+from tests.support.case import ModuleCase
+from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import (
     destructiveTest,
     with_system_user,
-    skip_if_binaries_missing
+    skip_if_binaries_missing,
+    skip_if_not_root
 )
 
 # Import salt libs
 import salt.utils
 
-KNOWN_HOSTS = os.path.join(integration.TMP, 'known_hosts')
+KNOWN_HOSTS = os.path.join(RUNTIME_VARS.TMP, 'known_hosts')
 GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
 GITHUB_IP = '192.30.253.113'
 
 
 @skip_if_binaries_missing(['ssh', 'ssh-keygen'], check_all=True)
-class SSHKnownHostsStateTest(integration.ModuleCase,
-                             integration.SaltReturnAssertsMixIn):
+class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the ssh state
     '''
@@ -126,7 +127,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
         '''
         ssh_known_hosts.absent
         '''
-        known_hosts = os.path.join(integration.FILES, 'ssh', 'known_hosts')
+        known_hosts = os.path.join(RUNTIME_VARS.FILES, 'ssh', 'known_hosts')
         shutil.copyfile(known_hosts, KNOWN_HOSTS)
         if not os.path.isfile(KNOWN_HOSTS):
             self.skipTest(
@@ -155,11 +156,10 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
 
 
-class SSHAuthStateTests(integration.ModuleCase,
-                        integration.SaltReturnAssertsMixIn):
+class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     @with_system_user('issue_7409', on_existing='delete', delete=True)
     def test_issue_7409_no_linebreaks_between_keys(self, username):
 
@@ -196,7 +196,7 @@ class SSHAuthStateTests(integration.ModuleCase,
             )
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     @with_system_user('issue_10198', on_existing='delete', delete=True)
     def test_issue_10198_keyfile_from_another_env(self, username=None):
         userdetails = self.run_function('user.info', [username])
@@ -206,13 +206,13 @@ class SSHAuthStateTests(integration.ModuleCase,
         key_fname = 'issue_10198.id_rsa.pub'
 
         # Create the keyfile that we expect to get back on the state call
-        with salt.utils.fopen(os.path.join(integration.TMP_PRODENV_STATE_TREE, key_fname), 'w') as kfh:
+        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_PRODENV_STATE_TREE, key_fname), 'w') as kfh:
             kfh.write(
                 'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
             )
 
         # Create a bogus key file on base environment
-        with salt.utils.fopen(os.path.join(integration.TMP_STATE_TREE, key_fname), 'w') as kfh:
+        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_STATE_TREE, key_fname), 'w') as kfh:
             kfh.write(
                 'ssh-rsa BAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
             )

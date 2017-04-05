@@ -25,7 +25,6 @@ import traceback
 import subprocess
 import warnings
 from functools import partial
-from contextlib import closing
 from collections import namedtuple
 
 from tests.support import helpers
@@ -303,7 +302,7 @@ class SaltTestingParser(optparse.OptionParser):
     def parse_args(self, args=None, values=None):
         self.options, self.args = optparse.OptionParser.parse_args(self, args, values)
         if self.options.names_file:
-            with open(self.options.names_file, 'rb') as fp_:
+            with open(self.options.names_file, 'rb') as fp_:  # pylint: disable=resource-leakage
                 lines = []
                 for line in fp_.readlines():
                     if six.PY2:
@@ -847,7 +846,7 @@ class SaltTestingParser(optparse.OptionParser):
             try:
                 time.sleep(0.15)
                 if cid_printed is False:
-                    with closing(open(cidfile)) as cidfile_fd:
+                    with open(cidfile) as cidfile_fd:  # pylint: disable=resource-leakage
                         cid = cidfile_fd.read()
                         if cid:
                             print(cid)

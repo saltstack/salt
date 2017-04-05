@@ -18,7 +18,7 @@ import subprocess
 import yaml
 
 # Import Salt Testing libs
-from tests.integration import AdaptedConfigurationTestCaseMixIn
+from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
@@ -34,13 +34,14 @@ FILE_DATA = {
              }
 
 # Import Salt Libs
+import salt.utils
 from salt.pillar import Pillar
 import salt.pillar.git_pillar as git_pillar
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not git_pillar.HAS_GITPYTHON, 'no GitPython')
-class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMixin):
+class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
     'test git_pillar pillar'
     maxDiff = None
 
@@ -80,7 +81,7 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModul
         os.makedirs(repo)
         subprocess.check_call(['git', 'init', repo])
         for filename in FILE_DATA:
-            with open(os.path.join(repo, filename), 'w') as data_file:
+            with salt.utils.fopen(os.path.join(repo, filename), 'w') as data_file:
                 yaml.dump(FILE_DATA[filename], data_file)
 
         subprocess.check_call(['git', 'add', '.'], cwd=repo)

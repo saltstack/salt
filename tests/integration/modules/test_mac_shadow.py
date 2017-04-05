@@ -10,8 +10,9 @@ import random
 import string
 
 # Import Salt Testing libs
-import tests.integration as integration
-from tests.support.helpers import destructiveTest
+from tests.support.unit import skipIf
+from tests.support.case import ModuleCase
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import salt libs
 import salt.utils
@@ -32,7 +33,11 @@ TEST_USER = __random_string()
 NO_USER = __random_string()
 
 
-class MacShadowModuleTest(integration.ModuleCase):
+@skip_if_not_root
+@skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.which('dscl'), '\'dscl\' binary not found in $PATH')
+@skipIf(not salt.utils.which('pwpolicy'), '\'pwpolicy\' binary not found in $PATH')
+class MacShadowModuleTest(ModuleCase):
     '''
     Validate the mac_system module
     '''
@@ -41,17 +46,7 @@ class MacShadowModuleTest(integration.ModuleCase):
         '''
         Get current settings
         '''
-        if not salt.utils.is_darwin():
-            self.skipTest('Test only available on macOS')
-
-        if not salt.utils.which('dscl'):
-            self.skipTest('Test requires dscl binary')
-
-        if not salt.utils.which('pwpolicy'):
-            self.skipTest('Test requires pwpolicy binary')
-
-        if salt.utils.get_uid(salt.utils.get_user()) != 0:
-            self.skipTest('Test requires root')
+        self.run_function('user.add', [TEST_USER])
 
     def tearDown(self):
         '''
@@ -59,13 +54,10 @@ class MacShadowModuleTest(integration.ModuleCase):
         '''
         self.run_function('user.delete', [TEST_USER])
 
-    @destructiveTest
     def test_info(self):
         '''
         Test shadow.info
         '''
-        self.run_function('user.add', [TEST_USER])
-
         # Correct Functionality
         ret = self.run_function('shadow.info', [TEST_USER])
         self.assertEqual(ret['name'], TEST_USER)
@@ -79,8 +71,6 @@ class MacShadowModuleTest(integration.ModuleCase):
         '''
         Test shadow.get_account_created
         '''
-        self.run_function('user.add', [TEST_USER])
-
         # Correct Functionality
         text_date = self.run_function('shadow.get_account_created', [TEST_USER])
         self.assertNotEqual(text_date, 'Invalid Timestamp')
@@ -97,8 +87,6 @@ class MacShadowModuleTest(integration.ModuleCase):
         '''
         Test shadow.get_last_change
         '''
-        self.run_function('user.add', [TEST_USER])
-
         # Correct Functionality
         text_date = self.run_function('shadow.get_last_change', [TEST_USER])
         self.assertNotEqual(text_date, 'Invalid Timestamp')
@@ -115,8 +103,6 @@ class MacShadowModuleTest(integration.ModuleCase):
         '''
         Test shadow.get_login_failed_last
         '''
-        self.run_function('user.add', [TEST_USER])
-
         # Correct Functionality
         text_date = self.run_function('shadow.get_login_failed_last', [TEST_USER])
         self.assertNotEqual(text_date, 'Invalid Timestamp')
@@ -133,8 +119,6 @@ class MacShadowModuleTest(integration.ModuleCase):
         '''
         Test shadow.get_login_failed_count
         '''
-        self.run_function('user.add', [TEST_USER])
-
         # Correct Functionality
         self.assertEqual(
             self.run_function('shadow.get_login_failed_count', [TEST_USER]),
@@ -151,8 +135,6 @@ class MacShadowModuleTest(integration.ModuleCase):
         Test shadow.get_maxdays
         Test shadow.set_maxdays
         '''
-        self.run_function('user.add', [TEST_USER])
-
         # Correct Functionality
         self.assertTrue(
             self.run_function('shadow.set_maxdays', [TEST_USER, 20]))
@@ -173,8 +155,6 @@ class MacShadowModuleTest(integration.ModuleCase):
         Test shadow.get_change
         Test shadow.set_change
         '''
-        self.run_function('user.add', [TEST_USER])
-
         # Correct Functionality
         self.assertTrue(
             self.run_function('shadow.set_change', [TEST_USER, '02/11/2011']))
@@ -195,8 +175,6 @@ class MacShadowModuleTest(integration.ModuleCase):
         Test shadow.get_expire
         Test shadow.set_expire
         '''
-        self.run_function('user.add', [TEST_USER])
-
         # Correct Functionality
         self.assertTrue(
             self.run_function('shadow.set_expire', [TEST_USER, '02/11/2011']))
@@ -216,8 +194,6 @@ class MacShadowModuleTest(integration.ModuleCase):
         '''
         Test shadow.del_password
         '''
-        self.run_function('user.add', [TEST_USER])
-
         # Correct Functionality
         self.assertTrue(self.run_function('shadow.del_password', [TEST_USER]))
         self.assertEqual(
@@ -233,8 +209,6 @@ class MacShadowModuleTest(integration.ModuleCase):
         '''
         Test shadow.set_password
         '''
-        self.run_function('user.add', [TEST_USER])
-
         # Correct Functionality
         self.assertTrue(
             self.run_function('shadow.set_password', [TEST_USER, 'Pa$$W0rd']))

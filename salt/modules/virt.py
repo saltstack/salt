@@ -682,7 +682,7 @@ def init(name,
         # check if failure is due to this domain already existing
         if "domain '{}' already exists".format(name) in str(err):
             # continue on to seeding
-            log.warn(err)
+            log.warning(err)
         else:
             raise err  # a real error we should report upwards
 

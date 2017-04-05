@@ -1,4 +1,4 @@
-# pylint: disable=W9903
+# pylint: disable=no-encoding-in-file,resource-leakage
 '''
 This is a shim that handles checking and updating salt thin and
 then invoking thin.

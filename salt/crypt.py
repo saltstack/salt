@@ -293,9 +293,10 @@ class MasterKeys(dict):
                             name + '.pub')
         if not os.path.isfile(path):
             key = self.__get_keys()
-            with salt.utils.fopen(path, 'wb+') as f:
-                f.write(key.publickey().exportKey('PEM'))
-        return salt.utils.fopen(path).read()
+            with salt.utils.fopen(path, 'wb+') as wfh:
+                wfh.write(key.publickey().exportKey('PEM'))
+        with salt.utils.fopen(path) as rfh:
+            return rfh.read()
 
     def get_mkey_paths(self):
         return self.pub_path, self.rsa_path

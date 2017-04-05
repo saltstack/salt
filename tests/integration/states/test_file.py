@@ -26,10 +26,11 @@ import filecmp
 log = logging.getLogger(__name__)
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP, TMP_STATE_TREE
 from tests.support.helpers import skip_if_not_root, with_system_user_and_group
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
@@ -139,7 +140,7 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         os.chmod(grail_fs_path, grail_fs_mode)
 
 
-class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+class FileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the file state
     '''
@@ -802,7 +803,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.addCleanup(lambda: shutil.rmtree(directory))
 
         wrong_file = os.path.join(directory, "wrong")
-        with open(wrong_file, "w") as fp:
+        with salt.utils.fopen(wrong_file, "w") as fp:
             fp.write("foo")
         good_file = os.path.join(directory, "bar")
 
@@ -837,7 +838,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.addCleanup(lambda: shutil.rmtree(directory))
 
         wrong_file = os.path.join(directory, "wrong")
-        with open(wrong_file, "w") as fp:
+        with salt.utils.fopen(wrong_file, "w") as fp:
             fp.write("foo")
         good_file = os.path.join(directory, "bar")
 
@@ -873,7 +874,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.addCleanup(lambda: shutil.rmtree(directory))
 
         wrong_file = os.path.join(directory, "wrong")
-        with open(wrong_file, "w") as fp:
+        with salt.utils.fopen(wrong_file, "w") as fp:
             fp.write("foo")
         good_file = os.path.join(directory, "bar")
 
@@ -2431,7 +2432,7 @@ FILE_SOURCE = 'http://localhost:{0}/grail/scene33'.format(PORT)
 FILE_HASH = 'd2feb3beb323c79fc7a0f44f1408b4a3'
 
 
-class RemoteFileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Uses a local tornado webserver to test http(s) file.managed states with and
     without skip_verify
@@ -2471,7 +2472,7 @@ class RemoteFileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn)
         cls.server.stop()
 
     def setUp(self):
-        fd_, self.name = tempfile.mkstemp(dir=integration.TMP)
+        fd_, self.name = tempfile.mkstemp(dir=TMP)
         try:
             os.close(fd_)
         except OSError as exc:

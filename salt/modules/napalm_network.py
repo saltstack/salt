@@ -1010,7 +1010,8 @@ def load_config(filename=None,
     loaded_config = None
     if debug:
         if filename:
-            loaded_config = open(filename).read()
+            with salt.utils.fopen(filename) as rfh:
+                loaded_config = rfh.read()
         else:
             loaded_config = text
     return _config_logic(napalm_device,  # pylint: disable=undefined-variable
@@ -1354,7 +1355,8 @@ def load_template(template_name,
                     _loaded['result'] = False
                     _loaded['comment'] = 'Error while rendering the template.'
                     return _loaded
-                _rendered = open(_temp_tpl_file).read()
+                with salt.utils.fopen(_temp_tpl_file) as rfh:
+                    _rendered = rfh.read()
                 __salt__['file.remove'](_temp_tpl_file)
             else:
                 return _loaded  # exit

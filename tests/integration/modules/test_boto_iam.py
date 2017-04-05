@@ -7,7 +7,7 @@ Validate the boto_iam module
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 # Import 3rd-party libs
@@ -33,7 +33,7 @@ except ImportError:
     BOTO_NOT_CONFIGURED,
     'Please setup boto AWS credentials before running boto integration tests.'
 )
-class BotoIAMTest(integration.ModuleCase):
+class BotoIAMTest(ModuleCase):
 
     def test_get_account_id(self):
         ret = self.run_function('boto_iam.get_account_id')

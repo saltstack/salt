@@ -6,11 +6,11 @@ Tests for the salt-run command
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 
 
-class ManageTest(integration.ShellCase):
+class ManageTest(ShellCase):
     '''
     Test the manage runner
     '''

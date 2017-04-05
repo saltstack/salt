@@ -8,15 +8,15 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-import tests.integration as integration
-from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.case import ModuleCase
+from tests.support.paths import FILES
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
 
 CERT = os.path.join(
-    integration.FILES,
+    FILES,
     'file',
     'base',
     'certs',
@@ -27,8 +27,8 @@ PASSWD = 'salttest'
 
 
 @destructiveTest
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-class MacKeychainModuleTest(integration.ModuleCase):
+@skip_if_not_root
+class MacKeychainModuleTest(ModuleCase):
     '''
     Integration tests for the mac_keychain module
     '''

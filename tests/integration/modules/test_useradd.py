@@ -6,7 +6,7 @@ import string
 import random
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import (
     destructiveTest,
@@ -24,7 +24,7 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 @destructiveTest
 @skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
 @skip_if_not_root
-class UseraddModuleTestLinux(integration.ModuleCase):
+class UseraddModuleTestLinux(ModuleCase):
 
     def setUp(self):
         super(UseraddModuleTestLinux, self).setUp()
@@ -110,7 +110,7 @@ class UseraddModuleTestLinux(integration.ModuleCase):
 @destructiveTest
 @skipIf(not salt.utils.is_windows(), 'These tests can only be run on Windows')
 @skip_if_not_root
-class UseraddModuleTestWindows(integration.ModuleCase):
+class UseraddModuleTestWindows(ModuleCase):
 
     def __random_string(self, size=6):
         return 'RS-' + ''.join(

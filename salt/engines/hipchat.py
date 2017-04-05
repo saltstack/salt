@@ -91,7 +91,8 @@ def _publish_file(token, room, filepath, message='', api_url=None):
     headers['Authorization'] = "Bearer " + token
     msg = json.dumps({'message': message})
 
-    payload = """\
+    with open(filepath, 'rb') as rfh:
+        payload = """\
 --boundary123456
 Content-Type: application/json; charset=UTF-8
 Content-Disposition: attachment; name="metadata"
@@ -104,7 +105,7 @@ Content-Disposition: attachment; name="file"; filename="{1}"
 {2}
 
 --boundary123456--\
-""".format(msg, os.path.basename(filepath), open(filepath, 'rb').read())
+""".format(msg, os.path.basename(filepath), rfh.read())
 
     salt.utils.http.query(url, method='POST', header_dict=headers, data=payload)
 

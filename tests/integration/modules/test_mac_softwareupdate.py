@@ -7,14 +7,18 @@ integration tests for mac_softwareupdate
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
-from tests.support.helpers import destructiveTest
+from tests.support.unit import skipIf
+from tests.support.case import ModuleCase
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import salt libs
 import salt.utils
 
 
-class MacSoftwareUpdateModuleTest(integration.ModuleCase):
+@skip_if_not_root
+@skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.which('softwareupdate'), '\'softwareupdate\' binary not found in $PATH')
+class MacSoftwareUpdateModuleTest(ModuleCase):
     '''
     Validate the mac_softwareupdate module
     '''
@@ -26,15 +30,6 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         '''
         Get current settings
         '''
-        if not salt.utils.is_darwin():
-            self.skipTest('Test only available on macOS')
-
-        if not salt.utils.which('softwareupdate'):
-            self.skipTest('Test requires softwareupdate binary')
-
-        if salt.utils.get_uid(salt.utils.get_user()) != 0:
-            self.skipTest('Test requires root')
-
         self.IGNORED_LIST = self.run_function('softwareupdate.list_ignored')
         self.SCHEDULE = self.run_function('softwareupdate.schedule')
         self.CATALOG = self.run_function('softwareupdate.get_catalog')

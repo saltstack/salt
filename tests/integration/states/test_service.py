@@ -6,9 +6,10 @@ Tests for the service state
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
@@ -19,8 +20,7 @@ SERVICE_NAME = 'crond'
 
 @destructiveTest
 @skipIf(salt.utils.which('crond') is None, 'crond not installed')
-class ServiceTest(integration.ModuleCase,
-                  integration.SaltReturnAssertsMixIn):
+class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the service state
     '''

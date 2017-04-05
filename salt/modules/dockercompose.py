@@ -179,7 +179,7 @@ def __read_docker_compose(path):
         return __standardize_result(False,
                                     'Path does not exist or docker-compose.yml is not present',
                                     None, None)
-    f = salt.utils.fopen(os.path.join(path, dc_filename), 'r')
+    f = salt.utils.fopen(os.path.join(path, dc_filename), 'r')  # pylint: disable=resource-leakage
     result = {'docker-compose.yml': ''}
     if f:
         for line in f:
@@ -207,7 +207,7 @@ def __write_docker_compose(path, docker_compose):
 
     if os.path.isdir(path) is False:
         os.mkdir(path)
-    f = salt.utils.fopen(os.path.join(path, dc_filename), 'w')
+    f = salt.utils.fopen(os.path.join(path, dc_filename), 'w')  # pylint: disable=resource-leakage
     if f:
         f.write(docker_compose)
         f.close()

@@ -10,7 +10,7 @@ import tempfile
 import yaml
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 
 # Import salt libs
 import salt.payload
@@ -18,7 +18,7 @@ import salt.utils
 import salt.utils.jid
 
 
-class RunnerReturnsTest(integration.ShellCase):
+class RunnerReturnsTest(ShellCase):
     '''
     Test the "runner_returns" feature
     '''

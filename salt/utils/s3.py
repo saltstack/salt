@@ -147,31 +147,35 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not data:
         data = None
 
-    if method == 'PUT':
-        if local_file:
-            data = salt.utils.fopen(local_file, 'r')
-        result = requests.request(method,
-                                  requesturl,
-                                  headers=headers,
-                                  data=data,
-                                  verify=verify_ssl,
-                                  stream=True)
-        response = result.content
-    elif method == 'GET' and local_file and not return_bin:
-        result = requests.request(method,
-                                  requesturl,
-                                  headers=headers,
-                                  data=data,
-                                  verify=verify_ssl,
-                                  stream=True)
-        response = result.content
-    else:
-        result = requests.request(method,
-                                  requesturl,
-                                  headers=headers,
-                                  data=data,
-                                  verify=verify_ssl)
-        response = result.content
+    try:
+        if method == 'PUT':
+            if local_file:
+                data = salt.utils.fopen(local_file, 'r')  # pylint: disable=resource-leakage
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl,
+                                      stream=True)
+            response = result.content
+        elif method == 'GET' and local_file and not return_bin:
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl,
+                                      stream=True)
+            response = result.content
+        else:
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl)
+            response = result.content
+    finally:
+        if data is not None:
+            data.close()
 
     err_code = None
     err_msg = None

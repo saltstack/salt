@@ -8,7 +8,7 @@
 # run tests. It *will* install the build deps on the machine running the script.
 #
 
-# pylint: disable=file-perms
+# pylint: disable=file-perms,resource-leakage
 
 from __future__ import absolute_import, print_function
 import errno

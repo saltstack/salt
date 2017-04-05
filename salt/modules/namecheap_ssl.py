@@ -40,11 +40,14 @@
         #namecheap.url: https://api.sandbox.namecheap.xml.response
 
 '''
+# Import Python libs
 from __future__ import absolute_import
-CAN_USE_NAMECHEAP = True
 
+# Import Salt libs
+import salt.utils
 try:
     import salt.utils.namecheap
+    CAN_USE_NAMECHEAP = True
 except ImportError:
     CAN_USE_NAMECHEAP = False
 
@@ -221,9 +224,9 @@ def __get_certificates(command,
 
     opts = salt.utils.namecheap.get_opts(command)
 
-    csr_handle = open(csr_file, 'rb')
+    with salt.utils.fopen(csr_file, 'rb') as csr_handle:
+        opts['csr'] = csr_handle.read()
 
-    opts['csr'] = csr_handle.read()
     opts['CertificateID'] = certificate_id
     opts['WebServerType'] = web_server_type
     if approver_email is not None:
@@ -234,8 +237,6 @@ def __get_certificates(command,
 
     for key, value in six.iteritems(kwargs):
         opts[key] = value
-
-    csr_handle.close()
 
     response_xml = salt.utils.namecheap.post_request(opts)
 
@@ -596,14 +597,12 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.parseCSR')
 
-    csr_handle = open(csr_file, 'rb')
+    with salt.utils.fopen(csr_file, 'rb') as csr_handle:
+        opts['csr'] = csr_handle.read()
 
-    opts['csr'] = csr_handle.read()
     opts['CertificateType'] = certificate_type
     if http_dc_validation:
         opts['HTTPDCValidation'] = 'true'
-
-    csr_handle.close()
 
     response_xml = salt.utils.namecheap.post_request(opts)
 

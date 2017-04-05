@@ -19,11 +19,11 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils
+import salt.transport
 import salt.modules.cp as cp
 from salt.utils import templates
 from salt.exceptions import CommandExecutionError
-import salt.utils
-import salt.transport
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -142,10 +142,10 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         '''
         response = cp.push('/saltines/test.file')
         self.assertEqual(response, True)
-        self.assertEqual(salt.utils.fopen().read.call_count, 2)
+        self.assertEqual(salt.utils.fopen().read.call_count, 2)  # pylint: disable=resource-leakage
         salt.transport.Channel.factory({}).send.assert_called_once_with(
             dict(
-                loc=salt.utils.fopen().tell(),
+                loc=salt.utils.fopen().tell(),  # pylint: disable=resource-leakage
                 cmd='_file_recv',
                 tok='token',
                 path=['saltines', 'test.file'],

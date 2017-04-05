@@ -8,10 +8,10 @@ from __future__ import absolute_import
 import time
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 
 
-class SaltUtilModuleTest(integration.ModuleCase):
+class SaltUtilModuleTest(ModuleCase):
     '''
     Testcase for the saltutil execution module
     '''
@@ -56,7 +56,7 @@ class SaltUtilModuleTest(integration.ModuleCase):
         self.assertIn('priv', ret['return'])
 
 
-class SaltUtilSyncModuleTest(integration.ModuleCase):
+class SaltUtilSyncModuleTest(ModuleCase):
     '''
     Testcase for the saltutil sync execution module
     '''

@@ -14,7 +14,7 @@ import logging
 import tempfile
 
 # Import Salt Testing libs
-from tests.integration import AdaptedConfigurationTestCaseMixIn
+from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
@@ -166,7 +166,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         return temp_dir, jid_file_path
 
 
-class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMixin):
+class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
     '''
     Test the local cache returner
     '''

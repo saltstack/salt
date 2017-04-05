@@ -7,10 +7,10 @@ Tests for various minion timeouts
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 
 
-class MinionTimeoutTestCase(integration.ShellCase):
+class MinionTimeoutTestCase(ShellCase):
     '''
     Test minion timing functions
     '''

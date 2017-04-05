@@ -9,7 +9,7 @@ import os
 import tempfile
 
 # Import Salt Testing libs
-from tests.integration import AdaptedConfigurationTestCaseMixIn
+from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import FILES, TMP, TMP_STATE_TREE
 from tests.support.unit import TestCase, skipIf
@@ -27,7 +27,7 @@ except ImportError:
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RootsTest(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMixin):
+class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
@@ -171,7 +171,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMix
         self.assertDictEqual(ret, {'dest_sym': 'source_sym'})
 
 
-class RootsLimitTraversalTest(TestCase, AdaptedConfigurationTestCaseMixIn):
+class RootsLimitTraversalTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_limit_traversal(self):
         '''

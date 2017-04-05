@@ -5,14 +5,12 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import os
 import random
 import string
 
 # Import Salt Testing Libs
-import tests.integration as integration
-from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.case import ModuleCase
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
@@ -38,8 +36,8 @@ CHANGE_USER = __random_string()
 
 
 @destructiveTest
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-class MacUserModuleTest(integration.ModuleCase):
+@skip_if_not_root
+class MacUserModuleTest(ModuleCase):
     '''
     Integration tests for the mac_user module
     '''

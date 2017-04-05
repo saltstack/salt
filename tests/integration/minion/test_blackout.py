@@ -10,18 +10,19 @@ from time import sleep
 import textwrap
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.paths import PILLAR_DIR
 from tests.support.helpers import destructiveTest
 
 # Import Salt libs
 import salt.utils
 
 
-BLACKOUT_PILLAR = os.path.join(integration.PILLAR_DIR, 'base', 'blackout.sls')
+BLACKOUT_PILLAR = os.path.join(PILLAR_DIR, 'base', 'blackout.sls')
 
 
 @destructiveTest
-class MinionBlackoutTestCase(integration.ModuleCase):
+class MinionBlackoutTestCase(ModuleCase):
     '''
     Test minion blackout functionality
     '''
@@ -29,7 +30,8 @@ class MinionBlackoutTestCase(integration.ModuleCase):
         '''
         setup minion blackout mode
         '''
-        salt.utils.fopen(BLACKOUT_PILLAR, 'w').write(blackout_data)
+        with salt.utils.fopen(BLACKOUT_PILLAR, 'w') as wfh:
+            wfh.write(blackout_data)
         self.run_function('saltutil.refresh_pillar')
         sleep(5)  # wait for minion to enter blackout mode
 

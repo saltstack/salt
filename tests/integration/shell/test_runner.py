@@ -7,13 +7,17 @@ Tests for the salt-run command
 # Import python libs
 from __future__ import absolute_import
 import os
-import yaml
 import shutil
 
 # Import Salt Testing libs
-import tests.integration as integration
 from tests.integration.utils import testprogram
-from tests.support.unit import skipIf
+from tests.support.case import ShellCase
+from tests.support.paths import TMP
+from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.helpers import skip_if_not_root
+
+# Import 3rd-party libs
+import yaml
 
 # Import salt libs
 import salt.utils
@@ -23,7 +27,7 @@ USERA_PWD = 'saltdev'
 HASHED_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
 
 
-class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixin):
+class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     '''
     Test the salt-run command
     '''
@@ -89,7 +93,7 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        config_dir = os.path.join(TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
@@ -174,7 +178,7 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
             stdout=stdout, stderr=stderr
         )
 
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @skip_if_not_root
     def test_salt_run_with_eauth_all_args(self):
         '''
         test salt-run with eauth
@@ -189,7 +193,7 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
             self.assertEqual(expect, run_cmd)
         self._remove_user()
 
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @skip_if_not_root
     def test_salt_run_with_eauth_bad_passwd(self):
         '''
         test salt-run with eauth and bad password

@@ -1336,7 +1336,7 @@ def fopen(*args, **kwargs):
     if six.PY3 and not binary and not kwargs.get('newline', None):
         kwargs['newline'] = ''
 
-    fhandle = open(*args, **kwargs)
+    fhandle = open(*args, **kwargs)  # pylint: disable=resource-leakage
 
     if is_fcntl_available():
         # modify the file descriptor on systems with fcntl

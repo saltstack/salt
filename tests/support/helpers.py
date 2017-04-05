@@ -27,11 +27,7 @@ import functools
 # Import 3rd-party libs
 import psutil  # pylint: disable=3rd-party-module-not-gated
 import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-if six.PY2:
-    import __builtin__ as pybuiltins  # pylint: disable=incompatible-py3-code,import-error
-else:
-    import builtins as pybuiltins  # pylint: disable=import-error
+from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,redefined-builtin
 try:
     from pytestsalt.utils import get_unused_localhost_port  # pylint: disable=unused-import
 except ImportError:
@@ -47,7 +43,7 @@ except ImportError:
 
 # Import Salt Tests Support libs
 from tests.support.unit import skip, _id
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
 
@@ -214,14 +210,17 @@ class RedirectStdStreams(object):
     '''
 
     def __init__(self, stdout=None, stderr=None):
+        # Late import
+        import salt.utils
         if stdout is None:
-            stdout = open(os.devnull, 'w')
+            stdout = salt.utils.fopen(os.devnull, 'w')  # pylint: disable=resource-leakage
         if stderr is None:
-            stderr = open(os.devnull, 'w')
+            stderr = salt.utils.fopen(os.devnull, 'w')  # pylint: disable=resource-leakage
 
         self.__stdout = stdout
         self.__stderr = stderr
         self.__redirected = False
+        self.patcher = patch.multiple(sys, stderr=self.__stderr, stdout=self.__stdout)
 
     def __enter__(self):
         self.redirect()
@@ -235,8 +234,7 @@ class RedirectStdStreams(object):
         self.old_stdout.flush()
         self.old_stderr = sys.stderr
         self.old_stderr.flush()
-        sys.stdout = self.__stdout
-        sys.stderr = self.__stderr
+        self.patcher.start()
         self.__redirected = True
 
     def unredirect(self):
@@ -254,9 +252,7 @@ class RedirectStdStreams(object):
         except ValueError:
             # already closed?
             pass
-
-        sys.stdout = self.old_stdout
-        sys.stderr = self.old_stderr
+        self.patcher.stop()
 
     def flush(self):
         if self.__redirected:
@@ -425,13 +421,13 @@ class ForceImportErrorOn(object):
                 self.__module_names[modname] = set(entry[1:])
             else:
                 self.__module_names[entry] = None
+        self.patcher = patch.object(builtins, '__import__', self.__fake_import__)
 
     def patch_import_function(self):
-        self.__original_import = pybuiltins.__import__
-        pybuiltins.__import__ = self.__fake_import__
+        self.patcher.start()
 
     def restore_import_funtion(self):
-        pybuiltins.__import__ = self.__original_import
+        self.patcher.stop()
 
     def __fake_import__(self, name, globals_, locals_, fromlist, level=-1):
         if name in self.__module_names:
@@ -556,11 +552,10 @@ def requires_network(only_local_network=False):
                          '173.194.41.201', '173.194.41.206', '173.194.41.192',
                          '173.194.41.193', '173.194.41.194', '173.194.41.195',
                          '173.194.41.196', '173.194.41.197'):
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 try:
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sock.settimeout(0.25)
                     sock.connect((addr, 80))
-                    sock.close()
                     # We connected? Stop the loop
                     break
                 except socket.error:
@@ -568,6 +563,8 @@ def requires_network(only_local_network=False):
                     continue
                 else:
                     cls.skipTest('No internet network connection was detected')
+                finally:
+                    sock.close()
             return func(cls)
         return wrapper
     return decorator
@@ -987,24 +984,12 @@ def requires_salt_modules(*names):
                         )
                     )
 
-                for name in names:
-                    if not hasattr(self, '__salt_sys_docs__'):
-                        # cache salts documentation
-                        self.__salt_sys_docs__ = self.run_function('sys.doc')
-                    if name not in self.__salt_sys_docs__:
-                        self.skipTest('Salt module {0!r} is not available'.format(name))
+                not_found_modules = self.run_function('runtests_helpers.modules_available', names)
+                if not_found_modules:
+                    if len(not_found_modules) == 1:
+                        self.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
+                    self.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
             caller.setUp = setUp
-
-            old_teardown = getattr(caller, 'tearDown', None)
-
-            def teardown(self, *args, **kwargs):
-                if hasattr(self, '__salt_sys_docs__'):
-                    del self.__salt_sys_docs__
-
-                if old_teardown is not None:
-                    old_teardown(self, *args, **kwargs)
-
-            caller.tearDown = teardown
             return caller
 
         # We're simply decorating functions

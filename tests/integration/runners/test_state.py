@@ -16,15 +16,16 @@ import threading
 from salt.ext.six.moves import queue
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 from tests.support.unit import skipIf
+from tests.support.paths import TMP
 
 # Import Salt Libs
 import salt.utils
 import salt.utils.event
 
 
-class StateRunnerTest(integration.ShellCase):
+class StateRunnerTest(ShellCase):
     '''
     Test the state runner.
     '''
@@ -101,7 +102,7 @@ class StateRunnerTest(integration.ShellCase):
 
 
 @skipIf(salt.utils.is_windows(), '*NIX-only test')
-class OrchEventTest(integration.ShellCase):
+class OrchEventTest(ShellCase):
     '''
     Tests for orchestration events
     '''
@@ -120,7 +121,7 @@ class OrchEventTest(integration.ShellCase):
             dir=self.master_d_dir,
             delete=True,
         )
-        self.base_env = tempfile.mkdtemp(dir=integration.TMP)
+        self.base_env = tempfile.mkdtemp(dir=TMP)
 
     def tearDown(self):
         shutil.rmtree(self.base_env)

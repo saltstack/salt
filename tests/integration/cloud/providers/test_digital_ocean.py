@@ -10,7 +10,8 @@ import random
 import string
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
@@ -34,7 +35,7 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'digital_ocean'
 
 
-class DigitalOceanTest(integration.ShellCase):
+class DigitalOceanTest(ShellCase):
     '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
     '''
@@ -59,7 +60,7 @@ class DigitalOceanTest(integration.ShellCase):
         # check if personal access token, ssh_key_file, and ssh_key_names are present
         config = cloud_providers_config(
             os.path.join(
-                integration.FILES,
+                FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'

@@ -11,9 +11,9 @@ import copy
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
+from tests.support.paths import TMP
 
 # Import Salt libs
-import tests.integration as integration
 import salt.loader
 import salt.config
 import salt.utils
@@ -32,7 +32,7 @@ REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 class CommonTestCaseBoilerplate(TestCase):
 
     def setUp(self):
-        self.root_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.root_dir = tempfile.mkdtemp(dir=TMP)
         self.state_tree_dir = os.path.join(self.root_dir, 'state_tree')
         self.cache_dir = os.path.join(self.root_dir, 'cachedir')
         if not os.path.isdir(self.root_dir):
@@ -294,7 +294,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertEqual(result['B']['file'][1]['require'][0]['cmd'], 'C')
 
     def test_pipe_through_stateconf(self):
-        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        dirpath = tempfile.mkdtemp(dir=TMP)
         if not os.path.isdir(dirpath):
             self.skipTest(
                 'The temporary directory \'{0}\' was not created'.format(
@@ -355,7 +355,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
     def test_compile_time_state_execution(self):
         if not sys.stdin.isatty():
             self.skipTest('Not attached to a TTY')
-        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        dirpath = tempfile.mkdtemp(dir=TMP)
         if not os.path.isdir(dirpath):
             self.skipTest(
                 'The temporary directory \'{0}\' was not created'.format(
@@ -387,7 +387,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             shutil.rmtree(dirpath, ignore_errors=True)
 
     def test_nested_high_state_execution(self):
-        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        dirpath = tempfile.mkdtemp(dir=TMP)
         if not os.path.isdir(dirpath):
             self.skipTest(
                 'The temporary directory \'{0}\' was not created'.format(
@@ -419,7 +419,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             shutil.rmtree(dirpath, ignore_errors=True)
 
     def test_repeat_includes(self):
-        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        dirpath = tempfile.mkdtemp(dir=TMP)
         if not os.path.isdir(dirpath):
             self.skipTest(
                 'The temporary directory \'{0}\' was not created'.format(

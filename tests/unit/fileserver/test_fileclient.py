@@ -10,7 +10,7 @@ import os
 import shutil
 
 # Import Salt Testing libs
-from tests.integration import AdaptedConfigurationTestCaseMixIn
+from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
@@ -45,7 +45,7 @@ MOCKED_OPTS = {
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class FileClientTest(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMixin):
+class FileClientTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         return {fileclient: {'__opts__': MOCKED_OPTS}}
@@ -79,7 +79,7 @@ class FileClientTest(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMo
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixIn, LoaderModuleMockMixin):
+class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
     '''
     Tests for the fileclient caching. The LocalClient is the only thing we can
     test as it is the only way we can mock the fileclient (the tests run from

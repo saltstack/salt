@@ -13,7 +13,8 @@ import string
 from salt.config import cloud_providers_config
 
 # Import Salt Testing LIbs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
 from salt.ext.six.moves import range
 
@@ -33,7 +34,7 @@ PROVIDER_NAME = 'vmware'
 TIMEOUT = 500
 
 
-class VMWareTest(integration.ShellCase):
+class VMWareTest(ShellCase):
     '''
     Integration tests for the vmware cloud provider in Salt-Cloud
     '''
@@ -58,7 +59,7 @@ class VMWareTest(integration.ShellCase):
         # check if user, password, url and provider are present
         config = cloud_providers_config(
             os.path.join(
-                integration.FILES,
+                FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'

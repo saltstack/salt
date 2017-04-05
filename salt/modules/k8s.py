@@ -541,7 +541,7 @@ def _is_valid_secret_file(filename):
 
 def _file_encode(filename):
     log.trace("Encoding secret file: {0}".format(filename))
-    with open(filename, "rb") as f:
+    with salt.utils.fopen(filename, "rb") as f:
         data = f.read()
         return base64.b64encode(data)
 

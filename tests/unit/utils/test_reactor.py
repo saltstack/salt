@@ -8,10 +8,11 @@ import os
 
 from contextlib import contextmanager
 
+import salt.utils
 from salt.utils.process import clean_proc
 import salt.utils.reactor as reactor
 
-from tests.integration import AdaptedConfigurationTestCaseMixIn
+from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, MagicMock
@@ -39,12 +40,12 @@ def _args_sideffect(*args, **kwargs):
 
 
 @skipIf(True, 'Skipping until its clear what and how is this supposed to be testing')
-class TestReactor(TestCase, AdaptedConfigurationTestCaseMixIn):
+class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
         self.opts = self.get_temp_config('master')
         self.tempdir = tempfile.mkdtemp(dir=TMP)
         self.sls_name = os.path.join(self.tempdir, 'test.sls')
-        with open(self.sls_name, 'w') as fh:
+        with salt.utils.fopen(self.sls_name, 'w') as fh:
             fh.write('''
 update_fileserver:
   runner.fileserver.update
