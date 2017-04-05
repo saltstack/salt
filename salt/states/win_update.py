@@ -463,9 +463,9 @@ def installed(name, categories=None, skips=None, retries=10):
            'changes': {},
            'comment': ''}
     deprecation_msg = 'The \'win_update\' module is deprecated, and will be ' \
-                      'removed in Salt Oxygen. Please use the \'win_wua\' ' \
+                      'removed in Salt Fluorine. Please use the \'win_wua\' ' \
                       'module instead.'
-    salt.utils.warn_until('Oxygen', deprecation_msg)
+    salt.utils.warn_until('Fluorine', deprecation_msg)
     ret.setdefault('warnings', []).append(deprecation_msg)
     if not categories:
         categories = [name]
@@ -547,9 +547,9 @@ def downloaded(name, categories=None, skips=None, retries=10):
            'comment': ''}
 
     deprecation_msg = 'The \'win_update\' module is deprecated, and will be ' \
-                      'removed in Salt Oxygen. Please use the \'win_wua\' ' \
+                      'removed in Salt Fluorine. Please use the \'win_wua\' ' \
                       'module instead.'
-    salt.utils.warn_until('Oxygen', deprecation_msg)
+    salt.utils.warn_until('Fluorine', deprecation_msg)
     ret.setdefault('warnings', []).append(deprecation_msg)
 
     if not categories:
