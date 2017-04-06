@@ -82,9 +82,9 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(saltmod.__opts__, {'test': True}):
             self.assertDictEqual(saltmod.state(name, tgt, highstate=True), test_ret)
 
-        ret.update({'comment': 'States ran successfully.', 'result': True})
+        ret.update({'comment': 'States ran successfully. No changes made to silver.', 'result': True, '__jid__': '20170406104341210934'})
         with patch.dict(saltmod.__opts__, {'test': False}):
-            mock = MagicMock(return_value={})
+            mock = MagicMock(return_value={'silver': {'jid': '20170406104341210934', 'retcode': 0, 'ret': {'test_|-notify_me_|-this is a name_|-show_notification': {'comment': 'Notify me', 'name': 'this is a name', 'start_time': '10:43:41.487565', 'result': True, 'duration': 0.35, '__run_num__': 0, '__sls__': 'demo', 'changes': {}, '__id__': 'notify_me'}}, 'out': 'highstate'}})
             with patch.dict(saltmod.__salt__, {'saltutil.cmd': mock}):
                 self.assertDictEqual(saltmod.state(name, tgt, highstate=True),
                                      ret)
