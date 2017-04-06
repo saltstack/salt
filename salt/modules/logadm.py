@@ -76,39 +76,55 @@ def _parse_options(entry, options, include_unset=True):
     if len(options) == 0:
         return None
 
-    # handle toggle options
-    for flag, name in option_toggles.items():
-        log_cfg[name] = flag in options
-        if not include_unset and not log_cfg[name]:
-            del log_cfg[name]
-        if flag in options:
-            options.remove(flag)
-
-    # handle flag options
-    for flag, name in option_flags.items():
-        value = None
-        if flag in options:
-            if len(options) > options.index(flag):
-                value = options[options.index(flag)+1]
-            options.remove(flag)
-
-        if value or include_unset:
-            log_cfg[name] = value
-        if value:
-            options.remove(value)
-
-    # handle log file
+    ## identifier is entry or log?
     if entry.startswith('/'):
         log_cfg['log_file'] = entry
     else:
         log_cfg['entryname'] = entry
-        if options[0].startswith('/'):
-            log_cfg['log_file'] = options[0]
-            del options[0]
 
-    # handle unknown options
-    if len(options) > 0:
-        log_cfg['additional_options'] = " ".join(options)
+    ## parse options
+    # NOTE: we loop over the options because values may exist multiple times
+    index = 0
+    while index < len(options):
+        # log file as first options
+        if index == 0 and options[index].startswith('/'):
+            log_cfg['log_file'] = options[index]
+
+        # check if toggle option
+        elif options[index] in option_toggles:
+            log_cfg[option_toggles[options[index]]] = True
+
+        # check if flag option
+        elif options[index] in option_flags and (index+1) <= len(options):
+            log_cfg[option_flags[options[index]]] = options[index+1]
+            index += 1
+
+        # unknown options
+        else:
+            if 'additional_options' not in log_cfg:
+                log_cfg['additional_options'] = []
+            if ' ' in options[index]:
+                log_cfg['dditional_options'] = "'{}'".format(options[index])
+            else:
+                log_cfg['additional_options'].append(options[index])
+
+        index += 1
+
+    ## turn additional_options into string
+    if 'additional_options' in log_cfg:
+        log_cfg['additional_options'] = " ".join(log_cfg['additional_options'])
+
+    ## include unset
+    if include_unset:
+        # toggle optioons
+        for name in option_toggles.values():
+            if name not in log_cfg:
+                log_cfg[name] = False
+
+        # flag options
+        for name in option_flags.values():
+            if name not in log_cfg:
+                log_cfg[name] = None
 
     return log_cfg
 
