@@ -863,20 +863,33 @@ def extracted(name,
             # Prevent a traceback from attempting to read from a directory path
             salt.utils.rm_rf(cached_source)
 
-    if source_hash:
-        try:
-            source_sum = __salt__['file.get_source_sum']('',
-                                                         source_match,
-                                                         source_hash,
-                                                         source_hash_name,
-                                                         __env__)
-        except CommandExecutionError as exc:
-            ret['comment'] = exc.strerror
-            return ret
+    if source_is_local:
+        update_source = False
     else:
-        source_sum = {}
+        if not os.path.isfile(cached_source):
+            update_source = True
+        else:
+            try:
+                source_sum = __salt__['file.get_source_sum']('',
+                                                             source_match,
+                                                             source_hash,
+                                                             source_hash_name,
+                                                             __env__)
+            except CommandExecutionError as exc:
+                ret['comment'] = exc.strerror
+                return ret
+            else:
+                if 'hsum' not in source_hash:
+                    log.warning('checksum not in file.get_source_sum results')
+                    update_source = True
+                else:
+                    # We already extracted the hash, set source_hash to the
+                    # extracted result to prevent repeating this work below.
+                    source_hash = source_sum['hsum']
+                    update_source = \
+                        not _compare_checksum(cached_source, source_sum)
 
-    if not source_is_local and not os.path.isfile(cached_source):
+    if update_source:
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = (
@@ -884,16 +897,12 @@ def extracted(name,
                 'discover if extraction is necessary'.format(source_match)
             )
             return ret
-
-        log.debug('%s is not in cache, downloading it', source_match)
-
         file_result = __states__['file.managed'](cached_source,
                                                  source=source_match,
                                                  source_hash=source_hash,
                                                  source_hash_name=source_hash_name,
                                                  makedirs=True,
                                                  skip_verify=skip_verify)
-
         log.debug('file.managed: {0}'.format(file_result))
 
         # Prevent a traceback if errors prevented the above state from getting
@@ -915,6 +924,19 @@ def extracted(name,
                 return file_result
     else:
         log.debug('Archive %s is already in cache', source_match)
+
+    if source_hash:
+        try:
+            source_sum = __salt__['file.get_source_sum']('',
+                                                         source_match,
+                                                         source_hash,
+                                                         source_hash_name,
+                                                         __env__)
+        except CommandExecutionError as exc:
+            ret['comment'] = exc.strerror
+            return ret
+    else:
+        source_sum = {}
 
     if archive_format == 'zip' and not password:
         log.debug('Checking %s to see if it is password-protected',
