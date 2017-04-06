@@ -55,7 +55,6 @@ def _parse_conf(conf_file=default_conf):
     Parse a logadm configuration file.
     '''
     ret = {}
-    # ret = []
     with salt.utils.fopen(conf_file, 'r') as ifile:
         for line in ifile:
             line = line.strip()
@@ -66,6 +65,49 @@ def _parse_conf(conf_file=default_conf):
             splitline = line.split(' ', 1)
             ret[splitline[0]] = splitline[1]
     return ret
+
+
+def _parse_options(entry, options):
+    '''
+    Parse a logadm options string
+    '''
+    log_cfg = {}
+    options = shlex.split(options)
+    if len(options) == 0:
+        return None
+
+    # handle toggle options
+    for flag, name in option_toggles.items():
+        log_cfg[name] = flag in options
+        if flag in options:
+            options.remove(flag)
+
+    # handle flag options
+    for flag, name in option_flags.items():
+        value = None
+        if flag in options:
+            if len(options) > options.index(flag):
+                value = options[options.index(flag)+1]
+            options.remove(flag)
+
+        log_cfg[name] = value
+        if value:
+            options.remove(value)
+
+    # handle log file
+    if entry.startswith('/'):
+        log_cfg['log_file'] = entry
+    else:
+        log_cfg['entryname'] = entry
+        if options[0].startswith('/'):
+            log_cfg['log_file'] = options[0]
+            del options[0]
+
+    # handle unknown options
+    if len(options) > 0:
+        log_cfg['additional_options'] = " ".join(options)
+
+    return log_cfg
 
 
 def show_conf(conf_file=default_conf, name=None):
@@ -119,43 +161,8 @@ def list_conf(conf_file=default_conf, log_file=None):
     cfg_parsed = {}
 
     ## parse all options
-    for log in cfg:
-        log_cfg = {}
-        options = shlex.split(cfg[log])
-        if len(options) == 0:
-            continue
-
-        # handle toggle options
-        for opt in option_toggles:
-            log_cfg[option_toggles[opt]] = opt in options
-            if opt in options:
-                options.remove(opt)
-
-        # handle flag options
-        for opt in option_flags:
-            opt_val = None
-            if opt in options:
-                if len(options) > options.index(opt):
-                    opt_val = options[options.index(opt)+1]
-                options.remove(opt)
-
-            log_cfg[option_flags[opt]] = opt_val
-            if opt_val:
-                options.remove(opt_val)
-
-        # handle log file
-        if log.startswith('/'):
-            log_cfg['log_file'] = log
-        else:
-            log_cfg['entryname'] = log
-            if options[0].startswith('/'):
-                log_cfg['log_file'] = options[0]
-                del options[0]
-
-        # handle unknown options
-        if len(options) > 0:
-            log_cfg['additional_options'] = " ".join(options)
-
+    for entry in cfg:
+        log_cfg = _parse_options(entry, cfg[entry])
         cfg_parsed[log_cfg['log_file'] if log_cfg['log_file'] else log_cfg['entryname']] = log_cfg
 
     ## filter
