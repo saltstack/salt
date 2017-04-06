@@ -13,6 +13,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import errno
 import socket
 import logging
 import threading
@@ -36,18 +37,7 @@ def __virtual__():
 
 
 def setup_handlers():
-    queue = Queue(5000)
-    handler = salt.log.setup.QueueHandler(queue)
-    handler.setLevel(1)
-    process_queue_thread = threading.Thread(target=process_queue, args=(__opts__['runtests_log_port'], queue))
-    process_queue_thread.daemon = True
-    process_queue_thread.start()
-    return handler
-
-
-def process_queue(port, queue):
-    import errno
-    import logging
+    port = __opts__['runtests_log_port']
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
@@ -56,6 +46,31 @@ def process_queue(port, queue):
         if exc.errno == errno.ECONNREFUSED:
             log.warning('Failed to connect to log server')
             return
+    finally:
+        sock.shutdown(socket.SHUT_RDWR)
+        sock.close()
+
+    queue = Queue()
+    handler = salt.log.setup.QueueHandler(queue)
+    handler.setLevel(1)
+    process_queue_thread = threading.Thread(target=process_queue, args=(port, queue))
+    process_queue_thread.daemon = True
+    process_queue_thread.start()
+    return handler
+
+
+def process_queue(port, queue):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.connect(('localhost', port))
+    except socket.error as exc:
+        if exc.errno == errno.ECONNREFUSED:
+            sock.shutdown(socket.SHUT_RDWR)
+            sock.close()
+            log.warning('Failed to connect to log server')
+            return
+
     while True:
         try:
             record = queue.get()
@@ -66,15 +81,20 @@ def process_queue(port, queue):
             # logging handlers
             sock.sendall(msgpack.dumps(record.__dict__, encoding='utf-8'))
         except (IOError, EOFError, KeyboardInterrupt, SystemExit):
+            sock.shutdown(socket.SHUT_RDWR)
+            sock.close()
             break
         except socket.error as exc:
             if exc.errno == errno.EPIPE:
                 # Broken pipe
+                sock.shutdown(socket.SHUT_RDWR)
+                sock.close()
                 break
-            logging.getLogger(__name__).exception(exc)
+            log.exception(exc)
         except Exception as exc:  # pylint: disable=broad-except
-            logging.getLogger(__name__).warning(
+            log.warning(
                 'An exception occurred in the pytest salt logging '
-                'queue thread: {0}'.format(exc),
+                'queue thread: %s',
+                exc,
                 exc_info_on_loglevel=logging.DEBUG
             )

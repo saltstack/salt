@@ -135,6 +135,7 @@ def pytest_addoption(parser):
     )
 # <---- CLI Options Setup --------------------------------------------------------------------------------------------
 
+
 # ----- CLI Terminal Reporter --------------------------------------------------------------------------------------->
 class SaltTerminalReporter(TerminalReporter):
     def __init__(self, config):
@@ -180,6 +181,7 @@ class SaltTerminalReporter(TerminalReporter):
                     swap = psproc.memory_percent('swap')
                     self._tw.write(template.format(name, cpu, mem, swap))
 # <---- CLI Terminal Reporter ----------------------------------------------------------------------------------------
+
 
 # ----- Register Markers -------------------------------------------------------------------------------------------->
 @pytest.mark.trylast
