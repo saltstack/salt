@@ -1191,14 +1191,9 @@ def install(name=None,
     reinstall = salt.utils.is_true(reinstall)
 
     try:
-        if "advisory_ids" in kwargs:
-            if pkgs:
-                raise SaltInvocationError('Cannot use "advisory_ids" and "pkgs" at the same time')
-            pkg_params, pkg_type = kwargs['advisory_ids'], 'advisory'
-        else:
-            pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
-                name, pkgs, sources, normalize=normalize, **kwargs
-            )
+        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, pkgs, sources, normalize=normalize, **kwargs
+        )
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
