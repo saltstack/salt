@@ -38,6 +38,7 @@ import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
+import salt.utils.pkg.deb
 import salt.utils.systemd
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -1858,8 +1859,9 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
         comments
             Sometimes you want to supply additional information, but not as
-            enabled configuration. Anything supplied for this list will be saved
-            in the repo configuration with a comment marker (#) in front.
+            enabled configuration. All comments provided here will be joined
+            into a single string and appended to the repo configuration with a
+            comment marker (#) before it.
 
             .. versionadded:: 2015.8.9
 
@@ -2089,13 +2091,17 @@ def mod_repo(repo, saltenv='base', **kwargs):
             if mod_source:
                 break
 
+    if 'comments' in kwargs:
+        kwargs['comments'] = \
+            salt.utils.pkg.deb.combine_comments(kwargs['comments'])
+
     if not mod_source:
         mod_source = sourceslist.SourceEntry(repo)
         if 'comments' in kwargs:
-            mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
+            mod_source.comment = kwargs['comments']
         sources.list.append(mod_source)
     elif 'comments' in kwargs:
-        mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
+        mod_source.comment = kwargs['comments']
 
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):
