@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import errno
 import logging
 import os
 import re
@@ -1614,10 +1615,12 @@ def latest(name,
                     try:
                         salt.utils.rm_rf(target_path)
                     except OSError as exc:
-                        removal_errors[target_path] = exc
+                        if exc.errno != errno.ENOENT:
+                            removal_errors[target_path] = exc
                 if removal_errors:
                     err_strings = [
-                        '  {0}\n    {1}'.format(k, v) for k, v in removal_errors.items()
+                        '  {0}\n    {1}'.format(k, v)
+                        for k, v in six.iteritems(removal_errors)
                     ]
                     return _fail(
                         ret,
