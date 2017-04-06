@@ -31,7 +31,6 @@ import salt.utils
 
 # Debug & Logging
 import logging
-import pprint
 
 # Integrations
 try:
@@ -48,7 +47,6 @@ __salt__ = {
     'cmd.run_all': salt.modules.cmdmod.run_all
 }
 log = logging.getLogger(__name__)
-ppr = pprint.PrettyPrinter(indent=2).pprint
 
 
 class RFC(object):
@@ -174,7 +172,6 @@ def _data2rec(schema, rec_data):
 
     res = {'prio': 10, 'weight': 20, 'port': 25 'name': 'myawesome.nl'}
     '''
-    # ppr(schema)
     try:
         rec_fields = rec_data.split(' ')
         assert len(rec_fields) == len(schema)
@@ -191,7 +188,6 @@ def _data2rec(schema, rec_data):
 
 
 def _data2rec_group(schema, recs_data, group_key):
-    # ppr(schema)
     if not isinstance(recs_data, (list, tuple)):
         recs_data = [recs_data]
 
