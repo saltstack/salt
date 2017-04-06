@@ -222,6 +222,7 @@ def _find_download_targets(name=None,
                            version=None,
                            pkgs=None,
                            normalize=True,
+                           skip_suggestions=False,
                            ignore_epoch=False,
                            **kwargs):
     '''
@@ -267,7 +268,37 @@ def _find_download_targets(name=None,
                                    'downloaded'.format(name)}
 
     version_spec = False
-    # Find out which packages will be targeted in the call to pkg.install
+    if not skip_suggestions:
+        try:
+            problems = _preflight_check(to_download, **kwargs)
+        except CommandExecutionError:
+            pass
+        else:
+            comments = []
+            if problems.get('no_suggest'):
+                comments.append(
+                    'The following package(s) were not found, and no '
+                    'possible matches were found in the package db: '
+                    '{0}'.format(
+                ', '.join(sorted(problems['no_suggest']))
+                    )
+                )
+            if problems.get('suggest'):
+                for pkgname, suggestions in \
+                        six.iteritems(problems['suggest']):
+                    comments.append(
+                        'Package \'{0}\' not found (possible matches: '
+                        '{1})'.format(pkgname, ', '.join(suggestions))
+                    )
+            if comments:
+                if len(comments) > 1:
+                    comments.append('')
+                return {'name': name,
+                        'changes': {},
+                        'result': False,
+                        'comment': '. '.join(comments).rstrip()}
+
+    # Find out which packages will be targeted in the call to pkg.download
     # Check current downloaded versions against specified versions
     targets = {}
     problems = []
@@ -1859,7 +1890,7 @@ def installed(
     return ret
 
 
-def downloaded(name, version=None, pkgs=None, **kwargs):
+def downloaded(name, version=None, pkgs=None, fromrepo=None, **kwargs):
     '''
     Ensure that the package is downloaded, and that it is the correct version
     (if specified).
@@ -1924,7 +1955,11 @@ def downloaded(name, version=None, pkgs=None, **kwargs):
                 'comment': 'No packages to download provided'}
 
     # Only downloading not yet downloaded packages
-    targets = _find_download_targets(name, version, pkgs, **kwargs)
+    targets = _find_download_targets(name,
+                                     version,
+                                     pkgs,
+                                     fromrepo=fromrepo,
+                                     **kwargs)
     if isinstance(targets, dict) and 'result' in targets:
         return targets
     elif not isinstance(targets, dict):
