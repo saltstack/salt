@@ -285,7 +285,6 @@ def _lookup_drill(name, rdtype, timeout=None, servers=None, secure=None):
         cmd, timeout=timeout,
         python_shell=False, output_loglevel='quiet')
 
-    # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warning('drill returned ({0}): {1}'.format(
                 cmd['retcode'], cmd['stderr']
@@ -293,6 +292,7 @@ def _lookup_drill(name, rdtype, timeout=None, servers=None, secure=None):
         return False
 
     lookup_res = iter(cmd['stdout'].splitlines())
+    validated = False
     res = []
     try:
         line = ''
@@ -363,7 +363,6 @@ def _lookup_host(name, rdtype, timeout=None, server=None):
 
     cmd = __salt__['cmd.run_all'](cmd + name, python_shell=False, output_loglevel='quiet')
 
-    # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warning('host returned ({0}): {1}'.format(
             cmd['retcode'], cmd['stdout']
@@ -432,7 +431,6 @@ def _lookup_nslookup(name, rdtype, timeout=None, server=None):
         cmd += ' {0}'.format(server)
 
     cmd = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='quiet')
-    # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warning('nslookup returned ({0}): {1}'.format(
             cmd['retcode'], cmd['stdout'].splitlines()[-1]
@@ -440,7 +438,6 @@ def _lookup_nslookup(name, rdtype, timeout=None, server=None):
         return False
 
     lookup_res = iter(cmd['stdout'].splitlines())
-
     res = []
     try:
         line = ''
@@ -494,7 +491,7 @@ def lookup(
     Lookup DNS record data
     :param name: name to lookup
     :param rdtype: DNS record type
-    :param method: gai (getaddrinfo()), pydns, dig, drill, host, nslookup or auto (default)
+    :param method: gai (getaddrinfo()), dnspython, dig, drill, host, nslookup or auto (default)
     :param servers: (list of) server(s) to try in-order
     :param timeout: query timeout or a valiant approximation of that
     :param walk: Find records in parents if they don't exist
@@ -543,7 +540,7 @@ def lookup(
     if servers:
         if not isinstance(servers, (list, tuple)):
             servers = [servers]
-        if method in ('pydns', 'dig', 'drill'):
+        if method in ('dnspython', 'dig', 'drill'):
             res_kwargs['servers'] = servers
         else:
             if timeout:
@@ -601,7 +598,7 @@ def query(
     :param timeout: query timeout or a valiant approximation of that
     :param secure: return only DNSSEC secured response
     :param walk: Find records in parents if they don't exist
-    :param walk_tld: Include the final domain in the walk
+    :param walk_tld: Include the top-level domain in the walk
     :return: [] of records
     '''
     rdtype = rdtype.upper()
@@ -777,10 +774,10 @@ def spf_rec(rdata):
 
             # TODO: Should be in something intelligent like an SPF_get
             # if mod == 'exp':
-            #     res[mod] = query(val, 'TXT', **qargs)
+            #     res[mod] = lookup(val, 'TXT', **qargs)
             #     continue
             # elif mod == 'redirect':
-            #     return records(val, 'SPF', **qargs)
+            #     return query(val, 'SPF', **qargs)
 
         mech = {}
         if mech_spec[0] in ('+', '-', '~', '?'):
