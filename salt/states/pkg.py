@@ -312,6 +312,46 @@ def _find_download_targets(name=None,
     return targets
 
 
+def _find_advisory_targets(name=None,
+                           advisory_ids=None,
+                           **kwargs):
+    '''
+    Inspect the arguments to pkg.patched and discover what advisory patches need to
+    be installed. Return a dict of advisory patches to install.
+    '''
+    cur_patched = __salt__['pkg.list_installed_patches']()
+    if advisory_ids:
+        to_download = advisory_ids
+    else:
+        to_download = [name]
+        if cur_patched.get(name, {}):
+            # Advisory patch already installed, no need to install it again
+            return {'name': name,
+                    'changes': {},
+                    'result': True,
+                    'comment': 'Advisory patch {0} is already '
+                               'installed'.format(name)}
+
+    # Find out which advisory patches will be targeted in the call to pkg.install
+    targets = []
+    for patch_name in to_download:
+        cver = cur_patched.get(patch_name, {})
+        # Advisory patch not yet installed, so add to targets
+        if not cver:
+            targets.append(patch_name)
+            continue
+
+    if not targets:
+        # All specified packages are already downloaded
+        msg = ('All specified advisory patches are already installed')
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': msg}
+
+    return targets
+
+
 def _find_remove_targets(name=None,
                          version=None,
                          pkgs=None,
@@ -1956,7 +1996,17 @@ def patched(name, advisory_ids=None, downloadonly=None, **kwargs):
                 'result': True,
                 'comment': 'No advisory ids provided'}
 
-    targets = advisory_ids
+    # Only downloading not yet downloaded packages
+    targets = _find_advisory_targets(name, advisory_ids, **kwargs)
+    if isinstance(targets, dict) and 'result' in targets:
+        return targets
+    elif not isinstance(targets, list):
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'An error was encountered while checking targets: '
+                           '{0}'.format(targets)}
+
     comment = []
     if __opts__['test']:
         summary = ', '.join(targets)
@@ -1987,7 +2037,7 @@ def patched(name, advisory_ids=None, downloadonly=None, **kwargs):
                               'package(s): {0}'.format(exc))
         return ret
 
-    if not changes:
+    if not changes and not comment:
         status= 'downloaded' if downloadonly else 'installed'
         comment.append('Related packages are already {}'.format(status))
 
@@ -1998,7 +2048,7 @@ def patched(name, advisory_ids=None, downloadonly=None, **kwargs):
     return ret
 
 
-def patches_downloaded(name, advisory_ids=None, **kwargs):
+def patch_downloaded(name, advisory_ids=None, **kwargs):
     '''
     Ensure that packages related to certain advisory ids are downloaded.
 
@@ -2010,7 +2060,7 @@ def patches_downloaded(name, advisory_ids=None, **kwargs):
     .. code-block:: yaml
 
         preparing-to-fix-issues:
-          pkg.patches_downloaded:
+          pkg.patch_downloaded:
             - advisory_ids:
               - SUSE-SLE-SERVER-12-SP2-2017-185
               - SUSE-SLE-SERVER-12-SP2-2017-150
