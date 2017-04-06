@@ -656,7 +656,7 @@ def _user_policies_attached(
                                                                 keyid=keyid,
                                                                 profile=profile)
                 newpolicies = [x.get('policy_arn') for x in _list]
-                ret['changes']['new'] = {'manged_policies': newpolicies}
+                ret['changes']['new'] = {'managed_policies': newpolicies}
                 ret['result'] = False
                 msg = 'Failed to add policy {0} to user {1}'
                 ret['comment'] = msg.format(policy_name, name)
@@ -1059,7 +1059,7 @@ def _group_policies_attached(
                                                                 key=key, keyid=keyid,
                                                                 profile=profile)
                 newpolicies = [x.get('policy_arn') for x in _list]
-                ret['changes']['new'] = {'manged_policies': newpolicies}
+                ret['changes']['new'] = {'managed_policies': newpolicies}
                 ret['result'] = False
                 msg = 'Failed to add policy {0} to group {1}'
                 ret['comment'] = msg.format(policy_name, name)
