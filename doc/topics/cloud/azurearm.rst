@@ -200,6 +200,10 @@ win_password
 Required for Windows. The password to use to log into the newly-created Windows
 VM to install Salt.
 
+win_installer
+-------------
+Required for Windows. The path to the Salt installer to be uploaded.
+
 resource_group
 --------------
 Required. The resource group that all VM resources (VM, network interfaces,
@@ -210,6 +214,20 @@ network_resource_group
 Optional. If specified, then the VM will be connected to the network resources
 in this group, rather than the group that it was created in. The VM interfaces
 and IPs will remain in the configured ``resource_group`` with the VM.
+
+network
+-------
+Required. The virtual network that the VM will be spun up in.
+
+subnet
+------
+Optional. The subnet inside the virtual network that the VM will be spun up in.
+Default is ``default``.
+
+iface_name
+----------
+Optional. The name to apply to the VM's network interface. If not supplied, the
+value will be set to ``<VM name>-iface0``.
 
 cleanup_disks
 -------------
@@ -236,14 +254,37 @@ to be recreated with the same name and network settings. If you would like
 interfaces and IPs to be deleted when their associated VM is deleted, set this
 to ``True``. 
 
-custom_data
------------
-Any custom cloud data that needs to be specified. How this data is used depends
-on the operating system and image that is used. For instance, Linux images that
-use ``cloud-init`` will import this data for use with that program. Some
-Windows images will create a file with a copy of this data, and others will
-ignore it. If a Windows image creates a file, then the location will depend
-upon the version of Windows.
+userdata
+--------
+Optional. Any custom cloud data that needs to be specified. How this data is
+used depends on the operating system and image that is used. For instance,
+Linux images that use ``cloud-init`` will import this data for use with that
+program. Some Windows images will create a file with a copy of this data, and
+others will ignore it. If a Windows image creates a file, then the location
+will depend upon the version of Windows. This will be ignored if the
+``userdata_file`` is specified.
+
+userdata_file
+-------------
+Optional. The path to a file to be read and submitted to Azure as user data.
+How this is used depends on the operating system that is being deployed. If
+used, any ``userdata`` setting will be ignored.
+
+wait_for_ip_timeout
+-------------------
+Optional. Default is ``600``. When waiting for a VM to be created, Salt Cloud
+will attempt to connect to the VM's IP address until it starts responding. This
+setting specifies the maximum time to wait for a response.
+
+wait_for_ip_interval
+--------------------
+Optional. Default is ``10``. How long to wait between attempts to connect to
+the VM's IP.
+
+wait_for_ip_interval_multiplier
+-------------------------------
+Optional. Default is ``1``. Increase the interval by this multiplier after
+each request; helps with throttling.
 
 expire_publisher_cache
 ----------------------
@@ -326,6 +367,18 @@ By default, the subnet data will be cached, and only updated every ``3600``
 seconds (1 hour). If you need the subnet cache to be updated at a different
 frequency, change this setting. Setting it to ``0`` will turn off the subnet
 cache.
+
+Other Options
+=============
+Other options relevant to Azure ARM.
+
+storage_account
+---------------
+Required for actions involving an Azure storage account.
+
+storage_key
+-----------
+Required for actions involving an Azure storage account.
 
 Show Instance
 =============
