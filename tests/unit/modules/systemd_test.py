@@ -168,8 +168,8 @@ class SystemdTestCase(TestCase):
         '''
         listdir_mock = MagicMock(side_effect=[
             ['foo.service', 'multi-user.target.wants', 'mytimer.timer'],
+            [],
             ['foo.service', 'multi-user.target.wants', 'bar.service'],
-            ['mysql', 'nginx', 'README'],
             ['mysql', 'nginx', 'README']
         ])
         access_mock = MagicMock(
