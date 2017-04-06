@@ -18,7 +18,7 @@ import salt.ext.six as six
 import salt.pillar
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError
 
 __proxyenabled__ = ['*']
 
@@ -51,11 +51,16 @@ def get(key,
 
         pkg:apache
 
-    merge
-        Specify whether or not the retrieved values should be recursively
-        merged into the passed default.
+    merge : False
+        If ``True``, the retrieved values will be merged into the passed
+        default. When the default and the retrieved value are both
+        dictionaries, the dictionaries will be recursively merged.
 
         .. versionadded:: 2014.7.0
+        .. versionchanged:: 2016.3.7,2016.11.4,Nitrogen
+            If the default and the retrieved value are not of the same type,
+            then merging will be skipped and the retrieved value will be
+            returned. Earlier releases raised an error in these cases.
 
     delimiter
         Specify an alternate delimiter to use when traversing a nested dict.
@@ -94,29 +99,50 @@ def get(key,
     pillar_dict = __pillar__ if saltenv is None else items(saltenv=saltenv)
 
     if merge:
-        if default is None:
-            log.debug('pillar.get: default is None, skipping merge')
-        else:
-            if not isinstance(default, dict):
-                raise SaltInvocationError(
-                    'default must be a dictionary or None when merge=True'
-                )
+        if isinstance(default, dict):
             ret = salt.utils.traverse_dict_and_list(
                 pillar_dict,
                 key,
                 {},
                 delimiter)
-            if isinstance(ret, collections.Mapping) and \
-                    isinstance(default, collections.Mapping):
+            if isinstance(ret, collections.Mapping):
                 default = copy.deepcopy(default)
                 return salt.utils.dictupdate.update(default, ret)
+            else:
+                log.error(
+                    'pillar.get: Default (%s) is a dict, but the returned '
+                    'pillar value (%s) is of type \'%s\'. Merge will be '
+                    'skipped.', default, ret, type(ret).__name__
+                )
+        elif isinstance(default, list):
+            ret = salt.utils.traverse_dict_and_list(
+                pillar_dict,
+                key,
+                [],
+                delimiter)
+            if isinstance(ret, list):
+                default = copy.deepcopy(default)
+                default.extend([x for x in ret if x not in default])
+                return default
+            else:
+                log.error(
+                    'pillar.get: Default (%s) is a list, but the returned '
+                    'pillar value (%s) is of type \'%s\'. Merge will be '
+                    'skipped.', default, ret, type(ret).__name__
+                )
+        else:
+            log.error(
+                'pillar.get: Default (%s) is of type \'%s\', must be a dict '
+                'or list to merge. Merge will be skipped.',
+                default, type(default).__name__
+            )
 
     ret = salt.utils.traverse_dict_and_list(pillar_dict,
                                             key,
                                             default,
                                             delimiter)
     if ret is KeyError:
-        raise KeyError("Pillar key not found: {0}".format(key))
+        raise KeyError('Pillar key not found: {0}'.format(key))
 
     return ret
 
