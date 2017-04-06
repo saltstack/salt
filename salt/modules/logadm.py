@@ -7,9 +7,14 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import shlex
+try:
+    from shlex import quote as _quote_args  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _quote_args
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 default_conf = '/etc/logadm.conf'
@@ -35,7 +40,7 @@ option_flags = {
     '-s': 'size',
     '-S': 'max_size',
     '-t': 'template',
-    '-T': 'pattern',
+    '-T': 'old_pattern',
     '-w': 'entryname',
     '-z': 'compress_count',
 }
@@ -49,6 +54,14 @@ def __virtual__():
         return True
     return (False, 'The logadm execution module cannot be loaded: only available on Solaris.')
 
+
+def _arg2opt(arg):
+    '''
+    Turn a pass argument into the correct option
+    '''
+    res = [o for o, a in option_toggles.items() if a == arg]
+    res += [o for o, a in option_flags.items() if a == arg]
+    return res[0] if len(res) else None
 
 def _parse_conf(conf_file=default_conf):
     '''
@@ -113,6 +126,12 @@ def _parse_options(entry, options, include_unset=True):
     ## turn additional_options into string
     if 'additional_options' in log_cfg:
         log_cfg['additional_options'] = " ".join(log_cfg['additional_options'])
+
+    ## ensure we have a log_file
+    # NOTE: logadm assumes logname is a file if no log_file is given
+    if not 'log_file' in log_cfg and 'entryname' in log_cfg:
+        log_cfg['log_file'] = log_cfg['entryname']
+        del log_cfg['entryname']
 
     ## include unset
     if include_unset:
@@ -185,7 +204,7 @@ def list_conf(conf_file=default_conf, log_file=None, include_unset=False):
     ## parse all options
     for entry in cfg:
         log_cfg = _parse_options(entry, cfg[entry], include_unset)
-        cfg_parsed[log_cfg['log_file'] if log_cfg['log_file'] else log_cfg['entryname']] = log_cfg
+        cfg_parsed[log_cfg['log_file'] if 'log_file' in log_cfg else log_cfg['entryname']] = log_cfg
 
     ## filter
     if log_file and log_file in cfg_parsed:
@@ -196,35 +215,89 @@ def list_conf(conf_file=default_conf, log_file=None, include_unset=False):
         return cfg_parsed
 
 
-def rotate(name,
-           pattern=False,
-           count=False,
-           age=False,
-           size=False,
-           copy=True,
-           conf_file=default_conf):
+@decorators.memoize
+def show_args():
     '''
-    Set up pattern for logging.
+    Show which arguments map to which flags and options.
 
-    .. versionchanged:: Nitrogen
+    .. versionadded:: Nitrogen
 
     CLI Example:
 
     .. code-block:: bash
 
-      salt '*' logadm.rotate myapplog pattern='/var/log/myapp/*.log' count=7
+        salt '*' logadm.show_args
     '''
-    command = "logadm -f {0} -w {1}".format(conf_file, name)
-    if count:
-        command += " -C {0}".format(count)
-    if age:
-        command += " -A {0}".format(age)
-    if copy:
-        command += " -c"
-    if size:
-        command += " -s {0}".format(size)
-    if pattern:
-        command += " {0}".format(pattern)
+    mapping = {'flags': {}, 'options': {}}
+    for flag, arg in option_toggles.items():
+        mapping['flags'][flag] = arg
+    for option, arg in option_flags.items():
+        mapping['options'][option] = arg
+
+    return mapping
+
+
+def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
+    '''
+    Set up pattern for logging.
+
+    .. versionchanged:: Nitrogen
+
+    name : string
+        alias for entryname
+    pattern : string
+        alias for log_file
+    conf_file : string
+        optional path to alternative configuration file
+    **kwargs : boolean|string|int
+        optional additional flags and parameters
+
+    .. note::
+        ``name`` and ``pattern`` were kept for backwards compatibility reasons.
+
+        ``name`` is an alias for the ``entryname`` argument, ``pattern`` is an alias
+        for ``log_file``. These aliasses wil only be used if the ``entryname`` and
+        ``log_file`` arguments are not passed.
+
+        For a full list of arguments see ```logadm.show_args```.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' logadm.rotate myapplog pattern='/var/log/myapp/*.log' count=7
+        salt '*' logadm.rotate myapplog log_file='/var/log/myapp/*.log' count=4 owner=myappd mode='0700'
+
+    '''
+    ## cleanup kwargs
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+
+    ## inject name into kwargs
+    if 'entryname' not in kwargs and name and not name.startswith('/'):
+        kwargs['entryname'] = name
+
+    ## inject pattern into kwargs
+    if 'log_file' not in kwargs and pattern and pattern.startswith('/'):
+        kwargs['log_file'] = pattern
+
+    ## build command
+    command = "logadm -f {}".format(conf_file)
+    for arg, val in kwargs.items():
+        if arg in option_toggles.values() and val:
+            command = "{} {}".format(
+                command,
+                _arg2opt(arg),
+            )
+        elif arg in option_flags.values():
+            command = "{} {} {}".format(
+                command,
+                _arg2opt(arg),
+                _quote_args(str(val))
+            )
+        elif arg != 'log_file':
+            log.warning("Unknown argument {}, don't know how to map this!".format(arg))
+    if 'log_file' in kwargs:
+        command = "{} {}".format(command, _quote_args(kwargs['log_file']))
 
     result = __salt__['cmd.run_all'](command, python_shell=False)
     if result['retcode'] != 0:
