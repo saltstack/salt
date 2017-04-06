@@ -137,6 +137,26 @@ def _get_bkroot():
     return os.path.join(__salt__['config.get']('cachedir'), 'file_backup')
 
 
+def _splitlines_preserving_trailing_newline(str):
+    '''
+    Returns a list of the lines in the string, breaking at line boundaries and
+    preserving a trailing newline (if present).
+
+    Essentially, this works like ``str.striplines(False)`` but preserves an
+    empty line at the end. This is equivalent to the following code:
+
+    .. code-block:: python
+
+        lines = str.splitlines()
+        if str.endswith('\n') or str.endswith('\r'):
+            lines.append('')
+    '''
+    lines = str.splitlines()
+    if str.endswith('\n') or str.endswith('\r'):
+        lines.append('')
+    return lines
+
+
 def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
@@ -1837,8 +1857,10 @@ def line(path, content, match=None, mode=None, location=None,
     if changed:
         if show_changes:
             with salt.utils.fopen(path, 'r') as fp_:
-                path_content = fp_.read().splitlines()
-            changes_diff = ''.join(difflib.unified_diff(path_content, body.splitlines()))
+                path_content = _splitlines_preserving_trailing_newline(
+                    fp_.read())
+            changes_diff = ''.join(difflib.unified_diff(
+                path_content, _splitlines_preserving_trailing_newline(body)))
         if __opts__['test'] is False:
             fh_ = None
             try:
@@ -4425,7 +4447,8 @@ def check_file_meta(
         tmp = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                  text=True)
         if salt.utils.is_windows():
-            contents = os.linesep.join(contents.splitlines())
+            contents = os.linesep.join(
+                _splitlines_preserving_trailing_newline(contents))
         with salt.utils.fopen(tmp, 'w') as tmp_:
             tmp_.write(str(contents))
         # Compare the static contents with the named file
@@ -4700,7 +4723,8 @@ def manage_file(name,
             tmp = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                      text=True)
             if salt.utils.is_windows():
-                contents = os.linesep.join(contents.splitlines())
+                contents = os.linesep.join(
+                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
 
@@ -4885,7 +4909,8 @@ def manage_file(name,
             tmp = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                      text=True)
             if salt.utils.is_windows():
-                contents = os.linesep.join(contents.splitlines())
+                contents = os.linesep.join(
+                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
             # Copy into place
