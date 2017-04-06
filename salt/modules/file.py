@@ -3818,7 +3818,7 @@ def get_managed(
                 # but `cached_sum == source_sum['hsum']` is elliptical as prev if
                 sfn = cached_dest
                 source_sum = {'hsum': cached_sum, 'hash_type': htype}
-            elif cached_sum != source_sum['hsum']:
+            elif cached_sum != source_sum.get('hsum', __opts__['hash_type']):
                 cache_refetch = True
 
         # If we didn't have the template or remote file, let's get it
