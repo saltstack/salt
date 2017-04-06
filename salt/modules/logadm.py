@@ -63,6 +63,7 @@ def _arg2opt(arg):
     res += [o for o, a in option_flags.items() if a == arg]
     return res[0] if len(res) else None
 
+
 def _parse_conf(conf_file=default_conf):
     '''
     Parse a logadm configuration file.
@@ -129,7 +130,7 @@ def _parse_options(entry, options, include_unset=True):
 
     ## ensure we have a log_file
     # NOTE: logadm assumes logname is a file if no log_file is given
-    if not 'log_file' in log_cfg and 'entryname' in log_cfg:
+    if 'log_file' not in log_cfg and 'entryname' in log_cfg:
         log_cfg['log_file'] = log_cfg['entryname']
         del log_cfg['entryname']
 
@@ -168,7 +169,7 @@ def show_conf(conf_file=default_conf, name=None):
     '''
     cfg = _parse_conf(conf_file)
 
-    ## filter
+    # filter
     if name and name in cfg:
         return {name: cfg[name]}
     elif name:
