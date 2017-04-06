@@ -16,7 +16,8 @@ from tests.support.unit import skipIf
 from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
-    requires_salt_modules
+    requires_salt_modules,
+    flaky
 )
 
 # Import salt libs
@@ -143,6 +144,7 @@ def latest_version(run_function, *names):
     return ret
 
 
+@flaky
 @destructiveTest
 @requires_salt_modules('pkg.version', 'pkg.latest_version')
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
