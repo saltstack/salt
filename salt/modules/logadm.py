@@ -14,7 +14,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 default_conf = '/etc/logadm.conf'
 option_toggles = {
-    '-c': 'copy_and_truncate',
+    '-c': 'copy',
     '-l': 'localtime',
     '-N': 'skip_missing',
 }
@@ -205,6 +205,8 @@ def rotate(name,
            conf_file=default_conf):
     '''
     Set up pattern for logging.
+
+    .. versionchanged:: Nitrogen
 
     CLI Example:
 
