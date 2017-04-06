@@ -44,6 +44,17 @@ def _path_is_abs(path):
         return False
 
 
+def _add_explanation(ret, source_hash_trigger, contents_missing):
+    '''
+    Common code to add additional explanation to the state's comment field,
+    both when test=True and not
+    '''
+    if source_hash_trigger:
+        ret['comment'] += ', due to source_hash update'
+    elif contents_missing:
+        ret['comment'] += ', due to absence of one or more files/dirs'
+
+
 def _update_checksum(cached_source, source_sum):
     cached_source_sum = '.'.join((cached_source, 'hash'))
     hash_type = source_sum.get('hash_type')
@@ -823,17 +834,20 @@ def extracted(name,
         )
         return ret
 
-    if trim_output and not isinstance(trim_output, (bool, six.integer_types)):
-        try:
-            # Try to handle cases where trim_output was passed as a
-            # string-ified integer.
-            trim_output = int(trim_output)
-        except TypeError:
-            ret['comment'] = (
-                'Invalid value for trim_output, must be True/False or an '
-                'integer'
-            )
-            return ret
+    if trim_output:
+        if trim_output is True:
+            trim_output = 100
+        elif not isinstance(trim_output, (bool, six.integer_types)):
+            try:
+                # Try to handle cases where trim_output was passed as a
+                # string-ified integer.
+                trim_output = int(trim_output)
+            except TypeError:
+                ret['comment'] = (
+                    'Invalid value for trim_output, must be True/False or an '
+                    'integer'
+                )
+                return ret
 
     if source_is_local:
         cached_source = source_match
@@ -852,28 +866,23 @@ def extracted(name,
     if source_hash:
         try:
             source_sum = __salt__['file.get_source_sum']('',
-                                                         source,
+                                                         source_match,
                                                          source_hash,
                                                          source_hash_name,
                                                          __env__)
         except CommandExecutionError as exc:
             ret['comment'] = exc.strerror
             return ret
-
-        if source_hash_update:
-            if _compare_checksum(cached_source, source_sum):
-                ret['result'] = True
-                ret['comment'] = \
-                    'Hash {0} has not changed'.format(source_sum['hsum'])
-                return ret
     else:
         source_sum = {}
 
     if not source_is_local and not os.path.isfile(cached_source):
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = \
-                'Archive {0} would be downloaded to cache'.format(source_match)
+            ret['comment'] = (
+                'Archive {0} would be downloaded to cache and checked to '
+                'discover if extraction is necessary'.format(source_match)
+            )
             return ret
 
         log.debug('%s is not in cache, downloading it', source_match)
@@ -883,8 +892,7 @@ def extracted(name,
                                                  source_hash=source_hash,
                                                  source_hash_name=source_hash_name,
                                                  makedirs=True,
-                                                 skip_verify=skip_verify,
-                                                 env=__env__)
+                                                 skip_verify=skip_verify)
 
         log.debug('file.managed: {0}'.format(file_result))
 
@@ -907,9 +915,6 @@ def extracted(name,
                 return file_result
     else:
         log.debug('Archive %s is already in cache', source_match)
-
-    if source_hash:
-        _update_checksum(cached_source, source_sum)
 
     if archive_format == 'zip' and not password:
         log.debug('Checking %s to see if it is password-protected',
@@ -996,13 +1001,14 @@ def extracted(name,
                           ))
         return ret
 
+    extraction_needed = overwrite
+    contents_missing = False
+
     # Check to see if we need to extract the archive. Using os.lstat() in a
     # try/except is considerably faster than using os.path.exists(), and we
     # already need to catch an OSError to cover edge cases where the minion is
     # running as a non-privileged user and is trying to check for the existence
     # of a path to which it does not have permission.
-    extraction_needed = overwrite
-
     try:
         if_missing_path_exists = os.path.exists(if_missing)
     except TypeError:
@@ -1038,6 +1044,7 @@ def extracted(name,
                     except OSError as exc:
                         if exc.errno == errno.ENOENT:
                             extraction_needed = True
+                            contents_missing = True
                         elif exc.errno != errno.ENOTDIR:
                             # In cases where a directory path was occupied by a
                             # file instead, all os.lstat() calls to files within
@@ -1100,6 +1107,17 @@ def extracted(name,
                             ret['comment'] = msg
                             return ret
 
+    if not extraction_needed \
+            and source_hash_update \
+            and not _compare_checksum(cached_source, source_sum):
+        extraction_needed = True
+        source_hash_trigger = True
+    else:
+        source_hash_trigger = False
+
+    if source_hash:
+        _update_checksum(cached_source, source_sum)
+
     created_destdir = False
 
     if extraction_needed:
@@ -1112,6 +1130,7 @@ def extracted(name,
                 )
             if clean and contents is not None:
                 ret['comment'] += ', after cleaning destination path(s)'
+            _add_explanation(ret, source_hash_trigger, contents_missing)
             return ret
 
         if clean and contents is not None:
@@ -1179,6 +1198,8 @@ def extracted(name,
                         with closing(tarfile.open(cached_source, 'r')) as tar:
                             tar.extractall(name)
                             files = tar.getnames()
+                            if trim_output:
+                                files = files[:trim_output]
                     except tarfile.ReadError:
                         if salt.utils.which('xz'):
                             if __salt__['cmd.retcode'](
@@ -1388,6 +1409,7 @@ def extracted(name,
                 ret['changes']['directories_created'] = [name]
             ret['changes']['extracted_files'] = files
             ret['comment'] = '{0} extracted to {1}'.format(source_match, name)
+            _add_explanation(ret, source_hash_trigger, contents_missing)
             if not source_is_local and not keep:
                 log.debug('Cleaning cached source file %s', cached_source)
                 try:
