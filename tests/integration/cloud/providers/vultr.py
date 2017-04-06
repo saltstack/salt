@@ -158,10 +158,12 @@ class VultrTest(integration.ShellCase):
         '''
         # check if instance with salt installed returned
         try:
+            create_vm = self.run_cloud('-p vultr-test {0}'.format(INSTANCE_NAME), timeout=500)
             self.assertIn(
                 INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p vultr-test {0}'.format(INSTANCE_NAME), timeout=500)]
+                [i.strip() for i in create_vm]
             )
+            self.assertNotIn('Failed to start', str(create_vm))
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
             raise
