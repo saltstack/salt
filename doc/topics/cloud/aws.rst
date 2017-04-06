@@ -57,7 +57,7 @@ parameters are discussed in more detail below.
       id: 'use-instance-role-credentials'
       key: 'use-instance-role-credentials'
 
-      # Make sure this key is owned by root with permissions 0400.
+      # Make sure this key is owned by corresponding user (default 'salt') with permissions 0400.
       #
       private_key: /etc/salt/my_test_key.pem
       keyname: my_test_key
