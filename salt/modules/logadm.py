@@ -67,7 +67,7 @@ def _parse_conf(conf_file=default_conf):
     return ret
 
 
-def _parse_options(entry, options):
+def _parse_options(entry, options, include_unset=True):
     '''
     Parse a logadm options string
     '''
@@ -79,6 +79,8 @@ def _parse_options(entry, options):
     # handle toggle options
     for flag, name in option_toggles.items():
         log_cfg[name] = flag in options
+        if not include_unset and not log_cfg[name]:
+            del log_cfg[name]
         if flag in options:
             options.remove(flag)
 
@@ -90,7 +92,8 @@ def _parse_options(entry, options):
                 value = options[options.index(flag)+1]
             options.remove(flag)
 
-        log_cfg[name] = value
+        if value or include_unset:
+            log_cfg[name] = value
         if value:
             options.remove(value)
 
@@ -139,7 +142,7 @@ def show_conf(conf_file=default_conf, name=None):
         return cfg
 
 
-def list_conf(conf_file=default_conf, log_file=None):
+def list_conf(conf_file=default_conf, log_file=None, include_unset=False):
     '''
     Show parsed configuration
 
@@ -149,6 +152,8 @@ def list_conf(conf_file=default_conf, log_file=None):
         path to logadm.conf, defaults to /etc/logadm.conf
     log_file : string
         optional show only one log file
+    include_unset : boolean
+        include unset flags in output
 
     CLI Example:
 
@@ -156,13 +161,14 @@ def list_conf(conf_file=default_conf, log_file=None):
 
         salt '*' logadm.list_conf
         salt '*' logadm.list_conf log=/var/log/syslog
+        salt '*' logadm.list_conf include_unset=False
     '''
     cfg = _parse_conf(conf_file)
     cfg_parsed = {}
 
     ## parse all options
     for entry in cfg:
-        log_cfg = _parse_options(entry, cfg[entry])
+        log_cfg = _parse_options(entry, cfg[entry], include_unset)
         cfg_parsed[log_cfg['log_file'] if log_cfg['log_file'] else log_cfg['entryname']] = log_cfg
 
     ## filter
