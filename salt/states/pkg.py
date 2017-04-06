@@ -316,15 +316,15 @@ def _find_advisory_targets(name=None,
                            advisory_ids=None,
                            **kwargs):
     '''
-    Inspect the arguments to pkg.patched and discover what advisory patches need to
-    be installed. Return a dict of advisory patches to install.
+    Inspect the arguments to pkg.patch_installed and discover what advisory
+    patches need to be installed. Return a dict of advisory patches to install.
     '''
-    cur_patched = __salt__['pkg.list_installed_patches']()
+    cur_patches = __salt__['pkg.list_installed_patches']()
     if advisory_ids:
         to_download = advisory_ids
     else:
         to_download = [name]
-        if cur_patched.get(name, {}):
+        if cur_patches.get(name, {}):
             # Advisory patch already installed, no need to install it again
             return {'name': name,
                     'changes': {},
@@ -335,7 +335,7 @@ def _find_advisory_targets(name=None,
     # Find out which advisory patches will be targeted in the call to pkg.install
     targets = []
     for patch_name in to_download:
-        cver = cur_patched.get(patch_name, {})
+        cver = cur_patches.get(patch_name, {})
         # Advisory patch not yet installed, so add to targets
         if not cver:
             targets.append(patch_name)
@@ -1972,7 +1972,7 @@ def downloaded(name, version=None, pkgs=None, **kwargs):
     return ret
 
 
-def patched(name, advisory_ids=None, downloadonly=None, **kwargs):
+def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
     '''
     Ensure that packages related to certain advisory ids are installed.
 
@@ -1984,7 +1984,7 @@ def patched(name, advisory_ids=None, downloadonly=None, **kwargs):
     .. code-block:: yaml
 
         issue-foo-fixed:
-          pkg.patched:
+          pkg.patch_installed:
             - advisory_ids:
               - SUSE-SLE-SERVER-12-SP2-2017-185
               - SUSE-SLE-SERVER-12-SP2-2017-150
@@ -2070,7 +2070,7 @@ def patch_downloaded(name, advisory_ids=None, **kwargs):
     # as we're explicitely passing 'downloadonly=True' to execution module.
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
-    return patched(name=name, advisory_ids=advisory_ids, downloadonly=True, **kwargs)
+    return patch_installed(name=name, advisory_ids=advisory_ids, downloadonly=True, **kwargs)
 
 
 def latest(
