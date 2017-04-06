@@ -548,7 +548,11 @@ def _get_docker_py_versioninfo():
 def _get_client(**kwargs):
     client_kwargs = {}
     if 'client_timeout' in kwargs:
-        client_kwargs['timeout'] = kwargs.pop('client_timeout')
+        client_timeout = kwargs.pop('client_timeout')
+        if client_timeout is not None:
+            # Passing a kwarg of timeout=None causes problems in docker-py, so
+            # only set this kwarg if the value is not None.
+            client_kwargs['timeout'] = client_timeout
     for key, val in (('base_url', 'docker.url'),
                      ('version', 'docker.version')):
         param = __salt__['config.get'](val, NOTSET)
@@ -606,6 +610,8 @@ def _docker_client(wrapped):
         '''
         if 'docker.client' not in __context__:
             __context__['docker.client'] = _get_client(**kwargs)
+        # Don't pass through client_timeout to the wrapped function
+        kwargs.pop('client_timeout', None)
         return wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
     return wrapper
 
