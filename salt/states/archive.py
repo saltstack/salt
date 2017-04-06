@@ -864,30 +864,25 @@ def extracted(name,
             salt.utils.rm_rf(cached_source)
 
     if source_is_local:
+        # No need to download archive, it's local to the minion
         update_source = False
     else:
         if not os.path.isfile(cached_source):
+            # Archive not cached, we need to download it
             update_source = True
         else:
-            try:
-                source_sum = __salt__['file.get_source_sum']('',
-                                                             source_match,
-                                                             source_hash,
-                                                             source_hash_name,
-                                                             __env__)
-            except CommandExecutionError as exc:
-                ret['comment'] = exc.strerror
-                return ret
+            # Archive is cached, keep=True likely used in prior run
+            if not source_hash:
+                # Since no source_hash was passed, we won't update the cached
+                # copy of the archive.
+                update_source = False
             else:
-                if 'hsum' not in source_hash:
-                    log.warning('checksum not in file.get_source_sum results')
-                    update_source = True
-                else:
-                    # We already extracted the hash, set source_hash to the
-                    # extracted result to prevent repeating this work below.
-                    source_hash = source_sum['hsum']
-                    update_source = \
-                        not _compare_checksum(cached_source, source_sum)
+                # Get the hash of the cached archive
+                cached_source_sum = __salt__['file.get_hash'](
+                    cached_source,
+                    form=__opts__['hash_type'])
+                update_source = \
+                    not _compare_checksum(cached_source, cached_source_sum)
 
     if update_source:
         if __opts__['test']:
@@ -897,6 +892,7 @@ def extracted(name,
                 'discover if extraction is necessary'.format(source_match)
             )
             return ret
+
         file_result = __states__['file.managed'](cached_source,
                                                  source=source_match,
                                                  source_hash=source_hash,
@@ -927,11 +923,11 @@ def extracted(name,
 
     if source_hash:
         try:
-            source_sum = __salt__['file.get_source_sum']('',
-                                                         source_match,
-                                                         source_hash,
-                                                         source_hash_name,
-                                                         __env__)
+            source_sum = __salt__['file.get_source_sum'](
+                 source=source_match,
+                 source_hash=source_hash,
+                 source_hash_name=source_hash_name,
+                 saltenv=__env__)
         except CommandExecutionError as exc:
             ret['comment'] = exc.strerror
             return ret
