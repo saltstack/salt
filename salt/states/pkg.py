@@ -1890,7 +1890,12 @@ def installed(
     return ret
 
 
-def downloaded(name, version=None, pkgs=None, fromrepo=None, **kwargs):
+def downloaded(name,
+               version=None,
+               pkgs=None,
+               fromrepo=None,
+               ignore_epoch=None,
+               **kwargs):
     '''
     Ensure that the package is downloaded, and that it is the correct version
     (if specified).
@@ -2000,9 +2005,24 @@ def downloaded(name, version=None, pkgs=None, fromrepo=None, **kwargs):
                               'package(s): {0}'.format(exc))
         return ret
 
+    new_pkgs = __salt__['pkg.list_downloaded']()
+    ok, failed = _verify_install(targets, new_pkgs, ignore_epoch=ignore_epoch)
+
+    result = True
+    if failed:
+        summary = ', '.join([_get_desired_pkg(x, targets)
+                             for x in failed])
+        comment.insert(0, 'The following packages failed to '
+                          'download: {0}'.format(summary))
+        result = False
+
+    if not changes and not comment:
+        comment.append('Packages are already downloaded: '
+                       '{0}'.format(', '.join([_get_desired_pkg(x, targets)])))
+
     ret = {'name': name,
            'changes': changes,
-           'result': True,
+           'result': result,
            'comment': '\n'.join(comment)}
     return ret
 
