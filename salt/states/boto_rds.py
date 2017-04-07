@@ -378,7 +378,7 @@ def replica_present(name, source, db_instance_class=None,
             - source: mydb
     '''
     ret = {'name': name,
-           'result': None,
+           'result': True,
            'comment': '',
            'changes': {}
            }
@@ -398,7 +398,6 @@ def replica_present(name, source, db_instance_class=None,
                                                            tags, region, key,
                                                            keyid, profile)
         if created:
-            ret['result'] = True
             ret['comment'] = 'RDS replica {0} created.'.format(name)
             ret['changes']['old'] = {'instance': None}
             ret['changes']['new'] = {
@@ -409,15 +408,19 @@ def replica_present(name, source, db_instance_class=None,
             ret['result'] = False
             ret['comment'] = 'Failed to create RDS replica {0}.'.format(name)
     else:
-        current = __salt__['boto_rds.describe_db_instances'](
-              name=name, region=region, key=key, keyid=keyid, profile=profile)
-        if db_parameter_group_name is not None and _describe['db_parameter_groups'][0]['DBParameterGroupName'] != db_parameter_group_name:
-            modified = __salt__['boto_rds.modify_db_instance'](name, db_parameter_group_name=db_parameter_group_name, region=region,
-                                                               key=key, keyid=keyid, profile=profile)
+        jmespath='DBInstances[0].DBParameterGroups[0].DBParameterGroupName'
+        pmg_name = __salt__['boto_rds.describe_db_instances'](name=name,
+              jmespath=jmespath, region=region, key=key, keyid=keyid,
+              profile=profile)
+        if pmg_name != db_parameter_group_name:
+            modified = __salt__['boto_rds.modify_db_instance'](
+                  name=name, db_parameter_group_name=db_parameter_group_name,
+                  region=region, key=key, keyid=keyid, profile=profile)
             if not modified:
                 ret['result'] = False
-                ret['comment'] = 'Failed to update parameter group of {0} RDS instance.'.format(name)
-            ret['changes']['old'] = _describe['db_parameter_groups'][0]['DBParameterGroupName']
+                ret['comment'] = ('Failed to update parameter group of {0} RDS '
+                                  'instance.'.format(name))
+            ret['changes']['old'] = pmg_name
             ret['changes']['new'] = db_parameter_group_name
         ret['result'] = True
         ret['comment'] = 'RDS replica {0} exists.'.format(name)
