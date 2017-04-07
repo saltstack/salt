@@ -37,6 +37,18 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
     def __get_opts__(self):
         return None
 
+    @classmethod
+    def setUpClass(cls):
+        master_conf = os.path.join(TMP_CONF_DIR, 'master')
+        cls.config = salt.config.client_config(master_conf)
+        cls.base_opts = {}
+        cls.base_opts.update(cls.config)
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.config
+        del cls.base_opts
+
     def setUp(self):
         # Make a local reference to the CherryPy app so we can mock attributes.
         self.app = app
