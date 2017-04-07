@@ -36,17 +36,23 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
     '''
     __opts__ = None
 
-    def __init__(self, *args, **kwargs):
-        super(BaseRestCherryPyTest, self).__init__(*args, **kwargs)
-
+    @classmethod
+    def setUpClass(cls):
         master_conf = os.path.join(TMP_CONF_DIR, 'master')
-        self.config = salt.config.client_config(master_conf)
+        cls.config = salt.config.client_config(master_conf)
+        cls.base_opts = {}
+        cls.base_opts.update(cls.config)
 
-    def setUp(self, *args, **kwargs):
+    @classmethod
+    def tearDownClass(cls):
+        del cls.config
+        del cls.base_opts
+
+    def setUp(self):
         # Make a local reference to the CherryPy app so we can mock attributes.
         self.app = app
 
-        __opts__ = self.config.copy()
+        __opts__ = self.base_opts.copy()
         __opts__.update(self.__opts__ or {
             'external_auth': {
                 'auto': {
