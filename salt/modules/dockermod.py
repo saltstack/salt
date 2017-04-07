@@ -87,15 +87,12 @@ To login to the configured registries, use the :py:func:`docker.login
 <salt.modules.dockermod.login>` function. This only needs to be done once for a
 given registry, and it will store/update the credentials in
 ``~/.docker/config.json``.
-<<<<<<< HEAD:salt/modules/dockermod.py
-=======
 
 .. note::
     For Salt releases before 2016.3.7 and 2016.11.4, :py:func:`docker.login
     <salt.modules.dockermod.login>` is not available. Instead, Salt will try to
     authenticate using each of your configured registries for each push/pull,
     behavior which is not correct and has been resolved in newer releases.
->>>>>>> 2016.11:salt/modules/dockerng.py
 
 
 Configuration Options
@@ -338,7 +335,6 @@ def _get_client(**kwargs):
         # Let docker-py auto detect docker version incase
         # it's not defined by user.
         client_kwargs['version'] = 'auto'
-<<<<<<< HEAD:salt/modules/dockermod.py
 
     docker_machine = __salt__['config.get']('docker.machine', NOTSET)
 
@@ -380,41 +376,8 @@ def _get_state(inspect_results):
         return 'running'
     else:
         return 'stopped'
-=======
->>>>>>> 2016.11:salt/modules/dockerng.py
-
-    docker_machine = __salt__['config.get']('docker.machine', NOTSET)
-
-<<<<<<< HEAD:salt/modules/dockermod.py
-=======
-    if docker_machine is not NOTSET:
-        docker_machine_json = __salt__['cmd.run'](
-            ['docker-machine', 'inspect', docker_machine],
-            python_shell=False)
-        try:
-            docker_machine_json = json.loads(docker_machine_json)
-            docker_machine_tls = \
-                docker_machine_json['HostOptions']['AuthOptions']
-            docker_machine_ip = docker_machine_json['Driver']['IPAddress']
-            client_kwargs['base_url'] = \
-                'https://' + docker_machine_ip + ':2376'
-            client_kwargs['tls'] = docker.tls.TLSConfig(
-                client_cert=(docker_machine_tls['ClientCertPath'],
-                             docker_machine_tls['ClientKeyPath']),
-                ca_cert=docker_machine_tls['CaCertPath'],
-                assert_hostname=False,
-                verify=True)
-        except Exception as exc:
-            raise CommandExecutionError(
-                'Docker machine {0} failed: {1}'.format(docker_machine, exc))
-    try:
-        # docker-py 2.0 renamed this client attribute
-        return docker.APIClient(**client_kwargs)
-    except AttributeError:
-        return docker.Client(**client_kwargs)
 
 
->>>>>>> 2016.11:salt/modules/dockerng.py
 # Decorators
 def _docker_client(wrapped):
     '''
@@ -558,34 +521,6 @@ def _get_exec_driver():
     return __context__[contextkey]
 
 
-<<<<<<< HEAD:salt/modules/dockermod.py
-=======
-def _get_repo_tag(image, default_tag='latest'):
-    '''
-    Resolves the docker repo:tag notation and returns repo name and tag
-    '''
-    if not isinstance(image, six.string_types):
-        image = str(image)
-    try:
-        r_name, r_tag = image.rsplit(':', 1)
-    except ValueError:
-        r_name = image
-        r_tag = default_tag
-    if not r_tag:
-        # Would happen if some wiseguy requests a tag ending in a colon
-        # (e.g. 'somerepo:')
-        log.warning(
-            'Assuming tag \'%s\' for repo \'%s\'', default_tag, image
-        )
-        r_tag = default_tag
-    elif '/' in r_tag:
-        # Public registry notation with no tag specified
-        # (e.g. foo.bar.com:5000/imagename)
-        return image, default_tag
-    return r_name, r_tag
-
-
->>>>>>> 2016.11:salt/modules/dockerng.py
 def _get_top_level_images(imagedata, subset=None):
     '''
     Returns a list of the top-level images (those which are not parents). If
@@ -943,98 +878,6 @@ def compare_container(first, second, ignore=None):
             val2 = result2[conf_dict][item]
             if val1 != val2:
                 ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
-    return ret
-
-
-def login(*registries):
-    '''
-    .. versionadded:: 2016.3.7,2016.11.4,Nitrogen
-
-    Performs a ``docker login`` to authenticate to one or more configured
-    repositories. See the documentation at the top of this page to configure
-    authentication credentials.
-
-    Multiple registry URLs (matching those configured in Pillar) can be passed,
-    and Salt will attempt to login to *just* those registries. If no registry
-    URLs are provided, Salt will attempt to login to *all* configured
-    registries.
-
-    **RETURN DATA**
-
-    A dictionary containing the following keys:
-
-    - ``Results`` - A dictionary mapping registry URLs to the authentication
-      result. ``True`` means a successful login, ``False`` means a failed
-      login.
-    - ``Errors`` - A list of errors encountered during the course of this
-      function.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion docker.login
-        salt myminion docker.login hub
-        salt myminion docker.login hub https://mydomain.tld/registry/
-    '''
-    # NOTE: This function uses the "docker login" CLI command so that login
-    # information is added to the config.json, since docker-py isn't designed
-    # to do so.
-    registry_auth = __pillar__.get('docker-registries', {})
-    ret = {}
-    errors = ret.setdefault('Errors', [])
-    if not isinstance(registry_auth, dict):
-        errors.append('\'docker-registries\' Pillar value must be a dictionary')
-        registry_auth = {}
-    for key, data in six.iteritems(__pillar__):
-        try:
-            if key.endswith('-docker-registries'):
-                try:
-                    registry_auth.update(data)
-                except TypeError:
-                    errors.append(
-                        '\'{0}\' Pillar value must be a dictionary'.format(key)
-                    )
-        except AttributeError:
-            pass
-
-    # If no registries passed, we will auth to all of them
-    if not registries:
-        registries = list(registry_auth)
-
-    results = ret.setdefault('Results', {})
-    for registry in registries:
-        if registry not in registry_auth:
-            errors.append(
-                'No match found for registry \'{0}\''.format(registry)
-            )
-            continue
-        try:
-            username = registry_auth[registry]['username']
-            password = registry_auth[registry]['password']
-        except TypeError:
-            errors.append(
-                'Invalid configuration for registry \'{0}\''.format(registry)
-            )
-        except KeyError as exc:
-            errors.append(
-                'Missing {0} for registry \'{1}\''.format(exc, registry)
-            )
-        else:
-            cmd = ['docker', 'login', '-u', username, '-p', password]
-            if registry.lower() != 'hub':
-                cmd.append(registry)
-            login_cmd = __salt__['cmd.run_all'](
-                cmd,
-                python_shell=False,
-                output_loglevel='quiet',
-            )
-            results[registry] = login_cmd['retcode'] == 0
-            if not results[registry]:
-                if login_cmd['stderr']:
-                    errors.append(login_cmd['stderr'])
-                elif login_cmd['stdout']:
-                    errors.append(login_cmd['stdout'])
     return ret
 
 
@@ -2619,7 +2462,6 @@ def create(image,
     except Exception:
         pull(image, client_timeout=client_timeout)
 
-<<<<<<< HEAD:salt/modules/dockermod.py
     if name is not None and kwargs.get('hostname') is None:
         kwargs['hostname'] = name
 
@@ -2633,32 +2475,6 @@ def create(image,
         log.warning(
             'The following arguments were ignored because they are not '
             'recognized by docker-py: %s', sorted(unused_kwargs)
-=======
-    create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
-    if create_kwargs.get('hostname') is None \
-            and create_kwargs.get('name') is not None:
-        create_kwargs['hostname'] = create_kwargs['name']
-
-    if create_kwargs.pop('validate_input', False):
-        _validate_input(create_kwargs, validate_ip_addrs=validate_ip_addrs)
-
-    # Rename the kwargs whose names differ from their counterparts in the
-    # docker.client.Client class member functions. Can't use iterators here
-    # because we're going to be modifying the dict.
-    for key in list(six.iterkeys(VALID_CREATE_OPTS)):
-        if key in create_kwargs:
-            val = VALID_CREATE_OPTS[key]
-            if 'api_name' in val:
-                create_kwargs[val['api_name']] = create_kwargs.pop(key)
-
-    # API v1.15 introduced HostConfig parameter
-    # https://docs.docker.com/engine/reference/api/docker_remote_api_v1.15/#create-a-container
-    if salt.utils.version_cmp(version()['ApiVersion'], '1.15') > 0:
-        client = _get_client()
-        host_config_args = get_client_args()['host_config']
-        create_kwargs['host_config'] = client.create_host_config(
-            **dict((arg, create_kwargs.pop(arg, None)) for arg in host_config_args if arg != 'version')
->>>>>>> 2016.11:salt/modules/dockerng.py
         )
 
     log.debug(
@@ -4183,11 +3999,7 @@ def inspect_network(network_id):
     return response
 
 
-<<<<<<< HEAD:salt/modules/dockermod.py
 def connect_container_to_network(container, network_id, ipv4_address=None):
-=======
-def connect_container_to_network(container, network_id):
->>>>>>> 2016.11:salt/modules/dockerng.py
     '''
     Connect container to network.
 
@@ -4199,6 +4011,8 @@ def connect_container_to_network(container, network_id):
 
     ipv4_address
         The IPv4 address to connect to the container
+
+        .. versionadded:: Nitrogen
 
     CLI Example:
 
@@ -4239,10 +4053,7 @@ def disconnect_container_from_network(container, network_id):
     return response
 
 
-<<<<<<< HEAD:salt/modules/dockermod.py
 # Volume Management
-=======
->>>>>>> 2016.11:salt/modules/dockerng.py
 def volumes(filters=None):
     '''
     List existing volumes
