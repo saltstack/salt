@@ -1964,6 +1964,7 @@ def downloaded(name,
                                      version,
                                      pkgs,
                                      fromrepo=fromrepo,
+                                     ignore_epoch=ignore_epoch,
                                      **kwargs)
     if isinstance(targets, dict) and 'result' in targets:
         return targets
@@ -1991,6 +1992,8 @@ def downloaded(name,
                                           pkgs=pkgs,
                                           version=version,
                                           downloadonly=True,
+                                          fromrepo=fromrepo,
+                                          ignore_epoch=ignore_epoch,
                                           **kwargs)
         changes.update(pkg_ret)
     except CommandExecutionError as exc:
