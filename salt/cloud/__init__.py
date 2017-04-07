@@ -1403,8 +1403,8 @@ class Cloud(object):
         mapped_providers = self.map_providers_parallel()
         profile_details = self.opts['profiles'][profile]
         vms = {}
-        for prov in mapped_providers:
-            prov_name = mapped_providers[prov].keys()[0]
+        for prov, val in six.iteritems(mapped_providers):
+            prov_name = next(iter(val))
             for node in mapped_providers[prov][prov_name]:
                 vms[node] = mapped_providers[prov][prov_name][node]
                 vms[node]['provider'] = prov
