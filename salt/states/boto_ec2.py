@@ -1240,3 +1240,203 @@ def volumes_tagged(name, tag_maps, authoritative=False, region=None, key=None,
         ret['comment'] = 'Error updating requested volume tags.'
         ret['result'] = False
     return ret
+
+
+def volume_present(name, volume_name=None, volume_id=None, instance_name=None,
+                   instance_id=None, device=None, size=None, snapshot_id=None,
+                   volume_type=None, iops=None, encrypted=False, kms_key_id=None,
+                   region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure the EC2 volume is present and attached.
+
+    .. versionadded:: 2016.11.0
+
+    name
+        State definition name.
+
+    volume_name
+        Name tag associated with the volume. Create one if no matching volume.
+        For safety, if this matches more than one volume, the state will refuse to apply.
+        Exclusive with 'volume_id'.
+
+    volume_id
+        Resource ID of the volume. Exclusive with 'volume_name'.
+
+    instance_name
+        Attach volume to instance with this Name tag.
+        Exclusive with 'instance_id'.
+
+    instance_id
+        Attach volume to instance with this ID.
+        Exclusive with 'instance_name'.
+
+    device
+        The device on the instance through which the volume is exposed (e.g. /dev/sdh)
+
+    size
+        The size of the new volume, in GiB. If you're creating the volume from a snapshot
+        and don't specify a volume size, the default is the snapshot size. Optinal be specified
+        at volume creation time; will be ignored afterward. Requires 'volume_name'.
+
+    snapshot_id
+        The snapshot ID from which the new Volume will be created. Optinal be specified
+        at volume creation time; will be ignored afterward. Requires 'volume_name'.
+
+    volume_type
+        The type of the volume. Valid values are: standard | io1 | gp2. Optinal be specified
+        at volume creation time; will be ignored afterward. Requires 'volume_name'.
+
+    iops
+        The provisioned IOPS you want to associate with this volume. Optinal be specified
+        at volume creation time; will be ignored afterward. Requires 'volume_name'.
+
+    encrypted
+        Specifies whether the volume should be encrypted. Optinal be specified
+        at volume creation time; will be ignored afterward. Requires 'volume_name'.
+
+    kms_key_id
+        If encrypted is True, this KMS Key ID may be specified to encrypt volume with this key.
+        Optinal be specified at volume creation time; will be ignored afterward.
+        Requires 'volume_name'.
+        e.g.: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+
+    '''
+
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}}
+    old_dict = {}
+    new_dict = {}
+    running_states = ('running', 'stopped')
+
+    if not salt.utils.exactly_one((volume_name, volume_id)):
+        raise SaltInvocationError("Exactly one of 'volume_name', 'volume_id', "
+                                  " must be provided.")
+    if not salt.utils.exactly_one((instance_name, instance_id)):
+        raise SaltInvocationError("Exactly one of 'instance_name', or 'instance_id'"
+                                  " must be provided.")
+    if device is None:
+        raise SaltInvocationError("Parameter 'device' is required.")
+    args = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
+    if instance_name:
+        instance_id = __salt__['boto_ec2.get_id'](
+                name=instance_name, in_states=running_states, **args)
+        if not instance_id:
+            raise SaltInvocationError('Instance with Name {0} not found.'.format(instance_name))
+
+    instances = __salt__['boto_ec2.find_instances'](instance_id=instance_id, return_objs=True, **args)
+    instance = instances[0]
+    if volume_name:
+        filters = {}
+        filters.update({'tag:Name': volume_name})
+        vols = __salt__['boto_ec2.get_all_volumes'](filters=filters, **args)
+        if len(vols) > 1:
+            msg = "More than one volume matched volume name {0}, can't continue in state {1}".format(volume_name,
+                                                                                                     name)
+            raise SaltInvocationError(msg)
+        if len(vols) < 1:
+            if __opts__['test']:
+                ret['comment'] = ('The volume with name {0} is set to be created and attached'
+                                  ' on {1}({2}).'.format(volume_name, instance_id, device))
+                ret['result'] = None
+                return ret
+            _rt = __salt__['boto_ec2.create_volume'](zone_name=instance.placement,
+                                                     size=size,
+                                                     snapshot_id=snapshot_id,
+                                                     volume_type=volume_type,
+                                                     iops=iops,
+                                                     encrypted=encrypted,
+                                                     kms_key_id=kms_key_id,
+                                                     wait_to_finish=10, **args)
+            if 'result' in _rt:
+                volume_id = _rt['result']
+            else:
+                raise SaltInvocationError('Error creating volume with name {0}.'.format(volume_name))
+            _rt = __salt__['boto_ec2.set_volumes_tags'](tag_maps=[{
+                                                                    'filters': {'volume_ids': [volume_id]},
+                                                                    'tags': {'Name': volume_name}
+                                                                  }], **args)
+            if _rt['success'] is False:
+                raise SaltInvocationError('Error updating requested volume '
+                                          '{0} with name {1}. {2}'.format(volume_id,
+                                                                          volume_name,
+                                                                          _rt['comment']))
+            old_dict['volume_id'] = None
+            new_dict['volume_id'] = volume_id
+        else:
+            volume_id = vols[0]
+    vols = __salt__['boto_ec2.get_all_volumes'](volume_ids=[volume_id], return_objs=True, **args)
+    if len(vols) < 1:
+        raise SaltInvocationError('Volume {0} do not exist'.format(volume_id))
+    vol = vols[0]
+    if vol.zone != instance.placement:
+        raise SaltInvocationError(('Volume {0} in {1} cannot attach to instance'
+                                   ' {2} in {3}.').format(volume_id,
+                                                          vol.zone,
+                                                          instance_id,
+                                                          instance.placement))
+    attach_data = vol.attach_data
+    if attach_data is not None and attach_data.instance_id is not None:
+        if instance_id == attach_data.instance_id and device == attach_data.device:
+            ret['comment'] = 'The volume {0} is attached on {1}({2}).'.format(volume_id,
+                                                                              instance_id, device)
+            return ret
+        else:
+            if __opts__['test']:
+                ret['comment'] = ('The volume {0} is set to be detached'
+                                  ' from {1}({2} and attached on {3}({4}).').format(attach_data.instance_id,
+                                                                                    attach_data.devic,
+                                                                                    volume_id,
+                                                                                    instance_id,
+                                                                                    device)
+                ret['result'] = None
+                return ret
+            if __salt__['boto_ec2.detach_volume'](volume_id=volume_id, wait_to_finish=10, **args):
+                ret['comment'] = 'Volume {0} is detached from {1}({2}).'.format(volume_id,
+                                                                                attach_data.instance_id,
+                                                                                attach_data.device)
+                old_dict['instance_id'] = attach_data.instance_id
+                old_dict['device'] = attach_data.device
+            else:
+                raise SaltInvocationError(('The volume {0} is already attached on instance {1}({2}).'
+                                           ' Failed to detach').format(volume_id,
+                                                                       attach_data.instance_id,
+                                                                       attach_data.device))
+    else:
+        old_dict['instance_id'] = instance_id
+        old_dict['device'] = None
+    if __opts__['test']:
+        ret['comment'] = 'The volume {0} is set to be attached on {1}({2}).'.format(volume_id,
+                                                                                    instance_id,
+                                                                                    device)
+        ret['result'] = None
+        return ret
+    if __salt__['boto_ec2.attach_volume'](volume_id=volume_id, instance_id=instance_id,
+                                          device=device, **args):
+        ret['comment'] = ' '.join([
+                          ret['comment'],
+                          'Volume {0} is attached on {1}({2}).'.format(volume_id, instance_id, device)])
+        new_dict['instance_id'] = instance_id
+        new_dict['device'] = device
+        ret['changes'] = {'old': old_dict, 'new': new_dict}
+    else:
+        ret['comment'] = 'Error attaching volume {0} to instance {1}({2}).'.format(volume_id,
+                                                                                   instance_id,
+                                                                                   device)
+        ret['result'] = False
+    return ret
+    
