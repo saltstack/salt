@@ -43,6 +43,8 @@ Connection module for Amazon RDS
 '''
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
+# pylint whinging perfectly valid code
+#pylint: disable=W0106
 
 
 # Import Python libs
