@@ -1242,7 +1242,7 @@ def install(name=None,
         pkg_params_items = []
         cur_patches = list_patches()
         for advisory_id in pkg_params:
-            if not advisory_id in cur_patches:
+            if advisory_id not in cur_patches:
                 raise CommandExecutionError(
                     'Advisory id "{0}" not found'.format(advisory_id)
                 )
@@ -2936,10 +2936,10 @@ def _get_patches(installed_only=None):
         python_shell=False
     )
     for line in salt.utils.itertools.split(ret, os.linesep):
-        inst, advisory_id, sev, pkg = re.match('([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)',
+        inst, advisory_id, sev, pkg = re.match(r'([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)',
                                                line).groups()
         if inst != 'i' and installed_only:
-           continue
+            continue
         patches[advisory_id] = {
             'installed': True if inst == 'i' else False,
             'summary': pkg

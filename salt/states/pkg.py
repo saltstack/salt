@@ -2073,7 +2073,7 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
         return ret
 
     if not changes and not comment:
-        status= 'downloaded' if downloadonly else 'installed'
+        status = 'downloaded' if downloadonly else 'installed'
         comment.append('Related packages are already {}'.format(status))
 
     ret = {'name': name,
