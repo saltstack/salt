@@ -1991,7 +1991,7 @@ def attach_volume(volume_id, instance_id, device,
     volume_id
         (string) – The ID of the EBS volume to be attached.
     instance_id
-        (string) – The ID of the EC2 instance from which it will be attached.
+        (string) – The ID of the EC2 instance to attach the volume to.
     device
         (string) – The device on the instance through which the volume is exposed (e.g. /dev/sdh)
 
@@ -2028,9 +2028,10 @@ def create_volume(zone_name, size=None, snapshot_id=None, volume_type=None,
                  volume from a snapshot and don't specify a volume size, the
                  default is the snapshot size.
     snapshot_id
-        (string) –  The snapshot ID from which the new Volume will be created.
+        (string) –  The snapshot ID from which the new volume will be created.
     volume_type
-        (string) -  The type of the volume. Valid values are: standard | io1 | gp2
+        (string) -  The type of the volume. Valid volume types for AWS can be found here:
+                    http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
     iops
         (int) - The provisioned IOPS you want to associate with this volume.
     encrypted
@@ -2040,7 +2041,7 @@ def create_volume(zone_name, size=None, snapshot_id=None, volume_type=None,
                    encrypt volume with this key
                    e.g.: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
     wait_to_finish
-        (int) - The time to wait for creating volume complete, in second.
+        (int) - The time to wait for creating volume complete, in seconds.
 
     returns
         (string) - created volume id on success, error message on failure.

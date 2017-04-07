@@ -1249,15 +1249,14 @@ def volume_present(name, volume_name=None, volume_id=None, instance_name=None,
     '''
     Ensure the EC2 volume is present and attached.
 
-    .. versionadded:: 2016.11.0
+    ..
 
     name
         State definition name.
 
     volume_name
-        Name tag associated with the volume. Create one if no matching volume.
-        For safety, if this matches more than one volume, the state will refuse to apply.
-        Exclusive with 'volume_id'.
+        The Name tag value for the volume. If no volume with that matching name tag is found,
+        a new volume will be created. If multiple volumes are matched, the state will fail.
 
     volume_id
         Resource ID of the volume. Exclusive with 'volume_name'.
@@ -1275,28 +1274,30 @@ def volume_present(name, volume_name=None, volume_id=None, instance_name=None,
 
     size
         The size of the new volume, in GiB. If you're creating the volume from a snapshot
-        and don't specify a volume size, the default is the snapshot size. Optinal be specified
+        and don't specify a volume size, the default is the snapshot size. Optionally specified
         at volume creation time; will be ignored afterward. Requires 'volume_name'.
 
     snapshot_id
-        The snapshot ID from which the new Volume will be created. Optinal be specified
+        The snapshot ID from which the new Volume will be created. Optionally specified
         at volume creation time; will be ignored afterward. Requires 'volume_name'.
 
     volume_type
-        The type of the volume. Valid values are: standard | io1 | gp2. Optinal be specified
-        at volume creation time; will be ignored afterward. Requires 'volume_name'.
+        The type of the volume. Optionally specified at volume creation time; will be ignored afterward.
+        Requires 'volume_name'.
+        Valid volume types for AWS can be found here:
+        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
 
     iops
-        The provisioned IOPS you want to associate with this volume. Optinal be specified
+        The provisioned IOPS you want to associate with this volume. Optionally specified
         at volume creation time; will be ignored afterward. Requires 'volume_name'.
 
     encrypted
-        Specifies whether the volume should be encrypted. Optinal be specified
+        Specifies whether the volume should be encrypted. Optionally specified
         at volume creation time; will be ignored afterward. Requires 'volume_name'.
 
     kms_key_id
         If encrypted is True, this KMS Key ID may be specified to encrypt volume with this key.
-        Optinal be specified at volume creation time; will be ignored afterward.
+        Optionally specified at volume creation time; will be ignored afterward.
         Requires 'volume_name'.
         e.g.: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
 
