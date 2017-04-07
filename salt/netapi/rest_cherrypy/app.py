@@ -1403,6 +1403,9 @@ class Keys(LowDataAdapter):
 
             List all keys or show a specific key
 
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
+
             :status 200: |200|
             :status 401: |401|
             :status 406: |406|
