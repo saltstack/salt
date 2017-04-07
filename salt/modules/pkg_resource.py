@@ -123,8 +123,10 @@ def parse_targets(name=None,
         if pkgs:
             log.error('Cannot use "advisory_ids" and "pkgs" at the same time')
             return None, None
-        else:
+        elif kwargs['advisory_ids']:
             return kwargs['advisory_ids'], 'advisory'
+        else:
+            return [name], 'advisory'
 
     elif pkgs:
         pkgs = _repack_pkgs(pkgs, normalize=normalize)
