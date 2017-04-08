@@ -408,10 +408,11 @@ def replica_present(name, source, db_instance_class=None,
             ret['result'] = False
             ret['comment'] = 'Failed to create RDS replica {0}.'.format(name)
     else:
-        jmespath='DBInstances[0].DBParameterGroups[0].DBParameterGroupName'
+        jmespath = 'DBInstances[0].DBParameterGroups[0].DBParameterGroupName'
         pmg_name = __salt__['boto_rds.describe_db_instances'](name=name,
               jmespath=jmespath, region=region, key=key, keyid=keyid,
               profile=profile)
+        pmg_name = pmg_name[0] if len(pmg_name) else None
         if pmg_name != db_parameter_group_name:
             modified = __salt__['boto_rds.modify_db_instance'](
                   name=name, db_parameter_group_name=db_parameter_group_name,
