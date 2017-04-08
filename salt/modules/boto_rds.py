@@ -591,7 +591,13 @@ def describe_db_instances(name=None, filters=None, jmespath='DBInstances',
     args.update({'Filters': filters}) if filters else None
     pit = pag.paginate(**args)
     pit = pit.search(jmespath) if jmespath else pit
-    return [p for p in pit]
+    try:
+        return [p for p in pit]
+    except ClientError as e:
+        code = getattr(e, 'response', {}).get('Error', {}).get('Code')
+        if code != 'DBInstanceNotFound':
+            log.error(salt.utils.boto3.get_error(e))
+    return []
 
 
 def describe_db_subnet_groups(name=None, filters=None, jmespath='DBSubnetGroups',
