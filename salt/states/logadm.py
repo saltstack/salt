@@ -77,43 +77,37 @@ def rotate(name, **kwargs):
         ret['result'] = False
         ret['comment'] = 'Missing log_file attribute!'
     else:
-        ## calculate changes
-        old_config = __salt__['logadm.list_conf'](include_unset=True)
+        ## lookup old configuration
+        old_config = __salt__['logadm.list_conf']()
+
+        ## remove existing entry
         if kwargs['log_file'] in old_config:
-            old_config = old_config[kwargs['log_file']]
-            new_config = old_config.copy()
-            new_config.update(kwargs)
-            for key, val in salt.utils.compare_dicts(old_config, new_config).items():
-                ret['changes'][key] = val['new']
-        else:
-            ret['changes'] = kwargs
-
-        ## check if we have changes
-        if len(ret['changes']) > 0:
-            ## remove existing entry
-            if kwargs['log_file'] in old_config:
-                res = __salt__['logadm.remove'](kwargs['entryname'] if 'entryname' in kwargs else kwargs['log_file'])
-                ret['result'] = 'Error' not in res
-                if not ret['result']:
-                    ret['comment'] = res['Error']
-                    ret['changes'] = {}
-
-            ## add new entry
-            res = __salt__['logadm.rotate'](name, **kwargs)
+            res = __salt__['logadm.remove'](kwargs['entryname'] if 'entryname' in kwargs else kwargs['log_file'])
             ret['result'] = 'Error' not in res
-            if ret['result']:
-                ret['comment'] = 'Log configuration {}'.format('updated' if kwargs['log_file'] in old_config else 'added')
-            else:
+            if not ret['result']:
                 ret['comment'] = res['Error']
-                ## NOTE: we need to remove the log file first
-                ##       potentially the log configuraiton can get lost :s
-                if kwargs['log_file'] in old_config:
-                    ret['changes'] = {kwargs['log_file']: None}
-                else:
-                    ret['changes'] = {}
+                ret['changes'] = {}
+
+        ## add new entry
+        res = __salt__['logadm.rotate'](name, **kwargs)
+        ret['result'] = 'Error' not in res
+        if ret['result']:
+            new_config = __salt__['logadm.list_conf']()
+            ret['comment'] = 'Log configuration {}'.format('updated' if kwargs['log_file'] in old_config else 'added')
+            if kwargs['log_file'] in old_config:
+                for key, val in salt.utils.compare_dicts(old_config[kwargs['log_file']], new_config[kwargs['log_file']]).items():
+                    ret['changes'][key] = val['new']
+            else:
+                ret['changes'] = new_config[kwargs['log_file']]
+            log.debug(ret['changes'])
         else:
-            ret['result'] = True
-            ret['comment'] = 'Log configuration is up to date.'
+            ret['comment'] = res['Error']
+            ## NOTE: we need to remove the log file first
+            ##       potentially the log configuraiton can get lost :s
+            if kwargs['log_file'] in old_config:
+                ret['changes'] = {kwargs['log_file']: None}
+            else:
+                ret['changes'] = {}
 
     return ret
 
