@@ -20,6 +20,9 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 # Define the state's virtual name
@@ -41,14 +44,14 @@ def __virtual__():
         )
 
 
-def config_present(name, value):
+def rotate(name, **kwargs):
     '''
-    Ensure configuration property is set to value in /usbkey/config
+    Add a log to the logadm configuration
 
     name : string
-        name of property
-    value : string
-        value of property
+        alias for entryname
+    **kwargs : boolean|string|int
+        optional additional flags and parameters
 
     '''
     ret = {'name': name,
@@ -56,13 +59,68 @@ def config_present(name, value):
            'result': None,
            'comment': ''}
 
-    ret['comment'] = 'TODO'
+    ## cleanup kwargs
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+
+    ## inject name as entryname
+    if 'entryname' not in kwargs:
+        kwargs['entryname'] = name
+
+    ## figure out log_file and entryname
+    if 'log_file' not in kwargs or not kwargs['log_file']:
+        if 'entryname' in kwargs and kwargs['entryname']:
+            if kwargs['entryname'].startswith('/'):
+                kwargs['log_file'] = kwargs['entryname']
+
+    ## check for log_file
+    if 'log_file' not in kwargs or not kwargs['log_file']:
+        ret['result'] = False
+        ret['comment'] = 'Missing log_file attribute!'
+    else:
+        ## calculate changes
+        old_config = __salt__['logadm.list_conf'](include_unset=True)
+        if kwargs['log_file'] in old_config:
+            old_config = old_config[kwargs['log_file']]
+            new_config = old_config.copy()
+            new_config.update(kwargs)
+            for key, val in salt.utils.compare_dicts(old_config, new_config).items():
+                ret['changes'][key] = val['new']
+        else:
+            ret['changes'] = kwargs
+
+        ## check if we have changes
+        if len(ret['changes']) > 0:
+            ## remove existing entry
+            if kwargs['log_file'] in old_config:
+                res = __salt__['logadm.remove'](kwargs['entryname'] if 'entryname' in kwargs else kwargs['log_file'])
+                ret['result'] = 'Error' not in res
+                if not ret['result']:
+                    ret['comment'] = res['Error']
+                    ret['changes'] = {}
+
+            ## add new entry
+            res = __salt__['logadm.rotate'](name, **kwargs)
+            ret['result'] = 'Error' not in res
+            if ret['result']:
+                ret['comment'] = 'Log configuration {}'.format('updated' if kwargs['log_file'] in old_config else 'added')
+            else:
+                ret['comment'] = res['Error']
+                ## NOTE: we need to remove the log file first
+                ##       potentially the log configuraiton can get lost :s
+                if kwargs['log_file'] in old_config:
+                    ret['changes'] = {kwargs['log_file']: None}
+                else:
+                    ret['changes'] = {}
+        else:
+            ret['result'] = True
+            ret['comment'] = 'Log configuration is up to date.'
+
     return ret
 
 
-def config_absent(name, log_file=None):
+def remove(name, log_file=None):
     '''
-    Ensure configuration for log file is absent
+    Remove a log from the logadm configuration
 
     name : string
         entryname
