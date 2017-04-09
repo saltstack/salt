@@ -278,10 +278,15 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
         kwargs['entryname'] = name
 
     ## inject pattern into kwargs
-    if 'log_file' not in kwargs and pattern and pattern.startswith('/'):
-        kwargs['log_file'] = pattern
+    if 'log_file' not in kwargs:
+        if pattern and pattern.startswith('/'):
+            kwargs['log_file'] = pattern
+        # NOTE: for backwards compatibility check if name is a path
+        elif name and name.startswith('/'):
+            kwargs['log_file'] = name
 
     ## build command
+    log.debug("logadm.rotate - kwargs: {}".format(kwargs))
     command = "logadm -f {}".format(conf_file)
     for arg, val in kwargs.items():
         if arg in option_toggles.values() and val:
@@ -298,8 +303,20 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
         elif arg != 'log_file':
             log.warning("Unknown argument {}, don't know how to map this!".format(arg))
     if 'log_file' in kwargs:
-        command = "{} {}".format(command, _quote_args(kwargs['log_file']))
+        # NOTE: except from ```man logadm```
+        #   If no log file name is provided on a logadm command line, the entry
+        #   name is assumed to be the same as the log file name. For example,
+        #   the following two lines achieve the same thing, keeping two copies
+        #   of rotated log files:
+        #
+        #     % logadm -C2 -w mylog /my/really/long/log/file/name
+        #     % logadm -C2 -w /my/really/long/log/file/name
+        if 'entryname' not in kwargs:
+            command = "{} -w {}".format(command, _quote_args(kwargs['log_file']))
+        else:
+            command = "{} {}".format(command, _quote_args(kwargs['log_file']))
 
+    log.debug("logadm.rotate - command: {}".format(command))
     result = __salt__['cmd.run_all'](command, python_shell=False)
     if result['retcode'] != 0:
         return dict(Error='Failed in adding log', Output=result['stderr'])
