@@ -100,8 +100,8 @@ def _parse_options(entry, options, include_unset=True):
     # NOTE: we loop over the options because values may exist multiple times
     index = 0
     while index < len(options):
-        # log file as first options
-        if index == 0 and options[index].startswith('/'):
+        # log file
+        if index in [0, (len(options)-1)] and options[index].startswith('/'):
             log_cfg['log_file'] = options[index]
 
         # check if toggle option
