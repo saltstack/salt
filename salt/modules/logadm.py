@@ -110,7 +110,7 @@ def _parse_options(entry, options, include_unset=True):
 
         # check if flag option
         elif options[index] in option_flags and (index+1) <= len(options):
-            log_cfg[option_flags[options[index]]] = options[index+1]
+            log_cfg[option_flags[options[index]]] = int(options[index+1]) if options[index+1].isdigit() else options[index+1]
             index += 1
 
         # unknown options
