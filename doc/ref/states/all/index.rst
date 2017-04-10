@@ -134,6 +134,7 @@ state modules
     libcloud_dns
     linux_acl
     locale
+    logadm
     logrotate
     lvm
     lvs_server
