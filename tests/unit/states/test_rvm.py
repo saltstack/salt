@@ -50,7 +50,7 @@ class TestRvmState(TestCase, LoaderModuleMockMixin):
                 with patch.dict(rvm.__salt__,
                                 {'rvm.install_ruby': mock_install_ruby}):
                     rvm._check_and_install_ruby({'changes': {}}, '1.9.3')
-        mock_install_ruby.assert_called_once_with('1.9.3', runas=None)
+        mock_install_ruby.assert_called_once_with('1.9.3', runas=None, opts=None, env=None)
 
     def test__check_ruby(self):
         mock = MagicMock(return_value=[['ruby', '1.9.3-p125', False],
@@ -97,4 +97,22 @@ class TestRvmState(TestCase, LoaderModuleMockMixin):
             with patch.object(rvm, '_check_and_install_ruby', new=mock):
                 rvm.installed('1.9.3', default=True)
         mock.assert_called_once_with(
-            {'result': True}, '1.9.3', True, user=None)
+            {'result': True}, '1.9.3', True, user=None, opts=None, env=None)
+
+    def test_installed_with_env(self):
+        mock = MagicMock()
+        with patch.object(rvm, '_check_rvm') as mock_method:
+            mock_method.return_value = {'result': True}
+            with patch.object(rvm, '_check_and_install_ruby', new=mock):
+                rvm.installed('1.9.3', default=True, env=[{'RUBY_CONFIGURE_OPTS': '--foobar'}])
+        mock.assert_called_once_with(
+            {'result': True}, '1.9.3', True, user=None, opts=None, env=[{'RUBY_CONFIGURE_OPTS': '--foobar'}])
+
+    def test_installed_with_opts(self):
+        mock = MagicMock()
+        with patch.object(rvm, '_check_rvm') as mock_method:
+            mock_method.return_value = {'result': True}
+            with patch.object(rvm, '_check_and_install_ruby', new=mock):
+                rvm.installed('1.9.3', default=True, opts=[{'-C': '--enable-shared,--with-readline-dir=$HOME/.rvm/usr'}])
+        mock.assert_called_once_with(
+            {'result': True}, '1.9.3', True, user=None, opts=[{'-C': '--enable-shared,--with-readline-dir=$HOME/.rvm/usr'}], env=None)
