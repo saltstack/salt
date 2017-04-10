@@ -137,6 +137,26 @@ def _get_bkroot():
     return os.path.join(__salt__['config.get']('cachedir'), 'file_backup')
 
 
+def _splitlines_preserving_trailing_newline(str):
+    '''
+    Returns a list of the lines in the string, breaking at line boundaries and
+    preserving a trailing newline (if present).
+
+    Essentially, this works like ``str.striplines(False)`` but preserves an
+    empty line at the end. This is equivalent to the following code:
+
+    .. code-block:: python
+
+        lines = str.splitlines()
+        if str.endswith('\n') or str.endswith('\r'):
+            lines.append('')
+    '''
+    lines = str.splitlines()
+    if str.endswith('\n') or str.endswith('\r'):
+        lines.append('')
+    return lines
+
+
 def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
@@ -1851,8 +1871,10 @@ def line(path, content=None, match=None, mode=None, location=None,
     if changed:
         if show_changes:
             with salt.utils.fopen(path, 'r') as fp_:
-                path_content = fp_.read().splitlines()
-            changes_diff = ''.join(difflib.unified_diff(path_content, body.splitlines()))
+                path_content = _splitlines_preserving_trailing_newline(
+                    fp_.read())
+            changes_diff = ''.join(difflib.unified_diff(
+                path_content, _splitlines_preserving_trailing_newline(body)))
         if __opts__['test'] is False:
             fh_ = None
             try:
@@ -4470,7 +4492,8 @@ def check_file_meta(
         tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                        text=True)
         if salt.utils.is_windows():
-            contents = os.linesep.join(contents.splitlines())
+            contents = os.linesep.join(
+                _splitlines_preserving_trailing_newline(contents))
         with salt.utils.fopen(tmp, 'w') as tmp_:
             tmp_.write(str(contents))
         # Compare the static contents with the named file
@@ -4676,7 +4699,7 @@ def manage_file(name,
         if not sfn:
             return _error(
                 ret, 'Source file \'{0}\' not found'.format(source))
-        htype = source_sum.get('hash_type', __opts__.get('hash_type', 'md5'))
+        htype = source_sum.get('hash_type', __opts__['hash_type'])
         # Recalculate source sum now that file has been cached
         source_sum = {
             'hash_type': htype,
@@ -4699,12 +4722,12 @@ def manage_file(name,
 
         # Only test the checksums on files with managed contents
         if source and not (not follow_symlinks and os.path.islink(real_name)):
-            name_sum = get_hash(real_name, source_sum.get('hash_type', __opts__.get('hash_type', 'md5')))
+            name_sum = get_hash(real_name, source_sum.get('hash_type', __opts__['hash_type']))
         else:
             name_sum = None
 
         # Check if file needs to be replaced
-        if source and (name_sum is None or source_sum.get('hsum', __opts__.get('hash_type', 'md5')) != name_sum):
+        if source and (name_sum is None or source_sum.get('hsum', __opts__['hash_type']) != name_sum):
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
@@ -4768,7 +4791,8 @@ def manage_file(name,
             tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                            text=True)
             if salt.utils.is_windows():
-                contents = os.linesep.join(contents.splitlines())
+                contents = os.linesep.join(
+                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 if encoding:
                     log.debug('File will be encoded with {0}'.format(encoding))
@@ -4976,7 +5000,8 @@ def manage_file(name,
             tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                            text=True)
             if salt.utils.is_windows():
-                contents = os.linesep.join(contents.splitlines())
+                contents = os.linesep.join(
+                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 if encoding:
                     log.debug('File will be encoded with {0}'.format(encoding))

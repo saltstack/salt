@@ -12,7 +12,6 @@ Provides the service module for systemd
 '''
 # Import python libs
 from __future__ import absolute_import
-import copy
 import errno
 import glob
 import logging
@@ -125,8 +124,7 @@ def _clear_context():
     # raise a RuntimeError.
     for key in list(__context__):
         try:
-            if key.startswith('systemd._systemctl_status.') \
-                    or key in ('systemd.systemd_services',):
+            if key.startswith('systemd._systemctl_status.'):
                 __context__.pop(key)
         except AttributeError:
             continue
@@ -178,9 +176,6 @@ def _get_systemd_services():
     '''
     Use os.listdir() to get all the unit files
     '''
-    contextkey = 'systemd.systemd_services'
-    if contextkey in __context__:
-        return __context__[contextkey]
     ret = set()
     for path in SYSTEM_CONFIG_PATHS + (LOCAL_CONFIG_PATH,):
         # Make sure user has access to the path, and if the path is a link
@@ -194,11 +189,10 @@ def _get_systemd_services():
                     continue
                 if unit_type in VALID_UNIT_TYPES:
                     ret.add(unit_name if unit_type == 'service' else fullname)
-    __context__[contextkey] = copy.deepcopy(ret)
     return ret
 
 
-def _get_sysv_services():
+def _get_sysv_services(systemd_services=None):
     '''
     Use os.listdir() and os.access() to get all the initscripts
     '''
@@ -220,7 +214,9 @@ def _get_sysv_services():
             )
         return []
 
-    systemd_services = _get_systemd_services()
+    if systemd_services is None:
+        systemd_services = _get_systemd_services()
+
     ret = []
     for sysv_service in sysv_services:
         if os.access(os.path.join(INITSCRIPT_PATH, sysv_service), os.X_OK):
@@ -539,7 +535,7 @@ def get_all():
         salt '*' service.get_all
     '''
     ret = _get_systemd_services()
-    ret.update(set(_get_sysv_services()))
+    ret.update(set(_get_sysv_services(systemd_services=ret)))
     return sorted(ret)
 
 
