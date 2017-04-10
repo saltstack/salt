@@ -3,7 +3,7 @@ Venafi Tools for Salt
 =====================
 
 Introduction
-~~~~~~~~~~~~
+~~~~~~~~~~~
 Before using these modules you need to register an account with Venafi, and
 configure it in your ``master`` configuration file.
 
@@ -31,8 +31,25 @@ file and set the ``api_key`` to it:
     venafi:
       api_key: abcdef01-2345-6789-abcd-ef0123456789
 
+To enable the ability for creating keys and certificates it is necessary to enable the 
+external pillars.  Open the ``/etc/salt/master`` file and add:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - venafi: True
+
+To modify the URL being used for the Venafi Certificate issuance modify the file
+in ``/etc/salt/master`` and add the base_url information following under the venafi tag:
+
+.. code-block:: yaml
+
+    venafi:
+      base_url: http://newurl.venafi.com
+
+
 Example Usage
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 Generate a CSR and submit it to Venafi for issuance, using the 'Internet' zone:
 salt-run venafi.request minion.example.com minion.example.com zone=Internet
 
@@ -41,7 +58,7 @@ aaa-bbb-ccc-dddd:
 salt-run venafi.pickup aaa-bbb-ccc-dddd
 
 Runner Functions
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 
 gen_key
 -------
@@ -52,6 +69,11 @@ The key will be generated based on the policy values that were configured
 by the Venafi administrator. A default Certificate Use Policy is associated
 with a zone; the key type and key length parameters associated with this value
 will be used.
+
+.. code-block:: bash
+
+    salt-run venafi.gen_key minion.example.com minion.example.com zone=Internet \
+      password=SecretSauce
 
 :param str minion_id: Required. The name of the minion which hosts the domain
     name in question.
@@ -72,8 +94,9 @@ Generate a csr using the host's private_key. Analogous to:
 
 .. code-block:: bash
 
-    VCert gencsr -cn [CN Value] -o "Beta Organization" -ou "Beta Group" \
-        -l "Palo Alto" -st "California" -c US
+    salt-run venafi.gen_csr minion.example.com minion.example.com country=US \ 
+    state=California loc=Sacramento org=CompanyName org_unit=DevOps \
+    zone=Internet password=SecretSauce
 
 :param str minion_id: Required.
 
@@ -106,7 +129,9 @@ Request a new certificate. Analogous to:
 
 .. code-block:: bash
 
-    VCert enroll -z <zone> -k <api key> -cn <domain name>
+    salt-run venafi.gen_csr minion.example.com minion.example.com country=US \ 
+    state=California loc=Sacramento org=CompanyName org_unit=DevOps \
+    zone=Internet password=SecretSauce
 
 :param str minion_id: Required.
 
@@ -132,12 +157,16 @@ Request a new certificate. Analogous to:
 
 :param str password=None: Optional. Password for the CSR.
 
-:param str company_id=None: Required, but may be configured in ``master`` file
+:param str company_id=None: Optional, but may be configured in ``master`` file
     instead.
 
 register
 --------
 Register a new user account
+
+.. code-block:: bash
+  
+  salt-run venafi.register username@example.com
 
 :param str email: Required. The email address to use for the new Venafi account.
 
@@ -146,6 +175,10 @@ show_company
 ------------
 Show company information, especially the company id
 
+.. code-block:: bash
+  
+  salt-run venafi.show_company example.com
+
 :param str domain: Required. The domain name to look up information for.
 
 
@@ -153,12 +186,20 @@ show_csrs
 ---------
 Show certificate requests for the configured API key.
 
+.. code-block:: bash
+  
+  salt-run venafi.show_csrs
+
 
 show_zones
 ----------
 Show zones for the specified company id.
 
-:param str company_id: Required. The company id to show the zones for.
+.. code-block:: bash
+  
+  salt-run venafi.show_zones
+
+:param str company_id: Optional. The company id to show the zones for.
 
 
 pickup, show_cert
@@ -166,12 +207,20 @@ pickup, show_cert
 Show certificate requests for the specified certificate id. Analogous to the
 VCert pickup command.
 
+.. code-block:: bash
+  
+  salt-run venafi.pickup 4295ebc0-14bf-11e7-b965-1df050017ec1
+
 :param str id_: Required. The id of the certificate to look up.
 
 
 show_rsa
 --------
 Show a private RSA key.
+
+.. code-block:: bash
+  
+  salt-run venafi.show_rsa minion.example.com minion.example.com
 
 :param str minion_id: The name of the minion to display the key for.
 
@@ -182,10 +231,18 @@ list_domain_cache
 -----------------
 List domains that have been cached on this master.
 
+.. code-block:: bash
+  
+  salt-run venafi.list_domain_cache
+
 
 del_cached_domain
 -----------------
 Delete a domain from this master's cache.
+
+.. code-block:: bash
+  
+  salt-run venafi.delete_domain_cache example.com
 
 :param str domains: A domain name, or a comma-separated list of domain names,
     to delete from this master's cache.
