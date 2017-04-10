@@ -2,7 +2,6 @@
 
 # Import python libs
 from __future__ import absolute_import
-import sys
 import re
 
 # Import Salt Testing libs
@@ -301,9 +300,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(
               re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$', mac, re.I))
 
-    @patch('salt.modules.virt._nic_profile')
-    @patch('salt.modules.virt._disk_profile')
-    def test_gen_xml_for_esxi_custom_profile(self, disk_profile, nic_profile):
+    def test_gen_xml_for_esxi_custom_profile(self):
         diskp_yaml = '''
 - first:
     size: 8192
@@ -328,29 +325,29 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
   model: e1000
   mac: '00:00:00:00:00:00'
 '''
-        disk_profile.return_value = yaml.load(diskp_yaml)
-        nic_profile.return_value = yaml.load(nicp_yaml)
-        diskp = virt._disk_profile('noeffect', 'esxi')
-        nicp = virt._nic_profile('noeffect', 'esxi')
-        xml_data = virt._gen_xml(
-            'hello',
-            1,
-            512,
-            diskp,
-            nicp,
-            'esxi',
-            )
-        root = ET.fromstring(xml_data)
-        self.assertEqual(root.attrib['type'], 'vmware')
-        self.assertEqual(root.find('vcpu').text, '1')
-        self.assertEqual(root.find('memory').text, str(512 * 1024))
-        self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
-        self.assertTrue(len(root.findall('.//disk')) == 2)
-        self.assertTrue(len(root.findall('.//interface')) == 2)
+        with patch('salt.modules.virt._nic_profile') as nic_profile, \
+                patch('salt.modules.virt._disk_profile') as disk_profile:
+            disk_profile.return_value = yaml.load(diskp_yaml)
+            nic_profile.return_value = yaml.load(nicp_yaml)
+            diskp = virt._disk_profile('noeffect', 'esxi')
+            nicp = virt._nic_profile('noeffect', 'esxi')
+            xml_data = virt._gen_xml(
+                'hello',
+                1,
+                512,
+                diskp,
+                nicp,
+                'esxi',
+                )
+            root = ET.fromstring(xml_data)
+            self.assertEqual(root.attrib['type'], 'vmware')
+            self.assertEqual(root.find('vcpu').text, '1')
+            self.assertEqual(root.find('memory').text, str(512 * 1024))
+            self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
+            self.assertTrue(len(root.findall('.//disk')) == 2)
+            self.assertTrue(len(root.findall('.//interface')) == 2)
 
-    @patch('salt.modules.virt._nic_profile')
-    @patch('salt.modules.virt._disk_profile')
-    def test_gen_xml_for_kvm_custom_profile(self, disk_profile, nic_profile):
+    def test_gen_xml_for_kvm_custom_profile(self):
         diskp_yaml = '''
 - first:
     size: 8192
@@ -375,25 +372,27 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
   model: virtio
   mac: '00:00:00:00:00:00'
 '''
-        disk_profile.return_value = yaml.load(diskp_yaml)
-        nic_profile.return_value = yaml.load(nicp_yaml)
-        diskp = virt._disk_profile('noeffect', 'kvm')
-        nicp = virt._nic_profile('noeffect', 'kvm')
-        xml_data = virt._gen_xml(
-            'hello',
-            1,
-            512,
-            diskp,
-            nicp,
-            'kvm',
-            )
-        root = ET.fromstring(xml_data)
-        self.assertEqual(root.attrib['type'], 'kvm')
-        self.assertEqual(root.find('vcpu').text, '1')
-        self.assertEqual(root.find('memory').text, str(512 * 1024))
-        self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
-        self.assertTrue(len(root.findall('.//disk')) == 2)
-        self.assertTrue(len(root.findall('.//interface')) == 2)
+        with patch('salt.modules.virt._nic_profile') as nic_profile, \
+                patch('salt.modules.virt._disk_profile') as disk_profile:
+            disk_profile.return_value = yaml.load(diskp_yaml)
+            nic_profile.return_value = yaml.load(nicp_yaml)
+            diskp = virt._disk_profile('noeffect', 'kvm')
+            nicp = virt._nic_profile('noeffect', 'kvm')
+            xml_data = virt._gen_xml(
+                'hello',
+                1,
+                512,
+                diskp,
+                nicp,
+                'kvm',
+                )
+            root = ET.fromstring(xml_data)
+            self.assertEqual(root.attrib['type'], 'kvm')
+            self.assertEqual(root.find('vcpu').text, '1')
+            self.assertEqual(root.find('memory').text, str(512 * 1024))
+            self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
+            self.assertTrue(len(root.findall('.//disk')) == 2)
+            self.assertTrue(len(root.findall('.//interface')) == 2)
 
     def test_controller_for_esxi(self):
         diskp = virt._disk_profile('default', 'esxi')
