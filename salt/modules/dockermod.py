@@ -88,6 +88,12 @@ To login to the configured registries, use the :py:func:`docker.login
 given registry, and it will store/update the credentials in
 ``~/.docker/config.json``.
 
+.. note::
+    For Salt releases before 2016.3.7 and 2016.11.4, :py:func:`docker.login
+    <salt.modules.dockermod.login>` is not available. Instead, Salt will try to
+    authenticate using each of your configured registries for each push/pull,
+    behavior which is not correct and has been resolved in newer releases.
+
 
 Configuration Options
 ---------------------
@@ -4005,6 +4011,8 @@ def connect_container_to_network(container, network_id, ipv4_address=None):
 
     ipv4_address
         The IPv4 address to connect to the container
+
+        .. versionadded:: Nitrogen
 
     CLI Example:
 
