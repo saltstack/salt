@@ -21,8 +21,6 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.groupadd
     '''
-    mock_group = {'passwd': '*', 'gid': 0, 'name': 'test', 'members': ['root']}
-    mock_getgrnam = grp.struct_group(('foo', '*', 20, ['test']))
 
     def setup_loader_modules(self):
         return {groupadd: {}}
@@ -43,35 +41,37 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'info' function tests: 1
 
-    @patch('grp.getgrnam', MagicMock(return_value=mock_getgrnam))
     def test_info(self):
         '''
         Tests the return of group information
         '''
-        ret = {'passwd': '*', 'gid': 20, 'name': 'foo', 'members': ['test']}
-        self.assertEqual(groupadd.info('foo'), ret)
+        getgrnam = grp.struct_group(('foo', '*', 20, ['test']))
+        with patch('grp.getgrnam', MagicMock(return_value=getgrnam)):
+            ret = {'passwd': '*', 'gid': 20, 'name': 'foo', 'members': ['test']}
+            self.assertEqual(groupadd.info('foo'), ret)
 
     # '_format_info' function tests: 1
 
-    @patch('salt.modules.groupadd._format_info',
-           MagicMock(return_value=mock_group))
     def test_format_info(self):
         '''
         Tests the formatting of returned group information
         '''
-        data = grp.struct_group(('wheel', '*', 0, ['root']))
-        ret = {'passwd': '*', 'gid': 0, 'name': 'test', 'members': ['root']}
-        self.assertDictEqual(groupadd._format_info(data), ret)
+        group = {'passwd': '*', 'gid': 0, 'name': 'test', 'members': ['root']}
+        with patch('salt.modules.groupadd._format_info', MagicMock(return_value=group)):
+            data = grp.struct_group(('wheel', '*', 0, ['root']))
+            ret = {'passwd': '*', 'gid': 0, 'name': 'test', 'members': ['root']}
+            self.assertDictEqual(groupadd._format_info(data), ret)
 
     # 'getent' function tests: 1
 
-    @patch('grp.getgrall', MagicMock(return_value=[mock_getgrnam]))
     def test_getent(self):
         '''
         Tests the return of information on all groups
         '''
-        ret = [{'passwd': '*', 'gid': 20, 'name': 'foo', 'members': ['test']}]
-        self.assertEqual(groupadd.getent(), ret)
+        getgrnam = grp.struct_group(('foo', '*', 20, ['test']))
+        with patch('grp.getgrall', MagicMock(return_value=[getgrnam])):
+            ret = [{'passwd': '*', 'gid': 20, 'name': 'foo', 'members': ['test']}]
+            self.assertEqual(groupadd.getent(), ret)
 
     # 'chgid' function tests: 2
 

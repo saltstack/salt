@@ -21,12 +21,14 @@ LSCLUSTER = '''\
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.utils.which', Mock(return_value='/usr/bin/pg_createcluster'))
 class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.cmd_run_all_mock = Mock(return_value={'stdout': LSCLUSTER})
         self.addCleanup(delattr, self, 'cmd_run_all_mock')
+        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pg_createcluster'))
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return {
             deb_postgres: {
                 '__salt__': {
@@ -64,12 +66,14 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.utils.which', Mock(return_value='/usr/bin/pg_lsclusters'))
 class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.cmd_run_all_mock = Mock(return_value={'stdout': LSCLUSTER})
         self.addCleanup(delattr, self, 'cmd_run_all_mock')
+        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pg_lsclusters'))
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return {
             deb_postgres: {
                 '__salt__': {
@@ -118,12 +122,14 @@ class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.utils.which', Mock(return_value='/usr/bin/pg_dropcluster'))
 class PostgresDeleteClusterTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.cmd_run_all_mock = Mock(return_value={'stdout': LSCLUSTER})
         self.addCleanup(delattr, self, 'cmd_run_all_mock')
+        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pg_dropcluster'))
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return {
             deb_postgres: {
                 '__salt__': {

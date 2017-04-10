@@ -310,7 +310,6 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(pw_user, 'list_groups', mock):
                 self.assertEqual(pw_user.info('name')['name'], '_TEST_GROUP')
 
-    @patch('salt.utils.get_group_list', MagicMock(return_value='A'))
     def test_list_groups(self):
         '''
         Return a list of groups the named user belongs to

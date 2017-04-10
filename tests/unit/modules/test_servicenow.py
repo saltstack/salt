@@ -10,7 +10,6 @@ from __future__ import absolute_import
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    patch,
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
@@ -28,7 +27,6 @@ class MockServiceNowClient(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('servicenow_rest.api.Client', MockServiceNowClient)
 class ServiceNowModuleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         module_globals = {
@@ -43,6 +41,7 @@ class ServiceNowModuleTestCase(TestCase, LoaderModuleMockMixin):
         }
         if servicenow.HAS_LIBS is False:
             module_globals['sys.modules'] = {'servicenow_rest': MagicMock()}
+            module_globals['sys.modules']['servicenow_rest'].api.Client = MockServiceNowClient
         return {servicenow: module_globals}
 
     def test_module_creation(self):

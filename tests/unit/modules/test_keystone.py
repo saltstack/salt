@@ -404,7 +404,7 @@ class MockClient(object):
     """
     flag = None
 
-    def __init__(self):
+    def __init__(self, profile=None, **conn_args):
         self.ec2 = MockEC2()
         self.endpoints = MockEndpoints()
         self.services = MockServices()
@@ -423,7 +423,6 @@ class MockClient(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.modules.keystone.auth', return_value=MockClient())
 class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.keystone
@@ -432,6 +431,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             keystone: {
+                'auth': MockClient,
                 'client': MockClient(),
                 'keystoneclient': MockKeystoneClient()
             }
@@ -439,7 +439,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'ec2_credentials_create' function tests: 1
 
-    def test_ec2_credentials_create(self, mock):
+    def test_ec2_credentials_create(self):
         '''
         Test if it create EC2-compatible credentials for user per tenant
         '''
@@ -456,7 +456,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'ec2_credentials_delete' function tests: 1
 
-    def test_ec2_credentials_delete(self, mock):
+    def test_ec2_credentials_delete(self):
         '''
         Test if it delete EC2-compatible credentials
         '''
@@ -469,7 +469,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'ec2_credentials_get' function tests: 1
 
-    def test_ec2_credentials_get(self, mock):
+    def test_ec2_credentials_get(self):
         '''
         Test if it return ec2_credentials for a user
         (keystone ec2-credentials-get)
@@ -488,7 +488,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'ec2_credentials_list' function tests: 1
 
-    def test_ec2_credentials_list(self, mock):
+    def test_ec2_credentials_list(self):
         '''
         Test if it return a list of ec2_credentials
         for a specific user (keystone ec2-credentials-list)
@@ -503,7 +503,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'endpoint_get' function tests: 1
 
-    def test_endpoint_get(self, mock):
+    def test_endpoint_get(self):
         '''
         Test if it return a specific endpoint (keystone endpoint-get)
         '''
@@ -525,7 +525,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'endpoint_list' function tests: 1
 
-    def test_endpoint_list(self, mock):
+    def test_endpoint_list(self):
         '''
         Test if it return a list of available endpoints
         (keystone endpoints-list)
@@ -538,7 +538,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'endpoint_create' function tests: 1
 
-    def test_endpoint_create(self, mock):
+    def test_endpoint_create(self):
         '''
         Test if it create an endpoint for an Openstack service
         '''
@@ -557,7 +557,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'endpoint_delete' function tests: 1
 
-    def test_endpoint_delete(self, mock):
+    def test_endpoint_delete(self):
         '''
         Test if it delete an endpoint for an Openstack service
         '''
@@ -570,7 +570,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'role_create' function tests: 1
 
-    def test_role_create(self, mock):
+    def test_role_create(self):
         '''
         Test if it create named role
         '''
@@ -582,7 +582,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'role_delete' function tests: 1
 
-    def test_role_delete(self, mock):
+    def test_role_delete(self):
         '''
         Test if it delete a role (keystone role-delete)
         '''
@@ -594,7 +594,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'role_get' function tests: 1
 
-    def test_role_get(self, mock):
+    def test_role_get(self):
         '''
         Test if it return a specific roles (keystone role-get)
         '''
@@ -606,7 +606,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'role_list' function tests: 1
 
-    def test_role_list(self, mock):
+    def test_role_list(self):
         '''
         Test if it return a list of available roles (keystone role-list)
         '''
@@ -616,7 +616,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'service_create' function tests: 1
 
-    def test_service_create(self, mock):
+    def test_service_create(self):
         '''
         Test if it add service to Keystone service catalog
         '''
@@ -630,7 +630,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'service_delete' function tests: 1
 
-    def test_service_delete(self, mock):
+    def test_service_delete(self):
         '''
         Test if it delete a service from Keystone service catalog
         '''
@@ -639,7 +639,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'service_get' function tests: 1
 
-    def test_service_get(self, mock):
+    def test_service_get(self):
         '''
         Test if it return a list of available services (keystone services-list)
         '''
@@ -656,7 +656,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'service_list' function tests: 1
 
-    def test_service_list(self, mock):
+    def test_service_list(self):
         '''
         Test if it return a list of available services (keystone services-list)
         '''
@@ -668,7 +668,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'tenant_create' function tests: 1
 
-    def test_tenant_create(self, mock):
+    def test_tenant_create(self):
         '''
         Test if it create a keystone tenant
         '''
@@ -679,7 +679,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'tenant_delete' function tests: 1
 
-    def test_tenant_delete(self, mock):
+    def test_tenant_delete(self):
         '''
         Test if it delete a tenant (keystone tenant-delete)
         '''
@@ -691,7 +691,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'tenant_get' function tests: 1
 
-    def test_tenant_get(self, mock):
+    def test_tenant_get(self):
         '''
         Test if it return a specific tenants (keystone tenant-get)
         '''
@@ -705,7 +705,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'tenant_list' function tests: 1
 
-    def test_tenant_list(self, mock):
+    def test_tenant_list(self):
         '''
         Test if it return a list of available tenants (keystone tenants-list)
         '''
@@ -716,7 +716,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'tenant_update' function tests: 1
 
-    def test_tenant_update(self, mock):
+    def test_tenant_update(self):
         '''
         Test if it update a tenant's information (keystone tenant-update)
         '''
@@ -725,7 +725,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'token_get' function tests: 1
 
-    def test_token_get(self, mock):
+    def test_token_get(self):
         '''
         Test if it return the configured tokens (keystone token-get)
         '''
@@ -736,7 +736,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_list' function tests: 1
 
-    def test_user_list(self, mock):
+    def test_user_list(self):
         '''
         Test if it return a list of available users (keystone user-list)
         '''
@@ -750,7 +750,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_get' function tests: 1
 
-    def test_user_get(self, mock):
+    def test_user_get(self):
         '''
         Test if it return a specific users (keystone user-get)
         '''
@@ -764,7 +764,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
                                        'email': 'salt@saltstack.com'}})
     # 'user_create' function tests: 1
 
-    def test_user_create(self, mock):
+    def test_user_create(self):
         '''
         Test if it create a user (keystone user-create)
         '''
@@ -778,7 +778,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_delete' function tests: 1
 
-    def test_user_delete(self, mock):
+    def test_user_delete(self):
         '''
         Test if it delete a user (keystone user-delete)
         '''
@@ -790,7 +790,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_update' function tests: 1
 
-    def test_user_update(self, mock):
+    def test_user_update(self):
         '''
         Test if it update a user's information (keystone user-update)
         '''
@@ -802,7 +802,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_verify_password' function tests: 1
 
-    def test_user_verify_password(self, mock):
+    def test_user_verify_password(self):
         '''
         Test if it verify a user's password
         '''
@@ -820,7 +820,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_password_update' function tests: 1
 
-    def test_user_password_update(self, mock):
+    def test_user_password_update(self):
         '''
         Test if it update a user's password (keystone user-password-update)
         '''
@@ -832,7 +832,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_role_add' function tests: 1
 
-    def test_user_role_add(self, mock):
+    def test_user_role_add(self):
         '''
         Test if it add role for user in tenant (keystone user-role-add)
         '''
@@ -855,7 +855,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_role_remove' function tests: 1
 
-    def test_user_role_remove(self, mock):
+    def test_user_role_remove(self):
         '''
         Test if it add role for user in tenant (keystone user-role-add)
         '''
@@ -883,7 +883,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_role_list' function tests: 1
 
-    def test_user_role_list(self, mock):
+    def test_user_role_list(self):
         '''
         Test if it return a list of available user_roles
         (keystone user-roles-list)

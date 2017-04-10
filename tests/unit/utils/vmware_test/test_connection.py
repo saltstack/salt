@@ -47,12 +47,19 @@ log = logging.getLogger(__name__)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_GSSAPI, 'The \'gssapi\' library is missing')
-@patch('gssapi.Name', MagicMock(return_value='service'))
-@patch('gssapi.InitContext', MagicMock())
 class GssapiTokenTest(TestCase):
     '''
     Test cases for salt.utils.vmware.get_gssapi_token
     '''
+    def setUp(self):
+        patches = (
+            ('gssapi.Name', MagicMock(return_value='service')),
+            ('gssapi.InitContext', MagicMock())
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
     def test_no_gssapi(self):
         with patch('salt.utils.vmware.HAS_GSSAPI', False):
@@ -117,12 +124,19 @@ class GssapiTokenTest(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.SmartConnect', MagicMock())
-@patch('salt.utils.vmware.Disconnect', MagicMock())
-@patch('salt.utils.vmware.get_gssapi_token',
-       MagicMock(return_value='fake_token'))
 class PrivateGetServiceInstanceTestCase(TestCase):
     '''Tests for salt.utils.vmware._get_service_instance'''
+
+    def setUp(self):
+        patches = (
+            ('salt.utils.vmware.SmartConnect', MagicMock()),
+            ('salt.utils.vmware.Disconnect', MagicMock()),
+            ('salt.utils.vmware.get_gssapi_token', MagicMock(return_value='fake_token'))
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
     def test_invalid_mechianism(self):
         with self.assertRaises(excs.CommandExecutionError) as excinfo:
@@ -560,11 +574,17 @@ class PrivateGetServiceInstanceTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.GetSi', MagicMock(return_value=None))
-@patch('salt.utils.vmware._get_service_instance',
-       MagicMock(return_value=MagicMock()))
 class GetServiceInstanceTestCase(TestCase):
     '''Tests for salt.utils.vmware.get_service_instance'''
+    def setUp(self):
+        patches = (
+            ('salt.utils.vmware.GetSi', MagicMock(return_value=None)),
+            ('salt.utils.vmware._get_service_instance', MagicMock(return_value=MagicMock()))
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
     def test_default_params(self):
         mock_get_si = MagicMock()
@@ -788,11 +808,17 @@ class IsConnectionToAVCenterTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.vim.ServiceInstance', MagicMock())
 class GetServiceInstanceFromManagedObjectTestCase(TestCase):
     '''Tests for salt.utils.vmware.get_managed_instance_from_managed_object'''
 
     def setUp(self):
+        patches = (
+            ('salt.utils.vmware.vim.ServiceInstance', MagicMock()),
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.mock_si = MagicMock()
         self.mock_stub = PropertyMock()
         self.mock_mo_ref = MagicMock(_stub=self.mock_stub)

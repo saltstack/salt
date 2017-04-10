@@ -58,7 +58,12 @@ class ExtendedTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        return {vmware: {'__active_provider_name__': ''}}
+        return {
+            vmware: {
+                '__virtual__': MagicMock(return_value='vmware'),
+                '__active_provider_name__': ''
+            }
+        }
 
     def assertRaisesWithMessage(self, exc_type, exc_msg, func, *args, **kwargs):
         try:
@@ -71,7 +76,6 @@ class ExtendedTestCase(TestCase, LoaderModuleMockMixin):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_LIBS, 'Install pyVmomi to be able to run this test.')
-@patch('salt.cloud.clouds.vmware.__virtual__', MagicMock(return_value='vmware'))
 class VMwareTestCase(ExtendedTestCase):
     '''
     Unit TestCase for salt.cloud.clouds.vmware module.
@@ -848,23 +852,23 @@ class VMwareTestCase(ExtendedTestCase):
             self.assertEqual(config.is_profile_configured(vmware.__opts__, 'vcenter01:vmware',
                                                           'base-gold', vm_=vm_), True)
 
-    @patch('salt.cloud.clouds.vmware.randint', return_value=101)
-    def test_add_new_ide_controller_helper(self, randint_mock):
+    def test_add_new_ide_controller_helper(self):
         '''
         Tests that creating a new controller, ensuring that it will generate a controller key
         if one is not provided
         '''
-        controller_label = 'Some label'
-        bus_number = 1
-        spec = vmware._add_new_ide_controller_helper(controller_label, None, bus_number)
-        self.assertEqual(spec.device.key, randint_mock.return_value)
+        with patch('salt.cloud.clouds.vmware.randint', return_value=101) as randint_mock:
+            controller_label = 'Some label'
+            bus_number = 1
+            spec = vmware._add_new_ide_controller_helper(controller_label, None, bus_number)
+            self.assertEqual(spec.device.key, randint_mock.return_value)
 
-        spec = vmware._add_new_ide_controller_helper(controller_label, 200, bus_number)
-        self.assertEqual(spec.device.key, 200)
+            spec = vmware._add_new_ide_controller_helper(controller_label, 200, bus_number)
+            self.assertEqual(spec.device.key, 200)
 
-        self.assertEqual(spec.device.busNumber, bus_number)
-        self.assertEqual(spec.device.deviceInfo.label, controller_label)
-        self.assertEqual(spec.device.deviceInfo.summary, controller_label)
+            self.assertEqual(spec.device.busNumber, bus_number)
+            self.assertEqual(spec.device.deviceInfo.label, controller_label)
+            self.assertEqual(spec.device.deviceInfo.summary, controller_label)
 
     def test_manage_devices_just_cd(self):
         '''
@@ -958,54 +962,54 @@ class VMwareTestCase(ExtendedTestCase):
                 call='function')
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
-    @patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None))
-    @patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None))
     def test_add_host_cluster_not_exists(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the specified cluster present
         in kwargs that are provided to add_host does not exist in the VMware
         environment.
         '''
-        provider_config_additions = {
-          'esxi_host_user': 'root',
-          'esxi_host_password': 'myhostpassword'
-        }
+        with patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None)):
+            with patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None)):
+                provider_config_additions = {
+                  'esxi_host_user': 'root',
+                  'esxi_host_password': 'myhostpassword'
+                }
 
-        provider_config = deepcopy(PROVIDER_CONFIG)
-        provider_config['vcenter01']['vmware'].update(provider_config_additions)
+                provider_config = deepcopy(PROVIDER_CONFIG)
+                provider_config['vcenter01']['vmware'].update(provider_config_additions)
 
-        with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
-            self.assertRaisesWithMessage(
-                SaltCloudSystemExit,
-                'Specified cluster does not exist.',
-                vmware.add_host,
-                kwargs={'host': 'my-esxi-host', 'cluster': 'my-cluster'},
-                call='function')
+                with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
+                    self.assertRaisesWithMessage(
+                        SaltCloudSystemExit,
+                        'Specified cluster does not exist.',
+                        vmware.add_host,
+                        kwargs={'host': 'my-esxi-host', 'cluster': 'my-cluster'},
+                        call='function')
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
-    @patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None))
-    @patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None))
     def test_add_host_datacenter_not_exists(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the specified datacenter
         present in kwargs that are provided to add_host does not exist in the VMware
         environment.
         '''
-        provider_config_additions = {
-          'esxi_host_user': 'root',
-          'esxi_host_password': 'myhostpassword'
-        }
+        with patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None)):
+            with patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None)):
+                provider_config_additions = {
+                  'esxi_host_user': 'root',
+                  'esxi_host_password': 'myhostpassword'
+                }
 
-        provider_config = deepcopy(PROVIDER_CONFIG)
-        provider_config['vcenter01']['vmware'].update(provider_config_additions)
+                provider_config = deepcopy(PROVIDER_CONFIG)
+                provider_config['vcenter01']['vmware'].update(provider_config_additions)
 
-        with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
-            self.assertRaisesWithMessage(
-                SaltCloudSystemExit,
-                'Specified datacenter does not exist.',
-                vmware.add_host,
-                kwargs={'host': 'my-esxi-host', 'datacenter': 'my-datacenter'},
-                call='function')
+                with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
+                    self.assertRaisesWithMessage(
+                        SaltCloudSystemExit,
+                        'Specified datacenter does not exist.',
+                        vmware.add_host,
+                        kwargs={'host': 'my-esxi-host', 'datacenter': 'my-datacenter'},
+                        call='function')
 
     def test_remove_host_no_kwargs(self):
         '''
@@ -1030,19 +1034,19 @@ class VMwareTestCase(ExtendedTestCase):
             call='function')
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
-    @patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None))
-    @patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None))
     def test_remove_host_not_exists(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the specified host present
         in kwargs that are provided to remove_host does not exist in the VMware
         environment.
         '''
-        self.assertRaises(
-            SaltCloudSystemExit,
-            vmware.remove_host,
-            kwargs={'host': 'my-host'},
-            call='function')
+        with patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None)):
+            with patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None)):
+                self.assertRaises(
+                    SaltCloudSystemExit,
+                    vmware.remove_host,
+                    kwargs={'host': 'my-host'},
+                    call='function')
 
     def test_connect_host_no_kwargs(self):
         '''
@@ -1067,19 +1071,19 @@ class VMwareTestCase(ExtendedTestCase):
             call='function')
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
-    @patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None))
-    @patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None))
     def test_connect_host_not_exists(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the specified host present
         in kwargs that are provided to connect_host does not exist in the VMware
         environment.
         '''
-        self.assertRaises(
-            SaltCloudSystemExit,
-            vmware.connect_host,
-            kwargs={'host': 'my-host'},
-            call='function')
+        with patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None)):
+            with patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None)):
+                self.assertRaises(
+                    SaltCloudSystemExit,
+                    vmware.connect_host,
+                    kwargs={'host': 'my-host'},
+                    call='function')
 
     def test_disconnect_host_no_kwargs(self):
         '''
@@ -1104,19 +1108,19 @@ class VMwareTestCase(ExtendedTestCase):
             call='function')
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
-    @patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None))
-    @patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None))
     def test_disconnect_host_not_exists(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the specified host present
         in kwargs that are provided to disconnect_host does not exist in the VMware
         environment.
         '''
-        self.assertRaises(
-            SaltCloudSystemExit,
-            vmware.disconnect_host,
-            kwargs={'host': 'my-host'},
-            call='function')
+        with patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None)):
+            with patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None)):
+                self.assertRaises(
+                    SaltCloudSystemExit,
+                    vmware.disconnect_host,
+                    kwargs={'host': 'my-host'},
+                    call='function')
 
     def test_reboot_host_no_kwargs(self):
         '''
@@ -1141,19 +1145,19 @@ class VMwareTestCase(ExtendedTestCase):
             call='function')
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
-    @patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None))
-    @patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None))
     def test_reboot_host_not_exists(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the specified host present
         in kwargs that are provided to connect_host does not exist in the VMware
         environment.
         '''
-        self.assertRaises(
-            SaltCloudSystemExit,
-            vmware.reboot_host,
-            kwargs={'host': 'my-host'},
-            call='function')
+        with patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None)):
+            with patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None)):
+                self.assertRaises(
+                    SaltCloudSystemExit,
+                    vmware.reboot_host,
+                    kwargs={'host': 'my-host'},
+                    call='function')
 
     def test_create_datastore_cluster_no_kwargs(self):
         '''

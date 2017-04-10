@@ -30,13 +30,13 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with('security import /path/to/cert.p12 -P passw0rd '
                                          '-k /Library/Keychains/System.keychain')
 
-    @patch('salt.modules.mac_keychain.unlock_keychain')
-    def test_install_cert_extras(self, unlock_mock):
+    def test_install_cert_extras(self):
         '''
             Test installing a certificate into the macOS keychain with extras
         '''
         mock = MagicMock()
-        with patch.dict(keychain.__salt__, {'cmd.run': mock}):
+        with patch.dict(keychain.__salt__, {'cmd.run': mock}), \
+                patch('salt.modules.mac_keychain.unlock_keychain') as unlock_mock:
             keychain.install('/path/to/cert.p12', 'passw0rd', '/path/to/chain', allow_any=True,
                              keychain_password='passw0rd1')
             unlock_mock.assert_called_once_with('/path/to/chain', 'passw0rd1')
