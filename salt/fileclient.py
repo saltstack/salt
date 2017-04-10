@@ -787,22 +787,6 @@ class LocalClient(Client):
         if not fnd_path:
             return ''
 
-        try:
-            fnd_mode = fnd.get('stat', [])[0]
-        except (IndexError, TypeError):
-            fnd_mode = None
-
-        if not salt.utils.is_windows():
-            if fnd_mode is not None:
-                try:
-                    if os.stat(dest).st_mode != fnd_mode:
-                        try:
-                            os.chmod(dest, fnd_mode)
-                        except OSError as exc:
-                            log.warning('Failed to chmod %s: %s', dest, exc)
-                except Exception:
-                    pass
-
         return fnd_path
 
     def file_list(self, saltenv='base', prefix=''):
@@ -1054,47 +1038,7 @@ class RemoteClient(Client):
                 mode_local = None
 
             if hash_local == hash_server:
-                if not salt.utils.is_windows():
-                    if mode_server is None:
-                        log.debug('No file mode available for \'%s\'', path)
-                    elif mode_local is None:
-                        log.debug(
-                            'No file mode available for \'%s\'',
-                            dest2check
-                        )
-                    else:
-                        if mode_server == mode_local:
-                            log.info(
-                                'Fetching file from saltenv \'%s\', '
-                                '** skipped ** latest already in cache '
-                                '\'%s\', mode up-to-date', saltenv, path
-                            )
-                        else:
-                            try:
-                                os.chmod(dest2check, mode_server)
-                                log.info(
-                                    'Fetching file from saltenv \'%s\', '
-                                    '** updated ** latest already in cache, '
-                                    '\'%s\', mode updated from %s to %s',
-                                    saltenv,
-                                    path,
-                                    salt.utils.st_mode_to_octal(mode_local),
-                                    salt.utils.st_mode_to_octal(mode_server)
-                                )
-                            except OSError as exc:
-                                log.warning(
-                                    'Failed to chmod %s: %s', dest2check, exc
-                                )
-                    # We may not have been able to check/set the mode, but we
-                    # don't want to re-download the file because of a failure
-                    # in mode checking. Return the cached path.
-                    return dest2check
-                else:
-                    log.info(
-                        'Fetching file from saltenv \'%s\', ** skipped ** '
-                        'latest already in cache \'%s\'', saltenv, path
-                    )
-                    return dest2check
+                return dest2check
 
         log.debug(
             'Fetching file from saltenv \'%s\', ** attempting ** \'%s\'',
@@ -1211,23 +1155,6 @@ class RemoteClient(Client):
                 saltenv, path
             )
 
-        if not salt.utils.is_windows():
-            if mode_server is not None:
-                try:
-                    if os.stat(dest).st_mode != mode_server:
-                        try:
-                            os.chmod(dest, mode_server)
-                            log.info(
-                                'Fetching file from saltenv \'%s\', '
-                                '** done ** \'%s\', mode set to %s',
-                                saltenv,
-                                path,
-                                salt.utils.st_mode_to_octal(mode_server)
-                            )
-                        except OSError:
-                            log.warning('Failed to chmod %s: %s', dest, exc)
-                except OSError:
-                    pass
         return dest
 
     def file_list(self, saltenv='base', prefix=''):
