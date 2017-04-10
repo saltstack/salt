@@ -945,6 +945,10 @@ VALID_OPTS = {
     # django auth
     'django_auth_path': str,
     'django_auth_settings': str,
+
+    # Number of times to try to auth with the master on a reconnect with the
+    # tcp transport
+    'tcp_authentication_retries': int,
 }
 
 # default configurations
@@ -1075,6 +1079,7 @@ DEFAULT_MINION_OPTS = {
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
+    'tcp_authentication_retries': 5,
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'minion'),
     'log_level': 'warning',
     'log_level_logfile': None,
