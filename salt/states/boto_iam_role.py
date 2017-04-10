@@ -491,7 +491,7 @@ def _policies_attached(
                                                                 keyid=keyid,
                                                                 profile=profile)
                 newpolicies = [x.get('policy_arn') for x in _list]
-                ret['changes']['new'] = {'manged_policies': newpolicies}
+                ret['changes']['new'] = {'managed_policies': newpolicies}
                 ret['result'] = False
                 msg = 'Failed to add policy {0} to role {1}'
                 ret['comment'] = msg.format(policy_name, name)
