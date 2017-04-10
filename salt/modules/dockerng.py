@@ -5744,7 +5744,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
         trans_tar_sha256 = salt.utils.get_hash(trans_tar, 'sha256')
         __salt__['dockerng.copy_to'](name, trans_tar,
                                      os.path.join(trans_dest_path, 'salt_state.tgz'),
-                                     exec_driver='nsenter',
+                                     exec_driver=_get_exec_driver(),
                                      overwrite=True)
 
         # Now execute the state into the container
