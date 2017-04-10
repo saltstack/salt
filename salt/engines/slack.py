@@ -81,7 +81,7 @@ fire_all is broken at the moment with json serialization errors
 
 # XXX next step: change from sync (local.cmd) to async (local.cmd_async).  As commands are submitted,
 # build an internal list of commands and their associated groups, and poll in a loop looking for
-# results from the commands.
+# results from the commands.  The local.cmd_iter_no_block would make this pretty doable.
 #
 # On startup look for events that we may have lost from a shutdown/crash (within a reasonable time window),
 # and re-build the internal list.
@@ -114,6 +114,7 @@ import salt.utils
 import salt.utils.event
 import salt.utils.http
 import salt.utils.slack
+from salt.utils.yamldumper import OrderedDumper
 
 def __virtual__():
     return HAS_SLACKCLIENT
@@ -148,11 +149,11 @@ def get_config_groups(groups_conf, groups_pillar_name):
     # Default to returning something that'll never match
     ret_groups = {
         "default": {
-            "users": set(),
-            "commands": set(),
-            "aliases": dict(),
-            "default_target": dict(),
-            "targets": dict()
+            "users"          : set(),
+            "commands"       : set(),
+            "aliases"        : dict(),
+            "default_target" : dict(),
+            "targets"        : dict()
         }
     }
 
@@ -165,7 +166,12 @@ def get_config_groups(groups_conf, groups_pillar_name):
     # First obtain group lists from pillars, then in case there is any overlap, iterate over the groups
     # that come from pillars.  The configuration in files on disk/from startup
     # will override any configs from pillars.  They are meant to be complementary not to provide overrides.
-    groups_gen = itertools.chain(_groups_from_pillar(groups_pillar_name).items(), use_groups.items())
+    try:
+        groups_gen = itertools.chain(_groups_from_pillar(groups_pillar_name).items(), use_groups.items())
+    except AtrributeError as ae:
+        log.warn("Failed to get groups from {}: {}".format(groups_pillar_name, _groups_from_pillar(groups_pillar_name)))
+        log.warn("or from config: {}".format(use_groups))
+        groups_gen = []
     for name, config in groups_gen:
         log.info("Trying to get {} and {} to be useful".format(name, config))
         ret_groups.setdefault(name, {
@@ -251,6 +257,31 @@ def can_user_run(user, command, groups):
     return ()
 
 
+def commandline_to_list(cmdline_str, trigger_string):
+    """
+    cmdline_str is the string of the command line
+    trigger_string is the trigger string, to be removed
+
+    Returns the full command line, with the trigger string removed,
+    as a list which is separated by spaces
+    """
+    cmdline = salt.utils.shlex_split(cmdline_str[len(trigger_string):])
+    # Remove slack url parsing
+    #  Translate target=<http://host.domain.net|host.domain.net>
+    #  to target=host.domain.net
+    cmdlist = []
+    for cmditem in cmdline:
+        pattern = r'(?P<begin>.*)(<.*\|)(?P<url>.*)(>)(?P<remainder>.*)'
+        m = re.match(pattern, cmditem)
+        if m:
+            origtext = m.group('begin') + m.group('url') + m.group('remainder')
+            cmdlist.append(origtext)
+        else:
+            cmdlist.append(cmditem)
+    return cmdlist
+
+
+
 def generate_triggered_messages(token, trigger_string, groups, groups_pillar_name, control):
     """
     slack_token = string
@@ -297,38 +328,25 @@ def generate_triggered_messages(token, trigger_string, groups, groups_pillar_nam
                 log.info("Message is {}".format(_text)) # this can violate the ascii codec
             except UnicodeEncodeError as uee:
                 log.warn("Got a message that I couldn't log.  The reason is: {}".format(uee))
+                continue # XXX Re-visit whether this is the right action here.
 
             # Convert UTF to string
             _text = json.dumps(_text)
             _text = yaml.safe_load(_text)
 
             if not control:
-                yield {
-                    "control": False,
-                    "message": m_data
-                }
+                yield { "control": False, "message": m_data }
 
             if not _text:
                 continue
+
             if _text.startswith(trigger_string) and control:
-                # Trim the trigger string from the front
-                # cmdline = _text[1:].split(' ', 1)
-                cmdline = salt.utils.shlex_split(_text[len(trigger_string):])
-                # Remove slack url parsing
-                #  Translate target=<http://host.domain.net|host.domain.net>
-                #  to target=host.domain.net
-                cmdlist = []
-                for cmditem in cmdline:
-                    pattern = r'(?P<begin>.*)(<.*\|)(?P<url>.*)(>)(?P<remainder>.*)'
-                    m = re.match(pattern, cmditem)
-                    if m:
-                        origtext = m.group('begin') + m.group('url') + m.group('remainder')
-                        cmdlist.append(origtext)
-                    else:
-                        cmdlist.append(cmditem)
-                cmdline = cmdlist
+                if not m_data.get('user'):
+                    log.warn("got a message without a user, going to ignore it")
+                    continue
 
                 slack_user_name = all_slack_users.get(m_data['user'], None)
+
                 if not slack_user_name:
                     all_slack_users = get_slack_users(token)
                     slack_user_name = all_slack_users.get(m_data['user'], None)
@@ -340,13 +358,15 @@ def generate_triggered_messages(token, trigger_string, groups, groups_pillar_nam
                 loaded_groups = get_config_groups(groups, groups_pillar_name)
                 log.debug("Got the groups: {}".format(loaded_groups))
 
+                # Trim the trigger string from the front
+                # cmdline = _text[1:].split(' ', 1)
+                cmdline = commandline_to_list(_text, trigger_string)# salt.utils.shlex_split(_text[len(trigger_string):]))
+
                 permitted_group = can_user_run(slack_user_name, cmdline[0], loaded_groups)
-                log.info("I am here")
                 if slack_user_name and permitted_group:
                     # maybe there are no aliases, so check on that
                     if cmdline[0] in permitted_group[1].get('aliases', {}).keys():
-                        use_cmdline = salt.utils.shlex_split(
-                            permitted_group[1]['aliases'][cmdline[0]])
+                        use_cmdline = commandline_to_list(permitted_group[1]['aliases'][cmdline[0]], "")
                     else:
                         use_cmdline = cmdline
                     yield {
@@ -356,11 +376,7 @@ def generate_triggered_messages(token, trigger_string, groups, groups_pillar_nam
                         "channel": channel,
                         "user": m_data['user'],
                         "slack_client": sc,
-                        # this uses the real cmdline[0] as typed from the user to match
-                        # to the expected targeting, to allow for alias targeting,
-                        # though the alias could specify its own targeting as part of the
-                        # provided command line.  Do one or the other, not both.
-                        "target": get_configured_target(permitted_group, cmdline[0])
+                        "target": get_target(permitted_group, cmdline, use_cmdline)
                     }
                 else:
                     channel.send_message('{}, {} is not allowed to use command {}.'.format(m_data['user'], slack_user_name, cmdline))
@@ -368,7 +384,7 @@ def generate_triggered_messages(token, trigger_string, groups, groups_pillar_nam
 
         time.sleep(1) # Sleep for a bit before asking slack again.
 
-def get_configured_target(permitted_group, cmd):
+def get_target(permitted_group, cmdline, alias_cmdline):
     """When we are permitted to run a command on a target, look to see
     what the default targeting is for that group, and for that specific
     command (if provided).
@@ -390,19 +406,35 @@ def get_configured_target(permitted_group, cmd):
 
     Run each of them through ``get_configured_target(("foo", f), "pillar.get")`` and confirm a valid target
     """
-    name, group_config = permitted_group
-    null_target =  {"target": None, "tgt_type": None}
-    target = group_config.get('default_target')
-    if not target: # Empty, None, or False
-        target = null_target
-    if group_config.get('targets'):
-        if group_config['targets'].get(cmd):
-            target = group_config['targets'][cmd]
-    if not target.get("target"):
-        log.debug("Group {} is not configured to have a target for cmd {}.".format(name, cmd))
-    return target
+    null_target = {"target": None, "tgt_type": None}
 
+    def check_cmd_against_group(cmd):
+        name, group_config = permitted_group
+        target = group_config.get('default_target')
+        if not target: # Empty, None, or False
+            target = null_target
+        if group_config.get('targets'):
+            if group_config['targets'].get(cmd):
+                target = group_config['targets'][cmd]
+        if not target.get("target"):
+            log.debug("Group {} is not configured to have a target for cmd {}.".format(name, cmd))
+        return target
 
+    for this_cl in cmdline, alias_cmdline:
+        _, kwargs = parse_args_and_kwargs(this_cl)
+        if 'target' in kwargs:
+            log.debug("target is in kwargs {}.".format(kwargs))
+            if 'tgt_type' in kwargs:
+                log.debug("tgt_type is in kwargs {}.".format(kwargs))
+                return {"target": kwargs['target'], "tgt_type": kwargs['tgt_type']}
+            return {"target": kwargs['target'], "tgt_type": 'glob'}
+
+    for this_cl in cmdline, alias_cmdline:
+        checked = check_cmd_against_group(this_cl[0])
+        log.debug("this cmdline has target {}.".format(this_cl))
+        if checked.get("target"):
+            return checked
+    return null_target
 
 def fire_msgs_to_event_bus(tag, message_generator, fire_all):
     """
@@ -420,6 +452,54 @@ def fire_msgs_to_event_bus(tag, message_generator, fire_all):
             time.sleep(1)
         else:
             log.info("Not firing to the event bus, fire_all is not specified")
+
+
+
+# emulate the yaml_out output formatter.  It relies on a global __opts__ object which we can't
+# obviously pass in
+
+def format_return_text(data, **kwargs):  # pylint: disable=unused-argument
+    '''
+    Print out YAML using the block mode
+    '''
+    params = dict(Dumper=OrderedDumper)
+    if 'output_indent' not in __opts__:
+        # default indentation
+        params.update(default_flow_style=False)
+    elif __opts__['output_indent'] >= 0:
+        # custom indent
+        params.update(default_flow_style=False,
+                      indent=__opts__['output_indent'])
+    else:  # no indentation
+        params.update(default_flow_style=True,
+                      indent=0)
+    try:
+        return yaml.dump(data, **params).replace("\n\n", "\n")
+    except Exception as exc:
+        import pprint
+        log.exception('Exception {0} encountered when trying to serialize {1}'.format(
+            exc, pprint.pformat(data)))
+
+
+def parse_args_and_kwargs(cmdline):
+    """
+    cmdline: list
+
+    returns tuple of: args (list), kwargs (dict)
+    """
+    # Parse args and kwargs
+    args    = []
+    kwargs  = {}
+
+    if len(cmdline) > 1:
+        for item in cmdline[1:]:
+            if '=' in item:
+                (key, value) = item.split('=', 1)
+                kwargs[key] = value
+            else:
+                args.append(item)
+    return (args, kwargs)
+
 
 
 def run_commands_from_slack(message_generator, fire_all, tag):
@@ -448,36 +528,17 @@ def run_commands_from_slack(message_generator, fire_all, tag):
 
 
         # Parse args and kwargs
-        cmdline = msg['cmdline']
-        cmd = cmdline[0]
-        args = []
-        kwargs = {}
-        ret = {}
+        cmd     = msg['cmdline'][0]
+        ret     = {}
 
-        if len(cmdline) > 1:
-            for item in cmdline[1:]:
-                if '=' in item:
-                    (key, value) = item.split('=', 1)
-                    kwargs[key] = value
-                else:
-                    args.append(item)
-
-        # Check for target. Otherwise assume *
-        if 'target' not in kwargs:
-            target = msg["target"].get('target', )
-        else:
-            target = kwargs['target']
-            del kwargs['target']
-        log.info("target is: {}".format(target))
-
+        log.info("cmdline is {}".format(msg['cmdline']))
+        args, kwargs = parse_args_and_kwargs(msg['cmdline'])
+        log.info("args is {}".format(args))
+        log.info("kwargs is {}".format(kwargs))
+        # Check for target. Otherwise assume None
+        target = msg["target"]["target"]
         # Check for tgt_type. Otherwise assume glob
-        if 'tgt_type' not in kwargs:
-            tgt_type = msg["target"].get('tgt_type', 'glob')
-        else:
-            tgt_type = kwargs['tgt_type']
-            del kwargs['tgt_type']
-        if not tgt_type:
-            tgt_type = 'glob' # I'm seeing this not cover everything
+        tgt_type = msg["target"]['tgt_type']
         log.debug("target_type is: {}".format(tgt_type))
 
         if cmd in runner_functions:
@@ -496,11 +557,11 @@ def run_commands_from_slack(message_generator, fire_all, tag):
 
         if ret:
             log.debug("ret to send back is {}".format(ret))
-            return_text = json.dumps(ret, sort_keys=True, indent=2)
+            # formatting function?
+            return_text = format_return_text(ret)
             r = msg["slack_client"].api_call(
                 "files.upload", channels=msg['channel'].id, files=None,
-                content=return_text
-            )
+                content=return_text )
             # Handle unicode return
             log.debug("Got back {} via the slack client".format(r))
             result = yaml.safe_load(json.dumps(r))
@@ -510,8 +571,7 @@ def run_commands_from_slack(message_generator, fire_all, tag):
             return_text = "Command {} on target {} completed".format(cmd, target)
             r = msg["slack_client"].api_call(
                 "files.upload", channels=msg['channel'].id, files=None,
-                content=return_text
-            )
+                content=return_text )
 
 
 def start(token,
