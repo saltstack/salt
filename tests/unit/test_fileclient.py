@@ -5,17 +5,14 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import errno
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch
-from mock import Mock
-import errno
+from tests.support.mock import patch, Mock
+from tests.support.unit import TestCase
+
+# Import Salt libs
 from salt.ext.six.moves import range
-
-ensure_in_syspath('../')
-
 from salt.fileclient import Client
 
 
