@@ -7,7 +7,7 @@ Module to interact with Junos devices.
 
 .. note::
 
-    Those who wish to use junos-eznc (PyEZ) version 2.1.0, must
+    Those who wish to use junos-eznc (PyEZ) version >= 2.1.0, must
     use the latest salt code from github until the next release.
 
 '''
