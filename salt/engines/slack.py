@@ -143,7 +143,6 @@ def get_config_groups(groups_conf, groups_pillar_name):
     """
     get info from groups in config, and from the named pillar
 
-    XXX change to getting data from pillars
     """
     # Get groups
     # Default to returning something that'll never match
