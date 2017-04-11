@@ -66,50 +66,51 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
                     'list': ['foo'],
                     'dict': {'foo': 'bar', 'subkey': {'foo': 'bar'}}}
 
-        pillarmod.__opts__ = {}
-        pillarmod.__pillar__ = {'int': 2,
-                                'string': 'bar',
-                                'list': ['bar', 'baz'],
-                                'dict': {'baz': 'qux', 'subkey': {'baz': 'qux'}}}
+        pillar_mock = {'int': 2,
+                       'string': 'bar',
+                       'list': ['bar', 'baz'],
+                       'dict': {'baz': 'qux', 'subkey': {'baz': 'qux'}}}
 
         # Test that we raise a KeyError when pillar_raise_on_missing is True
         with patch.dict(pillarmod.__opts__, {'pillar_raise_on_missing': True}):
             self.assertRaises(KeyError, pillarmod.get, 'missing')
         # Test that we return an empty string when it is not
-        self.assertEqual(pillarmod.get('missing'), '')
+        with patch.dict(pillarmod.__opts__, {}):
+            self.assertEqual(pillarmod.get('missing'), '')
 
-        # Test with no default passed (it should be KeyError) and merge=True.
-        # The merge should be skipped and the value returned from __pillar__
-        # should be returned.
-        for item in pillarmod.__pillar__:
-            self.assertEqual(
-                pillarmod.get(item, merge=True),
-                pillarmod.__pillar__[item]
-            )
-
-        # Test merging when the type of the default value is not the same as
-        # what was returned. Merging should be skipped and the value returned
-        # from __pillar__ should be returned.
-        for default_type in defaults:
-            for data_type in ('dict', 'list'):
-                if default_type == data_type:
-                    continue
+        with patch.dict(pillarmod.__pilar__, pillar_mock):
+            # Test with no default passed (it should be KeyError) and merge=True.
+            # The merge should be skipped and the value returned from __pillar__
+            # should be returned.
+            for item in pillarmod.__pillar__:
                 self.assertEqual(
-                    pillarmod.get(item, default=defaults[default_type], merge=True),
+                    pillarmod.get(item, merge=True),
                     pillarmod.__pillar__[item]
                 )
 
-        # Test recursive dict merging
-        self.assertEqual(
-            pillarmod.get('dict', default=defaults['dict'], merge=True),
-            {'foo': 'bar', 'baz': 'qux', 'subkey': {'foo': 'bar', 'baz': 'qux'}}
-        )
+            # Test merging when the type of the default value is not the same as
+            # what was returned. Merging should be skipped and the value returned
+            # from __pillar__ should be returned.
+            for default_type in defaults:
+                for data_type in ('dict', 'list'):
+                    if default_type == data_type:
+                        continue
+                    self.assertEqual(
+                        pillarmod.get(item, default=defaults[default_type], merge=True),
+                        pillarmod.__pillar__[item]
+                    )
 
-        # Test list merging
-        self.assertEqual(
-            pillarmod.get('list', default=defaults['list'], merge=True),
-            ['foo', 'bar', 'baz']
-        )
+            # Test recursive dict merging
+            self.assertEqual(
+                pillarmod.get('dict', default=defaults['dict'], merge=True),
+                {'foo': 'bar', 'baz': 'qux', 'subkey': {'foo': 'bar', 'baz': 'qux'}}
+            )
+
+            # Test list merging
+            self.assertEqual(
+                pillarmod.get('list', default=defaults['list'], merge=True),
+                ['foo', 'bar', 'baz']
+            )
 
     def test_pillar_get_default_merge_regression_38558(self):
         """Test for pillar.get(key=..., default=..., merge=True)
