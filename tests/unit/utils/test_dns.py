@@ -12,7 +12,7 @@ from salt._compat import ipaddress
 from salt.utils.odict import OrderedDict
 import salt.utils.dns
 from salt.utils.dns import _to_port, _tree, _weighted_order, _data2rec, _data2rec_group
-from salt.utils.dns import _lookup_gai, _lookup_dig, _lookup_drill, _lookup_host
+from salt.utils.dns import _lookup_gai, _lookup_dig, _lookup_drill, _lookup_host, _lookup_dnspython, _lookup_nslookup
 
 # Testing
 from tests.support.unit import skipIf, TestCase
@@ -155,8 +155,10 @@ class DNSlookupsCase(TestCase):
 
     Note that by far and large the parsers actually
     completely ignore the input name or output content
+    only nslookup is bad enough to be an exception to that
 
     a lookup function
+        - raises ValueError when an incorrect DNS type is given
         - returns False upon error
         - returns [*record-data] upon succes/no records
 
@@ -231,9 +233,13 @@ class DNSlookupsCase(TestCase):
         for rec_t, tests in right.items():
             with self._mock_cmd_ret([dict([('stdout', dres)]) for dres in tests]):
                 for test_res in self.RESULTS[rec_t]:
+                    if rec_t in ('A', 'AAAA', 'CNAME'):
+                        rec = 'mocksrvr.example.com'
+                    else:
+                        rec = 'example.com'
                     self.assertEqual(
-                        lookup_cb('mocksrvr.example.com', rec_t), test_res,
-                        msg='Error parsing {0} returns'.format(rec_t)
+                        lookup_cb(rec, rec_t), test_res,
+                        # msg='Error parsing {0} returns'.format(rec_t)
                     )
 
         if not secure:
@@ -456,55 +462,50 @@ class DNSlookupsCase(TestCase):
     def test_dnspython(self):
         pass
 
-#     def test_nslookup(self):
-#         wrongs = [
-#             {'retcode': 1, 'stderr': ';; connection timed out; no servers could be reached'}
-#         ]
-#
-#         # all nslookup returns look like this
-#         RES_TMPL = '''Server:		10.11.12.13
-# Address:	10.11.12.13#53
-#
-# Non-authoritative answer:
-# {}
-# '''
-#         empty = {'stdout': RES_TMPL.format('''*** Can't find www.google.com: No answer
-#
-# Authoritative answers can be found from:
-# ''')}
-#
-#         rights = {
-#             'A': ['''
-# Name:	mocksrvr.example.com
-# Address: 10.1.1.1
-#                 ''',
-#
-#
-#
-#                 'web.example.com  has address 10.1.1.1\n'
-#                 'web.example.com  has address 10.2.2.2\n'
-#                 'web.example.com  has address 10.3.3.3'
-#
-#             ],
-#             'AAAA':  [
-#                 'mocksrvr.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:111',
-#                 'mocksrvr.example.com is an alias for web.example.com.\n'
-#                 'web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:111\n'
-#                 'web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:222\n'
-#                 'web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:333'
-#             ],
-#             'CNAME': [
-#                 'mocksrvr.example.com is an alias for web.example.com.'
-#             ],
-#             'MX':    [
-#                 'example.com mail is handled by 10 mx1.example.com.',
-#                 'example.com mail is handled by 10 mx1.example.com.\n'
-#                 'example.com mail is handled by 20 mx2.example.eu.\n'
-#                 'example.com mail is handled by 30 mx3.example.nl.'
-#             ],
-#             'SPF':   [
-#                 'example.com descriptive text "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
-#             ]
-#         }
-#
-#         self._test_cmd_lookup(_lookup_host, wrongs, rights, empty=empty)
+    def test_nslookup(self):
+        # all nslookup returns look like this
+        RES_TMPL = 'Server:\t\t10.11.12.13\nAddress:\t10.11.12.13#53\n\nNon-authoritative answer:\n{}\n\nAuthoritative answers can be found from:'
+
+        wrong_type = {'stdout': 'unknown query type: WRONG' +
+                                RES_TMPL.format('Name:\tmocksrvr.example.com\nAddress: 10.1.1.1')}
+
+        wrongs = [
+            {'retcode': 1, 'stdout': ';; connection timed out; no servers could be reached'}
+        ]
+
+        empty = {'stdout': RES_TMPL.format(
+            "*** Can't find www.google.com: No answer\n\nAuthoritative answers can be found from:")}
+
+        rights = {
+            'A': [
+                'Name:\tmocksrvr.example.com\nAddress: 10.1.1.1',
+                'Name:\tmocksrvr.example.com\nAddress: 10.1.1.1\n'
+                'Name:\tweb.example.com\nAddress: 10.2.2.2\n'
+                'Name:\tweb.example.com\nAddress: 10.3.3.3'
+            ],
+            'AAAA': [
+                'mocksrvr.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:111',
+                'mocksrvr.example.com\tcanonical name = web.example.com.\n'
+                'web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:111\n'
+                'web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:222\n'
+                'web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:333'
+            ],
+            'CNAME': [
+                'mocksrvr.example.com\tcanonical name = web.example.com.'
+            ],
+            'MX':    [
+                'example.com\tmail exchanger = 10 mx1.example.com.',
+                'example.com\tmail exchanger = 10 mx1.example.com.\n'
+                'example.com\tmail exchanger = 20 mx2.example.eu.\n'
+                'example.com\tmail exchanger = 30 mx3.example.nl.'
+            ],
+            'TXT':   [
+                'example.com\ttext = "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
+            ]
+        }
+
+        for rec_t, tests in rights.items():
+            for idx, test in enumerate(tests):
+                rights[rec_t][idx] = RES_TMPL.format(test)
+
+        self._test_cmd_lookup(_lookup_nslookup, wrong_type=wrong_type, wrong=wrongs, right=rights, empty=empty)
