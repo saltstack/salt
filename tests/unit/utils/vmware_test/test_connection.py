@@ -732,6 +732,7 @@ class DisconnectTestCase(TestCase):
 
     def setUp(self):
         self.mock_si = MagicMock()
+        self.addCleanup(delattr, self, 'mock_si')
 
     def test_disconnect(self):
         mock_disconnect = MagicMock()
@@ -822,6 +823,8 @@ class GetServiceInstanceFromManagedObjectTestCase(TestCase):
         self.mock_si = MagicMock()
         self.mock_stub = PropertyMock()
         self.mock_mo_ref = MagicMock(_stub=self.mock_stub)
+        for attr in ('mock_si', 'mock_stub', 'mock_mo_ref'):
+            self.addCleanup(delattr, self, attr)
 
     def test_default_name_parameter(self):
         mock_trace = MagicMock()
