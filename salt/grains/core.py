@@ -1669,7 +1669,14 @@ def os_data():
                 continue
             osrelease_info[idx] = int(value)
         grains['osrelease_info'] = tuple(osrelease_info)
-        grains['osmajorrelease'] = str(grains['osrelease_info'][0])  # This will be an integer in the two releases
+        try:
+            grains['osmajorrelease'] = int(grains['osrelease_info'][0])
+        except (IndexError, TypeError, ValueError):
+            log.debug(
+                'Unable to derive osmajorrelease from osrelease_info \'%s\'. '
+                'The osmajorrelease grain will not be set.',
+                grains['osrelease_info']
+            )
         os_name = grains['os' if grains.get('os') in (
             'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
         grains['osfinger'] = '{0}-{1}'.format(

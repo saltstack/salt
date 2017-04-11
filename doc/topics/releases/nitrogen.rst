@@ -47,9 +47,9 @@ has now been extended to pillar SLS files as well. See :ref:`here
 Grains Changes
 ==============
 
-- The ``os_release`` grain has been changed from a string to an integer.
-  State files, especially those using a templating language like Jinja
-  may need to be adjusted to account for this change.
+- The ``osmajorrelease`` grain has been changed from a string to an integer.
+  State files, especially those using a templating language like Jinja, may
+  need to be adjusted to account for this change.
 - Add ability to specify disk backing mode in the VMWare salt cloud profile.
 
 State Module Changes
@@ -61,48 +61,50 @@ State Module Changes
   start/stop the service using the ``--no-block`` flag in the ``systemctl``
   command. On non-systemd minions, a warning will be issued.
 
-- The :py:func:`module.run <salt.states.module.run>` state has dropped its previous
-  syntax with ``m_`` prefix for reserved keywords. Additionally, it allows
-  running several functions in a batch.
+- The :py:func:`module.run <salt.states.module.run>` state has dropped its
+  previous syntax with ``m_`` prefix for reserved keywords. Additionally, it
+  allows running several functions in a batch.
 
-.. note::
-    It is nesessary to explicitly turn on the new behaviour (see below)
+  .. note::
+      It is necessary to explicitly turn on the new behavior (see below)
 
-  Before and after:
+  .. code-block:: yaml
 
-.. code-block:: yaml
+      # Before
+      run_something:
+        module.run:
+          - name: mymodule.something
+          - m_name: 'some name'
+          - kwargs: {
+            first_arg: 'one',
+            second_arg: 'two',
+            do_stuff: 'True'
+          }
 
-    # Before
-    run_something:
-      module.run:
-        - name: mymodule.something
-        - m_name: 'some name'
-        - kwargs: {
-          first_arg: 'one',
-          second_arg: 'two',
-          do_stuff: 'True'
-        }
-
-    # After
-    run_something:
-      module.run:
-        mymodule.something:
-          - name: some name
-          - first_arg: one
-          - second_arg: two
-          - do_stuff: True
-
-- Previous behaviour of the function :py:func:`module.run <salt.states.module.run>` is
-  still kept by default and can be bypassed in case you want to use behaviour above.
-  Please keep in mind that the old syntax will no longer be supported in the ``Oxygen``
-  release of Salt. To enable the new behavior, add the following to the minion config file:
+      # After
+      run_something:
+        module.run:
+          mymodule.something:
+            - name: some name
+            - first_arg: one
+            - second_arg: two
+            - do_stuff: True
 
 
-.. code-block:: yaml
+  Since a lot of users are already using :py:func:`module.run
+  <salt.states.module.run>` states, this new behavior must currently be
+  explicitly turned on, to allow users to take their time updating their SLS
+  files. However, please keep in mind that the new syntax will take effect in
+  the next feature release of Salt (Oxygen) and the old usage will no longer be
+  supported at that time.
 
-    use_superseded:
-      - module.run
+  To enable the new behavior for :py:func:`module.run <salt.states.module.run>`,
+  add the following to the minion config file:
 
+  .. code-block:: yaml
+
+      use_superseded:
+        - module.run
 
 
 Execution Module Changes
@@ -128,6 +130,8 @@ Execution Module Changes
 - A ``pkg.list_repo_pkgs`` function has been added for both
   :py:func:`Debian/Ubuntu <salt.modules.aptpkg.list_repo_pkgs>` and
   :py:func:`Arch Linux <salt.modules.pacman.list_repo_pkgs>`-based distros.
+- The :mod:`system <salt.modules.system>` module changed its return format
+  from "HH:MM AM/PM" to "HH:MM:SS AM/PM" for `get_system_time`.
 
 
 Proxy Module Changes
@@ -149,29 +153,26 @@ connection with the remote device only when required.
 Wildcard Versions in :py:func:`pkg.installed <salt.states.pkg.installed>` States
 ================================================================================
 
-The :py:func:`pkg.installed <salt.states.pkg.installed>` state now supports
-wildcards in package versions, for the following platforms:
+- The :py:func:`pkg.installed <salt.states.pkg.installed>` state now supports
+  wildcards in package versions, for the following platforms:
 
-- Debian/Ubuntu
-- RHEL/CentOS
-- Arch Linux
+  - Debian/Ubuntu
+  - RHEL/CentOS
+  - Arch Linux
 
-This support also extends to any derivatives of these distros, which use the
-:mod:`aptpkg <salt.modules.aptpkg>`, :mod:`yumpkg <salt.modules.yumpkg>`, or
-:mod:`pacman <salt.modules.pacman>` providers for the ``pkg`` virtual module.
+  This support also extends to any derivatives of these distros, which use the
+  :mod:`aptpkg <salt.modules.aptpkg>`, :mod:`yumpkg <salt.modules.yumpkg>`, or
+  :mod:`pacman <salt.modules.pacman>` providers for the ``pkg`` virtual module.
 
-Using wildcards can be useful for packages where the release name is built into
-the version in some way, such as for RHEL/CentOS which typically has version
-numbers like ``1.2.34-5.el7``. An example of the usage for this would be:
+  Using wildcards can be useful for packages where the release name is built into
+  the version in some way, such as for RHEL/CentOS which typically has version
+  numbers like ``1.2.34-5.el7``. An example of the usage for this would be:
 
-.. code-block:: yaml
+  .. code-block:: yaml
 
-    mypkg:
-      pkg.installed:
-        - version: '1.2.34*'
-
-- The :mod:`system <salt.modules.system>` module changed the returned format
-  from "HH:MM AM/PM" to "HH:MM:SS AM/PM" for `get_system_time`.
+      mypkg:
+        pkg.installed:
+          - version: '1.2.34*'
 
 Master Configuration Additions
 ==============================
