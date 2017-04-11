@@ -649,7 +649,7 @@ def query(
         res = caster(qres)
     else:
         # List of results
-        res = map(caster, qres)
+        res = list(map(caster, qres))
 
     return res
 
