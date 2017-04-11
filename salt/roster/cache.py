@@ -28,7 +28,6 @@ In the ``roster_order`` you can define *any* roster key and fill it with a param
 overriding the one in ``roster_defaults``:
 
 .. code-block:: yaml
-
 roster_order:
     host: id          # use the minion id as hostname
 
@@ -40,7 +39,6 @@ Selecting a host
 ================
 
 .. code-block:: yaml
-
 # default
 roster_order:
     host:
@@ -58,7 +56,6 @@ The relevant data will be fetched from the cache in-order, and the first match w
 Other address selection parameters are also possible:
 
 .. code-block:: yaml
-
 roster_order:
   host:
     - global|public|private|local    # Both IPv6 and IPv4 addresses in that range
@@ -75,7 +72,6 @@ Lists of references are also supported during the lookup, as are Salt SDB URLs.
 This should be especially useful for the other roster keys:
 
 .. code-block:: yaml
-
 roster_order:
   host:
     - grain: fqdn_ip4                # Lookup this grain
