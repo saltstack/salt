@@ -23,6 +23,7 @@ pillar modules
     file_tree
     foreman
     git_pillar
+    gpg
     hg_pillar
     hiera
     http_json
@@ -47,6 +48,7 @@ pillar modules
     svn_pillar
     varstack_pillar
     vault
+    venafi
     virtkey
     vmware_pillar
 
