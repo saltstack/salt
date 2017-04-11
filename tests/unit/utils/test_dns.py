@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
 
+'''
 from __future__ import print_function, absolute_import
 
 # Python
@@ -10,7 +12,7 @@ from salt._compat import ipaddress
 from salt.utils.odict import OrderedDict
 import salt.utils.dns
 from salt.utils.dns import _to_port, _tree, _weighted_order, _data2rec, _data2rec_group
-from salt.utils.dns import _lookup_gai, _lookup_dig, _lookup_drill
+from salt.utils.dns import _lookup_gai, _lookup_dig, _lookup_drill, _lookup_host
 
 # Testing
 from tests.support.unit import skipIf, TestCase
@@ -209,14 +211,16 @@ class DNSlookupsCase(TestCase):
 
         return patch.dict(salt.utils.dns.__salt__, {'cmd.run_all': cmd_mock}, clear=True)
 
-    def _test_cmd_lookup(self, lookup_cb, wrongs, rights, secure=False):
+    def _test_cmd_lookup(self, lookup_cb, wrongs, rights, empties=None, secure=None):
         # wrong
         for wrong in wrongs:
             with self._mock_cmd_ret(wrong):
                 self.assertEqual(lookup_cb('mockq', 'A'), False)
 
         # empty response
-        with self._mock_cmd_ret({}):
+        if empties is None:
+            empties = {}
+        with self._mock_cmd_ret(empties):
             self.assertEqual(lookup_cb('mockq', 'AAAA'), [])
 
         # Regular outputs
@@ -228,27 +232,25 @@ class DNSlookupsCase(TestCase):
                         msg='Error parsing {0} returns'.format(rec_t)
                     )
 
-        # TODO
-        if secure or not secure:
+        if not secure:
             return
 
-        # # Regular outputs are insecure outputs (e.g. False)
-        # for rec_t, tests in rights.items():
-        #     with self._mock_cmd_ret([dict([('stdout', dres)]) for dres in tests]):
-        #         for _ in self.RESULTS[rec_t]:
-        #             self.assertEqual(
-        #                 lookup_cb('mocksrvr.example.com', rec_t, secure=True), False,
-        #                 msg='Insecure {0} returns should not be returned'.format(rec_t)
-        #             )
-        #
-        # # dig won't include RRSIG's if they're not validated, which makes for easy mocking
-        # for rec_t, tests in rights.items():
-        #     with self._mock_cmd_ret([dict([('stdout', dres + '\nIGNORED\tRRSIG\tIGNORED\n')]) for dres in tests]):
-        #         for test_res in self.RESULTS[rec_t]:
-        #             self.assertEqual(
-        #                 lookup_cb('mocksrvr.example.com', rec_t, secure=True), test_res,
-        #                 msg='Error parsing DNSSEC\'d {0} returns'.format(rec_t)
-        #             )
+        # Regular outputs are insecure outputs (e.g. False)
+        for rec_t, tests in rights.items():
+            with self._mock_cmd_ret([dict([('stdout', dres)]) for dres in tests]):
+                for _ in self.RESULTS[rec_t]:
+                    self.assertEqual(
+                        lookup_cb('mocksrvr.example.com', rec_t, secure=True), False,
+                        msg='Insecure {0} returns should not be returned'.format(rec_t)
+                    )
+
+        for rec_t, tests in secure.items():
+            with self._mock_cmd_ret([dict([('stdout', dres)]) for dres in tests]):
+                for test_res in self.RESULTS[rec_t]:
+                    self.assertEqual(
+                        lookup_cb('mocksrvr.example.com', rec_t, secure=True), test_res,
+                        msg='Error parsing DNSSEC\'d {0} returns'.format(rec_t)
+                    )
 
     def test_dig(self):
         wrongs = [
@@ -283,7 +285,19 @@ class DNSlookupsCase(TestCase):
             ]
         }
 
-        self._test_cmd_lookup(_lookup_dig, wrongs, rights, secure=True)
+        secure = {
+            'A': [
+                'mocksrvr.example.com.\tA\t10.1.1.1\n'
+                'mocksrvr.example.com.\tRRSIG\tA 8 3 7200 20170420000000 20170330000000 1629 example.com. Hv4p37EF55LKBxUNYpnhWiEYqfmMct0z0WgDJyG5reqYfl+z4HX/kaoi Wr2iCYuYeB4Le7BgnMSb77UGHPWE7lCQ8z5gkgJ9rCDrooJzSTVdnHfw 1JQ7txRSp8Rj2GLf/L3Ytuo6nNZTV7bWUkfhOs61DAcOPHYZiX8rVhIh UAE=',
+                'web.example.com.\t\tA\t10.1.1.1\n'
+                'web.example.com.\t\tA\t10.2.2.2\n'
+                'web.example.com.\t\tA\t10.3.3.3\n'
+                'web.example.com.\tRRSIG\tA 8 3 7200 20170420000000 20170330000000 1629 example.com. Hv4p37EF55LKBxUNYpnhWiEYqfmMct0z0WgDJyG5reqYfl+z4HX/kaoi Wr2iCYuYeB4Le7BgnMSb77UGHPWE7lCQ8z5gkgJ9rCDrooJzSTVdnHfw 1JQ7txRSp8Rj2GLf/L3Ytuo6nNZTV7bWUkfhOs61DAcOPHYZiX8rVhIh UAE='
+
+            ]
+        }
+
+        self._test_cmd_lookup(_lookup_dig, wrongs, rights, secure=secure)
 
     def test_drill(self):
         wrongs = [
@@ -312,10 +326,9 @@ class DNSlookupsCase(TestCase):
         rights = {
             'A': [
                 'mocksrvr.example.com.\t4404\tIN\tA\t10.1.1.1\n',
-
                 'web.example.com.\t4404\tIN\tA\t10.1.1.1\n'
                 'web.example.com.\t4404\tIN\tA\t10.2.2.2\n'
-                'web.example.com.\t4404\tIN\tA\t10.3.3.3\n',
+                'web.example.com.\t4404\tIN\tA\t10.3.3.3',
             ],
             'AAAA': [
                 'mocksrvr.example.com.\t4404\tIN\tA\t2a00:a00:b01:c02:d03:e04:f05:111',
@@ -338,13 +351,24 @@ class DNSlookupsCase(TestCase):
             ]
         }
 
-        for rec_t, tests in rights.items():
-            for idx, test in enumerate(tests):
-                rights[rec_t][idx] = RES_TMPL.format(test)
+        secure = {
+            'A': [
+                'mocksrvr.example.com.\t4404\tIN\tA\t10.1.1.1\n'
+                'mocksrvr.example.com.\t4404\tIN\tRRSIG\tA 8 3 7200 20170420000000 20170330000000 1629 example.com. Hv4p37EF55LKBxUNYpnhWiEYqfmMct0z0WgDJyG5reqYfl+z4HX/kaoi Wr2iCYuYeB4Le7BgnMSb77UGHPWE7lCQ8z5gkgJ9rCDrooJzSTVdnHfw 1JQ7txRSp8Rj2GLf/L3Ytuo6nNZTV7bWUkfhOs61DAcOPHYZiX8rVhIh UAE=',
+                'web.example.com.\t4404\tIN\tA\t10.1.1.1\n'
+                'web.example.com.\t4404\tIN\tA\t10.2.2.2\n'
+                'web.example.com.\t4404\tIN\tA\t10.3.3.3\n'
+                'web.example.com.\t4404\tIN\tRRSIG\tA 8 3 7200 20170420000000 20170330000000 1629 example.com. Hv4p37EF55LKBxUNYpnhWiEYqfmMct0z0WgDJyG5reqYfl+z4HX/kaoi Wr2iCYuYeB4Le7BgnMSb77UGHPWE7lCQ8z5gkgJ9rCDrooJzSTVdnHfw 1JQ7txRSp8Rj2GLf/L3Ytuo6nNZTV7bWUkfhOs61DAcOPHYZiX8rVhIh UAE='
 
-        ppr(rights)
+            ]
+        }
 
-        self._test_cmd_lookup(_lookup_drill, wrongs, rights, secure=True)
+        for rec_d in rights, secure:
+            for rec_t, tests in rec_d.items():
+                for idx, test in enumerate(tests):
+                    rec_d[rec_t][idx] = RES_TMPL.format(test)
+
+        self._test_cmd_lookup(_lookup_drill, wrongs, rights, secure=secure)
 
     def test_gai(self):
         # wrong
@@ -375,3 +399,43 @@ class DNSlookupsCase(TestCase):
                         _lookup_gai('mockq', rec_t), test_res,
                         msg='Error parsing {0} returns'.format(rec_t)
                     )
+
+    def test_host(self):
+        wrongs = [
+            {'retcode': 9, 'stderr': ';; connection timed out; no servers could be reached'}
+        ]
+
+        empty = {'stdout': 'www.example.com has no MX record'}
+
+        # example returns for dig
+        rights = {
+            'A':     [
+                'mocksrvr.example.com has address 10.1.1.1',
+                'web.example.com  has address 10.1.1.1\n'
+                'web.example.com  has address 10.2.2.2\n'
+                'web.example.com  has address 10.3.3.3'
+
+            ],
+            'AAAA':  [
+                'mocksrvr.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:111',
+                'mocksrvr.example.com is an alias for web.example.com.\n'
+                'web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:111\n'
+                'web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:222\n'
+                'web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:333'
+            ],
+            'CNAME': [
+                'mocksrvr.example.com is an alias for web.example.com.'
+            ],
+            'MX':    [
+                'example.com mail is handled by 10 mx1.example.com.',
+                'example.com mail is handled by 10 mx1.example.com.\n'
+                'example.com mail is handled by 20 mx2.example.eu.\n'
+                'example.com mail is handled by 30 mx3.example.nl.'
+            ],
+            'SPF':   [
+                'example.com descriptive text "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
+            ]
+        }
+
+        self._test_cmd_lookup(_lookup_host, wrongs, rights, empties=empty)
+
