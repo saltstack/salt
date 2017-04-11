@@ -237,7 +237,9 @@ def _lookup_dig(name, rdtype, timeout=None, servers=None, secure=None):
 
     cmd = __salt__['cmd.run_all'](cmd + str(name), python_shell=False, output_loglevel='quiet')
 
-    if cmd['retcode'] != 0:
+    if 'ignoring invalid type' in cmd['stderr']:
+        raise ValueError('Invalid DNS type {}'.format(rdtype))
+    elif cmd['retcode'] != 0:
         log.warning('dig returned ({0}): {1}'.format(
             cmd['retcode'], cmd['stderr'].strip(string.whitespace + ';')
         ))
@@ -306,6 +308,8 @@ def _lookup_drill(name, rdtype, timeout=None, servers=None, secure=None):
             elif l_type == 'RRSIG':
                 validated = True
                 continue
+            elif l_type != rdtype:
+                raise ValueError('Invalid DNS type {}'.format(rdtype))
 
             res.append(l_rec.strip(string.whitespace + '"'))
 
@@ -326,10 +330,13 @@ def _lookup_gai(name, rdtype, timeout=None):
     :param timeout: ignored
     :return: [] of addresses or False if error
     '''
-    sock_t = {
-        'A':    socket.AF_INET,
-        'AAAA': socket.AF_INET6
-    }[rdtype]
+    try:
+        sock_t = {
+            'A':    socket.AF_INET,
+            'AAAA': socket.AF_INET6
+        }[rdtype]
+    except KeyError:
+        raise ValueError('Invalid DNS type {} for gai lookup'.format(rdtype))
 
     if timeout:
         log.warn('Ignoring timeout on gai resolver; fix resolv.conf to do that')
@@ -359,9 +366,11 @@ def _lookup_host(name, rdtype, timeout=None, server=None):
 
     cmd = __salt__['cmd.run_all'](cmd + name, python_shell=False, output_loglevel='quiet')
 
-    if cmd['retcode'] != 0:
+    if 'invalid type' in cmd['stderr']:
+        raise ValueError('Invalid DNS type {}'.format(rdtype))
+    elif cmd['retcode'] != 0:
         log.warning('host returned ({0}): {1}'.format(
-            cmd['retcode'], cmd['stdout']
+            cmd['retcode'], cmd['stderr']
         ))
         return False
     elif 'has no' in cmd['stdout']:
@@ -403,6 +412,8 @@ def _lookup_dnspython(name, rdtype, timeout=None, servers=None, secure=None):
         res = [str(rr.to_text().strip(string.whitespace + '"'))
                for rr in resolver.query(name, rdtype, raise_on_no_answer=False)]
         return res
+    except dns.rdatatype.UnknownRdatatype:
+        raise ValueError('Invalid DNS type {}'.format(rdtype))
     except (dns.resolver.NXDOMAIN,
             dns.resolver.YXDOMAIN,
             dns.resolver.NoNameservers,
@@ -436,7 +447,10 @@ def _lookup_nslookup(name, rdtype, timeout=None, server=None):
     lookup_res = iter(cmd['stdout'].splitlines())
     res = []
     try:
-        line = ''
+        line = next(lookup_res)
+        if 'unknown query type' in line:
+            raise ValueError('Invalid DNS type {}'.format(rdtype))
+
         while True:
             if name in line:
                 break

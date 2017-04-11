@@ -186,7 +186,7 @@ class DNSlookupsCase(TestCase):
             ['10 mx1.example.com.'],
             ['10 mx1.example.com.', '20 mx2.example.eu.', '30 mx3.example.nl.']
         ],
-        'SPF': [
+        'TXT': [
             ['v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all']
         ]
     }
@@ -211,20 +211,24 @@ class DNSlookupsCase(TestCase):
 
         return patch.dict(salt.utils.dns.__salt__, {'cmd.run_all': cmd_mock}, clear=True)
 
-    def _test_cmd_lookup(self, lookup_cb, wrongs, rights, empties=None, secure=None):
+    def _test_cmd_lookup(self, lookup_cb, wrong_type, wrong, right, empty=None, secure=None):
         # wrong
-        for wrong in wrongs:
+        for wrong in wrong:
             with self._mock_cmd_ret(wrong):
                 self.assertEqual(lookup_cb('mockq', 'A'), False)
 
         # empty response
-        if empties is None:
-            empties = {}
-        with self._mock_cmd_ret(empties):
+        if empty is None:
+            empty = {}
+        with self._mock_cmd_ret(empty):
             self.assertEqual(lookup_cb('mockq', 'AAAA'), [])
 
+        # wrong types
+        with self._mock_cmd_ret(wrong_type):
+            self.assertRaises(ValueError, lookup_cb, 'mockq', 'WRONG')
+
         # Regular outputs
-        for rec_t, tests in rights.items():
+        for rec_t, tests in right.items():
             with self._mock_cmd_ret([dict([('stdout', dres)]) for dres in tests]):
                 for test_res in self.RESULTS[rec_t]:
                     self.assertEqual(
@@ -236,7 +240,7 @@ class DNSlookupsCase(TestCase):
             return
 
         # Regular outputs are insecure outputs (e.g. False)
-        for rec_t, tests in rights.items():
+        for rec_t, tests in right.items():
             with self._mock_cmd_ret([dict([('stdout', dres)]) for dres in tests]):
                 for _ in self.RESULTS[rec_t]:
                     self.assertEqual(
@@ -253,8 +257,10 @@ class DNSlookupsCase(TestCase):
                     )
 
     def test_dig(self):
+        wrong_type = {'retcode': 0, 'stderr':  ';; Warning, ignoring invalid type ABC'}
+
         wrongs = [
-            {'retcode': 9, 'stderr':  ';; connection timed out; no servers could be reached'}
+            {'retcode': 9, 'stderr':  ';; connection timed out; no servers could be reached'},
         ]
 
         # example returns for dig
@@ -280,7 +286,7 @@ class DNSlookupsCase(TestCase):
                 'example.com.\t\tMX\t10 mx1.example.com.',
                 'example.com.\t\tMX\t10 mx1.example.com.\nexample.com.\t\tMX\t20 mx2.example.eu.\nexample.com.\t\tMX\t30 mx3.example.nl.'
             ],
-            'SPF': [
+            'TXT': [
                 'example.com.\tTXT\t"v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
             ]
         }
@@ -297,14 +303,10 @@ class DNSlookupsCase(TestCase):
             ]
         }
 
-        self._test_cmd_lookup(_lookup_dig, wrongs, rights, secure=secure)
+        self._test_cmd_lookup(_lookup_dig, wrong=wrongs, right=rights, wrong_type=wrong_type, secure=secure)
 
     def test_drill(self):
-        wrongs = [
-            {'retcode': 1, 'stderr':  'Error: error sending query: No (valid) nameservers defined in the resolver'}
-        ]
-
-        # # example returns for dig
+        # all Drill returns look like this
         RES_TMPL = ''';; ->>HEADER<<- opcode: QUERY, rcode: NOERROR, id: 58233
 ;; flags: qr rd ra ; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
 ;; QUESTION SECTION:
@@ -323,6 +325,13 @@ class DNSlookupsCase(TestCase):
 ;; MSG SIZE  rcvd: 50
 '''
 
+        # Not even a different retcode!?
+        wrong_type = {'stdout': RES_TMPL.format('mocksrvr.example.com.\t4404\tIN\tA\t10.1.1.1\n')}
+
+        wrongs = [
+            {'retcode': 1, 'stderr':  'Error: error sending query: No (valid) nameservers defined in the resolver'}
+        ]
+
         rights = {
             'A': [
                 'mocksrvr.example.com.\t4404\tIN\tA\t10.1.1.1\n',
@@ -331,7 +340,7 @@ class DNSlookupsCase(TestCase):
                 'web.example.com.\t4404\tIN\tA\t10.3.3.3',
             ],
             'AAAA': [
-                'mocksrvr.example.com.\t4404\tIN\tA\t2a00:a00:b01:c02:d03:e04:f05:111',
+                'mocksrvr.example.com.\t4404\tIN\tAAAA\t2a00:a00:b01:c02:d03:e04:f05:111',
                 'mocksrvr.example.com.\t4404\tIN\tCNAME\tweb.example.com.\n'
                 'web.example.com.\t4404\tIN\tAAAA\t2a00:a00:b01:c02:d03:e04:f05:111\n'
                 'web.example.com.\t4404\tIN\tAAAA\t2a00:a00:b01:c02:d03:e04:f05:222\n'
@@ -346,7 +355,7 @@ class DNSlookupsCase(TestCase):
                 'example.com.\t4404\tIN\tMX\t20 mx2.example.eu.\n'
                 'example.com.\t4404\tIN\tMX\t30 mx3.example.nl.'
             ],
-            'SPF': [
+            'TXT': [
                 'example.com.\t4404\tIN\tTXT\t"v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
             ]
         }
@@ -368,9 +377,12 @@ class DNSlookupsCase(TestCase):
                 for idx, test in enumerate(tests):
                     rec_d[rec_t][idx] = RES_TMPL.format(test)
 
-        self._test_cmd_lookup(_lookup_drill, wrongs, rights, secure=secure)
+        self._test_cmd_lookup(_lookup_drill, wrong_type=wrong_type, wrong=wrongs, right=rights, secure=secure)
 
     def test_gai(self):
+        # wrong type
+        self.assertRaises(ValueError, _lookup_gai, 'mockq', 'WRONG')
+
         # wrong
         with patch.object(socket, 'getaddrinfo', MagicMock(side_effect=socket.gaierror)):
             for rec_t in ('A', 'AAAA'):
@@ -401,6 +413,8 @@ class DNSlookupsCase(TestCase):
                     )
 
     def test_host(self):
+        wrong_type = {'retcode': 9, 'stderr': 'host: invalid type: WRONG'}
+
         wrongs = [
             {'retcode': 9, 'stderr': ';; connection timed out; no servers could be reached'}
         ]
@@ -432,10 +446,65 @@ class DNSlookupsCase(TestCase):
                 'example.com mail is handled by 20 mx2.example.eu.\n'
                 'example.com mail is handled by 30 mx3.example.nl.'
             ],
-            'SPF':   [
+            'TXT':   [
                 'example.com descriptive text "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
             ]
         }
 
-        self._test_cmd_lookup(_lookup_host, wrongs, rights, empties=empty)
+        self._test_cmd_lookup(_lookup_host, wrong_type=wrong_type, wrong=wrongs, right=rights, empty=empty)
 
+    def test_dnspython(self):
+        pass
+
+#     def test_nslookup(self):
+#         wrongs = [
+#             {'retcode': 1, 'stderr': ';; connection timed out; no servers could be reached'}
+#         ]
+#
+#         # all nslookup returns look like this
+#         RES_TMPL = '''Server:		10.11.12.13
+# Address:	10.11.12.13#53
+#
+# Non-authoritative answer:
+# {}
+# '''
+#         empty = {'stdout': RES_TMPL.format('''*** Can't find www.google.com: No answer
+#
+# Authoritative answers can be found from:
+# ''')}
+#
+#         rights = {
+#             'A': ['''
+# Name:	mocksrvr.example.com
+# Address: 10.1.1.1
+#                 ''',
+#
+#
+#
+#                 'web.example.com  has address 10.1.1.1\n'
+#                 'web.example.com  has address 10.2.2.2\n'
+#                 'web.example.com  has address 10.3.3.3'
+#
+#             ],
+#             'AAAA':  [
+#                 'mocksrvr.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:111',
+#                 'mocksrvr.example.com is an alias for web.example.com.\n'
+#                 'web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:111\n'
+#                 'web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:222\n'
+#                 'web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:333'
+#             ],
+#             'CNAME': [
+#                 'mocksrvr.example.com is an alias for web.example.com.'
+#             ],
+#             'MX':    [
+#                 'example.com mail is handled by 10 mx1.example.com.',
+#                 'example.com mail is handled by 10 mx1.example.com.\n'
+#                 'example.com mail is handled by 20 mx2.example.eu.\n'
+#                 'example.com mail is handled by 30 mx3.example.nl.'
+#             ],
+#             'SPF':   [
+#                 'example.com descriptive text "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
+#             ]
+#         }
+#
+#         self._test_cmd_lookup(_lookup_host, wrongs, rights, empty=empty)
