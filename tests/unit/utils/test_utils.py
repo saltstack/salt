@@ -722,7 +722,7 @@ class UtilsTestCase(TestCase):
                                 'run',
                                 {'order': 10004}]},
                 }
-            ), # order is different
+            ),  # order is different
             'test_onfail_simple_rev': (
                 OrderedDict([
                     ('host1',
