@@ -1336,6 +1336,13 @@ def managed(name,
             the ``contents`` options, setting the ``mode`` to ``keep`` is also
             incompatible with the ``contents`` options.
 
+        .. note:: keep does not work with salt-ssh.
+
+            As a consequence of how the files are transfered to the minion, and
+            the inability to connect back to the master with salt-ssh, salt is
+            unable to stat the file as it exists on the fileserver and thus
+            cannot mirror the mode on the salt-ssh minion
+
     template
         If this setting is applied, the named templating engine will be used to
         render the downloaded file. The following templates are supported:
