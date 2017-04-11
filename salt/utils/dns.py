@@ -438,9 +438,10 @@ def _lookup_nslookup(name, rdtype, timeout=None, server=None):
         cmd += ' {0}'.format(server)
 
     cmd = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='quiet')
+
     if cmd['retcode'] != 0:
         log.warning('nslookup returned ({0}): {1}'.format(
-            cmd['retcode'], cmd['stdout'].splitlines()[-1]
+            cmd['retcode'], cmd['stdout'].splitlines()[-1].strip(string.whitespace + ';')
         ))
         return False
 
