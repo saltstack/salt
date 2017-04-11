@@ -3543,16 +3543,6 @@ def set_selinux_context(path,
 
         salt '*' file.set_selinux_context path <user> <role> <type> <range>
         salt '*' file.set_selinux_context /etc/yum.repos.d/epel.repo system_u object_r system_conf_t s0
-
-    .. code-block:: yaml
-
-        /etc/yum.repos.d/epel.repo:
-          file.set_selinux_context:
-            - path: /etc/yum.repos.d/epel.repo
-            - user: system_u
-            - role: object_r
-            - type: system_conf_t
-            - range: s0
     '''
     if not any((user, role, type, range)):
         return False
