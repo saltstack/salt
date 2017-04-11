@@ -2,21 +2,22 @@
 '''
 
 '''
-from __future__ import print_function, absolute_import
+from __future__ import absolute_import
 
 # Python
 import socket
+from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 
 # Salt
 from salt._compat import ipaddress
 from salt.utils.odict import OrderedDict
 import salt.utils.dns
 from salt.utils.dns import _to_port, _tree, _weighted_order, _data2rec, _data2rec_group
-from salt.utils.dns import _lookup_gai, _lookup_dig, _lookup_drill, _lookup_host, _lookup_dnspython, _lookup_nslookup
+from salt.utils.dns import _lookup_gai, _lookup_dig, _lookup_drill, _lookup_host, _lookup_nslookup
 
 # Testing
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 
 # Debug

@@ -10,7 +10,7 @@ dns.srv_data('my1.example.com', 389, prio=10, weight=100)
 dns.srv_name('ldap/tcp', 'example.com')
 
 '''
-from __future__ import print_function, absolute_import
+from __future__ import absolute_import
 # Python
 import base64
 import binascii
@@ -21,7 +21,7 @@ import socket
 import shlex
 import ssl
 import string
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
+from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
 from salt._compat import ipaddress
 from salt.utils.odict import OrderedDict
 
@@ -36,7 +36,7 @@ import logging
 try:
     import dns.resolver
     HAS_DNSPYTHON = True
-except ImportError as e:
+except ImportError:
     HAS_DNSPYTHON = False
 HAS_DIG = salt.utils.which('dig') is not None
 HAS_DRILL = salt.utils.which('drill') is not None
