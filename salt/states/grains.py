@@ -400,7 +400,7 @@ def append(name, value, convert=False,
            'result': True,
            'comment': ''}
     grain = __salt__['grains.get'](name, None)
-    if grain:
+    if grain or name in __grains__:
         if isinstance(grain, list):
             if value in grain:
                 ret['comment'] = 'Value {1} is already in the list ' \
@@ -425,7 +425,10 @@ def append(name, value, convert=False,
                                      'added'.format(name, value)
                     ret['changes'] = {'added': value}
                     return ret
-                grain = [grain]
+                if grain is None:
+                    grain = []
+                else:
+                    grain = [grain]
                 grain.append(value)
                 __salt__['grains.setval'](name, grain)
                 ret['comment'] = 'Value {1} was added to grain {0}'\
