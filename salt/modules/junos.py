@@ -769,6 +769,8 @@ def install_config(path=None, **kwargs):
           the content is treated as Junos OS 'set' commands.(default = None)
       Optional
         * kwargs: Keyworded arguments which can be provided like-
+            * mode: The mode in which the configuration is locked.
+              (Options: private, dynamic, batch, exclusive; default= exclusive)
             * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
@@ -873,7 +875,8 @@ def install_config(path=None, **kwargs):
         op['merge'] = True
         del op['overwrite']
 
-    with Config(conn, mode='exclusive') as cu:
+    db_mode = op.pop('mode', 'exclusive')
+    with Config(conn, mode=db_mode) as cu:
         try:
             cu.load(**op)
 
