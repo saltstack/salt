@@ -2231,8 +2231,8 @@ def replace(path,
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
     if show_changes:
-        orig_file_as_str = ''.join([salt.utils.to_str(x) for x in orig_file])
-        new_file_as_str = ''.join([salt.utils.to_str(x) for x in new_file])
+        orig_file_as_str = [salt.utils.to_str(x) for x in orig_file]
+        new_file_as_str = [salt.utils.to_str(x) for x in new_file]
         return ''.join(difflib.unified_diff(orig_file_as_str, new_file_as_str))
 
     return has_changes
