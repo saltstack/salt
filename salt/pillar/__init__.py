@@ -417,7 +417,7 @@ class Pillar(object):
                     log.debug(
                         'pillarenv \'%s\' not found in the configured pillar '
                         'environments (%s)',
-                        self.opts['pillarenv'], ', '.join(self.opts('file_roots'))
+                        self.opts['pillarenv'], ', '.join(self.opts['file_roots'])
                     )
                 else:
                     tops[self.opts['pillarenv']] = [
