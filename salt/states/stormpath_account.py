@@ -58,9 +58,7 @@ def present(name, **kwargs):
     '''
     # Because __opts__ is not available outside of functions
     backend = __opts__.get('backend', False)
-    if not backend and __opts__.get('requests_lib', False):
-        salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
-                                            'please change your config')
+    if not backend:
         backend = 'requests'
 
     if backend == 'requests':
@@ -148,9 +146,7 @@ def absent(name, directory_id=None):
     '''
     # Because __opts__ is not available outside of functions
     backend = __opts__.get('backend', False)
-    if not backend and __opts__.get('requests_lib', False):
-        salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
-                                            'please change your config')
+    if not backend:
         backend = 'requests'
 
     if backend == 'requests':

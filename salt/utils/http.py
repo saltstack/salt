@@ -121,7 +121,6 @@ def query(url,
           port=80,
           opts=None,
           backend=None,
-          requests_lib=None,
           ca_bundle=None,
           verify_ssl=None,
           cert=None,
@@ -154,18 +153,7 @@ def query(url,
             opts = {}
 
     if not backend:
-        if requests_lib is not None or 'requests_lib' in opts:
-            salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
-                                            'please change your config')
-            # beware the named arg above
-            if 'backend' in opts:
-                backend = opts['backend']
-            elif requests_lib or opts.get('requests_lib', False):
-                backend = 'requests'
-            else:
-                backend = 'tornado'
-        else:
-            backend = opts.get('backend', 'tornado')
+        backend = opts.get('backend', 'tornado')
 
     if backend == 'requests':
         if HAS_REQUESTS is False:
