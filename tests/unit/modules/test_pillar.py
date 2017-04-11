@@ -78,7 +78,7 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pillarmod.__opts__, {}):
             self.assertEqual(pillarmod.get('missing'), '')
 
-        with patch.dict(pillarmod.__pilar__, pillar_mock):
+        with patch.dict(pillarmod.__pillar__, pillar_mock):
             # Test with no default passed (it should be KeyError) and merge=True.
             # The merge should be skipped and the value returned from __pillar__
             # should be returned.
