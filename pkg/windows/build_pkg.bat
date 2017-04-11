@@ -222,8 +222,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\modules\netbsd*"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\netbsd*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\netscaler.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\netscaler.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\modules\network.py"^
-    del /Q "%BinDir%\Lib\site-packages\salt\modules\network.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\neutron.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\neutron.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\nfs3.py"^
