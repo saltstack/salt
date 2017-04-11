@@ -217,7 +217,7 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None):
                     files = ''
                 if files:
                     for filename in files:
-                        fn = filename[len(cache_dest):].strip('/')
+                        fn = filename[len(file_client.get_cachedir(cache_dest)):].strip('/')
                         tgt = os.path.join(
                                 env_root,
                                 short,

@@ -132,11 +132,7 @@ class Client(object):
         '''
         Return the local location to cache the file, cache dirs will be made
         '''
-        if cachedir is None:
-            cachedir = self.opts['cachedir']
-        elif not os.path.isabs(cachedir):
-            cachedir = os.path.join(self.opts['cachedir'], cachedir)
-
+        cachedir = self.get_cachedir(cachedir)
         dest = salt.utils.path_join(cachedir,
                                     'files',
                                     saltenv,
@@ -158,6 +154,13 @@ class Client(object):
 
         yield dest
         os.umask(cumask)
+
+    def get_cachedir(self, cachedir=None):
+        if cachedir is None:
+            cachedir = self.opts['cachedir']
+        elif not os.path.isabs(cachedir):
+            cachedir = os.path.join(self.opts['cachedir'], cachedir)
+        return cachedir
 
     def get_file(self,
                  path,
@@ -250,10 +253,7 @@ class Client(object):
             #     prefix = ''
             # else:
             #     prefix = separated[0]
-            if cachedir is None:
-                cachedir = self.opts['cachedir']
-            elif not os.path.isabs(cachedir):
-                cachedir = os.path.join(self.opts['cachedir'], cachedir)
+            cachedir = self.get_cachedir(cachedir)
 
             dest = salt.utils.path_join(cachedir, 'files', saltenv)
             for fn_ in self.file_list_emptydirs(saltenv):
