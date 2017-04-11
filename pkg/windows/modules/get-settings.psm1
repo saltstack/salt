@@ -18,8 +18,10 @@ Function Get-Settings {
             "SaltDir"     = "C:\salt"
             "Python2Dir"   = "C:\Python27"
             "Scripts2Dir"  = "C:\Python27\Scripts"
+            "SitePkgs2Dir" = "C:\Python27\Lib\site-packages"
             "Python3Dir"   = "C:\Program Files\Python35"
             "Scripts3Dir"  = "C:\Program Files\Python35\Scripts"
+            "SitePkgs3Dir" = "C:\Program Files\Python35\Lib\site-packages"
             "DownloadDir" = "$env:Temp\DevSalt"
             }
         # The script deletes the DownLoadDir (above) for each install.
