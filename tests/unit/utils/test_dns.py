@@ -194,6 +194,12 @@ class DNSlookupsCase(TestCase):
     }
 
     def _mock_cmd_ret(self, delta_res):
+        '''
+        Take CMD_RET and update it w/(a list of ) delta_res
+        Mock cmd.run_all w/it
+        :param delta_res: list or dict
+        :return: patched cmd.run_all
+        '''
         if isinstance(delta_res, (list, tuple)):
             test_res = []
             for dres in delta_res:
@@ -214,6 +220,14 @@ class DNSlookupsCase(TestCase):
         return patch.dict(salt.utils.dns.__salt__, {'cmd.run_all': cmd_mock}, clear=True)
 
     def _test_cmd_lookup(self, lookup_cb, wrong_type, wrong, right, empty=None, secure=None):
+        '''
+        Perform a given battery of tests against a given lookup utilizing cmd.run_all
+        :param wrong_type: delta cmd.run_all output for an incorrect DNS type
+        :param wrong: delta cmd.run_all output for any error
+        :param right: delta cmd.run_all output for outputs in RESULTS
+        :param empty: delta cmd.run_all output for anything that won't return matches
+        :param secure: delta cmd.run_all output for secured RESULTS
+        '''
         # wrong
         for wrong in wrong:
             with self._mock_cmd_ret(wrong):
@@ -460,6 +474,7 @@ class DNSlookupsCase(TestCase):
         self._test_cmd_lookup(_lookup_host, wrong_type=wrong_type, wrong=wrongs, right=rights, empty=empty)
 
     def test_dnspython(self):
+
         pass
 
     def test_nslookup(self):
