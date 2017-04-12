@@ -325,6 +325,12 @@ def output(ret, **kwargs):
         * labels_key: use the labels under a certain key. Otherwise will try to use the dictionary keys (if any).
         * title: display title when only one table is selected (using the ``rows_key`` argument).
     '''
+
+    # to facilitate re-use
+    if 'opts' in kwargs:
+        global __opts__
+        __opts__ = kwargs.pop('opts')
+
     # Prefer kwargs before opts
     base_indent = kwargs.get('nested_indent', 0) \
         or __opts__.get('out.table.nested_indent', 0)
