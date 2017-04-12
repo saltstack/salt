@@ -69,7 +69,7 @@ class LocalClientTestCase(TestCase,
 
     def test_pub(self):
         if self.get_config('minion')['transport'] != 'zeromq':
-            self.skip('This test only works with ZeroMQ')
+            self.skipTest('This test only works with ZeroMQ')
         # Make sure we cleanly return if the publisher isn't running
         with patch('os.path.exists', return_value=False):
             self.assertRaises(SaltClientError, lambda: self.client.pub('*', 'test.ping'))
