@@ -25,6 +25,7 @@ import salt.utils
 from salt.exceptions import SaltRenderError
 from salt.ext.six.moves import builtins
 from salt.utils import get_context
+from salt.utils.decorators import JinjaFilter
 from salt.utils.jinja import (
     SaltCacheLoader,
     SerializerExtension,
@@ -477,6 +478,7 @@ class TestCustomExtensions(TestCase):
     def test_regex_escape(self):
         dataset = 'foo?:.*/\\bar'
         env = Environment(extensions=[SerializerExtension])
+        env.filters.update(JinjaFilter.salt_jinja_filters)
         rendered = env.from_string('{{ dataset|regex_escape }}').render(dataset=dataset)
         self.assertEqual(rendered, re.escape(dataset))
 
@@ -484,6 +486,7 @@ class TestCustomExtensions(TestCase):
         dataset = 'foo'
         unique = set(dataset)
         env = Environment(extensions=[SerializerExtension])
+        env.filters.update(JinjaFilter.salt_jinja_filters)
         rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
         self.assertEqual(rendered, u"{0}".format(unique))
 
@@ -491,6 +494,7 @@ class TestCustomExtensions(TestCase):
         dataset = ('foo', 'foo', 'bar')
         unique = set(dataset)
         env = Environment(extensions=[SerializerExtension])
+        env.filters.update(JinjaFilter.salt_jinja_filters)
         rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
         self.assertEqual(rendered, u"{0}".format(unique))
 
@@ -498,6 +502,7 @@ class TestCustomExtensions(TestCase):
         dataset = ['foo', 'foo', 'bar']
         unique = ['foo', 'bar']
         env = Environment(extensions=[SerializerExtension])
+        env.filters.update(JinjaFilter.salt_jinja_filters)
         rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
         self.assertEqual(rendered, u"{0}".format(unique))
 
