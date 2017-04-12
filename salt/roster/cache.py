@@ -29,8 +29,8 @@ overriding the one in ``roster_defaults``:
 
 .. code-block:: yaml
 
-roster_order:
-    host: id          # use the minion id as hostname
+    roster_order:
+        host: id          # use the minion id as hostname
 
 
 You can define lists of parameters as well, the first result from the list will become the value.
@@ -41,14 +41,14 @@ Selecting a host
 
 .. code-block:: yaml
 
-# default
-roster_order:
-    host:
-      - ipv6-private  # IPv6 addresses in private ranges
-      - ipv6-global   # IPv6 addresses in global ranges
-      - ipv4-private  # IPv4 addresses in private ranges
-      - ipv4-public   # IPv4 addresses in public ranges
-      - ipv4-local    # loopback addresses
+    # default
+    roster_order:
+        host:
+          - ipv6-private  # IPv6 addresses in private ranges
+          - ipv6-global   # IPv6 addresses in global ranges
+          - ipv4-private  # IPv4 addresses in private ranges
+          - ipv4-public   # IPv4 addresses in public ranges
+          - ipv4-local    # loopback addresses
 
 
 This is the default ``roster_order``.
@@ -59,10 +59,10 @@ Other address selection parameters are also possible:
 
 .. code-block:: yaml
 
-roster_order:
-  host:
-    - global|public|private|local    # Both IPv6 and IPv4 addresses in that range
-    - 2000::/3                       # CIDR networks, both IPv4 and IPv6 are supported
+    roster_order:
+      host:
+        - global|public|private|local    # Both IPv6 and IPv4 addresses in that range
+        - 2000::/3                       # CIDR networks, both IPv4 and IPv6 are supported
 
 
 Using cached data
@@ -76,21 +76,21 @@ This should be especially useful for the other roster keys:
 
 .. code-block:: yaml
 
-roster_order:
-  host:
-    - grain: fqdn_ip4                # Lookup this grain
-    - mine: network.ip_addrs         # Mine data lookup works the same
+    roster_order:
+      host:
+        - grain: fqdn_ip4                # Lookup this grain
+        - mine: network.ip_addrs         # Mine data lookup works the same
 
-  password: sdb://vault/ssh_pass     # Salt SDB URLs are also supported
+      password: sdb://vault/ssh_pass     # Salt SDB URLs are also supported
 
-  user:
-    - pillar: ssh:auth:user          # Lookup this pillar key
-    - sdb://osenv/USER               # Lookup this env var through sdb
+      user:
+        - pillar: ssh:auth:user          # Lookup this pillar key
+        - sdb://osenv/USER               # Lookup this env var through sdb
 
-  priv:
-    - pillar:                        # Lists are also supported
-        - salt:ssh:private_key
-        - ssh:auth:private_key
+      priv:
+        - pillar:                        # Lists are also supported
+            - salt:ssh:private_key
+            - ssh:auth:private_key
 
 '''
 from __future__ import absolute_import
