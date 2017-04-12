@@ -80,13 +80,13 @@ This should be especially useful for the other roster keys:
       host:
         - grain: fqdn_ip4                # Lookup this grain
         - mine: network.ip_addrs         # Mine data lookup works the same
-    
+
       password: sdb://vault/ssh_pass     # Salt SDB URLs are also supported
-    
+
       user:
         - pillar: ssh:auth:user          # Lookup this pillar key
         - sdb://osenv/USER               # Lookup this env var through sdb
-    
+
       priv:
         - pillar:                        # Lists are also supported
             - salt:ssh:private_key
