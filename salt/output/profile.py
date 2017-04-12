@@ -38,7 +38,7 @@ def output(data, **kwargs):
 
     Show profile data for returners that would normally show a highstate output.
 
-      ``salt globhere state.sls something --out=profile``
+        salt globhere state.sls something --out=profile
 
     Attempt to output the returns of state.sls and state.highstate as a table of
     names, modules and durations that looks somewhat like the following:
