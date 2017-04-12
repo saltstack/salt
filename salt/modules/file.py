@@ -2236,15 +2236,18 @@ def replace(path,
     if not dry_run and not salt.utils.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
-    if show_changes:
+    def get_changes():
         orig_file_as_str = [salt.utils.to_str(x) for x in orig_file]
         new_file_as_str = [salt.utils.to_str(x) for x in new_file]
         return ''.join(difflib.unified_diff(orig_file_as_str, new_file_as_str))
 
+    if show_changes:
+        return get_changes()
+
     # We may have found a regex line match but don't need to change the line
     # (for situations where the pattern also matches the repl). Revert the
     # has_changes flag to False if the final result is unchanged.
-    if not ''.join(difflib.unified_diff(orig_file, new_file)):
+    if not get_changes():
         has_changes = False
 
     return has_changes
