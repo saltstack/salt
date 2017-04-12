@@ -136,18 +136,6 @@ def _cleanup_destdir(name):
         pass
 
 
-def _cleanup_cached_source(cached_source):
-    log.debug('Cleaning cached source file %s', cached_source)
-    try:
-        os.remove(cached_source)
-    except OSError as exc:
-        if exc.errno != errno.ENOENT:
-            log.error(
-                'Failed to clean cached source file %s: %s',
-                cached_source, exc.__str__()
-            )
-
-
 def extracted(name,
               source,
               source_hash=None,
@@ -931,6 +919,13 @@ def extracted(name,
             )
             return ret
 
+        # NOTE: This will result in more than one copy of the source archive on
+        # the minion. The reason this is necessary is because if we are
+        # tracking the checksum using source_hash_update, we need a location
+        # where we can place the checksum file alongside the cached source
+        # file, where it won't be overwritten by caching a file with the same
+        # name in the same parent dir as the source file. Long term, we should
+        # come up with a better solution for this.
         file_result = __states__['file.managed'](cached_source,
                                                  source=source_match,
                                                  source_hash=source_hash,
@@ -1501,6 +1496,17 @@ def extracted(name,
             ret['comment'] += '\n- {0}'.format(item)
 
     if not source_is_local and not keep:
-        _cleanup_cached_source(cached_source)
+        for path in (cached_source, __salt__['cp.is_cached'](source_match)):
+            if not path:
+                continue
+            log.debug('Cleaning cached source file %s', path)
+            try:
+                os.remove(path)
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    log.error(
+                        'Failed to clean cached source file %s: %s',
+                        cached_source, exc.__str__()
+                    )
 
     return ret
