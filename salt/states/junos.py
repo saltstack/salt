@@ -412,7 +412,8 @@ def lock(name):
 
     .. note::
         Any user who wishes to use lock, must necessarily unlock the
-        configuration too.
+        configuration too. Ensure :py:func:`unlock <salt.states.junos.unlock>`
+        is called in the same orchestration run in which the lock is called.
 
     .. code-block:: yaml
 
@@ -501,4 +502,20 @@ def load(name, **kwargs):
     """
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     ret['changes'] = __salt__['junos.load'](name, **kwargs)
+    return ret
+
+
+def commit_check(name):
+    """
+
+    Perform a commit check on the configuration.
+
+    .. code-block:: yaml
+
+        perform commit check:
+          junos.commit_check
+
+    """
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret['changes'] = __salt__['junos.commit_check']()
     return ret

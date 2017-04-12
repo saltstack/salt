@@ -1106,7 +1106,8 @@ def lock():
 
     .. note::
         Any user who wishes to use lock, must necessarily unlock the
-        configuration too.
+        configuration too. Ensure :py:func:`unlock <salt.modules.junos.unlock>`
+        is called in the same orchestration run in which the lock is called.
 
     Usage:
 
@@ -1278,5 +1279,30 @@ def load(path=None, **kwargs):
         return ret
     finally:
         safe_rm(template_cached_path)
+
+    return ret
+
+
+def commit_check():
+    """
+
+    Perform a commit check on the configuration.
+
+    Usage:
+
+    .. code-block:: bash
+
+        salt 'device_name' junos.commit_check
+
+    """
+    conn = __proxy__['junos.conn']()
+    ret = dict()
+    ret['out'] = True
+    try:
+        conn.cu.commit_check()
+        ret['message'] = 'Commit check succeeded.'
+    except Exception as exception:
+        ret['message'] = 'Commit check failed with {0}'.format(exception)
+        ret['out'] = False
 
     return ret
