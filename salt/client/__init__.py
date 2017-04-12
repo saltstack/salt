@@ -517,6 +517,10 @@ class LocalClient(object):
             opts['gather_job_timeout'] = kwargs['gather_job_timeout']
 
         eauth=kwargs.get('eauth', {})
+        if 'username' in kwargs:
+            eauth['username'] = kwargs['username']
+        if 'password' in kwargs:
+            eauth['password'] = kwargs['password']
         if 'token' in kwargs:
             eauth['token'] = kwargs['token']
 
