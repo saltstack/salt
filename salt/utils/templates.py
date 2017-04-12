@@ -32,6 +32,7 @@ from salt.exceptions import (
 import salt.utils.jinja
 import salt.utils.network
 from salt.utils.odict import OrderedDict
+from salt.utils.decorators import JinjaFilter
 from salt import __path__ as saltpath
 
 log = logging.getLogger(__name__)
@@ -390,6 +391,8 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.filters['ip_host'] = salt.utils.network.ip_host  # return the network interface IP
     jinja_env.filters['network_hosts'] = salt.utils.network.network_hosts  # return the hosts within a network
     jinja_env.filters['network_size'] = salt.utils.network.network_size  # return the network size
+
+    jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
 
     # globals
     jinja_env.globals['odict'] = OrderedDict
