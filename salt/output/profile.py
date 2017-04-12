@@ -36,7 +36,7 @@ def _find_durations(data, name_max=60):
 def output(data, **kwargs):
     '''
 
-    Show profile data for commands.
+    Show profile data for returners that would normally show a highstate output.
 
       ``salt globhere state.sls something --out=profile``
 
