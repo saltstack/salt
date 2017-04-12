@@ -328,7 +328,7 @@ def output(ret, **kwargs):
 
     # to facilitate re-use
     if 'opts' in kwargs:
-        global __opts__
+        global __opts__  # pylint: disable=W0601
         __opts__ = kwargs.pop('opts')
 
     # Prefer kwargs before opts
