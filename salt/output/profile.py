@@ -1,22 +1,25 @@
-
-import table_out
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import
+import salt.output.table_out as table_out
 
 __virtualname__ = 'profile'
 
+
 def __virtual__():
     return True
+
 
 def _find_durations(data, name_max=60):
     ret = []
     ml = len('duration (ms)')
     for host in data:
         for sid in data[host]:
-            dat  = data[host][sid]
-            ts   = sid.split('_|-')
-            mod  = ts[0]
-            fun  = ts[-1]
+            dat = data[host][sid]
+            ts = sid.split('_|-')
+            mod = ts[0]
+            fun = ts[-1]
             name = dat.get('name', dat.get('__id__'))
-            dur  = float(data[host][sid].get('duration',-1))
+            dur = float(data[host][sid].get('duration', -1))
 
             if name is None:
                 name = '<>'
@@ -27,11 +30,12 @@ def _find_durations(data, name_max=60):
             if l > ml:
                 ml = l
 
-            ret.append( [dur, name, '{0}.{1}'.format(mod,fun)] )
+            ret.append([dur, name, '{0}.{1}'.format(mod, fun)])
 
     for row in ret:
         row[0] = '{0:{w}.4f}'.format(row[0], w=ml)
-    return [ x[1:] + x[0:1] for x in sorted(ret) ]
+    return [x[1:] + x[0:1] for x in sorted(ret)]
+
 
 def output(data, **kwargs):
     '''
@@ -66,6 +70,6 @@ def output(data, **kwargs):
     kwargs['labels_key'] = 'labels'
 
     to_show = {'labels': ['name', 'mod.fun', 'duration (ms)'],
-               'rows':   rows }
+               'rows':   rows}
 
     return table_out.output(to_show, **kwargs)
