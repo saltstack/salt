@@ -572,25 +572,22 @@ def create(vm_):
             record = session.xenapi.VM.get_record(vm)
             ret = show_instance(name)
             ret.update({'extra': record})
-            return ret
-
-    # prepare for deploying salt minion
-    record = session.xenapi.VM.get_record(vm)
-    if record is not None:
-        # Get bootstrap values 
-        vm_['ssh_host'] = get_vm_ip(name,session)
-        vm_['user'] = vm_.get('user', 'root')
-        vm_['password'] = vm_.get('password', 'p@ssw0rd!')
-        log.debug('{} has IP of {}'.format(name, vm_['ssh_host']))
-
-
-        # Bootstrap Salt!
-        if vm_['ssh_host'] is not None:
-            log.info('Installing Salt minion  on {0}'.format(name))
-            boot_ret = __utils__['cloud.bootstrap'](vm_,__opts__)
-            log.debug('boot return: {}'.format(boot_ret))
-            ret = show_instance(name)
-            ret.update({'extra': record})
+        else:
+            # prepare for deploying salt minion
+            record = session.xenapi.VM.get_record(vm)
+            if record is not None:
+                # Get bootstrap values 
+                vm_['ssh_host'] = get_vm_ip(name,session)
+                vm_['user'] = vm_.get('user', 'root')
+                vm_['password'] = vm_.get('password', 'p@ssw0rd!')
+                log.debug('{} has IP of {}'.format(name, vm_['ssh_host']))
+                # Bootstrap Salt minion!
+                if vm_['ssh_host'] is not None:
+                    log.info('Installing Salt minion  on {0}'.format(name))
+                    boot_ret = __utils__['cloud.bootstrap'](vm_,__opts__)
+                    log.debug('boot return: {}'.format(boot_ret))
+                    ret = show_instance(name)
+                    ret.update({'extra': record})
         
     __utils__['cloud.fire_event'](
         'event',
@@ -604,6 +601,8 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
+    log.debug('Adding {} to cloud cache.'.format(name))
+    __utils__['cloud.cachedir_index_add'](vm_['name'], vm_['profile'], 'xen', vm_['driver'])
     return ret
 
 
@@ -931,6 +930,13 @@ def destroy(name=None,call=None):
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
+        if __opts__.get('update_cachedir', False) is True:
+            __utils__['cloud.delete_minion_cachedir'](
+                    name,
+                    __active_provider_name__.split(':')[0],
+                    __opts__
+            )
+        __utils__['cloud.cachedir_index_del'](name)
         return ret
 
 
