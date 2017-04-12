@@ -1319,16 +1319,9 @@ class Jobs(LowDataAdapter):
         '''
         lowstate = [{
             'client': 'runner',
-            'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
+            'fun': 'jobs.list_job' if jid else 'jobs.list_jobs',
             'jid': jid,
         }]
-
-        if jid:
-            lowstate.append({
-                'client': 'runner',
-                'fun': 'jobs.list_job',
-                'jid': jid,
-            })
 
         cherrypy.request.lowstate = lowstate
         job_ret_info = list(self.exec_lowstate(
@@ -1336,12 +1329,18 @@ class Jobs(LowDataAdapter):
 
         ret = {}
         if jid:
-            job_ret, job_info = job_ret_info
-            ret['info'] = [job_info]
+            ret['info'] = [job_ret_info[0]]
+            minion_ret = {}
+            returns = job_ret_info[0].get('Result')
+            for minion in returns.keys():
+                if u'return' in returns[minion]:
+                    minion_ret[minion] = returns[minion].get(u'return')
+                else:
+                    minion_ret[minion] = returns[minion].get('return')
+            ret['return'] = [minion_ret]
         else:
-            job_ret = job_ret_info[0]
+            ret['return'] = [job_ret_info[0]]
 
-        ret['return'] = [job_ret]
         return ret
 
 
