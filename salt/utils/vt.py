@@ -30,6 +30,9 @@ import signal
 import select
 import logging
 
+# Import salt libs
+from salt.ext import six
+
 mswindows = (sys.platform == "win32")
 
 try:
@@ -566,7 +569,10 @@ class Terminal(object):
             try:
                 if self.stdin_logger:
                     self.stdin_logger.log(self.stdin_logger_level, data)
-                written = os.write(self.child_fd, data)
+                if six.PY3:
+                    written = os.write(self.child_fd, data.encode(__salt_system_encoding__))
+                else:
+                    written = os.write(self.child_fd, data)
             except OSError as why:
                 if why.errno == errno.EPIPE:  # broken pipe
                     os.close(self.child_fd)
