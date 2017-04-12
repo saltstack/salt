@@ -44,6 +44,7 @@ import salt.config
 import salt.version
 from salt._compat import ElementTree as ET
 from salt.template import compile_template
+from salt.utils.decorators import jinja_filter
 from salt import syspaths
 
 # Import 3rd party libs
@@ -89,6 +90,7 @@ log = logging.getLogger(__name__)
 USERAGENT = 'Salt/{0}'.format(salt.version.__version__)
 
 
+@jinja_filter('http_query')
 def query(url,
           method='GET',
           params=None,

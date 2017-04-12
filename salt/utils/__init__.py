@@ -125,6 +125,7 @@ import salt.defaults.exitcodes
 import salt.log
 import salt.utils.dictupdate
 import salt.version
+from salt.utils.decorators import jinja_filter
 from salt.utils.decorators import memoize as real_memoize
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.textformat import TextFormat
@@ -149,6 +150,7 @@ def safe_rm(tgt):
         pass
 
 
+@jinja_filter('is_empty')
 def is_empty(filename):
     '''
     Is a file empty?
@@ -160,6 +162,7 @@ def is_empty(filename):
         return False
 
 
+@jinja_filter('is_hex')
 def is_hex(value):
     '''
     Returns True if value is a hexidecimal string, otherwise returns False
@@ -296,6 +299,7 @@ def get_user():
         raise CommandExecutionError("Required external libraries not found. Need 'pwd' or 'win32api")
 
 
+@jinja_filter('get_uid')
 def get_uid(user=None):
     """
     Get the uid for a given user name. If no user given,
@@ -556,6 +560,7 @@ def rand_str(size=9999999999, hash_type=None):
     return hasher(to_bytes(str(random.SystemRandom().randint(0, size)))).hexdigest()
 
 
+@jinja_filter('which')
 def which(exe=None):
     '''
     Python clone of /usr/bin/which
@@ -683,6 +688,7 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
     return pr
 
 
+@jinja_filter('list_files')
 def list_files(directory):
     '''
     Return a list of all files found under directory
@@ -698,6 +704,7 @@ def list_files(directory):
     return list(ret)
 
 
+@jinja_filter('gen_mac')
 def gen_mac(prefix='AC:DE:48'):
     '''
     Generates a MAC address with the defined OUI prefix.
@@ -722,6 +729,7 @@ def gen_mac(prefix='AC:DE:48'):
                                                 random.randint(0, 0xff))
 
 
+@jinja_filter('mac_str_to_bytes')
 def mac_str_to_bytes(mac_str):
     '''
     Convert a MAC address string into bytes. Works with or without separators:
@@ -755,6 +763,7 @@ def ip_bracket(addr):
     return addr
 
 
+@jinja_filter('dns_check')
 def dns_check(addr, port, safe=False, ipv6=None):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
@@ -912,6 +921,7 @@ def backup_minion(path, bkroot):
         os.chmod(bkpath, fstat.st_mode)
 
 
+@jinja_filter('path_join')
 def path_join(*parts, **kwargs):
     '''
     This functions tries to solve some issues when joining multiple absolute
@@ -1196,6 +1206,7 @@ def arg_lookup(fun, aspec=None):
     return ret
 
 
+@jinja_filter('is_text_file')
 def istextfile(fp_, blocksize=512):
     '''
     Uses heuristics to guess whether the given file is text or binary,
@@ -1234,6 +1245,7 @@ def istextfile(fp_, blocksize=512):
     return float(len(nontext)) / len(block) <= 0.30
 
 
+@jinja_filter('is_sorted')
 def isorted(to_sort):
     '''
     Sort a list of strings ignoring case.
@@ -1248,6 +1260,7 @@ def isorted(to_sort):
     return sorted(to_sort, key=lambda x: x.lower())
 
 
+@jinja_filter('mysql_to_dict')
 def mysql_to_dict(data, key):
     '''
     Convert MySQL-style output to a python dictionary
@@ -1276,6 +1289,7 @@ def mysql_to_dict(data, key):
     return ret
 
 
+@jinja_filter('contains_whitespace')
 def contains_whitespace(text):
     '''
     Returns True if there are any whitespace characters in the string
@@ -1283,6 +1297,7 @@ def contains_whitespace(text):
     return any(x.isspace() for x in text)
 
 
+@jinja_filter('str_to_num')
 def str_to_num(text):
     '''
     Convert a string to a number.
@@ -1434,6 +1449,7 @@ def expr_match(line, expr):
     return False
 
 
+@jinja_filter('check_whitelist_blacklist')
 def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     '''
     Check a whitelist and/or blacklist to see if the value matches it.
@@ -2082,6 +2098,7 @@ def is_true(value=None):
         return bool(value)
 
 
+@jinja_filter('exactly_n_true')
 def exactly_n(l, n=1):
     '''
     Tests that exactly N items in an iterable are "truthy" (neither None,
@@ -2091,6 +2108,7 @@ def exactly_n(l, n=1):
     return all(any(i) for j in range(n)) and not any(i)
 
 
+@jinja_filter('exactly_one_true')
 def exactly_one(l):
     '''
     Check if only one item is not None, False, or 0 in an iterable.
@@ -2250,6 +2268,7 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
         yield top, dirs, nondirs
 
 
+@jinja_filter('file_hashsum')
 def get_hash(path, form='sha256', chunk_size=65536):
     '''
     Get the hash sum of a file
@@ -2370,6 +2389,7 @@ def date_cast(date):
                 'Unable to parse {0}. Consider installing timelib'.format(date))
 
 
+@jinja_filter('strftime')
 def date_format(date=None, format="%Y-%m-%d"):
     '''
     Converts date into a time-based string
@@ -2619,6 +2639,7 @@ def compare_versions(ver1='',
         return cmp_result in cmp_map[oper]
 
 
+@jinja_filter('compare_dicts')
 def compare_dicts(old=None, new=None):
     '''
     Compare before and after results from various salt functions, returning a
@@ -2641,6 +2662,7 @@ def compare_dicts(old=None, new=None):
     return ret
 
 
+@jinja_filter('compare_lists')
 def compare_lists(old=None, new=None):
     '''
     Compare before and after results from various salt functions, returning a
@@ -2701,6 +2723,7 @@ def argspec_report(functions, module=''):
     return ret
 
 
+@jinja_filter('json_decode_list')
 def decode_list(data):
     '''
     JSON decodes as unicode, Jinja needs bytes...
@@ -2717,6 +2740,7 @@ def decode_list(data):
     return rv
 
 
+@jinja_filter('json_decode_dict')
 def decode_dict(data):
     '''
     JSON decodes as unicode, Jinja needs bytes...
@@ -2754,6 +2778,7 @@ def find_json(raw):
         raise ValueError
 
 
+@jinja_filter('is_bin_file')
 def is_bin_file(path):
     '''
     Detects if the file is a binary, returns bool. Returns True if the file is
@@ -3081,6 +3106,7 @@ def chugid_and_umask(runas, umask):
         os.umask(umask)
 
 
+@jinja_filter('random_str')
 def rand_string(size=32):
     key = os.urandom(size)
     return key.encode('base64').replace('\n', '')
@@ -3152,6 +3178,7 @@ def to_str(s, encoding=None):
         raise TypeError('expected str, bytearray, or unicode')
 
 
+@jinja_filter('to_bytes')
 def to_bytes(s, encoding=None):
     '''
     Given bytes, bytearray, str, or unicode (python 2), return bytes (str for
@@ -3184,6 +3211,7 @@ def to_unicode(s, encoding=None):
     return s
 
 
+@jinja_filter('is_list')
 def is_list(value):
     '''
     Check if a variable is a list.
@@ -3191,6 +3219,7 @@ def is_list(value):
     return isinstance(value, list)
 
 
+@jinja_filter('is_iter')
 def is_iter(y, ignore=six.string_types):
     '''
     Test if an object is iterable, but not a string type.
@@ -3329,6 +3358,7 @@ def simple_types_filter(data):
     return data
 
 
+@jinja_filter('substring_in_list')
 def substr_in_list(string_to_search_for, list_to_search):
     '''
     Return a boolean value that indicates whether or not a given
