@@ -332,9 +332,8 @@ def create(vm_):
         Wait for the IP address to become available
         '''
         data = show_instance(vm_['name'], call='action')
-        # print("Waiting for hostname")
-        # pprint.pprint(data)
-        if str(data.get('main_ip', '0')) == '0':
+        main_ip = str(data.get('main_ip', '0'))
+        if main_ip.startswith('0'):
             time.sleep(3)
             return False
         return data['main_ip']

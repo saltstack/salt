@@ -49,6 +49,8 @@ runner modules
     survey
     test
     thin
+    vault
+    venafiapi
     virt
     vistara
     winrepo
