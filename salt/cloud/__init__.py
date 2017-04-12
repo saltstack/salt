@@ -1515,6 +1515,11 @@ class Cloud(object):
                         if driver not in ret[alias]:
                             ret[alias][driver] = {}
 
+                        # Clean kwargs of "__pub_*" data before running the cloud action call.
+                        # Prevents calling positional "kwarg" arg before "call" when no kwarg
+                        # argument is present in the cloud driver function's arg spec.
+                        kwargs = salt.utils.clean_kwargs(**kwargs)
+
                         if kwargs:
                             ret[alias][driver][vm_name] = self.clouds[fun](
                                 vm_name, kwargs, call='action'

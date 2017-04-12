@@ -95,6 +95,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 import salt.utils
+import salt.utils.pkg.deb
 
 
 def __virtual__():
@@ -386,13 +387,16 @@ def managed(name, ppa=None, **kwargs):
                 # split the line and sort everything after the URL
                 sanitizedsplit = sanitizedkwargs[kwarg].split()
                 sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
-                reposplit = pre[kwarg].split()
+                reposplit, _, pre_comments = \
+                    [x.strip() for x in pre[kwarg].partition('#')]
+                reposplit = reposplit.split()
                 reposplit[3:] = sorted(reposplit[3:])
                 if sanitizedsplit != reposplit:
                     break
                 if 'comments' in kwargs:
-                    _line = pre[kwarg].split('#')
-                    if str(kwargs['comments']) not in _line:
+                    post_comments = \
+                        salt.utils.pkg.deb.combine_comments(kwargs['comments'])
+                    if pre_comments != post_comments:
                         break
             else:
                 if os_family in ('redhat', 'suse') \

@@ -105,7 +105,7 @@ the key from the master when the minion has been gone for 60 seconds:
       key.timeout:
         - delete: 60
         - require:
-          - status: startreg
+          - status: statreg
 
 There are two stanzas in this formula, whose IDs are ``statreg`` and
 ``keydel``. The first stanza, ``statreg``, tells Thorium to keep track of
