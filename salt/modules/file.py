@@ -575,8 +575,6 @@ def get_source_sum(file_name='',
         Optional file name being managed, for matching with
         :py:func:`file.extract_hash <salt.modules.file.extract_hash>`.
 
-        .. versionadded:: 2016.11.0
-
     source
         Source file, as used in :py:mod:`file <salt.states.file>` and other
         states. If ``source_hash`` refers to a file containing hashes, then
@@ -594,8 +592,6 @@ def get_source_sum(file_name='',
     source_hash_name
         Specific file name to look for when ``source_hash`` refers to a remote
         file, used to disambiguate ambiguous matches.
-
-        .. versionadded:: 2016.11.0
 
     saltenv : base
         Salt fileserver environment from which to retrive the source_hash. This

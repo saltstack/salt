@@ -44,8 +44,25 @@ def _path_is_abs(path):
         return False
 
 
-def _update_checksum(cached_source, source_sum):
+def _add_explanation(ret, source_hash_trigger, contents_missing):
+    '''
+    Common code to add additional explanation to the state's comment field,
+    both when test=True and not
+    '''
+    if source_hash_trigger:
+        ret['comment'] += ', due to source_hash update'
+    elif contents_missing:
+        ret['comment'] += ', due to absence of one or more files/dirs'
+
+
+def _gen_checksum(path):
+    return {'hsum': salt.utils.get_hash(path, form=__opts__['hash_type']),
+            'hash_type': __opts__['hash_type']}
+
+
+def _update_checksum(cached_source):
     cached_source_sum = '.'.join((cached_source, 'hash'))
+    source_sum = _gen_checksum(cached_source)
     hash_type = source_sum.get('hash_type')
     hsum = source_sum.get('hsum')
     if hash_type and hsum:
@@ -76,21 +93,32 @@ def _update_checksum(cached_source, source_sum):
             )
 
 
-def _compare_checksum(cached_source, source_sum):
-    cached_source_sum = '.'.join((cached_source, 'hash'))
+def _read_cached_checksum(cached_source, form=None):
+    if form is None:
+        form = __opts__['hash_type']
+    path = '.'.join((cached_source, 'hash'))
     try:
-        with salt.utils.fopen(cached_source_sum, 'r') as fp_:
+        with salt.utils.fopen(path, 'r') as fp_:
             for line in fp_:
                 # Should only be one line in this file but just in case it
                 # isn't, read only a single line to avoid overuse of memory.
                 hash_type, hsum = line.rstrip('\n').split(':', 1)
-                if hash_type == source_sum.get('hash_type'):
+                if hash_type == form:
                     break
             else:
-                return False
+                return None
     except (IOError, OSError, ValueError):
-        return False
-    return {'hash_type': hash_type, 'hsum': hsum} == source_sum
+        return None
+    else:
+        return {'hash_type': hash_type, 'hsum': hsum}
+
+
+def _compare_checksum(cached_source, source_sum):
+    cached_sum = _read_cached_checksum(
+        cached_source,
+        form=source_sum.get('hash_type', __opts__['hash_type'])
+    )
+    return source_sum == cached_sum
 
 
 def _is_bsdtar():
@@ -823,17 +851,33 @@ def extracted(name,
         )
         return ret
 
-    if trim_output and not isinstance(trim_output, (bool, six.integer_types)):
+    if trim_output:
+        if trim_output is True:
+            trim_output = 100
+        elif not isinstance(trim_output, (bool, six.integer_types)):
+            try:
+                # Try to handle cases where trim_output was passed as a
+                # string-ified integer.
+                trim_output = int(trim_output)
+            except TypeError:
+                ret['comment'] = (
+                    'Invalid value for trim_output, must be True/False or an '
+                    'integer'
+                )
+                return ret
+
+    if source_hash:
         try:
-            # Try to handle cases where trim_output was passed as a
-            # string-ified integer.
-            trim_output = int(trim_output)
-        except TypeError:
-            ret['comment'] = (
-                'Invalid value for trim_output, must be True/False or an '
-                'integer'
-            )
+            source_sum = __salt__['file.get_source_sum'](
+                 source=source_match,
+                 source_hash=source_hash,
+                 source_hash_name=source_hash_name,
+                 saltenv=__env__)
+        except CommandExecutionError as exc:
+            ret['comment'] = exc.strerror
             return ret
+    else:
+        source_sum = {}
 
     if source_is_local:
         cached_source = source_match
@@ -849,43 +893,45 @@ def extracted(name,
             # Prevent a traceback from attempting to read from a directory path
             salt.utils.rm_rf(cached_source)
 
-    if source_hash:
-        try:
-            source_sum = __salt__['file.get_source_sum']('',
-                                                         source,
-                                                         source_hash,
-                                                         source_hash_name,
-                                                         __env__)
-        except CommandExecutionError as exc:
-            ret['comment'] = exc.strerror
-            return ret
+    existing_cached_source_sum = _read_cached_checksum(cached_source) \
 
-        if source_hash_update:
-            if _compare_checksum(cached_source, source_sum):
-                ret['result'] = True
-                ret['comment'] = \
-                    'Hash {0} has not changed'.format(source_sum['hsum'])
-                return ret
+    if source_is_local:
+        # No need to download archive, it's local to the minion
+        update_source = False
     else:
-        source_sum = {}
+        if not os.path.isfile(cached_source):
+            # Archive not cached, we need to download it
+            update_source = True
+        else:
+            # Archive is cached, keep=True likely used in prior run. If we need
+            # to verify the hash, then we *have* to update the source archive
+            # to know whether or not the hash changed. Hence the below
+            # statement. bool(source_hash) will be True if source_hash was
+            # passed, and otherwise False.
+            update_source = bool(source_hash)
 
-    if not source_is_local and not os.path.isfile(cached_source):
+    if update_source:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = \
-                'Archive {0} would be downloaded to cache'.format(source_match)
+            ret['comment'] = (
+                'Archive {0} would be downloaded to cache and checked to '
+                'discover if extraction is necessary'.format(source_match)
+            )
             return ret
 
-        log.debug('%s is not in cache, downloading it', source_match)
-
+        # NOTE: This will result in more than one copy of the source archive on
+        # the minion. The reason this is necessary is because if we are
+        # tracking the checksum using source_hash_update, we need a location
+        # where we can place the checksum file alongside the cached source
+        # file, where it won't be overwritten by caching a file with the same
+        # name in the same parent dir as the source file. Long term, we should
+        # come up with a better solution for this.
         file_result = __states__['file.managed'](cached_source,
                                                  source=source_match,
                                                  source_hash=source_hash,
                                                  source_hash_name=source_hash_name,
                                                  makedirs=True,
-                                                 skip_verify=skip_verify,
-                                                 env=__env__)
-
+                                                 skip_verify=skip_verify)
         log.debug('file.managed: {0}'.format(file_result))
 
         # Prevent a traceback if errors prevented the above state from getting
@@ -905,11 +951,12 @@ def extracted(name,
             if not file_result:
                 log.debug('failed to download {0}'.format(source_match))
                 return file_result
+
+        if source_hash:
+            _update_checksum(cached_source)
+
     else:
         log.debug('Archive %s is already in cache', source_match)
-
-    if source_hash:
-        _update_checksum(cached_source, source_sum)
 
     if archive_format == 'zip' and not password:
         log.debug('Checking %s to see if it is password-protected',
@@ -996,13 +1043,14 @@ def extracted(name,
                           ))
         return ret
 
+    extraction_needed = overwrite
+    contents_missing = False
+
     # Check to see if we need to extract the archive. Using os.lstat() in a
     # try/except is considerably faster than using os.path.exists(), and we
     # already need to catch an OSError to cover edge cases where the minion is
     # running as a non-privileged user and is trying to check for the existence
     # of a path to which it does not have permission.
-    extraction_needed = overwrite
-
     try:
         if_missing_path_exists = os.path.exists(if_missing)
     except TypeError:
@@ -1038,6 +1086,7 @@ def extracted(name,
                     except OSError as exc:
                         if exc.errno == errno.ENOENT:
                             extraction_needed = True
+                            contents_missing = True
                         elif exc.errno != errno.ENOTDIR:
                             # In cases where a directory path was occupied by a
                             # file instead, all os.lstat() calls to files within
@@ -1100,6 +1149,15 @@ def extracted(name,
                             ret['comment'] = msg
                             return ret
 
+    if not extraction_needed \
+            and source_hash_update \
+            and existing_cached_source_sum is not None \
+            and not _compare_checksum(cached_source, existing_cached_source_sum):
+        extraction_needed = True
+        source_hash_trigger = True
+    else:
+        source_hash_trigger = False
+
     created_destdir = False
 
     if extraction_needed:
@@ -1112,6 +1170,7 @@ def extracted(name,
                 )
             if clean and contents is not None:
                 ret['comment'] += ', after cleaning destination path(s)'
+            _add_explanation(ret, source_hash_trigger, contents_missing)
             return ret
 
         if clean and contents is not None:
@@ -1179,6 +1238,8 @@ def extracted(name,
                         with closing(tarfile.open(cached_source, 'r')) as tar:
                             tar.extractall(name)
                             files = tar.getnames()
+                            if trim_output:
+                                files = files[:trim_output]
                     except tarfile.ReadError:
                         if salt.utils.which('xz'):
                             if __salt__['cmd.retcode'](
@@ -1388,16 +1449,7 @@ def extracted(name,
                 ret['changes']['directories_created'] = [name]
             ret['changes']['extracted_files'] = files
             ret['comment'] = '{0} extracted to {1}'.format(source_match, name)
-            if not source_is_local and not keep:
-                log.debug('Cleaning cached source file %s', cached_source)
-                try:
-                    os.remove(cached_source)
-                except OSError as exc:
-                    if exc.errno != errno.ENOENT:
-                        log.error(
-                            'Failed to clean cached source file %s: %s',
-                            cached_source, exc.__str__()
-                        )
+            _add_explanation(ret, source_hash_trigger, contents_missing)
             ret['result'] = True
 
         else:
@@ -1442,5 +1494,19 @@ def extracted(name,
         )
         for item in enforce_failed:
             ret['comment'] += '\n- {0}'.format(item)
+
+    if not source_is_local and not keep:
+        for path in (cached_source, __salt__['cp.is_cached'](source_match)):
+            if not path:
+                continue
+            log.debug('Cleaning cached source file %s', path)
+            try:
+                os.remove(path)
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    log.error(
+                        'Failed to clean cached source file %s: %s',
+                        cached_source, exc.__str__()
+                    )
 
     return ret
