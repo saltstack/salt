@@ -35,6 +35,11 @@ def _find_durations(data, name_max=60):
 
 def output(data, **kwargs):
     '''
+
+    Show profile data for commands.
+
+      ``salt globhere state.sls something --out=profile``
+
     Attempt to output the returns of state.sls and state.highstate as a table of
     names, modules and durations that looks somewhat like the following:
 
