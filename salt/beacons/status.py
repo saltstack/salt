@@ -81,6 +81,12 @@ markers for specific list items:
           - 0
           - 1
           - 2
+
+
+.. warning::
+    Not all status functions are supported for every operating system. Be certain
+    to check the minion log for errors after configuring this beacon.
+
 '''
 
 # Import python libs
@@ -90,6 +96,8 @@ import datetime
 import salt.exceptions
 
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'status'
 
 
 def __validate__(config):
@@ -102,11 +110,7 @@ def __validate__(config):
 
 
 def __virtual__():
-    # TODO Find a way to check the existence of the module itself, not just a single func
-    if 'status.w' not in __salt__:
-        return (False, 'The \'status\' execution module is not available on this system')
-    else:
-        return True
+    return __virtualname__
 
 
 def beacon(config):
