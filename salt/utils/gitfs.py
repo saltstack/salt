@@ -1153,7 +1153,7 @@ class GitPython(GitProvider):
         '''
         Using the blob object, write the file to the destination path
         '''
-        with salt.utils.fopen(dest, 'w+') as fp_:
+        with salt.utils.fopen(dest, 'wb+') as fp_:
             blob.stream_data(fp_)
 
 
@@ -1819,7 +1819,7 @@ class Pygit2(GitProvider):
         '''
         Using the blob object, write the file to the destination path
         '''
-        with salt.utils.fopen(dest, 'w+') as fp_:
+        with salt.utils.fopen(dest, 'wb+') as fp_:
             fp_.write(blob.data)
 
 
