@@ -176,7 +176,7 @@ def _auth(uri):
     return _build_opener(basic, digest)
 
 
-def _extract_war_version(war):
+def extract_war_version(war):
     '''
     Extract the version from the war file name.  There does not seem to be a
     standard for encoding the version into the `war file name
@@ -609,7 +609,7 @@ def deploy_war(war,
     # If parallel versions are desired or not disabled
     if version is True:
         # Set it to defined version or attempt extract
-        version = version or _extract_war_version(war)
+        version = version or extract_war_version(war)
 
         if version != ('' or None):
             # Only pass version to Tomcat if not undefined
