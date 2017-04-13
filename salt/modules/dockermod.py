@@ -5240,7 +5240,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
         copy_to(name,
                 trans_tar,
                 os.path.join(trans_dest_path, 'salt_state.tgz'),
-                exec_driver='nsenter',
+                exec_driver=_get_exec_driver(),
                 overwrite=True)
 
         # Now execute the state into the container

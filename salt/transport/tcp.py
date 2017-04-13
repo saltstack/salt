@@ -408,7 +408,14 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             raise tornado.gen.Return(True)
 
         if force_auth or not self.auth.authenticated:
-            yield self.auth.authenticate()
+            count = 0
+            while count <= self.opts['tcp_authentication_retries'] or self.opts['tcp_authentication_retries'] < 0:
+                try:
+                    yield self.auth.authenticate()
+                    break
+                except SaltClientError as exc:
+                    log.debug(exc)
+                    count += 1
         try:
             ret = yield _do_transfer()
             raise tornado.gen.Return(ret)

@@ -2274,6 +2274,20 @@ ZeroMQ is installed.
 
 .. conf_minion:: failhard
 
+``tcp_authentication_retries``
+------------------------------
+
+Default: ``5``
+
+The number of times to retry authenticating with the salt master when it comes
+back online.
+
+Zeromq does a lot to make sure when connections come back online that they
+reauthenticate. The tcp transport should try to connect with a new connection
+if the old one times out on reauthenticating.
+
+`-1` for infinite tries.
+
 ``failhard``
 ------------
 

@@ -4395,7 +4395,7 @@ def check_managed_changes(
             if _urlparse(source).scheme in ('salt', 'file') \
                     or source.startswith('/'):
                 try:
-                    mode = salt.utils.st_mode_to_octal(os.stat(sfn).st_mode)
+                    mode = __salt__['cp.stat_file'](source, saltenv=saltenv, octal=True)
                 except Exception as exc:
                     log.warning('Unable to stat %s: %s', sfn, exc)
     changes = check_file_meta(name, sfn, source, source_sum, user,
@@ -4661,6 +4661,13 @@ def manage_file(name,
         a local file on the minion), the mode of the destination file will be
         set to the mode of the source file.
 
+        .. note:: keep_mode does not work with salt-ssh.
+
+            As a consequence of how the files are transfered to the minion, and
+            the inability to connect back to the master with salt-ssh, salt is
+            unable to stat the file as it exists on the fileserver and thus
+            cannot mirror the mode on the salt-ssh minion
+
     encoding : None
         If None, str() will be applied to contents.
         If not None, specified encoding will be used.
@@ -4710,7 +4717,7 @@ def manage_file(name,
             if _urlparse(source).scheme in ('salt', 'file') \
                     or source.startswith('/'):
                 try:
-                    mode = salt.utils.st_mode_to_octal(os.stat(sfn).st_mode)
+                    mode = __salt__['cp.stat_file'](source, saltenv=saltenv, octal=True)
                 except Exception as exc:
                     log.warning('Unable to stat %s: %s', sfn, exc)
 

@@ -746,6 +746,10 @@
 #
 #zmq_monitor: False
 
+# Number of times to try to authenticate with the salt master when reconnecting
+# to the master
+#tcp_authentication_retries: 5
+
 ######      Module configuration      #####
 ###########################################
 # Salt allows for modules to be passed arbitrary configuration data, any data
