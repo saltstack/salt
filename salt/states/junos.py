@@ -289,7 +289,7 @@ def install_config(name, **kwargs):
     Parameters:
       Required
         * name:
-          Path where the configuration file is present. If the file has a \
+          Path where the configuration/template file is present. If the file has a \
           '*.conf' extension,
           the content is treated as text format. If the file has a '*.xml' \
           extension,
@@ -298,8 +298,6 @@ def install_config(name, **kwargs):
           the content is treated as Junos OS 'set' commands.(default = None)
       Optional
         * kwargs: Keyworded arguments which can be provided like-
-            * template_path:
-              Path where the jinja template is present on the master.
             * template_vars:
               The dictionary of data for the jinja variables present in the \
               jinja template
