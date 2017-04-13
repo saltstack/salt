@@ -8,11 +8,6 @@ from __future__ import absolute_import
 import errno
 from mock import Mock
 
-try:
-    ERRIO = errno.EREMOTEIO
-except AttributeError:
-    ERRIO = errno.EIO
-
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -53,7 +48,7 @@ class FileclientTestCase(TestCase):
         If makedirs raises other than EEXIST errno, an exception should be raised.
         '''
         with patch('os.path.isfile', lambda prm: False):
-            with patch('os.makedirs', self._fake_makedir(num=ERRIO)):
+            with patch('os.makedirs', self._fake_makedir(num=errno.EIO)):
                 with self.assertRaises(OSError):
                     with Client(self.opts)._cache_loc('testfile') as c_ref_itr:
                         assert c_ref_itr == '/__test__/files/base/testfile'
