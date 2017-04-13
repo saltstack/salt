@@ -5,41 +5,59 @@ Junos Syslog Engine
 
 .. versionadded:: Nitrogen
 
-An engine that listen to syslog message from Junos devices,
+
+:depends: pyparsing, twisted
+
+
+An engine that listens to syslog message from Junos devices,
 extract event information and generate message on SaltStack bus.
 
-One can customize the name of the topic.
-The event data consists of the following fields:
-    a.  hostname
-    b.  hostip
-    c.  daemon
-    d.  event
-    e.  severity
-    f.  priority
-    g.  timestamp
-    h.  message
-    i.  pid
-    j.  raw (the raw event data forwarded from the device)
-The topic can consist of any of the combination of above fields,
+The event topic sent to salt is dynamically generated according to the topic title
+specified by the user. The incoming event data (from the junos device) consists
+of the following fields:
+
+1.   hostname
+2.   hostip
+3.   daemon
+4.   event
+5.   severity
+6.   priority
+7.   timestamp
+8.   message
+9.   pid
+10.   raw (the raw event data forwarded from the device)
+
+The topic title can consist of any of the combination of above fields,
 but the topic has to start with ‘jnpr/syslog’.
-So, we can have different combinations like:
-•   jnpr/syslog/hostip/daemon/event
-•   jnpr/syslog/daemon/severity
-The default topic is ‘jnpr/syslog/hostname/event’.
-The topic is to be specified in the configuration file.
+So, we can have different combinations:
+ - jnpr/syslog/hostip/daemon/event
+ - jnpr/syslog/daemon/severity
+
+The corresponding dynamic topic sent on salt event bus would look something like:
+
+ - jnpr/syslog/1.1.1.1/mgd/UI_COMMIT_COMPLETED
+ - jnpr/syslog/sshd/7
+The default topic title is ‘jnpr/syslog/hostname/event’.
 
 The user can choose the type of data he/she wants of the event bus.
-Like, if one wants events pertaining to a particular daemon, he/she can
+Like, if one wants only events pertaining to a particular daemon, he/she can
 specify that in the configuration file:
+
+.. code-block:: yaml
+
     daemon: mgd
 
 One can even have a list of daemons like:
+
+.. code-block:: yaml
+
     daemon:
       - mgd
       - sshd
 
-:configuration:
-  Example configuration
+Example configuration (to be written in master config file)
+
+.. code-block:: yaml
 
     engines:
       - junos_syslog:
@@ -49,15 +67,21 @@ One can even have a list of daemons like:
             - mgd
             - sshd
 
-For junos_syslog engine to receive events syslog must be set on junos device.
+For junos_syslog engine to receive events, syslog must be set on the junos device.
 This can be done via following configuration:
+
+.. code-block:: shell
+
     set system syslog host <ip-of-the-salt-device> port 516 any any
 
-Here is a sample syslog event which is received from the junos device:
-  '<30>May 29 05:18:12 bng-ui-vm-9 mspd[1492]: No chassis configuration found'
+Below is a sample syslog event which is received from the junos device:
+
+.. code-block:: shell
+
+    '<30>May 29 05:18:12 bng-ui-vm-9 mspd[1492]: No chassis configuration found'
 
 The source for parsing the syslog messages is taken from:
-    https://gist.github.com/leandrosilva/3651640#file-xlog-py
+https://gist.github.com/leandrosilva/3651640#file-xlog-py
 '''
 from __future__ import absolute_import
 
@@ -92,12 +116,12 @@ def __virtual__():
     Load only if twisted and pyparsing libs are present.
     '''
     if not HAS_TWISTED_AND_PYPARSING:
-        return (False, 'junos_syslog could not be loaded. \
-            Make sure you have twisted and pyparsing python libraries.')
+        return (False, 'junos_syslog could not be loaded.'
+                       ' Make sure you have twisted and pyparsing python libraries.')
     return True
 
 
-class Parser(object):
+class _Parser(object):
 
     def __init__(self):
         ints = Word(nums)
@@ -210,11 +234,11 @@ class Parser(object):
             return payload
 
 
-class SyslogServerFactory(DatagramProtocol):
+class _SyslogServerFactory(DatagramProtocol):
 
     def __init__(self, options):
         self.options = options
-        self.obj = Parser()
+        self.obj = _Parser()
         data = [
             "hostip",
             "priority",
@@ -360,5 +384,5 @@ class SyslogServerFactory(DatagramProtocol):
 def start(port=516, **kwargs):
 
     log.info('Starting junos syslog engine (port {0})'.format(port))
-    reactor.listenUDP(port, SyslogServerFactory(kwargs))
+    reactor.listenUDP(port, _SyslogServerFactory(kwargs))
     reactor.run()
