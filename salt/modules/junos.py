@@ -1,6 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
 Module to interact with Junos devices.
+
+:maturity: new
+:dependencies: junos-eznc, jxmlease
+
+.. note::
+
+    Those who wish to use junos-eznc (PyEZ) version >= 2.1.0, must
+    use the latest salt code from github until the next release.
+
+Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos proxy.
+
 '''
 from __future__ import absolute_import
 
@@ -19,6 +30,7 @@ except ImportError:
 try:
     # pylint: disable=W0611
     from jnpr.junos import Device
+    from jnpr.junos.utils.config import Config
     from jnpr.junos.utils.sw import SW
     from jnpr.junos.utils.scp import SCP
     import jnpr.junos.utils
@@ -394,7 +406,7 @@ def commit(**kwargs):
 
 def rollback(id=0, **kwargs):
     '''
-    To rollback the last committed configuration changes
+    To rollback the last committed configuration changes and commit the same.
 
     Usage:
 
@@ -471,7 +483,7 @@ def rollback(id=0, **kwargs):
             ret['out'] = False
             ret['message'] = \
                 'Rollback successful but commit failed with error "{0}"'\
-                    .format(exception)
+                .format(exception)
             return ret
     else:
         ret['message'] = 'Rollback succesfull but pre-commit check failed.'
@@ -757,6 +769,8 @@ def install_config(path=None, **kwargs):
           the content is treated as Junos OS 'set' commands.(default = None)
       Optional
         * kwargs: Keyworded arguments which can be provided like-
+            * mode: The mode in which the configuration is locked.
+              (Options: private, dynamic, batch, exclusive; default= exclusive)
             * dev_timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
@@ -767,6 +781,17 @@ def install_config(path=None, **kwargs):
               Specify whether the configuration file uses "replace:" statements.
               Those statements under the 'replace' tag will only be changed.\
                (default = False)
+            * format:
+              Determines the format of the contents.
+            * update:
+              Compare a complete loaded configuration against
+              the candidate configuration. For each hierarchy level or
+              configuration object that is different in the two configurations,
+              the version in the loaded configuration replaces the version in the
+              candidate configuration. When the configuration is later committed,
+              only system processes that are affected by the changed configuration
+              elements parse the new configuration. This action is supported from
+              PyEZ 2.1 (default = False)
             * comment:
               Provide a comment to the commit. (default = None)
             * confirm:
@@ -850,64 +875,66 @@ def install_config(path=None, **kwargs):
         op['merge'] = True
         del op['overwrite']
 
-    try:
-        conn.cu.load(**op)
-
-    except Exception as exception:
-        ret['message'] = 'Could not load configuration due to : "{0}"'.format(
-            exception)
-        ret['format'] = template_format
-        ret['out'] = False
-        return ret
-
-    finally:
-        safe_rm(template_cached_path)
-
-    config_diff = conn.cu.diff()
-    if config_diff is None:
-        ret['message'] = 'Configuration already applied!'
-        ret['out'] = True
-        return ret
-
-    commit_params = {}
-    if 'confirm' in op:
-        commit_params['confirm'] = op['confirm']
-    if 'comment' in op:
-        commit_params['comment'] = op['comment']
-
-    try:
-        check = conn.cu.commit_check()
-    except Exception as exception:
-        ret['message'] = \
-            'Commit check threw the following exception: "{0}"'\
-            .format(exception)
-
-        ret['out'] = False
-        return ret
-
-    if check:
+    db_mode = op.pop('mode', 'exclusive')
+    with Config(conn, mode=db_mode) as cu:
         try:
-            conn.cu.commit(**commit_params)
-            ret['message'] = 'Successfully loaded and committed!'
+            cu.load(**op)
+
         except Exception as exception:
-            ret['message'] = \
-                'Commit check successful but commit failed with "{0}"'\
-                .format(exception)
+            ret['message'] = 'Could not load configuration due to : "{0}"'.format(
+                exception)
+            ret['format'] = template_format
             ret['out'] = False
             return ret
-    else:
-        ret['message'] = 'Loaded configuration but commit check failed.'
-        ret['out'] = False
-        conn.cu.rollback()
 
-    try:
-        if write_diff and config_diff is not None:
-            with fopen(write_diff, 'w') as fp:
-                fp.write(config_diff)
-    except Exception as exception:
-        ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
-            exception)
-        ret['out'] = False
+        finally:
+            safe_rm(template_cached_path)
+
+        config_diff = cu.diff()
+        if config_diff is None:
+            ret['message'] = 'Configuration already applied!'
+            ret['out'] = True
+            return ret
+
+        commit_params = {}
+        if 'confirm' in op:
+            commit_params['confirm'] = op['confirm']
+        if 'comment' in op:
+            commit_params['comment'] = op['comment']
+
+        try:
+            check = cu.commit_check()
+        except Exception as exception:
+            ret['message'] = \
+                'Commit check threw the following exception: "{0}"'\
+                .format(exception)
+
+            ret['out'] = False
+            return ret
+
+        if check:
+            try:
+                cu.commit(**commit_params)
+                ret['message'] = 'Successfully loaded and committed!'
+            except Exception as exception:
+                ret['message'] = \
+                    'Commit check successful but commit failed with "{0}"'\
+                    .format(exception)
+                ret['out'] = False
+                return ret
+        else:
+            ret['message'] = 'Loaded configuration but commit check failed.'
+            ret['out'] = False
+            cu.rollback()
+
+        try:
+            if write_diff and config_diff is not None:
+                with fopen(write_diff, 'w') as fp:
+                    fp.write(config_diff)
+        except Exception as exception:
+            ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
+                exception)
+            ret['out'] = False
 
     return ret
 
@@ -1069,4 +1096,213 @@ def file_copy(src=None, dest=None):
     except Exception as exception:
         ret['message'] = 'Could not copy file : "{0}"'.format(exception)
         ret['out'] = False
+    return ret
+
+
+def lock():
+    """
+    Attempts an exclusive lock on the candidate configuration. This
+    is a non-blocking call.
+
+    .. note::
+        Any user who wishes to use lock, must necessarily unlock the
+        configuration too. Ensure :py:func:`unlock <salt.modules.junos.unlock>`
+        is called in the same orchestration run in which the lock is called.
+
+    Usage:
+
+    .. code-block:: bash
+
+        salt 'device_name' junos.lock
+
+    """
+    conn = __proxy__['junos.conn']()
+    ret = dict()
+    ret['out'] = True
+    try:
+        conn.cu.lock()
+        ret['message'] = "Successfully locked the configuration."
+    except jnpr.junos.exception.LockError as exception:
+        ret['message'] = 'Could not gain lock due to : "{0}"'.format(exception)
+        ret['out'] = False
+
+    return ret
+
+
+def unlock():
+    """
+    Unlocks the candidate configuration.
+
+    Usage:
+
+    .. code-block:: bash
+
+        salt 'device_name' junos.unlock
+
+    """
+    conn = __proxy__['junos.conn']()
+    ret = dict()
+    ret['out'] = True
+    try:
+        conn.cu.unlock()
+        ret['message'] = "Successfully unlocked the configuration."
+    except jnpr.junos.exception.UnlockError as exception:
+        ret['message'] = \
+            'Could not unlock configuration due to : "{0}"'.format(exception)
+        ret['out'] = False
+
+    return ret
+
+
+def load(path=None, **kwargs):
+    """
+
+    Loads the configuration from the file provided onto the device.
+
+    Usage:
+
+    .. code-block:: bash
+
+        salt 'device_name' junos.load 'salt://production/network/routers/config.set'
+
+        salt 'device_name' junos.load 'salt://templates/replace_config.conf' replace=True
+
+        salt 'device_name' junos.load 'salt://my_new_configuration.conf' overwrite=True
+
+        salt 'device_name' junos.load 'salt://syslog_template.conf' template_vars='{"syslog_host": "10.180.222.7"}'
+
+    Parameters:
+      Required
+        * path:
+          Path where the configuration/template file is present. If the file has a \
+          '*.conf' extension,
+          the content is treated as text format. If the file has a '*.xml' \
+          extension,
+          the content is treated as XML format. If the file has a '*.set' \
+          extension,
+          the content is treated as Junos OS 'set' commands.(default = None)
+      Optional
+        * kwargs: Keyworded arguments which can be provided like-
+            * overwrite:
+              Set to True if you want this file is to completely replace the\
+              configuration file. (default = False)
+            * replace:
+              Specify whether the configuration file uses "replace:" statements.
+              Those statements under the 'replace' tag will only be changed.\
+               (default = False)
+            * format:
+              Determines the format of the contents.
+            * update:
+              Compare a complete loaded configuration against
+              the candidate configuration. For each hierarchy level or
+              configuration object that is different in the two configurations,
+              the version in the loaded configuration replaces the version in the
+              candidate configuration. When the configuration is later committed,
+              only system processes that are affected by the changed configuration
+              elements parse the new configuration. This action is supported from
+              PyEZ 2.1 (default = False)
+            * template_vars:
+              Variables to be passed into the template processing engine in addition
+              to those present in __pillar__, __opts__, __grains__, etc.
+              You may reference these variables in your template like so:
+              {{ template_vars["var_name"] }}
+
+
+    """
+    conn = __proxy__['junos.conn']()
+    ret = dict()
+    ret['out'] = True
+
+    if path is None:
+        ret['message'] = \
+            'Please provide the salt path where the configuration is present'
+        ret['out'] = False
+        return ret
+
+    op = dict()
+    if '__pub_arg' in kwargs:
+        if kwargs['__pub_arg']:
+            if isinstance(kwargs['__pub_arg'][-1], dict):
+                op.update(kwargs['__pub_arg'][-1])
+    else:
+        op.update(kwargs)
+
+    template_vars = dict()
+    if "template_vars" in op:
+        template_vars = op["template_vars"]
+
+    template_cached_path = files.mkstemp()
+    __salt__['cp.get_template'](
+        path,
+        template_cached_path,
+        template_vars=template_vars)
+
+    if not os.path.isfile(template_cached_path):
+        ret['message'] = 'Invalid file path.'
+        ret['out'] = False
+        return ret
+
+    if os.path.getsize(template_cached_path) == 0:
+        ret['message'] = 'Template failed to render'
+        ret['out'] = False
+        return ret
+
+    op['path'] = template_cached_path
+
+    if 'format' not in op:
+        if path.endswith('set'):
+            template_format = 'set'
+        elif path.endswith('xml'):
+            template_format = 'xml'
+        else:
+            template_format = 'text'
+
+        op['format'] = template_format
+
+    if 'replace' in op and op['replace']:
+        op['merge'] = False
+        del op['replace']
+    elif 'overwrite' in op and op['overwrite']:
+        op['overwrite'] = True
+    elif 'overwrite' in op and not op['overwrite']:
+        op['merge'] = True
+        del op['overwrite']
+
+    try:
+        conn.cu.load(**op)
+        ret['message'] = "Successfully loaded the configuration."
+    except Exception as exception:
+        ret['message'] = 'Could not load configuration due to : "{0}"'.format(
+            exception)
+        ret['format'] = template_format
+        ret['out'] = False
+        return ret
+    finally:
+        safe_rm(template_cached_path)
+
+    return ret
+
+
+def commit_check():
+    """
+
+    Perform a commit check on the configuration.
+
+    Usage:
+
+    .. code-block:: bash
+
+        salt 'device_name' junos.commit_check
+
+    """
+    conn = __proxy__['junos.conn']()
+    ret = dict()
+    ret['out'] = True
+    try:
+        conn.cu.commit_check()
+        ret['message'] = 'Commit check succeeded.'
+    except Exception as exception:
+        ret['message'] = 'Commit check failed with {0}'.format(exception)
+        ret['out'] = False
+
     return ret
