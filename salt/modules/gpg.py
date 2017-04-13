@@ -1036,7 +1036,8 @@ def sign(user=None,
 def verify(text=None,
            user=None,
            filename=None,
-           gnupghome=None):
+           gnupghome=None,
+           signature=None):
     '''
     Verify a message or file
 
@@ -1054,6 +1055,10 @@ def verify(text=None,
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    signature
+        Specify the filename of a detached signature.
+    .. versionadded:: 2017.FILLMEIN
+
     CLI Example:
 
     .. code-block:: bash
@@ -1070,8 +1075,12 @@ def verify(text=None,
     if text:
         verified = gpg.verify(text)
     elif filename:
-        with salt.utils.flopen(filename, 'rb') as _fp:
-            verified = gpg.verify_file(_fp)
+        if signature:
+            with salt.utils.flopen(signature, 'rb') as _fp:
+                verified = gpg.verify_file(_fp, filename)
+        else:
+            with salt.utils.flopen(filename, 'rb') as _fp:
+                verified = gpg.verify_file(_fp)
     else:
         raise SaltInvocationError('filename or text must be passed.')
 
