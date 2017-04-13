@@ -3,7 +3,14 @@
 State modules to interact with Junos devices.
 ==============================================
 
-State module to connect the junos devices connected via a junos proxy.
+:maturity: new
+:dependencies: junos-eznc, jxmlease
+
+.. note::
+
+    Those who wish to use junos-eznc (PyEZ) version >= 2.1.0, must
+    use the latest salt code from github until the next release.
+
 Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos proxy.
 '''
 from __future__ import absolute_import
@@ -281,8 +288,8 @@ def install_config(name, **kwargs):
 
     Parameters:
       Required
-        * path or template_path (Either one of the keyword must be there):
-          Path where the configuration file is present. If the file has a \
+        * name:
+          Path where the configuration/template file is present. If the file has a \
           '*.conf' extension,
           the content is treated as text format. If the file has a '*.xml' \
           extension,
@@ -291,8 +298,6 @@ def install_config(name, **kwargs):
           the content is treated as Junos OS 'set' commands.(default = None)
       Optional
         * kwargs: Keyworded arguments which can be provided like-
-            * template_path:
-              Path where the jinja template is present on the master.
             * template_vars:
               The dictionary of data for the jinja variables present in the \
               jinja template
@@ -395,4 +400,120 @@ def file_copy(name, dest=None, **kwargs):
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     ret['changes'] = __salt__['junos.file_copy'](name, dest, **kwargs)
+    return ret
+
+
+def lock(name):
+    """
+    Attempts an exclusive lock on the candidate configuration. This
+    is a non-blocking call.
+
+    .. note::
+        Any user who wishes to use lock, must necessarily unlock the
+        configuration too. Ensure :py:func:`unlock <salt.states.junos.unlock>`
+        is called in the same orchestration run in which the lock is called.
+
+    .. code-block:: yaml
+
+            lock the config:
+              junos.lock
+
+    """
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret['changes'] = __salt__['junos.lock']()
+    return ret
+
+
+def unlock(name):
+    """
+    Unlocks the candidate configuration.
+
+    .. code-block:: yaml
+
+            unlock the config:
+              junos.unlock
+
+    """
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret['changes'] = __salt__['junos.unlock']()
+    return ret
+
+
+def load(name, **kwargs):
+    """
+    Loads the configuration provided onto the junos device.
+
+    .. code-block:: yaml
+
+            Install the mentioned config:
+              junos:
+                - load
+                - path: salt//configs/interface.set
+
+    .. code-block:: yaml
+
+            Install the mentioned config:
+              junos:
+                - load
+                - template_path: salt//configs/interface.set
+                - template_vars:
+                    interface_name: lo0
+                    description: Creating interface via SaltStack.
+
+
+    Parameters:
+      Required
+        * name:
+          Path where the configuration/template file is present. If the file has a \
+          '*.conf' extension,
+          the content is treated as text format. If the file has a '*.xml' \
+          extension,
+          the content is treated as XML format. If the file has a '*.set' \
+          extension,
+          the content is treated as Junos OS 'set' commands.(default = None)
+      Optional
+        * kwargs: Keyworded arguments which can be provided like-
+            * overwrite:
+              Set to True if you want this file is to completely replace the\
+              configuration file. (default = False)
+            * replace:
+              Specify whether the configuration file uses "replace:" statements.
+              Those statements under the 'replace' tag will only be changed.\
+               (default = False)
+            * format:
+              Determines the format of the contents.
+            * update:
+              Compare a complete loaded configuration against
+              the candidate configuration. For each hierarchy level or
+              configuration object that is different in the two configurations,
+              the version in the loaded configuration replaces the version in the
+              candidate configuration. When the configuration is later committed,
+              only system processes that are affected by the changed configuration
+              elements parse the new configuration. This action is supported from
+              PyEZ 2.1 (default = False)
+            * template_vars:
+              Variables to be passed into the template processing engine in addition
+              to those present in __pillar__, __opts__, __grains__, etc.
+              You may reference these variables in your template like so:
+              {{ template_vars["var_name"] }}
+
+    """
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret['changes'] = __salt__['junos.load'](name, **kwargs)
+    return ret
+
+
+def commit_check(name):
+    """
+
+    Perform a commit check on the configuration.
+
+    .. code-block:: yaml
+
+        perform commit check:
+          junos.commit_check
+
+    """
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret['changes'] = __salt__['junos.commit_check']()
     return ret
