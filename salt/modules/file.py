@@ -575,8 +575,6 @@ def get_source_sum(file_name='',
         Optional file name being managed, for matching with
         :py:func:`file.extract_hash <salt.modules.file.extract_hash>`.
 
-        .. versionadded:: 2016.11.0
-
     source
         Source file, as used in :py:mod:`file <salt.states.file>` and other
         states. If ``source_hash`` refers to a file containing hashes, then
@@ -594,8 +592,6 @@ def get_source_sum(file_name='',
     source_hash_name
         Specific file name to look for when ``source_hash`` refers to a remote
         file, used to disambiguate ambiguous matches.
-
-        .. versionadded:: 2016.11.0
 
     saltenv : base
         Salt fileserver environment from which to retrive the source_hash. This
@@ -2241,8 +2237,8 @@ def replace(path,
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
     if show_changes:
-        orig_file_as_str = ''.join([salt.utils.to_str(x) for x in orig_file])
-        new_file_as_str = ''.join([salt.utils.to_str(x) for x in new_file])
+        orig_file_as_str = [salt.utils.to_str(x) for x in orig_file]
+        new_file_as_str = [salt.utils.to_str(x) for x in new_file]
         return ''.join(difflib.unified_diff(orig_file_as_str, new_file_as_str))
 
     # We may have found a regex line match but don't need to change the line
