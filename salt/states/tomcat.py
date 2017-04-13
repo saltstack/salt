@@ -57,9 +57,6 @@ Notes
 
 from __future__ import absolute_import
 
-# import salt libs
-from salt.modules.tomcat import _extract_war_version
-
 
 # Private
 def __virtual__():
@@ -110,7 +107,7 @@ def war_deployed(name,
 
         Use ``False`` to prevent guessing the version and keeping it blank.
 
-        .. versionadded:: 2016.PLEASE_LET_ME_KNOW
+        .. versionadded:: 2016.11.0
 
     Example:
 
@@ -138,7 +135,7 @@ def war_deployed(name,
 
     # if version is defined or False, we don't want to overwrite
     if version == '':
-        version = _extract_war_version(war) or ""
+        version = __salt__['tomcat.extract_war_version'](war) or ''
     elif not version:
         version = ''
     else:
