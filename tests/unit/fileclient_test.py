@@ -48,7 +48,7 @@ class FileclientTestCase(TestCase):
         If makedirs raises other than EEXIST errno, an exception should be raised.
         '''
         with patch('os.path.isfile', lambda prm: False):
-            with patch('os.makedirs', self._fake_makedir(num=errno.EIO)):
+            with patch('os.makedirs', self._fake_makedir(num=errno.EROFS)):
                 with self.assertRaises(OSError):
                     with Client(self.opts)._cache_loc('testfile') as c_ref_itr:
                         assert c_ref_itr == '/__test__/files/base/testfile'
