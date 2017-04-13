@@ -10,7 +10,7 @@ from mock import Mock
 
 try:
     ERRIO = errno.EREMOTEIO
-except:
+except AttributeError:
     ERRIO = errno.EIO
 
 # Import Salt Testing libs
