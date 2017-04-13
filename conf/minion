@@ -193,6 +193,15 @@
 # The wait-time will be a random number of seconds between 0 and the defined value.
 #random_reauth_delay: 60
 
+
+# To avoid overloading a master when many minions startup at once, a randomized
+# delay may be set to tell the minions to wait before connecting to the master.
+# This value is the number of seconds to choose from for a random number. For
+# example, setting this value to 60 will choose a random number of seconds to delay
+# on startup between zero seconds and sixty seconds. Setting to '0' will disable
+# this feature.
+#random_startup_delay: 0
+
 # When waiting for a master to accept the minion's public key, salt will
 # continuously attempt to reconnect until successful. This is the timeout value,
 # in seconds, for each individual attempt. After this timeout expires, the minion
