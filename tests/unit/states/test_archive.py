@@ -48,7 +48,9 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
         return {
             archive: {
                 '__grains__': {'os': 'FooOS!'},
-                '__opts__': {"cachedir": TMP, "test": False},
+                '__opts__': {'cachedir': '/tmp',
+                             'test': False,
+                             'hash_type': 'sha256'},
                 '__env__': 'test'
             }
         }
@@ -92,7 +94,8 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
         isfile_mock = MagicMock(side_effect=_isfile_side_effect)
 
         with patch.dict(archive.__opts__, {'test': False,
-                                           'cachedir': tmp_dir}):
+                                           'cachedir': tmp_dir,
+                                           'hash_type': 'sha256'}):
             with patch.dict(archive.__salt__, {'file.directory_exists': mock_false,
                                                'file.file_exists': mock_false,
                                                'state.single': state_single_mock,
