@@ -33,8 +33,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         }
         return {virt: loader_globals, config: loader_globals}
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_boot_default_dev(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -49,8 +47,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find('os/boot').attrib['dev'], 'hd')
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_boot_custom_dev(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -66,8 +62,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find('os/boot').attrib['dev'], 'cdrom')
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_boot_multiple_devs(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -84,8 +78,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devs = root.findall('.//boot')
         self.assertTrue(len(devs) == 2)
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_serial_console(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -103,8 +95,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
         self.assertEqual(root.find('devices/console').attrib['type'], 'pty')
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_telnet_console(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -124,8 +114,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('devices/console').attrib['type'], 'tcp')
         self.assertEqual(root.find('devices/console/source').attrib['service'], '22223')
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_telnet_console_unspecified_port(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -144,8 +132,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('devices/console').attrib['type'], 'tcp')
         self.assertIsInstance(int(root.find('devices/console/source').attrib['service']), int)
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_serial_no_console(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -163,8 +149,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
         self.assertEqual(root.find('devices/console'), None)
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_telnet_no_console(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -226,8 +210,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(eth0['source'], 'br0')
             self.assertEqual(eth0['model'], 'virtio')
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_vol_xml_for_kvm(self):
         xml_data = virt._gen_vol_xml('vmname', 'system', 8192, 'kvm')
         root = ET.fromstring(xml_data)
@@ -236,8 +218,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
         self.assertEqual(root.find('capacity').text, str(8192 * 1024))
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_vol_xml_for_esxi(self):
         xml_data = virt._gen_vol_xml('vmname', 'system', 8192, 'esxi')
         root = ET.fromstring(xml_data)
@@ -246,8 +226,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
         self.assertEqual(root.find('capacity').text, str(8192 * 1024))
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_kvm_default_profile(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -286,8 +264,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(
               re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$', mac, re.I))
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_esxi_default_profile(self):
         diskp = virt._disk_profile('default', 'esxi')
         nicp = virt._nic_profile('default', 'esxi')
@@ -325,8 +301,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(
               re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$', mac, re.I))
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     @patch('salt.modules.virt._nic_profile')
     @patch('salt.modules.virt._disk_profile')
     def test_gen_xml_for_esxi_custom_profile(self, disk_profile, nic_profile):
@@ -374,8 +348,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(len(root.findall('.//disk')) == 2)
         self.assertTrue(len(root.findall('.//interface')) == 2)
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     @patch('salt.modules.virt._nic_profile')
     @patch('salt.modules.virt._disk_profile')
     def test_gen_xml_for_kvm_custom_profile(self, disk_profile, nic_profile):
@@ -423,8 +395,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(len(root.findall('.//disk')) == 2)
         self.assertTrue(len(root.findall('.//interface')) == 2)
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_controller_for_esxi(self):
         diskp = virt._disk_profile('default', 'esxi')
         nicp = virt._nic_profile('default', 'esxi')
@@ -442,8 +412,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         controller = controllers[0]
         self.assertEqual(controller.attrib['model'], 'lsilogic')
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_controller_for_kvm(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -502,8 +470,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$',
                     interface_attrs['mac'], re.I))
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_get_graphics(self):
         get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
               <name>test-vm</name>
@@ -520,8 +486,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual('5900', graphics['port'])
             self.assertEqual('0.0.0.0', graphics['listen'])
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_get_nics(self):
         get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
               <name>test-vm</name>
