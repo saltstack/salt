@@ -7,8 +7,10 @@ Module for managing Windows Updates using the Windows Update Agent.
 :depends:
         - salt.utils.win_update
 '''
+
 # Import Python libs
 from __future__ import absolute_import
+from __future__ import unicode_literals
 import logging
 
 # Import Salt libs
