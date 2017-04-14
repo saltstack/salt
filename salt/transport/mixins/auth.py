@@ -361,7 +361,7 @@ class AESReqServerMixin(object):
                         return {'enc': 'clear',
                                 'load': {'ret': False}}
                     else:
-                        pass
+                        os.remove(pubfn_pend)
 
         else:
             # Something happened that I have not accounted for, FAIL!
@@ -410,8 +410,8 @@ class AESReqServerMixin(object):
                'pub_key': self.master_key.get_pub_str(),
                'publish_port': self.opts['publish_port']}
 
-        # sign the masters pubkey (if enabled) before it is
-        # send to the minion that was just authenticated
+        # sign the master's pubkey (if enabled) before it is
+        # sent to the minion that was just authenticated
         if self.opts['master_sign_pubkey']:
             # append the pre-computed signature to the auth-reply
             if self.master_key.pubkey_signature():
