@@ -160,7 +160,7 @@ def returner(load):
         raise
 
     serial.dump(
-        load['return'],
+        dict((key, load[key]) for key in ['return', 'retcode', 'success'] if key in load),
         # Use atomic open here to avoid the file being read before it's
         # completely written to. Refs #1935
         salt.utils.atomicfile.atomic_open(
@@ -337,7 +337,12 @@ def get_jid(jid):
                 try:
                     with salt.utils.fopen(retp, 'rb') as rfh:
                         ret_data = serial.load(rfh)
-                    ret[fn_] = {'return': ret_data}
+                    if not isinstance(ret_data, dict) or 'return' not in ret_data:
+                        # Convert the old format in which return.p contains the only return data to
+                        # the new that is dict containing 'return' and optionally 'retcode' and
+                        # 'success'.
+                        ret_data = {'return': ret_data}
+                    ret[fn_] = ret_data
                     if os.path.isfile(outp):
                         with salt.utils.fopen(outp, 'rb') as rfh:
                             ret[fn_]['out'] = serial.load(rfh)
