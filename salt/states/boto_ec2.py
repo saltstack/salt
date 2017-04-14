@@ -1306,49 +1306,59 @@ def private_ips_present(name, network_interface_name=None, network_interface_id=
             ips_to_add.append(private_ip)
 
     if ips_to_add:
-        # Assign secondary private ips to ENI
-        assign_ips_args = {
-            'network_interface_id': network_interface_id,
-            'private_ip_addresses': ips_to_add,
-            'allow_reassignment': allow_reassignment,
-            'region': region,
-            'key': key,
-            'keyid': keyid,
-            'profile': profile
-        }
+        if not __opts__['test']:
+            # Assign secondary private ips to ENI
+            assign_ips_args = {
+                'network_interface_id': network_interface_id,
+                'private_ip_addresses': ips_to_add,
+                'allow_reassignment': allow_reassignment,
+                'region': region,
+                'key': key,
+                'keyid': keyid,
+                'profile': profile
+            }
 
-        __salt__['boto_ec2.assign_private_ip_addresses'](**assign_ips_args)
+            __salt__['boto_ec2.assign_private_ip_addresses'](**assign_ips_args)
 
-        # Verify secondary private ips were properly assigned to ENI
-        eni = __salt__['boto_ec2.get_network_interface'](**get_eni_args)
-        if eni and eni.get('result', {}).get('private_ip_addresses', None):
-            for eni_pip in eni['result']['private_ip_addresses']:
-                ret['changes']['new'].append(eni_pip['private_ip_address'])
+            # Verify secondary private ips were properly assigned to ENI
+            eni = __salt__['boto_ec2.get_network_interface'](**get_eni_args)
+            if eni and eni.get('result', {}).get('private_ip_addresses', None):
+                for eni_pip in eni['result']['private_ip_addresses']:
+                    ret['changes']['new'].append(eni_pip['private_ip_address'])
 
-        ips_not_added = []
-        for private_ip in private_ip_addresses:
-            if private_ip not in ret['changes']['new']:
-                ips_not_added.append(private_ip)
+            ips_not_added = []
+            for private_ip in private_ip_addresses:
+                if private_ip not in ret['changes']['new']:
+                    ips_not_added.append(private_ip)
 
-        # Display results
-        if ips_not_added:
-            ret['result'] = False
-            ret['comment'] = ('ips on eni: {0}\n'
-                              'attempted to add: {1}\n'
-                              'could not add the following ips: {2}\n'.format(
-                                '\n\t- ' + '\n\t- '.join(ret['changes']['new']),
-                                '\n\t- ' + '\n\t- '.join(ips_to_add),
-                                '\n\t- ' + '\n\t- '.join(ips_not_added)))
+            # Display results
+            if ips_not_added:
+                ret['result'] = False
+                ret['comment'] = ('ips on eni: {0}\n'
+                                  'attempted to add: {1}\n'
+                                  'could not add the following ips: {2}\n'.format(
+                                    '\n\t- ' + '\n\t- '.join(ret['changes']['new']),
+                                    '\n\t- ' + '\n\t- '.join(ips_to_add),
+                                    '\n\t- ' + '\n\t- '.join(ips_not_added)))
+            else:
+                ret['comment'] = "added ips: {0}".format(
+                    '\n\t- ' + '\n\t- '.join(ips_to_add))
+
+            # Verify there were changes
+            if ret['changes']['old'] == ret['changes']['new']:
+                ret['changes'] = {}
+
         else:
-            ret['comment'] = "added ips: {0}".format(
-                '\n\t- ' + '\n\t- '.join(ips_to_add))
-
-        # Verify there were changes
-        if ret['changes']['old'] == ret['changes']['new']:
+            # Testing mode, show that there were ips to add
+            ret['comment'] = ('ips on eni: {0}\n'
+                              'ips that would be added: {1}\n'.format(
+                                '\n\t- ' + '\n\t- '.join(ret['changes']['old']),
+                                '\n\t- ' + '\n\t- '.join(ips_to_add)))
             ret['changes'] = {}
+            ret['result'] = None
 
     else:
-        ret['comment'] = 'ips on network interface: {0}'.format(
+        ret['comment'] = 'ips on eni: {0}'.format(
             '\n\t- ' + '\n\t- '.join(ret['changes']['old']))
 
         # there were no changes since we did not attempt to remove ips
@@ -1409,52 +1419,76 @@ def private_ips_absent(name, network_interface_name=None, network_interface_id=N
     eni = __salt__['boto_ec2.get_network_interface'](**get_eni_args)
 
     # Check if there are any old private ips to remove from the eni
+    primary_private_ip = None
     if eni and eni.get('result', {}).get('private_ip_addresses'):
         for eni_pip in eni['result']['private_ip_addresses']:
             ret['changes']['old'].append(eni_pip['private_ip_address'])
+            if eni_pip['primary']:
+                primary_private_ip = eni_pip['private_ip_address']
 
     ips_to_remove = []
     for private_ip in private_ip_addresses:
         if private_ip in ret['changes']['old']:
             ips_to_remove.append(private_ip)
+        if private_ip == primary_private_ip:
+            ret['result'] = False
+            ret['comment'] = ('You cannot unassign the primary private ip address ({0}) on an '
+                              'eni\n'
+                              'ips on eni: {1}\n'
+                              'attempted to remove: {2}\n'.format(
+                                primary_private_ip,
+                                '\n\t- ' + '\n\t- '.join(ret['changes']['old']),
+                                '\n\t- ' + '\n\t- '.join(private_ip_addresses)))
+            ret['changes'] = {}
+            return ret
 
     if ips_to_remove:
-        # Unassign secondary private ips to ENI
-        assign_ips_args = {
-            'network_interface_id': network_interface_id,
-            'private_ip_addresses': ips_to_remove,
-            'region': region,
-            'key': key,
-            'keyid': keyid,
-            'profile': profile
-        }
+        if not __opts__['test']:
+            # Unassign secondary private ips to ENI
+            assign_ips_args = {
+                'network_interface_id': network_interface_id,
+                'private_ip_addresses': ips_to_remove,
+                'region': region,
+                'key': key,
+                'keyid': keyid,
+                'profile': profile
+            }
 
-        __salt__['boto_ec2.unassign_private_ip_addresses'](**assign_ips_args)
+            __salt__['boto_ec2.unassign_private_ip_addresses'](**assign_ips_args)
 
-        # Verify secondary private ips were properly unassigned from ENI
-        eni = __salt__['boto_ec2.get_network_interface'](**get_eni_args)
-        if eni and eni.get('result', {}).get('private_ip_addresses', None):
-            for eni_pip in eni['result']['private_ip_addresses']:
-                ret['changes']['new'].append(eni_pip['private_ip_address'])
-        ips_not_removed = []
-        for private_ip in private_ip_addresses:
-            if private_ip in ret['changes']['new']:
-                ips_not_removed.append(private_ip)
+            # Verify secondary private ips were properly unassigned from ENI
+            eni = __salt__['boto_ec2.get_network_interface'](**get_eni_args)
+            if eni and eni.get('result', {}).get('private_ip_addresses', None):
+                for eni_pip in eni['result']['private_ip_addresses']:
+                    ret['changes']['new'].append(eni_pip['private_ip_address'])
+            ips_not_removed = []
+            for private_ip in private_ip_addresses:
+                if private_ip in ret['changes']['new']:
+                    ips_not_removed.append(private_ip)
 
-        if ips_not_removed:
-            ret['result'] = False
-            ret['comment'] = ('ips on eni: {0}\n'
-                              'attempted to remove: {1}\n'
-                              'could not remove the following ips: {2}\n'.format(
-                                '\n\t- ' + '\n\t- '.join(ret['changes']['new']),
-                                '\n\t- ' + '\n\t- '.join(ips_to_remove),
-                                '\n\t- ' + '\n\t- '.join(ips_not_removed)))
+            if ips_not_removed:
+                ret['result'] = False
+                ret['comment'] = ('ips on eni: {0}\n'
+                                  'attempted to remove: {1}\n'
+                                  'could not remove the following ips: {2}\n'.format(
+                                    '\n\t- ' + '\n\t- '.join(ret['changes']['new']),
+                                    '\n\t- ' + '\n\t- '.join(ips_to_remove),
+                                    '\n\t- ' + '\n\t- '.join(ips_not_removed)))
+            else:
+                ret['comment'] = "removed ips: {0}".format('\n\t- ' + '\n\t- '.join(ips_to_remove))
+
+            # Verify there were changes
+            if ret['changes']['old'] == ret['changes']['new']:
+                ret['changes'] = {}
+
         else:
-            ret['comment'] = "removed ips: {0}".format('\n\t- ' + '\n\t- '.join(ips_to_remove))
-
-        # Verify there were changes
-        if ret['changes']['old'] == ret['changes']['new']:
+            # Testing mode, show that there were ips to remove
+            ret['comment'] = ('ips on eni: {0}\n'
+                              'ips that would be removed: {1}\n'.format(
+                                '\n\t- ' + '\n\t- '.join(ret['changes']['old']),
+                                '\n\t- ' + '\n\t- '.join(ips_to_remove)))
             ret['changes'] = {}
+            ret['result'] = None
 
     else:
         ret['comment'] = 'ips on network interface: {0}'.format(
