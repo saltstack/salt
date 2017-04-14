@@ -369,6 +369,28 @@ class AutoKey(object):
         os.remove(stub_file)
         return True
 
+    def check_autosign_grains(self, auth_grains):
+        if not auth_grains or 'auth_grains_dir' not in self.opts:
+            return False
+
+        auth_grains_dir = self.opts['auth_grains_dir']
+        for root, dirs, filenames in os.walk(auth_grains_dir):
+            for grain in filenames:
+                if grain in auth_grains:
+                    grain_file = os.path.join(auth_grains_dir, grain)
+                    if not self.check_permissions(grain_file):
+                        message = 'Wrong permissions for {0}, ignoring content'
+                        log.warning(message.format(grain_file))
+                        continue
+                    with salt.utils.fopen(grain_file, 'r') as f:
+                        for line in f:
+                            line = line.strip()
+                            if line.startswith('#'):
+                                continue
+                            if auth_grains[grain] == line:
+                                return True
+        return False
+
     def check_autoreject(self, keyid):
         '''
         Checks if the specified keyid should automatically be rejected.
@@ -378,7 +400,7 @@ class AutoKey(object):
             self.opts.get('autoreject_file', None)
         )
 
-    def check_autosign(self, keyid):
+    def check_autosign(self, keyid, auth_grains=None):
         '''
         Checks if the specified keyid should automatically be signed.
         '''
@@ -387,6 +409,8 @@ class AutoKey(object):
         if self.check_signing_file(keyid, self.opts.get('autosign_file', None)):
             return True
         if self.check_autosign_dir(keyid):
+            return True
+        if self.check_autosign_grains(auth_grains):
             return True
         return False
 
