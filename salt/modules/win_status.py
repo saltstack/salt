@@ -111,7 +111,7 @@ def diskusage(human_readable=False, path=None):
     _, total, free = \
         ctypes.c_ulonglong(), ctypes.c_ulonglong(), ctypes.c_longlong()
     if sys.version_info >= (3, ) or isinstance(path, six.text_type):
-        fun = ctypes.windll.kernel32.GetDiskFreeSpaceExw
+        fun = ctypes.windll.kernel32.GetDiskFreeSpaceExW
     else:
         fun = ctypes.windll.kernel32.GetDiskFreeSpaceExA
     ret = fun(path, ctypes.byref(_), ctypes.byref(total), ctypes.byref(free))

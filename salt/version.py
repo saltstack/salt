@@ -720,7 +720,7 @@ def versions_report(include_salt_cloud=False):
 
 def msi_conformant_version():
     '''
-    A msi conformant version consists of up to 4 numbers, each smaller than 256, except the 4th.
+    An msi conformant version consists of up to 4 numbers, each smaller than 256, except the 4th.
     Therefore, the year must be represented as 'short year'.
 
     Examples (depend on git checkout):
@@ -738,6 +738,7 @@ def msi_conformant_version():
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == 'msi':
-        print(msi_conformant_version())     # Building the msi requires a msi-conformant version
+        # Building the msi requires an msi-conformant version
+        print(msi_conformant_version())
     else:
         print(__version__)

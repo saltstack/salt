@@ -122,7 +122,7 @@ class NetapiClient(object):
         Wraps :py:meth:`salt.client.LocalClient.cmd_batch`
 
         :return: Returns the result from the exeuction module for each batch of
-        returns
+            returns
         '''
         local = salt.client.get_local_client(mopts=self.opts)
         return local.cmd_batch(*args, **kwargs)
