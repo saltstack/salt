@@ -1,9 +1,5 @@
 integration.client.test_runner
 integration.client.test_standard
-integration.fileserver.test_fileclient
-integration.fileserver.test_roots
-integration.loader.test_ext_grains
-integration.loader.test_ext_modules
 integration.modules.test_aliases
 integration.modules.test_beacons
 integration.modules.test_config
@@ -23,11 +19,9 @@ integration.modules.test_test
 integration.modules.test_useradd
 integration.renderers.test_pydsl
 integration.returners.test_librato_return
-integration.returners.test_local_cache
 integration.runners.test_fileserver
 integration.runners.test_jobs
 integration.runners.test_salt
-integration.runners.test_winrepo
 integration.sdb.test_env
 integration.states.test_host
 integration.states.test_renderers
