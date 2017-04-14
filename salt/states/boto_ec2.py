@@ -1321,7 +1321,6 @@ def private_ips_present(name, network_interface_name=None, network_interface_id=
 
         # Verify secondary private ips were properly assigned to ENI
         eni = __salt__['boto_ec2.get_network_interface'](**get_eni_args)
-        
         if eni and eni.get('result', {}).get('private_ip_addresses', None):
             for eni_pip in eni['result']['private_ip_addresses']:
                 ret['changes']['new'].append(eni_pip['private_ip_address'])
@@ -1434,11 +1433,9 @@ def private_ips_absent(name, network_interface_name=None, network_interface_id=N
 
         # Verify secondary private ips were properly unassigned from ENI
         eni = __salt__['boto_ec2.get_network_interface'](**get_eni_args)
-        
         if eni and eni.get('result', {}).get('private_ip_addresses', None):
             for eni_pip in eni['result']['private_ip_addresses']:
                 ret['changes']['new'].append(eni_pip['private_ip_address'])
-        
         ips_not_removed = []
         for private_ip in private_ip_addresses:
             if private_ip in ret['changes']['new']:
