@@ -2075,4 +2075,3 @@ def create_volume(zone_name, size=None, snapshot_id=None, volume_type=None,
     except boto.exception.BotoServerError as error:
         ret['error'] = __utils__['boto.get_error'](error)
     return ret
-            
