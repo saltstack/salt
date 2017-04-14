@@ -1076,7 +1076,9 @@ def verify(text=None,
         verified = gpg.verify(text)
     elif filename:
         if signature:
-            with salt.utils.flopen(signature, 'rb') as _fp:
+            # need to call with fopen instead of flopen due to:
+            # https://bitbucket.org/vinay.sajip/python-gnupg/issues/76/verify_file-closes-passed-file-handle
+            with salt.utils.fopen(signature, 'rb') as _fp:
                 verified = gpg.verify_file(_fp, filename)
         else:
             with salt.utils.flopen(filename, 'rb') as _fp:
