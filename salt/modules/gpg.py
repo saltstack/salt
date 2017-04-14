@@ -1057,7 +1057,7 @@ def verify(text=None,
 
     signature
         Specify the filename of a detached signature.
-    .. versionadded:: 2017.FILLMEIN
+    .. versionadded:: Nitrogen
 
     CLI Example:
 
