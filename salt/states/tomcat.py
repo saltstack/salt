@@ -145,7 +145,7 @@ def war_deployed(name,
     status = True
 
     # Gathered/specified new WAR version string
-    specified_ver = 'version {}'.format(version) if version else 'no version'
+    specified_ver = 'version {0}'.format(version) if version else 'no version'
 
     # Determine what to do
     try:
