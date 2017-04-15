@@ -157,14 +157,12 @@ class SaltTerminalReporter(TerminalReporter):
             return
 
         test_daemon = getattr(self._session, 'test_daemon', None)
-        if self.verbosity == 1 or test_daemon is None:
+        if self.verbosity == 1:
             line = ' [CPU:{0}%|MEM:{1}%]'.format(psutil.cpu_percent(),
                                                psutil.virtual_memory().percent)
             self._tw.write(line)
             return
         else:
-            if test_daemon is None:
-                return
             self.ensure_newline()
             template = ' {}  -  CPU: {:6.2f} %   MEM: {:6.2f} %   SWAP: {:6.2f} %\n'
             self._tw.write(
@@ -181,6 +179,13 @@ class SaltTerminalReporter(TerminalReporter):
                     mem = psproc.memory_percent('vms')
                     swap = psproc.memory_percent('swap')
                     self._tw.write(template.format(name, cpu, mem, swap))
+
+
+def pytest_sessionstart(session):
+    session.stats_processes = OrderedDict((
+        #('Log Server', test_daemon.log_server),
+        ('    Test Suite Run', psutil.Process(os.getpid())),
+    ))
 # <---- CLI Terminal Reporter ----------------------------------------------------------------------------------------
 
 
@@ -657,16 +662,13 @@ def test_daemon(request):
     test_daemon = TestDaemon(fake_parser)
     with test_daemon as test_daemon_running:
         request.session.test_daemon = test_daemon_running
-        stats_processes = OrderedDict((
-            #('Log Server', test_daemon.log_server),
-            ('    Test Suite Run', psutil.Process(os.getpid())),
+        request.session.stats_processes.update(OrderedDict((
             ('       Salt Master', psutil.Process(test_daemon.master_process.pid)),
             ('       Salt Minion', psutil.Process(test_daemon.minion_process.pid)),
             ('   Salt Sub Minion', psutil.Process(test_daemon.sub_minion_process.pid)),
             ('Salt Syndic Master', psutil.Process(test_daemon.smaster_process.pid)),
             ('       Salt Syndic', psutil.Process(test_daemon.syndic_process.pid)),
-        ))
-        request.session.stats_processes = stats_processes
+        )).items())
         yield
     TestDaemon.clean()
 # <---- Custom Fixtures Definitions ----------------------------------------------------------------------------------
