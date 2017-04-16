@@ -24,6 +24,9 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'haproxy'
 
+# Default socket location
+DEFAULT_SOCKET_URL = '/var/run/haproxy.sock'
+
 
 def __virtual__():
     '''
@@ -34,7 +37,7 @@ def __virtual__():
     return (False, 'The haproxyconn execution module cannot be loaded: haproxyctl module not available')
 
 
-def _get_conn(socket='/var/run/haproxy.sock'):
+def _get_conn(socket=DEFAULT_SOCKET_URL):
     '''
     Get connection to haproxy socket.
     '''
@@ -45,7 +48,7 @@ def _get_conn(socket='/var/run/haproxy.sock'):
     return ha_conn
 
 
-def list_servers(backend, socket='/var/run/haproxy.sock', objectify=False):
+def list_servers(backend, socket=DEFAULT_SOCKET_URL, objectify=False):
     '''
     List servers in haproxy backend.
 
@@ -66,7 +69,7 @@ def list_servers(backend, socket='/var/run/haproxy.sock', objectify=False):
     return ha_conn.sendCmd(ha_cmd, objectify=objectify)
 
 
-def enable_server(name, backend, socket='/var/run/haproxy.sock'):
+def enable_server(name, backend, socket=DEFAULT_SOCKET_URL):
     '''
     Enable Server in haproxy
 
@@ -101,7 +104,7 @@ def enable_server(name, backend, socket='/var/run/haproxy.sock'):
     return results
 
 
-def disable_server(name, backend, socket='/var/run/haproxy.sock'):
+def disable_server(name, backend, socket=DEFAULT_SOCKET_URL):
     '''
     Disable server in haproxy.
 
@@ -136,7 +139,7 @@ def disable_server(name, backend, socket='/var/run/haproxy.sock'):
     return results
 
 
-def get_weight(name, backend, socket='/var/run/haproxy.sock'):
+def get_weight(name, backend, socket=DEFAULT_SOCKET_URL):
     '''
     Get server weight
 
@@ -160,7 +163,7 @@ def get_weight(name, backend, socket='/var/run/haproxy.sock'):
     return ha_conn.sendCmd(ha_cmd)
 
 
-def set_weight(name, backend, weight=0, socket='/var/run/haproxy.sock'):
+def set_weight(name, backend, weight=0, socket=DEFAULT_SOCKET_URL):
     '''
     Set server weight
 
@@ -188,7 +191,7 @@ def set_weight(name, backend, weight=0, socket='/var/run/haproxy.sock'):
     return get_weight(name, backend, socket=socket)
 
 
-def set_state(name, backend, state, socket='/var/run/haproxy.sock'):
+def set_state(name, backend, state, socket=DEFAULT_SOCKET_URL):
     '''
     Force a server's administrative state to a new state. This can be useful to
     disable load balancing and/or any traffic to a server. Setting the state to
@@ -228,7 +231,7 @@ def set_state(name, backend, state, socket='/var/run/haproxy.sock'):
     return ha_conn.sendCmd(ha_cmd)
 
 
-def show_frontends(socket='/var/run/haproxy.sock'):
+def show_frontends(socket=DEFAULT_SOCKET_URL):
     '''
     Show HaProxy frontends
 
@@ -246,7 +249,7 @@ def show_frontends(socket='/var/run/haproxy.sock'):
     return ha_conn.sendCmd(ha_cmd)
 
 
-def show_backends(socket='/var/run/haproxy.sock'):
+def show_backends(socket=DEFAULT_SOCKET_URL):
     '''
     Show HaProxy Backends
 
@@ -264,7 +267,7 @@ def show_backends(socket='/var/run/haproxy.sock'):
     return ha_conn.sendCmd(ha_cmd)
 
 
-def get_sessions(name, backend, socket='/var/run/haproxy.sock'):
+def get_sessions(name, backend, socket=DEFAULT_SOCKET_URL):
     '''
     .. versionadded:: 2016.11.0
 
