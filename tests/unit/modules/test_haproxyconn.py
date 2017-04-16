@@ -64,7 +64,9 @@ class Mockcmds(object):
         """
         Mock of showFrontends method
         """
-        return 'server frontend'
+        return 'frontend-alpha\n' \
+               'frontend-beta\n' \
+               'frontend-gamma'
 
     @staticmethod
     def showBackends():
@@ -95,7 +97,7 @@ class MockHaConn(object):
         """
         self.ha_cmd = ha_cmd
         self.objectify = objectify
-        return True
+        return ha_cmd
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -155,6 +157,14 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         Test print all frontends received from the HAProxy socket
         '''
         self.assertTrue(haproxyconn.show_frontends())
+
+    def test_list_frontends(self, mock):
+        '''
+        Test listing all frontends
+        '''
+        self.assertItemsEqual(haproxyconn.list_frontends(),
+                ['frontend-alpha','frontend-beta','frontend-gamma'])
+
 
     # 'show_backends' function tests: 1
 
