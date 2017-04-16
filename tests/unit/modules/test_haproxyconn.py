@@ -18,7 +18,6 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.haproxyconn as haproxyconn
 
-
 class Mockcmds(object):
     """
     Mock of cmds
@@ -112,7 +111,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_list_servers(self, mock):
         '''
-        Test if it get a value from etcd, by direct path
+        Test list_servers
         '''
         self.assertTrue(haproxyconn.list_servers('mysql'))
 
@@ -120,7 +119,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_enable_server(self, mock):
         '''
-        Test if it get a value from etcd, by direct path
+        Test enable_server
         '''
         self.assertTrue(haproxyconn.enable_server('web1.salt.com', 'www'))
 
@@ -128,7 +127,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_disable_server(self, mock):
         '''
-        Test if it get a value from etcd, by direct path
+        Test disable_server
         '''
         self.assertTrue(haproxyconn.disable_server('db1.salt.com', 'mysql'))
 
@@ -136,7 +135,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_weight(self, mock):
         '''
-        Test if it get a value from etcd, by direct path
+        Test get the weight of a server
         '''
         self.assertTrue(haproxyconn.get_weight('db1.salt.com', 'mysql'))
 
@@ -144,7 +143,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_weight(self, mock):
         '''
-        Test if it get a value from etcd, by direct path
+        Test setting the weight of a given server
         '''
         self.assertTrue(haproxyconn.set_weight('db1.salt.com', 'mysql',
                                                weight=11))
@@ -153,7 +152,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_frontends(self, mock):
         '''
-        Test if it get a value from etcd, by direct path
+        Test print all frontends received from the HAProxy socket
         '''
         self.assertTrue(haproxyconn.show_frontends())
 
@@ -161,6 +160,6 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_backends(self, mock):
         '''
-        Test if it get a value from etcd, by direct path
+        Test print all backends received from the HAProxy socket
         '''
         self.assertTrue(haproxyconn.show_backends())
