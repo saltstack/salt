@@ -27,6 +27,10 @@ __virtualname__ = 'haproxy'
 # Default socket location
 DEFAULT_SOCKET_URL = '/var/run/haproxy.sock'
 
+# Numeric fields returned by stats
+FIELD_NUMERIC = ["weight","bin","bout"]
+# Field specifying the actual server name
+FIELD_NODE_NAME = "name"
 
 def __virtual__():
     '''
@@ -68,6 +72,55 @@ def list_servers(backend, socket=DEFAULT_SOCKET_URL, objectify=False):
     ha_cmd = haproxy.cmds.listServers(backend=backend)
     return ha_conn.sendCmd(ha_cmd, objectify=objectify)
 
+
+def get_backend(backend, socket=DEFAULT_SOCKET_URL):
+    '''
+
+    Receive information about a specific backend.
+
+    backend
+        haproxy backend
+
+    socket
+        haproxy stats socket
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' haproxy.get_backend mysql
+    '''
+
+    backend_data = list_servers(backend=backend, socket=socket) \
+                    .replace('\n',' ').split(' ')
+    result = {}
+
+    # Convert given string to Integer
+    def num(s):
+        try:
+            return int(s)
+        except ValueError:
+            return s
+
+    for data in backend_data:
+        # Check if field or server name
+        if ":" in data:
+            active_field = data.replace(':','').lower()
+            continue
+        elif active_field.lower() == FIELD_NODE_NAME:
+            active_server = data
+            result[active_server] = {}
+            continue
+        # Format and set returned field data to active server
+        if active_field in FIELD_NUMERIC:
+            if data == "":
+                result[active_server][active_field] = 0
+            else:
+                result[active_server][active_field] = num(data)
+        else:
+            result[active_server][active_field] = data
+
+    return result
 
 def enable_server(name, backend, socket=DEFAULT_SOCKET_URL):
     '''
@@ -281,6 +334,31 @@ def show_backends(socket=DEFAULT_SOCKET_URL):
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.showBackends()
     return ha_conn.sendCmd(ha_cmd)
+
+def list_backends(servers=True, socket=DEFAULT_SOCKET_URL):
+    '''
+
+    List HaProxy Backends
+
+    socket
+        haproxy stats socket
+
+    servers
+        list backends with servers
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' haproxy.list_backends
+    '''
+    if not servers:
+        return show_backends(socket=socket).split('\n')
+    else:
+        result = {}
+        for backend in list_backends(servers=False, socket=socket):
+            result[backend] = get_backend(backend=backend, socket=socket)
+        return result
 
 
 def get_sessions(name, backend, socket=DEFAULT_SOCKET_URL):
