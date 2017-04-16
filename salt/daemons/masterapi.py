@@ -369,15 +369,15 @@ class AutoKey(object):
         os.remove(stub_file)
         return True
 
-    def check_autosign_grains(self, auth_grains):
-        if not auth_grains or 'auth_grains_dir' not in self.opts:
+    def check_autosign_grains(self, autosign_grains):
+        if not autosign_grains or 'autosign_grains_dir' not in self.opts:
             return False
 
-        auth_grains_dir = self.opts['auth_grains_dir']
-        for root, dirs, filenames in os.walk(auth_grains_dir):
+        autosign_grains_dir = self.opts['autosign_grains_dir']
+        for root, dirs, filenames in os.walk(autosign_grains_dir):
             for grain in filenames:
-                if grain in auth_grains:
-                    grain_file = os.path.join(auth_grains_dir, grain)
+                if grain in autosign_grains:
+                    grain_file = os.path.join(autosign_grains_dir, grain)
                     if not self.check_permissions(grain_file):
                         message = 'Wrong permissions for {0}, ignoring content'
                         log.warning(message.format(grain_file))
@@ -387,7 +387,7 @@ class AutoKey(object):
                             line = line.strip()
                             if line.startswith('#'):
                                 continue
-                            if auth_grains[grain] == line:
+                            if autosign_grains[grain] == line:
                                 return True
         return False
 
@@ -400,7 +400,7 @@ class AutoKey(object):
             self.opts.get('autoreject_file', None)
         )
 
-    def check_autosign(self, keyid, auth_grains=None):
+    def check_autosign(self, keyid, autosign_grains=None):
         '''
         Checks if the specified keyid should automatically be signed.
         '''
@@ -410,7 +410,7 @@ class AutoKey(object):
             return True
         if self.check_autosign_dir(keyid):
             return True
-        if self.check_autosign_grains(auth_grains):
+        if self.check_autosign_grains(autosign_grains):
             return True
         return False
 

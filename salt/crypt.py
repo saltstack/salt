@@ -740,11 +740,11 @@ class AsyncAuth(object):
         payload = {}
         payload[u'cmd'] = u'_auth'
         payload[u'id'] = self.opts[u'id']
-        if u'auth_grains' in self.opts:
-            auth_grains = {}
-            for grain in self.opts[u'auth_grains']:
-                auth_grains[grain] = self.opts[u'grains'].get(grain, None)
-            payload[u'auth_grains'] = auth_grains
+        if u'autosign_grains' in self.opts:
+            autosign_grains = {}
+            for grain in self.opts[u'autosign_grains']:
+                autosign_grains[grain] = self.opts[u'grains'].get(grain, None)
+            payload[u'autosign_grains'] = autosign_grains
         try:
             pubkey_path = os.path.join(self.opts[u'pki_dir'], self.mpub)
             with salt.utils.files.fopen(pubkey_path) as f:
