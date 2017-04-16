@@ -203,3 +203,15 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
         self.assertDictEqual(haproxyconn.get_backend('test'),expected_data)
+
+    def test_wait_state_true(self,mock):
+        '''
+        Test a successful wait for state
+        '''
+        self.assertTrue(haproxyconn.wait_state('test','server01'))
+
+    def test_wait_state_false(self,mock):
+        '''
+        Test a failed wait for state, with a timeout of 0
+        '''
+        self.assertFalse(haproxyconn.wait_state('test','server02','up', 0))
