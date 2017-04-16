@@ -32,7 +32,8 @@ class Mockcmds(object):
         Mock of listServers method
         """
         self.backend = backend
-        return 'salt'
+        return 'Name: server01 Status: UP Weight: 1 bIn: 22 bOut: 12\n' \
+               'Name: server02 Status: MAINT Weight: 2 bIn: 0 bOut: 0'
 
     def enableServer(self, server, backend):
         """
@@ -73,7 +74,9 @@ class Mockcmds(object):
         """
         Mock of showBackends method
         """
-        return 'server backend'
+        return 'backend-alpha\n' \
+               'backend-beta\n' \
+               'backend-gamma'
 
 
 class Mockhaproxy(object):
@@ -173,3 +176,30 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         Test print all backends received from the HAProxy socket
         '''
         self.assertTrue(haproxyconn.show_backends())
+
+    def test_list_backends(self, mock):
+        '''
+        Test listing of all backends
+        '''
+        self.assertItemsEqual(haproxyconn.list_backends(),
+                ['backend-alpha','backend-beta','backend-gamma'])
+
+    def test_get_backend(self,mock):
+        '''
+        Test get_backend and compare returned value
+        '''
+        expected_data = {
+            'server01': {
+                'status': 'UP',
+                'weight': 1,
+                'bin': 22,
+                'bout': 12
+            },
+            'server02': {
+                'status': 'MAINT',
+                'weight': 2,
+                'bin': 0,
+                'bout': 0
+            }
+        }
+        self.assertDictEqual(haproxyconn.get_backend('test'),expected_data)
