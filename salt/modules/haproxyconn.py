@@ -12,6 +12,7 @@ from __future__ import absolute_import
 import stat
 import os
 import logging
+import time
 
 try:
     import haproxy.cmds
@@ -72,6 +73,38 @@ def list_servers(backend, socket=DEFAULT_SOCKET_URL, objectify=False):
     ha_cmd = haproxy.cmds.listServers(backend=backend)
     return ha_conn.sendCmd(ha_cmd, objectify=objectify)
 
+
+def wait_state(backend, server, value='up', timeout=60*5, socket=DEFAULT_SOCKET_URL):
+    '''
+
+    Wait for a specific server state
+
+    backend
+        haproxy backend
+
+    server
+        targeted server
+
+    value
+        state value
+
+    timeout
+        timeout before giving up state value, default 5 min
+
+    socket
+        haproxy stats socket
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' haproxy.wait_state mysql server01 up 60
+    '''
+    t = time.time() + timeout
+    while time.time() < t:
+        if get_backend(backend=backend, socket=socket)[server]["status"].lower() == value.lower():
+            return True
+    return False
 
 def get_backend(backend, socket=DEFAULT_SOCKET_URL):
     '''
