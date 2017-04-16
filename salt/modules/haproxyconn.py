@@ -248,6 +248,22 @@ def show_frontends(socket=DEFAULT_SOCKET_URL):
     ha_cmd = haproxy.cmds.showFrontends()
     return ha_conn.sendCmd(ha_cmd)
 
+def list_frontends(socket=DEFAULT_SOCKET_URL):
+    '''
+
+    List HaProxy frontends
+
+    socket
+        haproxy stats socket
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' haproxy.list_frontends
+    '''
+    return show_frontends(socket=socket).split('\n')
+
 
 def show_backends(socket=DEFAULT_SOCKET_URL):
     '''
