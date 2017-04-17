@@ -74,5 +74,5 @@ def event_return(event):
             for e in event:
                 logfile.write(str(json.dumps(e))+'\n')
     except:
-        log.error('Could not write to rawdata_json file {0}'.format(opts['rawfile']))
+        log.error('Could not write to rawdata_json file {0}'.format(opts['filename']))
         raise
