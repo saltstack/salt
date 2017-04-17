@@ -272,20 +272,20 @@ def update(name,
         if account_disabled:
             user_info['flags'] |= win32netcon.UF_ACCOUNTDISABLE
         else:
-            user_info['flags'] ^= win32netcon.UF_ACCOUNTDISABLE
+            user_info['flags'] &= ~win32netcon.UF_ACCOUNTDISABLE
     if unlock_account is not None:
         if unlock_account:
-            user_info['flags'] ^= win32netcon.UF_LOCKOUT
+            user_info['flags'] &= ~win32netcon.UF_LOCKOUT
     if password_never_expires is not None:
         if password_never_expires:
             user_info['flags'] |= win32netcon.UF_DONT_EXPIRE_PASSWD
         else:
-            user_info['flags'] ^= win32netcon.UF_DONT_EXPIRE_PASSWD
+            user_info['flags'] &= ~win32netcon.UF_DONT_EXPIRE_PASSWD
     if disallow_change_password is not None:
         if disallow_change_password:
             user_info['flags'] |= win32netcon.UF_PASSWD_CANT_CHANGE
         else:
-            user_info['flags'] ^= win32netcon.UF_PASSWD_CANT_CHANGE
+            user_info['flags'] &= ~win32netcon.UF_PASSWD_CANT_CHANGE
 
     # Apply new settings
     try:
