@@ -7,6 +7,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import salt.utils
+import salt.utils.sdb
 
 
 def get(key, default='', delimiter=':'):
@@ -33,4 +34,8 @@ def get(key, default='', delimiter=':'):
         salt-run config.get file_roots:base
         salt-run config.get file_roots,base delimiter=','
     '''
-    return salt.utils.traverse_dict_and_list(__opts__, key, delimiter=delimiter)
+    ret = salt.utils.traverse_dict_and_list(__opts__, key, default='_|-', delimiter=delimiter)
+    if ret == '_|-':
+        return default
+    else:
+        return salt.utils.sdb.sdb_get(ret, __opts__)
