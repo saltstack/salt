@@ -30,5 +30,7 @@ def get(key, default='', delimiter=':'):
     .. code-block:: bash
 
         salt-run config.get gitfs_remotes
+        salt-run config.get file_roots:base
+        salt-run config.get file_roots,base delimiter=','
     '''
     return salt.utils.traverse_dict_and_list(__opts__, key, delimiter=delimiter)
