@@ -218,6 +218,171 @@ def _find_unpurge_targets(desired):
     ]
 
 
+def _find_download_targets(name=None,
+                           version=None,
+                           pkgs=None,
+                           normalize=True,
+                           skip_suggestions=False,
+                           ignore_epoch=False,
+                           **kwargs):
+    '''
+    Inspect the arguments to pkg.downloaded and discover what packages need to
+    be downloaded. Return a dict of packages to download.
+    '''
+    cur_pkgs = __salt__['pkg.list_downloaded']()
+    if pkgs:
+        to_download = _repack_pkgs(pkgs, normalize=normalize)
+
+        if not to_download:
+            # Badly-formatted SLS
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': 'Invalidly formatted pkgs parameter. See '
+                               'minion log.'}
+    else:
+        if normalize:
+            _normalize_name = \
+                __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+            to_download = {_normalize_name(name): version}
+        else:
+            to_download = {name: version}
+
+        cver = cur_pkgs.get(name, {})
+        if name in to_download:
+            # Package already downloaded, no need to download again
+            if cver and version in cver:
+                return {'name': name,
+                        'changes': {},
+                        'result': True,
+                        'comment': 'Version {0} of package \'{1}\' is already '
+                                   'downloaded'.format(version, name)}
+
+            # if cver is not an empty string, the package is already downloaded
+            elif cver and version is None:
+                # The package is downloaded
+                return {'name': name,
+                        'changes': {},
+                        'result': True,
+                        'comment': 'Package {0} is already '
+                                   'downloaded'.format(name)}
+
+    version_spec = False
+    if not skip_suggestions:
+        try:
+            problems = _preflight_check(to_download, **kwargs)
+        except CommandExecutionError:
+            pass
+        else:
+            comments = []
+            if problems.get('no_suggest'):
+                comments.append(
+                    'The following package(s) were not found, and no '
+                    'possible matches were found in the package db: '
+                    '{0}'.format(
+                ', '.join(sorted(problems['no_suggest']))
+                    )
+                )
+            if problems.get('suggest'):
+                for pkgname, suggestions in \
+                        six.iteritems(problems['suggest']):
+                    comments.append(
+                        'Package \'{0}\' not found (possible matches: '
+                        '{1})'.format(pkgname, ', '.join(suggestions))
+                    )
+            if comments:
+                if len(comments) > 1:
+                    comments.append('')
+                return {'name': name,
+                        'changes': {},
+                        'result': False,
+                        'comment': '. '.join(comments).rstrip()}
+
+    # Find out which packages will be targeted in the call to pkg.download
+    # Check current downloaded versions against specified versions
+    targets = {}
+    problems = []
+    for pkgname, pkgver in six.iteritems(to_download):
+        cver = cur_pkgs.get(pkgname, {})
+        # Package not yet downloaded, so add to targets
+        if not cver:
+            targets[pkgname] = pkgver
+            continue
+        # No version specified but package is already downloaded
+        elif cver and not pkgver:
+            continue
+
+        version_spec = True
+        try:
+            oper, verstr = _get_comparison_spec(pkgver)
+        except CommandExecutionError as exc:
+            problems.append(exc.strerror)
+            continue
+
+        if not _fulfills_version_spec(cver.keys(), oper, verstr,
+                                      ignore_epoch=ignore_epoch):
+            targets[pkgname] = pkgver
+
+    if problems:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': ' '.join(problems)}
+
+    if not targets:
+        # All specified packages are already downloaded
+        msg = (
+            'All specified packages{0} are already downloaded'
+            .format(' (matching specified versions)' if version_spec else '')
+        )
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': msg}
+
+    return targets
+
+
+def _find_advisory_targets(name=None,
+                           advisory_ids=None,
+                           **kwargs):
+    '''
+    Inspect the arguments to pkg.patch_installed and discover what advisory
+    patches need to be installed. Return a dict of advisory patches to install.
+    '''
+    cur_patches = __salt__['pkg.list_installed_patches']()
+    if advisory_ids:
+        to_download = advisory_ids
+    else:
+        to_download = [name]
+        if cur_patches.get(name, {}):
+            # Advisory patch already installed, no need to install it again
+            return {'name': name,
+                    'changes': {},
+                    'result': True,
+                    'comment': 'Advisory patch {0} is already '
+                               'installed'.format(name)}
+
+    # Find out which advisory patches will be targeted in the call to pkg.install
+    targets = []
+    for patch_name in to_download:
+        cver = cur_patches.get(patch_name, {})
+        # Advisory patch not yet installed, so add to targets
+        if not cver:
+            targets.append(patch_name)
+            continue
+
+    if not targets:
+        # All specified packages are already downloaded
+        msg = ('All specified advisory patches are already installed')
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': msg}
+
+    return targets
+
+
 def _find_remove_targets(name=None,
                          version=None,
                          pkgs=None,
@@ -1723,6 +1888,261 @@ def installed(
     if warnings:
         ret['comment'] += '\n' + '. '.join(warnings) + '.'
     return ret
+
+
+def downloaded(name,
+               version=None,
+               pkgs=None,
+               fromrepo=None,
+               ignore_epoch=None,
+               **kwargs):
+    '''
+    .. versionadded:: Oxygen
+
+    Ensure that the package is downloaded, and that it is the correct version
+    (if specified).
+
+    Currently supported for the following pkg providers:
+    :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
+
+    :param str name:
+        The name of the package to be downloaded. This parameter is ignored if
+        either "pkgs" is used. Additionally, please note that this option can
+        only be used to download packages from a software repository.
+
+    :param str version:
+        Download a specific version of a package.
+
+        .. important::
+            As of version 2015.8.7, for distros which use yum/dnf, packages
+            which have a version with a nonzero epoch (that is, versions which
+            start with a number followed by a colon must have the epoch included
+            when specifying the version number. For example:
+
+            .. code-block:: yaml
+
+                vim-enhanced:
+                  pkg.downloaded:
+                    - version: 2:7.4.160-1.el7
+
+            An **ignore_epoch** argument has been added to which causes the
+            epoch to be disregarded when the state checks to see if the desired
+            version was installed.
+
+            You can install a specific version when using the ``pkgs`` argument by
+            including the version after the package:
+
+            .. code-block:: yaml
+
+                common_packages:
+                  pkg.downloaded:
+                    - pkgs:
+                      - unzip
+                      - dos2unix
+                      - salt-minion: 2015.8.5-1.el6
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        zsh:
+          pkg.downloaded:
+            - version: 5.0.5-4.63
+            - fromrepo: "myrepository"
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    if 'pkg.list_downloaded' not in __salt__:
+        ret['result'] = False
+        ret['comment'] = 'The pkg.downloaded state is not available on ' \
+                         'this platform'
+        return ret
+
+    if isinstance(pkgs, list) and len(pkgs) == 0:
+        ret['result'] = True
+        ret['comment'] = 'No packages to download provided'
+        return ret
+
+    # It doesn't make sense here to received 'downloadonly' as kwargs
+    # as we're explicitely passing 'downloadonly=True' to execution module.
+    if 'downloadonly' in kwargs:
+        del kwargs['downloadonly']
+
+    # Only downloading not yet downloaded packages
+    targets = _find_download_targets(name,
+                                     version,
+                                     pkgs,
+                                     fromrepo=fromrepo,
+                                     ignore_epoch=ignore_epoch,
+                                     **kwargs)
+    if isinstance(targets, dict) and 'result' in targets:
+        return targets
+    elif not isinstance(targets, dict):
+        ret['result'] = False
+        ret['comment'] = 'An error was encountered while checking targets: ' \
+                         '{0}'.format(targets)
+        return ret
+
+    if __opts__['test']:
+        summary = ', '.join(targets)
+        ret['comment'] = 'The following packages would be ' \
+                         'downloaded: {0}'.format(summary)
+        return ret
+
+    try:
+        pkg_ret = __salt__['pkg.install'](name=name,
+                                          pkgs=pkgs,
+                                          version=version,
+                                          downloadonly=True,
+                                          fromrepo=fromrepo,
+                                          ignore_epoch=ignore_epoch,
+                                          **kwargs)
+        ret['result'] = True
+        ret['changes'].update(pkg_ret)
+    except CommandExecutionError as exc:
+        ret = {'name': name, 'result': False}
+        if exc.info:
+            # Get information for state return from the exception.
+            ret['changes'] = exc.info.get('changes', {})
+            ret['comment'] = exc.strerror_without_changes
+        else:
+            ret['changes'] = {}
+            ret['comment'] = 'An error was encountered while downloading ' \
+                             'package(s): {0}'.format(exc)
+        return ret
+
+    new_pkgs = __salt__['pkg.list_downloaded']()
+    ok, failed = _verify_install(targets, new_pkgs, ignore_epoch=ignore_epoch)
+
+    if failed:
+        summary = ', '.join([_get_desired_pkg(x, targets)
+                             for x in failed])
+        ret['result'] = False
+        ret['comment'] = 'The following packages failed to ' \
+                         'download: {0}'.format(summary)
+
+    if not ret['changes'] and not ret['comment']:
+        ret['result'] = True
+        ret['comment'] = 'Packages are already downloaded: ' \
+                         '{0}'.format(', '.join(targets))
+
+    return ret
+
+
+def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
+    '''
+    .. versionadded:: Oxygen
+
+    Ensure that packages related to certain advisory ids are installed.
+
+    Currently supported for the following pkg providers:
+    :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        issue-foo-fixed:
+          pkg.patch_installed:
+            - advisory_ids:
+              - SUSE-SLE-SERVER-12-SP2-2017-185
+              - SUSE-SLE-SERVER-12-SP2-2017-150
+              - SUSE-SLE-SERVER-12-SP2-2017-120
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    if 'pkg.list_patches' not in __salt__:
+        ret['result'] = False
+        ret['comment'] = 'The pkg.patch_installed state is not available on ' \
+                         'this platform'
+        return ret
+
+    if isinstance(advisory_ids, list) and len(advisory_ids) == 0:
+        ret['result'] = True
+        ret['comment'] = 'No advisory ids provided'
+        return ret
+
+    # Only downloading not yet downloaded packages
+    targets = _find_advisory_targets(name, advisory_ids, **kwargs)
+    if isinstance(targets, dict) and 'result' in targets:
+        return targets
+    elif not isinstance(targets, list):
+        ret['result'] = False
+        ret['comment'] = 'An error was encountered while checking targets: ' \
+                         '{0}'.format(targets)
+        return ret
+
+    if __opts__['test']:
+        summary = ', '.join(targets)
+        ret['comment'] = 'The following advisory patches would be ' \
+                         'downloaded: {0}'.format(summary)
+        return ret
+
+    try:
+        pkg_ret = __salt__['pkg.install'](name=name,
+                                          advisory_ids=advisory_ids,
+                                          downloadonly=downloadonly,
+                                          **kwargs)
+        ret['result'] = True
+        ret['changes'].update(pkg_ret)
+    except CommandExecutionError as exc:
+        ret = {'name': name, 'result': False}
+        if exc.info:
+            # Get information for state return from the exception.
+            ret['changes'] = exc.info.get('changes', {})
+            ret['comment'] = exc.strerror_without_changes
+        else:
+            ret['changes'] = {}
+            ret['comment'] = ('An error was encountered while downloading '
+                              'package(s): {0}'.format(exc))
+        return ret
+
+    if not ret['changes'] and not ret['comment']:
+        status = 'downloaded' if downloadonly else 'installed'
+        ret['result'] = True
+        ret['comment'] = 'Related packages are already {}'.format(status)
+
+    return ret
+
+
+def patch_downloaded(name, advisory_ids=None, **kwargs):
+    '''
+    .. versionadded:: Oxygen
+
+    Ensure that packages related to certain advisory ids are downloaded.
+
+    Currently supported for the following pkg providers:
+    :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        preparing-to-fix-issues:
+          pkg.patch_downloaded:
+            - advisory_ids:
+              - SUSE-SLE-SERVER-12-SP2-2017-185
+              - SUSE-SLE-SERVER-12-SP2-2017-150
+              - SUSE-SLE-SERVER-12-SP2-2017-120
+    '''
+    if 'pkg.list_patches' not in __salt__:
+        return {'name': name,
+                'result': False,
+                'changes': {},
+                'comment': 'The pkg.patch_downloaded state is not available on '
+                           'this platform'}
+
+    # It doesn't make sense here to received 'downloadonly' as kwargs
+    # as we're explicitely passing 'downloadonly=True' to execution module.
+    if 'downloadonly' in kwargs:
+        del kwargs['downloadonly']
+    return patch_installed(name=name, advisory_ids=advisory_ids, downloadonly=True, **kwargs)
 
 
 def latest(

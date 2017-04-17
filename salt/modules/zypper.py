@@ -15,6 +15,7 @@ Package support for openSUSE via the zypper package manager
 # Import python libs
 from __future__ import absolute_import
 import copy
+import glob
 import logging
 import re
 import os
@@ -1026,10 +1027,18 @@ def install(name=None,
             for problem in problems:
                 log.error(problem)
             return {}
+    elif pkg_type == 'advisory':
+        targets = []
+        cur_patches = list_patches()
+        for advisory_id in pkg_params:
+            if advisory_id not in cur_patches:
+                raise CommandExecutionError('Advisory id "{0}" not found'.format(advisory_id))
+            else:
+                targets.append(advisory_id)
     else:
         targets = pkg_params
 
-    old = list_pkgs()
+    old = list_pkgs() if not downloadonly else list_downloaded()
     downgrades = []
     if fromrepo:
         fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
@@ -1047,6 +1056,8 @@ def install(name=None,
         cmd_install.extend(fromrepoopt)
 
     errors = []
+    if pkg_type == 'advisory':
+        targets = ["patch:{0}".format(t) for t in targets]
 
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
@@ -1065,7 +1076,7 @@ def install(name=None,
         __zypper__(no_repo_failure=ignore_repo_failure).call(*cmd)
 
     __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
+    new = list_pkgs() if not downloadonly else list_downloaded()
     ret = salt.utils.compare_dicts(old, new)
 
     if errors:
@@ -1768,6 +1779,28 @@ def download(*packages, **kwargs):
     )
 
 
+def list_downloaded():
+    '''
+    .. versionadded:: Oxygen
+
+    List prefetched packages downloaded by Zypper in the local disk.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_downloaded
+    '''
+    CACHE_DIR = '/var/cache/zypp/packages/'
+
+    ret = {}
+    # Zypper storage is repository_tag/arch/package-version.rpm
+    for package_path in glob.glob(os.path.join(CACHE_DIR, '*/*/*.rpm')):
+        pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)
+        ret.setdefault(pkg_info['name'], {})[pkg_info['version']] = package_path
+    return ret
+
+
 def diff(*paths):
     '''
     Return a formatted diff between current files and original in a package.
@@ -1805,3 +1838,57 @@ def diff(*paths):
                 ) or 'Unchanged'
 
     return ret
+
+
+def _get_patches(installed_only=False):
+    '''
+    List all known patches in repos.
+    '''
+    patches = {}
+    for element in __zypper__.nolock.xml.call('se', '-t', 'patch').getElementsByTagName('solvable'):
+        installed = element.getAttribute('status') == 'installed'
+        if (installed_only and installed) or not installed_only:
+            patches[element.getAttribute('name')] = {
+                'installed': installed,
+                'summary': element.getAttribute('summary'),
+            }
+
+    return patches
+
+
+def list_patches(refresh=False):
+    '''
+    .. versionadded:: Oxygen
+
+    List all known advisory patches from available repos.
+
+    refresh
+        force a refresh if set to True.
+        If set to False (default) it depends on zypper if a refresh is
+        executed.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_patches
+    '''
+    if refresh:
+        refresh_db()
+
+    return _get_patches()
+
+
+def list_installed_patches():
+    '''
+    .. versionadded:: Oxygen
+
+    List installed advisory patches on the system.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_installed_patches
+    '''
+    return _get_patches(installed_only=True)
