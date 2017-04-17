@@ -411,17 +411,29 @@ def _refresh_buckets_cache_file(cache_file):
 
     # helper s3 query function
     def __get_s3_meta(bucket, key=key, keyid=keyid):
-        return __utils__['s3.query'](
-                key=key,
-                keyid=keyid,
-                kms_keyid=keyid,
-                bucket=bucket,
-                service_url=service_url,
-                verify_ssl=verify_ssl,
-                location=location,
-                return_bin=False,
-                path_style=path_style,
-                https_enable=https_enable)
+        ret, marker = [], ''
+        while True:
+            tmp = __utils__['s3.query'](key=key,
+                                        keyid=keyid,
+                                        kms_keyid=keyid,
+                                        bucket=bucket,
+                                        service_url=service_url,
+                                        verify_ssl=verify_ssl,
+                                        location=location,
+                                        return_bin=False,
+                                        path_style=path_style,
+                                        https_enable=https_enable,
+                                        params={'marker': marker})
+            headers = []
+            for header in tmp:
+                if 'Key' in header:
+                    break
+                headers.append(header)
+            ret.extend(tmp)
+            if all([header.get('IsTruncated', 'false') == 'false' for header in headers]):
+                break
+            marker = tmp[-1]['Key']
+        return ret
 
     if _is_env_per_bucket():
         # Single environment per bucket
