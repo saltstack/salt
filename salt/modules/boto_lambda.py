@@ -873,7 +873,7 @@ def get_event_source_mapping_ids(EventSourceArn, FunctionName,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         mappings = []
-        for maps in s__utils__['boto3.paged_call'](conn.list_event_source_mappings,
+        for maps in __utils__['boto3.paged_call'](conn.list_event_source_mappings,
                                                    EventSourceArn=EventSourceArn,
                                                    FunctionName=FunctionName):
             mappings.extend([mapping['UUID']
