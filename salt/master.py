@@ -1543,6 +1543,11 @@ class AESFuncs(object):
         :return: True if key was revoked, False if not
         '''
         load = self.__verify_load(load, ('id', 'tok'))
+
+        if not self.opts.get('allow_minion_key_revoke', False):
+            log.debug('Minion {0} requested key revoke, but allow_minion_key_revoke is False'.format(load['id']))
+            return load
+
         if load is False:
             return load
         else:
