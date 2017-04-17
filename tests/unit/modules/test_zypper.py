@@ -479,6 +479,48 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                             self.assertTrue(pkgs.get(pkg_name))
                             self.assertEqual(pkgs[pkg_name], pkg_version)
 
+    def test_list_patches(self):
+        '''
+        Test advisory patches listing.
+
+        :return:
+        '''
+
+        ref_out = {
+            'stdout': get_test_data('zypper-patches.xml'),
+            'stderr': None,
+            'retcode': 0
+        }
+
+        PATCHES_RET = {
+            'SUSE-SLE-SERVER-12-SP2-2017-97': {'installed': False, 'summary': 'Recommended update for ovmf'},
+            'SUSE-SLE-SERVER-12-SP2-2017-98': {'installed': True, 'summary': 'Recommended update for kmod'},
+            'SUSE-SLE-SERVER-12-SP2-2017-99': {'installed': False, 'summary': 'Security update for apache2'}
+        }
+
+        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
+            list_patches = zypper.list_patches(refresh=False)
+            self.assertEqual(len(list_patches), 3)
+            self.assertDictEqual(list_patches, PATCHES_RET)
+
+    @patch('glob.glob', MagicMock(return_value=['/var/cache/zypper/packages/foo/bar/test_package.rpm']))
+    def test_list_downloaded(self):
+        '''
+        Test downloaded packages listing.
+
+        :return:
+        '''
+        DOWNLOADED_RET = {
+            'test-package': {
+                '1.0' : '/var/cache/zypper/packages/foo/bar/test_package.rpm'
+            }
+        }
+
+        with patch.dict(zypper.__salt__, {'lowpkg.bin_pkg_info': MagicMock(return_value={'name': 'test-package', 'version': '1.0'})}):
+            list_downloaded = zypper.list_downloaded()
+            self.assertEqual(len(list_downloaded), 1)
+            self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
+
     def test_download(self):
         '''
         Test package download
