@@ -54,7 +54,10 @@ from salt.ext.six.moves.urllib.parse import unquote as _unquote  # pylint: disab
 try:
     import boto
     import boto.iam
+    import boto3
+    import botocore
     logging.getLogger('boto').setLevel(logging.CRITICAL)
+    logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -887,6 +890,31 @@ def deactivate_mfa_device(user_name, serial, region=None, key=None, keyid=None,
             return True
         msg = 'Failed to deactivate MFA device {1} for user {0}.'
         log.error(msg.format(user_name, serial))
+        return False
+
+
+def delete_virtual_mfa_device(serial, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes the specified virtual MFA device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.delete_virtual_mfa_device serial_num
+    '''
+    conn = __utils__['boto3.get_connection_func']('iam')()
+    try:
+        conn.delete_virtual_mfa_device(SerialNumber=serial)
+        log.info('Deleted virtual MFA device {0}.'.format(serial))
+        return True
+    except botocore.exceptions.ClientError as e:
+        log.debug(e)
+        if 'NoSuchEntity' in str(e):
+            log.info('Virtual MFA device {0} not found.'.format(serial))
+            return True
+        msg = 'Failed to delete virtual MFA device {0}.'
+        log.error(msg.format(serial))
         return False
 
 
