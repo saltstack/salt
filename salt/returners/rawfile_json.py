@@ -64,15 +64,15 @@ def returner(ret):
         raise
 
 
-def event_return(event):
+def event_return(events):
     '''
     Write event return data to a file on the master.
     '''
     opts = _get_options({})  # Pass in empty ret, since this is a list of events
     try:
         with salt.utils.flopen(opts['filename'], 'a') as logfile:
-            for e in event:
-                logfile.write(str(json.dumps(e))+'\n')
+            for event in events:
+                logfile.write(str(json.dumps(event))+'\n')
     except:
         log.error('Could not write to rawdata_json file {0}'.format(opts['filename']))
         raise
