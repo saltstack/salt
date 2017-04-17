@@ -32,7 +32,6 @@ def check_status():
 
 
 @skip_if_binaries_missing(['ssh', 'ssh-keygen'], check_all=True)
-@skipIf(not check_status(), 'External source, github.com is down')
 class SSHModuleTest(ModuleCase):
     '''
     Test the ssh module
@@ -41,6 +40,8 @@ class SSHModuleTest(ModuleCase):
         '''
         Set up the ssh module tests
         '''
+        if not check_status():
+            self.skipTest('External source, github.com is down')
         super(SSHModuleTest, self).setUp()
         if not os.path.isdir(SUBSALT_DIR):
             os.makedirs(SUBSALT_DIR)

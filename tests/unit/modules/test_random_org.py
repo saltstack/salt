@@ -8,7 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # Import Salt Libs
 import salt.utils.http
@@ -26,13 +26,16 @@ def check_status():
         return False
 
 
-@skipIf(not check_status(), 'random.org is not available')
 class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.random_org
     '''
     def setup_loader_modules(self):
         return {random_org: {}}
+
+    def setUp(self):
+        if check_status() is False:
+            self.skipTest('External resource \'https://api.random.org/\' not available')
 
     # 'getUsage' function tests: 1
 
