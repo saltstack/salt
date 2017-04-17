@@ -163,7 +163,7 @@ def _restore_ownership(func):
                 __salt__['file.chown'](path, run_user['name'], group)
 
         # Filter special kwargs
-        for key in kwargs:
+        for key in list(kwargs):
             if key.startswith('__'):
                 del kwargs[key]
 

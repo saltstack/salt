@@ -307,7 +307,7 @@ def _run(cmd,
         if not os.access(cwd, os.R_OK):
             cwd = '/'
             if salt.utils.is_windows():
-                cwd = os.tempnam()[:3]
+                cwd = os.path.abspath(os.sep)
     else:
         # Handle edge cases where numeric/other input is entered, and would be
         # yaml-ified into non-string types
@@ -771,8 +771,9 @@ def run(cmd,
       command to be run using the ``stdin`` parameter. This can be useful in cases
       where sensitive information must be read from standard input.
 
-    :param str runas: User to run script as. If running on a Windows minion you
-      must also pass a password.
+    :param str runas: User to run command as. If running on a Windows minion you
+      must also pass a password. The target user account must be in the
+      Administrators group.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -985,8 +986,9 @@ def shell(cmd,
       command to be run using the ``stdin`` parameter. This can be useful in cases
       where sensitive information must be read from standard input.
 
-    :param str runas: User to run script as. If running on a Windows minion you
-      must also pass a password
+    :param str runas: User to run command as. If running on a Windows minion you
+      must also pass a password. The target user account must be in the
+      Administrators group.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -1171,8 +1173,9 @@ def run_stdout(cmd,
       command to be run using the ``stdin`` parameter. This can be useful in cases
       where sensitive information must be read from standard input.:
 
-    :param str runas: User to run script as. If running on a Windows minion you
-      must also pass a password
+    :param str runas: User to run command as. If running on a Windows minion you
+      must also pass a password. The target user account must be in the
+      Administrators group.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -1351,8 +1354,9 @@ def run_stderr(cmd,
       command to be run using the ``stdin`` parameter. This can be useful in cases
       where sensitive information must be read from standard input.:
 
-    :param str runas: User to run script as. If running on a Windows minion you
-      must also pass a password
+    :param str runas: User to run command as. If running on a Windows minion you
+      must also pass a password. The target user account must be in the
+      Administrators group.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -1533,8 +1537,9 @@ def run_all(cmd,
       command to be run using the ``stdin`` parameter. This can be useful in cases
       where sensitive information must be read from standard input.:
 
-    :param str runas: User to run script as. If running on a Windows minion you
-      must also pass a password
+    :param str runas: User to run command as. If running on a Windows minion you
+      must also pass a password. The target user account must be in the
+      Administrators group.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -1732,8 +1737,9 @@ def retcode(cmd,
       command to be run using the ``stdin`` parameter. This can be useful in cases
       where sensitive information must be read from standard input.:
 
-    :param str runas: User to run script as. If running on a Windows minion you
-      must also pass a password
+    :param str runas: User to run command as. If running on a Windows minion you
+      must also pass a password. The target user account must be in the
+      Administrators group.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -1967,7 +1973,8 @@ def script(source,
       where sensitive information must be read from standard input.:
 
     :param str runas: User to run script as. If running on a Windows minion you
-      must also pass a password
+      must also pass a password. The target user account must be in the
+      Administrators group.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -2194,7 +2201,8 @@ def script_retcode(source,
       where sensitive information must be read from standard input.:
 
     :param str runas: User to run script as. If running on a Windows minion you
-      must also pass a password
+      must also pass a password. The target user account must be in the
+      Administrators group.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -2925,8 +2933,9 @@ def powershell(cmd,
       command to be run using the ``stdin`` parameter. This can be useful in cases
       where sensitive information must be read from standard input.:
 
-    :param str runas: User to run script as. If running on a Windows minion you
-      must also pass a password
+    :param str runas: User to run command as. If running on a Windows minion you
+      must also pass a password. The target user account must be in the
+      Administrators group.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -3111,8 +3120,9 @@ def run_bg(cmd,
       the command is logged. Note that the command being run will still be logged
       (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
 
-    :param str runas: User to run script as. If running on a Windows minion you
-      must also pass a password
+    :param str runas: User to run command as. If running on a Windows minion you
+      must also pass a password. The target user account must be in the
+      Administrators group.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
