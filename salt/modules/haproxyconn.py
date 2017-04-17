@@ -299,6 +299,9 @@ def set_state(name, backend, state, socket=DEFAULT_SOCKET_URL):
     state
         A string of the state to set. Must be 'ready', 'drain', or 'maint'
 
+    socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
+
     CLI Example:
 
     .. code-block:: bash
