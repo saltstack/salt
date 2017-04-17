@@ -137,7 +137,7 @@ def __virtual__():
         return (False, 'The boto_lambda module could not be loaded: '
                 'boto version {0} or later must be installed.'.format(required_boto3_version))
     elif _LooseVersion(found_botocore_version) < _LooseVersion(required_botocore_version):
-        return (False, 'The boto_apigateway module could not be loaded: '
+        return (False, 'The boto_lambda module could not be loaded: '
                 'botocore version {0} or later must be installed.'.format(required_botocore_version))
     else:
         return True
