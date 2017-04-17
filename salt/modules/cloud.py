@@ -238,7 +238,7 @@ def action(
     try:
         info = client.action(fun, cloudmap, names, provider, instance, kwargs)
     except SaltCloudConfigError as err:
-        log.err(err)
+        log.error(err)
         return None
 
     return info
