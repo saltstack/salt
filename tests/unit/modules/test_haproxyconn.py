@@ -18,6 +18,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.haproxyconn as haproxyconn
 
+
 class Mockcmds(object):
     """
     Mock of cmds
@@ -165,9 +166,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test listing all frontends
         '''
-        self.assertItemsEqual(haproxyconn.list_frontends(),
-                ['frontend-alpha','frontend-beta','frontend-gamma'])
-
+        self.assertItemsEqual(haproxyconn.list_frontends(), ['frontend-alpha', 'frontend-beta', 'frontend-gamma'])
 
     # 'show_backends' function tests: 1
 
@@ -181,10 +180,9 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test listing of all backends
         '''
-        self.assertItemsEqual(haproxyconn.list_backends(),
-                ['backend-alpha','backend-beta','backend-gamma'])
+        self.assertItemsEqual(haproxyconn.list_backends(), ['backend-alpha', 'backend-beta', 'backend-gamma'])
 
-    def test_get_backend(self,mock):
+    def test_get_backend(self, mock):
         '''
         Test get_backend and compare returned value
         '''
@@ -202,16 +200,16 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
                 'bout': 0
             }
         }
-        self.assertDictEqual(haproxyconn.get_backend('test'),expected_data)
+        self.assertDictEqual(haproxyconn.get_backend('test'), expected_data)
 
-    def test_wait_state_true(self,mock):
+    def test_wait_state_true(self, mock):
         '''
         Test a successful wait for state
         '''
-        self.assertTrue(haproxyconn.wait_state('test','server01'))
+        self.assertTrue(haproxyconn.wait_state('test', 'server01'))
 
-    def test_wait_state_false(self,mock):
+    def test_wait_state_false(self, mock):
         '''
         Test a failed wait for state, with a timeout of 0
         '''
-        self.assertFalse(haproxyconn.wait_state('test','server02','up', 0))
+        self.assertFalse(haproxyconn.wait_state('test', 'server02', 'up', 0))

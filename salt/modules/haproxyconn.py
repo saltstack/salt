@@ -29,9 +29,10 @@ __virtualname__ = 'haproxy'
 DEFAULT_SOCKET_URL = '/var/run/haproxy.sock'
 
 # Numeric fields returned by stats
-FIELD_NUMERIC = ["weight","bin","bout"]
+FIELD_NUMERIC = ["weight", "bin", "bout"]
 # Field specifying the actual server name
 FIELD_NODE_NAME = "name"
+
 
 def __virtual__():
     '''
@@ -106,6 +107,7 @@ def wait_state(backend, server, value='up', timeout=60*5, socket=DEFAULT_SOCKET_
             return True
     return False
 
+
 def get_backend(backend, socket=DEFAULT_SOCKET_URL):
     '''
 
@@ -124,8 +126,7 @@ def get_backend(backend, socket=DEFAULT_SOCKET_URL):
         salt '*' haproxy.get_backend mysql
     '''
 
-    backend_data = list_servers(backend=backend, socket=socket) \
-                    .replace('\n',' ').split(' ')
+    backend_data = list_servers(backend=backend, socket=socket).replace('\n', ' ').split(' ')
     result = {}
 
     # Convert given string to Integer
@@ -138,7 +139,7 @@ def get_backend(backend, socket=DEFAULT_SOCKET_URL):
     for data in backend_data:
         # Check if field or server name
         if ":" in data:
-            active_field = data.replace(':','').lower()
+            active_field = data.replace(':', '').lower()
             continue
         elif active_field.lower() == FIELD_NODE_NAME:
             active_server = data
@@ -154,6 +155,7 @@ def get_backend(backend, socket=DEFAULT_SOCKET_URL):
             result[active_server][active_field] = data
 
     return result
+
 
 def enable_server(name, backend, socket=DEFAULT_SOCKET_URL):
     '''
@@ -334,6 +336,7 @@ def show_frontends(socket=DEFAULT_SOCKET_URL):
     ha_cmd = haproxy.cmds.showFrontends()
     return ha_conn.sendCmd(ha_cmd)
 
+
 def list_frontends(socket=DEFAULT_SOCKET_URL):
     '''
 
@@ -367,6 +370,7 @@ def show_backends(socket=DEFAULT_SOCKET_URL):
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.showBackends()
     return ha_conn.sendCmd(ha_cmd)
+
 
 def list_backends(servers=True, socket=DEFAULT_SOCKET_URL):
     '''
