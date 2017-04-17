@@ -1840,7 +1840,7 @@ def diff(*paths):
     return ret
 
 
-def _get_patches(installed_only=None):
+def _get_patches(installed_only=False):
     '''
     List all known patches in repos.
     '''

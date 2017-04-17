@@ -920,7 +920,7 @@ def list_downloaded():
 
         salt '*' pkg.list_downloaded
     '''
-    CACHE_DIR = '/var/cache/yum/'
+    CACHE_DIR = os.path.join('/var/cache/', _yum())
 
     ret = {}
     for package_path in glob.glob(os.path.join(CACHE_DIR, '*/*/*/packages/*.rpm')):
@@ -2926,7 +2926,7 @@ def diff(*paths):
     return ret
 
 
-def _get_patches(installed_only=None):
+def _get_patches(installed_only=False):
     '''
     List all known patches in repos.
     '''

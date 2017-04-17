@@ -1950,16 +1950,26 @@ def downloaded(name,
             - version: 5.0.5-4.63
             - fromrepo: "myrepository"
     '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    if 'pkg.list_downloaded' not in __salt__:
+        ret['result'] = False
+        ret['comment'] = 'The pkg.downloaded state is not available on ' \
+                         'this platform'
+        return ret
+
+    if isinstance(pkgs, list) and len(pkgs) == 0:
+        ret['result'] = True
+        ret['comment'] = 'No packages to download provided'
+        return ret
+
     # It doesn't make sense here to received 'downloadonly' as kwargs
     # as we're explicitely passing 'downloadonly=True' to execution module.
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
-
-    if isinstance(pkgs, list) and len(pkgs) == 0:
-        return {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': 'No packages to download provided'}
 
     # Only downloading not yet downloaded packages
     targets = _find_download_targets(name,
@@ -1971,24 +1981,17 @@ def downloaded(name,
     if isinstance(targets, dict) and 'result' in targets:
         return targets
     elif not isinstance(targets, dict):
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': 'An error was encountered while checking targets: '
-                           '{0}'.format(targets)}
-
-    comment = []
-    if __opts__['test']:
-        summary = ', '.join(targets)
-        comment.append('The following packages would be '
-                       'downloaded: {0}'.format(summary))
-        ret = {'name': name,
-               'changes': {},
-               'result': None,
-               'comment': '\n'.join(comment)}
+        ret['result'] = False
+        ret['comment'] = 'An error was encountered while checking targets: ' \
+                         '{0}'.format(targets)
         return ret
 
-    changes = {}
+    if __opts__['test']:
+        summary = ', '.join(targets)
+        ret['comment'] = 'The following packages would be ' \
+                         'downloaded: {0}'.format(summary)
+        return ret
+
     try:
         pkg_ret = __salt__['pkg.install'](name=name,
                                           pkgs=pkgs,
@@ -1997,7 +2000,8 @@ def downloaded(name,
                                           fromrepo=fromrepo,
                                           ignore_epoch=ignore_epoch,
                                           **kwargs)
-        changes.update(pkg_ret)
+        ret['result'] = True
+        ret['changes'].update(pkg_ret)
     except CommandExecutionError as exc:
         ret = {'name': name, 'result': False}
         if exc.info:
@@ -2006,29 +2010,25 @@ def downloaded(name,
             ret['comment'] = exc.strerror_without_changes
         else:
             ret['changes'] = {}
-            ret['comment'] = ('An error was encountered while downloading '
-                              'package(s): {0}'.format(exc))
+            ret['comment'] = 'An error was encountered while downloading ' \
+                             'package(s): {0}'.format(exc)
         return ret
 
     new_pkgs = __salt__['pkg.list_downloaded']()
     ok, failed = _verify_install(targets, new_pkgs, ignore_epoch=ignore_epoch)
 
-    result = True
     if failed:
         summary = ', '.join([_get_desired_pkg(x, targets)
                              for x in failed])
-        comment.insert(0, 'The following packages failed to '
-                          'download: {0}'.format(summary))
-        result = False
+        ret['result'] = False
+        ret['comment'] = 'The following packages failed to ' \
+                         'download: {0}'.format(summary)
 
-    if not changes and not comment:
-        comment.append('Packages are already downloaded: '
-                       '{0}'.format(', '.join([_get_desired_pkg(x, targets)])))
+    if not ret['changes'] and not ret['comment']:
+        ret['result'] = True
+        ret['comment'] = 'Packages are already downloaded: ' \
+                         '{0}'.format(', '.join(targets))
 
-    ret = {'name': name,
-           'changes': changes,
-           'result': result,
-           'comment': '\n'.join(comment)}
     return ret
 
 
@@ -2052,41 +2052,45 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
               - SUSE-SLE-SERVER-12-SP2-2017-150
               - SUSE-SLE-SERVER-12-SP2-2017-120
     '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    if 'pkg.list_patches' not in __salt__:
+        ret['result'] = False
+        ret['comment'] = 'The pkg.patch_installed state is not available on ' \
+                         'this platform'
+        return ret
+
     if isinstance(advisory_ids, list) and len(advisory_ids) == 0:
-        return {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': 'No advisory ids provided'}
+        ret['result'] = True
+        ret['comment'] = 'No advisory ids provided'
+        return ret
 
     # Only downloading not yet downloaded packages
     targets = _find_advisory_targets(name, advisory_ids, **kwargs)
     if isinstance(targets, dict) and 'result' in targets:
         return targets
     elif not isinstance(targets, list):
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': 'An error was encountered while checking targets: '
-                           '{0}'.format(targets)}
-
-    comment = []
-    if __opts__['test']:
-        summary = ', '.join(targets)
-        comment.append('The following advisory patches would be '
-                       'downloaded: {0}'.format(summary))
-        ret = {'name': name,
-               'changes': {},
-               'result': None,
-               'comment': '\n'.join(comment)}
+        ret['result'] = False
+        ret['comment'] = 'An error was encountered while checking targets: ' \
+                         '{0}'.format(targets)
         return ret
 
-    changes = {}
+    if __opts__['test']:
+        summary = ', '.join(targets)
+        ret['comment'] = 'The following advisory patches would be ' \
+                         'downloaded: {0}'.format(summary)
+        return ret
+
     try:
         pkg_ret = __salt__['pkg.install'](name=name,
                                           advisory_ids=advisory_ids,
                                           downloadonly=downloadonly,
                                           **kwargs)
-        changes.update(pkg_ret)
+        ret['result'] = True
+        ret['changes'].update(pkg_ret)
     except CommandExecutionError as exc:
         ret = {'name': name, 'result': False}
         if exc.info:
@@ -2099,14 +2103,11 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
                               'package(s): {0}'.format(exc))
         return ret
 
-    if not changes and not comment:
+    if not ret['changes'] and not ret['comment']:
         status = 'downloaded' if downloadonly else 'installed'
-        comment.append('Related packages are already {}'.format(status))
+        ret['result'] = True
+        ret['comment'] = 'Related packages are already {}'.format(status)
 
-    ret = {'name': name,
-           'changes': changes,
-           'result': True,
-           'comment': '\n'.join(comment)}
     return ret
 
 
@@ -2130,6 +2131,13 @@ def patch_downloaded(name, advisory_ids=None, **kwargs):
               - SUSE-SLE-SERVER-12-SP2-2017-150
               - SUSE-SLE-SERVER-12-SP2-2017-120
     '''
+    if 'pkg.list_patches' not in __salt__:
+        return {'name': name,
+                'result': False,
+                'changes': {},
+                'comment': 'The pkg.patch_downloaded state is not available on '
+                           'this platform'}
+
     # It doesn't make sense here to received 'downloadonly' as kwargs
     # as we're explicitely passing 'downloadonly=True' to execution module.
     if 'downloadonly' in kwargs:
