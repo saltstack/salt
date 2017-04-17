@@ -512,7 +512,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         '''
         DOWNLOADED_RET = {
             'test-package': {
-                '1.0' : '/var/cache/zypper/packages/foo/bar/test_package.rpm'
+                '1.0': '/var/cache/zypper/packages/foo/bar/test_package.rpm'
             }
         }
 
