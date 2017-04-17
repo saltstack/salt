@@ -35,11 +35,14 @@ def check_status():
 
 @destructiveTest
 @skipIf(not salt.utils.which('gem'), 'Gem is not available')
-@skipIf(not check_status(), 'External source \'https://rubygems.org\' is not available')
 class GemModuleTest(ModuleCase):
     '''
     Validate gem module
     '''
+
+    def setUp(self):
+        if check_status() is False:
+             self.skipTest('External resource \'https://rubygems.org\' is not available')
 
     def test_install_uninstall(self):
         '''
