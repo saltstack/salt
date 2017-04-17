@@ -1,5 +1,7 @@
 integration.client.test_runner
 integration.client.test_standard
+integration.loader.test_ext_grains
+integration.loader.test_ext_modules
 integration.modules.test_aliases
 integration.modules.test_beacons
 integration.modules.test_config
