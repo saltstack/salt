@@ -383,6 +383,7 @@ Section -Post
     nsExec::Exec "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
     nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
     nsExec::Exec "nssm.exe set salt-minion Start SERVICE_AUTO_START"
+    nsExec::Exec "nssm.exe set salt-minion AppNoConsole 1"
 
     RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
 
