@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Libs
 import salt.states.tomcat as tomcat
+from salt.modules import tomcat as tomcatmod
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -49,6 +50,7 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
                                          {'salt': {'version': '1'}},
                                          {'salt': {'version': '1'}}])
         with patch.dict(tomcat.__salt__, {"tomcat.ls": mock_ls,
+                                          'tomcat.extract_war_version': tomcatmod.extract_war_version,
                                           'tomcat.start': mock_start,
                                           'tomcat.undeploy': mock_undeploy,
                                           'tomcat.deploy_war': mock_deploy}):
@@ -112,6 +114,7 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(tomcat.__opts__, {"test": True}):
             with patch.dict(tomcat.__salt__,
                             {"tomcat.ls": mock_ls_version,
+                             "tomcat.extract_war_version": tomcatmod.extract_war_version,
                              "tomcat.deploy_war": mock_deploy,
                              "tomcat.undeploy": mock_undeploy}):
                 # We deploy from version to no version
@@ -125,6 +128,7 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(tomcat.__salt__,
                             {"tomcat.ls": mock_ls_no_version,
+                             "tomcat.extract_war_version": tomcatmod.extract_war_version,
                              "tomcat.deploy_war": mock_deploy,
                              "tomcat.undeploy": mock_undeploy}):
                 # Deploy from none to specified version
@@ -164,7 +168,8 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
                'result': True,
                'comment': 'tomcat manager is ready'}
         mock = MagicMock(return_value=True)
-        with patch.dict(tomcat.__salt__, {"tomcat.status": mock}):
+        with patch.dict(tomcat.__salt__, {"tomcat.status": mock,
+                                          "tomcat.extract_war_version": tomcatmod.extract_war_version}):
             self.assertDictEqual(tomcat.wait('salt'), ret)
 
     def test_mod_watch(self):
@@ -176,7 +181,8 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
                'result': False,
                'comment': 'True'}
         mock = MagicMock(return_value='True')
-        with patch.dict(tomcat.__salt__, {"tomcat.reload": mock}):
+        with patch.dict(tomcat.__salt__, {"tomcat.reload": mock,
+                                          "tomcat.extract_war_version": tomcatmod.extract_war_version}):
             ret.update({'changes': {'salt': False}})
             self.assertDictEqual(tomcat.mod_watch('salt'), ret)
 
@@ -195,6 +201,7 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
                                        {'salt': {'version': 1}}])
         mock2 = MagicMock(side_effect=['FAIL', 'saltstack'])
         with patch.dict(tomcat.__salt__, {"tomcat.status": mock,
+                                          "tomcat.extract_war_version": tomcatmod.extract_war_version,
                                           "tomcat.ls": mock1,
                                           "tomcat.undeploy": mock2}):
             ret.update({'comment': 'Tomcat Manager does not respond'})
