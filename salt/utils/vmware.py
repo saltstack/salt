@@ -75,8 +75,10 @@ You should see output related to the ESXi host's syslog configuration.
 # Import Python Libs
 from __future__ import absolute_import
 import atexit
+import errno
 import logging
 import time
+from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
 
 # Import Salt Libs
 from salt.exceptions import SaltSystemExit
@@ -187,8 +189,6 @@ def get_service_instance(host, username, password, protocol=None, port=None):
     service_instance = GetSi()
     if service_instance:
         if service_instance._GetStub().host == ':'.join([host, str(port)]):
-            if salt.utils.is_proxy():
-                service_instance._GetStub().GetConnection()
             return service_instance
         Disconnect(service_instance)
 
@@ -442,7 +442,18 @@ def get_mors_with_properties(service_instance, object_type, property_list=None, 
         rootFolder.
     '''
     # Get all the content
-    content = get_content(service_instance, object_type, property_list=property_list, container_ref=container_ref)
+    content_args = [service_instance, object_type]
+    content_kwargs = {'property_list': property_list,
+                      'container_ref': container_ref,
+                      }
+    try:
+        content = get_content(*content_args, **content_kwargs)
+    except BadStatusLine:
+        content = get_content(*content_args, **content_kwargs)
+    except IOError as e:
+        if e.errno != errno.EPIPE:
+            raise e
+        content = get_content(*content_args, **content_kwargs)
 
     object_list = []
     for obj in content:

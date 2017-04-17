@@ -11,3 +11,6 @@ Developing Salt
     raet/index
     git/index
     conventions/index
+    ../../ref/internals/index
+    ../projects/index
+    ../tutorials/writing_tests

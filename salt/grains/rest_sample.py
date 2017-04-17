@@ -24,6 +24,17 @@ def kernel():
     return {'kernel': 'proxy'}
 
 
+def proxy_functions(proxy):
+    '''
+    The loader will execute functions with one argument and pass
+    a reference to the proxymodules LazyLoader object.  However,
+    grains sometimes get called before the LazyLoader object is setup
+    so `proxy` might be None.
+    '''
+    if proxy:
+        return {'proxy_functions': proxy['rest_sample.fns']()}
+
+
 def os():
     return {'os': 'RestExampleOS'}
 

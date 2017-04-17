@@ -48,7 +48,7 @@ def __virtual__():
     '''
     if HAS_ALL_IMPORTS:
         return True
-    return False
+    return (False, 'The mssql execution module cannot be loaded: the pymssql python library is not available.')
 
 
 def _get_connection(**kwargs):

@@ -139,7 +139,7 @@ def wrap_tmpl_func(render_str):
                 tpldir = os.path.dirname(template).replace('\\', '/')
                 tpldata = {
                     'tplfile': template,
-                    'tpldir': tpldir,
+                    'tpldir': '.' if tpldir == '' else tpldir,
                     'tpldot': tpldir.replace('/', '.'),
                 }
                 context.update(tpldata)
@@ -189,7 +189,7 @@ def wrap_tmpl_func(render_str):
         else:
             if to_str:  # then render as string
                 return dict(result=True, data=output)
-            with tempfile.NamedTemporaryFile('wb', delete=False) as outf:
+            with tempfile.NamedTemporaryFile('wb', delete=False, prefix=salt.utils.files.TEMPFILE_PREFIX) as outf:
                 outf.write(SLS_ENCODER(output)[0])
                 # Note: If nothing is replaced or added by the rendering
                 #       function, then the contents of the output file will
@@ -435,7 +435,10 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
             from mako.lookup import TemplateLookup
             lookup = TemplateLookup(directories=[os.path.dirname(tmplpath)])
     else:
-        lookup = SaltMakoTemplateLookup(context['opts'], saltenv)
+        lookup = SaltMakoTemplateLookup(
+                context['opts'],
+                saltenv,
+                pillar_rend=context.get('_pillar_rend', False))
     try:
         return Template(
             tmplstr,

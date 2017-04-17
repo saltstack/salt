@@ -4,8 +4,8 @@ Salt 0.17.2 Release Notes
 
 :release: 2013-11-14
 
-Version 0.17.2 is another bugfix release for :doc:`0.17.0
-</topics/releases/0.17.0>`.  The changes include:
+Version 0.17.2 is another bugfix release for :ref:`0.17.0
+<release-0-17-0>`.  The changes include:
 
 - Add ability to delete key with grains.delval (:issue:`7872`)
 - Fix possible state compiler stack trace (:issue:`5767`)

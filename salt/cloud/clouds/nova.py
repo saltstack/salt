@@ -38,8 +38,6 @@ examples could be set up in the cloud configuration at
 .. code-block:: yaml
 
     my-openstack-config:
-      # The ID of the minion that will execute the salt nova functions
-      auth_minion: myminion
       # The name of the configuration profile to use on said minion
       config_profile: my_openstack_profile
 
@@ -47,6 +45,25 @@ examples could be set up in the cloud configuration at
 
       driver: nova
       userdata_file: /tmp/userdata.txt
+
+To use keystoneauth1 instead of keystoneclient, include the `use_keystoneauth`
+option in the provider config.
+
+.. note:: this is required to use keystone v3 as for authentication.
+
+.. code-block:: yaml
+
+    my-openstack-config:
+      use_keystoneauth: True
+      identity_url: 'https://controller:5000/v3'
+      auth_version: 3
+      compute_name: nova
+      compute_region: RegionOne
+      service_type: compute
+      tenant: admin
+      user: admin
+      password: passwordgoeshere
+      driver: nova
 
 For local installations that only use private IP address ranges, the
 following option may be useful. Using the old syntax:
@@ -266,6 +283,7 @@ def get_conn():
     kwargs['project_id'] = vm_['tenant']
     kwargs['auth_url'] = vm_['identity_url']
     kwargs['region_name'] = vm_['compute_region']
+    kwargs['use_keystoneauth'] = vm_['use_keystoneauth']
 
     if 'password' in vm_:
         kwargs['password'] = vm_['password']
@@ -318,7 +336,7 @@ def get_image(conn, vm_):
         return image['id']
     except novaclient.exceptions.NotFound as exc:
         raise SaltCloudNotFound(
-            'The specified image, {0!r}, could not be found: {1}'.format(
+            'The specified image, \'{0}\', could not be found: {1}'.format(
                 vm_image,
                 str(exc)
             )
@@ -364,7 +382,7 @@ def get_size(conn, vm_):
         if vm_size and str(vm_size) in (str(sizes[size]['id']), str(size)):
             return sizes[size]['id']
     raise SaltCloudNotFound(
-        'The specified size, {0!r}, could not be found.'.format(vm_size)
+        'The specified size, \'{0}\', could not be found.'.format(vm_size)
     )
 
 
@@ -672,7 +690,7 @@ def create(vm_):
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined ssh_key_file {0!r} does not exist'.format(
+            'The defined ssh_key_file \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -701,7 +719,7 @@ def create(vm_):
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
+            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
             vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
                 salt.config.get_cloud_config_value(
                     'keysize',
@@ -813,6 +831,8 @@ def create(vm_):
             )
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
+                if private_ip is False:
+                    continue
                 if salt.utils.cloud.is_public_ip(private_ip):
                     log.warn('{0} is a public IP'.format(private_ip))
                     data.public_ips.append(private_ip)
@@ -894,9 +914,9 @@ def create(vm_):
     if 'password' in ret['extra']:
         del ret['extra']['password']
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
@@ -1014,6 +1034,26 @@ def list_nodes_full(call=None, **kwargs):
 
     __utils__['cloud.cache_node_list'](ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
+
+
+def list_nodes_min(call=None, **kwargs):
+    '''
+    Return a list of the VMs that in this location
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            (
+                'The list_nodes_min function must be called with'
+                ' -f or --function.'
+            )
+        )
+
+    conn = get_conn()
+    server_list = conn.server_list_min()
+
+    if not server_list:
+        return {}
+    return server_list
 
 
 def list_nodes_select(call=None):
@@ -1179,3 +1219,111 @@ def virtual_interface_create(name, net_name, **kwargs):
     '''
     conn = get_conn()
     return conn.virtual_interface_create(name, net_name)
+
+
+def floating_ip_pool_list(call=None):
+    '''
+    List all floating IP pools
+
+    .. versionadded:: 2016.3.0
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_pool_list action must be called with -f or --function'
+        )
+
+    conn = get_conn()
+    return conn.floating_ip_pool_list()
+
+
+def floating_ip_list(call=None):
+    '''
+    List floating IPs
+
+    .. versionadded:: 2016.3.0
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_list action must be called with -f or --function'
+        )
+
+    conn = get_conn()
+    return conn.floating_ip_list()
+
+
+def floating_ip_create(kwargs, call=None):
+    '''
+    Allocate a floating IP
+
+    .. versionadded:: 2016.3.0
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_create action must be called with -f or --function'
+        )
+
+    if 'pool' not in kwargs:
+        log.error('pool is required')
+        return False
+
+    conn = get_conn()
+    return conn.floating_ip_create(kwargs['pool'])
+
+
+def floating_ip_delete(kwargs, call=None):
+    '''
+    De-allocate floating IP
+
+    .. versionadded:: 2016.3.0
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_delete action must be called with -f or --function'
+        )
+
+    if 'floating_ip' not in kwargs:
+        log.error('floating_ip is required')
+        return False
+
+    conn = get_conn()
+    return conn.floating_ip_delete(kwargs['floating_ip'])
+
+
+def floating_ip_associate(name, kwargs, call=None):
+    '''
+    Associate a floating IP address to a server
+
+    .. versionadded:: 2016.3.0
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The floating_ip_associate action must be called with -a of --action.'
+        )
+
+    if 'floating_ip' not in kwargs:
+        log.error('floating_ip is required')
+        return False
+
+    conn = get_conn()
+    conn.floating_ip_associate(name, kwargs['floating_ip'])
+    return list_nodes()[name]
+
+
+def floating_ip_disassociate(name, kwargs, call=None):
+    '''
+    Disassociate a floating IP from a server
+
+    .. versionadded:: 2016.3.0
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The floating_ip_disassociate action must be called with -a of --action.'
+        )
+
+    if 'floating_ip' not in kwargs:
+        log.error('floating_ip is required')
+        return False
+
+    conn = get_conn()
+    conn.floating_ip_disassociate(name, kwargs['floating_ip'])
+    return list_nodes()[name]

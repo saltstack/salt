@@ -89,7 +89,9 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM):
 
 
     :param delimiter:
-        Specify an alternate delimiter to use when traversing a nested dict
+        Specify an alternate delimiter to use when traversing a nested dict.
+        This is useful for when the desired key contains a colon. See CLI
+        example below for usage.
 
         .. versionadded:: 2014.7.0
 
@@ -98,6 +100,7 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM):
     .. code-block:: bash
 
         salt '*' grains.get pkg:apache
+        salt '*' grains.get abc::def|ghi delimiter='|'
     '''
     return salt.utils.traverse_dict_and_list(__grains__,
                                              key,
@@ -271,8 +274,8 @@ def setvals(grains, destructive=False):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
     if not __opts__.get('local', False):
-        # Sync the grains
-        __salt__['saltutil.sync_grains']()
+        # Refresh the grains
+        __salt__['saltutil.refresh_grains']()
     # Return the grains we just set to confirm everything was OK
     return new_grains
 
@@ -335,8 +338,9 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
         salt '*' grains.append key val
     '''
     grains = get(key, [], delimiter)
-    if not isinstance(grains, list) and convert is True:
-        grains = [grains]
+    if convert:
+        if not isinstance(grains, list):
+            grains = [] if grains is None else [grains]
     if not isinstance(grains, list):
         return 'The key {0} is not a valid list'.format(key)
     if val in grains:
@@ -542,7 +546,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         if ret is None:
             ret = merge
         else:
-            salt.utils.dictupdate.update(ret, merge)
+            salt.utils.dictupdate.update(ret, copy.deepcopy(merge))
 
     return ret
 
@@ -726,3 +730,7 @@ def set(key,
         ret['comment'] = _setval_ret
         ret['result'] = False
     return ret
+
+
+# Provide a jinja function call compatible get aliased as fetch
+fetch = get

@@ -18,6 +18,7 @@ import json
 import logging
 import numbers
 import os
+import posixpath
 import pprint
 import random
 import re
@@ -567,7 +568,7 @@ def which(exe=None):
                     # safely rely on that behavior
                     if _is_executable_file_or_link(full_path + ext):
                         return full_path + ext
-        log.trace('{0!r} could not be found in the following search path: {1!r}'.format(exe, search_path))
+        log.trace('\'{0}\' could not be found in the following search path: \'{1}\''.format(exe, search_path))
     else:
         log.error('No executable was passed to be searched by salt.utils.which()')
 
@@ -716,10 +717,12 @@ def ip_bracket(addr):
     return addr
 
 
-def dns_check(addr, safe=False, ipv6=False):
+def dns_check(addr, port, safe=False, ipv6=None):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception. Obeys system preference for IPv4/6 address resolution.
+    Tries to connect to the address before considering it useful. If no address
+    can be reached, the first one resolved is used as a fallback.
     '''
     error = False
     try:
@@ -732,13 +735,37 @@ def dns_check(addr, safe=False, ipv6=False):
         if not hostnames:
             error = True
         else:
-            addr = False
+            resolved = False
+            candidates = []
             for h in hostnames:
-                if h[0] == socket.AF_INET or (h[0] == socket.AF_INET6 and ipv6):
-                    addr = ip_bracket(h[4][0])
+                # It's an IP address, just return it
+                if h[4][0] == addr:
+                    resolved = addr
                     break
-            if not addr:
-                error = True
+
+                if h[0] == socket.AF_INET and ipv6 is True:
+                    continue
+                if h[0] == socket.AF_INET6 and ipv6 is False:
+                    continue
+
+                candidate_addr = ip_bracket(h[4][0])
+                if h[0] != socket.AF_INET6 or ipv6 is not None:
+                    candidates.append(candidate_addr)
+
+                s = socket.socket(h[0], socket.SOCK_STREAM)
+                try:
+                    s.connect((candidate_addr.strip('[]'), port))
+                    s.close()
+
+                    resolved = candidate_addr
+                    break
+                except socket.error:
+                    pass
+            if not resolved:
+                if len(candidates) > 0:
+                    resolved = candidates[0]
+                else:
+                    error = True
     except TypeError:
         err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(addr)
         raise SaltSystemExit(code=42, msg=err)
@@ -746,7 +773,7 @@ def dns_check(addr, safe=False, ipv6=False):
         error = True
 
     if error:
-        err = ('DNS lookup of \'{0}\' failed.').format(addr)
+        err = ('DNS lookup or connection check of \'{0}\' failed.').format(addr)
         if safe:
             if salt.log.is_console_configured():
                 # If logging is not configured it also means that either
@@ -755,7 +782,7 @@ def dns_check(addr, safe=False, ipv6=False):
                 log.error(err)
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
-    return addr
+    return resolved
 
 
 def required_module_list(docstring=None):
@@ -812,7 +839,7 @@ def check_or_die(command):
         raise CommandNotFoundError('\'None\' is not a valid command.')
 
     if not which(command):
-        raise CommandNotFoundError(command)
+        raise CommandNotFoundError('\'{0}\' is not in the path'.format(command))
 
 
 def backup_minion(path, bkroot):
@@ -844,16 +871,26 @@ def backup_minion(path, bkroot):
         os.chmod(bkpath, fstat.st_mode)
 
 
-def path_join(*parts):
+def path_join(*parts, **kwargs):
     '''
     This functions tries to solve some issues when joining multiple absolute
     paths on both *nix and windows platforms.
 
     See tests/unit/utils/path_join_test.py for some examples on what's being
     talked about here.
+
+    The "use_posixpath" kwarg can be be used to force joining using poxixpath,
+    which is useful for Salt fileserver paths on Windows masters.
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    use_posixpath = kwargs.pop('use_posixpath', False)
+    if kwargs:
+        invalid_kwargs(kwargs)
+
+    pathlib = posixpath if use_posixpath else os.path
+
     # Normalize path converting any os.sep as needed
-    parts = [os.path.normpath(p) for p in parts]
+    parts = [pathlib.normpath(p) for p in parts]
 
     try:
         root = parts.pop(0)
@@ -864,14 +901,9 @@ def path_join(*parts):
     if not parts:
         ret = root
     else:
-        if is_windows():
-            if len(root) == 1:
-                root += ':'
-            root = root.rstrip(os.sep) + os.sep
-
         stripped = [p.lstrip(os.sep) for p in parts]
         try:
-            ret = os.path.join(root, *stripped)
+            ret = pathlib.join(root, *stripped)
         except UnicodeDecodeError:
             # This is probably Python 2 and one of the parts contains unicode
             # characters in a bytestring. First try to decode to the system
@@ -881,13 +913,13 @@ def path_join(*parts):
             except NameError:
                 enc = sys.stdin.encoding or sys.getdefaultencoding()
             try:
-                ret = os.path.join(root.decode(enc),
+                ret = pathlib.join(root.decode(enc),
                                    *[x.decode(enc) for x in stripped])
             except UnicodeDecodeError:
                 # Last resort, try UTF-8
-                ret = os.path.join(root.decode('UTF-8'),
+                ret = pathlib.join(root.decode('UTF-8'),
                                    *[x.decode('UTF-8') for x in stripped])
-    return os.path.normpath(ret)
+    return pathlib.normpath(ret)
 
 
 def pem_finger(path=None, key=None, sum_type='sha256'):
@@ -903,7 +935,7 @@ def pem_finger(path=None, key=None, sum_type='sha256'):
             return ''
 
         with fopen(path, 'rb') as fp_:
-            key = ''.join(fp_.readlines()[1:-1])
+            key = ''.join([x for x in fp_.readlines() if x.strip()][1:-1])
 
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ''
@@ -1044,10 +1076,10 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
-    # We'll be showing errors to the users until Salt Carbon comes out, after
+    # We'll be showing errors to the users until Salt Oxygen comes out, after
     # which, errors will be raised instead.
     warn_until(
-        'Carbon',
+        'Oxygen',
         'It\'s time to start raising `SaltInvocationError` instead of '
         'returning warnings',
         # Let's not show the deprecation warning on the console, there's no
@@ -1058,7 +1090,7 @@ def format_call(fun,
     if extra:
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
-            msg = '{0[0]!r} is an invalid keyword argument for {1!r}'.format(
+            msg = '\'{0[0]}\' is an invalid keyword argument for \'{1}\''.format(
                 list(extra.keys()),
                 ret.get(
                     # In case this is being called for a state module
@@ -1068,8 +1100,8 @@ def format_call(fun,
                 )
             )
         else:
-            msg = '{0} and {1!r} are invalid keyword arguments for {2!r}'.format(
-                ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
+            msg = '{0} and \'{1}\' are invalid keyword arguments for \'{2}\''.format(
+                ', '.join(['\'{0}\''.format(e) for e in extra][:-1]),
                 list(extra.keys())[-1],
                 ret.get(
                     # In case this is being called for a state module
@@ -1084,7 +1116,7 @@ def format_call(fun,
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
             '\'key: value\' pairs. Your approach will work until Salt '
-            'Carbon is out.{1}'.format(
+            'Oxygen is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
             )
@@ -1137,6 +1169,11 @@ def istextfile(fp_, blocksize=512):
     elif not block:
         # An empty file is considered a valid text file
         return True
+    try:
+        block.decode('utf-8')
+        return True
+    except UnicodeDecodeError:
+        pass
 
     nontext = block.translate(None, text_characters)
     return float(len(nontext)) / len(block) <= 0.30
@@ -1390,7 +1427,7 @@ def subdict_match(data,
             try:
                 return re.match(pattern.lower(), str(target).lower())
             except Exception:
-                log.error('Invalid regex {0!r} in match'.format(pattern))
+                log.error('Invalid regex \'{0}\' in match'.format(pattern))
                 return False
         elif exact_match:
             return str(target).lower() == pattern.lower()
@@ -1439,8 +1476,8 @@ def subdict_match(data,
         splits = expr.split(delimiter)
         key = delimiter.join(splits[:idx])
         matchstr = delimiter.join(splits[idx:])
-        log.debug('Attempting to match {0!r} in {1!r} using delimiter '
-                  '{2!r}'.format(matchstr, key, delimiter))
+        log.debug('Attempting to match \'{0}\' in \'{1}\' using delimiter '
+                  '\'{2}\''.format(matchstr, key, delimiter))
         match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
         if match == {}:
             continue
@@ -1854,6 +1891,9 @@ def exactly_n(l, n=1):
 
 
 def exactly_one(l):
+    '''
+    Check if only one item is not None, False, or 0 in an iterable.
+    '''
     return exactly_n(l)
 
 
@@ -1879,8 +1919,10 @@ def rm_rf(path):
             func(path)
         else:
             raise  # pylint: disable=E0704
-
-    shutil.rmtree(path, onerror=_onerror)
+    if os.path.isdir(path):
+        shutil.rmtree(path, onerror=_onerror)
+    else:
+        os.remove(path)
 
 
 def option(value, default='', opts=None, pillar=None):
@@ -2197,7 +2239,7 @@ def warn_until(version,
         import inspect
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         raise RuntimeError(
-            'The warning triggered on filename {filename!r}, line number '
+            'The warning triggered on filename \'{filename}\', line number '
             '{lineno}, is supposed to be shown until version '
             '{until_version} is released. Current version is now '
             '{salt_version}. Please remove the warning.'.format(
@@ -2246,7 +2288,7 @@ def kwargs_warn_until(kwargs,
     This function is used to help deprecate unused legacy ``**kwargs`` that
     were added to function parameters lists to preserve backwards compatibility
     when removing a parameter. See
-    :doc:`the deprecation development docs </topics/development/deprecations>`
+    :ref:`the deprecation development docs <deprecations>`
     for the modern strategy for deprecating a function parameter.
 
     :param kwargs: The caller's ``**kwargs`` argument value (a ``dict``).
@@ -2288,11 +2330,11 @@ def kwargs_warn_until(kwargs,
     _version_ = salt.version.SaltStackVersion(*_version_info_)
 
     if kwargs or _version_.info >= version.info:
-        arg_names = ', '.join('{0!r}'.format(key) for key in kwargs)
+        arg_names = ', '.join('\'{0}\''.format(key) for key in kwargs)
         warn_until(
             version,
             message='The following parameter(s) have been deprecated and '
-                    'will be removed in {0!r}: {1}.'.format(version.string,
+                    'will be removed in \'{0}\': {1}.'.format(version.string,
                                                             arg_names),
             category=category,
             stacklevel=stacklevel,
@@ -2388,6 +2430,21 @@ def compare_dicts(old=None, new=None):
             # Key modified
             ret[key] = {'old': old[key],
                         'new': new[key]}
+    return ret
+
+
+def compare_lists(old=None, new=None):
+    '''
+    Compare before and after results from various salt functions, returning a
+    dict describing the changes that were made
+    '''
+    ret = dict()
+    for item in new:
+        if item not in old:
+            ret['new'] = item
+    for item in old:
+        if item not in new:
+            ret['old'] = item
     return ret
 
 
@@ -2602,7 +2659,7 @@ def get_group_list(user=None, include_default=True):
         raise Exception
     if hasattr(os, 'getgrouplist'):
         # Try os.getgrouplist, available in python >= 3.3
-        log.trace('Trying os.getgrouplist for {0!r}'.format(user))
+        log.trace('Trying os.getgrouplist for \'{0}\''.format(user))
         try:
             group_names = [
                 grp.getgrgid(grpid).gr_name for grpid in
@@ -2612,7 +2669,7 @@ def get_group_list(user=None, include_default=True):
             pass
     else:
         # Try pysss.getgrouplist
-        log.trace('Trying pysss.getgrouplist for {0!r}'.format(user))
+        log.trace('Trying pysss.getgrouplist for \'{0}\''.format(user))
         try:
             import pysss  # pylint: disable=import-error
             group_names = list(pysss.getgrouplist(user))
@@ -2622,7 +2679,7 @@ def get_group_list(user=None, include_default=True):
         # Fall back to generic code
         # Include the user's default group to behave like
         # os.getgrouplist() and pysss.getgrouplist() do
-        log.trace('Trying generic group list for {0!r}'.format(user))
+        log.trace('Trying generic group list for \'{0}\''.format(user))
         group_names = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
         try:
             default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
@@ -2643,7 +2700,7 @@ def get_group_list(user=None, include_default=True):
         except KeyError:
             # If for some reason the user does not have a default group
             pass
-    log.trace('Group list for user {0!r}: {1!r}'.format(user, sorted(ugroups)))
+    log.trace('Group list for user \'{0}\': \'{1}\''.format(user, sorted(ugroups)))
     return sorted(ugroups)
 
 
@@ -2886,6 +2943,29 @@ def is_list(value):
     return isinstance(value, list)
 
 
+def is_iter(y, ignore=six.string_types):
+    '''
+    Test if an object is iterable, but not a string type.
+
+    Test if an object is an iterator or is iterable itself. By default this
+    does not return True for string objects.
+
+    The `ignore` argument defaults to a list of string types that are not
+    considered iterable. This can be used to also exclude things like
+    dictionaries or named tuples.
+
+    Based on https://bitbucket.org/petershinners/yter
+    '''
+
+    if ignore and isinstance(y, ignore):
+        return False
+    try:
+        iter(y)
+        return True
+    except TypeError:
+        return False
+
+
 def invalid_kwargs(invalid_kwargs, raise_exc=True):
     '''
     Raise a SaltInvocationError if invalid_kwargs is non-empty
@@ -2905,6 +2985,16 @@ def invalid_kwargs(invalid_kwargs, raise_exc=True):
         raise SaltInvocationError(msg)
     else:
         return msg
+
+
+def shlex_split(s, **kwargs):
+    '''
+    Only split if variable is a string
+    '''
+    if isinstance(s, six.string_types):
+        return shlex.split(s, **kwargs)
+    else:
+        return s
 
 
 def split_input(val):
@@ -2952,3 +3042,11 @@ def str_version_to_evr(verstring):
         release = ''
 
     return epoch, version, release
+
+
+def substr_in_list(string_to_search_for, list_to_search):
+    '''
+    Return a boolean value that indicates whether or not a given
+    string is present in any of the strings which comprise a list
+    '''
+    return any(string_to_search_for in s for s in list_to_search)

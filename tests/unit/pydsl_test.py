@@ -289,7 +289,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
+                'The temporary directory \'{0}\' was not created'.format(
                     dirpath
                 )
             )
@@ -350,7 +350,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
+                'The temporary directory \'{0}\' was not created'.format(
                     dirpath
                 )
             )
@@ -382,7 +382,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
+                'The temporary directory \'{0}\' was not created'.format(
                     dirpath
                 )
             )
@@ -414,7 +414,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
+                'The temporary directory \'{0}\' was not created'.format(
                     dirpath
                 )
             )

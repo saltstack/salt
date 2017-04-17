@@ -95,6 +95,47 @@ class WinSystemTestCase(TestCase):
                         self.assertDictEqual(win_system.computer_name('salt'),
                                              ret)
 
+    def test_hostname(self):
+        ret = {
+            'name': 'salt',
+            'changes': {},
+            'result': True,
+            'comment': ''
+        }
+
+        mock = MagicMock(return_value='minion')
+        with patch.dict(win_system.__salt__, {"system.get_hostname": mock}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(win_system.__salt__, {"system.set_hostname": mock}):
+                ret.update({'comment': "The current hostname is 'minion', "
+                                       "but will be changed to 'salt' on the next reboot",
+                            'changes': {'hostname': 'salt'}})
+                self.assertDictEqual(win_system.hostname('salt'), ret)
+
+            mock = MagicMock(return_value=False)
+            with patch.dict(win_system.__salt__, {"system.set_hostname": mock}):
+                ret.update({'comment': "Unable to set hostname",
+                            'changes': {},
+                            'result': False})
+                self.assertDictEqual(win_system.hostname('salt'), ret)
+
+        mock = MagicMock(return_value='salt')
+        with patch.dict(win_system.__salt__, {"system.get_hostname": mock}):
+            ret.update({'comment': "Hostname is already set to 'salt'",
+                            'changes': {},
+                            'result': True})
+
+            self.assertDictEqual(win_system.hostname('salt'), ret)
+
+        mock = MagicMock(return_value='salt')
+        with patch.dict(win_system.__salt__, {"system.get_hostname": mock}):
+            ret.update({'name': 'SALT',
+                        'comment': "Hostname is already set to 'SALT'",
+                        'changes': {},
+                        'result': True})
+
+            self.assertDictEqual(win_system.hostname('SALT'), ret)
+
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -84,7 +84,7 @@ class NewStyleClassMixIn(object):
 
 class ExcInfoOnLogLevelFormatMixIn(object):
     '''
-    Logging handler class mixin to properly handle including exc_info on a pre logging handler basis
+    Logging handler class mixin to properly handle including exc_info on a per logging handler basis
     '''
 
     def format(self, record):
@@ -93,7 +93,8 @@ class ExcInfoOnLogLevelFormatMixIn(object):
         '''
         formatted_record = super(ExcInfoOnLogLevelFormatMixIn, self).format(record)
         exc_info_on_loglevel = getattr(record, 'exc_info_on_loglevel', None)
-        if exc_info_on_loglevel is None:
+        exc_info_on_loglevel_formatted = getattr(record, 'exc_info_on_loglevel_formatted', None)
+        if exc_info_on_loglevel is None and exc_info_on_loglevel_formatted is None:
             return formatted_record
 
         # If we reached this far it means the log record was created with exc_info_on_loglevel
@@ -104,7 +105,7 @@ class ExcInfoOnLogLevelFormatMixIn(object):
             return formatted_record
 
         # If we reached this far it means we should include exc_info
-        if not record.exc_info_on_loglevel_instance:
+        if not record.exc_info_on_loglevel_instance and not exc_info_on_loglevel_formatted:
             # This should actually never occur
             return formatted_record
 
@@ -133,5 +134,8 @@ class ExcInfoOnLogLevelFormatMixIn(object):
             #     for a script. See issue 13232.
             formatted_record += record.exc_info_on_loglevel_formatted.decode(sys.getfilesystemencoding(),
                                                                              'replace')
-
+        # Reset the record.exc_info_on_loglevel_instance because it might need
+        # to "travel" through a multiprocessing process and it might contain
+        # data which is not pickle'able
+        record.exc_info_on_loglevel_instance = None
         return formatted_record

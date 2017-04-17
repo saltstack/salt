@@ -72,7 +72,7 @@ def set_(filename, section, parameter, value):
     filename = _quote(filename)
     section = _quote(section)
     parameter = _quote(parameter)
-    value = _quote(value)
+    value = _quote(str(value))
 
     result = __salt__['cmd.run_all'](
             'openstack-config --set {0} {1} {2} {3}'.format(

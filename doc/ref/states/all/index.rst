@@ -1,8 +1,8 @@
 .. _all-salt.states:
 
-==================================
-Full list of builtin state modules
-==================================
+=============
+state modules
+=============
 
 .. currentmodule:: salt.states
 
@@ -13,7 +13,9 @@ Full list of builtin state modules
     alias
     alternatives
     apache
+    apache_conf
     apache_module
+    apache_site
     aptpkg
     archive
     artifactory
@@ -25,17 +27,22 @@ Full list of builtin state modules
     blockdev
     boto_asg
     boto_cfn
+    boto_cloudtrail
     boto_cloudwatch_alarm
+    boto_datapipeline
     boto_dynamodb
     boto_ec2
     boto_elasticache
     boto_elb
     boto_iam
     boto_iam_role
+    boto_iot
     boto_kms
+    boto_lambda
     boto_lc
     boto_rds
     boto_route53
+    boto_s3_bucket
     boto_secgroup
     boto_sns
     boto_sqs
@@ -43,6 +50,8 @@ Full list of builtin state modules
     bower
     cabal
     chef
+    chocolatey
+    chronos_job
     cloud
     cmd
     composer
@@ -63,13 +72,18 @@ Full list of builtin state modules
     esxi
     event
     file
+    firewall
     firewalld
     gem
     git
+    github
     glance
     glusterfs
     gnomedesktop
+    gpg
     grafana
+    grafana_dashboard
+    grafana_datasource
     grains
     group
     hg
@@ -81,23 +95,31 @@ Full list of builtin state modules
     incron
     influxdb_database
     influxdb_user
+    infoblox
     ini_manage
     ipmi
     ipset
     iptables
     jboss7
+    jenkins
+    k8s
     keyboard
     keystone
     kmod
     layman
-    libvirt
+    ldap
     linux_acl
     locale
     lvm
     lvs_server
     lvs_service
     lxc
+    mac_assistive
+    mac_defaults
+    mac_keychain
+    mac_xattr
     makeconf
+    marathon_app
     mdadm
     memcached
     modjk
@@ -116,6 +138,8 @@ Full list of builtin state modules
     npm
     ntp
     openstack_config
+    openvswitch_bridge
+    openvswitch_port
     pagerduty
     pagerduty_escalation_policy
     pagerduty_schedule
@@ -129,9 +153,13 @@ Full list of builtin state modules
     pkgrepo
     portage_config
     ports
+    postgres_cluster
     postgres_database
     postgres_extension
     postgres_group
+    postgres_initdb
+    postgres_language
+    postgres_privileges
     postgres_schema
     postgres_tablespace
     postgres_user
@@ -150,15 +178,20 @@ Full list of builtin state modules
     rdp
     redismod
     reg
+    rsync
     rvm
+    salt_proxy
     saltmod
     schedule
     selinux
     serverdensity_device
     service
     slack
+    smartos
     smtp
+    splunk
     splunk_search
+    sqlite3
     ssh_auth
     ssh_known_hosts
     stateconf
@@ -169,6 +202,7 @@ Full list of builtin state modules
     sysctl
     syslog_ng
     sysrc
+    telemetry_alert
     test
     timezone
     tls
@@ -179,10 +213,15 @@ Full list of builtin state modules
     user
     vbox_guest
     victorops
+    virt
     virtualenv_mod
+    win_certutil
     win_dacl
+    win_dism
     win_dns_client
     win_firewall
+    win_iis
+    win_license
     win_network
     win_path
     win_powercfg
@@ -192,5 +231,12 @@ Full list of builtin state modules
     winrepo
     x509
     xmpp
+    zabbix_host
+    zabbix_hostgroup
+    zabbix_user
+    zabbix_usergroup
     zcbuildout
+    zenoss
     zk_concurrency
+    zfs
+    zpool

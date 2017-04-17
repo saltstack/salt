@@ -1,32 +1,20 @@
-.. _execution-modules:
+.. _writing-execution-modules:
 
-=================
-Execution Modules
-=================
+=========================
+Writing Execution Modules
+=========================
 
 Salt execution modules are the functions called by the :command:`salt` command.
-
-.. note::
-
-    Salt execution modules are different from state modules and cannot be
-    called directly within state files.  You must use the :mod:`module <salt.states.module>`
-    state module to call execution modules within state runs.
-
-.. seealso:: :ref:`Full list of builtin modules <all-salt.modules>`
-
-Salt ships with many modules that cover a wide variety of tasks.
-
-.. _writing-execution-modules:
 
 Modules Are Easy to Write!
 ==========================
 
 Writing Salt execution modules is straightforward.
 
-A Salt execution modules is a Python or `Cython`_ module
+A Salt execution module is a Python or `Cython`_ module
 placed in a directory called ``_modules/``
 within the :conf_master:`file_roots` as specified by the master config file. By
-default this is `/srv/salt/_modules` on Linux systems.
+default this is ``/srv/salt/_modules`` on Linux systems.
 
 
 Modules placed in ``_modules/`` will be synced to the minions when any of the following
@@ -348,7 +336,7 @@ in the minion config file:
       pkg: aptpkg
 
 The above example will force the minion to use the :py:mod:`systemd
-<salt.modules.systemd>` module to provide service mangement, and the
+<salt.modules.systemd>` module to provide service management, and the
 :py:mod:`aptpkg <salt.modules.aptpkg>` module to provide package management.
 
 .. __: https://github.com/saltstack/salt/issues/new
@@ -471,7 +459,7 @@ Aliasing Functions
 
 Sometimes one wishes to use a function name that would shadow a python built-in.
 A common example would be ``set()``. To support this, append an underscore to
-the function defintion, ``def set_():``, and use the ``__func_alias__`` feature
+the function definition, ``def set_():``, and use the ``__func_alias__`` feature
 to provide an alias to the function.
 
 ``__func_alias__`` is a dictionary where each key is the name of a function in

@@ -12,7 +12,6 @@ import sys
 import time
 import logging
 import traceback
-import multiprocessing
 
 # Import salt libs
 import salt
@@ -31,6 +30,7 @@ from salt.utils import print_cli
 from salt.utils import kinds
 from salt.utils import activate_profile
 from salt.utils import output_profile
+from salt.utils.process import MultiprocessingProcess
 from salt.cli import daemons
 
 try:
@@ -331,7 +331,7 @@ class RAETCaller(BaseCaller):
             if (opts.get('__role') ==
                     kinds.APPL_KIND_NAMES[kinds.applKinds.caller]):
                 # spin up and fork minion here
-                self.process = multiprocessing.Process(target=raet_minion_run,
+                self.process = MultiprocessingProcess(target=raet_minion_run,
                                     kwargs={'cleanup_protecteds': [self.stack.ha], })
                 self.process.start()
                 # wait here until '/var/run/salt/minion/alpha_caller.manor.uxd' exists

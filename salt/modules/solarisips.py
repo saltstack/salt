@@ -38,11 +38,13 @@ Or you can override it globally by setting the :conf_minion:`providers` paramete
 # Import python libs
 from __future__ import print_function
 from __future__ import absolute_import
+import copy
 import logging
 
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -53,21 +55,27 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Solaris 11
     '''
-    if __grains__['os'] == 'Solaris' and float(__grains__['kernelrelease']) > 5.10:
+    if __grains__['os'] == 'Solaris' \
+            and float(__grains__['kernelrelease']) > 5.10 \
+            and salt.utils.which('pkg'):
         return __virtualname__
-    return False
+    return (False,
+            'The solarisips execution module failed to load: only available '
+            'on Solaris >= 11.')
 
 
 ips_pkg_return_values = {
-        0: 'Command succeeded.',
-        1: 'An error occurred.',
-        2: 'Invalid command line options were specified.',
-        3: 'Multiple operations were requested, but only some of them succeeded.',
-        4: 'No changes were made - nothing to do.',
-        5: 'The requested operation cannot be performed on a  live image.',
-        6: 'The requested operation cannot  be  completed  because the  licenses  for  the  packages  being  installed or updated have not been accepted.',
-        7: 'The image is currently in use by another process and cannot be modified.'
-        }
+    0: 'Command succeeded.',
+    1: 'An error occurred.',
+    2: 'Invalid command line options were specified.',
+    3: 'Multiple operations were requested, but only some of them succeeded.',
+    4: 'No changes were made - nothing to do.',
+    5: 'The requested operation cannot be performed on a  live image.',
+    6: 'The requested operation cannot be completed because the licenses for '
+       'the packages being installed or updated have not been accepted.',
+    7: 'The image is currently in use by another process and cannot be '
+       'modified.'
+}
 
 
 def _ips_get_pkgname(line):
@@ -96,9 +104,16 @@ def _ips_get_pkgversion(line):
 
 def refresh_db(full=False):
     '''
-    Updates the remote repos database. You can force the full pkg DB refresh from all publishers regardless the last refresh time.
+    Updates the remote repos database.
 
-    CLI Example::
+    full : False
+
+        Set to ``True`` to force a refresh of the pkg DB from all publishers,
+        regardless of the last refresh time.
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.refresh_db
         salt '*' pkg.refresh_db full=True
@@ -114,7 +129,9 @@ def upgrade_available(name):
     Check if there is an upgrade available for a certain package
     Accepts full or partial FMRI. Returns all matches found.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade_available apache-22
     '''
@@ -143,7 +160,12 @@ def list_upgrades(refresh=False, **kwargs):  # pylint: disable=W0613
     in the list of upgrades, then the global zone should be updated to get all
     possible updates. Use ``refresh=True`` to refresh the package database.
 
-    CLI Example::
+    refresh : False
+        Set to ``True`` to force a full pkg DB refresh before listing
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_upgrades
         salt '*' pkg.list_upgrades refresh=True
@@ -162,14 +184,24 @@ def upgrade(refresh=False, **kwargs):
     '''
     Upgrade all packages to the latest possible version.
     When run in global zone, it updates also all non-global zones.
-    In non-global zones upgrade is limited by dependency constrains linked to the version of pkg://solaris/entire.
+    In non-global zones upgrade is limited by dependency constrains linked to
+    the version of pkg://solaris/entire.
 
-    Returns also a raw output of "pkg update" command (because if update creates a new boot environment, no immediate changes are visible in "pkg list").
+    Returns also the raw output of the ``pkg update`` command (because if
+    update creates a new boot environment, no immediate changes are visible in
+    ``pkg list``).
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.upgrade
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+
     if salt.utils.is_true(refresh):
         refresh_db()
 
@@ -179,22 +211,26 @@ def upgrade(refresh=False, **kwargs):
 
     # Install or upgrade the package
     # If package is already installed
-    cmd = 'pkg update -v --accept '
-    ret = __salt__['cmd.run_all'](cmd)
+    cmd = ['pkg', 'update', '-v', '--accept']
+    out = __salt__['cmd.run_all'](cmd,
+                                  output_loglevel='trace',
+                                  python_shell=False)
 
-    # Get a list of the packages again, including newly installed ones.
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
 
-    changes = salt.utils.compare_dicts(old, new)
+    if out['retcode'] != 0:
+        raise CommandExecutionError(
+            'Error occurred updating package(s)',
+            info={
+                'changes': ret,
+                'retcode': ips_pkg_return_values[out['retcode']],
+                'errors': [out['stderr']]
+            }
+        )
 
-    output = {}
-    output['changes_in_current_be'] = changes
-    if ret['retcode']:
-        output['retcode'] = ips_pkg_return_values[ret['retcode']]   # translate error code if applicable
-        output['message'] = ret['stderr'] + '\n'
-    else:
-        output['raw_out'] = ret['stdout'] + '\n'
-    return output
+    return ret
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -203,7 +239,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': '<version>'}
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.list_pkgs
     '''
@@ -211,6 +249,14 @@ def list_pkgs(versions_as_list=False, **kwargs):
     if any([salt.utils.is_true(kwargs.get(x))
         for x in ('removed', 'purge_desired')]):
         return {}
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
 
     ret = {}
     cmd = '/bin/pkg list -Hv'
@@ -221,6 +267,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
         version = _ips_get_pkgversion(line)
         __salt__['pkg_resource.add_pkg'](ret, name, version)
 
+    __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -231,7 +279,9 @@ def version(*names, **kwargs):
     Common interface for obtaining the version of installed packages.
     Accepts full or partial FMRI. If called using pkg_resource, full FMRI is required.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.version vim
         salt '*' pkg.version foo bar baz
@@ -254,11 +304,13 @@ def version(*names, **kwargs):
 def latest_version(name, **kwargs):
     '''
     The available version of the package in the repository.
-    In case of multiple match, it returns list of all matched packages.
+    In case of multiple matches, it returns list of all matched packages.
     Accepts full or partial FMRI.
     Please use pkg.latest_version as pkg.available_version is being deprecated.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.latest_version pkg://solaris/entire
     '''
@@ -280,7 +332,9 @@ def get_fmri(name, **kwargs):
     Returns FMRI from partial name. Returns empty string ('') if not found.
     In case of multiple match, the function returns list of all matched packages.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.get_fmri bash
     '''
@@ -302,8 +356,9 @@ def get_fmri(name, **kwargs):
 
 def normalize_name(name, **kwargs):
     '''
-    Internal function. Normalizes pkg name to full FMRI before running pkg.install.
-    In case of multiple match or no match, it returns the name without modifications and lets the "pkg install" to decide what to do.
+    Internal function. Normalizes pkg name to full FMRI before running
+    pkg.install. In case of multiple matches or no match, it returns the name
+    without modifications.
 
     CLI Example:
 
@@ -332,7 +387,9 @@ def is_installed(name, **kwargs):
     Name can be full or partial FMRI.
     In case of multiple match from partial FMRI name, it returns True.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.is_installed bash
     '''
@@ -344,9 +401,12 @@ def is_installed(name, **kwargs):
 def search(name, versions_as_list=False, **kwargs):
     '''
     Searches the repository for given pkg name.
-    The name can be full or partial FMRI. All matches are printed. Globs are also supported.
+    The name can be full or partial FMRI. All matches are printed. Globs are
+    also supported.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.search bash
     '''
@@ -386,7 +446,9 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         A list of packages to install. Must be passed as a python list.
 
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.install vim
         salt '*' pkg.install pkg://solaris/editor/vim
@@ -404,10 +466,15 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
     if pkgs:    # multiple packages specified
         for pkg in pkgs:
             if list(pkg.items())[0][1]:   # version specified
-                pkg2inst += '{0}@{1} '.format(list(pkg.items())[0][0], list(pkg.items())[0][1])
+                pkg2inst += '{0}@{1} '.format(list(pkg.items())[0][0],
+                                              list(pkg.items())[0][1])
             else:
                 pkg2inst += '{0} '.format(list(pkg.items())[0][0])
-        log.debug('Installing these packages instead of {0}: {1}'.format(name, pkg2inst))
+        log.debug(
+            'Installing these packages instead of {0}: {1}'.format(
+                name, pkg2inst
+            )
+        )
 
     else:   # install single package
         if version:
@@ -426,27 +493,29 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
     # Install or upgrade the package
     # If package is already installed
     cmd += '{0}'.format(pkg2inst)
-    #ret = __salt__['cmd.retcode'](cmd)
-    ret = __salt__['cmd.run_all'](cmd)
+
+    out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
     # Get a list of the packages again, including newly installed ones.
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
 
-    changes = salt.utils.compare_dicts(old, new)
-
-    if ret['retcode'] != 0:     # there's something worth looking at
-        output = {}             # so we're adding some additional info
-        output['changes'] = changes
-        output['retcode'] = ips_pkg_return_values[ret['retcode']]   # translate error code
-        output['message'] = ret['stderr'] + '\n'
-        return output
+    if out['retcode'] != 0:
+        raise CommandExecutionError(
+            'Error occurred installing package(s)',
+            info={
+                'changes': ret,
+                'retcode': ips_pkg_return_values[out['retcode']],
+                'errors': [out['stderr']]
+            }
+        )
 
     # No error occurred
     if test:
-        return "Test succeeded."
+        return 'Test succeeded.'
 
-    # Return a list of the new packages installed.
-    return changes
+    return ret
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -467,49 +536,50 @@ def remove(name=None, pkgs=None, **kwargs):
 
     Returns a list containing the removed packages.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove tcsh
         salt '*' pkg.remove pkg://solaris/shell/tcsh
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-
-    # Check to see if the package is installed before we proceed
-    if not pkgs:
-        if not is_installed(name):
-            return ''
-
     pkg2rm = ''
     if pkgs:    # multiple packages specified
         for pkg in pkgs:
             pkg2rm += '{0} '.format(pkg)
-        log.debug('Installing these packages instead of {0}: {1}'.format(name, pkg2rm))
+        log.debug(
+            'Installing these packages instead of {0}: {1}'.format(
+                name, pkg2rm
+            )
+        )
     else:   # remove single package
-        pkg2rm = "{0}".format(name)
+        pkg2rm = '{0}'.format(name)
 
     # Get a list of the currently installed pkgs.
     old = list_pkgs()
 
     # Remove the package(s)
     cmd = '/bin/pkg uninstall -v {0}'.format(pkg2rm)
-    ret = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
     # Get a list of the packages after the uninstall
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
 
-    # Compare the pre and post remove package objects and report the uninstalled pkgs.
-    changes = salt.utils.compare_dicts(old, new)
+    if out['retcode'] != 0:
+        raise CommandExecutionError(
+            'Error occurred removing package(s)',
+            info={
+                'changes': ret,
+                'retcode': ips_pkg_return_values[out['retcode']],
+                'errors': [out['stderr']]
+            }
+        )
 
-    if ret['retcode'] != 0:     # there's something worth looking at
-        output = {}             # so we're adding some additional info
-        output['changes'] = changes
-        output['retcode'] = ips_pkg_return_values[ret['retcode']]   # translate error code
-        output['message'] = ret['stderr'] + '\n'
-        return output
-
-    # No error occurred
-    return changes
+    return ret
 
 
 def purge(name, **kwargs):
@@ -518,7 +588,9 @@ def purge(name, **kwargs):
 
     Returns a list containing the removed packages.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.purge <package name>
     '''

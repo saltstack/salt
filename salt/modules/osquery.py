@@ -22,11 +22,14 @@ __func_alias__ = {
     'time_': 'time',
 }
 
+__virtualname__ = 'osquery'
+
 
 def __virtual__():
     if salt.utils.which('osqueryi'):
-        return 'osquery'
-    return False
+        return __virtualname__
+    return (False, 'The osquery execution module cannot be loaded: '
+            'osqueryi binary is not in the path.')
 
 
 def _table_attrs(table):

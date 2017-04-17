@@ -24,6 +24,7 @@ import datetime
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
 import salt.ext.six as six
+from salt.exceptions import SaltInvocationError
 import salt.utils.event
 from salt.ext.six.moves import configparser
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
@@ -55,10 +56,10 @@ def __virtual__():
     Set the virtual pkg module if the os is openSUSE
     '''
     if __grains__.get('os_family', '') != 'Suse':
-        return False
+        return (False, "Module zypper: non SUSE OS not suppored by zypper package manager")
     # Not all versions of Suse use zypper, check that it is available
     if not salt.utils.which('zypper'):
-        return False
+        return (False, "Module zypper: zypper package manager not found")
     return __virtualname__
 
 
@@ -435,10 +436,10 @@ def info_available(*names, **kwargs):
 
     for pkg_data in pkg_info:
         nfo = {}
-        for line in [data for data in pkg_data.split("\n") if ":" in data]:
-            if line.startswith("-----"):
+        for line in [data for data in pkg_data.split('\n') if ':' in data]:
+            if line.startswith('-----'):
                 continue
-            kw = [data.strip() for data in line.split(":", 1)]
+            kw = [data.strip() for data in line.split(':', 1)]
             if len(kw) == 2 and kw[1]:
                 nfo[kw[0].lower()] = kw[1]
         if nfo.get('name'):
@@ -454,7 +455,7 @@ def info_available(*names, **kwargs):
 
 def info(*names, **kwargs):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2016.3.0
        Use :py:func:`~salt.modules.pkg.info_available` instead.
 
     Return the information of the named package available for the system.
@@ -785,8 +786,10 @@ def mod_repo(repo, **kwargs):
 
             if new_url == base_url:
                 raise CommandExecutionError(
-                    'Repository \'{0}\' already exists as \'{1}\''
-                    .format(repo, alias)
+                    'Repository \'{0}\' already exists as \'{1}\'.'.format(
+                        repo,
+                        alias
+                    )
                 )
 
         # Add new repo
@@ -812,7 +815,9 @@ def mod_repo(repo, **kwargs):
         cmd_opt.append(kwargs['refresh'] and '--refresh' or '--no-refresh')
 
     if 'cache' in kwargs:
-        cmd_opt.append(kwargs['cache'] and '--keep-packages' or '--no-keep-packages')
+        cmd_opt.append(
+            kwargs['cache'] and '--keep-packages' or '--no-keep-packages'
+        )
 
     if 'gpgcheck' in kwargs:
         cmd_opt.append(kwargs['gpgcheck'] and '--gpgcheck' or '--no-gpgcheck')
@@ -883,6 +888,7 @@ def install(name=None,
             pkgs=None,
             sources=None,
             downloadonly=None,
+            skip_verify=False,
             version=None,
             ignore_repo_failure=False,
             **kwargs):
@@ -906,10 +912,10 @@ def install(name=None,
 
     name
         The name of the package to be installed. Note that this parameter is
-        ignored if either "pkgs" or "sources" is passed. Additionally, please
-        note that this option can only be used to install packages from a
-        software repository. To install a package file manually, use the
-        "sources" option.
+        ignored if either ``pkgs`` or ``sources`` is passed. Additionally,
+        please note that this option can only be used to install packages from
+        a software repository. To install a package file manually, use the
+        ``sources`` option.
 
         CLI Example:
 
@@ -928,10 +934,13 @@ def install(name=None,
     downloadonly
         Only download the packages, do not install.
 
+    skip_verify
+        Skip the GPG verification check (e.g., ``--no-gpg-checks``)
+
     version
         Can be either a version number, or the combination of a comparison
         operator (<, >, <=, >=, =) and a version number (ex. '>1.2.3-4').
-        This parameter is ignored if "pkgs" or "sources" is passed.
+        This parameter is ignored if ``pkgs`` or ``sources`` is passed.
 
 
     Multiple Package Installation Options:
@@ -1017,14 +1026,21 @@ def install(name=None,
     downgrades = []
     if fromrepo:
         fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
-        log.info('Targeting repo {0!r}'.format(fromrepo))
+        log.info('Targeting repo \'{0}\''.format(fromrepo))
     else:
         fromrepoopt = ''
     cmd_install = ['install', '--name', '--auto-agree-with-licenses']
+    if not refresh:
+        cmd_install.insert(0, '--no-refresh')
+    if skip_verify:
+        cmd_install.insert(0, '--no-gpg-checks')
     if downloadonly:
         cmd_install.append('--download-only')
     if fromrepo:
         cmd_install.extend(fromrepoopt)
+
+    errors = []
+
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     systemd_scope = _systemd_scope()
@@ -1043,8 +1059,15 @@ def install(name=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
 
-    return salt.utils.compare_dicts(old, new)
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def upgrade(refresh=True,
@@ -1052,6 +1075,7 @@ def upgrade(refresh=True,
             dist_upgrade=False,
             fromrepo=None,
             novendorchange=False,
+            skip_verify=False,
             **kwargs):  # pylint: disable=unused-argument
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -1088,6 +1112,9 @@ def upgrade(refresh=True,
     novendorchange
         If set to True, no allow vendor changes. Default: False
 
+    skip_verify
+        Skip the GPG verification check (e.g., ``--no-gpg-checks``)
+
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
@@ -1108,6 +1135,10 @@ def upgrade(refresh=True,
 
     cmd_update = (['dist-upgrade'] if dist_upgrade else ['update']) + ['--auto-agree-with-licenses']
 
+    if skip_verify:
+        # The '--no-gpg-checks' needs to be placed before the Zypper command.
+        cmd_update.insert(0, '--no-gpg-checks')
+
     if refresh:
         refresh_db()
 
@@ -1115,11 +1146,6 @@ def upgrade(refresh=True,
         cmd_update.append('--dry-run')
 
     if dist_upgrade:
-        if dryrun:
-            # Creates a solver test case for debugging.
-            log.info('Executing debugsolver and performing a dry-run dist-upgrade')
-            __zypper__.noraise.call(*cmd_update + ['--debug-solver'])
-
         if fromrepo:
             for repo in fromrepo:
                 cmd_update.extend(['--from', repo])
@@ -1133,7 +1159,13 @@ def upgrade(refresh=True,
             else:
                 log.warn('Disabling vendor changes is not supported on this Zypper version')
 
+        if dryrun:
+            # Creates a solver test case for debugging.
+            log.info('Executing debugsolver and performing a dry-run dist-upgrade')
+            __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update + ['--debug-solver'])
+
     old = list_pkgs()
+
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
     if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
         ret['result'] = False
@@ -1164,12 +1196,22 @@ def _uninstall(name=None, pkgs=None):
         return {}
 
     systemd_scope = _systemd_scope()
+
+    errors = []
     while targets:
         __zypper__(systemd_scope=systemd_scope).call('remove', *targets[:500])
         targets = targets[500:]
-    __context__.pop('pkg.list_pkgs', None)
 
-    return salt.utils.compare_dicts(old, list_pkgs())
+    __context__.pop('pkg.list_pkgs', None)
+    ret = salt.utils.compare_dicts(old, list_pkgs())
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
@@ -1293,7 +1335,8 @@ def list_locks():
 
 def clean_locks():
     '''
-    Remove unused locks that do not currently (with regard to repositories used) lock any package.
+    Remove unused locks that do not currently (with regard to repositories
+    used) lock any package.
 
     CLI Example:
 
@@ -1504,7 +1547,6 @@ def _get_patterns(installed_only=None):
     List all known patterns in repos.
     '''
     patterns = {}
-
     for element in __zypper__.nolock.xml.call('se', '-t', 'pattern').getElementsByTagName('solvable'):
         installed = element.getAttribute('status') == 'installed'
         if (installed_only and installed) or not installed_only:
@@ -1570,7 +1612,9 @@ def search(criteria, refresh=False):
 
     solvables = __zypper__.nolock.xml.call('se', criteria).getElementsByTagName('solvable')
     if not solvables:
-        raise CommandExecutionError('No packages found by criteria "{0}".'.format(criteria))
+        raise CommandExecutionError(
+            'No packages found matching \'{0}\''.format(criteria)
+        )
 
     out = {}
     for solvable in [slv for slv in solvables
@@ -1663,7 +1707,7 @@ def list_products(all=False, refresh=False):
 
 
 def download(*packages, **kwargs):
-    """
+    '''
     Download packages to the local disk.
 
     refresh
@@ -1677,24 +1721,28 @@ def download(*packages, **kwargs):
 
         salt '*' pkg.download httpd
         salt '*' pkg.download httpd postfix
-    """
-    refresh = kwargs.get('refresh', False)
+    '''
     if not packages:
-        raise CommandExecutionError("No packages has been specified.")
+        raise SaltInvocationError('No packages specified')
 
+    refresh = kwargs.get('refresh', False)
     if refresh:
         refresh_db()
 
     pkg_ret = {}
     for dld_result in __zypper__.xml.call('download', *packages).getElementsByTagName("download-result"):
         repo = dld_result.getElementsByTagName("repository")[0]
+        path = dld_result.getElementsByTagName("localfile")[0].getAttribute("path")
         pkg_info = {
-            'repository-name': repo.getAttribute("name"),
-            'repository-alias': repo.getAttribute("alias"),
-            'path': dld_result.getElementsByTagName("localfile")[0].getAttribute("path"),
+            'repository-name': repo.getAttribute('name'),
+            'repository-alias': repo.getAttribute('alias'),
+            'path': path,
         }
+        key = _get_first_aggregate_text(
+            dld_result.getElementsByTagName('name')
+        )
         if __salt__['lowpkg.checksum'](pkg_info['path']):
-            pkg_ret[_get_first_aggregate_text(dld_result.getElementsByTagName("name"))] = pkg_info
+            pkg_ret[key] = pkg_info
 
     if pkg_ret:
         failed = [pkg for pkg in packages if pkg not in pkg_ret]
@@ -1702,7 +1750,9 @@ def download(*packages, **kwargs):
             pkg_ret['_error'] = ('The following package(s) failed to download: {0}'.format(', '.join(failed)))
         return pkg_ret
 
-    raise CommandExecutionError("Unable to download packages: {0}.".format(', '.join(packages)))
+    raise CommandExecutionError(
+        'Unable to download packages: {0}'.format(', '.join(packages))
+    )
 
 
 def diff(*paths):
@@ -1736,6 +1786,9 @@ def diff(*paths):
         local_pkgs = __salt__['pkg.download'](*pkg_to_paths.keys())
         for pkg, files in six.iteritems(pkg_to_paths):
             for path in files:
-                ret[path] = __salt__['lowpkg.diff'](local_pkgs[pkg]['path'], path) or 'Unchanged'
+                ret[path] = __salt__['lowpkg.diff'](
+                    local_pkgs[pkg]['path'],
+                    path
+                ) or 'Unchanged'
 
     return ret

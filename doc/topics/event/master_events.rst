@@ -43,10 +43,10 @@ Key events
 .. salt:event:: salt/key
 
     Fired when accepting and rejecting minions keys on the Salt master.
+    These happen as a result of actions undertaken by the `salt-key` command.
 
     :var id: The minion ID.
-    :var act: The new status of the minion key: ``accept``, ``pend``,
-              ``reject``.
+    :var act: The new status of the minion key: ``accept``, ``delete``,
 
 .. warning:: If a master is in :conf_master:`auto_accept mode`, ``salt/key`` events
              will not be fired when the keys are accepted.  In addition, pre-seeding
@@ -74,7 +74,7 @@ Job events
     :var minions: A list of minion IDs that Salt expects will return data for
         this job.
     :var user: The name of the user that ran the command as defined in Salt's
-        Client ACL or external auth.
+        Publisher ACL or external auth.
 
 .. salt:event:: salt/job/<JID>/ret/<MID>
 

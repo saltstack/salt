@@ -73,7 +73,16 @@ class BaseTCPReqCase(TestCase):
         cls.server_channel.close()
         del cls.server_channel
 
+    @classmethod
+    @tornado.gen.coroutine
+    def _handle_payload(cls, payload):
+        '''
+        TODO: something besides echo
+        '''
+        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
+
+@skipIf(salt.utils.is_darwin(), 'hanging test suite on MacOS')
 class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     '''
     Test all of the clear msg stuff
@@ -90,6 +99,7 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
+@skipIf(salt.utils.is_darwin(), 'hanging test suite on MacOS')
 class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     def setUp(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts)

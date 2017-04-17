@@ -4,6 +4,7 @@ Create ssh executor system
 '''
 # Import python libs
 from __future__ import absolute_import, print_function
+import base64
 import copy
 import getpass
 import json
@@ -43,6 +44,7 @@ import salt.utils.url
 import salt.utils.verify
 import salt.utils.network
 from salt.utils import is_windows
+from salt.utils.process import MultiprocessingProcess
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -55,7 +57,7 @@ except ImportError:
     HAS_ZMQ = False
 
 # The directory where salt thin is deployed
-DEFAULT_THIN_DIR = '/tmp/.%%USER%%_%%FQDNUUID%%_salt'
+DEFAULT_THIN_DIR = '/var/tmp/.%%USER%%_%%FQDNUUID%%_salt'
 
 # RSTR is just a delimiter to distinguish the beginning of salt STDOUT
 # and STDERR.  There is no special meaning.  Messages prior to RSTR in
@@ -115,16 +117,22 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 # 1. Identify a suitable python
 # 2. Jump to python
 
-SSH_SH_SHIM = r'''/bin/sh << 'EOF'
+# Note the list-comprehension syntax to define SSH_SH_SHIM is needed
+# to be able to define the string with indentation for readability but
+# still strip the white space for compactness and to avoid issues with
+# some multi-line embedded python code having indentation errors
+SSH_SH_SHIM = \
+    '\n'.join(
+        [s.strip() for s in r'''/bin/sh << 'EOF'
 set -e
 set -u
 DEBUG="{{DEBUG}}"
 if [ -n "$DEBUG" ]
-then set -x
+    then set -x
 fi
 SUDO=""
 if [ -n "{{SUDO}}" ]
-then SUDO="sudo "
+    then SUDO="sudo "
 fi
 SUDO_USER="{{SUDO_USER}}"
 if [ "$SUDO" ] && [ "$SUDO_USER" ]
@@ -133,20 +141,48 @@ elif [ "$SUDO" ] && [ -n "$SUDO_USER" ]
 then SUDO="sudo "
 fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
-PYTHON_CMDS="python27 python2.7 python26 python2.6 python2 python"
+PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
-do if "$py_cmd" -c "import sys; sys.exit(not (sys.hexversion >= 0x02060000 and sys.version_info[0] == {{HOST_PY_MAJOR}}));" >/dev/null 2>&1
-then py_cmd_path=`"$py_cmd" -c 'from __future__ import print_function; import sys; print(sys.executable);'`
-exec $SUDO "$py_cmd_path" -c 'import base64; exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
-exit 0
-else continue
-fi
+do
+    if command -v "$py_cmd" >/dev/null 2>&1 && "$py_cmd" -c \
+        "import sys; sys.exit(not (sys.version_info >= (2, 6)
+                              and sys.version_info[0] == {{HOST_PY_MAJOR}}));"
+    then
+        py_cmd_path=`"$py_cmd" -c \
+                   'from __future__ import print_function;
+                   import sys; print(sys.executable);'`
+        cmdpath=$(command -v $py_cmd 2>/dev/null || which $py_cmd 2>/dev/null)
+        if file $cmdpath | grep "shell script" > /dev/null
+        then
+            ex_vars="'PATH', 'LD_LIBRARY_PATH', 'MANPATH', \
+                   'XDG_DATA_DIRS', 'PKG_CONFIG_PATH'"
+            export $($py_cmd -c \
+                  "from __future__ import print_function;
+                  import sys;
+                  import os;
+                  map(sys.stdout.write, ['{{{{0}}}}={{{{1}}}} ' \
+                  .format(x, os.environ[x]) for x in [$ex_vars]])")
+            exec $SUDO PATH=$PATH LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
+                     MANPATH=$MANPATH XDG_DATA_DIRS=$XDG_DATA_DIRS \
+                     PKG_CONFIG_PATH=$PKG_CONFIG_PATH \
+                     "$py_cmd_path" -c \
+                   'import base64;
+                   exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
+        else
+            exec $SUDO "$py_cmd_path" -c \
+                   'import base64;
+                   exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
+        fi
+        exit 0
+    else
+        continue
+    fi
 done
 echo "ERROR: Unable to locate appropriate python command" >&2
 exit $EX_PYTHON_INVALID
 EOF'''.format(
-    EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
-)
+            EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
+            ).split('\n')])
 
 if not is_windows():
     shim_file = os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')
@@ -209,7 +245,13 @@ class SSH(object):
                 try:
                     salt.client.ssh.shell.gen_key(priv)
                 except OSError:
-                    raise salt.exceptions.SaltClientError('salt-ssh could not be run because it could not generate keys.\n\nYou can probably resolve this by executing this script with increased permissions via sudo or by running as root.\nYou could also use the \'-c\' option to supply a configuration directory that you have permissions to read and write to.')
+                    raise salt.exceptions.SaltClientError(
+                        'salt-ssh could not be run because it could not generate keys.\n\n'
+                        'You can probably resolve this by executing this script with '
+                        'increased permissions via sudo or by running as root.\n'
+                        'You could also use the \'-c\' option to supply a configuration '
+                        'directory that you have permissions to read and write to.'
+                    )
         self.defaults = {
             'user': self.opts.get(
                 'ssh_user',
@@ -246,13 +288,16 @@ class SSH(object):
         }
         if self.opts.get('rand_thin_dir'):
             self.defaults['thin_dir'] = os.path.join(
-                    '/tmp',
+                    '/var/tmp',
                     '.{0}'.format(uuid.uuid4().hex[:6]))
-            self.opts['wipe_ssh'] = 'True'
+            self.opts['ssh_wipe'] = 'True'
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
-        self.thin = salt.utils.thin.gen_thin(self.opts['cachedir'], extra_mods=self.opts.get('thin_extra_mods'))
+        self.thin = salt.utils.thin.gen_thin(self.opts['cachedir'],
+                                             extra_mods=self.opts.get('thin_extra_mods'),
+                                             python2_bin=self.opts['python2_bin'],
+                                             python3_bin=self.opts['python3_bin'])
         self.mods = mod_data(self.fsclient)
 
     def get_pubkey(self):
@@ -405,7 +450,7 @@ class SSH(object):
                         self.targets[host],
                         mine,
                         )
-                routine = multiprocessing.Process(
+                routine = MultiprocessingProcess(
                                 target=self.handle_routine,
                                 args=args)
                 routine.start()
@@ -451,7 +496,7 @@ class SSH(object):
             if len(running) >= self.opts.get('ssh_max_procs', 25) or len(self.targets) >= len(running):
                 time.sleep(0.1)
 
-    def run_iter(self, mine=False):
+    def run_iter(self, mine=False, jid=None):
         '''
         Execute and yield returns as they come in, do not print to the display
 
@@ -461,7 +506,7 @@ class SSH(object):
             will modify the argv with the arguments from mine_functions
         '''
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-        jid = self.returners[fstr]()
+        jid = self.returners[fstr](passed_jid=jid or self.opts.get('jid', None))
 
         # Save the invocation information
         argv = self.opts['argv']
@@ -505,12 +550,12 @@ class SSH(object):
                                                                               'return': ret,
                                                                               'fun': fun})
 
-    def run(self):
+    def run(self, jid=None):
         '''
         Execute the overall routine, print results via outputters
         '''
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-        jid = self.returners[fstr]()
+        jid = self.returners[fstr](passed_jid=jid or self.opts.get('jid', None))
 
         # Save the invocation information
         argv = self.opts['argv']
@@ -533,11 +578,14 @@ class SSH(object):
 
         # save load to the master job cache
         try:
+            if isinstance(jid, bytes):
+                jid = jid.decode('utf-8')
             if self.opts['master_job_cache'] == 'local_cache':
                 self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load, minions=self.targets.keys())
             else:
                 self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
         except Exception as exc:
+            log.exception(exc)
             log.error('Could not save load with returner {0}: {1}'.format(self.opts['master_job_cache'], exc))
 
         if self.opts.get('verbose'):
@@ -632,7 +680,14 @@ class Single(object):
         if kwargs.get('wipe'):
             self.wipe = 'False'
         else:
-            self.wipe = 'True' if self.opts.get('wipe_ssh') else 'False'
+            if self.opts.get('wipe_ssh'):
+                salt.utils.warn_until(
+                    'Nitrogen',
+                    'Support for \'wipe_ssh\' has been deprecated in Saltfile and will be removed '
+                    'in Salt Nitrogen. Please use \'ssh_wipe\' instead.'
+                )
+                self.wipe = 'True'
+            self.wipe = 'True' if self.opts.get('ssh_wipe') else 'False'
         if kwargs.get('thin_dir'):
             self.thin_dir = kwargs['thin_dir']
         else:
@@ -670,9 +725,14 @@ class Single(object):
                 'mods': self.mods,
                 'identities_only': identities_only,
                 'sudo_user': sudo_user}
-        self.minion_opts = opts.get('ssh_minion_opts', {})
+        # Pre apply changeable defaults
+        self.minion_opts = {
+                    'grains_cache': True,
+                }
+        self.minion_opts.update(opts.get('ssh_minion_opts', {}))
         if minion_opts is not None:
             self.minion_opts.update(minion_opts)
+        # Post apply system needed defaults
         self.minion_opts.update({
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
@@ -885,9 +945,11 @@ class Single(object):
                 result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
             result = 'TypeError encountered executing {0}: {1}'.format(self.fun, exc)
+            log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
         except Exception as exc:
             result = 'An Exception occurred while executing {0}: {1}'.format(self.fun, exc)
+            log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
@@ -940,7 +1002,10 @@ ARGS = {10}\n'''.format(self.minion_config,
                          self.cmd_umask,
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
-        py_code_enc = py_code.encode('base64')
+        if six.PY2:
+            py_code_enc = py_code.encode('base64')
+        else:
+            py_code_enc = base64.encodebytes(py_code.encode('utf-8')).decode('utf-8')
         cmd = SSH_SH_SHIM.format(
             DEBUG=debug,
             SUDO=sudo,
@@ -961,13 +1026,9 @@ ARGS = {10}\n'''.format(self.minion_config,
         if not self.tty:
             return self.shell.exec_cmd(cmd_str)
 
-        # Write the shim to a file
-        shim_dir = os.path.join(self.opts['cachedir'], 'ssh_shim')
-        if not os.path.exists(shim_dir):
-            os.makedirs(shim_dir)
+        # Write the shim to a temporary file in the default temp directory
         with tempfile.NamedTemporaryFile(mode='w',
                                          prefix='shim_',
-                                         dir=shim_dir,
                                          delete=False) as shim_tmp_file:
             shim_tmp_file.write(cmd_str)
 
@@ -1018,23 +1079,23 @@ ARGS = {10}\n'''.format(self.minion_config,
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
                     return 'ERROR: Failure deploying thin, undefined state: {0}'.format(stdout), stderr, retcode
-                stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
-                stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+                while re.search(RSTR_RE, stdout):
+                    stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
+                while re.search(RSTR_RE, stderr):
+                    stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             else:
                 return 'ERROR: {0}'.format(error), stderr, retcode
 
         # FIXME: this discards output from ssh_shim if the shim succeeds.  It should
         # always save the shim output regardless of shim success or failure.
-        if re.search(RSTR_RE, stdout):
+        while re.search(RSTR_RE, stdout):
             stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
-        else:
-            # This is actually an error state prior to the shim but let it fall through
-            pass
 
         if re.search(RSTR_RE, stderr):
             # Found RSTR in stderr which means SHIM completed and only
             # and remaining output is only from salt.
-            stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+            while re.search(RSTR_RE, stderr):
+                stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
 
         else:
             # RSTR was found in stdout but not stderr - which means there
@@ -1054,11 +1115,13 @@ ARGS = {10}\n'''.format(self.minion_config,
                         # If RSTR is not seen in stdout with tty, then there
                         # was a thin deployment problem.
                         log.error('ERROR: Failure deploying thin, retrying: {0}\n{1}'.format(stdout, stderr), stderr, retcode)
-                stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
+                while re.search(RSTR_RE, stdout):
+                    stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 if self.tty:
                     stderr = ''
                 else:
-                    stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+                    while re.search(RSTR_RE, stderr):
+                        stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             elif 'ext_mods' == shim_command:
                 self.deploy_ext()
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
@@ -1066,8 +1129,10 @@ ARGS = {10}\n'''.format(self.minion_config,
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
                     return 'ERROR: Failure deploying ext_mods: {0}'.format(stdout), stderr, retcode
-                stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
-                stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+                while re.search(RSTR_RE, stdout):
+                    stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
+                while re.search(RSTR_RE, stderr):
+                    stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
 
         return stdout, stderr, retcode
 
@@ -1268,9 +1333,16 @@ def ssh_version():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE).communicate()
     try:
-        return ret[1].split(b',')[0].split(b'_')[1]
+        version_parts = ret[1].split(b',')[0].split(b'_')[1]
+        parts = []
+        for part in version_parts:
+            try:
+                parts.append(int(part))
+            except ValueError:
+                return tuple(parts)
+        return tuple(parts)
     except IndexError:
-        return '2.0'
+        return (2, 0)
 
 
 def _convert_args(args):

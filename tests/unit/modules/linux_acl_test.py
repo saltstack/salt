@@ -193,4 +193,4 @@ class LinuxAclTestCase(TestCase):
 
     def test_delfacl__recursive_w_multiple_args(self):
         linux_acl.delfacl(*(self.default_user_acl[:-1] + self.files), recursive=True)
-        self.cmdrun.assert_called_once_with('setfacl -x -R ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.files), python_shell=False)
+        self.cmdrun.assert_called_once_with('setfacl -R -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.files), python_shell=False)

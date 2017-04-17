@@ -54,7 +54,7 @@ service, then set the reload value to True:
 .. note::
 
     More details regarding ``watch`` can be found in the
-    :doc:`Requisites </ref/states/requisites>` documentation.
+    :ref:`Requisites <requisites>` documentation.
 
 '''
 
@@ -316,7 +316,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ``watch`` can be used with service.running to restart a service when
          another state changes ( example: a file.managed state that creates the
          service's config file ). More details regarding ``watch`` can be found
-         in the :doc:`Requisites </ref/states/requisites>` documentation.
+         in the :ref:`Requisites <requisites>` documentation.
     '''
     ret = {'name': name,
            'changes': {},
@@ -431,6 +431,9 @@ def dead(name, enable=None, sig=None, **kwargs):
     # Check if the service is available
     try:
         if not _available(name, ret):
+            # A non-available service is OK here, don't let the state fail
+            # because of it.
+            ret['result'] = True
             return ret
     except CommandExecutionError as exc:
         ret['result'] = False

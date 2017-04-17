@@ -1,8 +1,8 @@
 .. _targeting-pillar:
 
-=====================
-Targeting with Pillar
-=====================
+======================
+Targeting using Pillar
+======================
 
 Pillar data can be used when targeting minions. This allows for ultimate
 control and flexibility when targeting minions.

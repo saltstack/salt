@@ -38,7 +38,7 @@ def __virtual__():
     """
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return True
-    return False
+    return (False, "Module win_wua: module has failed dependencies or is not on Windows client")
 
 
 def _wua_search(skip_hidden=True,
@@ -954,32 +954,36 @@ def set_wu_settings(level=None,
         Boolean value that indicates whether to include optional or recommended
         updates when a search for updates and installation of updates is
         performed.
+
     :param bool featured:
         Boolean value that indicates whether to display notifications for
         featured updates.
+
     :param bool elevated:
         Boolean value that indicates whether non-administrators can perform some
         update-related actions without administrator approval.
+
     :param bool msupdate:
         Boolean value that indicates whether to turn on Microsoft Update for
         other Microsoft products
+
     :param str day:
         Days of the week on which Automatic Updates installs or uninstalls
         updates.
         Accepted values:
-        - Everyday
-        - Monday
-        - Tuesday
-        - Wednesday
-        - Thursday
-        - Friday
-        - Saturday
+            - Everyday
+            - Monday
+            - Tuesday
+            - Wednesday
+            - Thursday
+            - Friday
+            - Saturday
+
     :param str time:
         Time at which Automatic Updates installs or uninstalls updates. Must be
         in the ##:## 24hr format, eg. 3:00 PM would be 15:00
 
-    :return:
-    Returns a dictionary containing the results.
+    :return: Returns a dictionary containing the results.
 
     CLI Examples:
 

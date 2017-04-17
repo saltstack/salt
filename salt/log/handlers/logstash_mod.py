@@ -185,7 +185,7 @@ def __virtual__():
         log.trace(
             'None of the required configuration sections, '
             '\'logstash_udp_handler\' and \'logstash_zmq_handler\', '
-            'were found the in the configuration. Not loading the Logstash '
+            'were found in the configuration. Not loading the Logstash '
             'logging handlers module.'
         )
         return False

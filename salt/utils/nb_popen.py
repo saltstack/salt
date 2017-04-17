@@ -25,7 +25,9 @@ import logging
 import tempfile
 import subprocess
 
-if subprocess.mswindows:
+mswindows = (sys.platform == "win32")
+
+if mswindows:
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
     import msvcrt
@@ -123,7 +125,7 @@ class NonBlockingPopen(subprocess.Popen):
         getattr(self, which).close()
         setattr(self, which, None)
 
-    if subprocess.mswindows:
+    if mswindows:
         def send(self, input):
             if not self.stdin:
                 return None

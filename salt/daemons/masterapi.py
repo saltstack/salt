@@ -13,6 +13,7 @@ import re
 import time
 import stat
 import tempfile
+import msgpack
 
 # Import salt libs
 import salt.crypt
@@ -146,7 +147,12 @@ def clean_expired_tokens(opts):
         for token in filenames:
             token_path = os.path.join(dirpath, token)
             with salt.utils.fopen(token_path) as token_file:
-                token_data = serializer.loads(token_file.read())
+                try:
+                    token_data = serializer.loads(token_file.read())
+                except msgpack.UnpackValueError:
+                    # Bad token file or empty. Remove.
+                    os.remove(token_path)
+                    return
                 if 'expire' not in token_data or token_data.get('expire', 0) < time.time():
                     try:
                         os.remove(token_path)
@@ -194,7 +200,15 @@ def access_keys(opts):
     '''
     users = []
     keys = {}
-    acl_users = set(opts['client_acl'].keys())
+    if opts['client_acl'] or opts['client_acl_blacklist']:
+        salt.utils.warn_until(
+                'Nitrogen',
+                'ACL rules should be configured with \'publisher_acl\' and '
+                '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
+                'This functionality will be removed in Salt Nitrogen.'
+                )
+    publisher_acl = opts['publisher_acl'] or opts['client_acl']
+    acl_users = set(publisher_acl.keys())
     if opts.get('user'):
         acl_users.add(opts['user'])
     acl_users.add(salt.utils.get_user())
@@ -461,6 +475,7 @@ class RemoteFuncs(object):
         good = self.ckminions.auth_check(
                 perms,
                 load['fun'],
+                load['arg'],
                 load['tgt'],
                 load.get('tgt_type', 'glob'),
                 publish_validate=True)
@@ -744,12 +759,13 @@ class RemoteFuncs(object):
             return False
         if 'events' in load:
             for event in load['events']:
-                self.event.fire_event(event, event['tag'])  # old dup event
+                if 'data' in event:
+                    event_data = event['data']
+                else:
+                    event_data = event
+                self.event.fire_event(event_data, event['tag'])  # old dup event
                 if load.get('pretag') is not None:
-                    if 'data' in event:
-                        self.event.fire_event(event['data'], tagify(event['tag'], base=load['pretag']))
-                    else:
-                        self.event.fire_event(event, tagify(event['tag'], base=load['pretag']))
+                    self.event.fire_event(event_data, tagify(event['tag'], base=load['pretag']))
         else:
             tag = load['tag']
             self.event.fire_event(load, tag)
@@ -1337,13 +1353,21 @@ class LocalFuncs(object):
         # check blacklist/whitelist
         good = True
         # Check if the user is blacklisted
-        for user_re in self.opts['client_acl_blacklist'].get('users', []):
+        if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
+            salt.utils.warn_until(
+                    'Nitrogen',
+                    'ACL rules should be configured with \'publisher_acl\' and '
+                    '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
+                    'This functionality will be removed in Salt Nitrogen.'
+                    )
+        blacklist = self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist']
+        for user_re in blacklist.get('users', []):
             if re.match(user_re, load['user']):
                 good = False
                 break
 
         # check if the cmd is blacklisted
-        for module_re in self.opts['client_acl_blacklist'].get('modules', []):
+        for module_re in blacklist.get('modules', []):
             # if this is a regular command, its a single function
             if isinstance(load['fun'], str):
                 funs_to_check = [load['fun']]
@@ -1399,6 +1423,7 @@ class LocalFuncs(object):
                         if token['name'] in self.opts['external_auth'][token['eauth']]
                         else self.opts['external_auth'][token['eauth']]['*'],
                     load['fun'],
+                    load['arg'],
                     load['tgt'],
                     load.get('tgt_type', 'glob'))
             if not good:
@@ -1440,6 +1465,7 @@ class LocalFuncs(object):
                         if name in self.opts['external_auth'][extra['eauth']]
                         else self.opts['external_auth'][extra['eauth']]['*'],
                     load['fun'],
+                    load['arg'],
                     load['tgt'],
                     load.get('tgt_type', 'glob'))
             if not good:
@@ -1487,14 +1513,16 @@ class LocalFuncs(object):
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
-                    if load['user'] not in self.opts['client_acl']:
+                    acl = self.opts['publisher_acl'] or self.opts['client_acl']
+                    if load['user'] not in acl:
                         log.warning(
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
                     good = self.ckminions.auth_check(
-                            self.opts['client_acl'][load['user']],
+                            acl[load['user']],
                             load['fun'],
+                            load['arg'],
                             load['tgt'],
                             load.get('tgt_type', 'glob'))
                     if not good:
@@ -1616,6 +1644,9 @@ class LocalFuncs(object):
 
             if 'metadata' in load['kwargs']:
                 pub_load['metadata'] = load['kwargs'].get('metadata')
+
+            if 'ret_kwargs' in load['kwargs']:
+                pub_load['ret_kwargs'] = load['kwargs'].get('ret_kwargs')
 
         if 'user' in load:
             log.info(

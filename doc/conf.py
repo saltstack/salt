@@ -15,31 +15,40 @@ from sphinx.directives import TocTree
 # pylint: disable=R0903
 class Mock(object):
     '''
-    Mock out specified imports
+    Mock out specified imports.
 
     This allows autodoc to do its thing without having oodles of req'd
     installed libs. This doesn't work with ``import *`` imports.
 
+    This Mock class can be configured to return a specific values at specific names, if required.
+
     http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
     '''
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self, mapping=None, *args, **kwargs):
+        """
+        Mapping allows to bypass the Mock object, but actually assign
+        a specific value, expected by a specific attribute returned.
+        """
+        self.__mapping = mapping or {}
 
     __all__ = []
 
     def __call__(self, *args, **kwargs):
-        ret = Mock()
         # If mocked function is used as a decorator, expose decorated function.
         # if args and callable(args[-1]):
         #     functools.update_wrapper(ret, args[0])
-        return ret
+        return Mock(mapping=self.__mapping)
 
-    @classmethod
-    def __getattr__(cls, name):
-        if name in ('__file__', '__path__'):
-            return '/dev/null'
+    def __getattr__(self, name):
+        #__mapping = {'total': 0}
+        data = None
+        if name in self.__mapping:
+            data = self.__mapping.get(name)
+        elif name in ('__file__', '__path__'):
+            data = '/dev/null'
         else:
-            return Mock()
+            data = Mock(mapping=self.__mapping)
+        return data
 # pylint: enable=R0903
 
 MOCK_MODULES = [
@@ -56,7 +65,6 @@ MOCK_MODULES = [
     'Crypto.Signature',
     'Crypto.Signature.PKCS1_v1_5',
     'M2Crypto',
-    'msgpack',
     'yaml',
     'yaml.constructor',
     'yaml.nodes',
@@ -92,9 +100,13 @@ MOCK_MODULES = [
     'tornado.httpserver',
     'tornado.httputil',
     'tornado.ioloop',
+    'tornado.iostream',
+    'tornado.netutil',
     'tornado.simple_httpclient',
+    'tornado.stack_context',
     'tornado.web',
     'tornado.websocket',
+    'tornado.locks',
 
     'ws4py',
     'ws4py.server',
@@ -125,10 +137,16 @@ MOCK_MODULES = [
     'salt.ext.six.moves.winreg',
     'win32security',
     'ntsecuritycon',
+    'pyroute2',
+    'pyroute2.ipdb',
 ]
 
 for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = Mock()
+    if mod_name == 'psutil':
+        mock = Mock(mapping={'total': 0})  # Otherwise it will crash Sphinx
+    else:
+        mock = Mock()
+    sys.modules[mod_name] = mock
 
 def mock_decorator_with_params(*oargs, **okwargs):
     '''
@@ -189,17 +207,23 @@ intersphinx_mapping = {
 
 # -- General Configuration -----------------------------------------------------
 
+# Set a var if we're building docs for the live site or not
+on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
+
 project = 'Salt'
-copyright = '2016 SaltStack, Inc.'
 
 version = salt.version.__version__
-latest_release = '2016.11.0'  # latest release
-previous_release = '2015.8.12'  # latest release from previous branch
-previous_release_dir = '2015.8'  # path on web server for previous branch
+latest_release = '2016.11.3'  # latest release
+previous_release = '2016.3.6'  # latest release from previous branch
+previous_release_dir = '2016.3'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
-today = time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z")
+today = ''
+copyright = ''
+if on_saltstack:
+    today = "Generated on " + time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z") + "."
+    copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
 build_type = 'previous'  # latest, previous, develop, next
@@ -269,6 +293,11 @@ rst_prolog = """\
      <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
       | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
 
+.. |osxdownload| raw:: html
+
+     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-x86_64.pkg"><strong>salt-{release}-x86_64.pkg</strong></a>
+      | <a href="https://repo.saltstack.com/osx/salt-{release}-x86_64.pkg.md5"><strong>md5</strong></a></p>
+
 """.format(release=release)
 
 # A shortcut for linking to tickets on the GitHub issue tracker
@@ -297,9 +326,6 @@ html_static_path = ['_static']
 html_logo = None # specified in the theme layout.html
 html_favicon = 'favicon.ico'
 html_use_smartypants = False
-
-# Set a var if we're building docs for the live site or not
-on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 
 # Use Google customized search or use Sphinx built-in JavaScript search
 if on_saltstack:
@@ -342,9 +368,12 @@ html_context = {
     'latest_release': latest_release,
     'previous_release': previous_release,
     'previous_release_dir': previous_release_dir,
+    'next_release': next_release,
+    'next_release_dir': next_release_dir,
     'search_cx': search_cx,
     'build_type': build_type,
     'today': today,
+    'copyright': copyright,
 }
 
 html_use_index = True

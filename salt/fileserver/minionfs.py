@@ -91,6 +91,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             and not salt.fileserver.is_file_ignored(__opts__, full):
         fnd['path'] = full
         fnd['rel'] = path
+        fnd['stat'] = list(os.stat(full))
         return fnd
     return fnd
 
@@ -155,9 +156,9 @@ def file_hash(load, fnd):
     ret = {}
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -224,9 +225,9 @@ def file_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -252,7 +253,7 @@ def file_list(load):
         # pushed files
         if tgt_minion not in minion_dirs:
             log.warning(
-                'No files found in minionfs cache for minion ID {0!r}'
+                'No files found in minionfs cache for minion ID \'{0}\''
                 .format(tgt_minion)
             )
             return []
@@ -307,9 +308,9 @@ def dir_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -335,7 +336,7 @@ def dir_list(load):
         # pushed files
         if tgt_minion not in minion_dirs:
             log.warning(
-                'No files found in minionfs cache for minion ID {0!r}'
+                'No files found in minionfs cache for minion ID \'{0}\''
                 .format(tgt_minion)
             )
             return []

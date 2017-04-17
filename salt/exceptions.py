@@ -9,10 +9,21 @@ import copy
 import logging
 import time
 
-# Import salt libs
+# Import Salt libs
 import salt.defaults.exitcodes
 
 log = logging.getLogger(__name__)
+
+
+def _nested_output(obj):
+    '''
+    Serialize obj and format for output
+    '''
+    # Explicit late import to avoid circular import
+    from salt.output import nested
+    nested.__opts__ = {}
+    ret = nested.output(obj).rstrip()
+    return ret
 
 
 def get_error_message(error):
@@ -85,6 +96,44 @@ class CommandExecutionError(SaltException):
     Used when a module runs a command which returns an error and wants
     to show the user the output gracefully instead of dying
     '''
+    def __init__(self, message='', info=None):
+        self.error = exc_str_prefix = message
+        self.info = info
+        if self.info:
+            try:
+                if exc_str_prefix[-1] not in '.?!':
+                    exc_str_prefix += '.'
+            except IndexError:
+                pass
+            exc_str_prefix += ' Additional info follows:\n\n'
+            # Get rid of leading space if the exception was raised with an
+            # empty message.
+            exc_str_prefix = exc_str_prefix.lstrip()
+            # NOTE: exc_str will be passed to the parent class' constructor and
+            # become self.strerror.
+            exc_str = exc_str_prefix + _nested_output(self.info)
+
+            # For states, if self.info is a dict also provide an attribute
+            # containing a nested output of the info dict without the changes
+            # (since they will be in the 'changes' key of the state return and
+            # this information would be redundant).
+            if isinstance(self.info, dict):
+                info_without_changes = copy.deepcopy(self.info)
+                info_without_changes.pop('changes', None)
+                if info_without_changes:
+                    self.strerror_without_changes = \
+                        exc_str_prefix + _nested_output(info_without_changes)
+                else:
+                    # 'changes' was the only key in the info dictionary. We no
+                    # longer have any additional info to display. Use the
+                    # original error message.
+                    self.strerror_without_changes = self.error
+            else:
+                self.strerror_without_changes = exc_str
+        else:
+            self.strerror_without_changes = exc_str = self.error
+
+        super(CommandExecutionError, self).__init__(exc_str)
 
 
 class LoaderError(SaltException):

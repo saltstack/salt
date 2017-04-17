@@ -30,7 +30,6 @@ class PipTestCase(TestCase):
                 expected_cmd,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -62,7 +61,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -75,7 +73,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -99,7 +96,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -112,7 +108,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -125,12 +120,15 @@ class PipTestCase(TestCase):
                 ['pip', 'install', pkgs[0], '--editable', editables[0]],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
 
+    @patch.object(pip, 'version', MagicMock(return_value='1.4'))
     def test_issue5940_install_multiple_pip_mirrors(self):
+        '''
+        test multiple pip mirrors.  This test only works with pip < 7.0.0
+        '''
         mirrors = [
             'http://g.pypi.python.org',
             'http://c.pypi.python.org',
@@ -149,7 +147,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -162,7 +159,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -175,7 +171,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--use-mirrors', '--mirrors', mirrors[0]],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -201,7 +196,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -214,7 +208,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -227,7 +220,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--find-links', find_links[0], pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -250,7 +242,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -288,7 +279,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -312,12 +302,11 @@ class PipTestCase(TestCase):
                 env={'VIRTUAL_ENV': '/test_env'},
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
 
-    @patch('os.path')
+    @patch('os.access')
     def test_install_log_argument_in_resulting_command(self, mock_path):
         pkg = 'pep8'
         log_path = '/tmp/pip-install.log'
@@ -328,12 +317,15 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--log', log_path, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
 
+    @patch('os.path')
+    def test_non_writeable_log(self, mock_path):
         # Let's fake a non-writable log file
+        pkg = 'pep8'
+        log_path = '/tmp/pip-install.log'
         mock_path.exists.side_effect = IOError('Fooo!')
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
@@ -355,7 +347,6 @@ class PipTestCase(TestCase):
                 expected_prefix + [10, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -368,7 +359,6 @@ class PipTestCase(TestCase):
                 expected_prefix + ['10', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -393,7 +383,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--index-url', index_url, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -408,7 +397,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--extra-index-url', extra_index_url, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -422,7 +410,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--no-index', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -437,7 +424,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--build', build, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -452,7 +438,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--target', target, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -467,7 +452,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--download', download, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -481,7 +465,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--no-download', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -496,7 +479,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--download-cache', download_cache, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -511,7 +493,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--source', source, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -526,7 +507,6 @@ class PipTestCase(TestCase):
                     ['pip', 'install', '--exists-action', action, pkg],
                     saltenv='base',
                     runas=None,
-                    cwd=None,
                     use_vt=False,
                     python_shell=False,
                 )
@@ -561,7 +541,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -574,7 +553,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -588,7 +566,6 @@ class PipTestCase(TestCase):
                  install_options[0], pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -613,7 +590,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -626,7 +602,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -639,7 +614,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--global-option', global_options[0], pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -653,7 +627,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--upgrade', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -667,7 +640,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--force-reinstall', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -681,7 +653,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--ignore-installed', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -695,7 +666,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--no-deps', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -709,7 +679,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--no-install', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -724,7 +693,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--proxy', proxy, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -751,7 +719,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -765,7 +732,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -779,7 +745,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--requirement', cached_reqs[0]],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -804,9 +769,9 @@ class PipTestCase(TestCase):
             pip.uninstall(requirements=requirements)
             mock.assert_called_once_with(
                 expected,
+                cwd=None,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -818,9 +783,9 @@ class PipTestCase(TestCase):
             pip.uninstall(requirements=','.join(requirements))
             mock.assert_called_once_with(
                 expected,
+                cwd=None,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -832,9 +797,9 @@ class PipTestCase(TestCase):
             pip.uninstall(requirements=requirements[0])
             mock.assert_called_once_with(
                 ['pip', 'uninstall', '-y', '--requirement', cached_reqs[0]],
+                cwd=None,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -848,8 +813,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 ['pip', 'uninstall', '-y', '--proxy', proxy, pkg],
                 saltenv='base',
-                runas=None,
                 cwd=None,
+                runas=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -864,8 +829,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 ['pip', 'uninstall', '-y', '--log', log_path, pkg],
                 saltenv='base',
-                runas=None,
                 cwd=None,
+                runas=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -890,9 +855,9 @@ class PipTestCase(TestCase):
             pip.uninstall(pkg, timeout=10)
             mock.assert_called_once_with(
                 expected_prefix + [10, pkg],
+                cwd=None,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -903,9 +868,9 @@ class PipTestCase(TestCase):
             pip.uninstall(pkg, timeout='10')
             mock.assert_called_once_with(
                 expected_prefix + ['10', pkg],
+                cwd=None,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -938,8 +903,8 @@ class PipTestCase(TestCase):
             ret = pip.freeze()
             mock.assert_called_once_with(
                 ['pip', 'freeze'],
-                runas=None,
                 cwd=None,
+                runas=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -969,8 +934,8 @@ class PipTestCase(TestCase):
                 ret = pip.list_()
                 mock.assert_called_with(
                     ['pip', 'freeze'],
-                    runas=None,
                     cwd=None,
+                    runas=None,
                     python_shell=False,
                 )
                 self.assertEqual(
@@ -1012,8 +977,8 @@ class PipTestCase(TestCase):
             ret = pip.list_(prefix='bb')
             mock.assert_called_with(
                 ['pip', 'freeze'],
-                runas=None,
                 cwd=None,
+                runas=None,
                 python_shell=False,
             )
             self.assertEqual(
@@ -1039,7 +1004,6 @@ class PipTestCase(TestCase):
                     ['pip', 'install', pkg],
                     saltenv='base',
                     runas=None,
-                    cwd=None,
                     use_vt=False,
                     python_shell=False,
                 )
@@ -1055,7 +1019,6 @@ class PipTestCase(TestCase):
                     ['pip', 'install', '--pre', pkg],
                     saltenv='base',
                     runas=None,
-                    cwd=None,
                     use_vt=False,
                     python_shell=False,
                 )

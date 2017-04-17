@@ -5,6 +5,7 @@ Tests for the Git state
 
 # Import python libs
 from __future__ import absolute_import
+import errno
 import os
 import shutil
 import socket
@@ -38,6 +39,10 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         except socket.error:
             msg = 'error resolving {0}, possible network issue?'
             self.skipTest(msg.format(self.__domain))
+
+    def tearDown(self):
+        # Reset the dns timeout after the test is over
+        socket.setdefaulttimeout(None)
 
     def test_latest(self):
         '''
@@ -333,6 +338,68 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             'The desired rev (develop) differs from the name of the local '
             'branch (new_branch)'
         )
+
+    def test_latest_updated_remote_rev(self):
+        '''
+        Ensure that we don't exit early when checking for a fast-forward
+        '''
+        orig_cwd = os.getcwd()
+        name = tempfile.mkdtemp(dir=integration.TMP)
+        target = os.path.join(integration.TMP, 'test_latest_updated_remote_rev')
+
+        # Initialize a new git repository
+        subprocess.check_call(['git', 'init', '--quiet', name])
+
+        try:
+            os.chdir(name)
+            # Set user.name and user.email config attributes if not present
+            for key, value in (('user.name', 'Jenkins'),
+                               ('user.email', 'qa@saltstack.com')):
+                # Check if key is missing
+                keycheck = subprocess.Popen(
+                    ['git', 'config', '--get', key],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
+                if keycheck.wait() != 0:
+                    # Set the key if it is not present
+                    subprocess.check_call(
+                        ['git', 'config', key, value])
+
+            # Add and commit a file
+            with salt.utils.fopen('foo.txt', 'w') as fp_:
+                fp_.write('Hello world\n')
+            subprocess.check_call(['git', 'add', '.'])
+            subprocess.check_call(['git', 'commit', '-qm', 'init'])
+
+            # Run the state to clone the repo we just created
+            ret = self.run_state(
+                'git.latest',
+                name=name,
+                target=target,
+            )
+            self.assertSaltTrueReturn(ret)
+
+            # Add another commit
+            with salt.utils.fopen('foo.txt', 'w') as fp_:
+                fp_.write('Added a line\n')
+            subprocess.check_call(['git', 'commit', '-aqm', 'added a line'])
+
+            # Run the state again. It should pass, if it doesn't then there was
+            # a problem checking whether or not the change is a fast-forward.
+            ret = self.run_state(
+                'git.latest',
+                name=name,
+                target=target,
+            )
+            self.assertSaltTrueReturn(ret)
+        finally:
+            os.chdir(orig_cwd)
+            for path in (name, target):
+                try:
+                    shutil.rmtree(path)
+                except OSError as exc:
+                    if exc.errno != errno.ENOENT:
+                        raise exc
 
     def test_present(self):
         '''

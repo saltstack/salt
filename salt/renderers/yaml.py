@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 YAML Renderer for Salt
+
+For YAML usage information see :ref:`Understanding YAML <yaml>`.
 '''
 
 from __future__ import absolute_import

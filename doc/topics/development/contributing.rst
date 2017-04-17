@@ -18,13 +18,13 @@ Salt Coding Style
 -----------------
 
 SaltStack has its own coding style guide that informs contributors on various coding
-approaches. Please review the :ref:`Salt Coding Style<coding-style>`_ documentation
+approaches. Please review the :ref:`Salt Coding Style<coding-style>` documentation
 for information about Salt's particular coding patterns.
 
-Within the :ref:`Salt Coding Style<coding-style>`_ documentation, there is a section
+Within the :ref:`Salt Coding Style<coding-style>` documentation, there is a section
 about running Salt's ``.pylintrc`` file. SaltStack recommends running the ``.pylintrc``
 file on any files you are changing with your code contribution before submitting a
-pull request to Salt's repository. Please see the :ref:`Linting<pylint-instructions>`_
+pull request to Salt's repository. Please see the :ref:`Linting<pylint-instructions>`
 documentation for more information.
 
 
@@ -66,7 +66,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
     .. code-block:: bash
 
         git fetch upstream
-        git checkout -b fix-broken-thing upstream/2015.5
+        git checkout -b fix-broken-thing upstream/2016.3
 
     If you're working on a feature, create your branch from the develop branch.
 
@@ -95,9 +95,9 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
     .. code-block:: bash
 
-        fix broken things in file1 and file2
+        Fix broken things in file1 and file2
 
-        Fixes #31337.  The issue is now eradicated from file1 and file2.
+        Fixes #31337
 
         # Please enter the commit message for your changes. Lines starting
         # with '#' will be ignored, and an empty message aborts the commit.
@@ -110,26 +110,54 @@ Fork a Repo Guide_>`_ and is well worth reading.
     If you get stuck, there are many introductory Git resources on
     http://help.github.com.
 
-#.  Push your locally-committed changes to your GitHub fork,
+#.  Push your locally-committed changes to your GitHub fork.
+
+    .. code-block:: bash
+
+        git push -u origin fix-broken-thing
+
+    or
+
+    .. code-block:: bash
+
+        git push -u origin add-cool-feature
 
     .. note::
 
         You may want to rebase before pushing to work out any potential
-        conflicts.
+        conflicts:
 
-    .. code-block:: bash
+        .. code-block:: bash
 
-        git fetch upstream
-        git rebase upstream/2015.5 fix-broken-thing
-        git push --set-upstream origin fix-broken-thing
+            git fetch upstream
+            git rebase upstream/2016.3 fix-broken-thing
+            git push -u origin fix-broken-thing
 
-    or,
+        or
 
-    .. code-block:: bash
+        .. code-block:: bash
 
-        git fetch upstream
-        git rebase upstream/develop add-cool-feature
-        git push --set-upstream origin add-cool-feature
+            git fetch upstream
+            git rebase upstream/develop add-cool-feature
+            git push -u origin add-cool-feature
+
+        If you do rebase, and the push is rejected with a
+        ``(non-fast-forward)`` comment, then run ``git status``. You will
+        likely see a message about the branches diverging:
+
+        .. code-block:: text
+
+            On branch fix-broken-thing
+            Your branch and 'origin/fix-broken-thing' have diverged,
+            and have 1 and 2 different commits each, respectively.
+              (use "git pull" to merge the remote branch into yours)
+            nothing to commit, working tree clean
+
+        Do **NOT** perform a ``git pull`` or ``git merge`` here. Instead, add
+        ``--force`` to the end of the ``git push`` command to get the changes
+        pushed to your fork. Pulling or merging, while they will resolve the
+        non-fast-forward issue, will likely add extra commits to the pull
+        request which were not part of your changes.
 
 #.  Find the branch on your GitHub salt fork.
 
@@ -142,9 +170,9 @@ Fork a Repo Guide_>`_ and is well worth reading.
     https://github.com/my-account/salt/pull/new/fix-broken-thing
 
     #.  If your branch is a fix for a release branch, choose that as the base
-        branch (e.g. ``2015.5``),
+        branch (e.g. ``2016.3``),
 
-        https://github.com/my-account/salt/compare/saltstack:2015.5...fix-broken-thing
+        https://github.com/my-account/salt/compare/saltstack:2016.3...fix-broken-thing
 
         If your branch is a feature, choose ``develop`` as the base branch,
 
@@ -197,7 +225,7 @@ The current release branch
 The current release branch is the most recent stable release. Pull requests
 containing bug fixes should be made against the release branch.
 
-The branch name will be a date-based name such as ``2015.5``.
+The branch name will be a date-based name such as ``2016.3``.
 
 Bug fixes are made on this branch so that minor releases can be cut from this
 branch without introducing surprises and new features. This approach maximizes
@@ -364,7 +392,7 @@ And ``upstream`` is the name of the remote pointing to the main Salt repo.
 
         git rebase --onto <release-branch> <orig-base> bp-1234
 
-    Note, release branches prior to ``2015.5`` will not be able to make use of
+    Note, release branches prior to ``2016.3`` will not be able to make use of
     rebase and must use cherry-picking instead.
 
 5.  Push the back-port branch to GitHub and open a new pull request.
@@ -390,3 +418,14 @@ and bug resolution. See the :ref:`Labels and Milestones
 .. _'Git resources`: https://help.github.com/articles/good-resources-for-learning-git-and-github/
 .. _`Closing issues via commit message`: https://help.github.com/articles/closing-issues-via-commit-messages
 .. _`git format-patch`: https://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
+
+Mentionbot
+==========
+
+SaltStack runs a mention-bot which notifies contributors who might be able
+to help review incoming pull-requests based on their past contribution to
+files which are being changed.
+
+If you do not wish to receive these notifications, please add your GitHub
+handle to the blacklist line in the `.mention-bot` file located in the
+root of the Salt repository.

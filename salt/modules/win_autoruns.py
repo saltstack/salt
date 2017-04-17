@@ -28,7 +28,7 @@ def __virtual__():
 
     if salt.utils.is_windows():
         return __virtualname__
-    return False
+    return (False, "Module win_autoruns: module only works on Windows systems")
 
 
 def _get_dirs(user_dir, startup_dir):

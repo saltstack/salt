@@ -13,7 +13,7 @@
 #default_include: minion.d/*.conf
 
 # Backwards compatibility option for proxymodules created before 2015.8.2
-# This setting will default to 'False' in the Boron release
+# This setting will default to 'False' in the 2016.3.0 release
 # Setting this to True adds proxymodules to the __opts__ dictionary.
 # This breaks several Salt features (basically anything that serializes
 # __opts__ over the wire) but retains backwards compatibility.
@@ -22,6 +22,14 @@
 # Set the location of the salt master server. If the master server cannot be
 # resolved, then the minion will fail to start.
 #master: salt
+
+# If a proxymodule has a function called 'grains', then call it during
+# regular grains loading and merge the results with the proxy's grains
+# dictionary.  Otherwise it is assumed that the module calls the grains
+# function in a custom way and returns the data elsewhere
+#
+# Default to False for 2016.3 and Carbon.  Switch to True for Nitrogen.
+# proxy_merge_grains_in_module: False
 
 # If multiple masters are specified in the 'master' setting, the default behavior
 # is to always try to connect to them in the order they are listed. If random_master is
@@ -75,6 +83,16 @@
 # Where cache data goes.
 # This data may contain sensitive data and should be protected accordingly.
 #cachedir: /var/cache/salt/minion
+
+# Append minion_id to these directories.  Helps with
+# multiple proxies and minions running on the same machine.
+# Allowed elements in the list: pki_dir, cachedir, extension_modules
+# Normally not needed unless running several proxies and/or minions on the same machine
+# Defaults to ['cachedir'] for proxies, [] (empty list) for regular minions
+# append_minionid_config_dirs:
+#   - cachedir
+
+
 
 # Verify and set permissions on configuration directories at startup.
 #verify_env: True

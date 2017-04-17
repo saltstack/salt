@@ -27,7 +27,7 @@ Primary Master Configuration
 
 Default: ``0.0.0.0`` (all interfaces)
 
-The local interface to bind to.
+The local interface to bind to, must be an IP address.
 
 .. code-block:: yaml
 
@@ -41,7 +41,7 @@ The local interface to bind to.
 Default: ``False``
 
 Whether the master should listen for IPv6 connections. If this is set to True,
-the interface option must be adjusted too (for example: "interface: '::'")
+the interface option must be adjusted too (for example: ``interface: '::'``)
 
 .. code-block:: yaml
 
@@ -228,13 +228,21 @@ The directory to store the pki authentication keys.
 ``extension_modules``
 ---------------------
 
+.. versionchanged:: 2016.3.0
+    The default location for this directory has been moved. Prior to this
+    version, the location was a directory named ``extmods`` in the Salt
+    cachedir (on most platforms, ``/var/cache/salt/extmods``). It has been
+    moved into the master cachedir (on most platforms,
+    ``/var/cache/salt/master/extmods``).
+
 Directory for custom modules. This directory can contain subdirectories for
-each of Salt's module types such as "runners", "output", "wheel", "modules",
-"states", "returners", etc. This path is appended to :conf_master:`root_dir`.
+each of Salt's module types such as ``runners``, ``output``, ``wheel``,
+``modules``, ``states``, ``returners``, ``engines``, etc. This path is appended to
+:conf_master:`root_dir`.
 
 .. code-block:: yaml
 
-    extension_modules: srv/modules
+    extension_modules: /root/salt_extmods
 
 .. conf_minion:: module_dirs
 
@@ -664,6 +672,24 @@ what you are doing! Transports are explained in :ref:`Salt Transports
 
     transport: zeromq
 
+``transport_opts``
+------------------
+
+Default: ``{}``
+
+(experimental) Starts multiple transports and overrides options for each transport with the provided dictionary
+This setting has a significant impact on performance and should not be changed unless you know
+what you are doing! Transports are explained in :ref:`Salt Transports
+<transports>`. The following example shows how to start a TCP transport alongside a ZMQ transport.
+
+.. code-block:: yaml
+
+    transport_opts:
+      tcp:
+        publish_port: 4605
+        ret_port: 4606
+      zeromq: []
+
 Salt-SSH Configuration
 ======================
 
@@ -679,6 +705,21 @@ Pass in an alternative location for the salt-ssh roster file.
 .. code-block:: yaml
 
     roster_file: /root/roster
+
+.. conf_master:: ssh_log_file
+
+``ssh_log_file``
+-------------------
+
+.. versionadded:: 2016.3.5
+
+Default: ``/var/log/salt/ssh``
+
+Specify the log file of the ``salt-ssh`` command.
+
+.. code-block:: yaml
+
+    ssh_log_file: /var/log/salt/ssh
 
 .. conf_master:: ssh_minion_opts
 
@@ -786,27 +827,28 @@ minion IDs for which keys will automatically be rejected. Will override both
 membership in the :conf_master:`autosign_file` and the
 :conf_master:`auto_accept` setting.
 
-.. conf_master:: client_acl
+.. conf_master:: publisher_acl
 
-``client_acl``
---------------
+``publisher_acl``
+-----------------
 
 Default: ``{}``
 
 Enable user accounts on the master to execute specific modules. These modules
-can be expressed as regular expressions.
+can be expressed as regular expressions. Note that client_acl option is
+deprecated by publisher_acl option and will be removed in future releases.
 
 .. code-block:: yaml
 
-    client_acl:
+    publisher_acl:
       fred:
         - test.ping
         - pkg.*
 
-.. conf_master:: client_acl_blacklist
+.. conf_master:: publisher_acl_blacklist
 
-``client_acl_blacklist``
-------------------------
+``publisher_acl_blacklist``
+---------------------------
 
 Default: ``{}``
 
@@ -814,13 +856,14 @@ Blacklist users or modules
 
 This example would blacklist all non sudo users, including root from
 running any commands. It would also blacklist any use of the "cmd"
-module.
+module. Note that client_acl_blacklist option is deprecated by
+publisher_acl_blacklist option and will be removed in future releases.
 
 This is completely disabled by default.
 
 .. code-block:: yaml
 
-    client_acl_blacklist:
+    publisher_acl_blacklist:
       users:
         - root
         - '^(?!sudo_).*$'   #  all non sudo users
@@ -1515,7 +1558,6 @@ directories above the one specified will be ignored and the relative path will
     gitfs_root: somefolder/otherfolder
 
 .. versionchanged:: 2014.7.0
-
    Ability to specify gitfs roots on a per-remote basis was added. See
    :ref:`here <gitfs-per-remote-config>` for more info.
 
@@ -2179,9 +2221,9 @@ exposed.
 .. code-block:: yaml
 
     minionfs_whitelist:
-      - base
-      - v1.*
-      - 'mybranch\d+'
+      - server01
+      - dev*
+      - 'mail\d+.mydomain.tld'
 
 .. conf_master:: minionfs_blacklist
 
@@ -2205,12 +2247,12 @@ exposed.
 .. code-block:: yaml
 
     minionfs_blacklist:
-      - base
-      - v1.*
-      - 'mybranch\d+'
+      - server01
+      - dev*
+      - 'mail\d+.mydomain.tld'
 
 
-.. _pillar-configuration:
+.. _pillar-configuration-master:
 
 Pillar Configuration
 ====================
@@ -2239,6 +2281,34 @@ configuration is the same as :conf_master:`file_roots`:
         - /srv/pillar/dev
       prod:
         - /srv/pillar/prod
+
+.. conf_master:: on_demand_ext_pillar
+
+``on_demand_ext_pillar``
+------------------------
+
+.. versionadded:: 2016.3.6,2016.11.3,Nitrogen
+
+Default: ``['libvirt', 'virtkey']``
+
+The external pillars permitted to be used on-demand using :py:func:`pillar.ext
+<salt.modules.pillar.ext>`.
+
+.. code-block:: yaml
+
+    on_demand_ext_pillar:
+      - libvirt
+      - virtkey
+      - git
+
+.. warning::
+    This will allow minions to request specific pillar data via
+    :py:func:`pillar.ext <salt.modules.pillar.ext>`, and may be considered a
+    security risk. However, pillar data generated in this way will not affect
+    the :ref:`in-memory pillar data <pillar-in-memory>`, so this risk is
+    limited to instances in which states/modules/etc. (built-in or custom) rely
+    upon pillar data generated by :py:func:`pillar.ext
+    <salt.modules.pillar.ext>`.
 
 .. conf_master:: pillar_opts
 
@@ -2628,7 +2698,11 @@ Pillar Merging Options
 Default: ``smart``
 
 The pillar_source_merging_strategy option allows you to configure merging
-strategy between different sources. It accepts 4 values:
+strategy between different sources. It accepts 5 values:
+
+* ``none``:
+.. versionadded:: 2016.3.4
+  It will not do any merging at all and only parse the pillar data from the passed environment and 'base' if no environment was specified.
 
 * ``recurse``:
 
@@ -2821,15 +2895,16 @@ can be utilized:
 Syndic Server Settings
 ======================
 
-A Salt syndic is a Salt master used to pass commands from a higher Salt master to
-minions below the syndic. Using the syndic is simple. If this is a master that
-will have syndic servers(s) below it, set the "order_masters" setting to True.
+A Salt syndic is a Salt master used to pass commands from a higher Salt master
+to minions below the syndic. Using the syndic is simple. If this is a master
+that will have syndic servers(s) below it, set the ``order_masters`` setting to
+``True``.
 
 If this is a master that will be running a syndic daemon for passthrough the
-"syndic_master" setting needs to be set to the location of the master server.
+``syndic_master`` setting needs to be set to the location of the master server.
 
-Do not not forget that, in other words, it means that it shares with the local minion
-its ID and PKI_DIR.
+Do not forget that, in other words, it means that it shares with the local minion
+its ID and PKI directory.
 
 .. conf_master:: order_masters
 
@@ -2851,9 +2926,13 @@ value must be set to True
 ``syndic_master``
 -----------------
 
-Default: ``''``
+.. versionchanged:: 2016.3.5,2016.11.1
 
-If this master will be running a salt-syndic to connect to a higher level
+    Set default higher level master address.
+
+Default: ``masterofmasters``
+
+If this master will be running the ``salt-syndic`` to connect to a higher level
 master, specify the higher level master with this configuration value.
 
 .. code-block:: yaml
@@ -2861,7 +2940,7 @@ master, specify the higher level master with this configuration value.
     syndic_master: masterofmasters
 
 You can optionally connect a syndic to multiple higher level masters by
-setting the 'syndic_master' value to a list:
+setting the ``syndic_master`` value to a list:
 
 .. code-block:: yaml
 
@@ -2869,7 +2948,7 @@ setting the 'syndic_master' value to a list:
       - masterofmasters1
       - masterofmasters2
 
-Each higher level master must be set up in a multimaster configuration.
+Each higher level master must be set up in a multi-master configuration.
 
 .. conf_master:: syndic_master_port
 
@@ -2878,40 +2957,72 @@ Each higher level master must be set up in a multimaster configuration.
 
 Default: ``4506``
 
-If this master will be running a salt-syndic to connect to a higher level
+If this master will be running the ``salt-syndic`` to connect to a higher level
 master, specify the higher level master port with this configuration value.
 
 .. code-block:: yaml
 
     syndic_master_port: 4506
 
-.. conf_master:: syndic_log_file
-
-.. conf_master:: syndic_master_log_file
+.. conf_master:: syndic_pidfile
 
 ``syndic_pidfile``
 ------------------
 
-Default: ``salt-syndic.pid``
+Default: ``/var/run/salt-syndic.pid``
 
-If this master will be running a salt-syndic to connect to a higher level
+If this master will be running the ``salt-syndic`` to connect to a higher level
 master, specify the pidfile of the syndic daemon.
 
 .. code-block:: yaml
 
-    syndic_pidfile: syndic.pid
+    syndic_pidfile: /var/run/syndic.pid
+
+.. conf_master:: syndic_log_file
 
 ``syndic_log_file``
 -------------------
 
-Default: ``syndic.log``
+Default: ``/var/log/salt/syndic``
 
-If this master will be running a salt-syndic to connect to a higher level
-master, specify the log_file of the syndic daemon.
+If this master will be running the ``salt-syndic`` to connect to a higher level
+master, specify the log file of the syndic daemon.
 
 .. code-block:: yaml
 
-    syndic_log_file: salt-syndic.log
+    syndic_log_file: /var/log/salt-syndic.log
+
+.. conf_master:: syndic_failover
+
+``syndic_failover``
+-------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``random``
+
+The behaviour of the multi-syndic when connection to a master of masters failed.
+Can specify ``random`` (default) or ``ordered``. If set to ``random``, masters
+will be iterated in random order. If ``ordered`` is specified, the configured
+order will be used.
+
+.. code-block:: yaml
+
+    syndic_failover: random
+
+.. conf_master:: syndic_wait
+
+``syndic_wait``
+---------------
+
+Default: ``5``
+
+The number of seconds for the salt client to wait for additional syndics to
+check in with their lists of expected minions before giving up.
+
+.. code-block:: yaml
+
+    syndic_wait: 5
 
 
 Peer Publish Settings

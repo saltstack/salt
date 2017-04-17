@@ -28,7 +28,7 @@ def __virtual__():
     '''
     if salt.utils.which('znc'):
         return 'znc'
-    return False
+    return (False, "Module znc: znc binary not found")
 
 
 def _makepass(password, hasher='sha256'):

@@ -22,7 +22,7 @@ def __virtual__():
     '''
     if salt.utils.which('lvm'):
         return __virtualname__
-    return False
+    return (False, 'The linux_lvm execution module cannot be loaded: the lvm binary is not in the path.')
 
 
 def version():

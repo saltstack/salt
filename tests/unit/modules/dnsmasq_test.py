@@ -16,6 +16,7 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
+from salt.exceptions import CommandExecutionError
 from salt.modules import dnsmasq
 
 # Import python libs
@@ -58,6 +59,23 @@ class DnsmasqTestCase(TestCase):
             with patch.object(os, 'listdir', mock):
                 self.assertDictEqual(dnsmasq.set_config(), {})
 
+    @patch('salt.modules.dnsmasq.get_config', MagicMock(return_value={'conf-dir': 'A'}))
+    def test_set_config_filter_pub_kwargs(self):
+        '''
+        Test that the kwargs returned from running the set_config function
+        do not contain the __pub that may have been passed through in **kwargs.
+        '''
+        mock_domain = 'local'
+        mock_address = '/some-test-address.local/8.8.4.4'
+        with patch.dict(dnsmasq.__salt__, {'file.append': MagicMock()}):
+            ret = dnsmasq.set_config(follow=False,
+                                     domain=mock_domain,
+                                     address=mock_address,
+                                     __pub_pid=8184,
+                                     __pub_jid=20161101194639387946,
+                                     __pub_tgt='salt-call')
+        self.assertEqual(ret, {'domain': mock_domain, 'address': mock_address})
+
     def test_get_config(self):
         '''
         test to dumps all options from the config file.
@@ -68,6 +86,14 @@ class DnsmasqTestCase(TestCase):
             with patch.object(os, 'listdir', mock):
                 self.assertDictEqual(dnsmasq.get_config(), {'conf-dir': 'A'})
 
+    def test_parse_dnsmasq_no_file(self):
+        '''
+        Tests that a CommandExecutionError is when a filename that doesn't exist is
+        passed in.
+        '''
+        self.assertRaises(CommandExecutionError, dnsmasq._parse_dnamasq, 'filename')
+
+    @patch('os.path.isfile', MagicMock(return_value=True))
     def test_parse_dnamasq(self):
         '''
         test for generic function for parsing dnsmasq files including includes.

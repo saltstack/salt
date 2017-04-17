@@ -34,7 +34,7 @@ def __virtual__():
     '''
     if HAS_SALTCLOUD:
         return True
-    return False
+    return (False, 'The cloud execution module cannot be loaded: only available on non-Windows systems.')
 
 
 def _get_client():

@@ -91,7 +91,7 @@ def __virtual__():
     '''
     if HAS_GLANCE:
         return 'glance'
-    return False
+    return (False, 'The glance execution module cannot be loaded: the glanceclient python library is not available.')
 
 
 __opts__ = {}
@@ -162,7 +162,6 @@ def _auth(profile=None, api_version=2, **connection_args):
         log.debug('Calling keystoneclient.v2_0.client.Client(' +
             '{0}, **{1})'.format(ks_endpoint, kwargs))
         keystone = kstone.Client(**kwargs)
-        log.debug(help(keystone.get_token))
         kwargs['token'] = keystone.get_token(keystone.session)
         # This doesn't realy prevent the password to show up
         # in the minion log as keystoneclient.session is
@@ -380,9 +379,9 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
         image.name, pformat(image)))
     ret_details = {}
     # I may want to use this code on Beryllium
-    # until we got Boron packages for Ubuntu
+    # until we got 2016.3.0 packages for Ubuntu
     # so please keep this code until Carbon!
-    warn_until('Carbon', 'Starting with \'Boron\' image_show() '
+    warn_until('Carbon', 'Starting with \'2016.3.0\' image_show() '
             'will stop wrapping the returned image in another '
             'dictionary.')
     if CUR_VER < BORON:
@@ -414,9 +413,9 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
     #    return False
     #
     # I may want to use this code on Beryllium
-    # until we got Boron packages for Ubuntu
+    # until we got 2016.3.0 packages for Ubuntu
     # so please keep this code until Carbon!
-    warn_until('Carbon', 'Starting in \'Boron\' image_list() '
+    warn_until('Carbon', 'Starting in \'2016.3.0\' image_list() '
         'will return a list of images instead of a dictionary '
         'keyed with the images\' names.')
     if CUR_VER < BORON:
@@ -508,9 +507,9 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
     g_client = _auth(profile)
     updated = g_client.images.update(image['id'], **to_update)
     # I may want to use this code on Beryllium
-    # until we got Boron packages for Ubuntu
+    # until we got 2016.3.0 packages for Ubuntu
     # so please keep this code until Carbon!
-    warn_until('Carbon', 'Starting with \'Boron\' image_update() '
+    warn_until('Carbon', 'Starting with \'2016.3.0\' image_update() '
             'will stop wrapping the returned, updated image in '
             'another dictionary.')
     if CUR_VER < BORON:

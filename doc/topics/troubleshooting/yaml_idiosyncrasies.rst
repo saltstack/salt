@@ -1,3 +1,5 @@
+.. _yaml-idiosyncrasies:
+
 ===================
 YAML Idiosyncrasies
 ===================
@@ -39,7 +41,7 @@ Nested Dictionaries
 When :ref:`dicts <python2:typesmapping>` are nested within other data
 structures (particularly lists), the indentation logic sometimes changes.
 Examples of where this might happen include ``context`` and ``default`` options
-from the :doc:`file.managed </ref/states/all/salt.states.file>` state:
+from the :mod:`file.managed <salt.states.file>` state:
 
 .. code-block:: yaml
 
@@ -110,7 +112,8 @@ PyYAML will load these values as boolean ``True`` or ``False``. Un-capitalized
 versions will also be loaded as booleans (``true``, ``false``, ``yes``, ``no``,
 ``on``, and ``off``). This can be especially problematic when constructing
 Pillar data. Make sure that your Pillars which need to use the string versions
-of these values are enclosed in quotes.
+of these values are enclosed in quotes.  Pillars will be parsed twice by salt,
+so you'll need to wrap your values in multiple quotes, for example '"false"'.
 
 The '%' Sign
 ============

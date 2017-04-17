@@ -68,10 +68,10 @@ def __virtual__():
     Only load this module if the nsnitro library is installed
     '''
     if salt.utils.is_windows():
-        return False
+        return (False, 'The netscaler execution module failed to load: not available on Windows.')
     if HAS_NSNITRO:
         return 'netscaler'
-    return False
+    return (False, 'The netscaler execution module failed to load: the nsnitro python library is not available.')
 
 
 def _connect(**kwargs):

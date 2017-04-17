@@ -37,7 +37,7 @@ Salt Virt Tutorial
 A tutorial about how to get Salt Virt up and running has been added to the
 tutorial section:
 
-:doc:`Cloud Controller Tutorial </topics/tutorials/cloud_controller>`
+:ref:`Cloud Controller Tutorial <cloud-controller>`
 
 The Salt Virt Runner
 ====================
@@ -66,3 +66,4 @@ Deploy from Network or Disk
 .. toctree::
     disk
     nic
+    ../tutorials/cloud_controller

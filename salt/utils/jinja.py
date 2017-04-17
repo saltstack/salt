@@ -58,10 +58,10 @@ class SaltCacheLoader(BaseLoader):
                  pillar_rend=False):
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env
@@ -72,7 +72,7 @@ class SaltCacheLoader(BaseLoader):
             self.searchpath = opts['file_roots'][saltenv]
         else:
             self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
-        log.debug('Jinja search path: {0!r}'.format(self.searchpath))
+        log.debug('Jinja search path: %s', self.searchpath)
         self._file_client = None
         self.cached = []
         self.pillar_rend = pillar_rend
@@ -116,7 +116,7 @@ class SaltCacheLoader(BaseLoader):
             tpldir = path.dirname(template).replace('\\', '/')
             tpldata = {
                 'tplfile': template,
-                'tpldir': tpldir,
+                'tpldir': '.' if tpldir == '' else tpldir,
                 'tpldot': tpldir.replace('/', '.'),
             }
             environment.globals.update(tpldata)
@@ -172,6 +172,8 @@ class PrintableDict(OrderedDict):
     def __repr__(self):  # pylint: disable=W0221
         output = []
         for key, value in six.iteritems(self):
+            # Raw string formatter required here because this is a repr
+            # function.
             output.append('{0!r}: {1!r}'.format(key, value))
         return '{' + ', '.join(output) + '}'
 
@@ -279,7 +281,7 @@ class SerializerExtension(Extension, object):
 
     **Load tags**
 
-    Salt implements ``import_yaml`` and ``import_json`` tags. They work like
+    Salt implements ``load_yaml`` and ``load_json`` tags. They work like
     the `import tag`_, except that the document is also deserialized.
 
     Syntaxes are ``{% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}``

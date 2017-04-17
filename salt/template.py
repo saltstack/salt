@@ -43,11 +43,11 @@ def compile_template(template,
     ret = {}
 
     log.debug('compile template: {0}'.format(template))
-    # We "map" env to the same as saltenv until Boron is out in order to follow the same deprecation path
+    # We "map" env to the same as saltenv until Carbon is out in order to follow the same deprecation path
     kwargs.setdefault('env', saltenv)
     salt.utils.warn_until(
-        'Boron',
-        'We are only supporting \'env\' in the templating context until Boron comes out. '
+        'Carbon',
+        'We are only supporting \'env\' in the templating context until Carbon comes out. '
         'Once this warning is shown, please remove the above mapping',
         _dont_call_warnings=True
     )
@@ -79,9 +79,9 @@ def compile_template(template,
 
     input_data = string_io(input_data)
     for render, argline in render_pipe:
-        # For GPG renderer, input_data can be an OrderedDict. Repress the
-        # error.
-        if not isinstance(input_data, OrderedDict):
+        # For GPG renderer, input_data can be an OrderedDict (from YAML) or dict (from py renderer).
+        # Repress the error.
+        if not isinstance(input_data, (dict, OrderedDict)):
             try:
                 input_data.seek(0)
             except Exception as exp:

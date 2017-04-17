@@ -22,7 +22,7 @@ def __virtual__():
     cmd = 'uwsgi'
     if salt.utils.which(cmd):
         return cmd
-    return False
+    return (False, 'The uwsgi execution module failed to load: the uwsgi binary is not in the path.')
 
 
 def stats(socket):

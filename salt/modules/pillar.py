@@ -8,6 +8,9 @@ from __future__ import absolute_import
 import collections
 
 # Import third party libs
+import os
+import copy
+import logging
 import yaml
 import salt.ext.six as six
 
@@ -15,11 +18,18 @@ import salt.ext.six as six
 import salt.pillar
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __proxyenabled__ = ['*']
 
+log = logging.getLogger(__name__)
 
-def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
+
+def get(key,
+        default=KeyError,
+        merge=False,
+        delimiter=DEFAULT_TARGET_DELIM,
+        saltenv=None):
     '''
     .. versionadded:: 0.14
 
@@ -48,27 +58,60 @@ def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
         .. versionadded:: 2014.7.0
 
     delimiter
-        Specify an alternate delimiter to use when traversing a nested dict
+        Specify an alternate delimiter to use when traversing a nested dict.
+        This is useful for when the desired key contains a colon. See CLI
+        example below for usage.
 
         .. versionadded:: 2014.7.0
+
+    saltenv
+        If specified, this function will query the master to generate fresh
+        pillar data on the fly, specifically from the requested pillar
+        environment. Note that this can produce different pillar data than
+        executing this function without an environment, as its normal behavior
+        is just to return a value from minion's pillar data in memory (which
+        can be sourced from more than one pillar environment).
+
+        Using this argument will not affect the pillar data in memory. It will
+        however be slightly slower and use more resources on the master due to
+        the need for the master to generate and send the minion fresh pillar
+        data. This tradeoff in performance however allows for the use case
+        where pillar data is desired only from a single environment.
+
+        .. versionadded:: Nitrogen
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pillar.get pkg:apache
+        salt '*' pillar.get abc::def|ghi delimiter='|'
     '''
     if not __opts__.get('pillar_raise_on_missing'):
         if default is KeyError:
             default = ''
 
-    if merge:
-        ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delimiter)
-        if isinstance(ret, collections.Mapping) and \
-                isinstance(default, collections.Mapping):
-            return salt.utils.dictupdate.update(default, ret)
+    pillar_dict = __pillar__ if saltenv is None else items(saltenv=saltenv)
 
-    ret = salt.utils.traverse_dict_and_list(__pillar__,
+    if merge:
+        if default is None:
+            log.debug('pillar.get: default is None, skipping merge')
+        else:
+            if not isinstance(default, dict):
+                raise SaltInvocationError(
+                    'default must be a dictionary or None when merge=True'
+                )
+            ret = salt.utils.traverse_dict_and_list(
+                pillar_dict,
+                key,
+                {},
+                delimiter)
+            if isinstance(ret, collections.Mapping) and \
+                    isinstance(default, collections.Mapping):
+                default = copy.deepcopy(default)
+                return salt.utils.dictupdate.update(default, ret)
+
+    ret = salt.utils.traverse_dict_and_list(pillar_dict,
                                             key,
                                             default,
                                             delimiter)
@@ -86,13 +129,22 @@ def items(*args, **kwargs):
     Contrast with :py:func:`raw` which returns the pillar data that is
     currently loaded into the minion.
 
-    pillar : none
+    pillar
         if specified, allows for a dictionary of pillar data to be made
         available to pillar and ext_pillar rendering. these pillar variables
         will also override any variables of the same name in pillar or
         ext_pillar.
 
         .. versionadded:: 2015.5.0
+
+    saltenv
+        Pass a specific pillar environment from which to compile pillar data.
+        If unspecified, the minion's :conf_minion:`environment` option is used,
+        and if that also is not specified then all configured pillar
+        environments will be merged into a single pillar dictionary and
+        returned.
+
+        .. versionadded:: Nitrogen
 
     CLI Example:
 
@@ -108,7 +160,7 @@ def items(*args, **kwargs):
         __opts__,
         __grains__,
         __opts__['id'],
-        __opts__['environment'],
+        kwargs.get('saltenv') or __opts__['environment'],
         pillar=kwargs.get('pillar'))
 
     return pillar.compile_pillar()
@@ -187,33 +239,43 @@ def item(*args, **kwargs):
     '''
     .. versionadded:: 0.16.2
 
-    Return one or more pillar entries
+    Return one or more pillar entries from the :ref:`in-memory pillar data
+    <pillar-in-memory>`.
 
-    pillar : none
-        if specified, allows for a dictionary of pillar data to be made
-        available to pillar and ext_pillar rendering. these pillar variables
-        will also override any variables of the same name in pillar or
-        ext_pillar.
+    delimiter
+        Delimiter used to traverse nested dictionaries.
 
-        .. versionadded:: 2015.5.0
+        .. note::
+            This is different from :py:func:`pillar.get
+            <salt.modules.pillar.get>` in that no default value can be
+            specified. :py:func:`pillar.get <salt.modules.pillar.get>` should
+            probably still be used in most cases to retrieve nested pillar
+            values, as it is a bit more flexible. One reason to use this
+            function instead of :py:func:`pillar.get <salt.modules.pillar.get>`
+            however is when it is desirable to retrieve the values of more than
+            one key, since :py:func:`pillar.get <salt.modules.pillar.get>` can
+            only retrieve one key at a time.
+
+        .. versionadded:: 2015.8.0
 
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' pillar.item foo
+        salt '*' pillar.item foo:bar
         salt '*' pillar.item foo bar baz
     '''
     ret = {}
     default = kwargs.get('default', '')
-    delimiter = kwargs.get('delimiter', ':')
+    delimiter = kwargs.get('delimiter', DEFAULT_TARGET_DELIM)
 
     try:
         for arg in args:
             ret[arg] = salt.utils.traverse_dict_and_list(__pillar__,
-                                                        arg,
-                                                        default,
-                                                        delimiter)
+                                                         arg,
+                                                         default,
+                                                         delimiter)
     except KeyError:
         pass
 
@@ -248,9 +310,39 @@ def raw(key=None):
 
 def ext(external, pillar=None):
     '''
+    .. versionchanged:: 2016.3.6,2016.11.3,Nitrogen
+        The supported ext_pillar types are now tunable using the
+        :conf_master:`on_demand_ext_pillar` config option. Earlier releases
+        used a hard-coded default.
+
     Generate the pillar and apply an explicit external pillar
 
-    CLI Example:
+
+    external
+        A single ext_pillar to add to the ext_pillar configuration. This must
+        be passed as a single section from the ext_pillar configuration (see
+        CLI examples below). For more complicated ``ext_pillar``
+        configurations, it can be helpful to use the Python shell to load YAML
+        configuration into a dictionary, and figure out
+
+        .. code-block:: python
+
+            >>> import yaml
+            >>> ext_pillar = yaml.safe_load("""
+            ... ext_pillar:
+            ...   - git:
+            ...     - issue38440 https://github.com/terminalmage/git_pillar:
+            ...       - env: base
+            ... """)
+            >>> ext_pillar
+            {'ext_pillar': [{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}]}
+            >>> ext_pillar['ext_pillar'][0]
+            {'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}
+
+        In the above example, the value to pass would be
+        ``{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}``.
+        Note that this would need to be quoted when passing on the CLI (as in
+        the CLI examples below).
 
     pillar : None
         If specified, allows for a dictionary of pillar data to be made
@@ -260,9 +352,13 @@ def ext(external, pillar=None):
 
         .. versionadded:: 2015.5.0
 
+    CLI Examples:
+
     .. code-block:: bash
 
         salt '*' pillar.ext '{libvirt: _}'
+        salt '*' pillar.ext "{'git': ['master https://github.com/myuser/myrepo']}"
+        salt '*' pillar.ext "{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}"
     '''
     if isinstance(external, six.string_types):
         external = yaml.safe_load(external)
@@ -307,3 +403,55 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
         raise ValueError("Pillar value in key {0} is not a dict".format(key))
 
     return ret.keys()
+
+
+def file_exists(path, saltenv=None):
+    '''
+    .. versionadded:: 2016.3.0
+
+    This is a master-only function. Calling from the minion is not supported.
+
+    Use the given path and search relative to the pillar environments to see if
+    a file exists at that path.
+
+    If the ``saltenv`` argument is given, restrict search to that environment
+    only.
+
+    Will only work with ``pillar_roots``, not external pillars.
+
+    Returns True if the file is found, and False otherwise.
+
+    path
+        The path to the file in question. Will be treated as a relative path
+
+    saltenv
+        Optional argument to restrict the search to a specific saltenv
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pillar.file_exists foo/bar.sls
+    '''
+    pillar_roots = __opts__.get('pillar_roots')
+    if not pillar_roots:
+        raise CommandExecutionError('No pillar_roots found. Are you running '
+                                    'this on the master?')
+
+    if saltenv:
+        if saltenv in pillar_roots:
+            pillar_roots = {saltenv: pillar_roots[saltenv]}
+        else:
+            return False
+
+    for env in pillar_roots:
+        for pillar_dir in pillar_roots[env]:
+            full_path = os.path.join(pillar_dir, path)
+            if __salt__['file.file_exists'](full_path):
+                return True
+
+    return False
+
+
+# Provide a jinja function call compatible get aliased as fetch
+fetch = get

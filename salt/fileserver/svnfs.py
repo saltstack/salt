@@ -79,8 +79,8 @@ def __virtual__():
     for param in ('svnfs_trunk', 'svnfs_branches', 'svnfs_tags'):
         if os.path.isabs(__opts__[param]):
             errors.append(
-                'Master configuration parameter {0!r} (value: {1}) cannot be '
-                'an absolute path'.format(param, __opts__[param])
+                'Master configuration parameter \'{0}\' (value: {1}) cannot '
+                'be an absolute path'.format(param, __opts__[param])
             )
     if errors:
         for error in errors:
@@ -151,7 +151,7 @@ def init():
             for param in (x for x in per_remote_conf
                           if x not in PER_REMOTE_OVERRIDES):
                 log.error(
-                    'Invalid configuration parameter {0!r} for remote {1}. '
+                    'Invalid configuration parameter \'{0}\' for remote {1}. '
                     'Valid parameters are: {2}. See the documentation for '
                     'further information.'.format(
                         param, repo_url, ', '.join(PER_REMOTE_OVERRIDES)
@@ -194,7 +194,7 @@ def init():
                 new_remote = True
             except pysvn._pysvn.ClientError as exc:
                 log.error(
-                    'Failed to initialize svnfs remote {0!r}: {1}'
+                    'Failed to initialize svnfs remote \'{0}\': {1}'
                     .format(repo_url, exc)
                 )
                 _failhard()
@@ -505,7 +505,7 @@ def envs(ignore_cache=False):
             ret.add('base')
         else:
             log.error(
-                'svnfs trunk path {0!r} does not exist in repo {1}, no base '
+                'svnfs trunk path \'{0}\' does not exist in repo {1}, no base '
                 'environment will be provided by this remote'
                 .format(repo['trunk'], repo['url'])
             )
@@ -515,7 +515,7 @@ def envs(ignore_cache=False):
             ret.update(os.listdir(branches))
         else:
             log.error(
-                'svnfs branches path {0!r} does not exist in repo {1}'
+                'svnfs branches path \'{0}\' does not exist in repo {1}'
                 .format(repo['branches'], repo['url'])
             )
 
@@ -524,7 +524,7 @@ def envs(ignore_cache=False):
             ret.update(os.listdir(tags))
         else:
             log.error(
-                'svnfs tags path {0!r} does not exist in repo {1}'
+                'svnfs tags path \'{0}\' does not exist in repo {1}'
                 .format(repo['tags'], repo['url'])
             )
     return [x for x in sorted(ret) if _env_is_exposed(x)]
@@ -593,9 +593,9 @@ def serve_file(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -623,9 +623,9 @@ def file_hash(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -680,9 +680,9 @@ def _file_lists(load, form):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 

@@ -111,7 +111,7 @@ def __virtual__():
     '''
     if __catalina_home() or _auth('dummy'):
         return 'tomcat'
-    return False
+    return (False, 'Tomcat execution module not loaded: neither Tomcat installed locally nor tomcat-manager credentials set in grains/pillar/config.')
 
 
 def __catalina_home():
@@ -579,9 +579,9 @@ def deploy_war(war,
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env

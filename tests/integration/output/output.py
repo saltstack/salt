@@ -18,6 +18,7 @@ ensure_in_syspath('../../')
 import integration
 import salt.config
 from salt.output import display_output
+import salt.config
 
 
 class OutputReturnTest(integration.ShellCase):

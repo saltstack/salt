@@ -232,7 +232,7 @@ def _check_ip_available(ip_addr):
             log.debug('IP "{0}" is already defined'.format(ip_addr))
             return False
 
-    log.debug('IP {0!r} is available to be defined'.format(ip_addr))
+    log.debug('IP \'{0}\' is available to be defined'.format(ip_addr))
     return True
 
 
@@ -530,8 +530,20 @@ def create(vm_):
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
 
+    if 'use_dns' in vm_ and 'ip_address' not in vm_:
+        use_dns = vm_['use_dns']
+        if use_dns:
+            from socket import gethostbyname, gaierror
+            try:
+                ip_address = gethostbyname(str(vm_['name']))
+            except gaierror:
+                log.debug('Resolving of {hostname} failed'.format(hostname=str(vm_['name'])))
+            else:
+                vm_['ip_address'] = str(ip_address)
+
     try:
-        data = create_node(vm_)
+        newid = _get_next_vmid()
+        data = create_node(vm_, newid)
     except Exception as exc:
         log.error(
             'Error creating {0} on PROXMOX\n\n'
@@ -546,7 +558,10 @@ def create(vm_):
 
     ret['creation_data'] = data
     name = vm_['name']        # hostname which we know
-    vmid = data['vmid']       # vmid which we have received
+    if (vm_['clone']) is True:
+        vmid = newid
+    else:
+        vmid = data['vmid']       # vmid which we have received
     host = data['node']       # host which we have received
     nodeType = data['technology']  # VM tech (Qemu / OpenVZ)
 
@@ -592,9 +607,9 @@ def create(vm_):
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     # Report success!
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
@@ -613,7 +628,7 @@ def create(vm_):
     return ret
 
 
-def create_node(vm_):
+def create_node(vm_, newid):
     '''
     Build and submit the requestdata to create a new node
     '''
@@ -639,7 +654,7 @@ def create_node(vm_):
 
     # Required by both OpenVZ and Qemu (KVM)
     vmhost = vm_['host']
-    newnode['vmid'] = _get_next_vmid()
+    newnode['vmid'] = newid
 
     for prop in 'cpuunits', 'description', 'memory', 'onboot':
         if prop in vm_:  # if the property is set, use it for the VM request
@@ -651,12 +666,12 @@ def create_node(vm_):
         newnode['ostemplate'] = vm_['image']
 
         # optional VZ settings
-        for prop in 'cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid':
+        for prop in 'cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid', 'storage':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
-        for prop in 'acpi', 'cores', 'cpu', 'pool':
+        for prop in 'acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
@@ -670,7 +685,17 @@ def create_node(vm_):
 
     log.debug('Preparing to generate a node using these parameters: {0} '.format(
               newnode))
-    node = query('post', 'nodes/{0}/{1}'.format(vmhost, vm_['technology']), newnode)
+    if vm_['clone'] is True and vm_['technology'] == 'qemu':
+        postParams = {}
+        postParams['newid'] = newnode['vmid']
+
+        for prop in 'description', 'format', 'full', 'name':
+            if 'clone_' + prop in vm_:  # if the property is set, use it for the VM request
+                postParams[prop] = vm_['clone_' + prop]
+
+        node = query('post', 'nodes/{0}/qemu/{1}/clone'.format(vmhost, vm_['clone_from']), postParams)
+    else:
+        node = query('post', 'nodes/{0}/{1}'.format(vmhost, vm_['technology']), newnode)
     return _parse_proxmox_upid(node, vm_)
 
 

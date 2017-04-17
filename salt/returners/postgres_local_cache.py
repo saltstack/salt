@@ -3,8 +3,19 @@
 Use a postgresql server for the master job cache. This helps the job cache to
 cope with scale.
 
+.. note::
+    There are three PostgreSQL returners.  Any can function as an external
+    :ref:`master job cache <external-master-cache>`. but each has different
+    features.  SaltStack recommends
+    :mod:`returners.pgjsonb <salt.returners.pgjsonb>` if you are working with
+    a version of PostgreSQL that has the appropriate native binary JSON types.
+    Otherwise, review
+    :mod:`returners.postgres <salt.returners.postgres>` and
+    :mod:`returners.postgres_local_cache <salt.returners.postgres_local_cache>`
+    to see which module best suits your particular needs.
+
 :maintainer:    gjredelinghuys@gmail.com
-:maturity:      New
+:maturity:      Stable
 :depends:       psycopg2
 :platform:      all
 
@@ -29,6 +40,12 @@ correctly:
     CREATE ROLE salt WITH PASSWORD 'salt';
     CREATE DATABASE salt WITH OWNER salt;
     EOF
+
+In case the postgres database is a remote host, you'll need this command also:
+
+.. code-block:: sql
+
+   ALTER ROLE salt WITH LOGIN;
 
 and then:
 
@@ -72,6 +89,19 @@ and then:
     CREATE INDEX ON salt_returns (id);
     CREATE INDEX ON salt_returns (jid);
     CREATE INDEX ON salt_returns (fun);
+
+    DROP TABLE IF EXISTS salt_events;
+    CREATE TABLE salt_events (
+      id SERIAL,
+      tag text NOT NULL,
+      data text NOT NULL,
+      alter_time TIMESTAMP WITH TIME ZONE DEFAULT now(),
+      master_id text NOT NULL
+    );
+    CREATE INDEX ON salt_events (tag);
+    CREATE INDEX ON salt_events (data);
+    CREATE INDEX ON salt_events (id);
+    CREATE INDEX ON salt_events (master_id);
     EOF
 
 Required python modules: psycopg2
@@ -225,6 +255,27 @@ def returner(load):
     _close_conn(conn)
 
 
+def event_return(events):
+    '''
+    Return event to a postgres server
+
+    Require that configuration be enabled via 'event_return'
+    option in master config.
+    '''
+    conn = _get_conn()
+    if conn is None:
+        return None
+    cur = conn.cursor()
+    for event in events:
+        tag = event.get('tag', '')
+        data = event.get('data', '')
+        sql = '''INSERT INTO salt_events
+                (tag, data, master_id)
+                VALUES (%s, %s, %s)'''
+        cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
+    _close_conn(conn)
+
+
 def save_load(jid, clear_load, minions=None):
     '''
     Save the load to the specified jid id
@@ -257,7 +308,7 @@ def save_load(jid, clear_load, minions=None):
     _close_conn(conn)
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''

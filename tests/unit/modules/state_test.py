@@ -45,7 +45,7 @@ class MockState(object):
         '''
         flag = None
 
-        def __init__(self, opts, pillar=False):
+        def __init__(self, opts, pillar=False, pillar_enc=None):
             pass
 
         def verify_data(self, data):

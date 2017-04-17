@@ -3,7 +3,7 @@
 Connection module for Amazon SNS
 
 :configuration: This module accepts explicit sns credentials but can also
-    utilize IAM roles assigned to the instance trough Instance Profiles. Dynamic
+    utilize IAM roles assigned to the instance through Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
     configuration is necessary. More Information available at:
 
@@ -65,7 +65,7 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_sns module could not be loaded: boto libraries not found')
     __utils__['boto.assign_funcs'](__name__, 'sns', pack=__salt__)
     return True
 
@@ -199,6 +199,9 @@ def get_arn(name, region=None, key=None, keyid=None, profile=None):
 def _get_region(region=None, profile=None):
     if profile and 'region' in profile:
         return profile['region']
+    if not region and __salt__['config.option'](profile):
+        _profile = __salt__['config.option'](profile)
+        region = _profile.get('region', None)
     if not region and __salt__['config.option']('sns.region'):
         region = __salt__['config.option']('sns.region')
     if not region:

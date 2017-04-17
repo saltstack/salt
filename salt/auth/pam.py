@@ -23,6 +23,14 @@ authenticated against.  This defaults to `login`
 
     The Python interface to PAM does not support authenticating as ``root``.
 
+.. note:: Using PAM groups with SSSD groups on python2.
+
+    To use sssd with the PAM eauth module and groups the `pysss` module is
+    needed.  On RedHat/CentOS this is `python-sss`.
+
+    This should not be needed with python >= 3.3, because the `os` modules has the
+    `getgrouplist` function.
+
 '''
 
 # Import Python Libs
@@ -76,7 +84,7 @@ class PamMessage(Structure):
             ]
 
     def __repr__(self):
-        return '<PamMessage {0} {1!r}>'.format(self.msg_style, self.msg)
+        return '<PamMessage {0} \'{1}\'>'.format(self.msg_style, self.msg)
 
 
 class PamResponse(Structure):
@@ -89,7 +97,7 @@ class PamResponse(Structure):
             ]
 
     def __repr__(self):
-        return '<PamResponse {0} {1!r}>'.format(self.resp_retcode, self.resp)
+        return '<PamResponse {0} \'{1}\'>'.format(self.resp_retcode, self.resp)
 
 
 CONV_FUNC = CFUNCTYPE(c_int,

@@ -19,7 +19,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       # The location of the ssh private key that can log into the new VM
       private_key: /root/mykey.pem
       # The name of the private key
-      private_key: mykey
+      keyname: mykey
 
 When creating your profiles for the joyent cloud, add the location attribute to
 the profile, this will automatically get picked up when performing tasks
@@ -29,7 +29,7 @@ associated with that vm. An example profile might look like:
 
       joyent_512:
         provider: my-joyent-config
-        size: Extra Small 512 MB
+        size: g4-highcpu-512M
         image: centos-6
         location: us-east-1
 
@@ -143,7 +143,7 @@ def get_image(vm_):
         return images[vm_image]
 
     raise SaltCloudNotFound(
-        'The specified image, {0!r}, could not be found.'.format(vm_image)
+        'The specified image, \'{0}\', could not be found.'.format(vm_image)
     )
 
 
@@ -160,7 +160,7 @@ def get_size(vm_):
         return sizes[vm_size]
 
     raise SaltCloudNotFound(
-        'The specified size, {0!r}, could not be found.'.format(vm_size)
+        'The specified size, \'{0}\', could not be found.'.format(vm_size)
     )
 
 
@@ -285,8 +285,11 @@ def create(vm_):
         'image': get_image(vm_),
         'size': get_size(vm_),
         'location': vm_.get('location', DEFAULT_LOCATION)
-
     }
+    # Let's not assign a default here; only assign a network value if
+    # one is explicitly configured
+    if 'networks' in vm_:
+        kwargs['networks'] = vm_.get('networks')
 
     __utils__['cloud.fire_event'](
         'event',
@@ -341,12 +344,16 @@ def create_node(**kwargs):
     size = kwargs['size']
     image = kwargs['image']
     location = kwargs['location']
+    networks = kwargs.get('networks')
 
-    data = json.dumps({
+    create_data = {
         'name': name,
         'package': size['name'],
-        'image': image['name']
-    })
+        'image': image['name'],
+    }
+    if networks is not None:
+        create_data['networks'] = networks
+    data = json.dumps(create_data)
 
     try:
         ret = query(command='/my/machines', data=data, method='POST',
@@ -584,7 +591,7 @@ def has_method(obj, method_name):
         return True
 
     log.error(
-        'Method {0!r} not yet supported!'.format(
+        'Method \'{0}\' not yet supported!'.format(
             method_name
         )
     )
@@ -1039,7 +1046,7 @@ def query(action=None,
     if command:
         path += '/{0}'.format(command)
 
-    log.debug('User: {0!r} on PATH: {1}'.format(user, path))
+    log.debug('User: \'{0}\' on PATH: {1}'.format(user, path))
 
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%a, %d %b %Y %H:%M:%S %Z').strip()

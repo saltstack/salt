@@ -94,9 +94,11 @@ class WinServiceTestCase(TestCase):
         '''
             Test to start the specified service
         '''
-        mock = MagicMock(return_value=False)
-        with patch.dict(win_service.__salt__, {'cmd.retcode': mock}):
-            self.assertTrue(win_service.start("salt"))
+        mock_retcode = MagicMock(side_effect=[False, False])
+        mock_run = MagicMock(return_value='Auto')
+        with patch.dict(win_service.__salt__, {'cmd.retcode': mock_retcode}):
+            with patch.dict(win_service.__salt__, {'cmd.run': mock_run}):
+                self.assertTrue(win_service.start("salt"))
 
     def test_stop(self):
         '''

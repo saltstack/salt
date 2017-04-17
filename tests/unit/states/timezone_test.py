@@ -46,7 +46,7 @@ class TimezoneTestCase(TestCase):
         with patch.dict(timezone.__salt__, {"timezone.zone_compare": mock,
                                             "timezone.get_hwclock": mock1,
                                             "timezone.set_hwclock": mock2}):
-            ret.update({'comment': "Unable to compare desrired timezone"
+            ret.update({'comment': "Unable to compare desired timezone"
                         " 'salt' to system timezone: ", 'result': False})
             self.assertDictEqual(timezone.system('salt'), ret)
 

@@ -14,7 +14,6 @@ import integration
 from salt.config import cloud_providers_config
 
 # Import Salt Testing Libs
-from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
@@ -37,7 +36,6 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'ec2'
 
 
-@skipIf(True, 'Skipping until we can figure out why the testrunner bails.')
 class EC2Test(integration.ShellCase):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
@@ -99,18 +97,18 @@ class EC2Test(integration.ShellCase):
         Tests creating and deleting an instance on EC2 (classic)
         '''
         # create the instance
-        instance = self.run_cloud('-p ec2-test {0}'.format(INSTANCE_NAME))
+        instance = self.run_cloud('-p ec2-test {0}'.format(INSTANCE_NAME), timeout=500)
         ret_str = '{0}:'.format(INSTANCE_NAME)
 
         # check if instance returned with salt installed
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
         ret_str = '                    shutting-down'
 
         # check if deletion was performed appropriately
@@ -128,7 +126,7 @@ class EC2Test(integration.ShellCase):
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
 
 
 if __name__ == '__main__':

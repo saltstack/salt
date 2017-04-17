@@ -31,7 +31,8 @@ Minion Primary Configuration
 
 Default: ``salt``
 
-The hostname or ipv4 of the master.
+The hostname or IP address of the master. See :conf_minion:`ipv6` for IPv6
+connections to the master.
 
 Default: ``salt``
 
@@ -39,8 +40,35 @@ Default: ``salt``
 
     master: salt
 
+master:port Syntax
+~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+The ``master`` config option can also be set to use the master's IP in
+conjunction with a port number by default.
+
+.. code-block:: yaml
+
+    master: localhost:1234
+
+For IPv6 formatting with a port, remember to add brackets around the IP address
+before adding the port and enclose the line in single quotes to make it a string:
+
+.. code-block:: yaml
+
+    master: '[2001:db8:85a3:8d3:1319:8a2e:370:7348]:1234'
+
+.. note::
+
+    If a port is specified in the ``master`` as well as :conf_minion:`master_port`,
+    the ``master_port`` setting will be overridden by the ``master`` configuration.
+
+List of Masters Syntax
+~~~~~~~~~~~~~~~~~~~~~~
+
 The option can can also be set to a list of masters, enabling
-:doc:`multi-master </topics/tutorials/multimaster>` mode.
+:ref:`multi-master <tutorial-multi-master>` mode.
 
 .. code-block:: yaml
 
@@ -74,6 +102,36 @@ The option can can also be set to a list of masters, enabling
           - address1
           - address2
         master_type: failover
+
+.. conf_minion:: ipv6
+
+``ipv6``
+--------
+
+Default: ``None``
+
+Whether the master should be connected over IPv6. By default salt minion
+will try to automatically detect IPv6 connectivity to master.
+
+.. code-block:: yaml
+
+    ipv6: True
+
+.. conf_minion:: master_uri_format
+
+``master_uri_format``
+---------------------
+
+.. versionadded:: 2015.8.0
+
+Specify the format in which the master address will be evaluated. Valid options
+are ``default`` or ``ip_only``. If ``ip_only`` is specified, then the master
+address will not be split into IP and PORT, so be sure that only an IP (or domain
+name) is set in the :conf_minion:`master` configuration setting.
+
+.. code-block:: yaml
+
+    master_uri_format: ip_only
 
 .. conf_minion:: master_type
 
@@ -123,6 +181,41 @@ minion event bus. The value is expressed in bytes.
 .. code-block:: yaml
 
     max_event_size: 1048576
+
+.. conf_minion:: master_failback
+
+``master_failback``
+-------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``False``
+
+If the minion is in multi-master mode and the :conf_minion`master_type`
+configuration option is set to ``failover``, this setting can be set to ``True``
+to force the minion to fail back to the first master in the list if the first
+master is back online.
+
+.. code-block:: yaml
+
+    master_failback: False
+
+.. conf_minion:: master_failback_interval
+
+``master_failback_interval``
+----------------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``0``
+
+If the minion is in multi-master mode, the :conf_minion`master_type` configuration
+is set to ``failover``, and the ``master_failback`` option is enabled, the master
+failback interval can be set to ping the top master with this interval, in seconds.
+
+.. code-block:: yaml
+
+    master_failback_interval: 0
 
 .. conf_minion:: master_alive_interval
 
@@ -360,7 +453,24 @@ This directory may contain sensitive data and should be protected accordingly.
 
     cachedir: /var/cache/salt/minion
 
-.. conf_minion:: verify_env
+.. conf_minion:: append_minionid_config_dirs
+
+``append_minionid_config_dirs``
+-------------------------------
+
+Default: ``[]`` (the empty list) for regular minions, ``['cachedir']`` for proxy minions.
+
+Append minion_id to these configuration directories.  Helps with multiple proxies
+and minions running on the same machine. Allowed elements in the list:
+``pki_dir``, ``cachedir``, ``extension_modules``.
+Normally not needed unless running several proxies and/or minions on the same machine.
+
+.. code-block:: yaml
+
+    append_minionid_config_dirs:
+      - pki_dir
+      - cachedir
+
 
 ``verify_env``
 --------------
@@ -433,6 +543,48 @@ to enable set grains_cache to ``True``.
 
     grains_cache: False
 
+.. conf_minion:: grains_deep_merge
+
+``grains_deep_merge``
+---------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``False``
+
+The grains can be merged, instead of overridden, using this option.
+This allows custom grains to defined different subvalues of a dictionary
+grain. By default this feature is disabled, to enable set grains_deep_merge
+to ``True``.
+
+.. code-block:: yaml
+
+    grains_deep_merge: False
+
+For example, with these custom grains functions:
+
+.. code-block:: python
+
+    def custom1_k1():
+        return {'custom1': {'k1': 'v1'}}
+
+    def custom1_k2():
+        return {'custom1': {'k2': 'v2'}}
+
+Without ``grains_deep_merge``, the result would be:
+
+.. code-block:: yaml
+
+    custom1:
+      k1: v1
+
+With ``grains_deep_merge``, the result will be:
+
+.. code-block:: yaml
+
+    custom1:
+      k1: v1
+      k2: v2
 
 .. conf_minion:: mine_enabled
 
@@ -443,7 +595,8 @@ to enable set grains_cache to ``True``.
 
 Default: ``True``
 
-Determines whether or not the salt minion should run scheduled mine updates.
+Determines whether or not the salt minion should run scheduled mine updates.  If this is set to
+False then the mine update function will not get added to the scheduler for the minion.
 
 .. code-block:: yaml
 
@@ -505,7 +658,9 @@ The directory where Unix sockets will be kept.
 
 Default: ``''``
 
-Backup files replaced by file.managed and file.recurse under cachedir.
+Make backups of files replaced by ``file.managed`` and ``file.recurse`` state modules under
+:conf_minion:`cachedir` in ``file_backup`` subdirectory preserving original paths.
+Refer to :ref:`File State Backups documentation <file-state-backups>` for more details.
 
 .. code-block:: yaml
 
@@ -558,7 +713,33 @@ parameter. The wait-time will be a random number of seconds between
 
     random_reauth_delay: 60
 
-.. conf_minion:: auth_tries
+.. conf_minion:: master_tries
+
+``master_tries``
+----------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``1``
+
+The number of attempts to connect to a master before giving up. Set this to
+``-1`` for unlimited attempts. This allows for a master to have downtime and the
+minion to reconnect to it later when it comes back up. In 'failover' mode, which
+is set in the :conf_minion:`master_type` configuration, this value is the number
+of attempts for each set of masters. In this mode, it will cycle through the list
+of masters for each attempt.
+
+``master_tries`` is different than :conf_minion:`auth_tries` because ``auth_tries``
+attempts to retry auth attempts with a single master. ``auth_tries`` is under the
+assumption that you can connect to the master but not gain authorization from it.
+``master_tries`` will still cycle through all of the masters in a given try, so it
+is appropriate if you expect occasional downtime from the master(s).
+
+.. code-block:: yaml
+
+    master_tries: 1
+
+.. conf_minion:: acceptance_wait_time_max
 
 ``auth_tries``
 --------------
@@ -782,6 +963,57 @@ talking to the intended master.
 
     syndic_finger: 'ab:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:50:10'
 
+.. conf_minion:: proxy_host
+
+``proxy_host``
+--------------
+
+Default: ``''``
+
+The hostname used for HTTP proxy access.
+
+.. code-block:: yaml
+
+    proxy_host: proxy.my-domain
+
+.. conf_minion:: proxy_port
+
+``proxy_port``
+--------------
+
+Default: ``0``
+
+The port number used for HTTP proxy access.
+
+.. code-block:: yaml
+
+    proxy_port: 31337
+
+.. conf_minion:: proxy_username
+
+``proxy_username``
+------------------
+
+Default: ``''``
+
+The username used for HTTP proxy access.
+
+.. code-block:: yaml
+
+    proxy_username: charon
+
+.. conf_minion:: proxy_password
+
+``proxy_password``
+------------------
+
+Default: ``''``
+
+The password used for HTTP proxy access.
+
+.. code-block:: yaml
+
+    proxy_password: obolus
 
 Minion Module Management
 ========================
@@ -935,8 +1167,8 @@ and/or having to install specific modules' dependencies in system libraries.
 Default: (empty)
 
 A module provider can be statically overwritten or extended for the minion via
-the ``providers`` option. This can be done :doc:`on an individual basis in an
-SLS file <../states/providers>`, or globally here in the minion config, like
+the ``providers`` option. This can be done :ref:`on an individual basis in an
+SLS file <state-providers>`, or globally here in the minion config, like
 below.
 
 .. code-block:: yaml
@@ -1249,8 +1481,11 @@ sha512 are also supported.
 
     hash_type: md5
 
-Pillar Settings
-===============
+
+.. _pillar-configuration-minion:
+
+Pillar Configuration
+====================
 
 .. conf_minion:: pillar_roots
 
@@ -1277,6 +1512,35 @@ the pillar environments.
       prod:
         - /srv/pillar/prod
 
+.. conf_minion:: on_demand_ext_pillar
+
+``on_demand_ext_pillar``
+------------------------
+
+.. versionadded:: 2016.3.6,2016.11.3,Nitrogen
+
+Default: ``['libvirt', 'virtkey']``
+
+When using a local :conf_minion:`file_client`, this option controls which
+external pillars are permitted to be used on-demand using :py:func:`pillar.ext
+<salt.modules.pillar.ext>`.
+
+.. code-block:: yaml
+
+    on_demand_ext_pillar:
+      - libvirt
+      - virtkey
+      - git
+
+.. warning::
+    This will allow a masterless minion to request specific pillar data via
+    :py:func:`pillar.ext <salt.modules.pillar.ext>`, and may be considered a
+    security risk. However, pillar data generated in this way will not affect
+    the :ref:`in-memory pillar data <pillar-in-memory>`, so this risk is
+    limited to instances in which states/modules/etc. (built-in or custom) rely
+    upon pillar data generated by :py:func:`pillar.ext
+    <salt.modules.pillar.ext>`.
+
 .. conf_minion:: pillarenv
 
 ``pillarenv``
@@ -1290,6 +1554,28 @@ the environment setting, but for pillar instead of states.
 .. code-block:: yaml
 
     pillarenv: None
+
+.. conf_minion:: minion_pillar_cache
+
+``minion_pillar_cache``
+-----------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``False``
+
+The minion can locally cache rendered pillar data under
+:conf_minion:`cachedir`/pillar. This allows a temporarily disconnected minion
+to access previously cached pillar data by invoking salt-call with the --local
+and --pillar_root=:conf_minion:`cachedir`/pillar options. Before enabling this
+setting consider that the rendered pillar may contain security sensitive data.
+Appropriate access restrictions should be in place. By default the saved pillar
+data will be readable only by the user account running salt. By default this
+feature is disabled, to enable set minion_pillar_cache to ``True``.
+
+.. code-block:: yaml
+
+    minion_pillar_cache: False
 
 .. conf_minion:: file_recv_max_size
 
@@ -1395,6 +1681,7 @@ this can be set to ``True``.
 
     always_verify_signature: True
 
+
 Thread Settings
 ===============
 
@@ -1402,14 +1689,15 @@ Thread Settings
 
 Default: ``True``
 
-Disable multiprocessing support by default when a minion receives a
+If `multiprocessing` is enabled when a minion receives a
 publication a new process is spawned and the command is executed therein.
+Conversely, if `multiprocessing` is disabled the new publication will be run
+executed in a thread.
+
 
 .. code-block:: yaml
 
     multiprocessing: True
-
-
 
 
 .. _minion-logging-settings:
@@ -1461,7 +1749,7 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 ``log_level_logfile``
 ---------------------
 
-Default: ``warning``
+Default: ``info``
 
 The level of messages to send to the log file. See also
 :conf_log:`log_level_logfile`. When it is not set explicitly

@@ -140,6 +140,10 @@ M2Crypto installed using apt::
 
     virtualenv --system-site-packages /path/to/your/virtualenv
 
+On Gentoo systems you should use ``--system-site-packages`` when creating
+the virtualenv to enable pkg and portage_config functionality as the
+portage package is not available via pip
+
 .. note:: Using your system Python modules in the virtualenv
 
     If you have the required python modules installed on your system already
@@ -225,7 +229,7 @@ Edit the minion config file:
     also running a non-development version of Salt, then you will have to
     change the ``master_port`` value in the minion config to match.
 
-.. note:: Using `salt-call` with a :doc:`Standalone Minion </topics/tutorials/standalone_minion>`
+.. note:: Using `salt-call` with a :ref:`Standalone Minion <tutorial-standalone-minion>`
 
     If you plan to run `salt-call` with this self-contained development
     environment in a masterless setup, you should invoke `salt-call` with

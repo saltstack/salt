@@ -16,12 +16,20 @@ try:
 except ImportError:
     pass
 
+# Import salt libs
+import salt.ext.six as six
+import salt.utils
+from salt.exceptions import SaltInvocationError
+
 # Define the module's virtual name
 __virtualname__ = 'shadow'
 
 
 def __virtual__():
-    return __virtualname__ if 'BSD' in __grains__.get('os', '') else False
+    if 'BSD' in __grains__.get('os', ''):
+        return __virtualname__
+    return (False, 'The bsd_shadow execution module cannot be loaded: '
+            'only available on BSD family systems.')
 
 
 def default_hash():
@@ -57,30 +65,47 @@ def info(name):
             'name': '',
             'passwd': ''}
 
-    cmd = ""
-    if __salt__['cmd.has_exec']('pw'):
-        cmd = 'pw user show {0}'.format(name)
-    elif __grains__['kernel'] in ('NetBSD', 'OpenBSD'):
-        cmd = 'grep "^{0}:" /etc/master.passwd'.format(name)
+    if not isinstance(name, six.string_types):
+        name = str(name)
+    if ':' in name:
+        raise SaltInvocationError('Invalid username \'{0}\''.format(name))
 
-    if cmd:
-        cmd += '| cut -f6,7 -d:'
+    if __salt__['cmd.has_exec']('pw'):
+        change, expire = __salt__['cmd.run_stdout'](
+            ['pw', 'user', 'show', name],
+            python_shell=False).split(':')[5:7]
+    elif __grains__['kernel'] in ('NetBSD', 'OpenBSD'):
         try:
-            change, expire = __salt__['cmd.run_all'](cmd, python_shell=True)['stdout'].split(':')
-        except ValueError:
-            pass
-        else:
-            ret['change'] = int(change)
-            ret['expire'] = int(expire)
+            with salt.utils.fopen('/etc/master.passwd', 'r') as fp_:
+                for line in fp_:
+                    if line.startswith('{0}:'.format(name)):
+                        change, expire = line.rstrip('\n')[5:7]
+                        break
+        except IOError:
+            change = expire = None
+    else:
+        change = expire = None
+
+    try:
+        ret['change'] = int(change)
+    except ValueError:
+        pass
+
+    try:
+        ret['expire'] = int(expire)
+    except ValueError:
+        pass
 
     return ret
 
 
 def set_change(name, change):
     '''
-    Sets the time at which the password expires (in seconds since the EPOCH).
-    See man usermod on NetBSD and OpenBSD or man pw on FreeBSD.
-    "0" means the password never expires.
+    Sets the time at which the password expires (in seconds since the UNIX
+    epoch). See ``man 8 usermod`` on NetBSD and OpenBSD or ``man 8 pw`` on
+    FreeBSD.
+
+    A value of ``0`` sets the password to never expire.
 
     CLI Example:
 
@@ -92,10 +117,10 @@ def set_change(name, change):
     if change == pre_info['change']:
         return True
     if __grains__['kernel'] == 'FreeBSD':
-        cmd = 'pw user mod {0} -f {1}'.format(name, change)
+        cmd = ['pw', 'user', 'mod', name, '-f', change]
     else:
-        cmd = 'usermod -f {0} {1}'.format(change, name)
-    __salt__['cmd.run'](cmd)
+        cmd = ['usermod', '-f', change, name]
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['change'] != pre_info['change']:
         return post_info['change'] == change
@@ -103,9 +128,11 @@ def set_change(name, change):
 
 def set_expire(name, expire):
     '''
-    Sets the time at which the account expires (in seconds since the EPOCH).
-    See man usermod on NetBSD and OpenBSD or man pw on FreeBSD.
-    "0" means the account never expires.
+    Sets the time at which the account expires (in seconds since the UNIX
+    epoch). See ``man 8 usermod`` on NetBSD and OpenBSD or ``man 8 pw`` on
+    FreeBSD.
+
+    A value of ``0`` sets the account to never expire.
 
     CLI Example:
 
@@ -117,10 +144,10 @@ def set_expire(name, expire):
     if expire == pre_info['expire']:
         return True
     if __grains__['kernel'] == 'FreeBSD':
-        cmd = 'pw user mod {0} -e {1}'.format(name, expire)
+        cmd = ['pw', 'user', 'mod', name, '-e', expire]
     else:
-        cmd = 'usermod -e {0} {1}'.format(expire, name)
-    __salt__['cmd.run'](cmd)
+        cmd = ['usermod', '-e', expire, name]
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['expire'] != pre_info['expire']:
         return post_info['expire'] == expire
@@ -151,8 +178,9 @@ def set_password(name, password):
 
     ``python -c "import crypt; print crypt.crypt('password', ciphersalt)"``
 
-    :strong:`NOTE:` When constructing the ``ciphersalt`` string, you must
-    escape any dollar signs, to avoid them being interpolated by the shell.
+    .. note::
+        When constructing the ``ciphersalt`` string, you must escape any dollar
+        signs, to avoid them being interpolated by the shell.
 
     ``'password'`` is, of course, the password for which you want to generate
     a hash.
@@ -172,10 +200,13 @@ def set_password(name, password):
         salt '*' shadow.set_password someuser '$1$UYCIxa628.9qXjpQCjM4a..'
     '''
     if __grains__.get('os', '') == 'FreeBSD':
-        cmd = 'pw user mod {0} -H 0'.format(name)
+        cmd = ['pw', 'user', 'mod', name, '-H', '0']
         stdin = password
     else:
-        cmd = 'usermod -p {0!r} {1}'.format(password, name)
+        cmd = ['usermod', '-p', password, name]
         stdin = None
-    __salt__['cmd.run'](cmd, stdin=stdin, output_loglevel='quiet')
+    __salt__['cmd.run'](cmd,
+                        stdin=stdin,
+                        output_loglevel='quiet',
+                        python_shell=False)
     return info(name)['passwd'] == password

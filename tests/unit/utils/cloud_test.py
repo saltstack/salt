@@ -20,7 +20,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import cloud
-from integration import TMP
+from integration import TMP, CODE_DIR
 
 GPG_KEYDIR = os.path.join(TMP, 'gpg-keydir')
 
@@ -62,6 +62,8 @@ try:
     HAS_KEYRING = True
 except ImportError:
     HAS_KEYRING = False
+
+os.chdir(CODE_DIR)
 
 
 class CloudUtilsTestCase(TestCase):

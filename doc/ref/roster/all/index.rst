@@ -1,8 +1,8 @@
 .. _all-salt.roster:
 
-===================================
-Full list of builtin roster modules
-===================================
+==============
+roster modules
+==============
 
 .. currentmodule:: salt.roster
 
@@ -15,4 +15,5 @@ Full list of builtin roster modules
     cloud
     clustershell
     flat
+    range
     scan

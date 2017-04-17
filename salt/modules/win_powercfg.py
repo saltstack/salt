@@ -27,7 +27,7 @@ def __virtual__():
     '''
     if __grains__['os'] == 'Windows':
         return __virtualname__
-    return False
+    return (False, 'Module only works on Windows.')
 
 
 def _get_current_scheme():

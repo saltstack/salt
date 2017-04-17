@@ -74,6 +74,10 @@ def output(data):
 
         return json.dumps(data, default=repr, indent=indent, sort_keys=sort_keys)
 
+    except UnicodeDecodeError as exc:
+        log.error('Unable to serialize output to json')
+        return json.dumps({'error': 'Unable to serialize output to json', 'message': str(exc)})
+
     except TypeError:
         log.debug('An error occurred while outputting JSON', exc_info=True)
     # Return valid JSON for unserializable objects
