@@ -237,7 +237,7 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
 
         try:
             max_logger_length = len(max(
-                list(logging.Logger.manager.loggerDict.keys()), key=len
+                list(logging.Logger.manager.loggerDict), key=len
             ))
             for handler in logging.root.handlers:
                 if handler in (LOGGING_NULL_HANDLER,
