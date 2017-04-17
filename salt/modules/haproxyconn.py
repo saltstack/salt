@@ -62,7 +62,7 @@ def list_servers(backend, socket=DEFAULT_SOCKET_URL, objectify=False):
         haproxy backend
 
     socket
-        haproxy stats socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
 
     CLI Example:
 
@@ -93,7 +93,7 @@ def wait_state(backend, server, value='up', timeout=60*5, socket=DEFAULT_SOCKET_
         timeout before giving up state value, default 5 min
 
     socket
-        haproxy stats socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
 
     CLI Example:
 
@@ -117,7 +117,7 @@ def get_backend(backend, socket=DEFAULT_SOCKET_URL):
         haproxy backend
 
     socket
-        haproxy stats socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
 
     CLI Example:
 
@@ -168,7 +168,7 @@ def enable_server(name, backend, socket=DEFAULT_SOCKET_URL):
         haproxy backend, or all backends if "*" is supplied
 
     socket
-        haproxy stats socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
 
     CLI Example:
 
@@ -203,7 +203,7 @@ def disable_server(name, backend, socket=DEFAULT_SOCKET_URL):
         haproxy backend, or all backends if "*" is supplied
 
     socket
-        haproxy stats socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
 
     CLI Example:
 
@@ -238,7 +238,7 @@ def get_weight(name, backend, socket=DEFAULT_SOCKET_URL):
         haproxy backend
 
     socket
-        haproxy stats socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
 
     CLI Example:
 
@@ -265,7 +265,7 @@ def set_weight(name, backend, weight=0, socket=DEFAULT_SOCKET_URL):
         Server Weight
 
     socket
-        haproxy stats socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
 
     CLI Example:
 
@@ -324,7 +324,7 @@ def show_frontends(socket=DEFAULT_SOCKET_URL):
     Show HaProxy frontends
 
     socket
-        haproxy stats socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
 
     CLI Example:
 
@@ -343,7 +343,7 @@ def list_frontends(socket=DEFAULT_SOCKET_URL):
     List HaProxy frontends
 
     socket
-        haproxy stats socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
 
     CLI Example:
 
@@ -359,7 +359,7 @@ def show_backends(socket=DEFAULT_SOCKET_URL):
     Show HaProxy Backends
 
     socket
-        haproxy stats socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
 
     CLI Example:
 
@@ -378,7 +378,7 @@ def list_backends(servers=True, socket=DEFAULT_SOCKET_URL):
     List HaProxy Backends
 
     socket
-        haproxy stats socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
 
     servers
         list backends with servers
@@ -411,7 +411,7 @@ def get_sessions(name, backend, socket=DEFAULT_SOCKET_URL):
         haproxy backend
 
     socket
-        haproxy stats socket
+        haproxy stats socket, default ``/var/run/haproxy.sock``
 
     CLI Example:
 
