@@ -7,9 +7,11 @@ IPC transport classes
 from __future__ import absolute_import
 import logging
 import socket
-import msgpack
 import weakref
 import time
+
+# Import 3rd-party libs
+import msgpack
 
 # Import Tornado libs
 import tornado
@@ -17,7 +19,7 @@ import tornado.gen
 import tornado.netutil
 import tornado.concurrent
 from tornado.locks import Semaphore
-from tornado.ioloop import IOLoop
+from tornado.ioloop import IOLoop, TimeoutError as TornadoTimeoutError
 from tornado.iostream import IOStream
 # Import Salt libs
 import salt.transport.client
@@ -67,7 +69,7 @@ class FutureWithTimeout(tornado.concurrent.Future):
         # inside the future itself to track what happens
         # when it completes.
         self._future._future_with_timeout = None
-        self.set_exception(tornado.ioloop.TimeoutError())
+        self.set_exception(TornadoTimeoutError())
 
     def _done_callback(self, future):
         try:
@@ -644,7 +646,7 @@ class IPCMessageSubscriber(IPCClient):
                 if not first:
                     # We read at least one piece of data
                     break
-        except tornado.ioloop.TimeoutError:
+        except TornadoTimeoutError:
             # In the timeout case, just return None.
             # Keep 'self._read_stream_future' alive.
             ret = None
