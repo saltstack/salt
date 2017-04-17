@@ -1897,6 +1897,8 @@ def downloaded(name,
                ignore_epoch=None,
                **kwargs):
     '''
+    .. versionadded:: Oxygen
+
     Ensure that the package is downloaded, and that it is the correct version
     (if specified).
 
@@ -2032,6 +2034,8 @@ def downloaded(name,
 
 def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
     '''
+    .. versionadded:: Oxygen
+
     Ensure that packages related to certain advisory ids are installed.
 
     Currently supported for the following pkg providers:
@@ -2108,6 +2112,8 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
 
 def patch_downloaded(name, advisory_ids=None, **kwargs):
     '''
+    .. versionadded:: Oxygen
+
     Ensure that packages related to certain advisory ids are downloaded.
 
     Currently supported for the following pkg providers:
