@@ -403,6 +403,24 @@ def _disk_profile(profile, hypervisor, **kwargs):
                   format: qcow2
                   model: virtio
 
+    Example profile for KVM/QEMU with two disks, first is created
+    from specified image, the second is empty:
+
+    .. code-block:: yaml
+
+        virt:
+          disk:
+            two_disks:
+              - system:
+                  size: 8192
+                  format: qcow2
+                  model: virtio
+                  image: http://path/to/image.qcow2
+              - lvm:
+                  size: 32768
+                  format: qcow2
+                  model: virtio
+
     The ``format`` and ``model`` parameters are optional, and will
     default to whatever is best suitable for the active hypervisor.
     '''
@@ -574,96 +592,39 @@ def init(name,
         salt 'hypervisor' virt.init vm_name 4 512 /var/lib/libvirt/images/img.raw
         salt 'hypervisor' virt.init vm_name 4 512 nic=profile disk=profile
     '''
+
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
     log.debug('Using hyperisor {0}'.format(hypervisor))
 
     nicp = _nic_profile(nic, hypervisor, **kwargs)
     log.debug('NIC profile is {0}'.format(nicp))
 
-    diskp = None
-    seedable = False
-    if image:  # with disk template image
-        log.debug('Image {0} will be used'.format(image))
-        # if image was used, assume only one disk, i.e. the
-        # 'default' disk profile
-        # TODO: make it possible to use disk profiles and use the
-        # template image as the system disk
-        diskp = _disk_profile('default', hypervisor, **kwargs)
-        log.debug('Disk profile is {0}'.format(diskp))
+    diskp = _disk_profile(disk, hypervisor, **kwargs)
 
-        # When using a disk profile extract the sole dict key of the first
-        # array element as the filename for disk
+    if image:
+        # Backward compatibility: if 'image' is specified in the VMs arguments
+        # instead of a disk arguments. In this case, 'image' will be assigned
+        # to the first disk for the VM.
         disk_name = next(six.iterkeys(diskp[0]))
-        disk_type = diskp[0][disk_name]['format']
-        disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
+        if not diskp[0][disk_name].get('image', None):
+            log.debug('{0} will be used as default image'.format(image))
+            diskp[0][disk_name]['image'] = image
 
-        if hypervisor in ['esxi', 'vmware']:
-            # TODO: we should be copying the image file onto the ESX host
-            raise SaltInvocationError(
-                'virt.init does not support image template template in '
-                'conjunction with esxi hypervisor'
-            )
-        elif hypervisor in ['qemu', 'kvm']:
-            img_dir = __salt__['config.option']('virt.images')
-            log.debug('Image directory from config option `virt.images` is {0}'
-                      .format(img_dir))
-            img_dest = os.path.join(
-                img_dir,
-                name,
-                disk_file_name
-            )
-            log.debug('Image destination will be {0}'.format(img_dest))
-            img_dir = os.path.dirname(img_dest)
-            log.debug('Image destination directory is  {0}'.format(img_dir))
-            sfn = __salt__['cp.cache_file'](image, saltenv)
+    # Create multiple disks, empty or from specified images.
+    for disk in diskp:
+        log.debug("Creating disk for VM [ {0} ]: {1}".format(name, disk))
 
-            try:
-                os.makedirs(img_dir)
-            except OSError:
-                pass
+        for disk_name, args in six.iteritems(disk):
 
-            qcow2 = False
-            if salt.utils.which('qemu-img'):
-                res = __salt__['cmd.run']('qemu-img info {}'.format(sfn))
-                imageinfo = yaml.load(res)
-                qcow2 = imageinfo['file format'] == 'qcow2'
-
-            try:
-                if enable_qcow and qcow2:
-                    log.info('Cloning qcow2 image {} using copy on write'
-                              .format(sfn))
-                    __salt__['cmd.run'](
-                        'qemu-img create -f qcow2 -o backing_file={} {}'
-                        .format(sfn, img_dest).split())
+            if hypervisor in ['esxi', 'vmware']:
+                if 'image' in args:
+                    # TODO: we should be copying the image file onto the ESX host
+                    raise SaltInvocationError(
+                        'virt.init does not support image '
+                        'template in conjunction with esxi hypervisor'
+                    )
                 else:
-                    log.debug('Copying {0} to {1}'.format(sfn, img_dest))
-                    salt.utils.files.copyfile(sfn, img_dest)
-                mask = os.umask(0)
-                os.umask(mask)
-                # Apply umask and remove exec bit
-                mode = (0o0777 ^ mask) & 0o0666
-                os.chmod(img_dest, mode)
-            except (IOError, OSError) as e:
-                raise CommandExecutionError('problem copying image. {0} - {1}'.format(image, e))
-
-            seedable = True
-        else:
-            log.error('Unsupported hypervisor when handling disk image')
-    else:
-        # no disk template image specified, create disks based on disk profile
-        diskp = _disk_profile(disk, hypervisor, **kwargs)
-        log.debug('No image specified, disk profile will be used: {0}'.format(diskp))
-        if hypervisor in ['qemu', 'kvm']:
-            # TODO: we should be creating disks in the local filesystem with
-            # qemu-img
-            raise SaltInvocationError(
-                'virt.init does not support disk profiles in conjunction with '
-                'qemu/kvm at this time, use image template instead'
-            )
-        else:
-            # assume libvirt manages disks for us
-            for disk in diskp:
-                for disk_name, args in six.iteritems(disk):
+                    # assume libvirt manages disks for us
                     log.debug('Generating libvirt XML for {0}'.format(disk))
                     xml = _gen_vol_xml(
                         name,
@@ -672,6 +633,117 @@ def init(name,
                         hypervisor,
                     )
                     define_vol_xml_str(xml)
+
+            elif hypervisor in ['qemu', 'kvm']:
+
+                disk_type = args['format']
+                disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
+                disk_size = args.get('size', None)
+
+                img_dir = __salt__['config.option']('virt.images')
+                log.debug('Image directory from config option `virt.images`'
+                          ' is {0}'.format(img_dir))
+                img_dest = os.path.join(
+                    img_dir,
+                    name,
+                    disk_file_name
+                )
+                log.debug('Image destination will be {0}'.format(img_dest))
+                img_dir = os.path.dirname(img_dest)
+                log.debug('Image destination directory is {0}'
+                          .format(img_dir))
+                try:
+                    os.makedirs(img_dir)
+                except OSError:
+                    pass
+
+                if 'image' in args:
+                    log.debug('Create disk from specified image {0}'
+                              .format(args['image']))
+                    sfn = __salt__['cp.cache_file'](args['image'], saltenv)
+
+                    qcow2 = False
+                    if salt.utils.which('qemu-img'):
+                        res = __salt__['cmd.run']('qemu-img info {}'.format(sfn))
+                        imageinfo = yaml.load(res)
+                        qcow2 = imageinfo['file format'] == 'qcow2'
+                    try:
+                        if enable_qcow and qcow2:
+                            log.info('Cloning qcow2 image {0} using copy on write'
+                                     .format(sfn))
+                            __salt__['cmd.run'](
+                                'qemu-img create -f qcow2 -o backing_file={0} {1}'
+                                .format(sfn, img_dest).split())
+                        else:
+                            log.debug('Copying {0} to {1}'.format(sfn, img_dest))
+                            salt.utils.files.copyfile(sfn, img_dest)
+
+                        mask = os.umask(0)
+                        os.umask(mask)
+
+                        if disk_size and qcow2:
+                            log.debug('Resize qcow2 image to {0}M'.format(disk_size))
+                            __salt__['cmd.run'](
+                                'qemu-img resize {0} {1}M'
+                                .format(img_dest, str(disk_size))
+                            )
+
+                        log.debug('Apply umask and remove exec bit')
+                        mode = (0o0777 ^ mask) & 0o0666
+                        os.chmod(img_dest, mode)
+
+                    except (IOError, OSError) as e:
+                        raise CommandExecutionError(
+                            'Problem while copying image. {0} - {1}'
+                            .format(args['image'], e)
+                        )
+
+                    if kwargs.get('seed'):
+                        seed_cmd = kwargs.get('seed_cmd', 'seed.apply')
+                        log.debug('Seed command is {0}'.format(seed_cmd))
+                        __salt__[seed_cmd](
+                            img_dest,
+                            id_=name,
+                            config=kwargs.get('config'),
+                            install=install,
+                            pub_key=pub_key,
+                            priv_key=priv_key,
+                        )
+                else:
+                    # Create empty disk
+                    try:
+                        mask = os.umask(0)
+                        os.umask(mask)
+
+                        if disk_size:
+                            log.debug('Create empty image with size {0}'.format(disk_size))
+                            __salt__['cmd.run'](
+                                'qemu-img create -f {0} {1} {2}M'
+                                .format(disk_type, img_dest, str(disk_size))
+                            )
+                        else:
+                            raise CommandExecutionError(
+                                'Unable to create new disk {0},'
+                                ' please specify <size> argument'
+                                .format(img_dest)
+                            )
+
+                        log.debug('Apply umask and remove exec bit')
+                        mode = (0o0777 ^ mask) & 0o0666
+                        os.chmod(img_dest, mode)
+
+                    except (IOError, OSError) as e:
+                        raise CommandExecutionError(
+                            'Problem while creating volume {0} - {1}'
+                            .format(img_dest, e)
+                        )
+
+            else:
+                # Unknown hypervisor
+                raise SaltInvocationError(
+                    'Unsupported hypervisor when handling disk image: {0}'
+                    .format(hypervisor)
+                )
 
     log.debug('Generating VM XML')
     kwargs['enable_vnc'] = enable_vnc
@@ -686,18 +758,8 @@ def init(name,
         else:
             raise err  # a real error we should report upwards
 
-    if seed and seedable:
-        log.debug('Seed command is {0}'.format(seed_cmd))
-        __salt__[seed_cmd](
-           img_dest,
-           id_=name,
-           config=kwargs.get('config'),
-           install=install,
-           pub_key=pub_key,
-           priv_key=priv_key,
-        )
     if start:
-        log.debug('Creating {0}'.format(name))
+        log.debug('Starting VM {0}'.format(name))
         _get_domain(name).create()
 
     return True
