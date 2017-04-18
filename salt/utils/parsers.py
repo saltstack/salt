@@ -44,6 +44,7 @@ import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.yamldumper import SafeOrderedDumper
 
+
 def _sorted(mixins_or_funcs):
     return sorted(
         mixins_or_funcs, key=lambda mf: getattr(mf, '_mixin_prio_', 1000)
