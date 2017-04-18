@@ -4450,6 +4450,11 @@ def manage_file(name,
                'comment': '',
                'result': True}
 
+
+    # Ensure that user-provided hash string is lowercase
+    if source_sum and ('hsum' in source_sum):
+        source_sum['hsum'] = source_sum['hsum'].lower()
+
     if source and not sfn:
         # File is not present, cache it
         sfn = __salt__['cp.cache_file'](source, saltenv)
