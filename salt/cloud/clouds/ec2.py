@@ -3724,7 +3724,7 @@ def disable_detailed_monitoring(name, call=None):
         )
 
     instance_id = _get_node(name)['instanceId']
-    params = {'Action': 'UnMonitorInstances',
+    params = {'Action': 'UnmonitorInstances',
               'InstanceId.1': instance_id}
 
     result = aws.query(params,
