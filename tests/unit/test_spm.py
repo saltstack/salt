@@ -61,6 +61,7 @@ class SPMTestUserInterface(salt.spm.SPMUserInterface):
 class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
         self._tmp_spm = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self._tmp_spm, ignore_errors=True)
 
         minion_config = self.get_temp_config('minion', **{
             'spm_logfile': os.path.join(self._tmp_spm, 'log'),
@@ -84,16 +85,11 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
             'spm_repo_dups': 'ignore',
             'spm_share_dir': os.path.join(self._tmp_spm, 'share'),
         })
-        shutil.rmtree(self._tmp_spm, ignore_errors=True)
-        os.mkdir(self._tmp_spm)
         self.ui = SPMTestUserInterface()
         self.client = salt.spm.SPMClient(self.ui, minion_config)
         self.minion_config = minion_config
-
-    def tearDown(self):
-        shutil.rmtree(self._tmp_spm, ignore_errors=True)
         for attr in ('client', 'ui', '_tmp_spm', 'minion_config'):
-            delattr(self, attr)
+            self.addCleanup(delattr, self, attr)
 
     def _create_formula_files(self, formula):
         fdir = os.path.join(self._tmp_spm, formula['definition']['name'])
