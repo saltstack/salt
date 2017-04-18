@@ -11,8 +11,10 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
 # Import Salt Libs
-import salt.utils.http
 import salt.modules.random_org as random_org
+
+# Import 3rd-party libs
+from tornado.httpclient import HTTPClient
 
 
 def check_status():
@@ -20,9 +22,8 @@ def check_status():
     Check the status of random.org
     '''
     try:
-        ret = salt.utils.http.query('https://api.random.org/', status=True)
-        return ret['status'] == 200
-    except:  # pylint: disable=W0702
+        return HTTPClient().fetch('https://api.random.org/').code == 200
+    except Exception:  # pylint: disable=broad-except
         return False
 
 

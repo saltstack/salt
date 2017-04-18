@@ -10,13 +10,14 @@ import shutil
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP
 from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
 import salt.utils
-import salt.utils.http
+
+# Import 3rd-party libs
+from tornado.httpclient import HTTPClient
 
 SUBSALT_DIR = os.path.join(TMP, 'subsalt')
 AUTHORIZED_KEYS = os.path.join(SUBSALT_DIR, 'authorized_keys')
@@ -28,7 +29,10 @@ def check_status():
     '''
     Check the status of Github for remote operations
     '''
-    return salt.utils.http.query('http://github.com', status=True)['status'] == 200
+    try:
+        return HTTPClient().fetch('http://github.com').code == 200
+    except Exception:  # pylint: disable=broad-except
+        return False
 
 
 @skip_if_binaries_missing(['ssh', 'ssh-keygen'], check_all=True)
