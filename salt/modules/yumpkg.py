@@ -19,7 +19,6 @@ from __future__ import absolute_import
 import contextlib
 import copy
 import fnmatch
-import glob
 import itertools
 import logging
 import os
@@ -923,9 +922,11 @@ def list_downloaded():
     CACHE_DIR = os.path.join('/var/cache/', _yum())
 
     ret = {}
-    for package_path in glob.glob(os.path.join(CACHE_DIR, '*/*/*/packages/*.rpm')):
-        pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)
-        ret.setdefault(pkg_info['name'], {})[pkg_info['version']] = package_path
+    for root, dirnames, filenames in os.walk(CACHE_DIR):
+        for filename in fnmatch.filter(filenames, '*.rpm'):
+            package_path = os.path.join(root, filename)
+            pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)
+            ret.setdefault(pkg_info['name'], {})[pkg_info['version']] = package_path
     return ret
 
 
