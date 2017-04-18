@@ -606,7 +606,6 @@ def _set_network_adapter_mapping(adapter_specs):
     return adapter_mapping
 
 
-<<<<<<< HEAD
 def _get_mode_spec(device, mode, disk_spec):
     if device.backing.diskMode != mode:
         if not disk_spec:
@@ -626,8 +625,6 @@ def _get_size_spec(device, size_gb=None, size_kb=None):
     return disk_spec
 
 
-=======
->>>>>>> Add support for specifying a datastore for new disks.
 def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
     unit_number = 0
     bus_number = 0
@@ -2575,11 +2572,7 @@ def create(vm_):
         config_spec.memoryMB = memory_mb
 
     if devices:
-<<<<<<< HEAD
-        specs = _manage_devices(devices, vm=object_ref, new_vm_name=vm_name)
-=======
         specs = _manage_devices(devices, vm=object_ref, new_vm_name=vm_['name'])
->>>>>>> Add support for specifying a datastore for new disks.
         config_spec.deviceChange = specs['device_specs']
 
     if extra_config:
