@@ -3654,68 +3654,21 @@ def show_detailed_monitoring(name=None, instance_id=None, call=None, quiet=False
         raise SaltCloudSystemExit(
             'The show_detailed_monitoring action must be called with -a or --action.'
         )
-
     location = get_location()
     if str(name).startswith('i-') and (len(name) == 10 or len(name) == 19):
         instance_id = name
 
-    if name is not None:
-        match_key = name
-    elif instance_id is not None:
-        match_key = instance_id
-    else:
+    if not name and not instance_id:
         raise SaltCloudSystemExit(
-            'The show_detailed_monitoring action must be provided with a name or instance ID'
+            'The show_detailed_monitoring action must be provided with a name or instance\
+ ID'
         )
     matched = _get_node(name=name, instance_id=instance_id, location=location)
-    result = {}
-    for provider in matched.keys():
-        result[provider] = {'ec2': {match_key: {}}}
-        result[provider]['ec2'][match_key]['monitoring'] = matched[location]['ec2'][match_key]['monitoring']
     log.log(
         logging.DEBUG if quiet is True else logging.INFO,
-        'Detailed Monitoring is {0} for {1}'.format(result, name)
+        'Detailed Monitoring is {0} for {1}'.format(matched['monitoring'], name)
     )
-
-    return result
-
-
-def enable_term_protect(name, call=None):
-    '''
-    Enable termination protection on a node
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a enable_term_protect mymachine
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The enable_term_protect action must be called with '
-            '-a or --action.'
-        )
-
-    return _toggle_term_protect(name, 'true')
-
-
-def disable_term_protect(name, call=None):
-    '''
-    Disable termination protection on a node
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a disable_term_protect mymachine
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The disable_term_protect action must be called with '
-            '-a or --action.'
-        )
-
-    return _toggle_term_protect(name, 'false')
+    return matched['monitoring']
 
 
 def _toggle_term_protect(name, value):
