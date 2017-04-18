@@ -200,3 +200,12 @@ def shutdown(opts):
     For this proxy shutdown is a no-op
     '''
     log.debug('rest_sample proxy shutdown() called...')
+
+
+def test_from_state():
+    '''
+    Test function so we have something to call from a state
+    :return:
+    '''
+    log.debug('test_from_state called')
+    return 'testvalue'

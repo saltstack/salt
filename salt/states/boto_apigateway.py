@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Apigateway Rest APIs
-=================
+===========================
 
 .. versionadded:: 2016.11.0
 
@@ -31,18 +31,18 @@ config:
 .. code-block:: yaml
 
     myprofile:
-        keyid: GKTADJGHEIQSXMKKRBJ08H
-        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
 
 .. code-block:: yaml
 
     Ensure Apigateway API exists:
-        boto_apigateway.present:
-            - name: myfunction
-            - region: us-east-1
-            - keyid: GKTADJGHEIQSXMKKRBJ08H
-            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      boto_apigateway.present:
+        - name: myfunction
+        - region: us-east-1
+        - keyid: GKTADJGHEIQSXMKKRBJ08H
+        - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
 '''
 

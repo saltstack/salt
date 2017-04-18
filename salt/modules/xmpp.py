@@ -182,7 +182,7 @@ def send_msg_multi(message,
         password = creds.get('xmpp.password')
 
     xmpp = SendMsgBot.create_multi(
-        jid, password, message, recipients=recipients, rooms=rooms)
+        jid, password, message, recipients=recipients, rooms=rooms, nick=nick)
 
     if rooms:
         xmpp.register_plugin('xep_0045')  # MUC plugin

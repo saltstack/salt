@@ -172,7 +172,7 @@ def ext_pillar(minion_id,
 
     pil = Pillar(opts, __grains__, minion_id, environment)
 
-    compiled_pillar = pil.compile_pillar()
+    compiled_pillar = pil.compile_pillar(ext=False)
 
     return compiled_pillar
 

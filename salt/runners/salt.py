@@ -7,14 +7,14 @@ execution modules available
 on the salt master.
 
 .. _salt_salt_runner:
+
 Salt's execution modules are normally available
 on the salt minion. Use this runner to call
 execution modules on the salt master.
 Salt :ref:`execution modules <writing-execution-modules>`
 are the functions called by the ``salt`` command.
 
-Execution modules can be
-called with ``salt-run``:
+Execution modules can be called with ``salt-run``:
 
 .. code-block:: bash
 
@@ -43,7 +43,7 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 def cmd(fun, *args, **kwargs):
     '''
     Execute ``fun`` with the given ``args`` and ``kwargs``.
-    Parameter ``fun`` should be the string :ref:`name <all-salt_modules>`
+    Parameter ``fun`` should be the string :ref:`name <all-salt.modules>`
     of the execution module to call.
 
     Note that execution modules will be *loaded every time*

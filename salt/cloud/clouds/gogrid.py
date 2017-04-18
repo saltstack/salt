@@ -326,10 +326,11 @@ def list_passwords(kwargs=None, call=None):
 
     ret = {}
     for item in response['list']:
-        server = item['server']['name']
-        if server not in ret:
-            ret[server] = []
-        ret[server].append(item)
+        if 'server' in item:
+            server = item['server']['name']
+            if server not in ret:
+                ret[server] = []
+            ret[server].append(item)
 
     return ret
 

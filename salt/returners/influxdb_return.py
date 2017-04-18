@@ -110,7 +110,7 @@ def _get_version(host, port, user, password):
     # check the InfluxDB version via the HTTP API
     try:
         result = requests.get("http://{0}:{1}/ping".format(host, port), auth=(user, password))
-        if result.status_code == 200 and influxDBVersionHeader in result.headers:
+        if result.status_code == 204 and influxDBVersionHeader in result.headers:
             version = result.headers[influxDBVersionHeader]
     except Exception as ex:
         log.critical('Failed to query InfluxDB version from HTTP API within InfluxDB returner: {0}'.format(ex))

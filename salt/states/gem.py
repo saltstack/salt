@@ -79,7 +79,7 @@ def installed(name,          # pylint: disable=C0103
         Format: http://hostname[:port]
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if ruby is not None and (__salt__['rvm.is_installed'](runas=user) or __salt__['rbenv.is_installed'](runas=user)):
+    if ruby is not None and not(__salt__['rvm.is_installed'](runas=user) or __salt__['rbenv.is_installed'](runas=user)):
         log.warning(
             'Use of argument ruby found, but neither rvm or rbenv is installed'
         )

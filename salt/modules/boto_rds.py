@@ -220,7 +220,10 @@ def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None,
         rds = conn.describe_db_subnet_groups(DBSubnetGroupName=name)
         return {'exists': bool(rds)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        if "DBSubnetGroupNotFoundFault" in e.message:
+            return {'exists': False}
+        else:
+            return {'error': salt.utils.boto3.get_error(e)}
 
 
 def create(name, allocated_storage, db_instance_class, engine,
@@ -273,10 +276,10 @@ def create(name, allocated_storage, db_instance_class, engine,
         kwargs = {}
         boto_params = set(boto3_param_map.keys())
         keys = set(locals().keys())
-        for key in keys.intersection(boto_params):
-            val = locals()[key]
+        for param_key in keys.intersection(boto_params):
+            val = locals()[param_key]
             if val is not None:
-                mapped = boto3_param_map[key]
+                mapped = boto3_param_map[param_key]
                 kwargs[mapped[0]] = mapped[1](val)
 
         taglist = _tag_doc(tags)
@@ -297,15 +300,15 @@ def create(name, allocated_storage, db_instance_class, engine,
             log.info('Waiting 10 secs...')
             sleep(10)
             _describe = describe(name=name, tags=tags, region=region, key=key,
-                                 keyid=keyid, profile=profile)
+                                 keyid=keyid, profile=profile)['rds']
             if not _describe:
                 return {'created': True}
-            if _describe['db_instance_status'] == wait_status:
+            if _describe['DBInstanceStatus'] == wait_status:
                 return {'created': True, 'message':
                         'Created RDS {0} with current status '
-                        '{1}'.format(name, _describe['db_instance_status'])}
+                        '{1}'.format(name, _describe['DBInstanceStatus'])}
 
-            log.info('Current status: {0}'.format(_describe['db_instance_status']))
+            log.info('Current status: {0}'.format(_describe['DBInstanceStatus']))
 
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
@@ -629,10 +632,8 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
 
         start_time = time()
         while True:
-            if not __salt__['boto_rds.exists'](name=name, region=region,
-                                               key=key, keyid=keyid,
-                                               profile=profile):
-
+            res = __salt__['boto_rds.exists'](name=name, region=region, key=key, keyid=keyid, profile=profile)
+            if not res.get('exists'):
                 return {'deleted': bool(res), 'message':
                         'Deleted RDS instance {0} completely.'.format(name)}
 

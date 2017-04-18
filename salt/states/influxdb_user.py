@@ -16,12 +16,12 @@ def __virtual__():
     return False
 
 
-def _changes(name, admin):
+def _changes(name, admin, **client_args):
     '''
     Get necessary changes to given user account
     '''
 
-    existing_user = __salt__['influxdb.user_info'](name)
+    existing_user = __salt__['influxdb.user_info'](name, **client_args)
     changes = {}
 
     if existing_user['admin'] != admin:
@@ -68,7 +68,7 @@ def present(name,
                 ret['result'] = False
                 return ret
     else:
-        changes = _changes(name, admin)
+        changes = _changes(name, admin, **client_args)
         if changes:
             if __opts__['test']:
                 ret['result'] = None
@@ -78,17 +78,17 @@ def present(name,
                     ret['comment'] += u'{0}: {1}\n'.format(k, v)
                 return ret
             else:
-                pre = __salt__['influxdb.user_info'](name)
+                pre = __salt__['influxdb.user_info'](name, **client_args)
                 for k, v in changes.items():
                     if k == 'admin':
                         if v:
-                            __salt__['influxdb.grant_admin_privileges'](name)
+                            __salt__['influxdb.grant_admin_privileges'](name, **client_args)
                             continue
                         else:
-                            __salt__['influxdb.revoke_admin_privileges'](name)
+                            __salt__['influxdb.revoke_admin_privileges'](name, **client_args)
                             continue
 
-                post = __salt__['influxdb.user_info'](name)
+                post = __salt__['influxdb.user_info'](name, **client_args)
                 for k in post:
                     if post[k] != pre[k]:
                         ret['changes'][k] = post[k]

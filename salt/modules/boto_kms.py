@@ -64,7 +64,7 @@ try:
     # pylint: enable=unused-import
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
-except ImportError:
+except (ImportError, AttributeError):
     HAS_BOTO = False
 
 

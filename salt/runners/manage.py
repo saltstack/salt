@@ -34,7 +34,7 @@ FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 log = logging.getLogger(__name__)
 
 
-def _ping(tgt, expr_form, timeout):
+def _ping(tgt, expr_form, timeout, gather_job_timeout):
     client = salt.client.get_local_client(__opts__['conf_file'])
     pub_data = client.run_job(tgt, 'test.ping', (), expr_form, '', timeout, '')
 
@@ -47,7 +47,8 @@ def _ping(tgt, expr_form, timeout):
             pub_data['minions'],
             client._get_timeout(timeout),
             tgt,
-            expr_form):
+            expr_form,
+            gather_job_timeout=gather_job_timeout):
 
         if fn_ret:
             for mid, _ in six.iteritems(fn_ret):
@@ -58,7 +59,7 @@ def _ping(tgt, expr_form, timeout):
     return list(returned), list(not_returned)
 
 
-def status(output=True, tgt='*', expr_form='glob'):
+def status(output=True, tgt='*', expr_form='glob', timeout=None, gather_job_timeout=None):
     '''
     Print the status of all known salt minions
 
@@ -67,10 +68,17 @@ def status(output=True, tgt='*', expr_form='glob'):
     .. code-block:: bash
 
         salt-run manage.status
+        salt-run manage.status timeout=5 gather_job_timeout=10
         salt-run manage.status tgt="webservers" expr_form="nodegroup"
     '''
     ret = {}
-    ret['up'], ret['down'] = _ping(tgt, expr_form, __opts__['timeout'])
+
+    if not timeout:
+        timeout = __opts__['timeout']
+    if not gather_job_timeout:
+        gather_job_timeout = __opts__['gather_job_timeout']
+
+    ret['up'], ret['down'] = _ping(tgt, expr_form, timeout, gather_job_timeout)
     return ret
 
 
@@ -148,7 +156,7 @@ def down(removekeys=False, tgt='*', expr_form='glob'):
     return ret
 
 
-def up(tgt='*', expr_form='glob'):  # pylint: disable=C0103
+def up(tgt='*', expr_form='glob', timeout=None, gather_job_timeout=None):  # pylint: disable=C0103
     '''
     Print a list of all of the minions that are up
 
@@ -157,9 +165,16 @@ def up(tgt='*', expr_form='glob'):  # pylint: disable=C0103
     .. code-block:: bash
 
         salt-run manage.up
+        salt-run manage.up timeout=5 gather_job_timeout=10
         salt-run manage.up tgt="webservers" expr_form="nodegroup"
     '''
-    ret = status(output=False, tgt=tgt, expr_form=expr_form).get('up', [])
+    ret = status(
+        output=False,
+        tgt=tgt,
+        expr_form=expr_form,
+        timeout=timeout,
+        gather_job_timeout=gather_job_timeout
+    ).get('up', [])
     return ret
 
 

@@ -93,8 +93,6 @@ import salt.utils
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
-import salt.loader
-from salt.template import compile_template
 
 # Import salt.cloud libs
 import salt.utils.cloud
@@ -1179,7 +1177,7 @@ def securitygroupid(vm_):
                 log.debug('AWS SecurityGroup ID of {0} is {1}'.format(
                     sg['groupName'], sg['groupId'])
                 )
-                securitygroupid_set = securitygroupid_set.add(sg['groupId'])
+                securitygroupid_set.add(sg['groupId'])
     return list(securitygroupid_set)
 
 
@@ -1678,6 +1676,7 @@ def request_instance(vm_=None, call=None):
     image_id = vm_['image']
     params[spot_prefix + 'ImageId'] = image_id
 
+    userdata = None
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False, default=None
     )
@@ -1691,18 +1690,13 @@ def request_instance(vm_=None, call=None):
             with salt.utils.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
-    if userdata is not None:
-        render_opts = __opts__.copy()
-        render_opts.update(vm_)
-        renderer = __opts__.get('renderer', 'yaml_jinja')
-        rend = salt.loader.render(render_opts, {})
-        blacklist = __opts__['renderer_blacklist']
-        whitelist = __opts__['renderer_whitelist']
-        userdata = compile_template(
-            ':string:', rend, renderer, blacklist, whitelist, input_data=userdata,
-        )
+    userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
 
-        params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
+    if userdata is not None:
+        try:
+            params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
+        except Exception as exc:
+            log.exception('Failed to encode userdata: %s', exc)
 
     vm_size = config.get_cloud_config_value(
         'size', vm_, __opts__, search_global=False
@@ -1888,7 +1882,7 @@ def request_instance(vm_=None, call=None):
             params[termination_key] = str(set_del_root_vol_on_destroy).lower()
 
             # Use default volume type if not specified
-            if 'Ebs.VolumeType' not in ex_blockdevicemappings[dev_index]:
+            if ex_blockdevicemappings and 'Ebs.VolumeType' not in ex_blockdevicemappings[dev_index]:
                 type_key = '{0}BlockDeviceMapping.{1}.Ebs.VolumeType'.format(spot_prefix, dev_index)
                 params[type_key] = rd_type
 
@@ -2122,14 +2116,21 @@ def query_instance(vm_=None, call=None):
 
         log.debug('Returned query data: {0}'.format(data))
 
-        if ssh_interface(vm_) == 'public_ips' and 'ipAddress' in data[0]['instancesSet']['item']:
-            log.error(
-                'Public IP not detected.'
-            )
-            return data
-        if ssh_interface(vm_) == 'private_ips' and \
-           'privateIpAddress' in data[0]['instancesSet']['item']:
-            return data
+        if ssh_interface(vm_) == 'public_ips':
+            if 'ipAddress' in data[0]['instancesSet']['item']:
+                return data
+            else:
+                log.error(
+                    'Public IP not detected.'
+                )
+
+        if ssh_interface(vm_) == 'private_ips':
+            if 'privateIpAddress' in data[0]['instancesSet']['item']:
+                return data
+            else:
+                log.error(
+                    'Private IP not detected.'
+                )
 
     try:
         data = salt.utils.cloud.wait_for_ip(
@@ -2560,9 +2561,11 @@ def create(vm_=None, call=None):
         transport=__opts__['transport']
     )
 
-    set_tags(
-        vm_['name'],
-        tags,
+    salt.utils.cloud.wait_for_fun(
+        set_tags,
+        timeout=30,
+        name=vm_['name'],
+        tags=tags,
         instance_id=vm_['instance_id'],
         call='action',
         location=location
@@ -2712,11 +2715,7 @@ def queue_instances(instances):
     '''
     for instance_id in instances:
         node = _get_node(instance_id=instance_id)
-        for name in node:
-            if instance_id == node[name]['instanceId']:
-                __utils__['cloud.cache_node'](node[name],
-                                            __active_provider_name__,
-                                            __opts__)
+        __utils__['cloud.cache_node'](node, __active_provider_name__, __opts__)
 
 
 def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
@@ -3267,10 +3266,7 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
         )
 
     node = _get_node(name=name, instance_id=instance_id)
-    for name in node:
-        __utils__['cloud.cache_node'](node[name],
-                                    __active_provider_name__,
-                                    __opts__)
+    __utils__['cloud.cache_node'](node, __active_provider_name__, __opts__)
     return node
 
 

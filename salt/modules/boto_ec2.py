@@ -502,8 +502,8 @@ def create_image(ami_name, instance_id=None, instance_name=None, tags=None, regi
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.create_instance ami_name instance_name=myinstance
-        salt myminion boto_ec2.create_instance another_ami_name tags='{"mytag": "value"}' description='this is my ami'
+        salt myminion boto_ec2.create_image ami_name instance_name=myinstance
+        salt myminion boto_ec2.create_image another_ami_name tags='{"mytag": "value"}' description='this is my ami'
 
     '''
 

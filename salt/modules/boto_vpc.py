@@ -2283,7 +2283,7 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                                   'must be provided.')
 
     if not _exactly_one((gateway_id, internet_gateway_name, instance_id, interface_id, vpc_peering_connection_id,
-                         interface_id, nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
+                         nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
         raise SaltInvocationError('Only one of gateway_id, internet_gateway_name, instance_id, '
                                   'interface_id, vpc_peering_connection_id, nat_gateway_id, '
                                   'nat_gateway_subnet_id or nat_gateway_subnet_name may be provided.')
@@ -2453,7 +2453,7 @@ def describe_route_table(route_table_id=None, route_table_name=None,
 
     '''
 
-    salt.utils.warn_until('Nitrogen',
+    salt.utils.warn_until('Oxygen',
          'The \'describe_route_table\' method has been deprecated and '
          'replaced by \'describe_route_tables\'.'
     )
@@ -2599,7 +2599,13 @@ def _maybe_set_name_tag(name, obj):
 
 def _maybe_set_tags(tags, obj):
     if tags:
-        obj.add_tags(tags)
+        # Not all objects in Boto have an 'add_tags()' method.
+        try:
+            obj.add_tags(tags)
+
+        except AttributeError:
+            for tag, value in tags.items():
+                obj.add_tag(tag, value)
 
         log.debug('The following tags: {0} were added to {1}'.format(', '.join(tags), obj))
 

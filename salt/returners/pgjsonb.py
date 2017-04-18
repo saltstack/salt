@@ -3,9 +3,20 @@
 Return data to a PostgreSQL server with json data stored in Pg's jsonb data type
 
 :maintainer:    Dave Boucha <dave@saltstack.com>, Seth House <shouse@saltstack.com>, C. R. Oldham <cr@saltstack.com>
-:maturity:      new
+:maturity:      Stable
 :depends:       python-psycopg2
 :platform:      all
+
+.. note::
+    There are three PostgreSQL returners.  Any can function as an external
+    :ref:`master job cache <external-master-cache>`. but each has different
+    features.  SaltStack recommends
+    :mod:`returners.pgjsonb <salt.returners.pgjsonb>` if you are working with
+    a version of PostgreSQL that has the appropriate native binary JSON types.
+    Otherwise, review
+    :mod:`returners.postgres <salt.returners.postgres>` and
+    :mod:`returners.postgres_local_cache <salt.returners.postgres_local_cache>`
+    to see which module best suits your particular needs.
 
 To enable this returner, the minion will need the python client for PostgreSQL
 installed and the following values configured in the minion or master

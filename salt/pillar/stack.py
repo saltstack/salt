@@ -105,7 +105,9 @@ are jinja2 templates which must render as a simple ordered list of ``yaml``
 files that will then be merged to build pillar data.
 
 The path of these ``yaml`` files must be relative to the directory of the
-PillarStack config file.
+PillarStack config file. These paths support unix style pathname pattern
+expansion through the
+`Python glob module <https://docs.python.org/2/library/glob.html>`.
 
 The following variables are available in jinja2 templating of PillarStack
 configuration files:
@@ -128,6 +130,7 @@ For example, you could have a PillarStack config file which looks like:
 
     $ cat /path/to/stack/config.cfg
     core.yml
+    common/*.yml
     osarchs/{{ __grains__['osarch'] }}.yml
     oscodenames/{{ __grains__['oscodename'] }}.yml
     {%- for role in pillar.get('roles', []) %}
@@ -143,6 +146,9 @@ And the whole directory structure could look like:
     /path/to/stack/
     ├── config.cfg
     ├── core.yml
+    ├── common/
+    │   ├── xxx.yml
+    │   └── yyy.yml
     ├── osarchs/
     │   ├── amd64.yml
     │   └── armhf.yml
@@ -164,6 +170,8 @@ amd64 platform running Debian Jessie, and which pillar ``roles`` is ``["db"]``,
 the following ``yaml`` files would be merged in order:
 
 - ``core.yml``
+- ``common/xxx.yml``
+- ``common/yyy.yml``
 - ``osarchs/amd64.yml``
 - ``oscodenames/jessie.yml``
 - ``roles/db.yml``
@@ -371,11 +379,14 @@ from __future__ import absolute_import
 import os
 import logging
 from functools import partial
+from glob import glob
+
 import yaml
-from jinja2 import FileSystemLoader, Environment, TemplateNotFound
+from jinja2 import FileSystemLoader, Environment
 
 # Import Salt libs
 import salt.ext.six as six
+import salt.utils
 
 
 log = logging.getLogger(__name__)
@@ -383,7 +394,6 @@ strategies = ('overwrite', 'merge-first', 'merge-last', 'remove')
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
-    import salt.utils
     stack = {}
     stack_config_files = list(args)
     traverse = {
@@ -417,28 +427,30 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
         "__opts__": __opts__,
         "__salt__": __salt__,
         "__grains__": __grains__,
+        "__stack__": {
+            'traverse': salt.utils.traverse_dict_and_list
+            },
         "minion_id": minion_id,
         "pillar": pillar,
         })
-    for path in _parse_stack_cfg(jenv.get_template(filename).render(stack=stack)):
-        try:
+    for item in _parse_stack_cfg(
+            jenv.get_template(filename).render(stack=stack)):
+        if not item.strip():
+            continue  # silently ignore whitespace or empty lines
+        paths = glob(os.path.join(basedir, item))
+        if not paths:
+            log.warning('Ignoring pillar stack template "{0}": can\'t find from '
+                     'root dir "{1}"'.format(item, basedir))
+            continue
+        for path in sorted(paths):
             log.debug('YAML: basedir={0}, path={1}'.format(basedir, path))
-            obj = yaml.safe_load(jenv.get_template(path).render(stack=stack))
+            obj = yaml.safe_load(jenv.get_template(
+                    os.path.relpath(path, basedir)).render(stack=stack))
             if not isinstance(obj, dict):
                 log.info('Ignoring pillar stack template "{0}": Can\'t parse '
                          'as a valid yaml dictionary'.format(path))
                 continue
             stack = _merge_dict(stack, obj)
-        except TemplateNotFound as e:
-            if hasattr(e, 'name') and e.name != path:
-                log.info('Jinja include file "{0}" not found '
-                         'from root dir "{1}", which was included '
-                         'by stack template "{2}"'.format(
-                             e.name, basedir, path))
-            else:
-                log.info('Ignoring pillar stack template "{0}": can\'t find from '
-                         'root dir "{1}"'.format(path, basedir))
-            continue
     return stack
 
 

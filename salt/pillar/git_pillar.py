@@ -4,8 +4,8 @@ Use a git repository as a Pillar source
 ---------------------------------------
 
 .. note::
-    This external pillar has been rewritten for the :doc:`2015.8.0
-    </topics/releases/2015.8.0>` release. The old method of configuring this
+    This external pillar has been rewritten for the :ref:`2015.8.0
+    <release-2015-8-0>` release. The old method of configuring this
     external pillar will be maintained for a couple releases, allowing time for
     configurations to be updated to reflect the new usage.
 
@@ -56,7 +56,11 @@ the repo's URL. Configuration details can be found below.
 Configuring git_pillar for Salt releases before 2015.8.0
 ========================================================
 
-For Salt releases earlier than :doc:`2015.8.0 </topics/releases/2015.8.0>`,
+.. note::
+    This legacy configuration for git_pillar will no longer be supported as of
+    the **Oxygen** release of Salt.
+
+For Salt releases earlier than :ref:`2015.8.0 <release-2015-8-0>`,
 GitPython is the only supported provider for git_pillar. Individual
 repositories can be configured under the :conf_master:`ext_pillar`
 configuration parameter like so:
@@ -67,8 +71,8 @@ configuration parameter like so:
       - git: master https://gitserver/git-pillar.git root=subdirectory
 
 The repository is specified in the format ``<branch> <repo_url>``, with an
-optional ``root`` parameter (added in the :doc:`2014.7.0
-</topics/releases/2014.7.0>` release) which allows the pillar SLS files to be
+optional ``root`` parameter (added in the :ref:`2014.7.0
+<release-2014-7-0>` release) which allows the pillar SLS files to be
 served up from a subdirectory (similar to :conf_master:`gitfs_root` in gitfs).
 
 To use more than one branch from the same repo, multiple lines must be
@@ -122,7 +126,7 @@ The corresponding Pillar top file would look like this:
 
 .. code-block:: yaml
 
-    {{env}}:
+    {{saltenv}}:
       '*':
         - bar
 
@@ -138,6 +142,10 @@ The corresponding Pillar top file would look like this:
     ``environment`` config option (instead of the minion's) before falling back
     to :conf_master:`gitfs_base`. This has been fixed in the 2016.3.5 and
     2016.11.1 releases (2016.11.0 contains the incorrect behavior).
+
+    Additionally, in releases before 2016.11.0, both ``{{env}}`` and
+    ``{{saltenv}}`` could be used as a placeholder for the environment.
+    Starting in 2016.11.0, ``{{env}}`` is no longer supported.
 
 .. _git-pillar-2015-8-0-and-later:
 
@@ -218,8 +226,23 @@ per-remote parameter:
         - production https://gitserver/git-pillar.git:
           - env: prod
 
-If ``__env__`` is specified as the branch name, then git_pillar will use the
-branch specified by :conf_master:`git_pillar_base`:
+If ``__env__`` is specified as the branch name, then git_pillar will decide
+which branch to use based on the following criteria:
+
+- If the minion has a :conf_minion:`pillarenv` configured, it will use that
+  pillar environment. (2016.11.2 and later)
+- Otherwise, if the minion has an ``environment`` configured, it will use that
+  environment.
+- Otherwise, the master's :conf_master:`git_pillar_base` will be used.
+
+.. note::
+    The use of :conf_minion:`environment` to choose the pillar environment
+    dates from a time before the :conf_minion:`pillarenv` parameter was added.
+    In a future release, it will be ignored and either the minion's
+    :conf_minion:`pillarenv` or the master's :conf_master:`git_pillar_base`
+    will be used.
+
+Here's an example of using ``__env__`` as the git_pillar environment:
 
 .. code-block:: yaml
 
@@ -232,7 +255,7 @@ The corresponding Pillar top file would look like this:
 
 .. code-block:: yaml
 
-    {{env}}:
+    {{saltenv}}:
       '*':
         - bar
 
@@ -257,6 +280,10 @@ The corresponding Pillar top file would look like this:
     2016.3.4 incorrectly checks the *master's* ``environment`` config option
     (instead of the minion's) before falling back to the master's
     :conf_master:`git_pillar_base`.
+
+    Additionally, in releases before 2016.11.0, both ``{{env}}`` and
+    ``{{saltenv}}`` could be used as a placeholder for the environment.
+    Starting in 2016.11.0, ``{{env}}`` is no longer supported.
 
 With the addition of pygit2_ support, git_pillar can now interact with
 authenticated remotes. Authentication works just like in gitfs (as outlined in
@@ -380,6 +407,10 @@ def ext_pillar(minion_id, repo, pillar_dirs):
             # the pillar top.sls is sourced from the correct location.
             pillar_roots = [pillar_dir]
             pillar_roots.extend([x for x in all_dirs if x != pillar_dir])
+            if env == '__env__':
+                env = opts.get('pillarenv') \
+                    or opts.get('environment') \
+                    or opts.get('git_pillar_base')
             opts['pillar_roots'] = {env: pillar_roots}
 
             local_pillar = Pillar(opts, __grains__, minion_id, env)
@@ -512,6 +543,14 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
     '''
     Support pre-Beryllium config schema
     '''
+    salt.utils.warn_until(
+        'Oxygen',
+        'The git ext_pillar configuration is deprecated. Please refer to the '
+        'documentation at '
+        'https://docs.saltstack.com/en/latest/ref/pillar/all/salt.pillar.git_pillar.html '
+        'for more information. This configuration will no longer be supported '
+        'as of the Oxygen release of Salt.'
+    )
     if pillar_dirs is None:
         return
     # split the branch, repo name and optional extra (key=val) parameters.
