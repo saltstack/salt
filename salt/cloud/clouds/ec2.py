@@ -3610,7 +3610,7 @@ def list_nodes_select(call=None):
 
 def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     '''
-    Show the details from EC2 concerning an AMI
+    Show the details from EC2 concerning an instance's termination protection state
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -3644,6 +3644,37 @@ def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     )
 
     return disable_protect
+
+
+def show_detailed_monitoring(name=None, instance_id=None, call=None, quiet=False):
+    '''
+    Show the details from EC2 regarding cloudwatch detailed monitoring.
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_detailed_monitoring action must be called with -a or --action.'
+        )
+
+    location = get_location()
+    if str(name).startswith('i-') and (len(name) == 10 or len(name) == 19):
+        instance_id = name
+
+    if name is not None:
+        match_key = name
+    elif instance_id is not None:
+        match_key = instance_id
+    else:
+        raise SaltCloudSystemExit(
+            'The show_detailed_monitoring action must be provided with a name or instance ID'
+        )
+    matched = _get_node(name=name, instance_id=instance_id, location=location)
+    result = matched[location]['ec2'][match_key]['monitoring']
+    log.log(
+        logging.DEBUG if quiet is True else logging.INFO,
+        'Detailed Monitoring is {0} for {1}'.format(result, name)
+    )
+
+    return result
 
 
 def enable_term_protect(name, call=None):
@@ -3686,13 +3717,8 @@ def disable_term_protect(name, call=None):
 
 def _toggle_term_protect(name, value):
     '''
-    Disable termination protection on a node
+    Enable or Disable termination protection on a node
 
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a disable_term_protect mymachine
     '''
     instance_id = _get_node(name)['instanceId']
     params = {'Action': 'ModifyInstanceAttribute',
@@ -3707,6 +3733,79 @@ def _toggle_term_protect(name, value):
                        sigver='4')
 
     return show_term_protect(name=name, instance_id=instance_id, call='action')
+
+
+def enable_term_protect(name, call=None):
+    '''
+    Enable termination protection on a node
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a enable_term_protect mymachine
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The enable_term_protect action must be called with '
+            '-a or --action.'
+        )
+
+    return _toggle_term_protect(name, 'true')
+
+
+def disable_detailed_monitoring(name, call=None):
+    '''
+    Enable/disable detailed monitoring on a node
+
+    CLI Example:
+
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The enable_term_protect action must be called with '
+            '-a or --action.'
+        )
+
+    instance_id = _get_node(name)['instanceId']
+    params = {'Action': 'UnMonitorInstances',
+              'InstanceId.1': instance_id}
+
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       return_root=True,
+                       opts=__opts__,
+                       sigver='4')
+
+    return show_detailed_monitoring(name=name, instance_id=instance_id, call='action')
+
+def enable_detailed_monitoring(name, call=None):
+    '''
+    Enable/disable detailed monitoring on a node
+
+    CLI Example:
+
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The enable_term_protect action must be called with '
+            '-a or --action.'
+        )
+
+    instance_id = _get_node(name)['instanceId']
+    params = {'Action': 'MonitorInstances',
+              'InstanceId.1': instance_id}
+
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       return_root=True,
+                       opts=__opts__,
+                       sigver='4')
+
+    return show_detailed_monitoring(name=name, instance_id=instance_id, call='action')
+
 
 
 def show_delvol_on_destroy(name, kwargs=None, call=None):
