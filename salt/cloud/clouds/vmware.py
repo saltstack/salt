@@ -273,8 +273,6 @@ def _edit_existing_hard_disk_helper(disk, size_kb=None, size_gb=None, mode=None)
 
 
 def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1000, thin_provision=False, datastore=None, vm_name=None):
-
-
     random_key = randint(-2099, -2000)
     size_kb = int(size_gb * 1024.0 * 1024.0)
 
