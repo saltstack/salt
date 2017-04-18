@@ -1,3 +1,5 @@
+.. _proxy-minion-end-to-end-example:
+
 ====================================
 Salt Proxy Minion End-to-End Example
 ====================================

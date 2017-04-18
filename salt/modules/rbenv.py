@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage ruby installations with rbenv. rbenv is supported on Linux and Mac OS X.
+Manage ruby installations with rbenv. rbenv is supported on Linux and macOS.
 rbenv doesn't work on Windows (and isn't really necessary on Windows as there is
 no system Ruby on Windows). On Windows, the RubyInstaller and/or Pik are both
 good alternatives to work with multiple versions of Ruby on the same box.

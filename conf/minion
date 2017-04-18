@@ -193,6 +193,15 @@
 # The wait-time will be a random number of seconds between 0 and the defined value.
 #random_reauth_delay: 60
 
+
+# To avoid overloading a master when many minions startup at once, a randomized
+# delay may be set to tell the minions to wait before connecting to the master.
+# This value is the number of seconds to choose from for a random number. For
+# example, setting this value to 60 will choose a random number of seconds to delay
+# on startup between zero seconds and sixty seconds. Setting to '0' will disable
+# this feature.
+#random_startup_delay: 0
+
 # When waiting for a master to accept the minion's public key, salt will
 # continuously attempt to reconnect until successful. This is the timeout value,
 # in seconds, for each individual attempt. After this timeout expires, the minion
@@ -647,6 +656,10 @@
 ###########################################
 # Disable multiprocessing support, by default when a minion receives a
 # publication a new process is spawned and the command is executed therein.
+#
+# WARNING: Disabling multiprocessing may result in substantial slowdowns
+# when processing large pillars. See https://github.com/saltstack/salt/issues/38758
+# for a full explanation.
 #multiprocessing: True
 
 
@@ -731,6 +744,10 @@
 #
 #zmq_monitor: False
 
+# Number of times to try to authenticate with the salt master when reconnecting
+# to the master
+#tcp_authentication_retries: 5
+
 ######      Module configuration      #####
 ###########################################
 # Salt allows for modules to be passed arbitrary configuration data, any data
@@ -801,8 +818,16 @@
 
 ######      Returner  settings        ######
 ############################################
-# Which returner(s) will be used for minion's result:
+# Default Minion returners. Can be a comma delimited string or a list:
+#
 #return: mysql
+#
+#return: mysql,slack,redis
+#
+#return:
+#  - mysql
+#  - hipchat
+#  - slack
 
 
 ######    Miscellaneous  settings     ######

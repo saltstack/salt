@@ -661,7 +661,7 @@ class State(object):
         self._pillar_enc = pillar_enc
         self.opts['pillar'] = self._gather_pillar()
         self.state_con = context or {}
-        self.load_modules(proxy=proxy)
+        self.load_modules()
         self.active = set()
         self.mod_init = set()
         self.pre = {}
@@ -861,7 +861,8 @@ class State(object):
         if self.states_loader == 'thorium':
             self.states = salt.loader.thorium(self.opts, self.functions, {})  # TODO: Add runners
         else:
-            self.states = salt.loader.states(self.opts, self.functions, self.utils, self.serializers)
+            self.states = salt.loader.states(self.opts, self.functions, self.utils,
+                                             self.serializers, proxy=self.proxy)
 
     def load_modules(self, data=None, proxy=None):
         '''
@@ -871,7 +872,7 @@ class State(object):
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, self.state_con,
                                                  utils=self.utils,
-                                                 proxy=proxy)
+                                                 proxy=self.proxy)
         if isinstance(data, dict):
             if data.get('provider', False):
                 if isinstance(data['provider'], str):
@@ -911,7 +912,7 @@ class State(object):
                 log.error('Error encountered during module reload. Modules were not reloaded.')
             except TypeError:
                 log.error('Error encountered during module reload. Modules were not reloaded.')
-        self.load_modules(proxy=self.proxy)
+        self.load_modules()
         if not self.opts.get('local', False) and self.opts.get('multiprocessing', True):
             self.functions['saltutil.refresh_modules']()
 
@@ -1647,8 +1648,9 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         '''
-        start_time = datetime.datetime.now()
-        log.info('Running state [{0}] at time {1}'.format(low['name'], start_time.time().isoformat()))
+        utc_start_time = datetime.datetime.utcnow()
+        local_start_time = utc_start_time - (datetime.datetime.utcnow() - datetime.datetime.now())
+        log.info('Running state [{0}] at time {1}'.format(low['name'], local_start_time.time().isoformat()))
         errors = self.verify_data(low)
         if errors:
             ret = {
@@ -1786,14 +1788,17 @@ class State(object):
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
-        finish_time = datetime.datetime.now()
-        ret['start_time'] = start_time.time().isoformat()
-        delta = (finish_time - start_time)
+        utc_finish_time = datetime.datetime.utcnow()
+        timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
+        local_finish_time = utc_finish_time - timezone_delta
+        local_start_time = utc_start_time - timezone_delta
+        ret['start_time'] = local_start_time.time().isoformat()
+        delta = (utc_finish_time - utc_start_time)
         # duration in milliseconds.microseconds
         duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
         ret['duration'] = duration
         ret['__id__'] = low['__id__']
-        log.info('Completed state [{0}] at time {1} duration_in_ms={2}'.format(low['name'], finish_time.time().isoformat(), duration))
+        log.info('Completed state [{0}] at time {1} duration_in_ms={2}'.format(low['name'], local_finish_time.time().isoformat(), duration))
         return ret
 
     def call_chunks(self, chunks):
@@ -1818,10 +1823,9 @@ class State(object):
         Check if the low data chunk should send a failhard signal
         '''
         tag = _gen_tag(low)
-        if self.opts['test']:
+        if self.opts.get('test', False):
             return False
-        if (low.get('failhard', False) or self.opts['failhard']
-                and tag in running):
+        if (low.get('failhard', False) or self.opts['failhard']) and tag in running:
             if running[tag]['result'] is None:
                 return False
             return not running[tag]['result']
@@ -2502,22 +2506,17 @@ class BaseHighState(object):
             envs.extend([x for x in list(self.opts['file_roots'])
                          if x not in envs])
         env_order = self.opts.get('env_order', [])
+        # Remove duplicates while preserving the order
+        members = set()
+        env_order = [env for env in env_order if not (env in members or members.add(env))]
         client_envs = self.client.envs()
         if env_order and client_envs:
-            client_env_list = self.client.envs()
-            env_intersection = set(env_order).intersection(client_env_list)
-            final_list = []
-            for ord_env in env_order:
-                if ord_env in env_intersection and ord_env not in final_list:
-                    final_list.append(ord_env)
-            return final_list
+            return [env for env in env_order if env in client_envs]
 
         elif env_order:
             return env_order
         else:
-            for cenv in client_envs:
-                if cenv not in envs:
-                    envs.append(cenv)
+            envs.extend([env for env in client_envs if env not in envs])
             return envs
 
     def get_tops(self):
@@ -2586,7 +2585,7 @@ class BaseHighState(object):
                     tops[saltenv].append({})
                     log.debug('No contents loaded for env: {0}'.format(saltenv))
 
-            if found > 1 and merging_strategy.startswith('merge'):
+            if found > 1 and merging_strategy == 'merge' and not self.opts.get('env_order', None):
                 log.warning(
                     'top_file_merging_strategy is set to \'%s\' and '
                     'multiple top files were found. Merging order is not '
@@ -3529,6 +3528,7 @@ class HighState(BaseHighState):
                            mocked=mocked,
                            loader=loader)
         self.matcher = salt.minion.Matcher(self.opts)
+        self.proxy = proxy
 
         # tracks all pydsl state declarations globally across sls files
         self._pydsl_all_decls = {}

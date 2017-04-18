@@ -1,4 +1,4 @@
-.. conf_log:: external-logging-handlers
+.. _external-logging-handlers:
 
 External Logging Handlers
 -------------------------
@@ -9,5 +9,7 @@ External Logging Handlers
     :toctree:
     :template: autosummary.rst.tmpl
 
+    fluent_mod
+    log4mongo_mod
     logstash_mod
     sentry_mod

@@ -12,7 +12,7 @@ A REST API for Salt
       SSL is enabled, since this version worked the best with SSL in
       internal testing. Versions 3.2.3 - 4.x can be used if SSL is not enabled.
       Be aware that there is a known
-      `SSL error <https://bitbucket.org/cherrypy/cherrypy/issue/1298/ssl-not-working>`_
+      `SSL error <https://github.com/cherrypy/cherrypy/issues/1298>`_
       introduced in version 3.2.5. The issue was reportedly resolved with
       CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
 :optdepends:    - ws4py Python module for websockets support.
@@ -462,6 +462,8 @@ import itertools
 import functools
 import logging
 import json
+import os
+import signal
 import tarfile
 import time
 from multiprocessing import Process, Pipe
@@ -632,11 +634,7 @@ def salt_ip_verify_tool():
                 logger.debug("Request from IP: {0}".format(rem_ip))
                 if rem_ip not in auth_ip_list:
                     logger.error("Blocked IP: {0}".format(rem_ip))
-                    cherrypy.response.status = 403
-                    return {
-                        'status': cherrypy.response.status,
-                        'return': "Bad IP",
-                    }
+                    raise cherrypy.HTTPError(403, 'Bad IP')
 
 
 def salt_auth_tool():
@@ -1321,16 +1319,9 @@ class Jobs(LowDataAdapter):
         '''
         lowstate = [{
             'client': 'runner',
-            'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
+            'fun': 'jobs.list_job' if jid else 'jobs.list_jobs',
             'jid': jid,
         }]
-
-        if jid:
-            lowstate.append({
-                'client': 'runner',
-                'fun': 'jobs.list_job',
-                'jid': jid,
-            })
 
         cherrypy.request.lowstate = lowstate
         job_ret_info = list(self.exec_lowstate(
@@ -1338,12 +1329,18 @@ class Jobs(LowDataAdapter):
 
         ret = {}
         if jid:
-            job_ret, job_info = job_ret_info
-            ret['info'] = [job_info]
+            ret['info'] = [job_ret_info[0]]
+            minion_ret = {}
+            returns = job_ret_info[0].get('Result')
+            for minion in returns.keys():
+                if u'return' in returns[minion]:
+                    minion_ret[minion] = returns[minion].get(u'return')
+                else:
+                    minion_ret[minion] = returns[minion].get('return')
+            ret['return'] = [minion_ret]
         else:
-            job_ret = job_ret_info[0]
+            ret['return'] = [job_ret_info[0]]
 
-        ret['return'] = [job_ret]
         return ret
 
 
@@ -1689,16 +1686,19 @@ class Login(LowDataAdapter):
         try:
             eauth = self.opts.get('external_auth', {}).get(token['eauth'], {})
 
-            # Get sum of '*' perms, user-specific perms, and group-specific perms
-            perms = eauth.get(token['name'], [])
-            perms.extend(eauth.get('*', []))
+            if token['eauth'] == 'django' and '^model' in eauth:
+                perms = token['auth_list']
+            else:
+                # Get sum of '*' perms, user-specific perms, and group-specific perms
+                perms = eauth.get(token['name'], [])
+                perms.extend(eauth.get('*', []))
 
-            if 'groups' in token and token['groups']:
-                user_groups = set(token['groups'])
-                eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
+                if 'groups' in token and token['groups']:
+                    user_groups = set(token['groups'])
+                    eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
 
-                for group in user_groups & eauth_groups:
-                    perms.extend(eauth['{0}%'.format(group)])
+                    for group in user_groups & eauth_groups:
+                        perms.extend(eauth['{0}%'.format(group)])
 
             if not perms:
                 logger.debug("Eauth permission list not found.")
@@ -2219,6 +2219,12 @@ class WebsocketEndpoint(object):
                     listen=True)
             stream = event.iter_events(full=True, auto_reconnect=True)
             SaltInfo = event_processor.SaltInfo(handler)
+
+            def signal_handler(signal, frame):
+                os._exit(0)
+
+            signal.signal(signal.SIGTERM, signal_handler)
+
             while True:
                 data = next(stream)
                 if data:
@@ -2380,7 +2386,7 @@ class Webhook(object):
 
         And finally deploy the new build:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set secret_key = data.get('headers', {}).get('X-My-Secret-Key') %}
             {% set build = data.get('post', {}) %}

@@ -38,6 +38,7 @@ import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
+import salt.utils.pkg.deb
 import salt.utils.systemd
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -1858,8 +1859,9 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
         comments
             Sometimes you want to supply additional information, but not as
-            enabled configuration. Anything supplied for this list will be saved
-            in the repo configuration with a comment marker (#) in front.
+            enabled configuration. All comments provided here will be joined
+            into a single string and appended to the repo configuration with a
+            comment marker (#) before it.
 
             .. versionadded:: 2015.8.9
 
@@ -2089,13 +2091,17 @@ def mod_repo(repo, saltenv='base', **kwargs):
             if mod_source:
                 break
 
+    if 'comments' in kwargs:
+        kwargs['comments'] = \
+            salt.utils.pkg.deb.combine_comments(kwargs['comments'])
+
     if not mod_source:
         mod_source = sourceslist.SourceEntry(repo)
         if 'comments' in kwargs:
-            mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
+            mod_source.comment = kwargs['comments']
         sources.list.append(mod_source)
     elif 'comments' in kwargs:
-        mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
+        mod_source.comment = kwargs['comments']
 
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):
@@ -2464,7 +2470,7 @@ def owner(*paths):
     return ret
 
 
-def info_installed(*names):
+def info_installed(*names, **kwargs):
     '''
     Return the information of the named package(s) installed on the system.
 
@@ -2473,15 +2479,27 @@ def info_installed(*names):
     names
         The names of the packages for which to return information.
 
+    failhard
+        Whether to throw an exception if none of the packages are installed.
+        Defaults to True.
+
+        .. versionadded:: 2016.11.3
+
     CLI example:
 
     .. code-block:: bash
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
+        salt '*' pkg.info_installed <package1> failhard=false
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    failhard = kwargs.pop('failhard', True)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names).items():
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard).items():
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():

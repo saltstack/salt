@@ -37,7 +37,7 @@ def compound(tgt, minion_id=None):
 
         salt '*' match.compound 'L@cheese,foo and *'
     '''
-    opts = {'grains': __grains__}
+    opts = {'grains': __grains__, 'pillar': __pillar__}
     if minion_id is not None:
         if not isinstance(minion_id, string_types):
             minion_id = str(minion_id)
@@ -320,7 +320,7 @@ def filter_by(lookup, expr_form='compound', minion_id=None):
 
     Pillar Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         # Filter the data for the current minion into a variable:
         {% set roles = salt['match.filter_by']({

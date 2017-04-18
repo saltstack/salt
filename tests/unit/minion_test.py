@@ -66,8 +66,7 @@ class MinionTestCase(TestCase):
         return None BEFORE any of the processes are spun up because we should be avoiding firing duplicate
         jobs.
         '''
-        mock_opts = {'cachedir': '',
-                     'extension_modules': ''}
+        mock_opts = salt.config.DEFAULT_MINION_OPTS
         mock_data = {'fun': 'foo.bar',
                      'jid': 123}
         mock_jid_queue = [123]
@@ -88,9 +87,7 @@ class MinionTestCase(TestCase):
         jid isn't already present in the jid_queue.
         '''
         mock_jid = 11111
-        mock_opts = {'cachedir': '',
-                     'extension_modules': '',
-                     'minion_jid_queue_hwm': 100}
+        mock_opts = salt.config.DEFAULT_MINION_OPTS
         mock_data = {'fun': 'foo.bar',
                      'jid': mock_jid}
         mock_jid_queue = [123, 456]
@@ -118,9 +115,8 @@ class MinionTestCase(TestCase):
         Tests that the _handle_decoded_payload function removes a jid from the minion's jid_queue when the
         minion's jid_queue high water mark (minion_jid_queue_hwm) is hit.
         '''
-        mock_opts = {'cachedir': '',
-                     'extension_modules': '',
-                     'minion_jid_queue_hwm': 2}
+        mock_opts = salt.config.DEFAULT_MINION_OPTS
+        mock_opts['minion_jid_queue_hwm'] = 2
         mock_data = {'fun': 'foo.bar',
                      'jid': 789}
         mock_jid_queue = [123, 456]

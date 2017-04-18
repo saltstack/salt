@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Allows you to manage assistive access on OS X minions with 10.9+
-================================================================
+Allows you to manage assistive access on macOS minions with 10.9+
+=================================================================
 
-Install, enable and disable assitive access on OS X minions
+Install, enable and disable assistive access on macOS minions
 
 .. code-block:: yaml
 

@@ -153,15 +153,8 @@ def _replace_auth_key(
                     # Commented Line
                     lines.append(line)
                     continue
-                comps = line.split()
-                if len(comps) < 2:
-                    # Not a valid line
-                    lines.append(line)
-                    continue
-                key_ind = 1
-                if comps[0][:4:] not in ['ssh-', 'ecds']:
-                    key_ind = 2
-                if comps[key_ind] == key:
+                comps = re.findall(r'((.*)\s)?(ssh-[a-z0-9-]+|ecdsa-[a-z0-9-]+)\s([a-zA-Z0-9+/]+={0,2})(\s(.*))?', line)
+                if comps[0][3] == key:
                     lines.append(auth_line)
                 else:
                     lines.append(line)
@@ -228,7 +221,7 @@ def _validate_keys(key_file):
     return ret
 
 
-def _fingerprint(public_key):
+def _fingerprint(public_key, fingerprint_hash_type=None):
     '''
     Return a public key fingerprint based on its base64-encoded representation
 
@@ -236,7 +229,39 @@ def _fingerprint(public_key):
     in the form "xx:xx:...:xx"
 
     If the key is invalid (incorrect base64 string), return None
+
+    public_key
+        The public key to return the fingerprint for
+
+    fingerprint_hash_type
+        The public key fingerprint hash type that the public key fingerprint
+        was originally hashed with. This defaults to ``md5`` if not specified.
+
+        .. versionadded:: 2016.11.4
+
+        .. note::
+
+            The default value of the ``fingerprint_hash_type`` will change to
+            ``sha256`` in Salt Nitrogen.
+
     '''
+    if fingerprint_hash_type:
+        hash_type = fingerprint_hash_type.lower()
+    else:
+        # Set fingerprint_hash_type to md5 as default
+        log.warning('Public Key hashing currently defaults to "md5". This will '
+                    'change to "sha256" in the Nitrogen release.')
+        hash_type = 'md5'
+
+    try:
+        hash_func = getattr(hashlib, hash_type)
+    except AttributeError:
+        raise CommandExecutionError(
+            'The fingerprint_hash_type {0} is not supported.'.format(
+                hash_type
+            )
+        )
+
     try:
         if six.PY2:
             raw_key = public_key.decode('base64')
@@ -244,7 +269,9 @@ def _fingerprint(public_key):
             raw_key = base64.b64decode(public_key, validate=True)  # pylint: disable=E1123
     except binascii.Error:
         return None
-    ret = hashlib.md5(raw_key).hexdigest()
+
+    ret = hash_func(raw_key).hexdigest()
+
     chunks = [ret[i:i + 2] for i in range(0, len(ret), 2)]
     return ':'.join(chunks)
 
@@ -710,7 +737,7 @@ def set_auth_key(
         return 'new'
 
 
-def _parse_openssh_output(lines):
+def _parse_openssh_output(lines, fingerprint_hash_type=None):
     '''
     Helper function which parses ssh-keygen -F and ssh-keyscan function output
     and yield dict with keys information, one by one.
@@ -722,7 +749,8 @@ def _parse_openssh_output(lines):
             hostname, enc, key = line.split()
         except ValueError:  # incorrect format
             continue
-        fingerprint = _fingerprint(key)
+        fingerprint = _fingerprint(key,
+                                   fingerprint_hash_type=fingerprint_hash_type)
         if not fingerprint:
             continue
         yield {'hostname': hostname, 'key': key, 'enc': enc,
@@ -730,7 +758,11 @@ def _parse_openssh_output(lines):
 
 
 @decorators.which('ssh-keygen')
-def get_known_host(user, hostname, config=None, port=None):
+def get_known_host(user,
+                   hostname,
+                   config=None,
+                   port=None,
+                   fingerprint_hash_type=None):
     '''
     Return information about known host from the configfile, if any.
     If there is no such key, return None.
@@ -751,7 +783,10 @@ def get_known_host(user, hostname, config=None, port=None):
     lines = __salt__['cmd.run'](cmd,
                                 ignore_retcode=True,
                                 python_shell=False).splitlines()
-    known_hosts = list(_parse_openssh_output(lines))
+    known_hosts = list(
+        _parse_openssh_output(lines,
+                              fingerprint_hash_type=fingerprint_hash_type)
+    )
     return known_hosts[0] if known_hosts else None
 
 
@@ -760,7 +795,8 @@ def recv_known_host(hostname,
                     enc=None,
                     port=None,
                     hash_known_hosts=True,
-                    timeout=5):
+                    timeout=5,
+                    fingerprint_hash_type=None):
     '''
     Retrieve information about host public key from remote server
 
@@ -786,6 +822,17 @@ def recv_known_host(hostname,
         and the host in question considered unavailable.  Default is 5 seconds.
 
         .. versionadded:: 2016.3.0
+
+    fingerprint_hash_type
+        The public key fingerprint hash type that the public key fingerprint
+        was originally hashed with. This defaults to ``md5`` if not specified.
+
+        .. versionadded:: 2016.11.4
+
+        .. note::
+
+            The default value of the ``fingerprint_hash_type`` will change to
+            ``sha256`` in Salt Nitrogen.
 
     CLI Example:
 
@@ -813,12 +860,13 @@ def recv_known_host(hostname,
     while not lines and attempts > 0:
         attempts = attempts - 1
         lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    known_hosts = list(_parse_openssh_output(lines))
+    known_hosts = list(_parse_openssh_output(lines,
+                                             fingerprint_hash_type=fingerprint_hash_type))
     return known_hosts[0] if known_hosts else None
 
 
 def check_known_host(user=None, hostname=None, key=None, fingerprint=None,
-                     config=None, port=None):
+                     config=None, port=None, fingerprint_hash_type=None):
     '''
     Check the record in known_hosts file, either by its value or by fingerprint
     (it's enough to set up either key or fingerprint, you don't need to set up
@@ -845,7 +893,11 @@ def check_known_host(user=None, hostname=None, key=None, fingerprint=None,
     else:
         config = config or '.ssh/known_hosts'
 
-    known_host = get_known_host(user, hostname, config=config, port=port)
+    known_host = get_known_host(user,
+                                hostname,
+                                config=config,
+                                port=port,
+                                fingerprint_hash_type=fingerprint_hash_type)
 
     if not known_host or 'fingerprint' not in known_host:
         return 'add'
@@ -899,7 +951,8 @@ def set_known_host(user=None,
                    enc=None,
                    config=None,
                    hash_known_hosts=True,
-                   timeout=5):
+                   timeout=5,
+                   fingerprint_hash_type=None):
     '''
     Download SSH public key from remote host "hostname", optionally validate
     its fingerprint against "fingerprint" variable and save the record in the
@@ -914,7 +967,7 @@ def set_known_host(user=None,
         The name of the remote host (e.g. "github.com")
 
     fingerprint
-        The fingerprint of the key which must be presented in the known_hosts
+        The fingerprint of the key which must be present in the known_hosts
         file (optional if key specified)
 
     key
@@ -947,6 +1000,17 @@ def set_known_host(user=None,
 
         .. versionadded:: 2016.3.0
 
+    fingerprint_hash_type
+        The public key fingerprint hash type that the public key fingerprint
+        was originally hashed with. This defaults to ``md5`` if not specified.
+
+        .. versionadded:: 2016.11.4
+
+        .. note::
+
+            The default value of the ``fingerprint_hash_type`` will change to
+            ``sha256`` in Salt Nitrogen.
+
     CLI Example:
 
     .. code-block:: bash
@@ -964,7 +1028,11 @@ def set_known_host(user=None,
 
     update_required = False
     check_required = False
-    stored_host = get_known_host(user, hostname, config, port)
+    stored_host = get_known_host(user,
+                                 hostname,
+                                 config=config,
+                                 port=port,
+                                 fingerprint_hash_type=fingerprint_hash_type)
 
     if not stored_host:
         update_required = True
@@ -983,7 +1051,8 @@ def set_known_host(user=None,
                                       enc=enc,
                                       port=port,
                                       hash_known_hosts=hash_known_hosts,
-                                      timeout=timeout)
+                                      timeout=timeout,
+                                      fingerprint_hash_type=fingerprint_hash_type)
         if not remote_host:
             return {'status': 'error',
                     'error': 'Unable to receive remote host key'}
@@ -1165,7 +1234,7 @@ def hash_known_hosts(user=None, config=None):
     origmode = os.stat(full).st_mode
     cmd = ['ssh-keygen', '-H', '-f', full]
     cmd_result = __salt__['cmd.run'](cmd, python_shell=False)
-    os.stat(full, origmode)
+    os.chmod(full, origmode)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0 and user:
         uinfo = __salt__['user.info'](user)

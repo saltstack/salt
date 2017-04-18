@@ -10,8 +10,13 @@ thorium modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    calc
     check
     file
+    key
     local
     reg
+    runner
+    status
     timer
+    wheel

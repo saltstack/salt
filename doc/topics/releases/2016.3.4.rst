@@ -2,8 +2,7 @@
 Salt 2016.3.4 Release Notes
 ===========================
 
-Version 2016.3.4 is a bugfix release for :doc:`2016.3.0
-</topics/releases/2016.3.0>`.
+Version 2016.3.4 is a bugfix release for :ref:`2016.3.0 <release-2016-3-0>`.
 
 Known Issues
 ------------
@@ -424,6 +423,7 @@ Changes:
 .. _`#36016`: https://github.com/saltstack/salt/pull/36016
 .. _`#36018`: https://github.com/saltstack/salt/pull/36018
 .. _`#36019`: https://github.com/saltstack/salt/pull/36019
+.. _`#36021`: https://github.com/saltstack/salt/issues/36021
 .. _`#36022`: https://github.com/saltstack/salt/pull/36022
 .. _`#36023`: https://github.com/saltstack/salt/pull/36023
 .. _`#36024`: https://github.com/saltstack/salt/pull/36024
@@ -435,6 +435,7 @@ Changes:
 .. _`#36039`: https://github.com/saltstack/salt/pull/36039
 .. _`#36040`: https://github.com/saltstack/salt/pull/36040
 .. _`#36047`: https://github.com/saltstack/salt/pull/36047
+.. _`#36055`: https://github.com/saltstack/salt/issues/36055
 .. _`#36061`: https://github.com/saltstack/salt/pull/36061
 .. _`#36062`: https://github.com/saltstack/salt/pull/36062
 .. _`#36068`: https://github.com/saltstack/salt/pull/36068
@@ -475,6 +476,7 @@ Changes:
 .. _`#36227`: https://github.com/saltstack/salt/pull/36227
 .. _`#36235`: https://github.com/saltstack/salt/pull/36235
 .. _`#36238`: https://github.com/saltstack/salt/pull/36238
+.. _`#36240`: https://github.com/saltstack/salt/issues/36240
 .. _`#36241`: https://github.com/saltstack/salt/pull/36241
 .. _`#36244`: https://github.com/saltstack/salt/pull/36244
 .. _`#36245`: https://github.com/saltstack/salt/pull/36245
@@ -732,6 +734,7 @@ Changes:
 .. _`#37179`: https://github.com/saltstack/salt/pull/37179
 .. _`#37183`: https://github.com/saltstack/salt/pull/37183
 .. _`#37186`: https://github.com/saltstack/salt/pull/37186
+.. _`#37187`: https://github.com/saltstack/salt/issues/37187
 .. _`#37188`: https://github.com/saltstack/salt/pull/37188
 .. _`#37206`: https://github.com/saltstack/salt/pull/37206
 .. _`#37207`: https://github.com/saltstack/salt/pull/37207

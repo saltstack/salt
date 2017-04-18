@@ -11,14 +11,15 @@ import logging
 
 # Import Salt testing libraries
 from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, \
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call, \
         PropertyMock
 
 # Import Salt libraries
+import salt.exceptions as excs
 import salt.utils.vmware
 # Import Third Party Libs
 try:
-    from pyVmomi import vim
+    from pyVmomi import vim, vmodl
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -34,9 +35,59 @@ log = logging.getLogger(__name__)
 class WaitForTaskTestCase(TestCase):
     '''Tests for salt.utils.vmware.wait_for_task'''
 
-    def test_info_state_running(self):
+    def test_first_task_info_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
         mock_task = MagicMock()
+        type(mock_task).info = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_first_task_info_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        mock_task = MagicMock()
+        type(mock_task).info = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_inner_loop_task_info_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        mock_task = MagicMock()
+        mock_info1 = MagicMock()
+        type(mock_task).info = PropertyMock(
+            side_effect=[mock_info1, exc])
+        type(mock_info1).state = PropertyMock(side_effect=['running', 'bad'])
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_inner_loop_task_info_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        mock_task = MagicMock()
+        mock_info1 = MagicMock()
+        type(mock_task).info = PropertyMock(
+            side_effect=[mock_info1, exc])
+        type(mock_info1).state = PropertyMock(side_effect=['running', 'bad'])
+        with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_info_state_running(self):
         # The 'bad' values are invalid in the while loop
+        mock_task = MagicMock()
         prop_mock_state = PropertyMock(side_effect=['running', 'bad', 'bad',
                                                     'success'])
         prop_mock_result = PropertyMock()
@@ -48,11 +99,27 @@ class WaitForTaskTestCase(TestCase):
         self.assertEqual(prop_mock_state.call_count, 4)
         self.assertEqual(prop_mock_result.call_count, 1)
 
-    def test_info_state_queued(self):
+    def test_info_state_running_continues_loop(self):
         mock_task = MagicMock()
-        # The 'bad' values are invalid in the while loop
-        prop_mock_state = PropertyMock(side_effect=['bad', 'queued', 'bad',
-                                                    'bad', 'success'])
+        # The 'fake' values are required to match all the lookups and end the
+        # loop
+        prop_mock_state = PropertyMock(side_effect=['running', 'fake', 'fake',
+                                                    'success'])
+        prop_mock_result = PropertyMock()
+        type(mock_task.info).state = prop_mock_state
+        type(mock_task.info).result = prop_mock_result
+        salt.utils.vmware.wait_for_task(mock_task,
+                                        'fake_instance_name',
+                                        'task_type')
+        self.assertEqual(prop_mock_state.call_count, 4)
+        self.assertEqual(prop_mock_result.call_count, 1)
+
+    def test_info_state_queued_continues_loop(self):
+        mock_task = MagicMock()
+        # The 'fake' values are required to match all the lookups and end the
+        # loop
+        prop_mock_state = PropertyMock(side_effect=['fake', 'queued', 'fake',
+                                                    'fake', 'success'])
         prop_mock_result = PropertyMock()
         type(mock_task.info).state = prop_mock_state
         type(mock_task.info).result = prop_mock_result
@@ -74,9 +141,8 @@ class WaitForTaskTestCase(TestCase):
         self.assertEqual(prop_mock_state.call_count, 3)
         self.assertEqual(prop_mock_result.call_count, 1)
 
-    def test_info_state_different_no_error_attr(self):
+    def test_info_error_exception(self):
         mock_task = MagicMock()
-        # The 'bad' values are invalid in the while loop
         prop_mock_state = PropertyMock(return_value='error')
         prop_mock_error = PropertyMock(side_effect=Exception('error exc'))
         type(mock_task.info).state = prop_mock_state
@@ -85,9 +151,69 @@ class WaitForTaskTestCase(TestCase):
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(prop_mock_state.call_count, 3)
-        self.assertEqual(prop_mock_error.call_count, 1)
-        self.assertEqual('error exc', excinfo.exception.message)
+        self.assertEqual(excinfo.exception.message, 'error exc')
+
+    def test_info_error_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        mock_task = MagicMock()
+        prop_mock_state = PropertyMock(return_value='error')
+        prop_mock_error = PropertyMock(side_effect=exc)
+        type(mock_task.info).state = prop_mock_state
+        type(mock_task.info).error = prop_mock_error
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_info_error_system_fault(self):
+        exc = vmodl.fault.SystemError()
+        exc.msg = 'SystemError msg'
+        mock_task = MagicMock()
+        prop_mock_state = PropertyMock(return_value='error')
+        prop_mock_error = PropertyMock(side_effect=exc)
+        type(mock_task.info).state = prop_mock_state
+        type(mock_task.info).error = prop_mock_error
+        with self.assertRaises(excs.VMwareSystemError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror, 'SystemError msg')
+
+    def test_info_error_invalid_argument_no_fault_message(self):
+        exc = vmodl.fault.InvalidArgument()
+        exc.faultMessage = None
+        exc.msg = 'InvalidArgumentFault msg'
+        mock_task = MagicMock()
+        prop_mock_state = PropertyMock(return_value='error')
+        prop_mock_error = PropertyMock(side_effect=exc)
+        type(mock_task.info).state = prop_mock_state
+        type(mock_task.info).error = prop_mock_error
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror,
+                         'InvalidArgumentFault msg')
+
+    def test_info_error_invalid_argument_with_fault_message(self):
+        exc = vmodl.fault.InvalidArgument()
+        fault_message = vim.LocalizableMessage()
+        fault_message.message = 'LocalFault msg'
+        exc.faultMessage = [fault_message]
+        exc.msg = 'InvalidArgumentFault msg'
+        mock_task = MagicMock()
+        prop_mock_state = PropertyMock(return_value='error')
+        prop_mock_error = PropertyMock(side_effect=exc)
+        type(mock_task.info).state = prop_mock_state
+        type(mock_task.info).error = prop_mock_error
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror,
+                         'InvalidArgumentFault msg (LocalFault msg)')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -300,6 +426,101 @@ class GetMorsWithPropertiesTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@patch('salt.utils.vmware.get_service_instance_from_managed_object',
+       MagicMock())
+@patch('salt.utils.vmware.get_mors_with_properties',
+       MagicMock(return_value=[MagicMock()]))
+class GetPropertiesOfManagedObjectTestCase(TestCase):
+    '''Tests for salt.utils.get_properties_of_managed_object'''
+
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.fake_mo_ref = vim.ManagedEntity('Fake')
+        self.mock_props = MagicMock()
+        self.mock_item_name = {'name': 'fake_name'}
+        self.mock_item = MagicMock()
+
+    def test_get_service_instance_from_managed_object_call(self):
+        mock_get_instance_from_managed_object = MagicMock()
+        with patch(
+            'salt.utils.vmware.get_service_instance_from_managed_object',
+            mock_get_instance_from_managed_object):
+
+            salt.utils.vmware.get_properties_of_managed_object(
+                self.fake_mo_ref, self.mock_props)
+        mock_get_instance_from_managed_object.assert_called_once_with(
+            self.fake_mo_ref)
+
+    def test_get_mors_with_properties_calls(self):
+        mock_get_mors_with_properties = MagicMock(return_value=[MagicMock()])
+        with patch(
+            'salt.utils.vmware.get_service_instance_from_managed_object',
+            MagicMock(return_value=self.mock_si)):
+
+            with patch('salt.utils.vmware.get_mors_with_properties',
+                       mock_get_mors_with_properties):
+                salt.utils.vmware.get_properties_of_managed_object(
+                    self.fake_mo_ref, self.mock_props)
+        mock_get_mors_with_properties.assert_has_calls(
+            [call(self.mock_si, vim.ManagedEntity,
+                  container_ref=self.fake_mo_ref,
+                  property_list=['name'],
+                  local_properties=True),
+             call(self.mock_si, vim.ManagedEntity,
+                  container_ref=self.fake_mo_ref,
+                  property_list=self.mock_props,
+                  local_properties=True)])
+
+    def test_managed_object_no_name_property(self):
+        with patch('salt.utils.vmware.get_mors_with_properties',
+                   MagicMock(side_effect=[vmodl.query.InvalidProperty(), []])):
+            with self.assertRaises(excs.VMwareApiError) as excinfo:
+                salt.utils.vmware.get_properties_of_managed_object(
+                    self.fake_mo_ref, self.mock_props)
+        self.assertEqual('Properties of managed object \'<unnamed>\' weren\'t '
+                         'retrieved', excinfo.exception.strerror)
+
+    def test_no_items_named_object(self):
+        with patch('salt.utils.vmware.get_mors_with_properties',
+                   MagicMock(side_effect=[[self.mock_item_name], []])):
+            with self.assertRaises(excs.VMwareApiError) as excinfo:
+                salt.utils.vmware.get_properties_of_managed_object(
+                    self.fake_mo_ref, self.mock_props)
+        self.assertEqual('Properties of managed object \'fake_name\' weren\'t '
+                         'retrieved', excinfo.exception.strerror)
+
+
+@patch('salt.utils.vmware.get_properties_of_managed_object',
+       MagicMock(return_value={'key': 'value'}))
+class GetManagedObjectName(TestCase):
+    '''Tests for salt.utils.get_managed_object_name'''
+
+    def setUp(self):
+        self.mock_mo_ref = MagicMock()
+
+    def test_get_properties_of_managed_object_call(self):
+        mock_get_properties_of_managed_object = MagicMock()
+        with patch('salt.utils.vmware.get_properties_of_managed_object',
+                   mock_get_properties_of_managed_object):
+            salt.utils.vmware.get_managed_object_name(self.mock_mo_ref)
+        mock_get_properties_of_managed_object.assert_called_once_with(
+            self.mock_mo_ref, ['name'])
+
+    def test_no_name_in_property_dict(self):
+        ret = salt.utils.vmware.get_managed_object_name(self.mock_mo_ref)
+        self.assertIsNone(ret)
+
+    def test_return_managed_object_name(self):
+        mock_get_properties_of_managed_object = MagicMock()
+        with patch('salt.utils.vmware.get_properties_of_managed_object',
+                   MagicMock(return_value={'name': 'fake_name'})):
+            ret = salt.utils.vmware.get_managed_object_name(self.mock_mo_ref)
+        self.assertEqual(ret, 'fake_name')
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@patch('salt.utils.vmware.get_root_folder', MagicMock())
 @patch('salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec',
        MagicMock(return_value=MagicMock()))
 @patch('salt.utils.vmware.vmodl.query.PropertyCollector.PropertySpec',
@@ -345,8 +566,8 @@ class GetContentTestCase(TestCase):
         self.si_mock = MagicMock()
         # RootFolder
         self.root_folder_mock = MagicMock()
-        self.root_folder_prop = PropertyMock(return_value=self.root_folder_mock)
-        type(self.si_mock.content).rootFolder = self.root_folder_prop
+        self.get_root_folder_mock = \
+                MagicMock(return_value=self.root_folder_mock)
         # CreateContainerView()
         self.container_view_mock = MagicMock()
         self.create_container_view_mock = \
@@ -378,28 +599,34 @@ class GetContentTestCase(TestCase):
                 MagicMock(return_value=self.filter_spec_ret_mock)
 
     def test_empty_container_ref(self):
-        ret = salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
-        self.assertEqual(self.root_folder_prop.call_count, 1)
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.get_root_folder_mock.assert_called_once_with(self.si_mock)
         self.create_container_view_mock.assert_called_once_with(
             self.root_folder_mock, [self.obj_type_mock], True)
 
     def test_defined_container_ref(self):
         container_ref_mock = MagicMock()
-        with patch(self.obj_spec_method_name, self.obj_type_mock):
-            ret = salt.utils.vmware.get_content(
-                self.si_mock, self.obj_type_mock,
-                container_ref=container_ref_mock)
-        self.assertEqual(self.root_folder_prop.call_count, 0)
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with patch(self.obj_spec_method_name, self.obj_type_mock):
+                salt.utils.vmware.get_content(
+                    self.si_mock, self.obj_type_mock,
+                    container_ref=container_ref_mock)
+        self.assertEqual(self.get_root_folder_mock.call_count, 0)
         self.create_container_view_mock.assert_called_once_with(
             container_ref_mock, [self.obj_type_mock], True)
 
     # Also checks destroy is called
     def test_local_traversal_spec(self):
-        with patch(self.traversal_spec_method_name, self.traversal_spec_mock):
-            with patch(self.obj_spec_method_name, self.obj_spec_mock):
-
-                ret = salt.utils.vmware.get_content(self.si_mock,
-                                                    self.obj_type_mock)
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with patch(self.traversal_spec_method_name,
+                       self.traversal_spec_mock):
+                with patch(self.obj_spec_method_name, self.obj_spec_mock):
+                    ret = salt.utils.vmware.get_content(self.si_mock,
+                                                        self.obj_type_mock)
         self.create_container_view_mock.assert_called_once_with(
             self.root_folder_mock, [self.obj_type_mock], True)
         self.traversal_spec_mock.assert_called_once_with(
@@ -412,15 +639,62 @@ class GetContentTestCase(TestCase):
         # check destroy is called
         self.assertEqual(self.destroy_mock.call_count, 1)
 
+    def test_create_container_view_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.si_mock.content.viewManager.CreateContainerView = \
+                MagicMock(side_effect=exc)
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with self.assertRaises(excs.VMwareApiError) as excinfo:
+                salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_create_container_view_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.si_mock.content.viewManager.CreateContainerView = \
+                MagicMock(side_effect=exc)
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+                salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_destroy_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.si_mock.content.viewManager.CreateContainerView = MagicMock(
+            return_value=MagicMock(Destroy=MagicMock(side_effect=exc)))
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with self.assertRaises(excs.VMwareApiError) as excinfo:
+                salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_destroy_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.si_mock.content.viewManager.CreateContainerView = MagicMock(
+            return_value=MagicMock(Destroy=MagicMock(side_effect=exc)))
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+                salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
     # Also checks destroy is not called
     def test_external_traversal_spec(self):
         traversal_spec_obj_mock = MagicMock()
-        with patch(self.traversal_spec_method_name, self.traversal_spec_mock):
-            with patch(self.obj_spec_method_name, self.obj_spec_mock):
-                ret = salt.utils.vmware.get_content(
-                    self.si_mock,
-                    self.obj_type_mock,
-                    traversal_spec=traversal_spec_obj_mock)
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with patch(self.traversal_spec_method_name,
+                       self.traversal_spec_mock):
+                with patch(self.obj_spec_method_name, self.obj_spec_mock):
+                    salt.utils.vmware.get_content(
+                        self.si_mock,
+                        self.obj_type_mock,
+                        traversal_spec=traversal_spec_obj_mock)
         self.obj_spec_mock.assert_called_once_with(
             obj=self.root_folder_mock,
             skip=True,
@@ -452,6 +726,24 @@ class GetContentTestCase(TestCase):
             [self.filter_spec_ret_mock])
         self.assertEqual(ret, self.result_mock)
 
+    def test_retrieve_contents_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.si_mock.content.propertyCollector.RetrieveContents = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_retrieve_contents_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.si_mock.content.propertyCollector.RetrieveContents = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
     def test_local_properties_set(self):
         container_ref_mock = MagicMock()
         with patch(self.traversal_spec_method_name, self.traversal_spec_mock):
@@ -467,8 +759,42 @@ class GetContentTestCase(TestCase):
             obj=container_ref_mock, skip=False, selectSet=None)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class GetRootFolderTestCase(TestCase):
+    '''Tests for salt.utils.get_root_folder'''
+
+    def setUp(self):
+        self.mock_root_folder = MagicMock()
+        self.mock_content = MagicMock(rootFolder=self.mock_root_folder)
+        self.mock_si = MagicMock(
+            RetrieveContent=MagicMock(return_value=self.mock_content))
+
+    def test_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        type(self.mock_content).rootFolder = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.get_root_folder(self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        type(self.mock_content).rootFolder = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.get_root_folder(self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_return(self):
+        ret = salt.utils.vmware.get_root_folder(self.mock_si)
+        self.assertEqual(ret, self.mock_root_folder)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(WaitForTaskTestCase, needs_daemon=False)
     run_tests(GetMorsWithPropertiesTestCase, needs_daemon=False)
+    run_tests(GetPropertiesOfManagedObjectTestCase, needs_daemon=False)
+    run_tests(GetManagedObjectName, needs_daemon=False)
     run_tests(GetContentTestCase, needs_daemon=False)
+    run_tests(GetRootFolderTestCase, needs_daemon=False)

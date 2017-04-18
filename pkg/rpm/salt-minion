@@ -25,24 +25,22 @@
 # processname: /usr/bin/salt-minion
 
 # Allow these to be overridden for tests
-: ${SALTMINION_BINDIR:=/usr/bin}
-: ${SALTMINION_SYSCONFDIR:=/etc}
-: ${SALTMINION_PYTHON:=python}    # Python must be 2.6 or newer
+: "${SALTMINION_BINDIR:=/usr/bin}"
+: "${SALTMINION_SYSCONFDIR:=/etc}"
 
 # Default values (can be overridden in settings file)
-: ${USER:=$(id -nu)}
+: "${USER:=$(id -nu)}"
 SALTMINION="${SALTMINION_BINDIR}/salt-minion"
 SALTCALL="${SALTMINION_BINDIR}/salt-call"
 # SALTMINION_CONFIGS are newline-separated entries of: MINION_USER CONFIG_DIR
-: ${SALTMINION_CONFIGS:="
+: "${SALTMINION_CONFIGS:="
 $USER ${SALTMINION_SYSCONFDIR}/salt
-"}
+"}"
 SALTMINION_ARGS=""
 SALTMINION_TIMEOUT=30
 SALTMINION_TICK=1
 
 SERVICE="salt-minion"
-PROCESS="salt-minion"
 
 # Read in settings file
 if [ -f "${SALTMINION_SYSCONFDIR}/default/salt" ]; then
@@ -70,7 +68,8 @@ _su_cmd() {
 
 _get_pid() {
     netstat $NS_NOTRIM -ap --protocol=unix 2>$ERROR_TO_DEVNULL \
-        | sed -r  -e "\|\s${SOCK_DIR}/minion_event_${MINION_ID_HASH}_pub\.ipc$|"'!d; s|/.*||; s/.*\s//;'
+        | sed -r -e "\|\s${SOCK_DIR}/minion_event_${MINION_ID_HASH}_pub\.ipc$|"'!d; s|/.*||; s/.*\s//;' \
+        | uniq
 }
 
 
@@ -82,7 +81,7 @@ _is_running() {
 _get_salt_config_value() {
     _su_cmd \
         "$MINION_USER" \
-        "\"$SALTMINION_PYTHON\" \
+        "\
             \"$SALTCALL\" \
             -c \"$CONFIG_DIR\" \
             --no-color \
@@ -127,7 +126,7 @@ start() {
 
     _su_cmd \
         "$MINION_USER" \
-        "\"$SALTMINION_PYTHON\" \
+        "\
             \"$SALTMINION\" \
             -c \"$CONFIG_DIR\" \
             -d $SALTMINION_ARGS \
@@ -220,7 +219,8 @@ status() {
     local pid="$(_get_pid)"
 
     if [ -n "$pid" ]; then
-        echo "$SERVICE:$MINION_USER:$MINION_ID is running: $pid"
+        # Unquote $pid here to display multiple PIDs in one line
+        echo "$SERVICE:$MINION_USER:$MINION_ID is running:" $pid
     else
         retval=3
         echo "$SERVICE:$MINION_USER:$MINION_ID is stopped."
@@ -246,7 +246,7 @@ main() {
     fi
 
     # Check to see if --notrim is a valid netstat option
-    if netstat --notrim 2>&1 >/dev/null | grep -q 'unrecognized'; then
+    if netstat --notrim -n 2>&1 >/dev/null | grep -q 'unrecognized'; then
         NS_NOTRIM=''
     fi
 

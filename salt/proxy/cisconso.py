@@ -55,7 +55,7 @@ the configuration of network devices via a NETCONF-compliant control plane.
 Cisco Network Services Orchestrator.
 
 More in-depth conceptual reading on Proxy Minions can be found in the
-:doc:`Proxy Minion </topics/proxyminion/index>` section of Salt's
+:ref:`Proxy Minion <proxy-minion>` section of Salt's
 documentation.
 
 

@@ -313,9 +313,11 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         Test to see if we're not auto-adding '*' and 'sys.doc' to the call
         '''
         data = self.run_salt('-d -t 20')
-        self.assertIn('user.add:', data)
+        if data:
+            self.assertIn('user.add:', data)
         data = self.run_salt('"*" -d -t 20')
-        self.assertIn('user.add:', data)
+        if data:
+            self.assertIn('user.add:', data)
         data = self.run_salt('"*" -d user -t 20')
         self.assertIn('user.add:', data)
         data = self.run_salt('"*" sys.doc -d user -t 20')
@@ -353,7 +355,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             '--config-dir {0} minion test.ping'.format(
                 config_dir
             ),
-            timeout=15,
+            timeout=60,
             catch_stderr=True,
             with_retcode=True
         )

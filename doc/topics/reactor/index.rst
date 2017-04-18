@@ -75,7 +75,7 @@ They differ because of the addition of the ``tag`` and ``data`` variables.
 
 Here is a simple reactor sls:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if data['id'] == 'mysql1' %}
     highstate_run:
@@ -92,7 +92,7 @@ API and the runner system.  In this example, a command is published to the
 ``mysql1`` minion with a function of :py:func:`state.apply
 <salt.modules.state.apply_>`. Similarly, a runner can be called:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if data['data']['orchestrate'] == 'refresh' %}
     orchestrate_run:
@@ -145,7 +145,7 @@ so using the Reactor to kick off an Orchestrate run is a very common pairing.
 
 For example:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # /etc/salt/master.d/reactor.conf
     # A custom event containing: {"foo": "Foo!", "bar: "bar*", "baz": "Baz!"}
@@ -153,7 +153,7 @@ For example:
       - myco/custom/event:
         - /srv/reactor/some_event.sls
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # /srv/reactor/some_event.sls
     invoke_orchestrate_file:
@@ -163,7 +163,7 @@ For example:
             event_tag: {{ tag }}
             event_data: {{ data | json() }}
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # /srv/salt/orch/do_complex_thing.sls
     {% set tag = salt.pillar.get('event_tag') %}
@@ -395,7 +395,7 @@ sets up and listens to the minions event bus, instead of to the masters.
 The biggest difference is that you have to use the caller method on the
 Reactor, which is the equivalent of salt-call, to run your commands.
 
-:ref:`Reactor Engine setup<salt.engines.reactor>`
+:mod:`Reactor Engine setup <salt.engines.reactor>`
 
 .. code-block:: yaml
 
@@ -463,7 +463,7 @@ from the event to the state file via inline Pillar.
 
 :file:`/srv/salt/haproxy/react_new_minion.sls`:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if data['act'] == 'accept' and data['id'].startswith('web') %}
     add_new_minion_to_pool:
@@ -480,7 +480,7 @@ The above command is equivalent to the following command at the CLI:
 
 .. code-block:: bash
 
-    salt 'haproxy*' state.apply haproxy.refresh_pool 'pillar={new_minion: minionid}'
+    salt 'haproxy*' state.apply haproxy.refresh_pool pillar='{new_minion: minionid}'
 
 This works with Orchestrate files as well:
 
@@ -507,7 +507,7 @@ won't yet direct traffic to it.
 
 :file:`/srv/salt/haproxy/refresh_pool.sls`:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% set new_minion = salt['pillar.get']('new_minion') %}
 
@@ -557,7 +557,7 @@ authentication every ten seconds by default.
 
 :file:`/srv/reactor/auth-pending.sls`:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {# Ink server failed to authenticate -- remove accepted key #}
     {% if not data['result'] and data['id'].startswith('ink') %}
@@ -583,7 +583,7 @@ Ink servers in the master configuration.
 
 :file:`/srv/reactor/auth-complete.sls`:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {# When an Ink server connects, run state.apply. #}
     highstate_run:
@@ -613,7 +613,7 @@ each minion fires when it first starts up and connects to the master.
 On the master, create **/srv/reactor/sync_grains.sls** with the following
 contents:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     sync_grains:
       local.saltutil.sync_grains:
@@ -624,7 +624,7 @@ And in the master config file, add the following reactor configuration:
 .. code-block:: yaml
 
     reactor:
-      - 'minion_start':
+      - 'salt/minion/*/start':
         - /srv/reactor/sync_grains.sls
 
 This will cause the master to instruct each minion to sync its custom grains
@@ -634,3 +634,8 @@ when it starts, making these grains available when the initial :ref:`highstate
 Other types can be synced by replacing ``local.saltutil.sync_grains`` with
 ``local.saltutil.sync_modules``, ``local.saltutil.sync_all``, or whatever else
 suits the intended use case.
+
+Also, if it is not desirable that *every* minion syncs on startup, the ``*``
+can be replaced with a different glob to narrow down the set of minions which
+will match that reactor (e.g. ``salt/minion/appsrv*/start``, which would only
+match minion IDs beginning with ``appsrv``).

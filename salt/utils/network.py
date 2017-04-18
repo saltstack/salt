@@ -26,6 +26,10 @@ except ImportError:
 import salt.utils
 from salt._compat import subprocess, ipaddress
 
+# inet_pton does not exist in Windows, this is a workaround
+if salt.utils.is_windows():
+    from salt.ext import win_inet_pton  # pylint: disable=unused-import
+
 log = logging.getLogger(__name__)
 
 # pylint: disable=C0103
@@ -656,10 +660,39 @@ def _get_iface_info(iface):
         return None, error_msg
 
 
+def _hw_addr_aix(iface):
+    '''
+    Return the hardware address (a.k.a. MAC address) for a given interface on AIX
+    MAC address not available in through interfaces
+    '''
+    cmd = subprocess.Popen(
+        'entstat -d {0} | grep \'Hardware Address\''.format(iface),
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT).communicate()[0]
+
+    if cmd:
+        comps = cmd.split(' ')
+        if len(comps) == 3:
+            mac_addr = comps[2].strip('\'').strip()
+            return mac_addr
+
+    error_msg = ('Interface "{0}" either not available or does not contain a hardware address'.format(iface))
+    log.error(error_msg)
+    return error_msg
+
+
 def hw_addr(iface):
     '''
     Return the hardware address (a.k.a. MAC address) for a given interface
+
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     '''
+    if salt.utils.is_aix():
+        return _hw_addr_aix
+
     iface_info, error = _get_iface_info(iface)
 
     if error is False:
@@ -710,8 +743,10 @@ def _subnets(proto='inet', interfaces_=None):
 
     if proto == 'inet':
         subnet = 'netmask'
+        dflt_cidr = 32
     elif proto == 'inet6':
         subnet = 'prefixlen'
+        dflt_cidr = 128
     else:
         log.error('Invalid proto {0} calling subnets()'.format(proto))
         return
@@ -721,7 +756,10 @@ def _subnets(proto='inet', interfaces_=None):
         addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
 
         for intf in addrs:
-            intf = ipaddress.ip_interface('{0}/{1}'.format(intf['address'], intf[subnet]))
+            if subnet in intf:
+                intf = ipaddress.ip_interface('{0}/{1}'.format(intf['address'], intf[subnet]))
+            else:
+                intf = ipaddress.ip_interface('{0}/{1}'.format(intf['address'], dflt_cidr))
             if not intf.is_loopback:
                 ret.add(intf.network)
     return [str(net) for net in sorted(ret)]
@@ -928,6 +966,8 @@ def _remotes_on(port, which_end):
             return _openbsd_remotes_on(port, which_end)
         if salt.utils.is_windows():
             return _windows_remotes_on(port, which_end)
+        if salt.utils.is_aix():
+            return _aix_remotes_on(port, which_end)
 
         return _linux_remotes_on(port, which_end)
 
@@ -1032,8 +1072,11 @@ def _freebsd_remotes_on(port, which_end):
             continue  # ignore header
         if len(chunks) < 2:
             continue
-        local = chunks[5]
-        remote = chunks[6]
+        # sockstat -4 -c -p 4506 does this with high PIDs:
+        # USER     COMMAND    PID   FD PROTO  LOCAL ADDRESS         FOREIGN ADDRESS
+        # salt-master python2.781106 35 tcp4  192.168.12.34:4506    192.168.12.45:60143
+        local = chunks[-2]
+        remote = chunks[-1]
         lhost, lport = local.split(':')
         rhost, rport = remote.split(':')
         if which_end == 'local' and int(lport) != port:  # ignore if local port not port
@@ -1054,23 +1097,23 @@ def _netbsd_remotes_on(port, which_end):
     Parses output of shell 'sockstat' (NetBSD)
     to get connections
 
-    $ sudo sockstat -4
+    $ sudo sockstat -4 -n
     USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
-    root    python2.7   1456    29  tcp4   *.4505           *.*
-    root    python2.7   1445    17  tcp4   *.4506           *.*
-    root    python2.7   1294    14  tcp4   127.0.0.1.11813  127.0.0.1.4505
-    root    python2.7   1294    41  tcp4   127.0.0.1.61115  127.0.0.1.4506
+    root    python2.7   1456    29  tcp    *.4505           *.*
+    root    python2.7   1445    17  tcp    *.4506           *.*
+    root    python2.7   1294    14  tcp    127.0.0.1.11813  127.0.0.1.4505
+    root    python2.7   1294    41  tcp    127.0.0.1.61115  127.0.0.1.4506
 
-    $ sudo sockstat -4 -c -p 4506
+    $ sudo sockstat -4 -c -n -p 4506
     USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
-    root    python2.7   1294    41  tcp4   127.0.0.1.61115  127.0.0.1.4506
+    root    python2.7   1294    41  tcp    127.0.0.1.61115  127.0.0.1.4506
     '''
 
     port = int(port)
     remotes = set()
 
     try:
-        cmd = salt.utils.shlex_split('sockstat -4 -c -p {0}'.format(port))
+        cmd = salt.utils.shlex_split('sockstat -4 -c -n -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
@@ -1082,7 +1125,7 @@ def _netbsd_remotes_on(port, which_end):
         chunks = line.split()
         if not chunks:
             continue
-        # ['root', 'python2.7', '1456', '37', 'tcp4',
+        # ['root', 'python2.7', '1456', '37', 'tcp',
         #  '127.0.0.1.4505-', '127.0.0.1.55703']
         # print chunks
         if 'COMMAND' in chunks[1]:
@@ -1234,4 +1277,54 @@ def _linux_remotes_on(port, which_end):
             continue
         remotes.add(rhost.strip("[]"))
 
+    return remotes
+
+
+def _aix_remotes_on(port, which_end):
+    '''
+    AIX specific helper function.
+    Returns set of ipv4 host addresses of remote established connections
+    on local or remote tcp port.
+
+    Parses output of shell 'netstat' to get connections
+
+    root@la68pp002_pub:/opt/salt/lib/python2.7/site-packages/salt/modules# netstat -f inet -n
+    Active Internet connections
+    Proto Recv-Q Send-Q  Local Address          Foreign Address        (state)
+    tcp4       0      0  172.29.149.95.50093    209.41.78.13.4505      ESTABLISHED
+    tcp4       0      0  127.0.0.1.9514         *.*                    LISTEN
+    tcp4       0      0  127.0.0.1.9515         *.*                    LISTEN
+    tcp4       0      0  127.0.0.1.199          127.0.0.1.32779        ESTABLISHED
+    tcp4       0      0  127.0.0.1.32779        127.0.0.1.199          ESTABLISHED
+    tcp4       0     40  172.29.149.95.22       172.29.96.83.41022     ESTABLISHED
+    tcp4       0      0  172.29.149.95.22       172.29.96.83.41032     ESTABLISHED
+    tcp4       0      0  127.0.0.1.32771        127.0.0.1.32775        ESTABLISHED
+    tcp        0      0  127.0.0.1.32775        127.0.0.1.32771        ESTABLISHED
+    tcp4       0      0  127.0.0.1.32771        127.0.0.1.32776        ESTABLISHED
+    tcp        0      0  127.0.0.1.32776        127.0.0.1.32771        ESTABLISHED
+    tcp4       0      0  127.0.0.1.32771        127.0.0.1.32777        ESTABLISHED
+    tcp        0      0  127.0.0.1.32777        127.0.0.1.32771        ESTABLISHED
+    tcp4       0      0  127.0.0.1.32771        127.0.0.1.32778        ESTABLISHED
+    tcp        0      0  127.0.0.1.32778        127.0.0.1.32771        ESTABLISHED
+    '''
+    remotes = set()
+    try:
+        data = subprocess.check_output(['netstat', '-f', 'inet', '-n'])  # pylint: disable=minimum-python-version
+    except subprocess.CalledProcessError:
+        log.error('Failed netstat')
+        raise
+
+    lines = salt.utils.to_str(data).split('\n')
+    for line in lines:
+        if 'ESTABLISHED' not in line:
+            continue
+        chunks = line.split()
+        local_host, local_port = chunks[3].rsplit('.', 1)
+        remote_host, remote_port = chunks[4].rsplit('.', 1)
+
+        if which_end == 'remote_port' and int(remote_port) != port:
+            continue
+        if which_end == 'local_port' and int(local_port) != port:
+            continue
+        remotes.add(remote_host)
     return remotes

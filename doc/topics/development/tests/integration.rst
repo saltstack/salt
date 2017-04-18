@@ -82,9 +82,9 @@ test suite illustrating the broad usefulness of each function.
 
 The ``setUp`` function is used to set up any repetitive or useful tasks that the
 tests in a test class need before running. For example, any of the ``mac_*``
-integration tests should only run on OSX machines. The ``setUp`` function can be
-used to test for the presence of the ``Darwin`` kernel. If the ``Darwin`` kernel
-is not present, then the test should be skipped.
+integration tests should only run on macOS machines. The ``setUp`` function can
+be used to test for the presence of the ``Darwin`` kernel. If the ``Darwin``
+kernel is not present, then the test should be skipped.
 
 .. code-block:: python
 

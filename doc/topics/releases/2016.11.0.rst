@@ -1,3 +1,5 @@
+.. _release-2016-11-0:
+
 ==============================================
 Salt 2016.11.0 Release Notes - Codename Carbon
 ==============================================
@@ -297,6 +299,26 @@ In the current release, the following modules were included:
 - :mod:`SNMP configuration management state <salt.states.netsnmp>`
 - :mod:`Users management state <salt.states.netusers>`
 
+Cisco NXOS Proxy Minion
+=======================
+
+Beginning with 2016.11.0, there is a proxy minion that can be used to configure
+nxos cisco devices over ssh.
+
+- :mod:`Proxy Minion <salt.proxy.nxos>`
+- :mod:`Execution Module <salt.modules.nxos>`
+- :mod:`State Module <salt.states.nxos>`
+
+Cisco Network Services Orchestrator Proxy Minion
+================================================
+
+Beginning with 2016.11.0, there is a proxy minion to use the Cisco Network
+Services Orchestrator as a proxy minion.
+
+- :mod:`Proxy Minion <salt.proxy.cisconso>`
+- :mod:`Execution Module <salt.modules.cisconso>`
+- :mod:`State Module <salt.states.cisconso>`
+
 Junos Module Changes
 ====================
 
@@ -328,7 +350,7 @@ eAuth Changes
 
 - External auth modules' ``auth`` method can return an ACL list for the given
   username instead of ``True``. This list should be in the same format as
-  described in the :doc:`eAuth documentation </topics/eauth/index>`. It will be
+  described in the :ref:`eAuth documentation <acl-eauth>`. It will be
   used for the user instead of one set in master config.
 
   Example of the ``auth`` method return that allows a user to execute functions
@@ -342,15 +364,15 @@ eAuth Changes
        '@wheel',
        '@runner']
 
-- External auth is supported by :doc:`salt-run </ref/cli/salt-run>` and
-  :doc:`salt-key </ref/cli/salt-key>` now. Note that master must be started to
+- External auth is supported by :ref:`salt-run <salt-run>` and
+  :ref:`salt-key <salt-key>` now. Note that master must be started to
   use them with eAuth.
 
 External Module Packaging
 =========================
 
 Modules may now be packaged via entry-points in setuptools. See
-:doc:`external module packaging </topics/tutorials/packaging_modules>` tutorial
+:ref:`external module packaging <tutorial-packaging-modules>` tutorial
 for more information.
 
 Functionality Changes

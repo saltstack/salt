@@ -865,6 +865,8 @@ def _ps(osdata):
         )
     elif osdata['os_family'] == 'Debian':
         grains['ps'] = 'ps -efHww'
+    elif osdata['os_family'] == 'AIX':
+        grains['ps'] = '/usr/bin/ps auxww'
     else:
         grains['ps'] = 'ps -efH'
     return grains
@@ -987,7 +989,7 @@ def _windows_platform_data():
 
 def _osx_platform_data():
     '''
-    Additional data for Mac OS X systems
+    Additional data for macOS systems
     Returns: A dictionary containing values for the following:
         - model_name
         - boot_rom_version
@@ -1256,7 +1258,7 @@ def os_data():
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     init_bin = salt.utils.which(init_cmdline[0])
                     if init_bin is not None and init_bin.endswith('bin/init'):
-                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'), six.b('runit'))
+                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
                         edge_len = max(len(x) for x in supported_inits) - 1
                         try:
                             buf_size = __opts__['file_buffer_size']
@@ -1286,6 +1288,8 @@ def os_data():
                             )
                     elif salt.utils.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
+                    elif init_cmdline == ['runit']:
+                        grains['init'] = 'runit'
                     else:
                         log.info(
                             'Could not determine init system from command line: ({0})'
@@ -1686,6 +1690,8 @@ def ip_fqdn():
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list(set(item[4][0] for item in info))
             except socket.error:
+                log.warning('Unable to find IPv{0} record for "{1}" causing a 10 second timeout when rendering grains. '
+                            'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn))
                 ret[key] = []
 
     return ret

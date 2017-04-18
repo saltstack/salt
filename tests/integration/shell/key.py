@@ -265,7 +265,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             '--config-dir {0} -L'.format(
                 config_dir
             ),
-            timeout=15
+            timeout=60
         )
         try:
             self.assertIn('minion', '\n'.join(ret))

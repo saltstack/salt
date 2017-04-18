@@ -341,6 +341,8 @@ expects to deploy fresh code via the file.recurse call. The site-code
 deployment will only be executed if the graceful-down run completes
 successfully.
 
+.. _requisites-onfail:
+
 onfail
 ~~~~~~
 
@@ -376,6 +378,8 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
     ``onfail`` used AND logic. See `Issue #22370`_ for more information.
 
 .. _Issue #22370: https://github.com/saltstack/salt/issues/22370
+
+.. _requisites-onchanges:
 
 onchanges
 ~~~~~~~~~

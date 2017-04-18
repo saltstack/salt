@@ -109,7 +109,7 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
             '--config-dir {0} -d'.format(
                 config_dir
             ),
-            timeout=15,
+            timeout=60,
             catch_stderr=True,
             with_retcode=True
         )

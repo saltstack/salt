@@ -52,7 +52,8 @@ fileperms-default=0644
 fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
 
 # Py3 Modernize PyLint Plugin Settings
-modernize-nofix = libmodernize.fixes.fix_dict_six
+modernize-nofix = libmodernize.fixes.fix_dict_six,
+  saltpylint.py3modernize.fixes.fix_dict_salt_six
 
 # Minimum Python Version To Enforce
 minimum-python-version = 2.6

@@ -752,10 +752,10 @@ def run(cmd,
 
     :param str stdin: A string of standard input can be specified for the
       command to be run using the ``stdin`` parameter. This can be useful in cases
-      where sensitive information must be read from standard input.:
+      where sensitive information must be read from standard input.
 
     :param str runas: User to run script as. If running on a Windows minion you
-      must also pass a password
+      must also pass a password.
 
     :param str password: Windows only. Required when specifying ``runas``. This
       parameter will be ignored on non-Windows platforms.
@@ -765,10 +765,14 @@ def run(cmd,
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
 
-    :param bool python_shell: If False, let python handle the positional
-      arguments. Set to True to use shell features, such as pipes or redirection
+    :param bool python_shell: If ``False``, let python handle the positional
+      arguments. Set to ``True`` to use shell features, such as pipes or
+      redirection.
 
-    :param bool bg: If True, run command in background and do not await or deliver it's results
+    :param bool bg: If ``True``, run command in background and do not await or
+      deliver it's results
+
+      .. versionadded:: 2016.3.0
 
     :param list env: A list of environment variables to be set prior to
       execution.
@@ -788,8 +792,7 @@ def run(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -802,7 +805,7 @@ def run(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -997,8 +1000,7 @@ def shell(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -1011,7 +1013,7 @@ def shell(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -1183,8 +1185,7 @@ def run_stdout(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -1197,7 +1198,7 @@ def run_stdout(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -1365,8 +1366,7 @@ def run_stderr(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -1379,7 +1379,7 @@ def run_stderr(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -1548,8 +1548,7 @@ def run_all(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -1562,7 +1561,7 @@ def run_all(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -1598,13 +1597,22 @@ def run_all(cmd,
       ``env`` represents the environment variables for the command, and
       should be formatted as a dict, or a YAML string which resolves to a dict.
 
-    redirect_stderr : False
-        If set to ``True``, then stderr will be redirected to stdout. This is
-        helpful for cases where obtaining both the retcode and output is
-        desired, but it is not desired to have the output separated into both
-        stdout and stderr.
+    :param bool redirect_stderr: If set to ``True``, then stderr will be
+      redirected to stdout. This is helpful for cases where obtaining both the
+      retcode and output is desired, but it is not desired to have the output
+      separated into both stdout and stderr.
 
         .. versionadded:: 2015.8.2
+
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
+
+      .. versionadded:: 2016.3.0
+
+    :param bool bg: If ``True``, run command in background and do not await or
+      deliver it's results
+
+      .. versionadded:: 2016.3.6
 
     CLI Example:
 
@@ -1739,8 +1747,7 @@ def retcode(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -1753,7 +1760,7 @@ def retcode(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -1976,8 +1983,7 @@ def script(source,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -1990,7 +1996,7 @@ def script(source,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -2202,8 +2208,7 @@ def script_retcode(source,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -2216,7 +2221,7 @@ def script_retcode(source,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -2479,8 +2484,7 @@ def run_chroot(root,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -2493,7 +2497,7 @@ def run_chroot(root,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -2935,8 +2939,7 @@ def powershell(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -2949,7 +2952,7 @@ def powershell(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -3122,8 +3125,7 @@ def run_bg(cmd,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -3136,7 +3138,7 @@ def run_bg(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 

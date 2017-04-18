@@ -51,9 +51,10 @@ import salt.utils.atomicfile
 import salt.utils.find
 import salt.utils.filebuffer
 import salt.utils.files
+import salt.utils.locales
 import salt.utils.templates
 import salt.utils.url
-from salt.exceptions import CommandExecutionError, SaltInvocationError, get_error_message as _get_error_message
+from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
 
 log = logging.getLogger(__name__)
 
@@ -134,6 +135,26 @@ def _get_bkroot():
     '''
     # Get the cachedir from the minion config
     return os.path.join(__salt__['config.get']('cachedir'), 'file_backup')
+
+
+def _splitlines_preserving_trailing_newline(str):
+    '''
+    Returns a list of the lines in the string, breaking at line boundaries and
+    preserving a trailing newline (if present).
+
+    Essentially, this works like ``str.striplines(False)`` but preserves an
+    empty line at the end. This is equivalent to the following code:
+
+    .. code-block:: python
+
+        lines = str.splitlines()
+        if str.endswith('\n') or str.endswith('\r'):
+            lines.append('')
+    '''
+    lines = str.splitlines()
+    if str.endswith('\n') or str.endswith('\r'):
+        lines.append('')
+    return lines
 
 
 def gid_to_group(gid):
@@ -554,8 +575,6 @@ def get_source_sum(file_name='',
         Optional file name being managed, for matching with
         :py:func:`file.extract_hash <salt.modules.file.extract_hash>`.
 
-        .. versionadded:: 2016.11.0
-
     source
         Source file, as used in :py:mod:`file <salt.states.file>` and other
         states. If ``source_hash`` refers to a file containing hashes, then
@@ -573,8 +592,6 @@ def get_source_sum(file_name='',
     source_hash_name
         Specific file name to look for when ``source_hash`` refers to a remote
         file, used to disambiguate ambiguous matches.
-
-        .. versionadded:: 2016.11.0
 
     saltenv : base
         Salt fileserver environment from which to retrive the source_hash. This
@@ -686,31 +703,54 @@ def check_hash(path, file_hash):
     '''
     Check if a file matches the given hash string
 
-    Returns true if the hash matched, otherwise false. Raises ValueError if
-    the hash was not formatted correctly.
+    Returns ``True`` if the hash matches, otherwise ``False``.
 
     path
-        A file path
+        Path to a file local to the minion.
+
     hash
-        A string in the form <hash_type>:<hash_value>. For example:
-        ``md5:e138491e9d5b97023cea823fe17bac22``
+        The hash to check against the file specified in the ``path`` argument.
+        For versions 2016.11.4 and newer, the hash can be specified without an
+        accompanying hash type (e.g. ``e138491e9d5b97023cea823fe17bac22``),
+        but for earlier releases it is necessary to also specify the hash type
+        in the format ``<hash_type>:<hash_value>`` (e.g.
+        ``md5:e138491e9d5b97023cea823fe17bac22``).
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.check_hash /etc/fstab md5:<md5sum>
+        salt '*' file.check_hash /etc/fstab e138491e9d5b97023cea823fe17bac22
+        salt '*' file.check_hash /etc/fstab md5:e138491e9d5b97023cea823fe17bac22
     '''
     path = os.path.expanduser(path)
 
-    hash_parts = file_hash.split(':', 1)
-    if len(hash_parts) != 2:
-        # Support "=" for backward compatibility.
-        hash_parts = file_hash.split('=', 1)
-        if len(hash_parts) != 2:
-            raise ValueError('Bad hash format: \'{0}\''.format(file_hash))
-    hash_form, hash_value = hash_parts
-    return get_hash(path, hash_form) == hash_value
+    if not isinstance(file_hash, six.string_types):
+        raise SaltInvocationError('hash must be a string')
+
+    for sep in (':', '='):
+        if sep in file_hash:
+            hash_type, hash_value = file_hash.split(sep, 1)
+            break
+    else:
+        hash_value = file_hash
+        hash_len = len(file_hash)
+        hash_type = HASHES_REVMAP.get(hash_len)
+        if hash_type is None:
+            raise SaltInvocationError(
+                'Hash {0} (length: {1}) could not be matched to a supported '
+                'hash type. The supported hash types and lengths are: '
+                '{2}'.format(
+                    file_hash,
+                    hash_len,
+                    ', '.join(
+                        ['{0} ({1})'.format(HASHES_REVMAP[x], x)
+                         for x in sorted(HASHES_REVMAP)]
+                    ),
+                )
+            )
+
+    return get_hash(path, hash_type) == hash_value
 
 
 def find(path, *args, **kwargs):
@@ -1537,7 +1577,7 @@ def _get_line_indent(src, line, indent):
     '''
     Indent the line with the source line.
     '''
-    if not (indent or line):
+    if not indent:
         return line
 
     idt = []
@@ -1676,17 +1716,15 @@ def line(path, content, match=None, mode=None, location=None,
     before = _regex_to_static(body, before)
     match = _regex_to_static(body, match)
 
-    if mode == 'delete':
+    if os.stat(path).st_size == 0 and mode in ('delete', 'replace'):
+        log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
+        body = ''
+    elif mode == 'delete':
         body = os.linesep.join([line for line in body.split(os.linesep) if line.find(match) < 0])
-
     elif mode == 'replace':
-        if os.stat(path).st_size == 0:
-            log.warning('Cannot find text to replace. File \'{0}\' is empty.'.format(path))
-            body = ''
-        else:
-            body = os.linesep.join([(_get_line_indent(file_line, content, indent)
-                                    if (file_line.find(match) > -1 and not file_line == content) else file_line)
-                                    for file_line in body.split(os.linesep)])
+        body = os.linesep.join([(_get_line_indent(file_line, content, indent)
+                                if (file_line.find(match) > -1 and not file_line == content) else file_line)
+                                for file_line in body.split(os.linesep)])
     elif mode == 'insert':
         if not location and not before and not after:
             raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
@@ -1742,7 +1780,6 @@ def line(path, content, match=None, mode=None, location=None,
     elif mode == 'ensure':
         after = after and after.strip()
         before = before and before.strip()
-        content = content and content.strip()
 
         if before and after:
             _assert_occurrence(body, before, 'before')
@@ -1816,8 +1853,10 @@ def line(path, content, match=None, mode=None, location=None,
     if changed:
         if show_changes:
             with salt.utils.fopen(path, 'r') as fp_:
-                path_content = fp_.read().splitlines()
-            changes_diff = ''.join(difflib.unified_diff(path_content, body.splitlines()))
+                path_content = _splitlines_preserving_trailing_newline(
+                    fp_.read())
+            changes_diff = ''.join(difflib.unified_diff(
+                path_content, _splitlines_preserving_trailing_newline(body)))
         if __opts__['test'] is False:
             fh_ = None
             try:
@@ -1993,7 +2032,7 @@ def replace(path,
         )
 
     flags_num = _get_flags(flags)
-    cpattern = re.compile(str(pattern), flags_num)
+    cpattern = re.compile(salt.utils.to_bytes(pattern), flags_num)
     filesize = os.path.getsize(path)
     if bufsize == 'file':
         bufsize = filesize
@@ -2007,15 +2046,18 @@ def replace(path,
         pre_group = get_group(path)
         pre_mode = salt.utils.normalize_mode(get_mode(path))
 
-    # Avoid TypeErrors by forcing repl to be a string
-    repl = str(repl)
+    # Avoid TypeErrors by forcing repl to be bytearray related to mmap
+    # Replacement text may contains integer: 123 for example
+    repl = salt.utils.to_bytes(str(repl))
+    if not_found_content:
+        not_found_content = salt.utils.to_bytes(not_found_content)
 
     found = False
     temp_file = None
-    content = str(not_found_content) if not_found_content and \
+    content = salt.utils.to_str(not_found_content) if not_found_content and \
                                        (prepend_if_not_found or
                                         append_if_not_found) \
-                                     else repl
+                                     else salt.utils.to_str(repl)
 
     try:
         # First check the whole file, determine whether to make the replacement
@@ -2032,7 +2074,7 @@ def replace(path,
                                    access=mmap.ACCESS_READ)
             except (ValueError, mmap.error):
                 # size of file in /proc is 0, but contains data
-                r_data = "".join(r_file)
+                r_data = salt.utils.to_bytes("".join(r_file))
             if search_only:
                 # Just search; bail as early as a match is found
                 if re.search(cpattern, r_data):
@@ -2049,7 +2091,7 @@ def replace(path,
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, to avoid pre/appending the
                     # content if it was pre/appended in a previous run.
-                    if re.search('^{0}$'.format(re.escape(content)),
+                    if re.search(salt.utils.to_bytes('^{0}$'.format(re.escape(content))),
                                  r_data,
                                  flags=flags_num):
                         # Content was found, so set found.
@@ -2060,7 +2102,7 @@ def replace(path,
                 if show_changes or append_if_not_found or \
                    prepend_if_not_found:
                     orig_file = r_data.read(filesize).splitlines(True) \
-                        if hasattr(r_data, 'read') \
+                        if isinstance(r_data, mmap.mmap) \
                         else r_data.splitlines(True)
                     new_file = result.splitlines(True)
 
@@ -2099,7 +2141,7 @@ def replace(path,
                         result, nrepl = re.subn(cpattern, repl,
                                                 r_data, count)
                         try:
-                            w_file.write(result)
+                            w_file.write(salt.utils.to_str(result))
                         except (OSError, IOError) as exc:
                             raise CommandExecutionError(
                                 "Unable to write file '{0}'. Contents may "
@@ -2119,14 +2161,14 @@ def replace(path,
         if not_found_content is None:
             not_found_content = repl
         if prepend_if_not_found:
-            new_file.insert(0, not_found_content + '\n')
+            new_file.insert(0, not_found_content + b'\n')
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith('\n'):
-                    new_file[-1] += '\n'
-            new_file.append(not_found_content + '\n')
+                if not new_file[-1].endswith(b'\n'):
+                    new_file[-1] += b'\n'
+            new_file.append(not_found_content + b'\n')
         has_changes = True
         if not dry_run:
             try:
@@ -2139,7 +2181,7 @@ def replace(path,
             try:
                 fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
                 for line in new_file:
-                    fh_.write(line)
+                    fh_.write(salt.utils.to_str(line))
             finally:
                 fh_.close()
 
@@ -2185,7 +2227,9 @@ def replace(path,
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
     if show_changes:
-        return ''.join(difflib.unified_diff(orig_file, new_file))
+        orig_file_as_str = [salt.utils.to_str(x) for x in orig_file]
+        new_file_as_str = [salt.utils.to_str(x) for x in new_file]
+        return ''.join(difflib.unified_diff(orig_file_as_str, new_file_as_str))
 
     return has_changes
 
@@ -3521,9 +3565,14 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith('http') or proto == 'ftp':
-                    if __salt__['cp.cache_file'](single_src):
-                        ret = (single_src, single_hash)
-                        break
+                    try:
+                        if __salt__['cp.cache_file'](single_src):
+                            ret = (single_src, single_hash)
+                            break
+                    except MinionError as exc:
+                        # Error downloading file. Log the caught exception and
+                        # continue on to the next source.
+                        log.exception(exc)
                 elif proto == 'file' and os.path.exists(urlparsed_single_src.path):
                     ret = (single_src, single_hash)
                     break
@@ -3603,10 +3652,12 @@ def apply_template_on_contents(
             to_str=True,
             context=context_dict,
             saltenv=saltenv,
-            grains=__grains__,
+            grains=__opts__['grains'],
             pillar=__pillar__,
             salt=__salt__,
-            opts=__opts__)['data'].encode('utf-8')
+            opts=__opts__)['data']
+        if six.PY2:
+            contents = contents.encode('utf-8')
     else:
         ret = {}
         ret['result'] = False
@@ -3730,16 +3781,22 @@ def get_managed(
 
     if source and (template or parsed_scheme in salt.utils.files.REMOTE_PROTOS):
         # Check if we have the template or remote file cached
+        cache_refetch = False
         cached_dest = __salt__['cp.is_cached'](source, saltenv)
         if cached_dest and (source_hash or skip_verify):
             htype = source_sum.get('hash_type', 'sha256')
             cached_sum = get_hash(cached_dest, form=htype)
-            if skip_verify or cached_sum == source_sum['hsum']:
+            if skip_verify:
+                # prev: if skip_verify or cached_sum == source_sum['hsum']:
+                # but `cached_sum == source_sum['hsum']` is elliptical as prev if
                 sfn = cached_dest
                 source_sum = {'hsum': cached_sum, 'hash_type': htype}
+            elif cached_sum != source_sum.get('hsum', __opts__['hash_type']):
+                cache_refetch = True
 
         # If we didn't have the template or remote file, let's get it
-        if not sfn:
+        # Similarly when the file has been updated and the cache has to be refreshed
+        if not sfn or cache_refetch:
             try:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             except Exception as exc:
@@ -3772,7 +3829,7 @@ def get_managed(
                     context=context_dict,
                     salt=__salt__,
                     pillar=__pillar__,
-                    grains=__grains__,
+                    grains=__opts__['grains'],
                     opts=__opts__,
                     **kwargs)
             else:
@@ -4288,7 +4345,7 @@ def check_managed_changes(
             if _urlparse(source).scheme in ('salt', 'file') \
                     or source.startswith('/'):
                 try:
-                    mode = salt.utils.st_mode_to_octal(os.stat(sfn).st_mode)
+                    mode = __salt__['cp.stat_file'](source, saltenv=saltenv, octal=True)
                 except Exception as exc:
                     log.warning('Unable to stat %s: %s', sfn, exc)
     changes = check_file_meta(name, sfn, source, source_sum, user,
@@ -4386,7 +4443,8 @@ def check_file_meta(
         tmp = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                  text=True)
         if salt.utils.is_windows():
-            contents = os.linesep.join(contents.splitlines())
+            contents = os.linesep.join(
+                _splitlines_preserving_trailing_newline(contents))
         with salt.utils.fopen(tmp, 'w') as tmp_:
             tmp_.write(str(contents))
         # Compare the static contents with the named file
@@ -4545,6 +4603,13 @@ def manage_file(name,
         a local file on the minion), the mode of the destination file will be
         set to the mode of the source file.
 
+        .. note:: keep_mode does not work with salt-ssh.
+
+            As a consequence of how the files are transfered to the minion, and
+            the inability to connect back to the master with salt-ssh, salt is
+            unable to stat the file as it exists on the fileserver and thus
+            cannot mirror the mode on the salt-ssh minion
+
     CLI Example:
 
     .. code-block:: bash
@@ -4569,7 +4634,7 @@ def manage_file(name,
         if not sfn:
             return _error(
                 ret, 'Source file \'{0}\' not found'.format(source))
-        htype = source_sum.get('hash_type', __opts__.get('hash_type', 'md5'))
+        htype = source_sum.get('hash_type', __opts__['hash_type'])
         # Recalculate source sum now that file has been cached
         source_sum = {
             'hash_type': htype,
@@ -4579,7 +4644,7 @@ def manage_file(name,
             if _urlparse(source).scheme in ('salt', 'file') \
                     or source.startswith('/'):
                 try:
-                    mode = salt.utils.st_mode_to_octal(os.stat(sfn).st_mode)
+                    mode = __salt__['cp.stat_file'](source, saltenv=saltenv, octal=True)
                 except Exception as exc:
                     log.warning('Unable to stat %s: %s', sfn, exc)
 
@@ -4592,12 +4657,12 @@ def manage_file(name,
 
         # Only test the checksums on files with managed contents
         if source and not (not follow_symlinks and os.path.islink(real_name)):
-            name_sum = get_hash(real_name, source_sum['hash_type'])
+            name_sum = get_hash(real_name, source_sum.get('hash_type', __opts__['hash_type']))
         else:
             name_sum = None
 
         # Check if file needs to be replaced
-        if source and (name_sum is None or source_sum['hsum'] != name_sum):
+        if source and (name_sum is None or source_sum.get('hsum', __opts__['hash_type']) != name_sum):
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
@@ -4661,7 +4726,8 @@ def manage_file(name,
             tmp = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                      text=True)
             if salt.utils.is_windows():
-                contents = os.linesep.join(contents.splitlines())
+                contents = os.linesep.join(
+                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
 
@@ -4740,7 +4806,9 @@ def manage_file(name,
             ret['comment'] = 'File {0} updated'.format(name)
 
         elif not ret['changes'] and ret['result']:
-            ret['comment'] = u'File {0} is in the correct state'.format(name)
+            ret['comment'] = u'File {0} is in the correct state'.format(
+                salt.utils.locales.sdecode(name)
+            )
         if sfn:
             __clean_tmp(sfn)
         return ret
@@ -4844,7 +4912,8 @@ def manage_file(name,
             tmp = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                      text=True)
             if salt.utils.is_windows():
-                contents = os.linesep.join(contents.splitlines())
+                contents = os.linesep.join(
+                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
             # Copy into place
@@ -5290,8 +5359,8 @@ def list_backups(path, limit=None):
     '''
     .. versionadded:: 0.17.0
 
-    Lists the previous versions of a file backed up using Salt's :doc:`file
-    state backup </ref/states/backup_mode>` system.
+    Lists the previous versions of a file backed up using Salt's :ref:`file
+    state backup <file-state-backups>` system.
 
     path
         The path on the minion to check for backups
@@ -5361,8 +5430,8 @@ list_backup = salt.utils.alias_function(list_backups, 'list_backup')
 
 def list_backups_dir(path, limit=None):
     '''
-    Lists the previous versions of a directory backed up using Salt's :doc:`file
-    state backup </ref/states/backup_mode>` system.
+    Lists the previous versions of a directory backed up using Salt's :ref:`file
+    state backup <file-state-backups>` system.
 
     path
         The directory on the minion to check for backups
@@ -5425,7 +5494,7 @@ def restore_backup(path, backup_id):
     .. versionadded:: 0.17.0
 
     Restore a previous version of a file that was backed up using Salt's
-    :doc:`file state backup </ref/states/backup_mode>` system.
+    :ref:`file state backup <file-state-backups>` system.
 
     path
         The path on the minion to check for backups
@@ -5487,7 +5556,7 @@ def delete_backup(path, backup_id):
     .. versionadded:: 0.17.0
 
     Delete a previous version of a file that was backed up using Salt's
-    :doc:`file state backup </ref/states/backup_mode>` system.
+    :ref:`file state backup <file-state-backups>` system.
 
     path
         The path on the minion to check for backups
@@ -5683,7 +5752,7 @@ def pardir():
 
     This can be useful when constructing Salt Formulas.
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set pardir = salt['file.pardir']() %}
         {% set final_path = salt['file.join']('subdir', pardir, 'confdir') %}
@@ -5705,7 +5774,7 @@ def normpath(path):
 
     This can be useful at the CLI but is frequently useful when scripting.
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {%- from salt['file.normpath'](tpldir + '/../vars.jinja') import parent_vars %}
 
@@ -5726,7 +5795,7 @@ def basename(path):
 
     This can be useful at the CLI but is frequently useful when scripting.
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {%- set filename = salt['file.basename'](source_file) %}
 
@@ -5747,7 +5816,7 @@ def dirname(path):
 
     This can be useful at the CLI but is frequently useful when scripting.
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {%- from salt['file.dirname'](tpldir) + '/vars.jinja' import parent_vars %}
 
@@ -5769,7 +5838,7 @@ def join(*args):
     This can be useful at the CLI but is frequently useful when scripting
     combining path variables:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set www_root = '/var' %}
         {% set app_dir = 'myapp' %}

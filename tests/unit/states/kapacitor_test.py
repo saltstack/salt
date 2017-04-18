@@ -25,7 +25,7 @@ def _present(name='testname',
              define_result=True,
              enable_result=True,
              disable_result=True,
-             script='test'):
+             script='testscript'):
     '''
     Run a "kapacitor.present" state after setting up mocks, and return the
     state return value as well as the mocks to make assertions.
@@ -57,6 +57,15 @@ def _present(name='testname',
     return retval, get_mock, define_mock, enable_mock, disable_mock
 
 
+def _task(script='testscript', enabled=True, task_type='stream', db='testdb', rp='default'):
+    return {
+        'script': script,
+        'enabled': enabled,
+        'type': task_type,
+        'dbrps': [{'db': db, 'rp': rp}],
+    }
+
+
 class KapacitorTestCase(TestCase):
     def test_task_present_new_task(self):
         ret, get_mock, define_mock, enable_mock, _ = _present()
@@ -68,9 +77,8 @@ class KapacitorTestCase(TestCase):
         self.assertIn('enabled', ret['changes'])
         self.assertEqual(True, ret['changes']['enabled']['new'])
 
-    def test_task_present_existing_task(self):
-        old_task = {'script': 'old_task', 'enabled': True}
-        ret, get_mock, define_mock, enable_mock, _ = _present(task=old_task)
+    def test_task_present_existing_task_updated_script(self):
+        ret, get_mock, define_mock, enable_mock, _ = _present(task=_task(script='oldscript'))
         get_mock.assert_called_once_with('testname')
         define_mock.assert_called_once_with('testname', '/tmp/script.tick',
             database='testdb', retention_policy='default', task_type='stream')
@@ -79,8 +87,7 @@ class KapacitorTestCase(TestCase):
         self.assertNotIn('enabled', ret['changes'])
 
     def test_task_present_existing_task_not_enabled(self):
-        old_task = {'script': 'test', 'enabled': False}
-        ret, get_mock, define_mock, enable_mock, _ = _present(task=old_task)
+        ret, get_mock, define_mock, enable_mock, _ = _present(task=_task(enabled=False))
         get_mock.assert_called_once_with('testname')
         self.assertEqual(False, define_mock.called)
         enable_mock.assert_called_once_with('testname')
@@ -89,8 +96,7 @@ class KapacitorTestCase(TestCase):
         self.assertEqual(True, ret['changes']['enabled']['new'])
 
     def test_task_present_disable_existing_task(self):
-        old_task = {'script': 'test', 'enabled': True}
-        ret, get_mock, define_mock, _, disable_mock = _present(task=old_task, enable=False)
+        ret, get_mock, define_mock, _, disable_mock = _present(task=_task(), enable=False)
         get_mock.assert_called_once_with('testname')
         self.assertEqual(False, define_mock.called)
         disable_mock.assert_called_once_with('testname')

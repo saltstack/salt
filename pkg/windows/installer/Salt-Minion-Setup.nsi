@@ -20,6 +20,7 @@
 !include "StrFunc.nsh"
 !include "x64.nsh"
 !include "WinMessages.nsh"
+!include "WinVer.nsh"
 ${StrLoc}
 ${StrStrAdv}
 
@@ -174,6 +175,49 @@ ShowInstDetails show
 ShowUnInstDetails show
 
 
+; Check and install Visual C++ 2008 SP1 MFC Security Update redist packages
+; See http://blogs.msdn.com/b/astebner/archive/2009/01/29/9384143.aspx for more info
+Section -Prerequisites
+
+    ; VCRedist only needed on Windows Server 2008R2/Windows 7 and below
+    ${If} ${AtMostWin2008R2}
+
+        !define VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
+        !define VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"
+
+        Var /GLOBAL VcRedistGuid
+        Var /GLOBAL NeedVcRedist
+        ${If} ${CPUARCH} == "AMD64"
+            StrCpy $VcRedistGuid ${VC_REDIST_X64_GUID}
+        ${Else}
+            StrCpy $VcRedistGuid ${VC_REDIST_X86_GUID}
+        ${EndIf}
+
+        Push $VcRedistGuid
+        Call MsiQueryProductState
+        ${If} $NeedVcRedist == "True"
+            MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
+                "VC Redist 2008 SP1 MFC is currently not installed. Would you like to install?" \
+                /SD IDYES IDNO endVcRedist
+
+            ClearErrors
+            ; The Correct version of VCRedist is copied over by "build_pkg.bat"
+            SetOutPath "$INSTDIR\"
+            File "..\prereqs\vcredist.exe"
+            ExecWait "$INSTDIR\vcredist.exe /qb!"
+            IfErrors 0 endVcRedist
+                MessageBox MB_OK \
+                    "VC Redist 2008 SP1 MFC failed to install. Try installing the package manually." \
+                    /SD IDOK
+
+            endVcRedist:
+        ${EndIf}
+
+    ${EndIf}
+
+SectionEnd
+
+
 Section "MainSection" SEC01
 
     SetOutPath "$INSTDIR\"
@@ -235,6 +279,7 @@ Function .onInit
         Delete "$INSTDIR\uninst.exe"
         Delete "$INSTDIR\nssm.exe"
         Delete "$INSTDIR\salt*"
+        Delete "$INSTDIR\vcredist.exe"
         RMDir /r "$INSTDIR\bin"
 
         ; Remove registry entries
@@ -292,6 +337,7 @@ Section -Post
     nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
     nsExec::Exec "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
     nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
+    nsExec::Exec "nssm.exe set salt-minion AppNoConsole 1"
 
     RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
 
@@ -299,6 +345,8 @@ Section -Post
 
     Push "C:\salt"
     Call AddToPath
+
+    Delete "$INSTDIR\vcredist.exe"
 
 SectionEnd
 
@@ -331,6 +379,7 @@ Section Uninstall
     Delete "$INSTDIR\uninst.exe"
     Delete "$INSTDIR\nssm.exe"
     Delete "$INSTDIR\salt*"
+    Delete "$INSTDIR\vcredist.exe"
 
     ; Remove salt directory, you must check to make sure you're not removing
     ; the Program Files directory
@@ -366,6 +415,18 @@ FunctionEnd
 ###############################################################################
 # Helper Functions
 ###############################################################################
+Function MsiQueryProductState
+
+  !define INSTALLSTATE_DEFAULT "5"
+
+  Pop $R0
+  StrCpy $NeedVcRedist "False"
+  System::Call "msi::MsiQueryProductStateA(t '$R0') i.r0"
+  StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
+  StrCpy $NeedVcRedist "True"
+
+FunctionEnd
+
 
 Function Trim
 

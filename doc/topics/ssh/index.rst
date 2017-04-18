@@ -156,7 +156,7 @@ systems still need to be implemented.
     By default, Grains are settable through ``salt-ssh``. By
     default, these grains will *not* be persisted across reboots.
 
-    See the "thin_dir" setting in :doc:`Roster documentation </topics/ssh/roster>`
+    See the "thin_dir" setting in :ref:`Roster documentation <ssh-roster>`
     for more details.
 
 Configuring Salt SSH
@@ -168,7 +168,7 @@ the ``-c`` option to Salt SSH facilitates passing in a directory to look inside 
 configuration file named ``master``.
 
 Minion Config
----------------
+-------------
 
 .. versionadded:: 2015.5.1
 
@@ -225,6 +225,9 @@ Boolean-style options should be specified in their YAML representation.
     For the `Saltfile` to be automatically detected it needs to be named
     `Saltfile` with a capital `S` and be readable by the user running
     salt-ssh.
+
+At last you can create ``~/.salt/Saltfile`` and ``salt-ssh``
+will automatically load it by default.
 
 Debugging salt-ssh
 ==================

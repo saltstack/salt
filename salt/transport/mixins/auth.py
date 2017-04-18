@@ -21,8 +21,12 @@ from salt.utils.cache import CacheCli
 
 # Import Third Party Libs
 import tornado.gen
-from Crypto.Cipher import PKCS1_OAEP
-from Crypto.PublicKey import RSA
+try:
+    from Cryptodome.Cipher import PKCS1_OAEP
+    from Cryptodome.PublicKey import RSA
+except ImportError:
+    from Crypto.Cipher import PKCS1_OAEP
+    from Crypto.PublicKey import RSA
 
 
 log = logging.getLogger(__name__)
@@ -31,7 +35,10 @@ log = logging.getLogger(__name__)
 # TODO: rename
 class AESPubClientMixin(object):
     def _verify_master_signature(self, payload):
-        if payload.get('sig') and self.opts.get('sign_pub_messages'):
+        if self.opts.get('sign_pub_messages'):
+            if not payload.get('sig', False):
+                raise salt.crypt.AuthenticationError('Message signing is enabled but the payload has no signature.')
+
             # Verify that the signature is valid
             master_pubkey_path = os.path.join(self.opts['pki_dir'], 'minion_master.pub')
             if not salt.crypt.verify_signature(master_pubkey_path, payload['load'], payload.get('sig')):

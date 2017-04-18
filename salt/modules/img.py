@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Virtual machine image management tools
+
+.. deprecated:: 2016.3.0
 '''
 
 # Import python libs

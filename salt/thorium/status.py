@@ -32,7 +32,7 @@ def reg(name):
             for key in event['data']['data']:
                 if key in ('id', 'recv_time'):
                     continue
-                idata[key] = event['data'][key]
-            __reg__['status']['val'][event['data']['data']['id']] = idata
-            ret['changes'][event['data']['data']['id']] = True
+                idata[key] = event['data']['data'][key]
+            __reg__['status']['val'][event['data']['id']] = idata
+            ret['changes'][event['data']['id']] = True
     return ret

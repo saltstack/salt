@@ -37,6 +37,27 @@ def __virtual__():
     return True
 
 
+def _parse_numbers(text):
+    '''
+    Convert a string to a number, allowing for a K|M|G|T postfix, 32.8K.
+    Returns a decimal number if the string is a real number,
+    or the string unchanged otherwise.
+    '''
+    if text.isdigit():
+        return decimal.Decimal(text)
+
+    try:
+        postPrefixes = {'K': '10E3', 'M': '10E6', 'G': '10E9', 'T': '10E12', 'P': '10E15', 'E': '10E18', 'Z': '10E21', 'Y': '10E24'}
+        if text[-1] in postPrefixes.keys():
+            v = decimal.Decimal(text[:-1])
+            v = v * decimal.Decimal(postPrefixes[text[-1]])
+            return v
+        else:
+            return decimal.Decimal(text)
+    except ValueError:
+        return text
+
+
 def _clean_flags(args, caller):
     '''
     Sanitize flags passed into df
@@ -75,9 +96,7 @@ def usage(args=None):
         return {}
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
-    elif __grains__['kernel'] == 'OpenBSD':
-        cmd = 'df -kP'
-    elif __grains__['kernel'] == 'AIX':
+    elif __grains__['kernel'] == 'OpenBSD' or __grains__['kernel'] == 'AIX':
         cmd = 'df -kP'
     else:
         cmd = 'df'
@@ -141,7 +160,10 @@ def inodeusage(args=None):
         salt '*' disk.inodeusage
     '''
     flags = _clean_flags(args, 'disk.inodeusage')
-    cmd = 'df -iP'
+    if __grains__['kernel'] == 'AIX':
+        cmd = 'df -i'
+    else:
+        cmd = 'df -iP'
     if flags:
         cmd += ' -{0}'.format(flags)
     ret = {}
@@ -161,6 +183,14 @@ def inodeusage(args=None):
                     'used': comps[5],
                     'free': comps[6],
                     'use': comps[7],
+                    'filesystem': comps[0],
+                }
+            elif __grains__['kernel'] == 'AIX':
+                ret[comps[6]] = {
+                    'inodes': comps[4],
+                    'used': comps[5],
+                    'free': comps[2],
+                    'use': comps[5],
                     'filesystem': comps[0],
                 }
             else:
@@ -189,7 +219,7 @@ def percent(args=None):
     '''
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
-    elif __grains__['kernel'] == 'OpenBSD':
+    elif __grains__['kernel'] == 'OpenBSD' or __grains__['kernel'] == 'AIX':
         cmd = 'df -kP'
     else:
         cmd = 'df'
@@ -201,9 +231,11 @@ def percent(args=None):
         if line.startswith('Filesystem'):
             continue
         comps = line.split()
-        while not comps[1].isdigit():
+        while len(comps) >= 2 and not comps[1].isdigit():
             comps[0] = '{0} {1}'.format(comps[0], comps[1])
             comps.pop(1)
+        if len(comps) < 2:
+            continue
         try:
             if __grains__['kernel'] == 'Darwin':
                 ret[comps[8]] = comps[4]
@@ -464,11 +496,18 @@ def fstype(device):
     if salt.utils.which('df'):
         # the fstype was not set on the block device, so inspect the filesystem
         # itself for its type
-        df_out = __salt__['cmd.run']('df -T {0}'.format(device)).splitlines()
-        if len(df_out) > 1:
-            fs_type = df_out[1]
-            if fs_type:
-                return fs_type
+        if __grains__['kernel'] == 'AIX' and os.path.isfile('/usr/sysv/bin/df'):
+            df_out = __salt__['cmd.run']('/usr/sysv/bin/df -n {0}'.format(device)).split()
+            if len(df_out) > 2:
+                fs_type = df_out[2]
+                if fs_type:
+                    return fs_type
+        else:
+            df_out = __salt__['cmd.run']('df -T {0}'.format(device)).splitlines()
+            if len(df_out) > 1:
+                fs_type = df_out[1]
+                if fs_type:
+                    return fs_type
 
     return ''
 
@@ -705,6 +744,9 @@ def iostat(interval=1, count=5, disks=None):
 
     .. versionadded:: 2016.3.0
 
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     CLI Example:
 
     .. code-block:: bash
@@ -715,6 +757,8 @@ def iostat(interval=1, count=5, disks=None):
         return _iostat_linux(interval, count, disks)
     elif salt.utils.is_freebsd():
         return _iostat_fbsd(interval, count, disks)
+    elif salt.utils.is_aix():
+        return _iostat_aix(interval, count, disks)
 
 
 def _iostats_dict(header, stats):
@@ -823,5 +867,105 @@ def _iostat_linux(interval, count, disks):
 
     for disk, stats in dev_stats.items():
         iostats[disk] = _iostats_dict(dev_header, stats)
+
+    return iostats
+
+
+def _iostat_aix(interval, count, disks):
+    '''
+    AIX support to gather and return (averaged) IO stats.
+    '''
+    log.debug('DGM disk iostat entry')
+
+    if disks is None:
+        iostat_cmd = 'iostat -dD {0} {1} '.format(interval, count)
+    elif isinstance(disks, six.string_types):
+        iostat_cmd = 'iostat -dD {0} {1} {2}'.format(disks, interval, count)
+    else:
+        iostat_cmd = 'iostat -dD {0} {1} {2}'.format(' '.join(disks), interval, count)
+
+    ret = {}
+    procn = None
+    fields = []
+    disk_name = ''
+    disk_mode = ''
+    dev_stats = collections.defaultdict(list)
+    for line in __salt__['cmd.run'](iostat_cmd).splitlines():
+        # Note: iostat -dD is per-system
+        #
+        #root@l490vp031_pub:~/devtest# iostat -dD hdisk6 1 3
+        #
+        #System configuration: lcpu=8 drives=1 paths=2 vdisks=2
+        #
+        #hdisk6          xfer:  %tm_act      bps      tps      bread      bwrtn
+        #                          0.0      0.0      0.0        0.0        0.0
+        #                read:      rps  avgserv  minserv  maxserv   timeouts      fails
+        #                          0.0      0.0      0.0      0.0           0          0
+        #               write:      wps  avgserv  minserv  maxserv   timeouts      fails
+        #                          0.0      0.0      0.0      0.0           0          0
+        #               queue:  avgtime  mintime  maxtime  avgwqsz    avgsqsz     sqfull
+        #                          0.0      0.0      0.0      0.0        0.0         0.0
+        #--------------------------------------------------------------------------------
+        #
+        #hdisk6          xfer:  %tm_act      bps      tps      bread      bwrtn
+        #                          9.6     16.4K     4.0       16.4K       0.0
+        #                read:      rps  avgserv  minserv  maxserv   timeouts      fails
+        #                          4.0      4.9      0.3      9.9           0          0
+        #               write:      wps  avgserv  minserv  maxserv   timeouts      fails
+        #                          0.0      0.0      0.0      0.0           0          0
+        #               queue:  avgtime  mintime  maxtime  avgwqsz    avgsqsz     sqfull
+        #                          0.0      0.0      0.0      0.0        0.0         0.0
+        #--------------------------------------------------------------------------------
+        #
+        #hdisk6          xfer:  %tm_act      bps      tps      bread      bwrtn
+        #                          0.0      0.0      0.0        0.0        0.0
+        #                read:      rps  avgserv  minserv  maxserv   timeouts      fails
+        #                          0.0      0.0      0.3      9.9           0          0
+        #               write:      wps  avgserv  minserv  maxserv   timeouts      fails
+        #                          0.0      0.0      0.0      0.0           0          0
+        #               queue:  avgtime  mintime  maxtime  avgwqsz    avgsqsz     sqfull
+        #                          0.0      0.0      0.0      0.0        0.0         0.0
+        #--------------------------------------------------------------------------------
+        if not line or line.startswith('System') or line.startswith('-----------'):
+            continue
+
+        if not re.match(r'\s', line):
+            #seen disk name
+            dsk_comps = line.split(':')
+            dsk_firsts = dsk_comps[0].split()
+            disk_name = dsk_firsts[0]
+            disk_mode = dsk_firsts[1]
+            fields = dsk_comps[1].split()
+            if disk_name not in dev_stats.keys():
+                dev_stats[disk_name] = []
+                procn = len(dev_stats[disk_name])
+                dev_stats[disk_name].append({})
+                dev_stats[disk_name][procn][disk_mode] = {}
+                dev_stats[disk_name][procn][disk_mode]['fields'] = fields
+                dev_stats[disk_name][procn][disk_mode]['stats'] = []
+            continue
+
+        if ':' in line:
+            comps = line.split(':')
+            fields = comps[1].split()
+            disk_mode = comps[0].lstrip()
+            if disk_mode not in dev_stats[disk_name][0].keys():
+                dev_stats[disk_name][0][disk_mode] = {}
+                dev_stats[disk_name][0][disk_mode]['fields'] = fields
+                dev_stats[disk_name][0][disk_mode]['stats'] = []
+        else:
+            line = line.split()
+            stats = [_parse_numbers(x) for x in line[:]]
+            dev_stats[disk_name][0][disk_mode]['stats'].append(stats)
+
+    iostats = {}
+
+    for disk, list_modes in dev_stats.items():
+        iostats[disk] = {}
+        for modes in list_modes:
+            for disk_mode in modes.keys():
+                fields = modes[disk_mode]['fields']
+                stats = modes[disk_mode]['stats']
+                iostats[disk][disk_mode] = _iostats_dict(fields, stats)
 
     return iostats

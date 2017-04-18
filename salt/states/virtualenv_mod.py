@@ -14,7 +14,7 @@ import os
 import salt.version
 import salt.utils
 
-from salt.exceptions import CommandNotFoundError
+from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 from salt.ext import six
 log = logging.getLogger(__name__)
@@ -54,7 +54,9 @@ def managed(name,
             env_vars=None,
             no_use_wheel=False,
             pip_upgrade=False,
-            pip_pkgs=None):
+            pip_pkgs=None,
+            pip_no_cache_dir=False,
+            pip_cache_dir=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -237,7 +239,12 @@ def managed(name,
 
     # Populate the venv via a requirements file
     if requirements or pip_pkgs:
-        before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
+        try:
+            before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
+            return ret
 
         if requirements:
 
@@ -273,7 +280,9 @@ def managed(name,
             no_deps=no_deps,
             proxy=proxy,
             use_vt=use_vt,
-            env_vars=env_vars
+            env_vars=env_vars,
+            no_cache_dir=pip_no_cache_dir,
+            cache_dir=pip_cache_dir
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:

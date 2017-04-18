@@ -73,9 +73,9 @@ def get_minion_data(minion, opts):
     grains = None
     pillar = None
     if opts.get('minion_data_cache', False):
-        cache = salt.cache.Cache(opts)
+        cache = salt.cache.factory(opts)
         if minion is None:
-            for id_ in cache.list('minions'):
+            for id_ in cache.ls('minions'):
                 data = cache.fetch('minions/{0}'.format(id_), 'data')
                 if data is None:
                     continue
@@ -180,7 +180,7 @@ class CkMinions(object):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
-        self.cache = salt.cache.Cache(opts)
+        self.cache = salt.cache.factory(opts)
         # TODO: this is actually an *auth* check
         if self.opts.get('transport', 'zeromq') in ('zeromq', 'tcp'):
             self.acc = 'minions'
@@ -207,7 +207,8 @@ class CkMinions(object):
         '''
         if isinstance(expr, six.string_types):
             expr = [m for m in expr.split(',') if m]
-        return [x for x in expr if x in self._pki_minions()]
+        minions = self._pki_minions()
+        return [x for x in expr if x in minions]
 
     def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
@@ -344,13 +345,13 @@ class CkMinions(object):
         if greedy:
             minions = self._pki_minions()
         elif cache_enabled:
-            minions = self.cache.list('minions')
+            minions = self.cache.ls('minions')
         else:
             return []
 
         if cache_enabled:
             if greedy:
-                cminions = self.cache.list('minions')
+                cminions = self.cache.ls('minions')
             else:
                 cminions = minions
             if cminions is None:
@@ -414,7 +415,7 @@ class CkMinions(object):
                         mlist.append(fn_)
                 return mlist
             elif cache_enabled:
-                return self.cache.list('minions')
+                return self.cache.ls('minions')
             else:
                 return list()
 
@@ -576,7 +577,7 @@ class CkMinions(object):
         '''
         minions = set()
         if self.opts.get('minion_data_cache', False):
-            search = self.cache.list('minions')
+            search = self.cache.ls('minions')
             if search is None:
                 return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts['publish_port']))
@@ -634,6 +635,8 @@ class CkMinions(object):
         make sure everyone has checked back in.
         '''
         try:
+            if expr is None:
+                expr = ''
             check_func = getattr(self, '_check_{0}_minions'.format(expr_form), None)
             if expr_form in ('grain',
                              'grain_pcre',
@@ -1095,7 +1098,7 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
     minions = checker.check_minions(
             tgt,
             tgt_type)
-    cache = salt.cache.Cache(opts)
+    cache = salt.cache.factory(opts)
     for minion in minions:
         mdata = cache.fetch('minions/{0}'.format(minion), 'mine')
         if mdata is None:

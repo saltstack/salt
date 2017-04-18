@@ -53,26 +53,28 @@ class Batch(object):
             args.append(self.opts.get('expr_form', 'glob'))
 
         self.pub_kwargs['yield_pub_data'] = True
-        ping_gen = self.local.cmd_iter(*args, **self.pub_kwargs)
+        ping_gen = self.local.cmd_iter(*args,
+                                       gather_job_timeout=self.opts['gather_job_timeout'],
+                                       **self.pub_kwargs)
 
         # Broadcast to targets
         fret = set()
         nret = set()
-        try:
-            for ret in ping_gen:
-                if ('minions' and 'jid') in ret:
-                    for minion in ret['minions']:
-                        nret.add(minion)
-                    continue
-                else:
+        for ret in ping_gen:
+            if ('minions' and 'jid') in ret:
+                for minion in ret['minions']:
+                    nret.add(minion)
+                continue
+            else:
+                try:
                     m = next(six.iterkeys(ret))
-                    if m is not None:
-                        fret.add(m)
-            return (list(fret), ping_gen, nret.difference(fret))
-        except StopIteration:
-            if not self.quiet:
-                print_cli('No minions matched the target.')
-        return list(fret), ping_gen
+                except StopIteration:
+                    if not self.quiet:
+                        print_cli('No minions matched the target.')
+                    break
+                if m is not None:
+                    fret.add(m)
+        return (list(fret), ping_gen, nret.difference(fret))
 
     def get_bnum(self):
         '''
@@ -174,6 +176,7 @@ class Batch(object):
                                 ret=self.opts.get('return', ''),
                                 show_jid=show_jid,
                                 verbose=show_verbose,
+                                gather_job_timeout=self.opts['gather_job_timeout'],
                                 **self.eauth)
                 # add it to our iterators and to the minion_tracker
                 iters.append(new_iter)
@@ -241,12 +244,15 @@ class Batch(object):
                     active.remove(minion)
                     if bwait:
                         wait.append(datetime.now() + timedelta(seconds=bwait))
+                # Munge retcode into return data
+                if 'retcode' in data and isinstance(data['ret'], dict) and 'retcode' not in data['ret']:
+                    data['ret']['retcode'] = data['retcode']
                 if self.opts.get('raw'):
                     ret[minion] = data
                     yield data
                 else:
-                    ret[minion] = data
-                    yield {minion: data}
+                    ret[minion] = data['ret']
+                    yield {minion: data['ret']}
                 if not self.quiet:
                     ret[minion] = data['ret']
                     data[minion] = data.pop('ret')

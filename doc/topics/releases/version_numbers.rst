@@ -1,5 +1,7 @@
 :orphan:
 
+.. _version-numbers:
+
 ===============
 Version Numbers
 ===============

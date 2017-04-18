@@ -253,6 +253,7 @@ def state(
             cmd_kw['topfn'] = ''.join(cmd_kw.pop('arg'))
         elif sls:
             cmd_kw['mods'] = cmd_kw.pop('arg')
+        cmd_kw.update(cmd_kw.pop('kwarg'))
         tmp_ret = __salt__[fun](**cmd_kw)
         cmd_ret = {__opts__['id']: {
             'ret': tmp_ret,
@@ -638,7 +639,6 @@ def runner(name, **kwargs):
           salt.runner:
             - name: manage.up
     '''
-    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
     try:
         jid = __orchestration_jid__
     except NameError:
@@ -652,16 +652,27 @@ def runner(name, **kwargs):
                                       full_return=True,
                                       **kwargs)
 
-    ret['result'] = True
-    ret['comment'] = "Runner function '{0}' executed.".format(name)
+    runner_return = out.get('return')
+    if isinstance(runner_return, dict) and 'Error' in runner_return:
+        out['success'] = False
+    if not out.get('success', True):
+        ret = {
+            'name': name,
+            'result': False,
+            'changes': {},
+            'comment': runner_return if runner_return else "Runner function '{0}' failed without comment.".format(name)
+        }
+    else:
+        ret = {
+            'name': name,
+            'result': True,
+            'changes': runner_return if runner_return else {},
+            'comment': "Runner function '{0}' executed.".format(name)
+        }
 
     ret['__orchestration__'] = True
     if 'jid' in out:
         ret['__jid__'] = out['jid']
-
-    runner_return = out.get('return')
-    if runner_return:
-        ret['changes'] = runner_return
 
     return ret
 

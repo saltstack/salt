@@ -168,8 +168,8 @@ class SystemdTestCase(TestCase):
         '''
         listdir_mock = MagicMock(side_effect=[
             ['foo.service', 'multi-user.target.wants', 'mytimer.timer'],
+            [],
             ['foo.service', 'multi-user.target.wants', 'bar.service'],
-            ['mysql', 'nginx', 'README'],
             ['mysql', 'nginx', 'README']
         ])
         access_mock = MagicMock(
@@ -513,6 +513,9 @@ class SystemdScopeTestCase(TestCase):
 
     def test_enable(self):
         self._change_state('enable')
+
+    def test_disable(self):
+        self._change_state('disable')
 
     def test_mask(self):
         self._mask_unmask('mask', False)

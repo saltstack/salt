@@ -91,7 +91,7 @@ class MasterPillarUtil(object):
         self.use_cached_pillar = use_cached_pillar
         self.grains_fallback = grains_fallback
         self.pillar_fallback = pillar_fallback
-        self.cache = salt.cache.Cache(opts)
+        self.cache = salt.cache.factory(opts)
         log.debug(
             'Init settings: tgt: \'{0}\', expr_form: \'{1}\', saltenv: \'{2}\', '
             'use_cached_grains: {3}, use_cached_pillar: {4}, '
@@ -109,7 +109,8 @@ class MasterPillarUtil(object):
             log.debug('Skipping cached mine data minion_data_cache'
                       'and enfore_mine_cache are both disabled.')
             return mine_data
-        minion_ids = self.cache.list('minions')
+        if not minion_ids:
+            minion_ids = self.cache.ls('minions')
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
@@ -127,11 +128,20 @@ class MasterPillarUtil(object):
             log.debug('Skipping cached data because minion_data_cache is not '
                       'enabled.')
             return grains, pillars
-        minion_ids = self.cache.list('minions')
+        if not minion_ids:
+            minion_ids = self.cache.ls('minions')
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
             mdata = self.cache.fetch('minions/{0}'.format(minion_id), 'data')
+            if not isinstance(mdata, dict):
+                log.warning(
+                    'cache.fetch should always return a dict. ReturnedType: {0}, MinionId: {1}'.format(
+                        type(mdata).__name__,
+                        minion_id
+                    )
+                )
+                continue
             if 'grains' in mdata:
                 grains[minion_id] = mdata['grains']
             if 'pillar' in mdata:
@@ -342,7 +352,7 @@ class MasterPillarUtil(object):
             # in the same file, 'data.p'
             grains, pillars = self._get_cached_minion_data(*minion_ids)
         try:
-            c_minions = self.cache.list('minions')
+            c_minions = self.cache.ls('minions')
             for minion_id in minion_ids:
                 if not salt.utils.verify.valid_id(self.opts, minion_id):
                     continue

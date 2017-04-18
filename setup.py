@@ -716,31 +716,6 @@ class Build(build):
 
 
 class Install(install):
-    user_options = install.user_options + [
-        ('salt-transport=', None, 'The transport to prepare salt for. Choices are \'zeromq\' '
-                                  '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq'),
-        ('salt-root-dir=', None,
-         'Salt\'s pre-configured root directory'),
-        ('salt-config-dir=', None,
-         'Salt\'s pre-configured configuration directory'),
-        ('salt-cache-dir=', None,
-         'Salt\'s pre-configured cache directory'),
-        ('salt-sock-dir=', None,
-         'Salt\'s pre-configured socket directory'),
-        ('salt-srv-root-dir=', None,
-         'Salt\'s pre-configured service directory'),
-        ('salt-base-file-roots-dir=', None,
-         'Salt\'s pre-configured file roots directory'),
-        ('salt-base-pillar-roots-dir=', None,
-         'Salt\'s pre-configured pillar roots directory'),
-        ('salt-base-master-roots-dir=', None,
-         'Salt\'s pre-configured master roots directory'),
-        ('salt-logs-dir=', None,
-         'Salt\'s pre-configured logs directory'),
-        ('salt-pidfile-dir=', None,
-         'Salt\'s pre-configured pidfiles directory'),
-    ]
-
     def initialize_options(self):
         install.initialize_options(self)
 

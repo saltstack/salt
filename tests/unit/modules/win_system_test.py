@@ -291,11 +291,11 @@ class WinSystemTestCase(TestCase):
         '''
             Test setting a new hostname
         '''
-        cmd_run_mock = MagicMock(return_value="DNSHostName\n\nMINION")
+        cmd_run_mock = MagicMock(return_value="MINION")
         with patch.dict(win_system.__salt__, {'cmd.run': cmd_run_mock}):
             ret = win_system.get_hostname()
             self.assertEqual(ret, "MINION")
-        cmd_run_mock.assert_called_once_with(cmd="wmic nicconfig get dnshostname")
+        cmd_run_mock.assert_called_once_with(cmd="hostname")
 
 
 if __name__ == '__main__':

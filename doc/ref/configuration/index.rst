@@ -27,7 +27,7 @@ interfaces (0.0.0.0). To bind Salt to a specific IP, redefine the
    + interface: 10.0.0.1
 
 After updating the configuration file, restart the Salt master.
-See the :doc:`master configuration reference </ref/configuration/master>`
+See the :ref:`master configuration reference <configuration-salt-master>`
 for more details about other configurable options.
 
 Minion Configuration
@@ -48,7 +48,7 @@ configuration file, typically ``/etc/salt/minion``, as follows:
    + master: 10.0.0.1
 
 After updating the configuration file, restart the Salt minion.
-See the :doc:`minion configuration reference </ref/configuration/minion>`
+See the :ref:`minion configuration reference <configuration-salt-minion>`
 for more details about other configurable options.
 
 Running Salt
@@ -78,8 +78,8 @@ Running Salt
 
         salt-master --log-level=debug
 
-    For information on salt's logging system please see the :doc:`logging
-    document</ref/configuration/logging/index>`.
+    For information on salt's logging system please see the :ref:`logging
+    document<logging>`.
 
 
 .. admonition:: Run as an unprivileged (non-root) user
@@ -97,10 +97,10 @@ Running Salt
     * /var/run/salt
 
     More information about running salt as a non-privileged user can be found
-    :doc:`here </ref/configuration/nonroot>`.
+    :ref:`here <configuration-non-root-user>`.
 
 
-There is also a full :doc:`troubleshooting guide</topics/troubleshooting/index>`
+There is also a full :ref:`troubleshooting guide<troubleshooting>`
 available.
 
 .. _key-identity:
@@ -180,7 +180,7 @@ The ``salt-key`` command allows for signing keys individually or in bulk. The
 example above, using ``-A`` bulk-accepts all pending keys. To accept keys
 individually use the lowercase of the same option, ``-a keyname``.
 
-.. seealso:: :doc:`salt-key manpage </ref/cli/salt-key>`
+.. seealso:: :ref:`salt-key manpage <salt-key>`
 
 Sending Commands
 ================

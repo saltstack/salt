@@ -2,11 +2,11 @@
 
 ############################################################################
 #
-# Title: Build Environment Script for OSX
+# Title: Build Environment Script for macOS
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
-# Description: This script sets up a build environment for salt on OSX.
+# Description: This script sets up a build environment for salt on macOS.
 #
 # Requirements:
 #     - XCode Command Line Tools (xcode-select --install)
@@ -15,7 +15,7 @@
 #     This script is not passed any parameters
 #
 #     Example:
-#         The following will set up a build environment for salt on OSX
+#         The following will set up a build environment for salt on macOS
 #
 #         ./dev_env.sh
 #
@@ -140,8 +140,8 @@ sudo -H $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: libsodium\007"
 
-PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.7.tar.gz"
-PKGDIR="libsodium-1.0.7"
+PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.12.tar.gz"
+PKGDIR="libsodium-1.0.12"
 
 download $PKGURL
 

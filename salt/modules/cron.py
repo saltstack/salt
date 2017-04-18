@@ -339,9 +339,16 @@ def list_tab(user):
                     comment = comment_line
                 else:
                     comment += '\n' + comment_line
-            elif len(line.split()) > 5:
+            elif line.find('=') > 0 and (' ' not in line or line.index('=') < line.index(' ')):
+                # Appears to be a ENV setup line
+                comps = line.split('=', 1)
+                dat = {}
+                dat['name'] = comps[0]
+                dat['value'] = comps[1]
+                ret['env'].append(dat)
+            elif len(line.split(' ')) > 5:
                 # Appears to be a standard cron line
-                comps = line.split()
+                comps = line.split(' ')
                 dat = {'minute': comps[0],
                        'hour': comps[1],
                        'daymonth': comps[2],
@@ -357,13 +364,6 @@ def list_tab(user):
                 identifier = None
                 comment = None
                 commented_cron_job = False
-            elif line.find('=') > 0:
-                # Appears to be a ENV setup line
-                comps = line.split('=')
-                dat = {}
-                dat['name'] = comps[0]
-                dat['value'] = ' '.join(comps[1:])
-                ret['env'].append(dat)
         else:
             ret['pre'].append(line)
     return ret

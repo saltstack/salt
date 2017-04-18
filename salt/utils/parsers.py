@@ -377,6 +377,10 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
                 saltfile = ''
             if os.path.isfile(saltfile):
                 self.options.saltfile = saltfile
+            else:
+                saltfile = os.path.join(os.path.expanduser("~"), '.salt', 'Saltfile')
+                if os.path.isfile(saltfile):
+                    self.options.saltfile = saltfile
         else:
             saltfile = self.options.saltfile
 
@@ -386,8 +390,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
 
         if not os.path.isfile(self.options.saltfile):
             self.error(
-                '\'{0}\' file does not exist.\n'.format(self.options.saltfile
-                )
+                '\'{0}\' file does not exist.\n'.format(self.options.saltfile)
             )
 
         # Make sure we have an absolute path
@@ -498,6 +501,7 @@ class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
     def process_config_dir(self):
+        self.options.config_dir = os.path.expanduser(self.options.config_dir)
         if not os.path.isdir(self.options.config_dir):
             # No logging is configured yet
             sys.stderr.write(
@@ -555,11 +559,10 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 '-l', '--log-level',
                 dest=self._loglevel_config_setting_name_,
                 choices=list(log.LOG_LEVELS),
-                help='Console logging log level. One of {0}. '
-                     'Default: \'{1}\'.'.format(
-                         ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
-                         self._default_logging_level_
-                     )
+                help='Console logging log level. One of {0}. Default: \'{1}\'.'.format(
+                     ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                     self._default_logging_level_
+                )
             )
 
         group.add_option(
@@ -575,28 +578,26 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             '--log-file-level',
             dest=self._logfile_loglevel_config_setting_name_,
             choices=list(log.LOG_LEVELS),
-            help='Logfile logging log level. One of {0}. '
-                 'Default: \'{1}\'.'.format(
-                     ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
-                     self._default_logging_level_
-                 )
+            help='Logfile logging log level. One of {0}. Default: \'{1}\'.'.format(
+                 ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                 self._default_logging_level_
+            )
         )
 
     def process_log_level(self):
         if not getattr(self.options, self._loglevel_config_setting_name_, None):
+            # Log level is not set via CLI, checking loaded configuration
             if self.config.get(self._loglevel_config_setting_name_, None):
                 # Is the regular log level setting set?
                 setattr(self.options,
                         self._loglevel_config_setting_name_,
-                        self.config.get(self._loglevel_config_setting_name_)
-                       )
+                        self.config.get(self._loglevel_config_setting_name_))
             else:
-                # Nothing is set on the configuration? Let's use the cli tool
+                # Nothing is set on the configuration? Let's use the CLI tool
                 # defined default
                 setattr(self.options,
                         self._loglevel_config_setting_name_,
-                        self._default_logging_level_
-                       )
+                        self._default_logging_level_)
 
         # Setup extended logging right before the last step
         self._mixin_after_parsed_funcs.append(self.__setup_extended_logging)
@@ -611,40 +612,42 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
     def process_log_file(self):
         if not getattr(self.options, self._logfile_config_setting_name_, None):
+            # Log file is not set via CLI, checking loaded configuration
             if self.config.get(self._logfile_config_setting_name_, None):
                 # Is the regular log file setting set?
                 setattr(self.options,
                         self._logfile_config_setting_name_,
-                        self.config.get(self._logfile_config_setting_name_)
-                       )
+                        self.config.get(self._logfile_config_setting_name_))
             else:
-                # Nothing is set on the configuration? Let's use the cli tool
+                # Nothing is set on the configuration? Let's use the CLI tool
                 # defined default
                 setattr(self.options,
                         self._logfile_config_setting_name_,
-                        self._default_logging_logfile_
-                       )
+                        self._default_logging_logfile_)
                 if self._logfile_config_setting_name_ in self.config:
                     # Remove it from config so it inherits from log_file
                     self.config.pop(self._logfile_config_setting_name_)
 
     def process_log_level_logfile(self):
         if not getattr(self.options, self._logfile_loglevel_config_setting_name_, None):
+            # Log file level is not set via CLI, checking loaded configuration
             if self.config.get(self._logfile_loglevel_config_setting_name_, None):
                 # Is the regular log file level setting set?
                 setattr(self.options,
                         self._logfile_loglevel_config_setting_name_,
-                        self.config.get(self._logfile_loglevel_config_setting_name_)
-                       )
+                        self.config.get(self._logfile_loglevel_config_setting_name_))
             else:
-                # Nothing is set on the configuration? Let's use the cli tool
+                # Nothing is set on the configuration? Let's use the CLI tool
                 # defined default
                 setattr(self.options,
                         self._logfile_loglevel_config_setting_name_,
-                        self._default_logging_level_
-                       )
+                        # From the console log level config setting
+                        self.config.get(
+                            self._loglevel_config_setting_name_,
+                            self._default_logging_level_
+                        ))
                 if self._logfile_loglevel_config_setting_name_ in self.config:
-                    # Remove it from config so it inherits from log_level
+                    # Remove it from config so it inherits from log_level_logfile
                     self.config.pop(self._logfile_loglevel_config_setting_name_)
 
     def __setup_logfile_logger_config(self, *args):  # pylint: disable=unused-argument
@@ -654,7 +657,9 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             self.config.pop(self._logfile_loglevel_config_setting_name_)
 
         loglevel = getattr(self.options,
+                           # From the options setting
                            self._logfile_loglevel_config_setting_name_,
+                           # From the default setting
                            self._default_logging_level_
                            )
 
@@ -914,12 +919,6 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         Check if a pid file exists and if it is associated with
         a running process.
         '''
-        # There is no os.getppid method for windows
-        if salt.utils.is_windows():
-            from salt.utils.win_functions import get_parent_pid
-            ppid = get_parent_pid()
-        else:
-            ppid = os.getppid()
 
         if self.check_pidfile():
             pid = self.get_pidfile()
@@ -1532,9 +1531,9 @@ class CloudQueriesMixIn(six.with_metaclass(MixInMeta, object)):
 
     def _mixin_after_parsed(self):
         group_options_selected = [
-                option for option in self.cloud_queries_group.option_list if
-                getattr(self.options, option.dest) is not False and
-                getattr(self.options, option.dest) is not None
+            option for option in self.cloud_queries_group.option_list if
+            getattr(self.options, option.dest) is not False and
+            getattr(self.options, option.dest) is not None
         ]
         if len(group_options_selected) > 1:
             self.error(
@@ -2981,7 +2980,7 @@ class SaltCloudParser(six.with_metaclass(OptionParserMeta,
     description = (
         'Salt Cloud is the system used to provision virtual machines on various public\n'
         'clouds via a cleanly controlled profile and mapping system'
-        )
+    )
 
     usage = '%prog [options] <-m MAP | -p PROFILE> <NAME> [NAME2 ...]'
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Support for MacPorts under Mac OSX.
+Support for MacPorts under macOS.
 
 This module has some caveats.
 
@@ -381,6 +381,13 @@ def upgrade_available(pkg, refresh=True):
 def refresh_db():
     '''
     Update ports with ``port selfupdate``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt mac pkg.refresh_db
+
     '''
     cmd = ['port', 'selfupdate']
     return salt.utils.mac_utils.execute_return_success(cmd)

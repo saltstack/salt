@@ -92,6 +92,11 @@ USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
 root    python2.7   1294    41  tcp4   127.0.0.1:61115  127.0.0.1:4506
 '''
 
+FREEBSD_SOCKSTAT_WITH_FAT_PID = '''\
+USER     COMMAND    PID   FD PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
+salt-master python2.781106 35 tcp4  127.0.0.1:61115  127.0.0.1:4506
+'''
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class NetworkTestCase(TestCase):
@@ -234,6 +239,14 @@ class NetworkTestCase(TestCase):
             with patch('salt.utils.is_freebsd', lambda: True):
                 with patch('subprocess.check_output',
                            return_value=FREEBSD_SOCKSTAT):
+                    remotes = network._freebsd_remotes_on('4506', 'remote')
+                    self.assertEqual(remotes, set(['127.0.0.1']))
+
+    def test_freebsd_remotes_on_with_fat_pid(self):
+        with patch('salt.utils.is_sunos', lambda: False):
+            with patch('salt.utils.is_freebsd', lambda: True):
+                with patch('subprocess.check_output',
+                           return_value=FREEBSD_SOCKSTAT_WITH_FAT_PID):
                     remotes = network._freebsd_remotes_on('4506', 'remote')
                     self.assertEqual(remotes, set(['127.0.0.1']))
 

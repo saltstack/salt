@@ -548,7 +548,10 @@ class SSH(object):
             }
 
         # save load to the master job cache
-        self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+        if self.opts['master_job_cache'] == 'local_cache':
+            self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load, minions=self.targets.keys())
+        else:
+            self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
 
         for ret in self.handle_ssh(mine=mine):
             host = next(six.iterkeys(ret))
@@ -898,9 +901,11 @@ class Single(object):
             opts_pkg['id'] = self.id
 
             retcode = 0
-
+            popts = {}
+            popts.update(opts_pkg['__master_opts__'])
+            popts.update(opts_pkg)
             pillar = salt.pillar.Pillar(
-                    opts_pkg,
+                    popts,
                     opts_pkg['grains'],
                     opts_pkg['id'],
                     opts_pkg.get('environment', 'base')

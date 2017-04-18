@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Libs
 from salt.states import tomcat
+from salt.modules import tomcat as tomcatmod
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -22,7 +23,7 @@ from salttesting.mock import (
 ensure_in_syspath('../../')
 
 # Globals
-tomcat.__salt__ = {}
+tomcat.__salt__ = {'tomcat.extract_war_version': tomcatmod.extract_war_version}
 tomcat.__opts__ = {}
 tomcat.__env__ = {}
 

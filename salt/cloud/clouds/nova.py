@@ -38,8 +38,6 @@ examples could be set up in the cloud configuration at
 .. code-block:: yaml
 
     my-openstack-config:
-      # The ID of the minion that will execute the salt nova functions
-      auth_minion: myminion
       # The name of the configuration profile to use on said minion
       config_profile: my_openstack_profile
 
@@ -47,6 +45,25 @@ examples could be set up in the cloud configuration at
 
       driver: nova
       userdata_file: /tmp/userdata.txt
+
+To use keystoneauth1 instead of keystoneclient, include the `use_keystoneauth`
+option in the provider config.
+
+.. note:: this is required to use keystone v3 as for authentication.
+
+.. code-block:: yaml
+
+    my-openstack-config:
+      use_keystoneauth: True
+      identity_url: 'https://controller:5000/v3'
+      auth_version: 3
+      compute_name: nova
+      compute_region: RegionOne
+      service_type: compute
+      tenant: admin
+      user: admin
+      password: passwordgoeshere
+      driver: nova
 
 For local installations that only use private IP address ranges, the
 following option may be useful. Using the old syntax:
@@ -279,6 +296,7 @@ def get_conn():
     kwargs['project_id'] = vm_['tenant']
     kwargs['auth_url'] = vm_['identity_url']
     kwargs['region_name'] = vm_['compute_region']
+    kwargs['use_keystoneauth'] = vm_['use_keystoneauth']
 
     if 'password' in vm_:
         kwargs['password'] = vm_['password']
@@ -627,12 +645,17 @@ def request_instance(vm_=None, call=None):
                 kwargs['files'][src_path] = files[src_path]
 
     userdata_file = config.get_cloud_config_value(
-        'userdata_file', vm_, __opts__, search_global=False
+        'userdata_file', vm_, __opts__, search_global=False, default=None
     )
-
     if userdata_file is not None:
-        with salt.utils.fopen(userdata_file, 'r') as fp:
-            kwargs['userdata'] = fp.read()
+        try:
+            with salt.utils.fopen(userdata_file, 'r') as fp_:
+                kwargs['userdata'] = salt.utils.cloud.userdata_template(
+                    __opts__, vm_, fp_.read()
+                )
+        except Exception as exc:
+            log.exception(
+                'Failed to read userdata from %s: %s', userdata_file, exc)
 
     kwargs['config_drive'] = config.get_cloud_config_value(
         'config_drive', vm_, __opts__, search_global=False
@@ -866,6 +889,8 @@ def create(vm_):
             )
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
+                if private_ip is False:
+                    continue
                 if salt.utils.cloud.is_public_ip(private_ip):
                     log.warning('{0} is a public IP'.format(private_ip))
                     data.public_ips.append(private_ip)

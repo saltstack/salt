@@ -76,7 +76,7 @@ Syndic with Multimaster lets you connect a syndic to multiple masters to provide
 an additional layer of redundancy in a syndic configuration.
 
 Higher level masters should first be configured in a multimaster configuration.
-See :doc:`Multimaster Tutorial </topics/tutorials/multimaster>`.
+See :ref:`Multimaster Tutorial <tutorial-multi-master>`.
 
 On the syndic, the :conf_master:`syndic_master` option is populated with
 a list of the higher level masters.
@@ -168,6 +168,16 @@ daemon until the data reaches the Master or Syndic node that issued the command.
 Syndic wait
 ===========
 
+``syndic_wait`` is a master configuration file setting that specifies the number of
+seconds the Salt client should wait for additional syndics to check in with their
+lists of expected minions before giving up. This value defaults to ``5`` seconds.
+
+The ``syndic_wait`` setting is necessary because the higher-level master does not
+have a way of knowing which minions are below the syndics. The higher-level master
+has its own list of expected minions and the masters below them have their own lists
+as well, so the Salt client does not how long to wait for all returns. The
+``syndic_wait`` option allows time for all minions to return to the Salt client.
+
 .. note::
 
     To reduce the amount of time the CLI waits for Minions to respond, install
@@ -208,3 +218,16 @@ Syndic node.
     - :conf_master:`syndic_log_file`: path to the logfile (absolute or not)
     - :conf_master:`syndic_pidfile`: path to the pidfile (absolute or not)
     - :conf_master:`syndic_wait`: time in seconds to wait on returns from this syndic
+
+Minion Data Cache
+=================
+
+Beginning with Salt 2016.11.0, the :ref:`Pluggable Minion Data Cache <pluggable-data-cache>`
+was introduced. The minion data cache contains the Salt Mine data, minion grains, and minion
+pillar information cached on the Salt Master. By default, Salt uses the ``localfs`` cache
+module, but other external data stores can be used instead.
+
+Using a pluggable minion cache modules allows for the data stored on a Salt Master about
+Salt Minions to be replicated on other Salt Masters the Minion is connected to. Please see
+the :ref:`Minion Data Cache <cache>` documentation for more information and configuration
+examples.

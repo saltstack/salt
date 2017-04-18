@@ -12,24 +12,25 @@ Pillar was added to Salt in version 0.9.8
 
 .. note:: Storing sensitive data
 
-    Unlike state tree, pillar data is only available for the targeted
-    minion specified by the matcher type.  This makes it useful for
-    storing sensitive data specific to a particular minion.
+    Pillar data is compiled on the master. Additionally, pillar data for a
+    given minion is only accessible by the minion for which it is targeted in
+    the pillar configuration. This makes pillar useful for storing sensitive
+    data specific to a particular minion.
 
 
 Declaring the Master Pillar
 ===========================
 
-The Salt Master server maintains a pillar_roots setup that matches the
-structure of the file_roots used in the Salt file server. Like the
-Salt file server the ``pillar_roots`` option in the master config is based
-on environments mapping to directories. The pillar data is then mapped to
-minions based on matchers in a top file which is laid out in the same way
-as the state top file. Salt pillars can use the same matcher types as the
-standard top file.
+The Salt Master server maintains a :conf_master:`pillar_roots` setup that
+matches the structure of the :conf_master:`file_roots` used in the Salt file
+server. Like :conf_master:`file_roots`, the :conf_master:`pillar_roots` option
+mapps environments to directories. The pillar data is then mapped to minions
+based on matchers in a top file which is laid out in the same way as the state
+top file. Salt pillars can use the same matcher types as the standard :ref:`top
+file <states-top>`.
 
-The configuration for the :conf_master:`pillar_roots` in the master config file
-is identical in behavior and function as :conf_master:`file_roots`:
+conf_master:`pillar_roots` is configured just like :conf_master:`file_roots`.
+For example:
 
 .. code-block:: yaml
 
@@ -89,7 +90,7 @@ by their ``os`` grain:
 
 ``/srv/pillar/packages.sls``
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if grains['os'] == 'RedHat' %}
     apache: httpd
@@ -115,13 +116,13 @@ of ``Foo Industries``.
 Consequently this data can be used from within modules, renderers, State SLS
 files, and more via the shared pillar :ref:`dict <python2:typesmapping>`:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     apache:
       pkg.installed:
         - name: {{ pillar['apache'] }}
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     git:
       pkg.installed:
@@ -149,10 +150,33 @@ And the actual pillar file at '/srv/pillar/common_pillar.sls':
     foo: bar
     boo: baz
 
-Pillar namespace flattened
-==========================
+.. note::
+    When working with multiple pillar environments, assuming that each pillar
+    environment has its own top file, the jinja placeholder ``{{ saltenv }}``
+    can be used in place of the environment name:
 
-The separate pillar files all share the same namespace. Given a ``top.sls`` of:
+    .. code-block:: jinja
+
+        {{ saltenv }}:
+          '*':
+             - common_pillar
+
+    Yes, this is ``{{ saltenv }}``, and not ``{{ pillarenv }}``. The reason for
+    this is because the Pillar top files are parsed using some of the same code
+    which parses top files when :ref:`running states <running-highstate>`, so
+    the pillar environment takes the place of ``{{ saltenv }}`` in the jinja
+    context.
+
+
+Pillar Namespace Flattening
+===========================
+
+The separate pillar SLS files all merge down into a single dictionary of
+key-value pairs. When the same key is defined in multiple SLS files, this can
+result in unexpected behavior if care is not taken to how the pillar SLS files
+are laid out.
+
+For example, given a ``top.sls`` containing the following:
 
 .. code-block:: yaml
 
@@ -161,44 +185,49 @@ The separate pillar files all share the same namespace. Given a ``top.sls`` of:
         - packages
         - services
 
-a ``packages.sls`` file of:
+with ``packages.sls`` containing:
 
 .. code-block:: yaml
 
     bind: bind9
 
-and a ``services.sls`` file of:
+and ``services.sls`` containing:
 
 .. code-block:: yaml
 
     bind: named
 
-Then a request for the ``bind`` pillar will only return ``named``; the
-``bind9`` value is not available. It is better to structure your pillar files
-with more hierarchy. For example your ``package.sls`` file could look like:
+Then a request for the ``bind`` pillar key will only return ``named``. The
+``bind9`` value will be lost, because ``services.sls`` was evaluated later.
+
+.. note::
+    Pillar files are applied in the order they are listed in the top file.
+    Therefore conflicting keys will be overwritten in a 'last one wins' manner!
+    For example, in the above scenario conflicting key values in ``services``
+    will overwrite those in ``packages`` because it's at the bottom of the list.
+
+It can be better to structure your pillar files with more hierarchy. For
+example the ``package.sls`` file could be configured like so:
 
 .. code-block:: yaml
 
     packages:
       bind: bind9
 
-Pillar Namespace Merges
-=======================
+This would make the ``packages`` pillar key a nested dictionary containing a
+``bind`` key.
 
-With some care, the pillar namespace can merge content from multiple pillar
-files under a single key, so long as conflicts are avoided as described above.
+Pillar Dictionary Merging
+=========================
 
-For example, if the above example were modified as follows, the values are
-merged below a single key:
+If the same pillar key is defined in multiple pillar SLS files, and the keys in
+both files refer to nested dictionaries, then the content from these
+dictionaries will be recursively merged.
 
-.. code-block:: yaml
+For example, keeping the ``top.sls`` the same, assume the following
+modifications to the pillar SLS files:
 
-    base:
-      '*':
-        - packages
-        - services
-
-And a ``packages.sls`` file like:
+``packages.sls``:
 
 .. code-block:: yaml
 
@@ -206,7 +235,7 @@ And a ``packages.sls`` file like:
       package-name: bind9
       version: 9.9.5
 
-And a ``services.sls`` file like:
+``services.sls``:
 
 .. code-block:: yaml
 
@@ -214,7 +243,7 @@ And a ``services.sls`` file like:
       port: 53
       listen-on: any
 
-The resulting pillar will be as follows:
+The resulting pillar dictionary will be:
 
 .. code-block:: bash
 
@@ -230,11 +259,9 @@ The resulting pillar will be as follows:
         version:
             9.9.5
 
-.. note::
-    Pillar files are applied in the order they are listed in the top file.
-    Therefore conflicting keys will be overwritten in a 'last one wins' manner!
-    For example, in the above scenario conflicting key values in ``services``
-    will overwrite those in ``packages`` because it's at the bottom of the list.
+Since both pillar SLS files contained a ``bind`` key which contained a nested
+dictionary, the pillar dictionary's ``bind`` key contains the combined contents
+of both SLS files' ``bind`` keys.
 
 Including Other Pillars
 =======================
@@ -266,34 +293,118 @@ With this form, the included file (users.sls) will be nested within the 'users'
 key of the compiled pillar. Additionally, the 'sudo' value will be available
 as a template variable to users.sls.
 
+.. _pillar-in-memory:
 
-Viewing Minion Pillar
-=====================
+In-Memory Pillar Data vs. On-Demand Pillar Data
+===============================================
 
-Once the pillar is set up the data can be viewed on the minion via the
-``pillar`` module, the pillar module comes with functions,
-:mod:`pillar.items <salt.modules.pillar.items>` and :mod:`pillar.raw
-<salt.modules.pillar.raw>`.  :mod:`pillar.items <salt.modules.pillar.items>`
-will return a freshly reloaded pillar and :mod:`pillar.raw
-<salt.modules.pillar.raw>` will return the current pillar without a refresh:
+Since compiling pillar data is computationally expensive, the minion will
+maintain a copy of the pillar data in memory to avoid needing to ask the master
+to recompile and send it a copy of the pillar data each time pillar data is
+requested. This in-memory pillar data is what is returned by the
+:py:func:`pillar.item <salt.modules.pillar.item>`, :py:func:`pillar.get
+<salt.modules.pillar.get>`, and :py:func:`pillar.raw <salt.modules.pillar.raw>`
+functions.
+
+Also, for those writing custom execution modules, or contributing to Salt's
+existing execution modules, the in-memory pillar data is available as the
+``__pillar__`` dunder dictionary.
+
+The in-memory pillar data is generated on minion start, and can be refreshed
+using the :py:func:`saltutil.refresh_pillar
+<salt.modules.saltutil.refresh_pillar>` function:
 
 .. code-block:: bash
 
-    salt '*' pillar.items
+    salt '*' saltutil.refresh_pillar
+
+This function triggers the minion to asynchronously refresh the in-memory
+pillar data and will always return ``None``.
+
+In contrast to in-memory pillar data, certain actions trigger pillar data to be
+compiled to ensure that the most up-to-date pillar data is available. These
+actions include:
+
+- Running states
+- Running :py:func:`pillar.items <salt.modules.pillar.items>`
+
+Performing these actions will *not* refresh the in-memory pillar data. So, if
+pillar data is modified, and then states are run, the states will see the
+updated pillar data, but :py:func:`pillar.item <salt.modules.pillar.item>`,
+:py:func:`pillar.get <salt.modules.pillar.get>`, and :py:func:`pillar.raw
+<salt.modules.pillar.raw>` will not see this data unless refreshed using
+:py:func:`saltutil.refresh_pillar <salt.modules.saltutil.refresh_pillar>`.
+
+
+How Pillar Environments Are Handled
+===================================
+
+When multiple pillar environments are used, the default behavior is for the
+pillar data from all environments to be merged together. The pillar dictionary
+will therefore contain keys from all configured environments.
+
+The :conf_minion:`pillarenv` minion config option can be used to force the
+minion to only consider pillar configuration from a single environment. This
+can be useful in cases where one needs to run states with alternate pillar
+data, either in a testing/QA environment or to test changes to the pillar data
+before pushing them live.
+
+For example, assume that the following is set in the minion config file:
+
+.. code-block:: yaml
+
+    pillarenv: base
+
+This would cause that minion to ignore all other pillar environments besides
+``base`` when compiling the in-memory pillar data. Then, when running states,
+the ``pillarenv`` CLI argument can be used to override the minion's
+:conf_minion:`pillarenv` config value:
+
+.. code-block:: bash
+
+    salt '*' state.apply mystates pillarenv=testing
+
+The above command will run the states with pillar data sourced exclusively from
+the ``testing`` environment, without modifying the in-memory pillar data.
 
 .. note::
-    Prior to version 0.16.2, this function is named ``pillar.data``. This
-    function name is still supported for backwards compatibility.
+    When running states, the ``pillarenv`` CLI option does not require a
+    :conf_minion:`pillarenv` option to be set in the minion config file. When
+    :conf_minion:`pillarenv` is left unset, as mentioned above all configured
+    environments will be combined. Running states with ``pillarenv=testing`` in
+    this case would still restrict the states' pillar data to just that of the
+    ``testing`` pillar environment.
+
+Viewing Pillar Data
+===================
+
+To view pillar data, use the :mod:`pillar <salt.modules.pillar>` execution
+module. This module includes several functions, each of them with their own
+use. These functions include:
+
+- :py:func:`pillar.item <salt.modules.pillar.item>` - Retrieves the value of
+  one or more keys from the :ref:`in-memory pillar datj <pillar-in-memory>`.
+- :py:func:`pillar.items <salt.modules.pillar.items>` - Compiles a fresh pillar
+  dictionary and returns it, leaving the :ref:`in-memory pillar data
+  <pillar-in-memory>` untouched. If pillar keys are passed to this function
+  however, this function acts like :py:func:`pillar.item
+  <salt.modules.pillar.item>` and returns their values from the :ref:`in-memory
+  pillar data <pillar-in-memory>`.
+- :py:func:`pillar.raw <salt.modules.pillar.raw>` - Like :py:func:`pillar.items
+  <salt.modules.pillar.items>`, it returns the entire pillar dictionary, but
+  from the :ref:`in-memory pillar data <pillar-in-memory>` instead of compiling
+  fresh pillar data.
+- :py:func:`pillar.get <salt.modules.pillar.get>` - Described in detail below.
 
 
-Pillar "get" Function
-=====================
+The :py:func:`pillar.get <salt.modules.pillar.get>` Function
+============================================================
 
 .. versionadded:: 0.14.0
 
 The :mod:`pillar.get <salt.modules.pillar.get>` function works much in the same
 way as the ``get`` method in a python dict, but with an enhancement: nested
-dict components can be extracted using a `:` delimiter.
+dictonaries can be traversed using a colon as a delimiter.
 
 If a structure like this is in pillar:
 
@@ -330,23 +441,8 @@ This makes handling nested structures much easier.
     'qux')``) to get the salt function, instead of the default dictionary
     behavior.
 
-
-Refreshing Pillar Data
-======================
-
-When pillar data is changed on the master the minions need to refresh the data
-locally. This is done with the ``saltutil.refresh_pillar`` function.
-
-.. code-block:: bash
-
-    salt '*' saltutil.refresh_pillar
-
-This function triggers the minion to asynchronously refresh the pillar and will
-always return ``None``.
-
-
-Set Pillar Data at the Command Line
-===================================
+Setting Pillar Data at the Command Line
+=======================================
 
 Pillar data can be set at the command line like the following example:
 
@@ -354,7 +450,7 @@ Pillar data can be set at the command line like the following example:
 
     salt '*' state.apply pillar='{"cheese": "spam"}'
 
-This will add a Pillar key of ``cheese`` with its value set to ``spam``.
+This will add a pillar key of ``cheese`` with its value set to ``spam``.
 
 .. note::
 
@@ -364,7 +460,7 @@ This will add a Pillar key of ``cheese`` with its value set to ``spam``.
     a security concern in some cases.
 
 
-Master Config In Pillar
+Master Config in Pillar
 =======================
 
 For convenience the data stored in the master configuration file can be made
@@ -372,13 +468,12 @@ available in all minion's pillars. This makes global configuration of services
 and systems very easy but may not be desired if sensitive data is stored in the
 master configuration. This option is disabled by default.
 
-To enable the master config from being added to the pillar set ``pillar_opts``
-to ``True``:
+To enable the master config from being added to the pillar set
+:conf_minion:`pillar_opts` to ``True`` in the minion config file:
 
 .. code-block:: yaml
 
     pillar_opts: True
-
 
 Minion Config in Pillar
 =======================

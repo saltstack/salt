@@ -106,6 +106,9 @@ def query(key, keyid, method='GET', params=None, headers=None,
         if local_file:
             payload_hash = salt.utils.get_hash(local_file, form='sha256')
 
+    if path is None:
+        path = ''
+
     if not requesturl:
         requesturl = 'https://{0}/{1}'.format(endpoint, path)
         headers, requesturl = salt.utils.aws.sig4(
@@ -130,16 +133,15 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not data:
         data = None
 
-    response = None
     if method == 'PUT':
         if local_file:
-            with salt.utils.fopen(local_file, 'r') as data:
-                result = requests.request(method,
-                                          requesturl,
-                                          headers=headers,
-                                          data=data,
-                                          verify=verify_ssl,
-                                          stream=True)
+            data = salt.utils.fopen(local_file, 'r')
+        result = requests.request(method,
+                                  requesturl,
+                                  headers=headers,
+                                  data=data,
+                                  verify=verify_ssl,
+                                  stream=True)
         response = result.content
     elif method == 'GET' and local_file and not return_bin:
         result = requests.request(method,
@@ -148,6 +150,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
                                   data=data,
                                   verify=verify_ssl,
                                   stream=True)
+        response = result.content
     else:
         result = requests.request(method,
                                   requesturl,

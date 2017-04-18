@@ -5,7 +5,7 @@ Node groups
 ===========
 
 Nodegroups are declared using a compound target specification. The compound
-target documentation can be found :doc:`here <compound>`.
+target documentation can be found :ref:`here <targeting-compound>`.
 
 The :conf_master:`nodegroups` master config file parameter is used to define
 nodegroups. Here's an example nodegroup configuration within
@@ -25,8 +25,8 @@ nodegroups. Here's an example nodegroup configuration within
 .. note::
 
     The ``L`` within group1 is matching a list of minions, while the ``G`` in
-    group2 is matching specific grains. See the :doc:`compound matchers
-    <compound>` documentation for more details.
+    group2 is matching specific grains. See the :ref:`compound matchers
+    <targeting-compound>` documentation for more details.
 
 .. versionadded:: 2015.8.0
 
@@ -122,7 +122,7 @@ example, to check if a minion is in the 'webserver' nodegroup:
     nodegroups:
       webserver: 'G@os:Debian and L@minion1,minion2'
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if grains.id in salt['pillar.get']('master:nodegroups:webserver', [])
     and grains.os in salt['pillar.get']('master:nodegroups:webserver', []) %}

@@ -28,6 +28,7 @@ import salt.transport.mixins.auth
 from salt.exceptions import SaltReqTimeoutError
 
 import zmq
+import zmq.error
 import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
 if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
@@ -46,7 +47,10 @@ import tornado.concurrent
 
 # Import third party libs
 import salt.ext.six as six
-from Crypto.Cipher import PKCS1_OAEP
+try:
+    from Cryptodome.Cipher import PKCS1_OAEP
+except ImportError:
+    from Crypto.Cipher import PKCS1_OAEP
 
 log = logging.getLogger(__name__)
 
@@ -351,7 +355,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
             )
 
-        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+        if (self.opts['ipv6'] is True or ':' in self.opts['master_ip']) and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self._socket.setsockopt(zmq.IPV4ONLY, 0)
 
@@ -461,6 +465,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
+        self.clients.setsockopt(zmq.BACKLOG, self.opts.get('zmq_backlog', 1000))
         if HAS_ZMQ_MONITOR and self.opts['zmq_monitor']:
             # Socket monitor shall be used the only for debug  purposes so using threading doesn't look too bad here
             import threading
@@ -682,6 +687,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             pub_sock.setsockopt(zmq.IPV4ONLY, 0)
+        pub_sock.setsockopt(zmq.BACKLOG, self.opts.get('zmq_backlog', 1000))
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
@@ -1062,9 +1068,14 @@ class ZeroMQSocketMonitor(object):
 
     def start_poll(self):
         log.trace("Event monitor start!")
-        while self._monitor_socket is not None and self._monitor_socket.poll():
-            msg = self._monitor_socket.recv_multipart()
-            self.monitor_callback(msg)
+        try:
+            while self._monitor_socket is not None and self._monitor_socket.poll():
+                msg = self._monitor_socket.recv_multipart()
+                self.monitor_callback(msg)
+        except (AttributeError, zmq.error.ContextTerminated):
+            # We cannot log here because we'll get an interrupted system call in trying
+            # to flush the logging buffer as we terminate
+            pass
 
     @property
     def event_map(self):

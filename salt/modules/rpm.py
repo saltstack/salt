@@ -575,7 +575,7 @@ def info(*packages, **attr):
             # Convert Unix ticks into ISO time format
             if key in ['build_date', 'install_date']:
                 try:
-                    pkg_data[key] = datetime.datetime.fromtimestamp(int(value)).isoformat() + "Z"
+                    pkg_data[key] = datetime.datetime.utcfromtimestamp(int(value)).isoformat() + "Z"
                 except ValueError:
                     log.warning('Could not convert "{0}" into Unix time'.format(value))
                 continue

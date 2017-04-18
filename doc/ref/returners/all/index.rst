@@ -44,3 +44,4 @@ returner modules
     sqlite3_return
     syslog_return
     xmpp_return
+    zabbix_return

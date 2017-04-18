@@ -89,6 +89,27 @@ def getenforce():
         return 'Disabled'
 
 
+def getconfig():
+    '''
+    Return the selinux mode from the config file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.getconfig
+    '''
+    try:
+        config = '/etc/selinux/config'
+        with salt.utils.fopen(config, 'r') as _fp:
+            for line in _fp:
+                if line.strip().startswith('SELINUX='):
+                    return line.split('=')[1].capitalize().strip()
+    except (IOError, OSError, AttributeError):
+        return None
+    return None
+
+
 def setenforce(mode):
     '''
     Set the SELinux enforcing mode
@@ -134,7 +155,7 @@ def setenforce(mode):
             conf = _cf.read()
         try:
             with salt.utils.fopen(config, 'w') as _cf:
-                conf = re.sub(r"\nSELINUX.*\n", "\nSELINUX=" + modestring + "\n", conf)
+                conf = re.sub(r"\nSELINUX=.*\n", "\nSELINUX=" + modestring + "\n", conf)
                 _cf.write(conf)
         except (IOError, OSError) as exc:
             msg = 'Could not write SELinux config file: {0}'

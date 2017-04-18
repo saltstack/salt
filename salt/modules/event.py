@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Use the :doc:`Salt Event System </topics/event/index>` to fire events from the
+Use the :ref:`Salt Event System <events>` to fire events from the
 master to the minion and vice-versa.
 '''
 from __future__ import absolute_import

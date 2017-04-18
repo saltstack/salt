@@ -12,9 +12,6 @@ from __future__ import absolute_import
 import logging
 import re
 
-# Import Salt libs
-import salt.utils
-
 # Import Third Party Libs
 try:
     import psutil
@@ -28,9 +25,7 @@ __virtualname__ = 'memusage'
 
 
 def __virtual__():
-    if salt.utils.is_windows():
-        return False
-    elif HAS_PSUTIL is False:
+    if HAS_PSUTIL is False:
         return False
     else:
         return __virtualname__

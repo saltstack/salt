@@ -202,6 +202,26 @@ class SnapperTestCase(TestCase):
         self.assertEqual(snapper.status_to_string(128), ["extended attributes changed"])
         self.assertEqual(snapper.status_to_string(256), ["ACL info changed"])
 
+    @patch('salt.modules.snapper.snapper.CreateConfig', MagicMock())
+    @patch('salt.modules.snapper.snapper.GetConfig', MagicMock(return_value=DBUS_RET['ListConfigs'][0]))
+    def test_create_config(self):
+        opts = {
+            'name': 'testconfig',
+            'subvolume': '/foo/bar/',
+            'fstype': 'btrfs',
+            'template': 'mytemplate',
+            'extra_opts': {"NUMBER_CLEANUP": False},
+        }
+        with patch('salt.modules.snapper.set_config', MagicMock()) as set_config_mock:
+            self.assertEqual(snapper.create_config(**opts), DBUS_RET['ListConfigs'][0])
+            set_config_mock.assert_called_with("testconfig", **opts['extra_opts'])
+
+        with patch('salt.modules.snapper.set_config', MagicMock()) as set_config_mock:
+            del opts['extra_opts']
+            self.assertEqual(snapper.create_config(**opts), DBUS_RET['ListConfigs'][0])
+            assert not set_config_mock.called
+            self.assertRaises(CommandExecutionError, snapper.create_config)
+
     @patch('salt.modules.snapper.snapper.CreateSingleSnapshot', MagicMock(return_value=1234))
     @patch('salt.modules.snapper.snapper.CreatePreSnapshot', MagicMock(return_value=1234))
     @patch('salt.modules.snapper.snapper.CreatePostSnapshot', MagicMock(return_value=1234))
@@ -215,6 +235,36 @@ class SnapperTestCase(TestCase):
                 'pre_number': 23,
             }
             self.assertEqual(snapper.create_snapshot(**opts), 1234)
+
+    @patch('salt.modules.snapper.snapper.DeleteSnapshots', MagicMock())
+    @patch('salt.modules.snapper.snapper.ListSnapshots', MagicMock(return_value=DBUS_RET['ListSnapshots']))
+    def test_delete_snapshot_id_success(self):
+        self.assertEqual(snapper.delete_snapshot(snapshots_ids=43), {"root": {"ids": [43], "status": "deleted"}})
+        self.assertEqual(snapper.delete_snapshot(snapshots_ids=[42, 43]), {"root": {"ids": [42, 43], "status": "deleted"}})
+
+    @patch('salt.modules.snapper.snapper.DeleteSnapshots', MagicMock())
+    @patch('salt.modules.snapper.snapper.ListSnapshots', MagicMock(return_value=DBUS_RET['ListSnapshots']))
+    def test_delete_snapshot_id_fail(self):
+        self.assertRaises(CommandExecutionError, snapper.delete_snapshot)
+        self.assertRaises(CommandExecutionError, snapper.delete_snapshot, snapshots_ids=1)
+        self.assertRaises(CommandExecutionError, snapper.delete_snapshot, snapshots_ids=[1, 2])
+
+    @patch('salt.modules.snapper.snapper.SetSnapshot', MagicMock())
+    def test_modify_snapshot(self):
+        _ret = {
+            'userdata': {'userdata2': 'uservalue2'},
+            'description': 'UPDATED DESCRIPTION', 'timestamp': 1457006571,
+            'cleanup': 'number', 'user': 'root', 'type': 'pre', 'id': 42
+        }
+        _opts = {
+            'config': 'root',
+            'snapshot_id': 42,
+            'cleanup': 'number',
+            'description': 'UPDATED DESCRIPTION',
+            'userdata': {'userdata2': 'uservalue2'},
+        }
+        with patch('salt.modules.snapper.get_snapshot', MagicMock(side_effect=[DBUS_RET['ListSnapshots'][0], _ret])):
+            self.assertDictEqual(snapper.modify_snapshot(**_opts), _ret)
 
     @patch('salt.modules.snapper._get_last_snapshot', MagicMock(return_value={'id': 42}))
     def test__get_num_interval(self):
@@ -234,6 +284,7 @@ class SnapperTestCase(TestCase):
     @patch('salt.modules.snapper._get_num_interval', MagicMock(return_value=(42, 43)))
     @patch('salt.modules.snapper.snapper.GetComparison', MagicMock())
     @patch('salt.modules.snapper.snapper.GetFiles', MagicMock(return_value=DBUS_RET['GetFiles']))
+    @patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs']))
     def test_status(self):
         if six.PY3:
             self.assertCountEqual(snapper.status(), MODULE_RET['GETFILES'])
@@ -288,6 +339,7 @@ class SnapperTestCase(TestCase):
     @patch('salt.modules.snapper._is_text_file', MagicMock(return_value=True))
     @patch('os.path.isfile', MagicMock(side_effect=[False, True]))
     @patch('salt.utils.fopen', mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post']))
+    @patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs']))
     def test_diff_text_file(self):
         if sys.version_info < (2, 7):
             self.assertEqual(snapper.diff(), {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo26']})
@@ -302,6 +354,7 @@ class SnapperTestCase(TestCase):
     @patch('salt.modules.snapper._is_text_file', MagicMock(return_value=True))
     @patch('os.path.isfile', MagicMock(side_effect=[True, True, False, True]))
     @patch('os.path.isdir', MagicMock(return_value=False))
+    @patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs']))
     @skipIf(sys.version_info < (2, 7), 'Python 2.7 required to compare diff properly')
     def test_diff_text_files(self):
         fopen_effect = [
@@ -331,6 +384,7 @@ class SnapperTestCase(TestCase):
             "f18f971f1517449208a66589085ddd3723f7f6cefb56c141e3d97ae49e1d87fa",
         ])
     })
+    @patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs']))
     def test_diff_binary_files(self):
         fopen_effect = [
             mock_open(read_data="dummy binary").return_value,

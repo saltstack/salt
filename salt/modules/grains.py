@@ -91,7 +91,9 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
 
 
     :param delimiter:
-        Specify an alternate delimiter to use when traversing a nested dict
+        Specify an alternate delimiter to use when traversing a nested dict.
+        This is useful for when the desired key contains a colon. See CLI
+        example below for usage.
 
         .. versionadded:: 2014.7.0
 
@@ -105,6 +107,7 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
     .. code-block:: bash
 
         salt '*' grains.get pkg:apache
+        salt '*' grains.get abc::def|ghi delimiter='|'
     '''
     if ordered is True:
         grains = __grains__
@@ -282,8 +285,8 @@ def setvals(grains, destructive=False):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
     if not __opts__.get('local', False):
-        # Sync the grains
-        __salt__['saltutil.sync_grains']()
+        # Refresh the grains
+        __salt__['saltutil.refresh_grains']()
     # Return the grains we just set to confirm everything was OK
     return new_grains
 
@@ -558,9 +561,9 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
     # Iterate over the list of grain values to match against patterns in the lookup_dict keys
     for each in val if isinstance(val, list) else [val]:
         for key in sorted(lookup_dict):
-            if key not in six.string_types:
-                key = str(key)
-            if fnmatch.fnmatchcase(each, key):
+            test_key = key if isinstance(key, six.string_types) else str(key)
+            test_each = each if isinstance(each, six.string_types) else str(each)
+            if fnmatch.fnmatchcase(test_each, test_key):
                 ret = lookup_dict[key]
                 break
         if ret is not None:

@@ -50,11 +50,6 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     with salt.utils.fopen(cache, 'r') as fh_:
         cache_data = msgpack.load(fh_)
 
-    indexed_minion = cache_data.get(tgt, None)
-
-    if indexed_minion is None:
-        return {}
-
     client = salt.cloud.CloudClient(
             os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
             )
@@ -62,15 +57,27 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     if not info:
         return {}
 
-    provider = indexed_minion.get('provider', None)
-    profile = indexed_minion.get('profile', None)
-    driver = indexed_minion.get('driver', None)
+    not_actioned = info.get('Not Actioned/Not Running')
+    if not_actioned and tgt in not_actioned:
+        return {}
+
+    indexed_minion = cache_data.get(tgt, None)
+
+    if indexed_minion:
+        provider = indexed_minion.get('provider', None)
+        driver = indexed_minion.get('driver', None)
+        profile = indexed_minion.get('profile', None)
+    else:
+        provider = next(iter(info))
+        driver = next(iter(info[provider]))
+        profile = None
+
     vm_ = {
         'provider': provider,
         'profile': profile,
     }
 
-    full_info = info.get(provider, {}).get(driver, {}).get(tgt, {}).get(tgt, {})
+    full_info = info.get(provider, {}).get(driver, {}).get(tgt, {})
     public_ips = full_info.get('public_ips', [])
     private_ips = full_info.get('private_ips', [])
     ip_list = []
@@ -85,34 +92,36 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     ))
     preferred_ip = extract_ipv4(roster_order, ip_list)
 
-    ret['tgt'] = {
+    ret[tgt] = {
         'host': preferred_ip,
     }
 
-    cloud_opts = salt.config.cloud_config('/etc/salt/cloud')
-    ssh_username = salt.utils.cloud.ssh_usernames({}, cloud_opts)
+    cloud_opts = salt.config.cloud_config(
+        os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
+    )
+    ssh_username = salt.utils.cloud.ssh_usernames(vm_, cloud_opts)
     if isinstance(ssh_username, string_types):
-        ret['tgt']['user'] = ssh_username
+        ret[tgt]['user'] = ssh_username
     elif isinstance(ssh_username, list):
-        ret['tgt']['user'] = ssh_username[0]
+        ret[tgt]['user'] = ssh_username[0]
 
     password = salt.config.get_cloud_config_value(
         'password', vm_, cloud_opts, search_global=False, default=None
     )
     if password:
-        ret['tgt']['password'] = password
+        ret[tgt]['password'] = password
 
     key_filename = salt.config.get_cloud_config_value(
         'private_key', vm_, cloud_opts, search_global=False, default=None
     )
     if key_filename:
-        ret['tgt']['priv'] = key_filename
+        ret[tgt]['priv'] = key_filename
 
     sudo = salt.config.get_cloud_config_value(
         'sudo', vm_, cloud_opts, search_global=False, default=None
     )
     if sudo:
-        ret['tgt']['sudo'] = sudo
+        ret[tgt]['sudo'] = sudo
 
     return ret
 

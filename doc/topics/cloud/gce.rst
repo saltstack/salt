@@ -1,3 +1,5 @@
+.. _cloud-getting-started-gce:
+
 ==========================================
 Getting Started With Google Compute Engine
 ==========================================

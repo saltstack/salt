@@ -2,8 +2,7 @@
 Salt 2015.5.6 Release Notes
 ===========================
 
-Version 2015.5.6 is a bugfix release for :doc:`2015.5.0
-</topics/releases/2015.5.0>`.
+Version 2015.5.6 is a bugfix release for :ref:`2015.5.0<release-2015-5-0>`.
 
 Security Fixes
 --------------
@@ -50,7 +49,7 @@ Changes:
 
 - **PR** `#27469`_: (*twangboy*) Added quotes to version numbers example
 
-- **PR** `#27467`_: (*cachedout*) file.managed: check contents_{pillar|grain} result
+- **PR** `#27467`_: (*cachedout*) file.managed: check ``contents_{pillar|grain}`` result
 
 - **PR** `#27419`_: (*rallytime*) Amend error log to include multiple tips for troubleshooting.
 
@@ -329,6 +328,7 @@ Changes:
 .. _`#26617`: https://github.com/saltstack/salt/pull/26617
 .. _`#26618`: https://github.com/saltstack/salt/pull/26618
 .. _`#26620`: https://github.com/saltstack/salt/pull/26620
+.. _`#26628`: https://github.com/saltstack/salt/issues/26628
 .. _`#26631`: https://github.com/saltstack/salt/pull/26631
 .. _`#26636`: https://github.com/saltstack/salt/pull/26636
 .. _`#26640`: https://github.com/saltstack/salt/pull/26640
@@ -455,14 +455,17 @@ Changes:
 .. _`#27336`: https://github.com/saltstack/salt/pull/27336
 .. _`#27345`: https://github.com/saltstack/salt/pull/27345
 .. _`#27351`: https://github.com/saltstack/salt/pull/27351
+.. _`#27356`: https://github.com/saltstack/salt/issues/27356
 .. _`#27358`: https://github.com/saltstack/salt/pull/27358
 .. _`#27375`: https://github.com/saltstack/salt/pull/27375
 .. _`#27379`: https://github.com/saltstack/salt/pull/27379
+.. _`#27389`: https://github.com/saltstack/salt/issues/27389
 .. _`#27408`: https://github.com/saltstack/salt/pull/27408
 .. _`#27410`: https://github.com/saltstack/salt/pull/27410
 .. _`#27419`: https://github.com/saltstack/salt/pull/27419
 .. _`#27426`: https://github.com/saltstack/salt/pull/27426
 .. _`#27434`: https://github.com/saltstack/salt/pull/27434
+.. _`#27438`: https://github.com/saltstack/salt/issues/27438
 .. _`#27467`: https://github.com/saltstack/salt/pull/27467
 .. _`#27468`: https://github.com/saltstack/salt/pull/27468
 .. _`#27469`: https://github.com/saltstack/salt/pull/27469

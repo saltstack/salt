@@ -4,7 +4,10 @@ Cache data in filesystem.
 
 .. versionadded:: 2016.11.0
 
-Expirations can be set in the relevant config file (``/etc/salt/master`` for
+The ``localfs`` Minion cache module is the default cache module and does not
+require any configuration.
+
+Expiration values can be set in the relevant config file (``/etc/salt/master`` for
 the master, ``/etc/salt/cloud`` for Salt Cloud, etc).
 '''
 from __future__ import absolute_import
@@ -20,12 +23,28 @@ import salt.utils.atomicfile
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {'list': 'ls'}
 
-def store(bank, key, data):
+
+def __cachedir(kwargs=None):
+    if kwargs and 'cachedir' in kwargs:
+        return kwargs['cachedir']
+    return __opts__.get('cachedir', salt.syspaths.CACHE_DIR)
+
+
+def init_kwargs(kwargs):
+    return {'cachedir': __cachedir(kwargs)}
+
+
+def get_storage_id(kwargs):
+    return ('localfs', __cachedir(kwargs))
+
+
+def store(bank, key, data, cachedir):
     '''
     Store information in a file.
     '''
-    base = os.path.join(__opts__['cachedir'], os.path.normpath(bank))
+    base = os.path.join(cachedir, os.path.normpath(bank))
     if not os.path.isdir(base):
         try:
             os.makedirs(base)
@@ -51,14 +70,14 @@ def store(bank, key, data):
         )
 
 
-def fetch(bank, key):
+def fetch(bank, key, cachedir):
     '''
     Fetch information from a file.
     '''
-    key_file = os.path.join(__opts__['cachedir'], os.path.normpath(bank), '{0}.p'.format(key))
+    key_file = os.path.join(cachedir, os.path.normpath(bank), '{0}.p'.format(key))
     if not os.path.isfile(key_file):
         log.debug('Cache file "%s" does not exist', key_file)
-        return None
+        return {}
     try:
         with salt.utils.fopen(key_file, 'rb') as fh_:
             return __context__['serial'].load(fh_)
@@ -70,11 +89,11 @@ def fetch(bank, key):
         )
 
 
-def updated(bank, key):
+def updated(bank, key, cachedir):
     '''
     Return the epoch of the mtime for this cache file
     '''
-    key_file = os.path.join(__opts__['cachedir'], os.path.normpath(bank), '{0}.p'.format(key))
+    key_file = os.path.join(cachedir, os.path.normpath(bank), '{0}.p'.format(key))
     if not os.path.isfile(key_file):
         log.warning('Cache file "%s" does not exist', key_file)
         return None
@@ -88,18 +107,21 @@ def updated(bank, key):
         )
 
 
-def flush(bank, key=None):
+def flush(bank, key=None, cachedir=None):
     '''
     Remove the key from the cache bank with all the key content.
     '''
+    if cachedir is None:
+        cachedir = __cachedir()
+
     try:
         if key is None:
-            target = os.path.join(__opts__['cachedir'], os.path.normpath(bank))
+            target = os.path.join(cachedir, os.path.normpath(bank))
             if not os.path.isdir(target):
                 return False
             shutil.rmtree(target)
         else:
-            target = os.path.join(__opts__['cachedir'], os.path.normpath(bank), '{0}.p'.format(key))
+            target = os.path.join(cachedir, os.path.normpath(bank), '{0}.p'.format(key))
             if not os.path.isfile(target):
                 return False
             os.remove(target)
@@ -112,30 +134,37 @@ def flush(bank, key=None):
     return True
 
 
-def list(bank):
+def ls(bank, cachedir):
     '''
     Return an iterable object containing all entries stored in the specified bank.
     '''
-    base = os.path.join(__opts__['cachedir'], os.path.normpath(bank))
+    base = os.path.join(cachedir, os.path.normpath(bank))
     if not os.path.isdir(base):
         return []
     try:
-        return os.listdir(base)
+        items = os.listdir(base)
     except OSError as exc:
         raise SaltCacheError(
             'There was an error accessing directory "{0}": {1}'.format(
                 base, exc
             )
         )
+    ret = []
+    for item in items:
+        if item.endswith('.p'):
+            ret.append(item.rstrip(item[-2:]))
+        else:
+            ret.append(item)
+    return ret
 
 
-def contains(bank, key):
+def contains(bank, key, cachedir):
     '''
     Checks if the specified bank contains the specified key.
     '''
     if key is None:
-        base = os.path.join(__opts__['cachedir'], os.path.normpath(bank))
+        base = os.path.join(cachedir, os.path.normpath(bank))
         return os.path.isdir(base)
     else:
-        keyfile = os.path.join(__opts__['cachedir'], os.path.normpath(bank), '{0}.p'.format(key))
+        keyfile = os.path.join(cachedir, os.path.normpath(bank), '{0}.p'.format(key))
         return os.path.isfile(keyfile)

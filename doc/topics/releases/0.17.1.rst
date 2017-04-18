@@ -212,8 +212,8 @@ David Anderson
 Fix Reference
 =============
 
-Version 0.17.1 is the first bugfix release for :doc:`0.17.0
-</topics/releases/0.17.0>`.  The changes include:
+Version 0.17.1 is the first bugfix release for :ref:`0.17.0
+<release-0-17-0>`.  The changes include:
 
 - Fix symbolic links in thin.tgz (:issue:`7482`)
 - Pass env through to file.patch state (:issue:`7452`)

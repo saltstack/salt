@@ -372,6 +372,9 @@ def cache_file(path, saltenv='base'):
         salt '*' cp.cache_file salt://foo/bar.conf saltenv=config
         salt '*' cp.cache_file salt://foo/bar.conf?saltenv=config
 
+    If the path being cached is a ``salt://`` URI, and the path does not exist,
+    then ``False`` will be returned.
+
     .. note::
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
@@ -628,6 +631,28 @@ def hash_file(path, saltenv='base'):
     return _client().hash_file(path, saltenv)
 
 
+def stat_file(path, saltenv='base', octal=True):
+    '''
+    Return the permissions of a file, to get the permissions of a file on the
+    salt master file server prepend the path with salt://<file on server>
+    otherwise, prepend the file with / for a local file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.stat_file salt://path/to/file
+    '''
+    path, senv = salt.utils.url.split_env(path)
+    if senv:
+        saltenv = senv
+
+    stat = _client().hash_and_stat_file(path, saltenv)[1]
+    if stat is None:
+        return stat
+    return salt.utils.st_mode_to_octal(stat[0]) if octal is True else stat[0]
+
+
 def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     '''
     WARNING Files pushed to the master will have global read permissions..
@@ -688,7 +713,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     load_path_split_drive = os.path.splitdrive(load_path_normal)[1]
 
     # Finally, split the remaining path into a list for delivery to the master
-    load_path_list = load_path_split_drive.split(os.sep)
+    load_path_list = [_f for _f in load_path_split_drive.split(os.sep) if _f]
 
     load = {'cmd': '_file_recv',
             'id': __opts__['id'],

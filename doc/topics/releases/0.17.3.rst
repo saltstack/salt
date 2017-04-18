@@ -9,8 +9,8 @@ Salt 0.17.3 Release Notes
     0.17.3 had some regressions which were promptly fixed in the 0.17.4
     release.  Please use 0.17.4 instead.
 
-Version 0.17.3 is another bugfix release for :doc:`0.17.0
-</topics/releases/0.17.0>`.  The changes include:
+Version 0.17.3 is another bugfix release for :ref:`0.17.0
+<release-0-17-0>`.  The changes include:
 
 - Fix some jinja render errors (:issue:`8418`)
 - Fix ``file.replace`` state changing file ownership (:issue:`8399`)

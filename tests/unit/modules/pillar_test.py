@@ -58,6 +58,97 @@ class PillarModuleTestCase(TestCase):
         else:
             self.assertEqual(pillarmod.ls(), ['a', 'b'])
 
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_pillar_get_default_merge(self):
+        defaults = {'int': 1,
+                    'string': 'foo',
+                    'list': ['foo'],
+                    'dict': {'foo': 'bar', 'subkey': {'foo': 'bar'}}}
+
+        pillarmod.__opts__ = {}
+        pillarmod.__pillar__ = {'int': 2,
+                                'string': 'bar',
+                                'list': ['bar', 'baz'],
+                                'dict': {'baz': 'qux', 'subkey': {'baz': 'qux'}}}
+
+        # Test that we raise a KeyError when pillar_raise_on_missing is True
+        with patch.dict(pillarmod.__opts__, {'pillar_raise_on_missing': True}):
+            self.assertRaises(KeyError, pillarmod.get, 'missing')
+        # Test that we return an empty string when it is not
+        self.assertEqual(pillarmod.get('missing'), '')
+
+        # Test with no default passed (it should be KeyError) and merge=True.
+        # The merge should be skipped and the value returned from __pillar__
+        # should be returned.
+        for item in pillarmod.__pillar__:
+            self.assertEqual(
+                pillarmod.get(item, merge=True),
+                pillarmod.__pillar__[item]
+            )
+
+        # Test merging when the type of the default value is not the same as
+        # what was returned. Merging should be skipped and the value returned
+        # from __pillar__ should be returned.
+        for default_type in defaults:
+            for data_type in ('dict', 'list'):
+                if default_type == data_type:
+                    continue
+                self.assertEqual(
+                    pillarmod.get(item, default=defaults[default_type], merge=True),
+                    pillarmod.__pillar__[item]
+                )
+
+        # Test recursive dict merging
+        self.assertEqual(
+            pillarmod.get('dict', default=defaults['dict'], merge=True),
+            {'foo': 'bar', 'baz': 'qux', 'subkey': {'foo': 'bar', 'baz': 'qux'}}
+        )
+
+        # Test list merging
+        self.assertEqual(
+            pillarmod.get('list', default=defaults['list'], merge=True),
+            ['foo', 'bar', 'baz']
+        )
+
+    def test_pillar_get_default_merge_regression_38558(self):
+        """Test for pillar.get(key=..., default=..., merge=True)
+
+        Do not update the ``default`` value when using ``merge=True``.
+
+        See: https://github.com/saltstack/salt/issues/38558
+        """
+
+        pillarmod.__opts__ = {}
+        pillarmod.__pillar__ = {'l1': {'l2': {'l3': 42}}}
+
+        res = pillarmod.get(key='l1')
+        self.assertEqual({'l2': {'l3': 42}}, res)
+
+        default = {'l2': {'l3': 43}}
+
+        res = pillarmod.get(key='l1', default=default)
+        self.assertEqual({'l2': {'l3': 42}}, res)
+        self.assertEqual({'l2': {'l3': 43}}, default)
+
+        res = pillarmod.get(key='l1', default=default, merge=True)
+        self.assertEqual({'l2': {'l3': 42}}, res)
+        self.assertEqual({'l2': {'l3': 43}}, default)
+
+    def test_pillar_get_default_merge_regression_39062(self):
+        '''
+        Confirm that we do not raise an exception if default is None and
+        merge=True.
+
+        See https://github.com/saltstack/salt/issues/39062 for more info.
+        '''
+        pillarmod.__opts__ = {}
+        pillarmod.__pillar__ = {'foo': 'bar'}
+
+        self.assertEqual(
+            pillarmod.get(key='foo', default=None, merge=True),
+            'bar',
+        )
+
 
 # gracinet: not sure this is really useful, but other test modules have this as well
 if __name__ == '__main__':

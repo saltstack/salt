@@ -35,7 +35,7 @@ def useradd_all(pwfile, user, password, opts='', runas=None):
     Add a user to htpasswd file using the htpasswd command. If the htpasswd
     file does not exist, it will be created.
 
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2016.3.0
 
     pwfile
         Path to htpasswd file

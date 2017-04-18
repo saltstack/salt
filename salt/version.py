@@ -60,7 +60,7 @@ class SaltStackVersion(object):
         r'\.(?P<minor>[\d]{1,2})'
         r'(?:\.(?P<bugfix>[\d]{0,2}))?'
         r'(?:\.(?P<mbugfix>[\d]{0,2}))?'
-        r'(?:(?P<pre_type>rc|a|b|alpha|beta)(?P<pre_num>[\d]{1}))?'
+        r'(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]{1}))?'
         r'(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-(?P<sha>[a-z0-9]{8}))?'
     )
     git_sha_regex = re.compile(r'(?P<sha>[a-z0-9]{7})')
@@ -574,6 +574,7 @@ def dependency_information(include_salt_cloud=False):
         ('msgpack-python', 'msgpack', 'version'),
         ('msgpack-pure', 'msgpack_pure', 'version'),
         ('pycrypto', 'Crypto', '__version__'),
+        ('pycryptodome', 'Cryptodome', 'version_info'),
         ('libnacl', 'libnacl', '__version__'),
         ('PyYAML', 'yaml', '__version__'),
         ('ioflo', 'ioflo', '__version__'),
@@ -594,6 +595,7 @@ def dependency_information(include_salt_cloud=False):
         ('python-gnupg', 'gnupg', '__version__'),
         ('mysql-python', 'MySQLdb', '__version__'),
         ('cherrypy', 'cherrypy', '__version__'),
+        ('docker-py', 'docker', '__version__'),
     ]
 
     if include_salt_cloud:
@@ -710,5 +712,27 @@ def versions_report(include_salt_cloud=False):
         yield line
 
 
+def msi_conformant_version():
+    '''
+    A msi conformant version consists of up to 4 numbers, each smaller than 256,
+    except the 4th. Therefore, the year must be represented as 'short year'.
+
+    Examples (depend on git checkout):
+      develop                2016.11.0-742-g5ca4d20     16.11.0.742
+      2016.11 (branch)       2016.11.2-78-gce1f01f      16.11.2.78
+      v2016.11.2 (tag)       2016.11.2                  16.11.2.0
+
+    Note that the commit count for tags is 0(zero)
+    '''
+    year2 = int(str(__saltstack_version__.major)[2:])
+    month = __saltstack_version__.minor
+    minor = __saltstack_version__.bugfix
+    commi = __saltstack_version__.noc
+    return '{0}.{1}.{2}.{3}'.format(year2, month, minor, commi)
+
 if __name__ == '__main__':
-    print(__version__)
+    if len(sys.argv) == 2 and sys.argv[1] == 'msi':
+        # Building the msi requires an msi-conformant version
+        print(msi_conformant_version())
+    else:
+        print(__version__)

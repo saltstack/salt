@@ -27,7 +27,7 @@ Primary Master Configuration
 
 Default: ``0.0.0.0`` (all interfaces)
 
-The local interface to bind to.
+The local interface to bind to, must be an IP address.
 
 .. code-block:: yaml
 
@@ -245,7 +245,7 @@ each of Salt's module types such as ``runners``, ``output``, ``wheel``,
 
     extension_modules: /root/salt_extmods
 
-.. conf_minion:: module_dirs
+.. conf_master:: module_dirs
 
 ``module_dirs``
 ---------------
@@ -459,13 +459,96 @@ jobs dir.
 Default: ``True``
 
 The minion data cache is a cache of information about the minions stored on the
-master, this information is primarily the pillar and grains data. The data is
-cached in the Master cachedir under the name of the minion and used to
-predetermine what minions are expected to reply from executions.
+master, this information is primarily the pillar, grains and mine data. The data
+is cached via the cache subsystem in the Master cachedir under the name of the
+minion or in a supported database. The data is used to predetermine what minions
+are expected to reply from executions.
 
 .. code-block:: yaml
 
     minion_data_cache: True
+
+.. conf_master:: cache
+
+``cache``
+---------
+
+Default: ``localfs``
+
+Cache subsystem module to use for minion data cache.
+
+.. code-block:: yaml
+
+    cache: consul
+
+.. conf_master:: memcache_expire_seconds
+
+``memcache_expire_seconds``
+---------------------------
+
+Default: ``0``
+
+Memcache is an additional cache layer that keeps a limited amount of data
+fetched from the minion data cache for a limited period of time in memory that
+makes cache operations faster. It doesn't make much sence for the ``localfs``
+cache driver but helps for more complex drivers like ``consul``.
+
+This option sets the memcache items expiration time. By default is set to ``0``
+that disables the memcache.
+
+.. code-block:: yaml
+
+    memcache_expire_seconds: 30
+
+.. conf_master:: memcache_max_items
+
+``memcache_max_items``
+----------------------
+
+Default: ``1024``
+
+Set memcache limit in items that are bank-key pairs. I.e the list of
+minion_0/data, minion_0/mine, minion_1/data contains 3 items. This value depends
+on the count of minions usually targeted in your environment. The best one could
+be found by analyzing the cache log with ``memcache_debug`` enabled.
+
+.. code-block:: yaml
+
+    memcache_max_items: 1024
+
+.. conf_master:: memcache_full_cleanup
+
+``memcache_full_cleanup``
+-------------------------
+
+Default: ``False``
+
+If cache storage got full, i.e. the items count exceeds the
+``memcache_max_items`` value, memcache cleans up it's storage. If this option
+set to ``False`` memcache removes the only one oldest value from it's storage.
+If this set set to ``True`` memcache removes all the expired items and also
+removes the oldest one if there are no expired items.
+
+.. code-block:: yaml
+
+    memcache_full_cleanup: True
+
+.. conf_master:: memcache_debug
+
+``memcache_debug``
+------------------
+
+Default: ``False``
+
+Enable collecting the memcache stats and log it on `debug` log level. If enabled
+memcache collect information about how many ``fetch`` calls has been done and
+how many of them has been hit by memcache. Also it outputs the rate value that
+is the result of division of the first two values. This should help to choose
+right values for the expiration time and the cache size.
+
+.. code-block:: yaml
+
+    memcache_debug: True
 
 .. conf_master:: ext_job_cache
 
@@ -721,7 +804,7 @@ Pass in an alternative location for the salt-ssh roster file.
 .. conf_master:: ssh_log_file
 
 ``ssh_log_file``
--------------------
+----------------
 
 .. versionadded:: 2016.3.5
 
@@ -1127,6 +1210,99 @@ root of the base environment.
 
     state_top: top.sls
 
+.. conf_master:: state_top_saltenv
+
+``state_top_saltenv``
+---------------------
+
+This option has no default value. Set it to an environment name to ensure that
+*only* the top file from that environment is considered during a
+:ref:`highstate <running-highstate>`.
+
+.. note::
+    Using this value does not change the merging strategy. For instance, if
+    :conf_master:`top_file_merging_strategy` is set to ``merge``, and
+    :conf_master:`state_top_saltenv` is set to ``foo``, then any sections for
+    environments other than ``foo`` in the top file for the ``foo`` environment
+    will be ignored. With :conf_master:`state_top_saltenv` set to ``base``, all
+    states from all environments in the ``base`` top file will be applied,
+    while all other top files are ignored. The only way to set
+    :conf_master:`state_top_saltenv` to something other than ``base`` and not
+    have the other environments in the targeted top file ignored, would be to
+    set :conf_master:`top_file_merging_strategy` to ``merge_all``.
+
+.. code-block:: yaml
+
+    state_top_saltenv: dev
+
+.. conf_master:: top_file_merging_strategy
+
+``top_file_merging_strategy``
+-----------------------------
+
+.. versionchanged:: 2016.11.0
+    A ``merge_all`` strategy has been added.
+
+Default: ``merge``
+
+When no specific fileserver environment (a.k.a. ``saltenv``) has been specified
+for a :ref:`highstate <running-highstate>`, all environments' top files are
+inspected. This config option determines how the SLS targets in those top files
+are handled.
+
+When set to ``merge``, the ``base`` environment's top file is evaluated first,
+followed by the other environments' top files. The first target expression
+(e.g. ``'*'``) for a given environment is kept, and when the same target
+expression is used in a different top file evaluated later, it is ignored.
+Because ``base`` is evaluated first, it is authoritative. For example, if there
+is a target for ``'*'`` for the ``foo`` environment in both the ``base`` and
+``foo`` environment's top files, the one in the ``foo`` environment would be
+ignored. The environments will be evaluated in no specific order (aside from
+``base`` coming first). For greater control over the order in which the
+environments are evaluated, use :conf_master:`env_order`. Note that, aside from
+the ``base`` environment's top file, any sections in top files that do not
+match that top file's environment will be ignored. So, for example, a section
+for the ``qa`` environment would be ignored if it appears in the ``dev``
+environment's top file. To keep use cases like this from being ignored, use the
+``merge_all`` strategy.
+
+When set to ``same``, then for each environment, only that environment's top
+file is processed, with the others being ignored. For example, only the ``dev``
+environment's top file will be processed for the ``dev`` environment, and any
+SLS targets defined for ``dev`` in the ``base`` environment's (or any other
+environment's) top file will be ignored. If an environment does not have a top
+file, then the top file from the :conf_master:`default_top` config parameter
+will be used as a fallback.
+
+When set to ``merge_all``, then all states in all environments in all top files
+will be applied. The order in which individual SLS files will be executed will
+depend on the order in which the top files were evaluated, and the environments
+will be evaluated in no specific order. For greater control over the order in
+which the environments are evaluated, use :conf_master:`env_order`.
+
+.. code-block:: yaml
+
+    top_file_merging_strategy: same
+
+.. conf_master:: env_order
+
+``env_order``
+-------------
+
+Default: ``[]``
+
+When :conf_master:`top_file_merging_strategy` is set to ``merge``, and no
+environment is specified for a :ref:`highstate <running-highstate>`, this
+config option allows for the order in which top files are evaluated to be
+explicitly defined.
+
+.. code-block:: yaml
+
+    env_order:
+      - base
+      - dev
+      - qa
+
 .. conf_master:: master_tops
 
 ``master_tops``
@@ -1174,6 +1350,23 @@ The renderer to use on the minions to render the state data.
 .. code-block:: yaml
 
     renderer: yaml_jinja
+
+.. conf_master:: userdata_template
+
+``userdata_template``
+---------------------
+
+.. versionadded:: 2016.11.4
+
+Default: ``None``
+
+The renderer to use for templating userdata files in salt-cloud, if the
+``userdata_template`` is not set in the cloud profile. If no value is set in
+the cloud profile or master config file, no templating will be performed.
+
+.. code-block:: yaml
+
+    userdata_template: jinja
 
 .. conf_master:: jinja_trim_blocks
 
@@ -1302,22 +1495,6 @@ Enable extra routines for YAML renderer used states containing UTF characters.
 .. code-block:: yaml
 
     yaml_utf8: False
-
-.. conf_master:: test
-
-``test``
---------
-
-Default: ``False``
-
-Set all state calls to only test if they are going to actually make changes
-or just post what changes are going to be made.
-
-.. code-block:: yaml
-
-    test: False
-
-.. conf_master:: runner_returns
 
 ``runner_returns``
 ------------------
@@ -2396,7 +2573,7 @@ exposed.
       - 'mail\d+.mydomain.tld'
 
 
-.. _pillar-configuration:
+.. _pillar-configuration-master:
 
 Pillar Configuration
 ====================
@@ -2425,6 +2602,34 @@ configuration is the same as :conf_master:`file_roots`:
         - /srv/pillar/dev
       prod:
         - /srv/pillar/prod
+
+.. conf_master:: on_demand_ext_pillar
+
+``on_demand_ext_pillar``
+------------------------
+
+.. versionadded:: 2016.3.6,2016.11.3,Nitrogen
+
+Default: ``['libvirt', 'virtkey']``
+
+The external pillars permitted to be used on-demand using :py:func:`pillar.ext
+<salt.modules.pillar.ext>`.
+
+.. code-block:: yaml
+
+    on_demand_ext_pillar:
+      - libvirt
+      - virtkey
+      - git
+
+.. warning::
+    This will allow minions to request specific pillar data via
+    :py:func:`pillar.ext <salt.modules.pillar.ext>`, and may be considered a
+    security risk. However, pillar data generated in this way will not affect
+    the :ref:`in-memory pillar data <pillar-in-memory>`, so this risk is
+    limited to instances in which states/modules/etc. (built-in or custom) rely
+    upon pillar data generated by :py:func:`pillar.ext
+    <salt.modules.pillar.ext>`.
 
 .. conf_master:: pillar_opts
 
@@ -3142,6 +3347,20 @@ order will be used.
 .. code-block:: yaml
 
     syndic_failover: random
+
+.. conf_master:: syndic_wait
+
+``syndic_wait``
+---------------
+
+Default: ``5``
+
+The number of seconds for the salt client to wait for additional syndics to
+check in with their lists of expected minions before giving up.
+
+.. code-block:: yaml
+
+    syndic_wait: 5
 
 
 Peer Publish Settings

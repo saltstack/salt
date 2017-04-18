@@ -1,3 +1,5 @@
+.. _tutorial-stormpath:
+
 =========================
 Using Salt with Stormpath
 =========================

@@ -11,12 +11,20 @@ import logging
 import os
 import re
 import shlex
+import stat
 import tarfile
+import tempfile
 import zipfile
 try:
     from shlex import quote as _quote  # pylint: disable=E0611
 except ImportError:
     from pipes import quote as _quote
+
+try:
+    import rarfile
+    HAS_RARFILE = True
+except ImportError:
+    HAS_RARFILE = False
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
@@ -39,11 +47,19 @@ log = logging.getLogger(__name__)
 def list_(name,
           archive_format=None,
           options=None,
+          strip_components=None,
           clean=False,
           verbose=False,
           saltenv='base'):
     '''
     .. versionadded:: 2016.11.0
+    .. versionchanged:: 2016.11.2
+        The rarfile_ Python module is now supported for listing the contents of
+        rar archives. This is necessary on minions with older releases of the
+        ``rar`` CLI tool, which do not support listing the contents in a
+        parsable format.
+
+    .. _rarfile: https://pypi.python.org/pypi/rarfile
 
     List the files and directories in an tar, zip, or rar archive.
 
@@ -91,6 +107,14 @@ def list_(name,
             It is not necessary to manually specify options for gzip'ed
             archives, as gzip compression is natively supported by tarfile_.
 
+    strip_components
+        This argument specifies a number of top-level directories to strip from
+        the results. This is similar to the paths that would be extracted if
+        ``--strip-components`` (or ``--strip``) were used when extracting tar
+        archives.
+
+        .. versionadded:: 2016.11.2
+
     clean : False
         Set this value to ``True`` to delete the path referred to by ``name``
         once the contents have been listed. This option should be used with
@@ -106,6 +130,10 @@ def list_(name,
         paths into separate keys containing the directory names, file names,
         and also directories/files present in the top level of the archive.
 
+        .. versionchanged:: 2016.11.2
+            This option now includes symlinks in their own list. Before, they
+            were included with files.
+
     saltenv : base
         Specifies the fileserver environment from which to retrieve
         ``archive``. This is only applicable when ``archive`` is a file from
@@ -119,49 +147,69 @@ def list_(name,
     .. code-block:: bash
 
             salt '*' archive.list /path/to/myfile.tar.gz
+            salt '*' archive.list /path/to/myfile.tar.gz strip_components=1
             salt '*' archive.list salt://foo.tar.gz
             salt '*' archive.list https://domain.tld/myfile.zip
             salt '*' archive.list ftp://10.1.2.3/foo.rar
     '''
-    def _list_tar(name, cached, decompress_cmd):
+    def _list_tar(name, cached, decompress_cmd, failhard=False):
+        dirs = []
+        files = []
+        links = []
         try:
             with contextlib.closing(tarfile.open(cached)) as tar_archive:
-                return [
-                    x.name + '/' if x.isdir() else x.name
-                    for x in tar_archive.getmembers()
-                ]
-        except tarfile.ReadError:
-            if not salt.utils.which('tar'):
-                raise CommandExecutionError('\'tar\' command not available')
-            if decompress_cmd is not None:
-                # Guard against shell injection
-                try:
-                    decompress_cmd = ' '.join(
-                        [_quote(x) for x in shlex.split(decompress_cmd)]
-                    )
-                except AttributeError:
-                    raise CommandExecutionError('Invalid CLI options')
-            else:
-                if salt.utils.which('xz') \
-                        and __salt__['cmd.retcode'](['xz', '-l', cached],
-                                                    python_shell=False,
-                                                    ignore_retcode=True) == 0:
-                    decompress_cmd = 'xz --decompress --stdout'
+                for member in tar_archive.getmembers():
+                    if member.issym():
+                        links.append(member.name)
+                    elif member.isdir():
+                        dirs.append(member.name + '/')
+                    else:
+                        files.append(member.name)
+            return dirs, files, links
 
-            if decompress_cmd:
-                cmd = '{0} {1} | tar tf -'.format(decompress_cmd, _quote(cached))
-                result = __salt__['cmd.run_all'](cmd, python_shell=True)
-                if result['retcode'] != 0:
-                    raise CommandExecutionError(
-                        'Failed to decompress {0}'.format(name),
-                        info={'error': result['stderr']}
-                    )
-                ret = []
-                for line in salt.utils.itertools.split(result['stdout'], '\n'):
-                    line = line.strip()
-                    if line:
-                        ret.append(line)
-                return ret
+        except tarfile.ReadError:
+            if not failhard:
+                if not salt.utils.which('tar'):
+                    raise CommandExecutionError('\'tar\' command not available')
+                if decompress_cmd is not None:
+                    # Guard against shell injection
+                    try:
+                        decompress_cmd = ' '.join(
+                            [_quote(x) for x in shlex.split(decompress_cmd)]
+                        )
+                    except AttributeError:
+                        raise CommandExecutionError('Invalid CLI options')
+                else:
+                    if salt.utils.which('xz') \
+                            and __salt__['cmd.retcode'](['xz', '-l', cached],
+                                                        python_shell=False,
+                                                        ignore_retcode=True) == 0:
+                        decompress_cmd = 'xz --decompress --stdout'
+
+                if decompress_cmd:
+                    fd, decompressed = tempfile.mkstemp()
+                    os.close(fd)
+                    try:
+                        cmd = '{0} {1} > {2}'.format(decompress_cmd,
+                                                     _quote(cached),
+                                                     _quote(decompressed))
+                        result = __salt__['cmd.run_all'](cmd, python_shell=True)
+                        if result['retcode'] != 0:
+                            raise CommandExecutionError(
+                                'Failed to decompress {0}'.format(name),
+                                info={'error': result['stderr']}
+                            )
+                        return _list_tar(name, decompressed, None, True)
+                    finally:
+                        try:
+                            os.remove(decompressed)
+                        except OSError as exc:
+                            if exc.errno != errno.ENOENT:
+                                log.warning(
+                                    'Failed to remove intermediate '
+                                    'decompressed archive %s: %s',
+                                    decompressed, exc.__str__()
+                                )
 
         raise CommandExecutionError(
             'Unable to list contents of {0}. If this is an XZ-compressed tar '
@@ -172,37 +220,97 @@ def list_(name,
         )
 
     def _list_zip(name, cached):
-        # Password-protected ZIP archives can still be listed by zipfile, so
-        # there is no reason to invoke the unzip command.
+        '''
+        Password-protected ZIP archives can still be listed by zipfile, so
+        there is no reason to invoke the unzip command.
+        '''
+        dirs = set()
+        files = []
+        links = []
         try:
             with contextlib.closing(zipfile.ZipFile(cached)) as zip_archive:
-                return zip_archive.namelist()
+                for member in zip_archive.infolist():
+                    path = member.filename
+                    if salt.utils.is_windows():
+                        if path.endswith('/'):
+                            # zipfile.ZipInfo objects on windows use forward
+                            # slash at end of the directory name.
+                            dirs.add(path)
+                        else:
+                            files.append(path)
+                    else:
+                        mode = member.external_attr >> 16
+                        if stat.S_ISLNK(mode):
+                            links.append(path)
+                        elif stat.S_ISDIR(mode):
+                            dirs.add(path)
+                        else:
+                            files.append(path)
+
+                for path in files:
+                    # ZIP files created on Windows do not add entries
+                    # to the archive for directories. So, we'll need to
+                    # manually add them.
+                    dirname = ''.join(path.rpartition('/')[:2])
+                    if dirname:
+                        dirs.add(dirname)
+            return list(dirs), files, links
         except zipfile.BadZipfile:
             raise CommandExecutionError('{0} is not a ZIP file'.format(name))
 
     def _list_rar(name, cached):
-        if not salt.utils.which('rar'):
-            raise CommandExecutionError(
-                'rar command not available, is it installed?'
-            )
-        output = __salt__['cmd.run'](
-            ['rar', 'lt', path],
-            python_shell=False,
-            ignore_retcode=False)
-        matches = re.findall(r'Name:\s*([^\n]+)\s*Type:\s*([^\n]+)', output)
-        ret = [x + '/' if y == 'Directory' else x for x, y in matches]
-        if not ret:
-            raise CommandExecutionError(
-                'Failed to list {0}, is it a rar file?'.format(name),
-                info={'error': output}
-            )
-        return ret
+        dirs = []
+        files = []
+        if HAS_RARFILE:
+            with rarfile.RarFile(cached) as rf:
+                for member in rf.infolist():
+                    path = member.filename.replace('\\', '/')
+                    if member.isdir():
+                        dirs.append(path + '/')
+                    else:
+                        files.append(path)
+        else:
+            if not salt.utils.which('rar'):
+                raise CommandExecutionError(
+                    'rar command not available, is it installed?'
+                )
+            output = __salt__['cmd.run'](
+                ['rar', 'lt', name],
+                python_shell=False,
+                ignore_retcode=False)
+            matches = re.findall(r'Name:\s*([^\n]+)\s*Type:\s*([^\n]+)', output)
+            for path, type_ in matches:
+                if type_ == 'Directory':
+                    dirs.append(path + '/')
+                else:
+                    files.append(path)
+            if not dirs and not files:
+                raise CommandExecutionError(
+                    'Failed to list {0}, is it a rar file? If so, the '
+                    'installed version of rar may be too old to list data in '
+                    'a parsable format. Installing the rarfile Python module '
+                    'may be an easier workaround if newer rar is not readily '
+                    'available.'.format(name),
+                    info={'error': output}
+                )
+        return dirs, files, []
 
     cached = __salt__['cp.cache_file'](name, saltenv)
     if not cached:
         raise CommandExecutionError('Failed to cache {0}'.format(name))
 
     try:
+        if strip_components:
+            try:
+                int(strip_components)
+            except ValueError:
+                strip_components = -1
+
+            if strip_components <= 0:
+                raise CommandExecutionError(
+                    '\'strip_components\' must be a positive integer'
+                )
+
         parsed = _urlparse(name)
         path = parsed.path or parsed.netloc
 
@@ -228,7 +336,7 @@ def list_(name,
 
         args = (options,) if archive_format == 'tar' else ()
         try:
-            ret = func(name, cached, *args)
+            dirs, files, links = func(name, cached, *args)
         except (IOError, OSError) as exc:
             raise CommandExecutionError(
                 'Failed to list contents of {0}: {1}'.format(
@@ -253,22 +361,40 @@ def list_(name,
                         'Failed to clean cached archive %s: %s',
                         cached, exc.__str__()
                     )
+
+        if strip_components:
+            for item in (dirs, files, links):
+                for index, path in enumerate(item):
+                    try:
+                        # Strip off the specified number of directory
+                        # boundaries, and grab what comes after the last
+                        # stripped path separator.
+                        item[index] = item[index].split(
+                            os.sep, strip_components)[strip_components]
+                    except IndexError:
+                        # Path is excluded by strip_components because it is not
+                        # deep enough. Set this to an empty string so it can
+                        # be removed in the generator expression below.
+                        item[index] = ''
+
+                # Remove all paths which were excluded
+                item[:] = (x for x in item if x)
+                item.sort()
+
         if verbose:
-            verbose_ret = {'dirs': [],
-                           'files': [],
-                           'top_level_dirs': [],
-                           'top_level_files': []}
-            for item in ret:
-                if item.endswith('/'):
-                    verbose_ret['dirs'].append(item)
-                    if item.count('/') == 1:
-                        verbose_ret['top_level_dirs'].append(item)
-                else:
-                    verbose_ret['files'].append(item)
-                    if item.count('/') == 0:
-                        verbose_ret['top_level_files'].append(item)
-            ret = verbose_ret
+            ret = {'dirs': sorted(dirs),
+                   'files': sorted(files),
+                   'links': sorted(links)}
+            ret['top_level_dirs'] = [x for x in ret['dirs']
+                                     if x.count('/') == 1]
+            ret['top_level_files'] = [x for x in ret['files']
+                                      if x.count('/') == 0]
+            ret['top_level_links'] = [x for x in ret['links']
+                                      if x.count('/') == 0]
+        else:
+            ret = sorted(dirs + files + links)
         return ret
+
     except CommandExecutionError as exc:
         # Reraise with cache path in the error so that the user can examine the
         # cached archive for troubleshooting purposes.
@@ -884,7 +1010,7 @@ def unzip(zip_file,
                     if salt.utils.is_windows() is False:
                         info = zfile.getinfo(target)
                         # Check if zipped file is a symbolic link
-                        if info.external_attr == 2716663808:
+                        if stat.S_ISLNK(info.external_attr >> 16):
                             source = zfile.read(target)
                             os.symlink(source, os.path.join(dest, target))
                             continue
@@ -915,6 +1041,9 @@ def is_encrypted(name, clean=False, saltenv='base'):
     Returns ``True`` if the zip archive is password-protected, ``False`` if
     not. If the specified file is not a ZIP archive, an error will be raised.
 
+    name
+        The path / URL of the archive to check.
+
     clean : False
         Set this value to ``True`` to delete the path referred to by ``name``
         once the contents have been listed. This option should be used with
@@ -931,6 +1060,7 @@ def is_encrypted(name, clean=False, saltenv='base'):
 
             salt '*' archive.is_encrypted /path/to/myfile.zip
             salt '*' archive.is_encrypted salt://foo.zip
+            salt '*' archive.is_encrypted salt://foo.zip saltenv=dev
             salt '*' archive.is_encrypted https://domain.tld/myfile.zip clean=True
             salt '*' archive.is_encrypted ftp://10.1.2.3/foo.zip
     '''

@@ -66,9 +66,9 @@ def orchestrate(mods,
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
     res = salt.utils.check_state_result(ret['data'])
     if res:
-        ret['data']['retcode'] = 0
+        ret['retcode'] = 0
     else:
-        ret['data']['retcode'] = 1
+        ret['retcode'] = 1
     return ret
 
 # Aliases for orchestrate runner
@@ -186,7 +186,7 @@ def event(tagmatch='*',
         # Watch the event bus forever in a shell while-loop.
         salt-run state.event | while read -r tag data; do
             echo $tag
-            echo $data | jq -colour-output .
+            echo $data | jq --color-output .
         done
 
     .. seealso::

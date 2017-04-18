@@ -334,6 +334,9 @@ def _parse_settings_bond_1(opts, iface, bond_def):
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
 
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
+
     return bond
 
 
@@ -373,9 +376,6 @@ def _parse_settings_bond_2(opts, iface, bond_def):
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
         bond.update({'arp_interval': bond_def['arp_interval']})
-
-    if 'primary' in opts:
-        bond.update({'primary': opts['primary']})
 
     if 'hashing-algorithm' in opts:
         valid = ['layer2', 'layer2+3', 'layer3+4']
@@ -507,6 +507,9 @@ def _parse_settings_bond_5(opts, iface, bond_def):
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
 
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
+
     return bond
 
 
@@ -542,6 +545,9 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     else:
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
+
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
 
     return bond
 
@@ -975,7 +981,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type == 'bridge':
         __salt__['pkg.install']('bridge-utils')
 
-    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip', 'ib']:
+    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip', 'ib', 'alias']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
             template = JINJA.get_template('rh{0}_eth.jinja'.format(rh_major))

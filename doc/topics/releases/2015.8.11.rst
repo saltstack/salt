@@ -2,8 +2,7 @@
 Salt 2015.8.11 Release Notes
 ============================
 
-Version 2015.8.11 is a bugfix release for :doc:`2015.8.0
-</topics/releases/2015.8.0>`.
+Version 2015.8.11 is a bugfix release for :ref:`2015.8.0<release-2015-8-0>`.
 
 Returner Changes
 ================
@@ -18,7 +17,7 @@ New Configuration Parameter: ``rotate_aes_key``
 - ``Rotate_aes_key`` causes Salt to generate a new AES key whenever a minion key
   is deleted.  This eliminates the chance that a deleted minion could continue
   to eavesdrop on communications with the master if it continues to run after its
-  key is deleted.  See the entry in the documentation for `rotate_aes_key`_.
+  key is deleted.  See the entry in the documentation for :conf_master:`rotate_aes_key`.
 
 Ubuntu 16.04 Packages
 =====================
@@ -405,11 +404,13 @@ Changes:
 
 .. _`#20226`: https://github.com/saltstack/salt/pull/20226
 .. _`#22480`: https://github.com/saltstack/salt/pull/22480
+.. _`#23643`: https://github.com/saltstack/salt/issues/23643
 .. _`#25089`: https://github.com/saltstack/salt/pull/25089
 .. _`#28325`: https://github.com/saltstack/salt/pull/28325
 .. _`#28467`: https://github.com/saltstack/salt/pull/28467
 .. _`#32484`: https://github.com/saltstack/salt/pull/32484
 .. _`#32857`: https://github.com/saltstack/salt/pull/32857
+.. _`#33266`: https://github.com/saltstack/salt/issues/33266
 .. _`#33282`: https://github.com/saltstack/salt/pull/33282
 .. _`#33286`: https://github.com/saltstack/salt/pull/33286
 .. _`#33287`: https://github.com/saltstack/salt/pull/33287
@@ -492,6 +493,7 @@ Changes:
 .. _`#33555`: https://github.com/saltstack/salt/pull/33555
 .. _`#33558`: https://github.com/saltstack/salt/pull/33558
 .. _`#33581`: https://github.com/saltstack/salt/pull/33581
+.. _`#33582`: https://github.com/saltstack/salt/issues/33582
 .. _`#33599`: https://github.com/saltstack/salt/pull/33599
 .. _`#33611`: https://github.com/saltstack/salt/pull/33611
 .. _`#33615`: https://github.com/saltstack/salt/pull/33615
@@ -648,4 +650,3 @@ Changes:
 .. _`#34647`: https://github.com/saltstack/salt/pull/34647
 .. _`#34651`: https://github.com/saltstack/salt/pull/34651
 .. _`#34676`: https://github.com/saltstack/salt/pull/34676
-.. _ `rotate_aes_key`: https://docs.saltstack.com/en/2015.8/ref/configuration/master.html#rotate-aes-key

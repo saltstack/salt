@@ -359,8 +359,9 @@ def build_schedule_item(name, **kwargs):
         else:
             schedule[name]['splay'] = kwargs['splay']
 
-    for item in ['range', 'when', 'once', 'once_fmt', 'cron', 'returner',
-                 'return_config', 'return_kwargs', 'until', 'run_on_start']:
+    for item in ['range', 'when', 'once', 'once_fmt', 'cron',
+                 'returner', 'after', 'return_config', 'return_kwargs',
+                 'until', 'run_on_start']:
         if item in kwargs:
             schedule[name][item] = kwargs[item]
 

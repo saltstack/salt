@@ -26,12 +26,13 @@ log = logging.getLogger(__name__)
 
 # salt libs
 from salt.ext import six
+import salt.utils.templates
 
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
     # pylint: disable=W0611
-    from napalm import get_network_driver
+    from napalm_base import get_network_driver
     # pylint: enable=W0611
     HAS_NAPALM = True
 except ImportError:
@@ -109,13 +110,17 @@ def _filter_dict(input_dict, search_key, search_value):
     return output_dict
 
 
-def _config_logic(loaded_result, test=False, commit_config=True):
+def _config_logic(loaded_result, test=False, commit_config=True, loaded_config=None):
 
     '''
     Builds the config logic for `load_config` and `load_template` functions.
     '''
 
     loaded_result['already_configured'] = False
+
+    loaded_result['loaded_config'] = ''
+    if loaded_config:
+        loaded_result['loaded_config'] = loaded_config
 
     _compare = compare_config()
     if _compare.get('result', False):
@@ -365,16 +370,28 @@ def cli(*commands):
     # in case of errors, they'll be catched in the proxy
 
 
-def traceroute(destination, source='', ttl=0, timeout=0):
+def traceroute(destination, source=None, ttl=None, timeout=None, vrf=None):
 
     '''
     Calls the method traceroute from the NAPALM driver object and returns a dictionary with the result of the traceroute
     command executed on the device.
 
-    :param destination: Hostname or address of remote host
-    :param source: Source address to use in outgoing traceroute packets
-    :param ttl: IP maximum time-to-live value (or IPv6 maximum hop-limit value)
-    :param timeout: Number of seconds to wait for response (seconds)
+    destination
+        Hostname or address of remote host
+
+    source
+        Source address to use in outgoing traceroute packets
+
+    ttl
+        IP maximum time-to-live value (or IPv6 maximum hop-limit value)
+
+    timeout
+        Number of seconds to wait for response (seconds)
+
+    vrf
+        VRF (routing instance) for traceroute attempt
+
+        .. versionadded:: 2016.11.4
 
     CLI Example:
 
@@ -390,22 +407,39 @@ def traceroute(destination, source='', ttl=0, timeout=0):
             'destination': destination,
             'source': source,
             'ttl': ttl,
-            'timeout': timeout
+            'timeout': timeout,
+            'vrf': vrf
         }
     )
 
 
-def ping(destination, source='', ttl=0, timeout=0, size=0, count=0):
+def ping(destination, source=None, ttl=None, timeout=None, size=None, count=None, vrf=None):
 
     '''
     Executes a ping on the network device and returns a dictionary as a result.
 
-    :param destination: Hostname or IP address of remote host
-    :param source: Source address of echo request
-    :param ttl: IP time-to-live value (IPv6 hop-limit value) (1..255 hops)
-    :param timeout: Maximum wait time after sending final packet (seconds)
-    :param size: Size of request packets (0..65468 bytes)
-    :param count: Number of ping requests to send (1..2000000000 packets)
+    destination
+        Hostname or IP address of remote host
+
+    source
+        Source address of echo request
+
+    ttl
+        IP time-to-live value (IPv6 hop-limit value) (1..255 hops)
+
+    timeout
+        Maximum wait time after sending final packet (seconds)
+
+    size
+        Size of request packets (0..65468 bytes)
+
+    count
+        Number of ping requests to send (1..2000000000 packets)
+
+    vrf
+        VRF (routing instance) for ping attempt
+
+        .. versionadded:: 2016.11.4
 
     CLI Example:
 
@@ -424,7 +458,8 @@ def ping(destination, source='', ttl=0, timeout=0, size=0, count=0):
             'ttl': ttl,
             'timeout': timeout,
             'size': size,
-            'count': count
+            'count': count,
+            'vrf': vrf
         }
     )
 
@@ -732,35 +767,57 @@ def mac(address='', interface='', vlan=0):
 # ----- Configuration specific functions ------------------------------------------------------------------------------>
 
 
-def load_config(filename=None, text=None, test=False, commit=True, replace=False):
-
+def load_config(filename=None,
+                text=None,
+                test=False,
+                commit=True,
+                debug=False,
+                replace=False):
     '''
-    Populates the candidate configuration. It can be loaded from a file or from a string. If you send both a
-    filename and a string containing the configuration, the file takes precedence.
+    Applies configuration changes on the device. It can be loaded from a file or from inline string.
+    If you send both a filename and a string containing the configuration, the file has higher precedence.
 
-    If you use this method the existing configuration will be merged with the candidate configuration once
-    you commit the changes.
-
-    Be aware that by default this method will commit the configuration. If there are no changes, it does not commit and
+    By default this function will commit the changes. If there are no changes, it does not commit and
     the flag ``already_configured`` will be set as ``True`` to point this out.
 
-    :param filename: Path to the file containing the desired configuration. By default is None.
-    :param text: String containing the desired configuration.
-    :param test: Dry run? If set as ``True``, will apply the config, discard and return the changes. Default: ``False``\
-    and will commit the changes on the device.
-    :param commit: Commit? (default: ``True``) Sometimes it is not needed to commit the config immediately \
-                   after loading the changes. E.g.: a state loads a couple of parts (add / remove / update) \
-                   and would not be optimal to commit after each operation. \
-                   Also, from the CLI when the user needs to apply the similar changes before committing, \
-                   can specify ``commit=False`` and will not discard the config.
-    :param replace: Load and replace the configuration. Default: ``False``.
+    To avoid committing the configuration, set the argument ``test`` to ``True`` and will discard (dry run).
+
+    To keep the chnages but not commit, set ``commit`` to ``False``.
+
+    To replace the config, set ``replace`` to ``True``.
+
+    filename
+        Path to the file containing the desired configuration. By default is None.
+
+    text
+        String containing the desired configuration.
+
+    test: False
+        Dry run? If set as ``True``, will apply the config, discard and return the changes. Default: ``False``
+        and will commit the changes on the device.
+
+    commit: True
+        Commit? Default: ``True``.
+
+    debug: False
+        Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` contaning the raw
+        configuration loaded on the device.
+
+        .. versionadded:: 2016.11.2
+
+    replace: False
+        Load and replace the configuration. Default: ``False``.
+
+        .. versionadded:: 2016.11.2
+
     :return: a dictionary having the following keys:
 
-    * result (bool): if the config was applied successfully. It is ``False`` only in case of failure. In case
-    there are no changes to be applied and successfully performs all operations it is still ``True`` and so will be
+    * result (bool): if the config was applied successfully. It is ``False`` only in case of failure. In case \
+    there are no changes to be applied and successfully performs all operations it is still ``True`` and so will be \
     the ``already_configured`` flag (example below)
     * comment (str): a message for the user
     * already_configured (bool): flag to check if there were no changes applied
+    * loaded_config (str): the configuration loaded on the device. Requires ``debug`` to be set as ``True``
     * diff (str): returns the config changes applied
 
     CLI Example:
@@ -775,7 +832,6 @@ def load_config(filename=None, text=None, test=False, commit=True, replace=False
     Example output:
 
     .. code-block:: python
-
         {
             'comment': 'Configuration discarded.',
             'already_configured': False,
@@ -787,7 +843,6 @@ def load_config(filename=None, text=None, test=False, commit=True, replace=False
     fun = 'load_merge_candidate'
     if replace:
         fun = 'load_replace_candidate'
-
     _loaded = __proxy__['napalm.call'](
         fun,
         **{
@@ -795,43 +850,184 @@ def load_config(filename=None, text=None, test=False, commit=True, replace=False
             'config': text
         }
     )
-
-    return _config_logic(_loaded, test=test, commit_config=commit)
+    loaded_config = None
+    if debug:
+        if filename:
+            loaded_config = open(filename).read()
+        else:
+            loaded_config = text
+    return _config_logic(_loaded,
+                         test=test,
+                         commit_config=commit,
+                         loaded_config=loaded_config)
 
 
 def load_template(template_name,
                   template_source=None,
                   template_path=None,
+                  template_hash=None,
+                  template_hash_name=None,
+                  template_user='root',
+                  template_group='root',
+                  template_mode='755',
+                  saltenv=None,
+                  template_engine='jinja',
+                  skip_verify=True,
+                  defaults=None,
                   test=False,
                   commit=True,
+                  debug=False,
                   replace=False,
                   **template_vars):
-
     '''
-    Renders a configuration template (Jinja) and loads the result on the device.
+    Renders a configuration template (default: Jinja) and loads the result on the device.
 
-    By default will commit the changes. To force a dry run, set ``test=True``.
+    By default this function will commit the changes. If there are no changes,
+    it does not commit, discards he config and the flag ``already_configured``
+    will be set as ``True`` to point this out.
 
-    :param template_name: Identifies the template name.
-    :param template_source (optional): Inline config template to be rendered and loaded on the device.
-    :param template_path (optional): Specifies the absolute path to a different directory for the configuration \
-    templates. If not specified, by default will use the default templates defined in NAPALM.
-    :param test: Dry run? If set to ``True``, will apply the config, discard and return the changes. Default: ``False``\
-    and will commit the changes on the device.
-    :param commit: Commit? (default: ``True``) Sometimes it is not needed to commit the config immediately \
-                   after loading the changes. E.g.: a state loads a couple of parts (add / remove / update) \
-                   and would not be optimal to commit after each operation. \
-                   Also, from the CLI when the user needs to apply the similar changes before committing, \
-                   can specify ``commit=False`` and will not discard the config.
-    :param replace: Load and replace the configuration.
-    :param template_vars: Dictionary with the arguments to be used when the template is rendered.
+    To avoid committing the configuration, set the argument ``test`` to ``True``
+    and will discard (dry run).
+
+    To preserve the chnages, set ``commit`` to ``False``.
+    However, this is recommended to be used only in exceptional cases
+    when there are applied few consecutive states
+    and/or configuration changes.
+    Otherwise the user might forget that the config DB is locked
+    and the candidate config buffer is not cleared/merged in the running config.
+
+    To replace the config, set ``replace`` to ``True``.
+
+    template_name
+        Identifies path to the template source.
+        The template can be either stored on the local machine, either remotely.
+        The recommended location is under the ``file_roots``
+        as specified in the master config file.
+        For example, let's suppose the ``file_roots`` is configured as:
+
+        .. code-block:: yaml
+
+            file_roots:
+                base:
+                    - /etc/salt/states
+
+        Placing the template under ``/etc/salt/states/templates/example.jinja``,
+        it can be used as ``salt://templates/example.jinja``.
+        Alternatively, for local files, the user can specify the abolute path.
+        If remotely, the source can be retrieved via ``http``, ``https`` or ``ftp``.
+
+        Examples:
+
+        - ``salt://my_template.jinja``
+        - ``/absolute/path/to/my_template.jinja``
+        - ``http://example.com/template.cheetah``
+        - ``https:/example.com/template.mako``
+        - ``ftp://example.com/template.py``
+
+    template_source: None
+        Inline config template to be rendered and loaded on the device.
+
+    template_path: None
+        Required only in case the argument ``template_name`` provides only the file basename
+        when referencing a local template using the absolute path.
+        E.g.: if ``template_name`` is specified as ``my_template.jinja``,
+        in order to find the template, this argument must be provided:
+        ``template_path: /absolute/path/to/``.
+
+    template_hash: None
+        Hash of the template file. Format: ``{hash_type: 'md5', 'hsum': <md5sum>}``
+
+        .. versionadded:: 2016.11.2
+
+    template_hash_name: None
+        When ``template_hash`` refers to a remote file,
+        this specifies the filename to look for in that file.
+
+        .. versionadded:: 2016.11.2
+
+    template_group: root
+        Owner of file.
+
+        .. versionadded:: 2016.11.2
+
+    template_user: root
+        Group owner of file.
+
+        .. versionadded:: 2016.11.2
+
+    template_user: 755
+        Permissions of file.
+
+        .. versionadded:: 2016.11.2
+
+    saltenv: base
+        Specifies the template environment.
+        This will influence the relative imports inside the templates.
+
+        .. versionadded:: 2016.11.2
+
+    template_engine: jinja
+        The following templates engines are supported:
+
+        - :mod:`cheetah<salt.renderers.cheetah>`
+        - :mod:`genshi<salt.renderers.genshi>`
+        - :mod:`jinja<salt.renderers.jinja>`
+        - :mod:`mako<salt.renderers.mako>`
+        - :mod:`py<salt.renderers.py>`
+        - :mod:`wempy<salt.renderers.wempy>`
+
+        .. versionadded:: 2016.11.2
+
+    skip_verify: True
+        If ``True``, hash verification of remote file sources
+        (``http://``, ``https://``, ``ftp://``) will be skipped,
+        and the ``source_hash`` argument will be ignored.
+
+        .. versionadded:: 2016.11.2
+
+    test: False
+        Dry run? If set to ``True``, will apply the config,
+        discard and return the changes.
+        Default: ``False`` and will commit the changes on the device.
+
+    commit: True
+        Commit? (default: ``True``)
+
+    debug: False
+        Debug mode. Will insert a new key under the output dictionary,
+        as ``loaded_config`` contaning the raw result after the template was rendered.
+
+        .. versionadded:: 2016.11.2
+
+    replace: False
+        Load and replace the configuration.
+
+        .. versionadded:: 2016.11.2
+
+    defaults: None
+        Default variables/context passed to the template.
+
+        .. versionadded:: 2016.11.2
+
+    **template_vars
+        Dictionary with the arguments/context to be used when the template is rendered.
+
+        .. note::
+
+            Do not explicitely specify this argument.
+            This represents any other variable that will be sent
+            to the template rendering system.
+            Please see the examples below!
+
     :return: a dictionary having the following keys:
 
     * result (bool): if the config was applied successfully. It is ``False`` only in case of failure. In case \
-    there are no changes to be applied and successfully performs all operations it is still `True` and so will be \
+    there are no changes to be applied and successfully performs all operations it is still ``True`` and so will be \
     the ``already_configured`` flag (example below)
     * comment (str): a message for the user
     * already_configured (bool): flag to check if there were no changes applied
+    * loaded_config (str): the configuration loaded on the device, after rendering the template. Requires ``debug`` \
+    to be set as ``True``
     * diff (str): returns the config changes applied
 
     The template can use variables from the ``grains``, ``pillar`` or ``opts``, for example:
@@ -840,22 +1036,50 @@ def load_template(template_name,
 
         {% set router_model = grains.get('model') -%}
         {% set router_vendor = grains.get('vendor') -%}
+        {% set os_version = grains.get('version') -%}
         {% set hostname = pillar.get('proxy', {}).get('host') -%}
         {% if router_vendor|lower == 'juniper' %}
         system {
             host-name {{hostname}};
         }
+        {% elif router_vendor|lower == 'cisco' %}
+        hostname {{hostname}}
         {% endif %}
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' net.load_template ntp_peers peers=[192.168.0.1]  # uses NAPALM default templates
-        salt '*' net.load_template set_hostname template_source='system { domain-name {{domain_name}}; }'
-        domain_name='test.com'
+        salt '*' net.load_template set_ntp_peers peers=[192.168.0.1]  # uses NAPALM default templates
+
+        # inline template:
+        salt -G 'os:junos' net.load_template set_hostname template_source='system { host-name {{host_name}}; }' \
+        host_name='MX480.lab'
+
+        # inline template using grains info:
+        salt -G 'os:junos' net.load_template set_hostname \
+        template_source='system { host-name {{grains.model}}.lab; }'
+        # if the device is a MX480, the command above will set the hostname as: MX480.lab
+
+        # inline template using pillar data:
+        salt -G 'os:junos' net.load_template set_hostname template_source='system { host-name {{pillar.proxy.host}}; }'
+
         salt '*' net.load_template my_template template_path='/tmp/tpl/' my_param='aaa'  # will commit
         salt '*' net.load_template my_template template_path='/tmp/tpl/' my_param='aaa' test=True  # dry run
+
+        salt '*' net.load_template salt://templates/my_stuff.jinja debug=True  # equivalent of the next command
+        salt '*' net.load_template my_stuff.jinja template_path=salt://templates/ debug=True
+
+        # in case the template needs to include files that are not under the same path (e.g. http://),
+        # to help the templating engine find it, you will need to specify the `saltenv` argument:
+        salt '*' net.load_template my_stuff.jinja template_path=salt://templates saltenv=/path/to/includes debug=True
+
+        # render a mako template:
+        salt '*' net.load_template salt://templates/my_stuff.mako template_engine=mako debug=True
+
+        # render remote template
+        salt -G 'os:junos' net.load_template http://bit.ly/2fReJg7 test=True debug=True peers=['192.168.0.1']
+        salt -G 'os:ios' net.load_template http://bit.ly/2gKOj20 test=True debug=True peers=['192.168.0.1']
 
     Example output:
 
@@ -865,30 +1089,150 @@ def load_template(template_name,
             'comment': '',
             'already_configured': False,
             'result': True,
-            'diff': '[edit system]+  host-name edge01.bjm01'
+            'diff': '[edit system]+  host-name edge01.bjm01',
+            'loaded_config': 'system { host-name edge01.bjm01; }''
         }
     '''
+    _rendered = ''
+    _loaded = {
+        'result': True,
+        'comment': '',
+        'out': None
+    }
+    loaded_config = None
 
-    load_templates_params = template_vars.copy()  # to leave the template_vars unchanged
-    load_templates_params.update(
-        {
-            'template_name': template_name,
-            'template_source': template_source,  # inline template
-            'template_path': template_path,
-            'replace': replace,  # to load_replace_candidate after the template is rendered
-            'pillar': __pillar__,  # inject pillar content, accessible as `pillar`
-            'grains': __grains__,  # inject grains, accessible as `grains`
-            'opts': __opts__  # inject opts, accessible as `opts`
-        }
-    )
+    # prechecks
+    if template_engine not in salt.utils.templates.TEMPLATE_REGISTRY:
+        _loaded.update({
+            'result': False,
+            'comment': 'Invalid templating engine! Choose between: {tpl_eng_opts}'.format(
+                tpl_eng_opts=', '.join(list(salt.utils.templates.TEMPLATE_REGISTRY.keys()))
+            )
+        })
+        return _loaded  # exit
 
-    _loaded = __proxy__['napalm.call']('load_template',
-                                       **load_templates_params
-                                       )
+    # to check if will be rendered by salt or NAPALM
+    salt_render_prefixes = ('salt://', 'http://', 'https://', 'ftp://')
+    salt_render = False
+    for salt_render_prefix in salt_render_prefixes:
+        if not salt_render:
+            salt_render = salt_render or template_name.startswith(salt_render_prefix) or \
+                          (template_path and template_path.startswith(salt_render_prefix))
+    file_exists = __salt__['file.file_exists'](template_name)
+
+    if template_source or template_path or file_exists or salt_render:
+        # either inline template
+        # either template in a custom path
+        # either abs path send
+        # either starts with salt:// and
+        # then use Salt render system
+
+        # if needed to render the template send as inline arg
+        if template_source:
+            # render the content
+            if not saltenv:
+                saltenv = template_path if template_path else 'base'  # either use the env from the path, either base
+            _rendered = __salt__['file.apply_template_on_contents'](
+                contents=template_source,
+                template=template_engine,
+                context=template_vars,
+                defaults=defaults,
+                saltenv=saltenv
+            )
+            if not isinstance(_rendered, six.string_types):
+                if 'result' in _rendered:
+                    _loaded['result'] = _rendered['result']
+                else:
+                    _loaded['result'] = False
+                if 'comment' in _rendered:
+                    _loaded['comment'] = _rendered['comment']
+                else:
+                    _loaded['comment'] = 'Error while rendering the template.'
+                return _loaded
+        else:
+            if template_path and not file_exists:
+                template_name = __salt__['file.join'](template_path, template_name)
+                if not saltenv:
+                    # no saltenv overriden
+                    # use the custom template path
+                    saltenv = template_path if not salt_render else 'base'
+            elif salt_render and not saltenv:
+                # if saltenv not overrided and path specified as salt:// or http:// etc.
+                # will use the default environment, from the base
+                saltenv = template_path if template_path else 'base'
+            if not saltenv:
+                # still not specified, default to `base`
+                saltenv = 'base'
+            # render the file - either local, either remote
+            _rand_filename = __salt__['random.hash'](template_name, 'md5')
+            _temp_file = __salt__['file.join']('/tmp', _rand_filename)
+            _managed = __salt__['file.get_managed'](name=_temp_file,
+                                                    source=template_name,  # abs path
+                                                    source_hash=template_hash,
+                                                    source_hash_name=template_hash_name,
+                                                    user=template_user,
+                                                    group=template_group,
+                                                    mode=template_mode,
+                                                    template=template_engine,
+                                                    context=template_vars,
+                                                    defaults=defaults,
+                                                    saltenv=saltenv,
+                                                    skip_verify=skip_verify)
+            if not isinstance(_managed, (list, tuple)) and isinstance(_managed, six.string_types):
+                _loaded['comment'] = _managed
+                _loaded['result'] = False
+            elif isinstance(_managed, (list, tuple)) and not len(_managed) > 0:
+                _loaded['result'] = False
+                _loaded['comment'] = 'Error while rendering the template.'
+            elif isinstance(_managed, (list, tuple)) and not len(_managed[0]) > 0:
+                _loaded['result'] = False
+                _loaded['comment'] = _managed[-1]  # contains the error message
+            if _loaded['result']:  # all good
+                _temp_tpl_file = _managed[0]
+                _temp_tpl_file_exists = __salt__['file.file_exists'](_temp_tpl_file)
+                if not _temp_tpl_file_exists:
+                    _loaded['result'] = False
+                    _loaded['comment'] = 'Error while rendering the template.'
+                    return _loaded
+                _rendered = open(_temp_tpl_file).read()
+                __salt__['file.remove'](_temp_tpl_file)
+            else:
+                return _loaded  # exit
+
+        if debug:  # all good, but debug mode required
+            # valid output and debug mode
+            loaded_config = _rendered
+        if _loaded['result']:  # all good
+            fun = 'load_merge_candidate'
+            if replace:  # replace requested
+                fun = 'load_replace_candidate'
+            _loaded = __proxy__['napalm.call'](
+                fun,
+                **{
+                    'config': _rendered
+                }
+            )
+    else:
+        # otherwise, use NAPALM render system, injecting pillar/grains/opts vars
+        load_templates_params = defaults if defaults else {}
+        load_templates_params.update(template_vars)
+        load_templates_params.update(
+            {
+                'template_name': template_name,
+                'template_source': template_source,  # inline template
+                'template_path': template_path,
+                'pillar': __pillar__,  # inject pillar content
+                'grains': __grains__,  # inject grains content
+                'opts': __opts__  # inject opts content
+            }
+        )
+        _loaded = __proxy__['napalm.call']('load_template',
+                                           **load_templates_params)
 
     return _config_logic(_loaded,
                          test=test,
-                         commit_config=commit)
+                         commit_config=commit,
+                         loaded_config=loaded_config)
 
 
 def commit():

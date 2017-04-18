@@ -20,7 +20,11 @@ import multiprocessing
 import traceback
 
 # Import third party libs
-from Crypto.PublicKey import RSA
+try:
+    from Cryptodome.PublicKey import RSA
+except ImportError:
+    # Fall back to pycrypto
+    from Crypto.PublicKey import RSA
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
@@ -400,7 +404,7 @@ class Master(SMaster):
         # Let's check to see how our max open files(ulimit -n) setting is
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
         if mof_h == resource.RLIM_INFINITY:
-            # Unclear what to do with infinity... OSX reports RLIM_INFINITY as
+            # Unclear what to do with infinity... macOS reports RLIM_INFINITY as
             # hard limit,but raising to anything above soft limit fails...
             mof_h = mof_s
         log.info(
@@ -433,7 +437,7 @@ class Master(SMaster):
                 )
             except ValueError:
                 # https://github.com/saltstack/salt/issues/1991#issuecomment-13025595
-                # A user under OSX reported that our 100000 default value is
+                # A user under macOS reported that our 100000 default value is
                 # still too high.
                 log.critical(
                     'Failed to raise max open files setting to {0}. If this '
@@ -1718,13 +1722,6 @@ class ClearFuncs(object):
                                    message=msg))
 
         name = self.loadauth.load_name(clear_load)
-        if not ((name in self.opts['external_auth'][clear_load['eauth']]) |
-                ('*' in self.opts['external_auth'][clear_load['eauth']])):
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
-                                   message=msg))
         if self.loadauth.time_auth(clear_load) is False:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
@@ -1888,9 +1885,9 @@ class ClearFuncs(object):
                     'user': username}
 
             self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-            ret = self.wheel_.call_func(fun, **clear_load)
-            data['return'] = ret
-            data['success'] = True
+            ret = self.wheel_.call_func(fun, full_return=True, **clear_load)
+            data['return'] = ret['return']
+            data['success'] = ret['success']
             self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
             return {'tag': tag,
                     'data': data}
@@ -1924,7 +1921,7 @@ class ClearFuncs(object):
             name = self.loadauth.load_name(clear_load)
             groups = self.loadauth.get_groups(clear_load)
             eauth_config = self.opts['external_auth'][clear_load['eauth']]
-            if '*' not in eauth_config and name not in eauth_config:
+            if '^model' not in eauth_config and '*' not in eauth_config and name not in eauth_config:
                 found = False
                 for group in groups:
                     if "{0}%".format(group) in eauth_config:
@@ -2024,7 +2021,7 @@ class ClearFuncs(object):
                             break
             except KeyError:
                 pass
-            if '*' not in eauth_users and token['name'] not in eauth_users \
+            if '^model' not in eauth_users and '*' not in eauth_users and token['name'] not in eauth_users \
                 and not group_auth_match:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''

@@ -109,10 +109,10 @@ Install Salt (and dependencies) into the virtualenv:
 .. _`Fedora Linux`: http://fedoraproject.org/
 .. _`Amazon Linux`: https://aws.amazon.com/amazon-linux-ami/
 
-.. note:: Installing dependencies on OS X.
+.. note:: Installing dependencies on macOS.
 
-    You can install needed dependencies on OS X using homebrew or macports.
-    See :doc:`OS X Installation </topics/installation/osx>`
+    You can install needed dependencies on macOS using homebrew or macports.
+    See :ref:`macOS Installation <macos-installation>`
 
 .. warning:: Installing on RedHat-based Distros
 
@@ -127,11 +127,15 @@ During development it is easiest to be able to run the Salt master and minion
 that are installed in the virtualenv you created above, and also to have all
 the configuration, log, and cache files contained in the virtualenv as well.
 
+The ``/path/to/your/virtualenv`` referenced multiple times below is also
+available in the variable ``$VIRTUAL_ENV`` once the virtual environment is
+activated.
+
 Copy the master and minion config files into your virtualenv:
 
 .. code-block:: bash
 
-    mkdir -p /path/to/your/virtualenv/etc/salt
+    mkdir -p /path/to/your/virtualenv/etc/salt/pki/{master,minion}
     cp ./salt/conf/master ./salt/conf/minion /path/to/your/virtualenv/etc/salt/
 
 Edit the master config file:
@@ -139,28 +143,32 @@ Edit the master config file:
 1.  Uncomment and change the ``user: root`` value to your own user.
 2.  Uncomment and change the ``root_dir: /`` value to point to
     ``/path/to/your/virtualenv``.
-3.  If you are running version 0.11.1 or older, uncomment, and change the
+3.  Uncomment and change the ``pki: /etc/salt/pki/master`` value to point to
+    ``/path/to/your/virtualenv/etc/salt/pki/master``
+4.  If you are running version 0.11.1 or older, uncomment, and change the
     ``pidfile: /var/run/salt-master.pid`` value to point to
     ``/path/to/your/virtualenv/salt-master.pid``.
-4.  If you are also running a non-development version of Salt you will have to
+5.  If you are also running a non-development version of Salt you will have to
     change the ``publish_port`` and ``ret_port`` values as well.
 
 Edit the minion config file:
 
 1.  Repeat the edits you made in the master config for the ``user`` and
     ``root_dir`` values as well as any port changes.
-2.  If you are running version 0.11.1 or older, uncomment, and change the
+2.  Uncomment and change the ``pki: /etc/salt/pki/minion`` value to point to
+    ``/path/to/your/virtualenv/etc/salt/pki/minion``
+3.  If you are running version 0.11.1 or older, uncomment, and change the
     ``pidfile: /var/run/salt-minion.pid`` value to point to
     ``/path/to/your/virtualenv/salt-minion.pid``.
-3.  Uncomment and change the ``master: salt`` value to point at ``localhost``.
-4.  Uncomment and change the ``id:`` value to something descriptive like
+4.  Uncomment and change the ``master: salt`` value to point at ``localhost``.
+5.  Uncomment and change the ``id:`` value to something descriptive like
     "saltdev". This isn't strictly necessary but it will serve as a reminder of
     which Salt installation you are working with.
-5.  If you changed the ``ret_port`` value in the master config because you are
+6.  If you changed the ``ret_port`` value in the master config because you are
     also running a non-development version of Salt, then you will have to
     change the ``master_port`` value in the minion config to match.
 
-.. note:: Using `salt-call` with a :doc:`Standalone Minion </topics/tutorials/standalone_minion>`
+.. note:: Using `salt-call` with a :ref:`Standalone Minion <tutorial-standalone-minion>`
 
     If you plan to run `salt-call` with this self-contained development
     environment in a masterless setup, you should invoke `salt-call` with
@@ -221,8 +229,8 @@ If you would like to log to the console instead of to the log file, remove the
         # use 'limit descriptors 2047' for c-shell
         ulimit -n 2047
 
-    To set file descriptors on OSX, refer to the :doc:`OS X Installation
-    </topics/installation/osx>` instructions.
+    To set file descriptors on macOS, refer to the :ref:`macOS Installation
+    <macos-installation>` instructions.
 
 
 Changing Default Paths
@@ -243,10 +251,10 @@ You can now call all of Salt's CLI tools without explicitly passing the configur
 Additional Options
 ..................
 
-In case you want to distribute your virtualenv, you probably don't want to
-include Salt's clone ``.git/`` directory, and, without it, Salt won't report
-the accurate version. You can tell ``setup.py`` to generate the hardcoded
-version information which is distributable:
+If you want to distribute your virtualenv, you probably don't want to include
+Salt's clone ``.git/`` directory, and, without it, Salt won't report the
+accurate version. You can tell ``setup.py`` to generate the hardcoded version
+information which is distributable:
 
 .. code-block:: bash
 
@@ -337,7 +345,7 @@ Run the test suite with following command:
 
     ./setup.py test
 
-See :doc:`here <tests/index>` for more information regarding the test suite.
+See :ref:`here <salt-test-suite>` for more information regarding the test suite.
 
 Issue and Pull Request Labeling System
 --------------------------------------

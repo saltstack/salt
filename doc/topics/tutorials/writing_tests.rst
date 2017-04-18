@@ -8,7 +8,7 @@ Salt's Test Suite: An Introduction
 
     This tutorial makes a couple of assumptions. The first assumption is that
     you have a basic knowledge of Salt. To get up to speed, check out the
-    :ref:`Salt Walkthrough </topics/tutorials/walkthrough>`.
+    :ref:`Salt Walkthrough <tutorial-salt-walk-through>`.
 
     The second assumption is that your Salt development environment is already
     configured and that you have a basic understanding of contributing to the
@@ -44,14 +44,14 @@ depending on your relevant version of Python:
 
 To be able to run integration tests which utilizes ZeroMQ transport, you also
 need to install additional requirements for it. Make sure you have installed
-the C compiler and development libraries and header files needed for your
+the C/C++ compiler and development libraries and header files needed for your
 Python version.
 
 This is an example for RedHat-based operating systems:
 
 .. code-block:: bash
 
-    yum install gcc python-devel
+    yum install gcc gcc-c++ python-devel
     pip install -r requirements/zeromq.txt
 
 On Debian, Ubuntu or their derivatives run the following commands:
@@ -338,7 +338,7 @@ call should return.
                 alias='fred')
         self.assertEqual(tgt_ret, 'bob')
 
-Using multiple Salt commands in this manor provides two useful benefits. The first is
+Using multiple Salt commands in this manner provides two useful benefits. The first is
 that it provides some additional coverage for the ``aliases.set_target`` function.
 The second benefit is the call to ``aliases.get_target`` is not dependent on the
 presence of any aliases set outside of this test. Tests should not be dependent on

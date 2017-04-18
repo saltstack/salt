@@ -216,7 +216,7 @@ def _ppid():
     '''
     ret = {}
     if __grains__['kernel'] == 'SunOS':
-        cmd = 'ps -a -o pid,ppid | tail -n+2'
+        cmd = 'ps -a -o pid,ppid | tail +2'
     else:
         cmd = 'ps -ax -o pid,ppid | tail -n+2'
     out = __salt__['cmd.run'](cmd, python_shell=True)
@@ -308,10 +308,11 @@ def _netstat_sunos():
     Return netstat information for SunOS flavors
     '''
     log.warning('User and program not (yet) supported on SunOS')
+
     ret = []
     for addr_family in ('inet', 'inet6'):
         # Lookup TCP connections
-        cmd = 'netstat -f {0} -P tcp -an | tail -n+5'.format(addr_family)
+        cmd = 'netstat -f {0} -P tcp -an | tail +5'.format(addr_family)
         out = __salt__['cmd.run'](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
@@ -323,7 +324,7 @@ def _netstat_sunos():
                 'remote-address': comps[1],
                 'state': comps[6]})
         # Lookup UDP connections
-        cmd = 'netstat -f {0} -P udp -an | tail -n+5'.format(addr_family)
+        cmd = 'netstat -f {0} -P udp -an | tail +5'.format(addr_family)
         out = __salt__['cmd.run'](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
@@ -332,6 +333,53 @@ def _netstat_sunos():
                 'local-address': comps[0],
                 'remote-address': comps[1] if len(comps) > 2 else ''})
 
+    return ret
+
+
+def _netstat_aix():
+    '''
+    Return netstat information for SunOS flavors
+    '''
+    ret = []
+    ## AIX 6.1 - 7.2, appears to ignore addr_family field contents
+    ## for addr_family in ('inet', 'inet6'):
+    for addr_family in ('inet',):
+        # Lookup connections
+        cmd = 'netstat -n -a -f {0} | tail -n +3'.format(addr_family)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
+        for line in out.splitlines():
+            comps = line.split()
+            if len(comps) < 5:
+                continue
+
+            proto_seen = None
+            tcp_flag = True
+            if 'tcp' == comps[0] or 'tcp4' == comps[0]:
+                proto_seen = 'tcp'
+            elif 'tcp6' == comps[0]:
+                proto_seen = 'tcp6'
+            elif 'udp' == comps[0] or 'udp4' == comps[0]:
+                proto_seen = 'udp'
+                tcp_flag = False
+            elif 'udp6' == comps[0]:
+                proto_seen = 'udp6'
+                tcp_flag = False
+
+            if tcp_flag:
+                if len(comps) >= 6:
+                    ret.append({
+                        'proto': proto_seen,
+                        'recv-q': comps[1],
+                        'send-q': comps[2],
+                        'local-address': comps[3],
+                        'remote-address': comps[4],
+                        'state': comps[5]})
+            else:
+                if len(comps) >= 5:
+                    ret.append({
+                        'proto': proto_seen,
+                        'local-address': comps[3],
+                        'remote-address': comps[4]})
     return ret
 
 
@@ -378,7 +426,7 @@ def _netstat_route_linux():
 
 def _netstat_route_freebsd():
     '''
-    Return netstat routing information for FreeBSD and OS X
+    Return netstat routing information for FreeBSD and macOS
     '''
     ret = []
     cmd = 'netstat -f inet -rn | tail -n+5'
@@ -480,7 +528,7 @@ def _netstat_route_sunos():
     Return netstat routing information for SunOS
     '''
     ret = []
-    cmd = 'netstat -f inet -rn | tail -n+5'
+    cmd = 'netstat -f inet -rn | tail +5'
     out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
@@ -491,7 +539,37 @@ def _netstat_route_sunos():
             'netmask': '',
             'flags': comps[2],
             'interface': comps[5] if len(comps) >= 6 else ''})
-    cmd = 'netstat -f inet6 -rn | tail -n+5'
+    cmd = 'netstat -f inet6 -rn | tail +5'
+    out = __salt__['cmd.run'](cmd, python_shell=True)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet6',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': '',
+            'flags': comps[2],
+            'interface': comps[5] if len(comps) >= 6 else ''})
+    return ret
+
+
+def _netstat_route_aix():
+    '''
+    Return netstat routing information for AIX
+    '''
+    ret = []
+    cmd = 'netstat -f inet -rn | tail -n +5'
+    out = __salt__['cmd.run'](cmd, python_shell=True)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': '',
+            'flags': comps[2],
+            'interface': comps[5] if len(comps) >= 6 else ''})
+    cmd = 'netstat -f inet6 -rn | tail -n +5'
     out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
@@ -519,6 +597,9 @@ def netstat():
     .. versionchanged:: 2015.8.0
         Added support for SunOS
 
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     CLI Example:
 
     .. code-block:: bash
@@ -531,6 +612,8 @@ def netstat():
         return _netstat_bsd()
     elif __grains__['kernel'] == 'SunOS':
         return _netstat_sunos()
+    elif __grains__['kernel'] == 'AIX':
+        return _netstat_aix()
     raise CommandExecutionError('Not yet supported on this platform')
 
 
@@ -565,6 +648,21 @@ def active_tcp():
                 'remote_port': '.'.join(connection['remote-address'].split('.')[-1:])
             }
         return ret
+    elif __grains__['kernel'] == 'AIX':
+        # lets use netstat to mimic linux as close as possible
+        ret = {}
+        for connection in _netstat_aix():
+            if not connection['proto'].startswith('tcp'):
+                continue
+            if connection['state'] != 'ESTABLISHED':
+                continue
+            ret[len(ret)+1] = {
+                'local_addr': '.'.join(connection['local-address'].split('.')[:-1]),
+                'local_port': '.'.join(connection['local-address'].split('.')[-1:]),
+                'remote_addr': '.'.join(connection['remote-address'].split('.')[:-1]),
+                'remote_port': '.'.join(connection['remote-address'].split('.')[-1:])
+            }
+        return ret
     else:
         return {}
 
@@ -575,6 +673,9 @@ def traceroute(host):
 
     .. versionchanged:: 2015.8.0
         Added support for SunOS
+
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
 
     CLI Example:
 
@@ -592,7 +693,7 @@ def traceroute(host):
     out = __salt__['cmd.run'](cmd)
 
     # Parse version of traceroute
-    if salt.utils.is_sunos():
+    if salt.utils.is_sunos() or salt.utils.is_aix():
         traceroute_version = [0, 0, 0]
     else:
         cmd2 = 'traceroute --version'
@@ -625,8 +726,21 @@ def traceroute(host):
         if line.startswith('traceroute'):
             continue
 
+        if salt.utils.is_aix():
+            if line.startswith('trying to get source for'):
+                continue
+
+            if line.startswith('source should be'):
+                continue
+
+            if line.startswith('outgoing MTU'):
+                continue
+
+            if line.startswith('fragmentation required'):
+                continue
+
         if 'Darwin' in str(traceroute_version[1]) or 'FreeBSD' in str(traceroute_version[1]) or \
-            __grains__['kernel'] == 'SunOS':
+            __grains__['kernel'] in ('SunOS', 'AIX'):
             try:
                 traceline = re.findall(r'\s*(\d*)\s+(.*)\s+\((.*)\)\s+(.*)$', line)[0]
             except IndexError:
@@ -728,8 +842,13 @@ def arp():
             if comps[0] == 'Host' or comps[1] == '(incomplete)':
                 continue
             ret[comps[1]] = comps[0]
+        elif __grains__['kernel'] == 'AIX':
+            if comps[0] in ('bucket', 'There'):
+                continue
+            ret[comps[3]] = comps[1].strip('(').strip(')')
         else:
             ret[comps[3]] = comps[1].strip('(').strip(')')
+
     return ret
 
 
@@ -1297,6 +1416,9 @@ def routes(family=None):
     .. versionchanged:: 2015.8.0
         Added support for SunOS (Solaris 10, Illumos, SmartOS)
 
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     CLI Example:
 
     .. code-block:: bash
@@ -1316,6 +1438,8 @@ def routes(family=None):
         routes_ = _netstat_route_netbsd()
     elif __grains__['os'] in ['OpenBSD']:
         routes_ = _netstat_route_openbsd()
+    elif __grains__['os'] in ['AIX']:
+        routes_ = _netstat_route_aix()
     else:
         raise CommandExecutionError('Not yet supported on this platform')
 
@@ -1333,6 +1457,9 @@ def default_route(family=None):
     .. versionchanged:: 2015.8.0
         Added support for SunOS (Solaris 10, Illumos, SmartOS)
 
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     CLI Example:
 
     .. code-block:: bash
@@ -1349,7 +1476,7 @@ def default_route(family=None):
         default_route['inet'] = ['0.0.0.0', 'default']
         default_route['inet6'] = ['::/0', 'default']
     elif __grains__['os'] in ['FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS', 'Darwin'] or \
-        __grains__['kernel'] == 'SunOS':
+        __grains__['kernel'] in ('SunOS', 'AIX'):
         default_route['inet'] = ['default']
         default_route['inet6'] = ['default']
     else:
@@ -1379,6 +1506,9 @@ def get_route(ip):
     .. versionchanged:: 2015.8.0
         Added support for SunOS (Solaris 10, Illumos, SmartOS)
         Added support for OpenBSD
+
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
 
     CLI Example::
 
@@ -1465,6 +1595,39 @@ def get_route(ip):
 
         return ret
 
+    if __grains__['kernel'] == 'AIX':
+        # root@la68pp002_pub:~# route -n get 172.29.149.95
+        #   route to: 172.29.149.95
+        #destination: 172.29.149.95
+        #    gateway: 127.0.0.1
+        #  interface: lo0
+        #interf addr: 127.0.0.1
+        #     flags: <UP,GATEWAY,HOST,DONE,STATIC>
+        #recvpipe  sendpipe  ssthresh  rtt,msec    rttvar  hopcount      mtu     expire
+        #      0         0         0         0         0         0         0    -68642
+        cmd = 'route -n get {0}'.format(ip)
+        out = __salt__['cmd.run'](cmd, python_shell=False)
+
+        ret = {
+            'destination': ip,
+            'gateway': None,
+            'interface': None,
+            'source': None
+        }
+
+        for line in out.splitlines():
+            line = line.split(':')
+            if 'route to' in line[0]:
+                ret['destination'] = line[1].strip()
+            if 'gateway' in line[0]:
+                ret['gateway'] = line[1].strip()
+            if 'interface' in line[0]:
+                ret['interface'] = line[1].strip()
+            if 'interf addr' in line[0]:
+                ret['source'] = line[1].strip()
+
+        return ret
+
     else:
         raise CommandExecutionError('Not yet supported on this platform')
 
@@ -1489,7 +1652,10 @@ def ifacestartswith(cidr):
         if 'inet' in ifval:
             for inet in ifval['inet']:
                 if inet['address'][0:size] == pattern:
-                    intfnames.append(inet['label'])
+                    if 'label' in inet:
+                        intfnames.append(inet['label'])
+                    else:
+                        intfnames.append(ifname)
     return intfnames
 
 

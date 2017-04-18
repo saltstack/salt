@@ -828,6 +828,23 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval'})
 
+    def test_append_convert_to_list_empty(self):
+        # Append to an existing list
+        self.setGrains({'foo': None})
+        ret = grains.append(
+            name='foo',
+            value='baz',
+            convert=True)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value baz was added to grain foo')
+        self.assertEqual(ret['changes'], {'added': 'baz'})
+        self.assertEqual(
+            grains.__grains__,
+            {'foo': ['baz']})
+        self.assertGrainFileContent("foo:\n"
+                                  + "- baz\n"
+        )
+
     # 'list_present' function tests: 7
 
     def test_list_present(self):

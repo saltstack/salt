@@ -217,7 +217,6 @@ pseudoxml: translations
 	@echo
 	@echo "Build finished. The pseudo-XML files are in $(BUILDDIR)/pseudoxml."
 
-
 translations:
 	@if [ "$(SPHINXLANG)" = "en" ] || [ "x$(SPHINXLANG)" = "x" ]; then \
 		echo "No need to update translations. Skipping..."; \

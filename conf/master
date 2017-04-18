@@ -127,8 +127,20 @@
 # the jobs system and is not generally recommended.
 #job_cache: True
 
-# Cache minion grains and pillar data in the cachedir.
+# Cache minion grains, pillar and mine data via the cache subsystem in the
+# cachedir or a database.
 #minion_data_cache: True
+
+# Cache subsystem module to use for minion data cache.
+#cache: localfs
+# Enables a fast in-memory cache booster and sets the expiration time.
+#memcache_expire_seconds: 0
+# Set a memcache limit in items (bank + key) per cache storage (driver + driver_opts).
+#memcache_max_items: 1024
+# Each time a cache storage got full cleanup all the expired items not just the oldest one.
+#memcache_full_cleanup: False
+# Enable collecting the memcache stats and log it on `debug` log level.
+#memcache_debug: False
 
 # Store all returns in the given returner.
 # Setting this option requires that any returner-specific configuration also
@@ -233,6 +245,9 @@
 
 # Set the ZeroMQ high water marks
 # http://api.zeromq.org/3-2:zmq-setsockopt
+
+# The listen queue size / backlog
+#zmq_backlog: 1000
 
 # The publisher interface ZeroMQPubServerChannel
 #pub_hwm: 1000
@@ -396,6 +411,17 @@
 
 # Pass in an alternative location for the salt-ssh roster file
 #roster_file: /etc/salt/roster
+
+# Define locations for roster files so they can be chosen when using Salt API.
+# An administrator can place roster files into these locations. Then when
+# calling Salt API, parameter 'roster_file' should contain a relative path to
+# these locations. That is, "roster_file=/foo/roster" will be resolved as
+# "/etc/salt/roster.d/foo/roster" etc. This feature prevents passing insecure
+# custom rosters through the Salt API.
+#
+#rosters:
+# - /etc/salt/roster.d
+# - /opt/salt/some/more/rosters
 
 # The log file of the salt-ssh command:
 #ssh_log_file: /var/log/salt/ssh
@@ -686,6 +712,11 @@
 # ext_pillar.
 #ext_pillar_first: False
 
+# The external pillars permitted to be used on-demand using pillar.ext
+#on_demand_ext_pillar:
+#  - libvirt
+#  - virtkey
+
 # The pillar_gitfs_ssl_verify option specifies whether to ignore ssl certificate
 # errors when contacting the pillar gitfs backend. You might want to set this to
 # false if you're using a git backend that uses a self-signed certificate but
@@ -851,6 +882,10 @@
 # will be iterated in random order. If ``ordered`` is specified, the configured
 # order will be used.
 #syndic_failover: random
+
+# The number of seconds for the salt client to wait for additional syndics to
+# check in with their lists of expected minions before giving up.
+#syndic_wait: 5
 
 
 #####      Peer Publish settings     #####

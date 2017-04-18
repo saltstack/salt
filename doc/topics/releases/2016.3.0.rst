@@ -1,4 +1,4 @@
-:orphan:
+.. _release-2016-3-0:
 
 ============================================
 Salt 2016.3.0 Release Notes - Codename Boron
@@ -88,7 +88,7 @@ External Module Packaging
 =========================
 
 Modules may now be packaged via entry-points in setuptools. See
-:doc:`external module packaging </topics/tutorials/packaging_modules>` tutorial
+:ref:`external module packaging <tutorial-packaging-modules>` tutorial
 for more information.
 
 
@@ -107,7 +107,7 @@ Cloud Changes
 Platform Changes
 ================
 
-- Renamed modules related to OS X. The following module filenames were changed.
+- Renamed modules related to macOS. The following module filenames were changed.
   The virtual name remained unchanged.
 
 - **PR** `#30558`_: renamed osxdesktop.py to mac_desktop.py
@@ -351,7 +351,7 @@ Documentation of the Dimension Data SaltStack integration is found on `developer
 Minion Blackout
 ---------------
 During a blackout, minions will not execute any remote execution commands,
-except for :ref:`saltutil.refresh_pillar
+except for :mod:`saltutil.refresh_pillar
 <salt.modules.saltutil.refresh_pillar>`. Blackouts are enabled using a special
 pillar key, ``minion_blackout`` set to ``True``.
 

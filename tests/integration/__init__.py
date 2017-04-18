@@ -128,7 +128,7 @@ except ImportError:
             try:
                 cmdline = process.cmdline()
             except psutil.AccessDenied:
-                # OSX denies us access to the above information
+                # macOS denies us access to the above information
                 cmdline = None
             if not cmdline:
                 try:
@@ -614,7 +614,7 @@ class SaltDaemonScriptBase(SaltScriptBase, ShellTestCase):
                                 if exc.errno != errno.ENOTCONN:
                                     raise
                             except AttributeError:
-                                # This is not OSX !?
+                                # This is not macOS !?
                                 pass
                     del sock
                 elif isinstance(port, str):
@@ -801,7 +801,7 @@ class TestDaemon(object):
             )
             sys.stdout.flush()
             process.start()
-            process.wait_until_running(timeout=15)
+            process.wait_until_running(timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -1138,6 +1138,13 @@ class TestDaemon(object):
                 TMP_PRODENV_STATE_TREE
             ]
         }
+        master_opts.setdefault('reactor', []).append(
+            {
+                'salt/minion/*/start': [
+                    os.path.join(FILES, 'reactor-sync-minion.sls')
+                ],
+            }
+        )
         for opts_dict in (master_opts, syndic_master_opts):
             if 'ext_pillar' not in opts_dict:
                 opts_dict['ext_pillar'] = []
@@ -1863,14 +1870,14 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         except OSError:
             os.chdir(INTEGRATION_TEST_DIR)
 
-    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=30):  # pylint: disable=W0221
+    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
         '''
         Execute salt
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout)
 
-    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False, timeout=25):  # pylint: disable=W0221
+    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
         '''
         Execute salt-ssh
         '''
@@ -1885,7 +1892,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
                                                   arg_str,
                                                   timeout=timeout,
                                                   async_flag=' --async' if async else '')
-        return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
+        return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=60)
 
     def run_run_plus(self, fun, *arg, **kwargs):
         '''
@@ -1932,7 +1939,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
             arg_str,
             catch_stderr=catch_stderr,
             with_retcode=with_retcode,
-            timeout=30
+            timeout=60
         )
 
     def run_cp(self, arg_str, with_retcode=False, catch_stderr=False):
@@ -1940,16 +1947,16 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixi
         Execute salt-cp
         '''
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
+        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=60)
 
     def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
         Execute salt-call.
         '''
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=30)
+        return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=60)
 
-    def run_cloud(self, arg_str, catch_stderr=False, timeout=15):
+    def run_cloud(self, arg_str, catch_stderr=False, timeout=30):
         '''
         Execute salt-cloud
         '''

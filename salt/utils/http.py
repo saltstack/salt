@@ -198,7 +198,7 @@ def query(url,
     log_url = sanitize_url(url_full, hide_fields)
 
     log.debug('Requesting URL {0} using {1} method'.format(log_url, method))
-    if method == 'POST':
+    if method == 'POST' and log.isEnabledFor(logging.TRACE):
         # Make sure no secret fields show up in logs
         if isinstance(data, dict):
             log_data = data.copy()
@@ -537,7 +537,7 @@ def query(url,
         log.trace(('Cannot Trace Log Response Text: {0}. This may be due to '
                   'incompatibilities between requests and logging.').format(exc))
 
-    if text_out is not None and os.path.exists(text_out):
+    if text_out is not None:
         with salt.utils.fopen(text_out, 'w') as tof:
             tof.write(result_text)
 
@@ -762,7 +762,11 @@ def _render(template, render, renderer, template_dict, opts):
         rend = salt.loader.render(opts, {})
         blacklist = opts.get('renderer_blacklist')
         whitelist = opts.get('renderer_whitelist')
-        return compile_template(template, rend, renderer, blacklist, whitelist, **template_dict)
+        ret = compile_template(template, rend, renderer, blacklist, whitelist, **template_dict)
+        ret = ret.read()
+        if str(ret).startswith('#!') and not str(ret).startswith('#!/'):
+            ret = str(ret).split('\n', 1)[1]
+        return ret
     with salt.utils.fopen(template, 'r') as fh_:
         return fh_.read()
 

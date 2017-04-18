@@ -48,8 +48,6 @@ Core Changes
     salt '*' state.highstate mock=True
     salt '*' state.apply edit.vim mock=True
 
-.. _`#28994`: https://github.com/saltstack/salt/pull/28994
-
 Changes for v2015.8.3..v2015.8.4
 --------------------------------
 
@@ -515,7 +513,7 @@ Changes:
 
 - **PR** `#29317`_: (*basepi*) [2015.8] Merge forward from 2015.5 to 2015.8
 
-- **PR** `#29240`_: (*clan*) handle acl_type [[d]efault:][user|group|mask|other]
+- **PR** `#29240`_: (*clan*) handle acl_type ``[[d]efault:][user|group|mask|other]``
 
 - **PR** `#29305`_: (*lorengordon*) Add 'file' as a source_hash proto
 
@@ -578,11 +576,13 @@ Changes:
 - **PR** `#29178`_: (*whytewolf*) Profile not being passed to keystone.endpoint_get in _auth. so if a p…
 
 .. _`#19332`: https://github.com/saltstack/salt/issues/19332
+.. _`#24237`: https://github.com/saltstack/salt/issues/24237
 .. _`#29116`: https://github.com/saltstack/salt/issues/29116
 .. _`#29187`: https://github.com/saltstack/salt/issues/29187
 .. _`#23825`: https://github.com/saltstack/salt/pull/23825
 .. _`#26511`: https://github.com/saltstack/salt/pull/26511
 .. _`#26853`: https://github.com/saltstack/salt/pull/26853
+.. _`#26845`: https://github.com/saltstack/salt/issues/26845
 .. _`#26962`: https://github.com/saltstack/salt/pull/26962
 .. _`#27104`: https://github.com/saltstack/salt/pull/27104
 .. _`#27606`: https://github.com/saltstack/salt/pull/27606

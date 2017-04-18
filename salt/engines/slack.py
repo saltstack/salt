@@ -34,10 +34,10 @@ prefaced with a ``!``.
 # Import python libraries
 from __future__ import absolute_import
 import datetime
+import json
 import logging
 import time
 import re
-import json
 import yaml
 
 try:
@@ -224,5 +224,6 @@ def start(token,
                     else:
                         # Fire event to event bus
                         fire('{0}/{1}'.format(tag, _m['type']), _m)
+            time.sleep(1)
     else:
         raise UserWarning("Could not connect to slack")

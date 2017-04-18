@@ -72,16 +72,26 @@ def task_present(name,
     with salt.utils.fopen(script_path, 'r') as file:
         new_script = file.read().replace('\t', '    ')
 
-    if old_script == new_script:
+    is_up_to_date = task and (
+        old_script == new_script and
+        task_type == task['type'] and
+        task['dbrps'] == [{'db': database, 'rp': retention_policy}]
+    )
+
+    if is_up_to_date:
         comments.append('Task script is already up-to-date')
     else:
         if __opts__['test']:
             ret['result'] = None
             comments.append('Task would have been updated')
         else:
-            result = __salt__['kapacitor.define_task'](name, script_path,
-                task_type=task_type, database=database,
-                retention_policy=retention_policy)
+            result = __salt__['kapacitor.define_task'](
+                name,
+                script_path,
+                task_type=task_type,
+                database=database,
+                retention_policy=retention_policy
+            )
             ret['result'] = result['success']
             if not ret['result']:
                 comments.append('Could not define task')
@@ -89,11 +99,25 @@ def task_present(name,
                     comments.append(result['stderr'])
                 ret['comment'] = '\n'.join(comments)
                 return ret
-        ret['changes']['TICKscript diff'] = '\n'.join(difflib.unified_diff(
-            old_script.splitlines(),
-            new_script.splitlines(),
-        ))
-        comments.append('Task script updated')
+
+        if old_script != new_script:
+            ret['changes']['TICKscript diff'] = '\n'.join(difflib.unified_diff(
+                old_script.splitlines(),
+                new_script.splitlines(),
+            ))
+            comments.append('Task script updated')
+
+        if not task or task['type'] != task_type:
+            ret['changes']['type'] = task_type
+            comments.append('Task type updated')
+
+        if not task or task['dbrps'][0]['db'] != database:
+            ret['changes']['db'] = database
+            comments.append('Task database updated')
+
+        if not task or task['dbrps'][0]['rp'] != retention_policy:
+            ret['changes']['rp'] = retention_policy
+            comments.append('Task retention policy updated')
 
     if enable:
         if task and task['enabled']:

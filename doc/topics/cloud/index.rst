@@ -105,27 +105,28 @@ Cloud Provider Specifics
 
         Getting Started With Aliyun <aliyun>
         Getting Started With Azure <azure>
+        Getting Started With Azure Arm <azurearm>
         Getting Started With DigitalOcean <digitalocean>
+        Getting Started With Dimension Data <dimensiondata>
         Getting Started With EC2 <aws>
         Getting Started With GoGrid <gogrid>
         Getting Started With Google Compute Engine <gce>
         Getting Started With HP Cloud <hpcloud>
         Getting Started With Joyent <joyent>
-        Getting Started With LXC <lxc>
         Getting Started With Linode <linode>
+        Getting Started With LXC <lxc>
         Getting Started With OpenNebula <opennebula>
         Getting Started With OpenStack <openstack>
         Getting Started With Parallels <parallels>
         Getting Started With ProfitBricks <profitbricks>
         Getting Started With Proxmox <proxmox>
         Getting Started With Rackspace <rackspace>
-        Getting Started With Saltify <saltify>
         Getting Started With Scaleway <scaleway>
+        Getting Started With Saltify <saltify>
         Getting Started With SoftLayer <softlayer>
         Getting Started With Vexxhost <vexxhost>
         Getting Started With Virtualbox <virtualbox>
         Getting Started With VMware <vmware>
-        Getting Started With vSphere <vsphere>
 
 
 Miscellaneous Options

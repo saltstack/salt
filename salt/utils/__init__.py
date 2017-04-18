@@ -18,6 +18,7 @@ import json
 import logging
 import numbers
 import os
+import posixpath
 import random
 import re
 import shlex
@@ -40,7 +41,6 @@ from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-
 # pylint: disable=redefined-builtin
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
-from salt.ext.six.moves import map
 from stat import S_IMODE
 # pylint: enable=import-error,redefined-builtin
 
@@ -744,10 +744,12 @@ def ip_bracket(addr):
     return addr
 
 
-def dns_check(addr, safe=False, ipv6=False):
+def dns_check(addr, port, safe=False, ipv6=None):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception. Obeys system preference for IPv4/6 address resolution.
+    Tries to connect to the address before considering it useful. If no address
+    can be reached, the first one resolved is used as a fallback.
     '''
     error = False
     try:
@@ -760,13 +762,38 @@ def dns_check(addr, safe=False, ipv6=False):
         if not hostnames:
             error = True
         else:
-            addr = False
+            resolved = False
+            candidates = []
             for h in hostnames:
-                if h[0] == socket.AF_INET or (h[0] == socket.AF_INET6 and ipv6):
-                    addr = ip_bracket(h[4][0])
+                # It's an IP address, just return it
+                if h[4][0] == addr:
+                    resolved = addr
                     break
-            if not addr:
-                error = True
+
+                if h[0] == socket.AF_INET and ipv6 is True:
+                    continue
+                if h[0] == socket.AF_INET6 and ipv6 is False:
+                    continue
+
+                candidate_addr = ip_bracket(h[4][0])
+
+                if h[0] != socket.AF_INET6 or ipv6 is not None:
+                    candidates.append(candidate_addr)
+
+                s = socket.socket(h[0], socket.SOCK_STREAM)
+                try:
+                    s.connect((candidate_addr.strip('[]'), port))
+                    s.close()
+
+                    resolved = candidate_addr
+                    break
+                except socket.error:
+                    pass
+            if not resolved:
+                if len(candidates) > 0:
+                    resolved = candidates[0]
+                else:
+                    error = True
     except TypeError:
         err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(addr)
         raise SaltSystemExit(code=42, msg=err)
@@ -774,7 +801,7 @@ def dns_check(addr, safe=False, ipv6=False):
         error = True
 
     if error:
-        err = ('DNS lookup of \'{0}\' failed.').format(addr)
+        err = ('DNS lookup or connection check of \'{0}\' failed.').format(addr)
         if safe:
             if salt.log.is_console_configured():
                 # If logging is not configured it also means that either
@@ -783,7 +810,7 @@ def dns_check(addr, safe=False, ipv6=False):
                 log.error(err)
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
-    return addr
+    return resolved
 
 
 def required_module_list(docstring=None):
@@ -872,21 +899,32 @@ def backup_minion(path, bkroot):
         os.chmod(bkpath, fstat.st_mode)
 
 
-def path_join(*parts):
+def path_join(*parts, **kwargs):
     '''
     This functions tries to solve some issues when joining multiple absolute
     paths on both *nix and windows platforms.
 
     See tests/unit/utils/path_join_test.py for some examples on what's being
     talked about here.
+
+    The "use_posixpath" kwarg can be be used to force joining using poxixpath,
+    which is useful for Salt fileserver paths on Windows masters.
     '''
     if six.PY3:
         new_parts = []
         for part in parts:
             new_parts.append(to_str(part))
         parts = new_parts
+
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    use_posixpath = kwargs.pop('use_posixpath', False)
+    if kwargs:
+        invalid_kwargs(kwargs)
+
+    pathlib = posixpath if use_posixpath else os.path
+
     # Normalize path converting any os.sep as needed
-    parts = [os.path.normpath(p) for p in parts]
+    parts = [pathlib.normpath(p) for p in parts]
 
     try:
         root = parts.pop(0)
@@ -897,14 +935,9 @@ def path_join(*parts):
     if not parts:
         ret = root
     else:
-        if is_windows():
-            if len(root) == 1:
-                root += ':'
-            root = root.rstrip(os.sep) + os.sep
-
         stripped = [p.lstrip(os.sep) for p in parts]
         try:
-            ret = os.path.join(root, *stripped)
+            ret = pathlib.join(root, *stripped)
         except UnicodeDecodeError:
             # This is probably Python 2 and one of the parts contains unicode
             # characters in a bytestring. First try to decode to the system
@@ -914,13 +947,13 @@ def path_join(*parts):
             except NameError:
                 enc = sys.stdin.encoding or sys.getdefaultencoding()
             try:
-                ret = os.path.join(root.decode(enc),
+                ret = pathlib.join(root.decode(enc),
                                    *[x.decode(enc) for x in stripped])
             except UnicodeDecodeError:
                 # Last resort, try UTF-8
-                ret = os.path.join(root.decode('UTF-8'),
+                ret = pathlib.join(root.decode('UTF-8'),
                                    *[x.decode('UTF-8') for x in stripped])
-    return os.path.normpath(ret)
+    return pathlib.normpath(ret)
 
 
 def pem_finger(path=None, key=None, sum_type='sha256'):
@@ -1077,10 +1110,10 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
-    # We'll be showing errors to the users until Salt Nitrogen comes out, after
+    # We'll be showing errors to the users until Salt Oxygen comes out, after
     # which, errors will be raised instead.
     warn_until(
-        'Nitrogen',
+        'Oxygen',
         'It\'s time to start raising `SaltInvocationError` instead of '
         'returning warnings',
         # Let's not show the deprecation warning on the console, there's no
@@ -1117,7 +1150,7 @@ def format_call(fun,
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
             '\'key: value\' pairs. Your approach will work until Salt '
-            'Nitrogen is out.{1}'.format(
+            'Oxygen is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
             )
@@ -1595,7 +1628,7 @@ def clean_kwargs(**kwargs):
     Return a dict without any of the __pub* keys (or any other keys starting
     with a dunder) from the kwargs dict passed into the execution module
     functions. These keys are useful for tracking what was used to invoke
-    the function call, but they may not be desierable to have if passing the
+    the function call, but they may not be desirable to have if passing the
     kwargs forward wholesale.
     '''
     ret = {}
@@ -1661,7 +1694,7 @@ def is_linux():
 @real_memoize
 def is_darwin():
     '''
-    Simple function to return if a host is Darwin (OS X) or not
+    Simple function to return if a host is Darwin (macOS) or not
     '''
     return sys.platform.startswith('darwin')
 
@@ -1753,6 +1786,14 @@ def is_openbsd():
     Simple function to return if host is OpenBSD or not
     '''
     return sys.platform.startswith('openbsd')
+
+
+@real_memoize
+def is_aix():
+    '''
+    Simple function to return if host is AIX or not
+    '''
+    return sys.platform.startswith('aix')
 
 
 def is_fcntl_available(check_sunos=False):
@@ -1961,10 +2002,10 @@ def rm_rf(path):
             func(path)
         else:
             raise  # pylint: disable=E0704
-    if os.path.isdir(path):
-        shutil.rmtree(path, onerror=_onerror)
-    else:
+    if os.path.islink(path) or not os.path.isdir(path):
         os.remove(path)
+    else:
+        shutil.rmtree(path, onerror=_onerror)
 
 
 def option(value, default='', opts=None, pillar=None):
@@ -2339,7 +2380,7 @@ def kwargs_warn_until(kwargs,
     This function is used to help deprecate unused legacy ``**kwargs`` that
     were added to function parameters lists to preserve backwards compatibility
     when removing a parameter. See
-    :doc:`the deprecation development docs </topics/development/deprecations>`
+    :ref:`the deprecation development docs <deprecations>`
     for the modern strategy for deprecating a function parameter.
 
     :param kwargs: The caller's ``**kwargs`` argument value (a ``dict``).
@@ -2977,7 +3018,9 @@ def to_str(s, encoding=None):
         return s
     if six.PY3:
         if isinstance(s, (bytes, bytearray)):
-            return s.decode(encoding or __salt_system_encoding__)
+            # https://docs.python.org/3/howto/unicode.html#the-unicode-type
+            # replace error with U+FFFD, REPLACEMENT CHARACTER
+            return s.decode(encoding or __salt_system_encoding__, "replace")
         raise TypeError('expected str, bytes, or bytearray')
     else:
         if isinstance(s, bytearray):

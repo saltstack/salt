@@ -329,6 +329,7 @@ def present(name,
 
     homephone
         The user's home phone number (not supported in MacOS)
+        If GECOS field contains more than 3 commas, this field will have the rest of 'em
 
     .. versionchanged:: 2014.7.0
        Shadow attribute support added.
@@ -409,7 +410,7 @@ def present(name,
 
     # the comma is used to separate field in GECOS, thus resulting into
     # salt adding the end of fullname each time this function is called
-    for gecos_field in ['fullname', 'roomnumber', 'workphone', 'homephone']:
+    for gecos_field in ['fullname', 'roomnumber', 'workphone']:
         if isinstance(gecos_field, string_types) and ',' in gecos_field:
             ret['comment'] = "Unsupported char ',' in {0}".format(gecos_field)
             ret['result'] = False
@@ -501,16 +502,16 @@ def present(name,
                 continue
             # run chhome once to avoid any possible bad side-effect
             if key == 'home' and 'homeDoesNotExist' not in changes:
-                if __grains__['kernel'] == 'Darwin':
+                if __grains__['kernel'] in ('Darwin', 'Windows'):
                     __salt__['user.chhome'](name, val)
                 else:
-                    __salt__['user.chhome'](name, val, False)
+                    __salt__['user.chhome'](name, val, persist=False)
                 continue
             if key == 'homeDoesNotExist':
-                if __grains__['kernel'] == 'Darwin':
+                if __grains__['kernel'] in ('Darwin', 'Windows'):
                     __salt__['user.chhome'](name, val)
                 else:
-                    __salt__['user.chhome'](name, val, True)
+                    __salt__['user.chhome'](name, val, persist=True)
                 if not os.path.isdir(val):
                     __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0o755)
                 continue

@@ -4,7 +4,7 @@ Wrapper for rsync
 
 .. versionadded:: 2014.1.0
 
-This data can also be passed into :doc:`pillar </topics/tutorials/pillar>`.
+This data can also be passed into :ref:`pillar <pillar-walk-through>`.
 Options passed into opts will overwrite options passed into pillar.
 '''
 from __future__ import absolute_import

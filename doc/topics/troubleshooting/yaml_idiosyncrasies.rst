@@ -1,3 +1,5 @@
+.. _yaml-idiosyncrasies:
+
 ===================
 YAML Idiosyncrasies
 ===================
@@ -39,7 +41,7 @@ Nested Dictionaries
 When :ref:`dicts <python2:typesmapping>` are nested within other data
 structures (particularly lists), the indentation logic sometimes changes.
 Examples of where this might happen include ``context`` and ``default`` options
-from the :doc:`file.managed </ref/states/all/salt.states.file>` state:
+from the :mod:`file.managed <salt.states.file>` state:
 
 .. code-block:: yaml
 

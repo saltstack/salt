@@ -231,7 +231,7 @@ class LocalClient(object):
         Return the information about a given job
         '''
         log.debug('Checking whether jid {0} is still running'.format(jid))
-        timeout = self.opts['gather_job_timeout']
+        timeout = int(kwargs.get('gather_job_timeout', self.opts['gather_job_timeout']))
 
         pub_data = self.run_job(tgt,
                                 'saltutil.find_job',
@@ -510,10 +510,26 @@ class LocalClient(object):
                 'ret': ret,
                 'batch': batch,
                 'raw': kwargs.get('raw', False)}
+
+        if 'timeout' in kwargs:
+            opts['timeout'] = kwargs['timeout']
+        if 'gather_job_timeout' in kwargs:
+            opts['gather_job_timeout'] = kwargs['gather_job_timeout']
+
+        eauth = {}
+        if 'eauth' in kwargs:
+            eauth['eauth'] = kwargs.pop('eauth')
+        if 'username' in kwargs:
+            eauth['username'] = kwargs.pop('username')
+        if 'password' in kwargs:
+            eauth['password'] = kwargs.pop('password')
+        if 'token' in kwargs:
+            eauth['token'] = kwargs.pop('token')
+
         for key, val in six.iteritems(self.opts):
             if key not in opts:
                 opts[key] = val
-        batch = salt.cli.batch.Batch(opts, quiet=True)
+        batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret in batch.run():
             yield ret
 
@@ -989,6 +1005,7 @@ class LocalClient(object):
 
         if timeout is None:
             timeout = self.opts['timeout']
+        gather_job_timeout = int(kwargs.get('gather_job_timeout', self.opts['gather_job_timeout']))
         start = int(time.time())
 
         # timeouts per minion, id_ -> timeout time
@@ -1089,7 +1106,7 @@ class LocalClient(object):
                     jinfo_iter = []
                 else:
                     jinfo_iter = self.get_returns_no_block('salt/job/{0}'.format(jinfo['jid']))
-                timeout_at = time.time() + self.opts['gather_job_timeout']
+                timeout_at = time.time() + gather_job_timeout
                 # if you are a syndic, wait a little longer
                 if self.opts['order_masters']:
                     timeout_at += self.opts.get('syndic_wait', 1)
@@ -1122,6 +1139,10 @@ class LocalClient(object):
 
                 # if the job isn't running there anymore... don't count
                 if raw['data']['return'] == {}:
+                    continue
+
+                if 'return' in raw['data']['return'] and \
+                    raw['data']['return']['return'] == {}:
                     continue
 
                 # if we didn't originally target the minion, lets add it to the list
@@ -1431,7 +1452,7 @@ class LocalClient(object):
                     if connected_minions is None:
                         connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
                     if self.opts['minion_data_cache'] \
-                            and salt.cache.Cache(self.opts).contains('minions/{0}'.format(id_), 'data') \
+                            and salt.cache.factory(self.opts).contains('minions/{0}'.format(id_), 'data') \
                             and connected_minions \
                             and id_ not in connected_minions:
 

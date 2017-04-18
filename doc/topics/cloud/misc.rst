@@ -94,7 +94,7 @@ profile or map:
 Setting Up a Salt Syndic with Salt Cloud
 ========================================
 
-In addition to `setting up new Salt Masters`_, :ref:`syndic`s can also be
+In addition to `setting up new Salt Masters`_, :ref:`syndics <syndic>` can also be
 provisioned using Salt Cloud. In order to set up a Salt Syndic via Salt Cloud,
 a Salt Master needs to be installed on the new machine and a master configuration
 file needs to be set up using the ``make_master`` setting. This setting can be

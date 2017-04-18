@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Install pkg, dmg and .app applications on Mac OS X minions.
+Install pkg, dmg and .app applications on macOS minions.
 
 '''
 

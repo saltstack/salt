@@ -27,6 +27,7 @@ import hashlib  # do not remove, used in imported file.py functions
 import errno  # do not remove, used in imported file.py functions
 import shutil  # do not remove, used in imported file.py functions
 import re  # do not remove, used in imported file.py functions
+import string  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import fileinput  # do not remove, used in imported file.py functions
 import fnmatch  # do not remove, used in imported file.py functions
@@ -58,12 +59,16 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         touch, append, contains, contains_regex, get_source_sum,
         contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
         get_hash, manage_file, file_exists, get_diff, line, list_backups,
-        __clean_tmp, check_file_meta, _binary_replace, restore_backup,
+        __clean_tmp, check_file_meta, _binary_replace,
+        _splitlines_preserving_trailing_newline, restore_backup,
         access, copy, readdir, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
         lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
-        comment, uncomment, _add_flags, comment_line, apply_template_on_contents)
+        comment, uncomment, _add_flags, comment_line, _regex_to_static,
+        _get_line_indent, apply_template_on_contents, dirname, basename,
+        list_backups_dir)
+from salt.modules.file import normpath as normpath_
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -85,17 +90,22 @@ def __virtual__():
             global append, _error, directory_exists, touch, contains
             global contains_regex, contains_glob, get_source_sum
             global find, psed, get_sum, check_hash, get_hash, delete_backup
-            global get_diff, _get_flags, extract_hash, comment_line
+            global get_diff, line, _get_flags, extract_hash, comment_line
             global access, copy, readdir, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
+            global _splitlines_preserving_trailing_newline
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
+            global _regex_to_static, _get_line_indent, dirname, basename
+            global list_backups_dir, normpath_
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
             _get_flags = _namespaced_function(_get_flags, globals())
             _binary_replace = _namespaced_function(_binary_replace, globals())
+            _splitlines_preserving_trailing_newline = _namespaced_function(
+                _splitlines_preserving_trailing_newline, globals())
             _error = _namespaced_function(_error, globals())
             _get_bkroot = _namespaced_function(_get_bkroot, globals())
             list_backups = _namespaced_function(list_backups, globals())
@@ -127,6 +137,7 @@ def __virtual__():
             check_hash = _namespaced_function(check_hash, globals())
             get_hash = _namespaced_function(get_hash, globals())
             get_diff = _namespaced_function(get_diff, globals())
+            line = _namespaced_function(line, globals())
             access = _namespaced_function(access, globals())
             copy = _namespaced_function(copy, globals())
             readdir = _namespaced_function(readdir, globals())
@@ -145,9 +156,15 @@ def __virtual__():
             comment = _namespaced_function(comment, globals())
             uncomment = _namespaced_function(uncomment, globals())
             comment_line = _namespaced_function(comment_line, globals())
+            _regex_to_static = _namespaced_function(_regex_to_static, globals())
+            _get_line_indent = _namespaced_function(_get_line_indent, globals())
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
             _add_flags = _namespaced_function(_add_flags, globals())
             apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())
+            dirname = _namespaced_function(dirname, globals())
+            basename = _namespaced_function(basename, globals())
+            list_backups_dir = _namespaced_function(list_backups_dir, globals())
+            normpath_ = _namespaced_function(normpath_, globals())
 
             return __virtualname__
     return (False, "Module win_file: module only works on Windows systems")
@@ -158,7 +175,8 @@ __outputter__ = {
 }
 
 __func_alias__ = {
-    'makedirs_': 'makedirs'
+    'makedirs_': 'makedirs',
+    'normpath_': 'normpath',
 }
 
 

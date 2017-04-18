@@ -34,18 +34,29 @@ class LinuxLVMTestCase(TestCase):
         '''
         Tests LVM version info from lvm version
         '''
-        mock = MagicMock(return_value='Library version : 1')
+        mock = MagicMock(return_value=
+                             '  LVM version:     2.02.168(2) (2016-11-30)\n'
+                             '  Library version: 1.03.01 (2016-11-30)\n'
+                             '  Driver version:  4.35.0\n'
+                        )
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
-            self.assertEqual(linux_lvm.version(), '1')
+            self.assertEqual(linux_lvm.version(), '2.02.168(2) (2016-11-30)')
 
     def test_fullversion(self):
         '''
         Tests all version info from lvm version
         '''
-        mock = MagicMock(return_value='Library version : 1')
+        mock = MagicMock(return_value=
+                             '  LVM version:     2.02.168(2) (2016-11-30)\n'
+                             '  Library version: 1.03.01 (2016-11-30)\n'
+                             '  Driver version:  4.35.0\n'
+                        )
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
             self.assertDictEqual(linux_lvm.fullversion(),
-                                 {'Library version': '1'})
+                                 {'LVM version': '2.02.168(2) (2016-11-30)',
+                                  'Library version': '1.03.01 (2016-11-30)',
+                                  'Driver version': '4.35.0',
+                                 })
 
     def test_pvdisplay(self):
         '''
@@ -152,13 +163,30 @@ class LinuxLVMTestCase(TestCase):
 
         self.assertRaises(CommandExecutionError, linux_lvm.pvcreate, 'A')
 
-        pvdisplay = MagicMock(return_value=True)
+        # pvdisplay() would be called by pvcreate() twice: firstly to check
+        # whether a device is already initialized for use by LVM and then to
+        # ensure that the pvcreate executable did its job correctly.
+        pvdisplay = MagicMock(side_effect=[False, True])
         with patch('salt.modules.linux_lvm.pvdisplay', pvdisplay):
             with patch.object(os.path, 'exists', return_value=True):
                 ret = {'stdout': 'saltines', 'stderr': 'cheese', 'retcode': 0, 'pid': '1337'}
                 mock = MagicMock(return_value=ret)
                 with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
                     self.assertEqual(linux_lvm.pvcreate('A', metadatasize=1000), True)
+
+    def test_pvcreate_existing_pvs(self):
+        '''
+        Test a scenario when all the submitted devices are already LVM PVs.
+        '''
+        pvdisplay = MagicMock(return_value=True)
+        with patch('salt.modules.linux_lvm.pvdisplay', pvdisplay):
+            with patch.object(os.path, 'exists', return_value=True):
+                ret = {'stdout': 'saltines', 'stderr': 'cheese', 'retcode': 0, 'pid': '1337'}
+                cmd_mock = MagicMock(return_value=ret)
+                with patch.dict(linux_lvm.__salt__, {'cmd.run_all': cmd_mock}):
+                    self.assertEqual(linux_lvm.pvcreate('A', metadatasize=1000),
+                                     True)
+                    cmd_mock.assert_not_called()
 
     def test_pvremove(self):
         '''

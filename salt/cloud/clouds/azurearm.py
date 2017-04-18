@@ -881,8 +881,13 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
             with salt.utils.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
+    userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
+
     if userdata is not None:
-        os_kwargs['custom_data'] = base64.b64encode(userdata)
+        try:
+            os_kwargs['custom_data'] = base64.b64encode(userdata)
+        except Exception as exc:
+            log.exception('Failed to encode userdata: %s', exc)
 
     iface_data = create_interface(kwargs=vm_)
     vm_['iface_id'] = iface_data['id']

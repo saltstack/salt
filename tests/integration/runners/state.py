@@ -68,6 +68,20 @@ class StateRunnerTest(integration.ShellCase):
         for item in good_out:
             self.assertIn(item, ret_output)
 
+    def test_orchestrate_nested(self):
+        '''
+        test salt-run state.orchestrate and failhard with nested orchestration
+        '''
+        if os.path.exists('/tmp/ewu-2016-12-13'):
+            os.remove('/tmp/ewu-2016-12-13')
+
+        _, code = self.run_run(
+                'state.orchestrate nested-orch.outer',
+                with_retcode=True)
+
+        self.assertFalse(os.path.exists('/tmp/ewu-2016-12-13'))
+        self.assertNotEqual(code, 0)
+
     def test_state_event(self):
         '''
         test to ensure state.event
@@ -95,7 +109,7 @@ class OrchEventTest(integration.ShellCase):
     Tests for orchestration events
     '''
     def setUp(self):
-        self.timeout = 15
+        self.timeout = 60
         self.master_d_dir = os.path.join(self.get_config_dir(), 'master.d')
         try:
             os.makedirs(self.master_d_dir)

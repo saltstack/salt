@@ -110,6 +110,27 @@ def _active_mounts(ret):
     return ret
 
 
+def _active_mounts_aix(ret):
+    '''
+    List active mounts on AIX systems
+    '''
+    for line in __salt__['cmd.run_stdout']('mount -p').split('\n'):
+        comps = re.sub(r"\s+", " ", line).split()
+        if comps and comps[0] == 'node' or comps[0] == '--------':
+            continue
+        if len(comps) < 8:
+            ret[comps[1]] = {'device': comps[0],
+                             'fstype': comps[2],
+                             'opts': _resolve_user_group_names(comps[6].split(','))}
+        else:
+            ret[comps[2]] = {'node': comps[0],
+                             'device': comps[1],
+                             'fstype': comps[3],
+                             'opts': _resolve_user_group_names(comps[7].split(','))}
+
+    return ret
+
+
 def _active_mounts_freebsd(ret):
     '''
     List active mounts on FreeBSD systems
@@ -202,6 +223,8 @@ def active(extended=False):
     ret = {}
     if __grains__['os'] == 'FreeBSD':
         _active_mounts_freebsd(ret)
+    elif __grains__['kernel'] == 'AIX':
+        _active_mounts_aix(ret)
     elif __grains__['kernel'] == 'SunOS':
         _active_mounts_solaris(ret)
     elif __grains__['os'] == 'OpenBSD':

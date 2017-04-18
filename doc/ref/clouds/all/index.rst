@@ -11,6 +11,7 @@ Full list of Salt Cloud modules
     :template: autosummary.rst.tmpl
 
     aliyun
+    azurearm
     cloudstack
     digital_ocean
     dimensiondata
@@ -25,6 +26,7 @@ Full list of Salt Cloud modules
     opennebula
     openstack
     parallels
+    profitbricks
     proxmox
     pyrax
     qingcloud
@@ -35,3 +37,4 @@ Full list of Salt Cloud modules
     softlayer_hw
     virtualbox
     vmware
+    vultrpy

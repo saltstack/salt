@@ -117,6 +117,7 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
+@skipIf(True, 'Skipping flaky test until Jenkins is moved to C7.')
 @skipIf(ON_SUSE, 'Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed')
 class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     def setUp(self):
@@ -142,6 +143,9 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         '''
         Test a variety of bad requests, make sure that we get some sort of error
         '''
+        # TODO: This test should be re-enabled when Jenkins moves to C7.
+        # Once the version of salt-testing is increased to something newer than the September
+        # release of salt-testing, the @flaky decorator should be applied to this test.
         msgs = ['', [], tuple()]
         for msg in msgs:
             with self.assertRaises(salt.exceptions.AuthenticationError):

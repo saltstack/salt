@@ -217,5 +217,5 @@ wait_for_timeout
     The timeout to wait in seconds for provisioning resources such as servers.
     The default wait_for_timeout is 15 minutes.
 
-For more information concerning cloud profiles, see :doc:`here
-</topics/cloud/profiles>`.
+For more information concerning cloud profiles, see :ref:`here
+<salt-cloud-profiles>`.

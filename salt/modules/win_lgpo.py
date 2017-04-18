@@ -4,27 +4,31 @@ Manage Local Policy on Windows
 
 .. versionadded:: 2016.11.0
 
-This module allows configuring local group policy (i.e. gpedit.msc) on a Windows server.
+This module allows configuring local group policy (i.e. ``gpedit.msc``) on a
+Windows server.
 
 Administrative Templates
 ========================
-    Administrative template policies are dynamically read from admx/adml files on the server.
 
+Administrative template policies are dynamically read from ADMX/ADML files on
+the server.
 
 Windows Settings
 ================
-    Policies contained in the "Windows Settings" section of the gpedit.msc gui are statically
-    defined in this module.  Each policy is configured for the section (Machine/User) in the
-    module's _policy_info class.  The _policy_info class contains a policies dict on how the module will
-    configure the policy, where the policy resides in the gui (for display purposes), data
-    validation data, data transformation data, etc.
+
+Policies contained in the "Windows Settings" section of the ``gpedit.msc`` GUI
+are statically defined in this module. Each policy is configured for the section
+(Machine/User) in the module's _policy_info class. The ``_policy_info`` class
+contains a "policies" dict on how the module will configure the policy, where
+the policy resides in the GUI (for display purposes), data validation data, data
+transformation data, etc.
 
 Current known limitations
 =========================
-    At this time, start/shutdown scripts policies are displayed, but are not configurable.
 
-    Not all "Security Settings" policies exist in the _policy_info class
-
+- At this time, start/shutdown scripts policies are displayed, but are not
+  configurable.
+- Not all "Security Settings" policies exist in the _policy_info class
 
 :depends:
   - pywin32 Python module
@@ -33,7 +37,6 @@ Current known limitations
   - codecs
   - struct
   - salt.modules.reg
-
 '''
 
 # Import python libs
@@ -41,6 +44,7 @@ from __future__ import absolute_import
 import os
 import logging
 import re
+
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
@@ -48,13 +52,15 @@ from salt.exceptions import SaltInvocationError
 import salt.utils.dictupdate as dictupdate
 from salt.ext.six import string_types
 from salt.ext.six.moves import range
+from salt.ext.six import StringIO
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'
 __func_alias__ = {'set_': 'set'}
 adm_policy_name_map = {True: {}, False: {}}
 HAS_WINDOWS_MODULES = False
-# define some globals XPATH variables that we'll set assuming all our imports are good
+# define some global XPATH variables that we'll set assuming all our imports are
+# good
 TRUE_VALUE_XPATH = None
 FALSE_VALUE_XPATH = None
 ELEMENTS_XPATH = None
@@ -104,7 +110,7 @@ try:
     VALUE_LIST_XPATH = etree.XPath('.//*[local-name() = "valueList"]')
     ENUM_ITEM_DISPLAY_NAME_XPATH = etree.XPath('.//*[local-name() = "item" and @*[local-name() = "displayName" = $display_name]]')
     ADMX_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "name"] = $policy_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class)]')
-    ADML_SEARCH_XPATH = etree.XPath('//*[text() = $policy_name and @*[local-name() = "id"]]')
+    ADML_SEARCH_XPATH = etree.XPath('//*[starts-with(text(), $policy_name) and @*[local-name() = "id"]]')
     ADMX_DISPLAYNAME_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "displayName"] = $display_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class) ]')
     PRESENTATION_ANCESTOR_XPATH = etree.XPath('ancestor::*[local-name() = "presentation"]')
     TEXT_ELEMENT_XPATH = etree.XPath('.//*[local-name() = "text"]')
@@ -114,108 +120,298 @@ except ImportError:
 
 class _policy_info(object):
     '''
-    policy helper stuff
+    Policy Helper Class
+    ===================
 
     The format of the policy dict is as follows:
-        The top most two key/value pairs in the dict divide the policies object into the two sections
-        of local group policy, using the keys "Machine" and "User".  The value make-up of these dicts
-        are described below in "Policy Section Definition"
 
-        Policy Section Definition
-        -------------------------
-        A policy section dict has two required key/value pairs:
-            key name: lgpo_section
-            value: string matching how the policy section is displayed in the mmc snap-in
-                ("Computer Configuration" for "Machine" and "User Configuration" for "User")
+    The top most two key/value pairs in the dict divide the policies object into
+    the two sections of local group policy, using the keys "Machine" and "User".
+    The value make-up of these dicts are described below in "Policy Section
+    Definition"
 
-            key name: policies
-            value: a dict containing the non-Administrative template policy definitions, the key for
-                each item is a short/unique identifier for the policy, the value is described below in
-                "Policies Definition"
+    Policy Section Definition
+    -------------------------
 
-        Policies Definition
-        -------------------
-        A policies definition item describes the particular policy.
-        There are three child key/value pairs shared with all policy types:
-            key name: lgpo_section
-            value: a list containing the hierarchical path to the policy in the gpedit mmc snap-in.
+    A policy section dict has two required key/value pairs:
 
-            key name: Policy
-            value: a string containing the name of the policy in the gpedit mmc snap-in
+    ============  ==============================================================
+    Key
+    ============  ==============================================================
+    lgpo_section  String matching how the policy section is displayed in the mmc
+                  snap-in ("Computer Configuration" for "Machine" and "User
+                  Configuration" for "User")
+    policies      a dict containing the non-Administrative template policy
+                  definitions, the key for each item is a short/unique
+                  identifier for the policy, the value is described below in
+                  "Policies Definition"
+    ============  ==============================================================
 
-            key name: Settings
-            value: An object which describes valid settings for the policy.  This can be None for no validation,
-            a list of possible settings, or a dict with the following key/value pairs:
-                key name: Function
-                value: the class function to use to validate the setting
+    Policies Definition
+    -------------------
 
-                key name: Args
-                value: a dict of kwargs to pass to the class function
+    A policies definition item describes the particular policy. There are three
+    child key/value pairs shared with all policy types:
 
-        Additionally, each policies definition will contain a key/value pair that defines the mechanism that
-        will be used to configure the policy.  The available mechanisms are:  NetUserModal, Registry, Secedit,
-        and LsaRights
+    ============  ==============================================================
+    Key           Value
+    ============  ==============================================================
+    lgpo_section  A list containing the hierarchical path to the policy in the
+                  gpedit mmc snap-in.
+    Policy        A string containing the name of the policy in the gpedit mmc
+                  snap-in
+    Settings      An object which describes valid settings for the policy. This
+                  can be None for no validation, a list of possible settings, or
+                  a dict with the following key/value pairs:
 
-        Registry mechanism
-        ------------------
-        Some policies set simply values in the windows registry, the value of this key is a dict with the
-        following make-up:
-            key name: Hive
-            value: a string containing the Registry hive, such as HKEY_LOCAL_MACHINE
+                  - **Function:** The class function to use to validate the
+                    setting
+                  - **Args:** A dict of kwargs to pass to the class function
+    ============  ==============================================================
 
-            key name: Path
-            value: a string containing the registry key path, such as SYSTEM\\CurrentControlSet\\Control\\Lsa
+    Additionally, each policies definition will contain a key/value pair that
+    defines the mechanism that will be used to configure the policy. The
+    available mechanisms are:  NetUserModal, Registry, Secedit, and LsaRights
 
-            key name: Value
-            value: a string containing the name of the registry value, such as restrictanonymous
+    Registry Mechanism
+    ------------------
 
-            key name: Type
-            value: a string contianing the registry type of the value, such as REG_DWORD
+    Some policies simply set values in the Windows registry. The value of this
+    key is a dict with the following make-up:
 
-        Secedit mechanism
-        -----------------
-        Some policies are configurable via the "secedit.exe" executable, the value of this key is a dict with the
-        following make-up:
-            key name: Option
-            value: a string containing the name of the policy as it appears in an export from secedit, such as
-                PasswordComplexity
+    =====  =====================================================================
+    Key    Value
+    =====  =====================================================================
+    Hive   A string containing the Registry hive, such as ``HKEY_LOCAL_MACHINE``
+    Path   A string containing the registry key path, such as
+           ``SYSTEM\\CurrentControlSet\\Control\\Lsa``
+    Value  A string containing the name of the registry value, such as
+           **restrictanonymous**
+    Type   A string containing the registry type of the value, such as
+           ``REG_DWORD``
+    =====  =====================================================================
 
-            key name: Section
-            value: a string containing the name of the section that the "Option" value appears in in an export
-                from secedit, such as "System Access"
+    Secedit Mechanism
+    -----------------
 
-        LsaRights mechanism
-        -------------------
-        LSA Rights policiesare configured via the LsaRights mechansim, the value of this key is a dict with the
-        following make-up:
-            key name: Option
-            value: a string containing the programmatic name of the Lsa Right, such as SeNetworkLogonRight
+    Some policies are configurable via the "secedit.exe" executable. The value
+    of this key is a dict with the following make-up:
 
-        NetUserModal mechanism
-        ----------------------
-        Some policies are configurable by the NetUserModalGet and NetUserModalSet function from pywin32.  The value
-        of this key is a dict with the following make-up:
-            key name: Modal
-            value: The modal "level" that the particular option is specified in (0-3), see
-                https://msdn.microsoft.com/en-us/library/windows/desktop/aa370656(v=vs.85).aspx
+    =======  ===================================================================
+    Key      Value
+    =======  ===================================================================
+    Option   A string containing the name of the policy as it appears in an
+             export from secedit, such as **PasswordComplexity**
+    Section  A string containing the name of the section in which the "Option"
+             value appears in an export from ``secedit``, such as "System
+             Access"
+    =======  ===================================================================
 
-            key name: Option
-            value: The name of the structure member which contains the data for the policy, for example max_passwd_age
+    LsaRights mechanism
+    -------------------
 
-        Optionally, each policy definition can contain a 'Transform' key.  The Transform key is used to handle data that is stored
-        and viewed differently.  This key's value is a dict with the following key/value pairs:
-            key name: Get
-            value: the name of the class function to use to transform the data from the stored value to how the value
-            is displayed in the GUI
+    LSA Rights policies are configured via the LsaRights mechanism. The value of
+    this key is a dict with the following make-up:
 
-            key name: Put
-            value: the name of the class function to use to transfor the data supplied by the user to the correct value
-            that the policy is stored in
-        For example, "Minimum password age" is stored in seconds, but is displayed in days.  Thus the "Get" and "Put" functions
-        for this policy do these conversions so the user is able to set and view the policy using the same data that is shown
-        in the GUI
+    ======  ====================================================================
+    Key     Value
+    ======  ====================================================================
+    Option  A string containing the programmatic name of the Lsa Right, such as
+            **SeNetworkLogonRight**
+    ======  ====================================================================
+
+    NetUserModal mechanism
+    ----------------------
+
+    Some policies are configurable by the **NetUserModalGet** and
+    **NetUserModalSet** function from pywin32.  The value of this key is a dict
+    with the following make-up:
+
+    ======  ====================================================================
+    Key     Value
+    ======  ====================================================================
+    Modal   The modal "level" that the particular option is specified in (0-3),
+            see `here <https://msdn.microsoft.com/en-us/library/windows/desktop/
+            aa370656(v=vs.85).aspx>`_
+    Option  The name of the structure member which contains the data for the
+            policy, for example **max_passwd_age**
+    ======  ====================================================================
+
+    Optionally, each policy definition can contain a "Transform" key. The
+    Transform key is used to handle data that is stored and viewed differently.
+    This key's value is a dict with the following key/value pairs:
+
+    ===  =======================================================================
+    Key  Value
+    ===  =======================================================================
+    Get  The name of the class function to use to transform the data from the
+         stored value to how the value is displayed in the GUI
+    Put The name of the class function to use to transform the data supplied by
+        the user to the correct value that the policy is stored in
+    ===  =======================================================================
+
+    For example, "Minimum password age" is stored in seconds, but is displayed
+    in days.  Thus the "Get" and "Put" functions for this policy do these
+    conversions so the user is able to set and view the policy using the same
+    data that is shown in the GUI.
     '''
     def __init__(self):
+        self.audit_lookup = {
+            0: 'No auditing',
+            1: 'Success',
+            2: 'Failure',
+            3: 'Success, Failure',
+            'Not Defined': 'Not Defined',
+            None: 'Not Defined',
+        }
+        self.sc_removal_lookup = {
+            0: 'No Action',
+            1: 'Lock Workstation',
+            2: 'Force Logoff',
+            3: 'Disconnect if a Remote Desktop Services session',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.uac_admin_prompt_lookup = {
+            0: 'Elevate without prompting',
+            1: 'Prompt for credentials on the secure desktop',
+            2: 'Prompt for consent on the secure desktop',
+            3: 'Prompt for credentials',
+            4: 'Prompt for consent',
+            5: 'Prompt for consent for non-Windows binaries',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.uac_user_prompt_lookup = {
+            0: 'Automatically deny elevation requests',
+            1: 'Prompt for credentials on the secure desktop',
+            3: 'Prompt for credentials',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.enabled_one_disabled_zero = {
+            0: 'Disabled',
+            1: 'Enabled',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.enabled_one_disabled_zero_transform = {
+            'Get': '_dict_lookup',
+            'Put': '_dict_lookup',
+            'GetArgs': {
+                'lookup': self.enabled_one_disabled_zero,
+                'value_lookup': False,
+            },
+            'PutArgs': {
+                'lookup': self.enabled_one_disabled_zero,
+                'value_lookup': True,
+            },
+        }
+        self.s4u2self_options = {
+            0: 'Default',
+            1: 'Enabled',
+            2: 'Disabled',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.audit_transform = {
+            'Get': '_dict_lookup',
+            'Put': '_dict_lookup',
+            'GetArgs': {
+                'lookup': self.audit_lookup,
+                'value_lookup': False,
+            },
+            'PutArgs': {
+                'lookup': self.audit_lookup,
+                'value_lookup': True,
+            },
+        }
+        self.enabled_one_disabled_zero_strings = {
+            '0': 'Disabled',
+            '1': 'Enabled',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.enabled_one_disabled_zero_strings_transform = {
+            'Get': '_dict_lookup',
+            'Put': '_dict_lookup',
+            'GetArgs': {
+                'lookup': self.enabled_one_disabled_zero_strings,
+                'value_lookup': False,
+            },
+            'PutArgs': {
+                'lookup': self.enabled_one_disabled_zero_strings,
+                'value_lookup': True,
+            },
+        }
+        self.security_options_gpedit_path = [
+                'Computer Configuration',
+                'Windows Settings',
+                'Security Settings',
+                'Local Policies',
+                'Security Options'
+        ]
+        self.password_policy_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Account Policies',
+            'Password Policy'
+        ]
+        self.audit_policy_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Local Policies',
+            'Audit Policy'
+        ]
+        self.account_lockout_policy_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Account Policies',
+            'Account Lockout Policy'
+        ]
+        self.user_rights_assignment_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Local Policies',
+            'User Rights Assignment'
+        ]
+        self.block_ms_accounts = {
+            0: 'This policy is disabled',
+            1: 'Users can\'t add Microsoft accounts',
+            3: 'Users can\'t add or log on with Microsoft accounts',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.ldap_server_signing_requirements = {
+            1: 'None',
+            2: 'Require signing',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.smb_server_name_hardening_levels = {
+            0: 'Off',
+            1: 'Accept if provided by client',
+            2: 'Require from client',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.locked_session_user_info = {
+            1: 'User display name, domain and user names',
+            2: 'User display name only',
+            3: 'Do not display user information',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.force_guest = {
+            0: 'Classic - local users authenticate as themselves',
+            1: 'Guest only - local users authenticate as Guest',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
         self.policies = {
             'Machine': {
                 'lgpo_section': 'Computer Configuration',
@@ -253,7 +449,8 @@ class _policy_info(object):
                         },
                     },
                     'StartupPowershellScriptOrder': {
-                        'Policy': 'Startup - For this GPO, run scripts in the following order',
+                        'Policy': 'Startup - For this GPO, run scripts in the '
+                                  'following order',
                         'lgpo_section': ['Computer Configuration',
                                          'Windows Settings',
                                          'Scripts (Startup/Shutdown)',
@@ -307,7 +504,8 @@ class _policy_info(object):
                         },
                     },
                     'ShutdownPowershellScriptOrder': {
-                        'Policy': 'Shutdown - For this GPO, run scripts in the following order',
+                        'Policy': 'Shutdown - For this GPO, run scripts in the '
+                                  'following order',
                         'lgpo_section': ['Computer Configuration',
                                          'Windows Settings',
                                          'Scripts (Startup/Shutdown)',
@@ -328,32 +526,160 @@ class _policy_info(object):
                             'Put': '_powershell_script_order_reverse_conversion',
                         },
                     },
+                    'LSAAnonymousNameLookup': {
+                        'Policy': 'Network access: Allow anonymous SID/Name '
+                                  'translation',
+                        'lgpo_section': self.password_policy_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Secedit': {
+                            'Option': 'LSAAnonymousNameLookup',
+                            'Section': 'System Access',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'RestrictAnonymousSam': {
+                        'Policy': 'Network access: Do not allow anonymous '
+                                  'enumeration of SAM accounts',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'RestrictAnonymousSam',
+                            'Type': 'REG_DWORD'
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
                     'RestrictAnonymous': {
-                        'Policy': 'Network Access: Do not allow anonymous enumeration of SAM accounts and shares',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
-                        'Settings': [0, 1],
+                        'Policy': 'Network access: Do not allow anonymous '
+                                  'enumeration of SAM accounts and shares',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
                             'Value': 'RestrictAnonymous',
                             'Type': 'REG_DWORD'
                         },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'DisableDomainCreds': {
+                        'Policy': 'Network access: Do not allow storage of '
+                                  'passwords and credentials for network '
+                                  'authentication',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'DisableDomainCreds',
+                            'Type': 'REG_DWORD'
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EveryoneIncludesAnonymous': {
+                        'Policy': 'Network access: Let Everyone permissions '
+                                  'apply to anonymous users',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'everyoneincludesanonymous',
+                            'Type': 'REG_DWORD'
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'NullSessionPipes': {
+                        'Policy': 'Network access: Named Pipes that can be '
+                                  'accessed anonymously',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'NullSessionPipes',
+                            'Type': 'REG_MULTI_SZ'
+                        },
+                    },
+                    'RemoteRegistryExactPaths': {
+                        'Policy': 'Network access: Remotely accessible registry '
+                                  'paths',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\'
+                                    'SecurePipeServers\\winreg\\'
+                                    'AllowedExactPaths',
+                            'Value': 'Machine',
+                            'Type': 'REG_MULTI_SZ'
+                        },
+                    },
+                    'RemoteRegistryPaths': {
+                        'Policy': 'Network access: Remotely accessible registry '
+                                  'paths and sub-paths',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\'
+                                    'SecurePipeServers\\winreg\\AllowedPaths',
+                            'Value': 'Machine',
+                            'Type': 'REG_MULTI_SZ'
+                        },
+                    },
+                    'RestrictNullSessAccess': {
+                        'Policy': 'Network access: Restrict anonymous access to '
+                                  'Named Pipes and Shares',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'RestrictNullSessAccess',
+                            'Type': 'REG_DWORD'
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'NullSessionShares': {
+                        'Policy': 'Network access: Shares that can be accessed '
+                                  'anonymously',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'NullSessionShares',
+                            'Type': 'REG_MULTI_SZ'
+                        },
+                    },
+                    'ForceGuest': {
+                        'Policy': 'Network access: Sharing and security model '
+                                  'for local accounts',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.force_guest.keys(),
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'ForceGuest',
+                            'Type': 'REG_DWORD'
+                        },
                         'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.force_guest,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.force_guest,
+                                'value_lookup': True,
+                            },
                         },
                     },
                     'PasswordHistory': {
                         'Policy': 'Enforce password history',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Password Policy'],
+                        'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 24}
@@ -365,11 +691,7 @@ class _policy_info(object):
                     },
                     'MaxPasswordAge': {
                         'Policy': 'Maximum password age',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Password Policy'],
+                        'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 86313600}
@@ -385,11 +707,7 @@ class _policy_info(object):
                     },
                     'MinPasswordAge': {
                         'Policy': 'Minimum password age',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Password Policy'],
+                        'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 86313600}
@@ -405,11 +723,7 @@ class _policy_info(object):
                     },
                     'MinPasswordLen': {
                         'Policy': 'Minimum password length',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Password Policy'],
+                        'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 14}
@@ -421,99 +735,85 @@ class _policy_info(object):
                     },
                     'PasswordComplexity': {
                         'Policy': 'Passwords must meet complexity requirements',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Password Policy'],
-                        'Settings': [0, 1],
+                        'lgpo_section': self.password_policy_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
                         'Secedit': {
                             'Option': 'PasswordComplexity',
                             'Section': 'System Access',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'ClearTextPasswords': {
                         'Policy': 'Store passwords using reversible encryption',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Password Policy'],
-                        'Settings': [0, 1],
+                        'lgpo_section': self.password_policy_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
                         'Secedit': {
                             'Option': 'ClearTextPassword',
                             'Section': 'System Access',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'AdminAccountStatus': {
                         'Policy': 'Accounts: Administrator account status',
-                        'Settings': [0, 1],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Secedit': {
                             'Option': 'EnableAdminAccount',
                             'Section': 'System Access',
                         },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'NoConnectedUser': {
+                        'Policy': 'Accounts: Block Microsoft accounts',
+                        'Settings': self.block_ms_accounts.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\policies\\system',
+                            'Value': 'NoConnectedUser',
+                            'Type': 'REG_DWORD',
+                        },
                         'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.block_ms_accounts,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.block_ms_accounts,
+                                'value_lookup': True,
+                            },
                         },
                     },
                     'GuestAccountStatus': {
                         'Policy': 'Accounts: Guest account status',
-                        'Settings': [0, 1],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Secedit': {
                             'Option': 'EnableGuestAccount',
                             'Section': 'System Access',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'LimitBlankPasswordUse': {
-                        'Policy': 'Accounts: Limit local account use of blank passwords to console logon only',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
-                        'Settings': [0, 1],
+                        'Policy': 'Accounts: Limit local account use of blank '
+                                  'passwords to console logon only',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero.keys(),
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
                             'Value': 'limitblankpassworduse',
                             'Type': 'REG_DWORD',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'RenameAdministratorAccount': {
                         'Policy': 'Accounts: Rename administrator account',
                         'Settings': None,
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Secedit': {
                             'Option': 'NewAdministratorName',
                             'Section': 'System Access',
@@ -526,11 +826,7 @@ class _policy_info(object):
                     'RenameGuestAccount': {
                         'Policy': 'Accounts: Rename guest account',
                         'Settings': None,
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Secedit': {
                             'Option': 'NewGuestName',
                             'Section': 'System Access',
@@ -541,51 +837,546 @@ class _policy_info(object):
                         },
                     },
                     'AuditBaseObjects': {
-                        'Policy': 'Audit: Audit the access of global system objects',
-                        'Settings': [0, 1],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
+                        'Policy': 'Audit: Audit the access of global system '
+                                  'objects',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
                             'Value': 'AuditBaseObjects',
                             'Type': 'REG_DWORD',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform
                     },
-                    'DoNotDisplayLastUserName': {
-                        'Policy': 'Interactive logon: Do not display last user name',
-                        'Settings': [0, 1],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                    'SceNoApplyLegacyAuditPolicy': {
+                        'Policy': 'Audit: Force audit policy subcategory '
+                                  'settings (Windows Vista or later) to '
+                                  'override audit policy category settings',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
-                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'AuditBaseObjects',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform
+                    },
+                    'DontDisplayLastUserName': {
+                        'Policy': 'Interactive logon: Do not display last user '
+                                  'name',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
                             'Value': 'DontDisplayLastUserName',
                             'Type': 'REG_DWORD',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'CachedLogonsCount': {
+                        'Policy': 'Interactive logon: Number of previous logons '
+                                  'to cache (in case domain controller is not '
+                                  'available)',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 50}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\'
+                                    'CurrentVersion\\Winlogon',
+                            'Value': 'CachedLogonsCount',
+                            'Type': 'REG_SZ',
                         },
                     },
+                    'ForceUnlockLogon': {
+                        'Policy': 'Interactive logon: Require Domain Controller '
+                                  'authentication to unlock workstation',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\'
+                                    'CurrentVersion\\Winlogon',
+                            'Value': 'ForceUnlockLogon',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'ScRemoveOption': {
+                        'Policy': 'Interactive logon: Smart card removal '
+                                  'behavior',
+                        'Settings': self.sc_removal_lookup.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\'
+                                    'CurrentVersion\\Winlogon',
+                            'Value': 'ScRemoveOption',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.sc_removal_lookup,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.sc_removal_lookup,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'DisableCAD': {
+                        'Policy': 'Interactive logon: Do not require '
+                                  'CTRL+ALT+DEL',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'DisableCAD',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'FilterAdministratorToken': {
+                        'Policy': 'User Account Control: Admin Approval Mode '
+                                  'for the built-in Administrator account',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'FilterAdministratorToken',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableUIADesktopToggle': {
+                        'Policy': 'User Account Control: Allow UIAccess '
+                                  'applications to prompt for elevation without '
+                                  'using the secure desktop',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'EnableUIADesktopToggle',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'ConsentPromptBehaviorAdmin': {
+                        'Policy': 'User Account Control: Behavior of the '
+                                  'elevation prompt for administrators in Admin '
+                                  'Approval Mode',
+                        'Settings': self.uac_admin_prompt_lookup.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'ConsentPromptBehaviorAdmin',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.uac_admin_prompt_lookup,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.uac_admin_prompt_lookup,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'ConsentPromptBehaviorUser': {
+                        'Policy': 'User Account Control: Behavior of the '
+                                  'elevation prompt for standard users',
+                        'Settings': self.uac_user_prompt_lookup.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'ConsentPromptBehaviorUser',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.uac_user_prompt_lookup,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.uac_user_prompt_lookup,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'EnableInstallerDetection': {
+                        'Policy': 'User Account Control: Detect application '
+                                  'installations and prompt for elevation',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'EnableInstallerDetection',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'ValidateAdminCodeSignatures': {
+                        'Policy': 'User Account Control: Only elevate '
+                                  'executables that are signed and validated',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'ValidateAdminCodeSignatures',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableSecureUIAPaths': {
+                        'Policy': 'User Account Control: Only elevate UIAccess '
+                                  'applicaitons that are installed in secure '
+                                  'locations',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'EnableSecureUIAPaths',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableLUA': {
+                        'Policy': 'User Account Control: Run all administrators '
+                                  'in Admin Approval Mode',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'EnableLUA',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'PromptOnSecureDesktop': {
+                        'Policy': 'User Account Control: Switch to the secure '
+                                  'desktop when prompting for elevation',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'PromptOnSecureDesktop',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableVirtualization': {
+                        'Policy': 'User Account Control: Virtualize file and '
+                                  'registry write failures to per-user '
+                                  'locations',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'EnableVirtualization',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'PasswordExpiryWarning': {
+                        'Policy': 'Interactive logon: Prompt user to change '
+                                  'password before expiration',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 999}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\'
+                                    'CurrentVersion\\Winlogon',
+                            'Value': 'PasswordExpiryWarning',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'MaxDevicePasswordFailedAttempts': {
+                        'Policy': 'Interactive logon: Machine account lockout '
+                                  'threshold',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 999}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\policies\\system',
+                            'Value': 'MaxDevicePasswordFailedAttempts',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'InactivityTimeoutSecs': {
+                        'Policy': 'Interactive logon: Machine inactivity limit',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 599940}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\policies\\system',
+                            'Value': 'InactivityTimeoutSecs',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'legalnoticetext': {
+                        'Policy': 'Interactive logon: Message text for users '
+                                  'attempting to log on',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\policies\\system',
+                            'Value': 'legalnoticetext',
+                            'Type': 'REG_SZ',
+                        },
+                    },
+                    'legalnoticecaption': {
+                        'Policy': 'Interactive logon: Message title for users '
+                                  'attempting to log on',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\policies\\system',
+                            'Value': 'legalnoticecaption',
+                            'Type': 'REG_SZ',
+                        },
+                    },
+                    'DontDisplayLockedUserId': {
+                        'Policy': 'Interactive logon: Display user information '
+                                  'when the session is locked',
+                        'Settings': self.locked_session_user_info.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\policies\\system',
+                            'Value': 'DontDisplayLockedUserId',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.locked_session_user_info,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.locked_session_user_info,
+                                'value_lookup': True,
+                            },
+                        }
+                    },
+                    'ScForceOption': {
+                        'Policy': 'Interactive logon: Require smart card',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
+                            'Value': 'ScForceOption',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'Client_RequireSecuritySignature': {
+                        'Policy': 'Microsoft network client: Digitally sign '
+                                  'communications (always)',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanWorkstation\\Parameters',
+                            'Value': 'RequireSecuritySignature',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'Client_EnableSecuritySignature': {
+                        'Policy': 'Microsoft network client: Digitally sign '
+                                  'communications (if server agrees)',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanWorkstation\\Parameters',
+                            'Value': 'EnableSecuritySignature',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnablePlainTextPassword': {
+                        'Policy': 'Microsoft network client: Send unencrypted '
+                                  'password to third-party SMB servers',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanWorkstation\\Parameters',
+                            'Value': 'EnablePlainTextPassword',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'AutoDisconnect': {
+                        'Policy': 'Microsoft network server: Amount of idle '
+                                  'time required before suspending session',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 99999}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'AutoDisconnect',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'EnableS4U2SelfForClaims': {
+                        'Policy': 'Microsoft network server: Attempt S4U2Self '
+                                  'to obtain claim information',
+                        'Settings': self.s4u2self_options.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'EnableS4U2SelfForClaims',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.s4u2self_options,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.s4u2self_options,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'Server_RequireSecuritySignature': {
+                        'Policy': 'Microsoft network server: Digitally sign '
+                                  'communications (always)',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'RequireSecuritySignature',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'Server_EnableSecuritySignature': {
+                        'Policy': 'Microsoft network server: Digitally sign '
+                                  'communications (if client agrees)',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'EnableSecuritySignature',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'EnableForcedLogoff': {
+                        'Policy': 'Microsoft network server: Disconnect clients '
+                                  'when logon hours expire',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'EnableForcedLogoff',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'SmbServerNameHardeningLevel': {
+                        'Policy': 'Microsoft network server: Server SPN target '
+                                  'name validation level',
+                        'Settings': self.smb_server_name_hardening_levels.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\'
+                                    'LanmanServer\\Parameters',
+                            'Value': 'SmbServerNameHardeningLevel',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.smb_server_name_hardening_levels,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.smb_server_name_hardening_levels,
+                                'value_lookup': True,
+                            },
+                        }
+                    },
                     'FullPrivilegeAuditing': {
-                        'Policy': 'Audit: Audit the use of Backup and Restore privilege',
+                        'Policy': 'Audit: Audit the use of Backup and Restore '
+                                  'privilege',
                         'Settings': [chr(0), chr(1)],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'System\\CurrentControlSet\\Control\\Lsa',
@@ -598,54 +1389,40 @@ class _policy_info(object):
                         },
                     },
                     'CrashOnAuditFail': {
-                        'Policy': 'Audit: Shut down system immediately if unable to log security audits',
-                        'Settings': [0, 1],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'Policy': 'Audit: Shut down system immediately if '
+                                  'unable to log security audits',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
                             'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
                             'Value': 'CrashOnAuditFail',
                             'Type': 'REG_DWORD',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'UndockWithoutLogon': {
                         'Policy': 'Devices: Allow undock without having to log on',
-                        'Settings': [0, 1],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
-                            'Path': 'Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
+                            'Path': 'Software\\Microsoft\\Windows\\'
+                                    'CurrentVersion\\Policies\\System',
                             'Value': 'UndockWithoutLogon',
                             'Type': 'REG_DWORD',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'AllocateDASD': {
-                        'Policy': 'Devices: Allowed to format and eject removable media',
+                        'Policy': 'Devices: Allowed to format and eject '
+                                  'removable media',
                         'Settings': ["", "0", "1", "2"],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
-                            'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
+                            'Path': 'Software\\Microsoft\\Windows NT\\'
+                                    'CurrentVersion\\Winlogon',
                             'Value': 'AllocateDASD',
                             'Type': 'REG_SZ',
                         },
@@ -655,56 +1432,43 @@ class _policy_info(object):
                         },
                     },
                     'AllocateCDRoms': {
-                        'Policy': 'Devices: Restrict CD-ROM access to locally logged-on user only',
-                        'Settings': ["0", "1"],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'Policy': 'Devices: Restrict CD-ROM access to locally '
+                                  'logged-on user only',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
-                            'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
+                            'Path': 'Software\\Microsoft\\Windows NT\\'
+                                    'CurrentVersion\\Winlogon',
                             'Value': 'AllocateCDRoms',
                             'Type': 'REG_SZ',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                            'PutArgs': {'return_string': True}
-                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
                     },
                     'AllocateFloppies': {
-                        'Policy': 'Devices: Restrict floppy access to locally logged-on user only',
-                        'Settings': ["0", "1"],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'Policy': 'Devices: Restrict floppy access to locally '
+                                  'logged-on user only',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
-                            'Path': 'Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon',
+                            'Path': 'Software\\Microsoft\\Windows NT\\'
+                                    'CurrentVersion\\Winlogon',
                             'Value': 'AllocateFloppies',
                             'Type': 'REG_SZ',
                         },
-                        'Transform': {
-                            'Get': '_enable_one_disable_zero_conversion',
-                            'Put': '_enable_one_disable_zero_reverse_conversion',
-                            'PutArgs': {'return_string': True}
-                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
                     },
-                    # see KB298503 why we aren't just doing this one via the registry
+                    # see KB298503 why we aren't just doing this one via the
+                    # registry
                     'DriverSigningPolicy': {
-                        'Policy': 'Devices: Unsigned driver installation behavior',
+                        'Policy': 'Devices: Unsigned driver installation '
+                                  'behavior',
                         'Settings': ['3,0', '3,' + chr(1), '3,' + chr(2)],
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Security Options'],
+                        'lgpo_section': self.security_options_gpedit_path,
                         'Secedit': {
-                            'Option': 'MACHINE\\Software\\Microsoft\\Driver Signing\\Policy',
+                            'Option': 'MACHINE\\Software\\Microsoft\\Driver '
+                                      'Signing\\Policy',
                             'Section': 'Registry Values',
                         },
                         'Transform': {
@@ -712,13 +1476,147 @@ class _policy_info(object):
                             'Put': '_driver_signing_reg_reverse_conversion',
                         },
                     },
+                    'SubmitControl': {
+                        'Policy': 'Domain controller: Allow server operators to '
+                                  'schedule tasks',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'SubmitControl',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    'LDAPServerIntegrity': {
+                        'Policy': 'Domain controller: LDAP server signing '
+                                  'requirements',
+                        'Settings': self.ldap_server_signing_requirements.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\NTDS'
+                                    '\\Parameters',
+                            'Value': 'LDAPServerIntegrity',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.ldap_server_signing_requirements,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.ldap_server_signing_requirements,
+                                'value_lookup': True,
+                            },
+                        }
+                    },
+                    'RefusePasswordChange': {
+                        'Policy': 'Domain controller: Refuse machine account '
+                                  'password changes',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\'
+                                    'Netlogon\\Parameters',
+                            'Value': 'RefusePasswordChange',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    'RequireSignOrSeal': {
+                        'Policy': 'Domain member: Digitally encrypt or sign '
+                                  'secure channel data (always)',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\'
+                                    'Netlogon\\Parameters',
+                            'Value': 'RequireSignOrSeal',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    'SealSecureChannel': {
+                        'Policy': 'Domain member: Digitally encrypt secure '
+                                  'channel data (when possible)',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\'
+                                    'Netlogon\\Parameters',
+                            'Value': 'SealSecureChannel',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    'SignSecureChannel': {
+                        'Policy': 'Domain member: Digitally sign secure channel '
+                                  'data (when possible)',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\'
+                                    'Netlogon\\Parameters',
+                            'Value': 'SignSecureChannel',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    'DisablePasswordChange': {
+                        'Policy': 'Domain member: Disable machine account '
+                                  'password changes',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\'
+                                    'Netlogon\\Parameters',
+                            'Value': 'DisablePasswordChange',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    'MaximumPasswordAge': {
+                        'Policy': 'Domain member: Maximum machine account '
+                                  'password age',
+                        'Settings': {
+                            'Function': '_in_range_inclusive',
+                            'Args': {'min': 0, 'max': 999}
+                        },
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\'
+                                    'Netlogon\\Parameters',
+                            'Value': 'MaximumPasswordAge',
+                            'Type': 'REG_DWORD',
+                        },
+                    },
+                    'RequireStrongKey': {
+                        'Policy': 'Domain member: Require strong (Windows 2000 '
+                                  'or later) session key',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\'
+                                    'Netlogon\\Parameters',
+                            'Value': 'RequireStrongKey',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
                     'LockoutDuration': {
                         'Policy': 'Account lockout duration',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Account Lockout Policy'],
+                        'lgpo_section': self.account_lockout_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 6000000}
@@ -734,11 +1632,7 @@ class _policy_info(object):
                     },
                     'LockoutThreshold': {
                         'Policy': 'Account lockout threshold',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Account Lockout Policy'],
+                        'lgpo_section': self.account_lockout_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 1000}
@@ -750,11 +1644,7 @@ class _policy_info(object):
                     },
                     'LockoutWindow': {
                         'Policy': 'Reset account lockout counter after',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Account Lockout Policy'],
+                        'lgpo_section': self.account_lockout_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
                             'Args': {'min': 0, 'max': 6000000}
@@ -770,164 +1660,98 @@ class _policy_info(object):
                     },
                     'AuditAccountLogon': {
                         'Policy': 'Audit account logon events',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Account Policies',
-                                         'Account Lockout Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditAccountLogon',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditAccountManage': {
                         'Policy': 'Audit account management',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditAccountManage',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditDSAccess': {
                         'Policy': 'Audit directory service access',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditDSAccess',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditLogonEvents': {
                         'Policy': 'Audit logon events',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditLogonEvents',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditObjectAccess': {
                         'Policy': 'Audit object access',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditObjectAccess',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditPolicyChange': {
                         'Policy': 'Audit policy change',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditPolicyChange',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditPrivilegeUse': {
                         'Policy': 'Audit privilege use',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditPrivilegeUse',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditProcessTracking': {
                         'Policy': 'Audit process tracking',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditProcessTracking',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'AuditSystemEvents': {
                         'Policy': 'Audit system events',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'Audit Policy'],
-                        'Settings': [0, 1, 2, 3],
+                        'lgpo_section': self.audit_policy_gpedit_path,
+                        'Settings': self.audit_lookup.keys(),
                         'Secedit': {
                             'Option': 'AuditSystemEvents',
                             'Section': 'Event Audit',
                         },
-                        'Transform': {
-                            'Get': '_event_audit_conversion',
-                            'Put': '_event_audit_reverse_conversion',
-                        },
+                        'Transform': self.audit_transform,
                     },
                     'SeTrustedCredManAccessPrivilege': {
-                        'Policy': 'Access Credential Manager as a trusted caller',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'Policy': 'Access Credential Manager as a trusted '
+                                  'caller',
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeTrustedCredManAccessPrivilege'
@@ -939,11 +1763,7 @@ class _policy_info(object):
                     },
                     'SeNetworkLogonRight': {
                         'Policy': 'Access this computer from the network',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeNetworkLogonRight'
@@ -955,11 +1775,7 @@ class _policy_info(object):
                     },
                     'SeTcbPrivilege': {
                         'Policy': 'Act as part of the operating system',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeTcbPrivilege'
@@ -971,11 +1787,7 @@ class _policy_info(object):
                     },
                     'SeMachineAccountPrivilege': {
                         'Policy': 'Add workstations to domain',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeMachineAccountPrivilege'
@@ -987,11 +1799,7 @@ class _policy_info(object):
                     },
                     'SeIncreaseQuotaPrivilege': {
                         'Policy': 'Adjust memory quotas for a process',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeIncreaseQuotaPrivilege'
@@ -1002,12 +1810,8 @@ class _policy_info(object):
                         },
                     },
                     'SeInteractiveLogonRight': {
-                        'Policy': 'Allow logon locally',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'Policy': 'Allow log on locally',
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeInteractiveLogonRight'
@@ -1018,12 +1822,8 @@ class _policy_info(object):
                         },
                     },
                     'SeRemoteInteractiveLogonRight': {
-                        'Policy': 'Allow logon through Remote Desktop Services',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'Policy': 'Allow log on through Remote Desktop Services',
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeRemoteInteractiveLogonRight'
@@ -1035,11 +1835,7 @@ class _policy_info(object):
                     },
                     'SeBackupPrivilege': {
                         'Policy': 'Backup files and directories',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeBackupPrivilege'
@@ -1051,11 +1847,7 @@ class _policy_info(object):
                     },
                     'SeChangeNotifyPrivilege': {
                         'Policy': 'Bypass traverse checking',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeChangeNotifyPrivilege'
@@ -1067,11 +1859,7 @@ class _policy_info(object):
                     },
                     'SeSystemtimePrivilege': {
                         'Policy': 'Change the system time',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSystemtimePrivilege'
@@ -1083,11 +1871,7 @@ class _policy_info(object):
                     },
                     'SeTimeZonePrivilege': {
                         'Policy': 'Change the time zone',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeTimeZonePrivilege'
@@ -1099,11 +1883,7 @@ class _policy_info(object):
                     },
                     'SeCreatePagefilePrivilege': {
                         'Policy': 'Create a pagefile',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreatePagefilePrivilege'
@@ -1115,11 +1895,7 @@ class _policy_info(object):
                     },
                     'SeCreateTokenPrivilege': {
                         'Policy': 'Create a token object',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreateTokenPrivilege'
@@ -1131,11 +1907,7 @@ class _policy_info(object):
                     },
                     'SeCreateGlobalPrivilege': {
                         'Policy': 'Create global objects',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreateGlobalPrivilege'
@@ -1147,11 +1919,7 @@ class _policy_info(object):
                     },
                     'SeCreatePermanentPrivilege': {
                         'Policy': 'Create permanent shared objects',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreatePermanentPrivilege'
@@ -1163,11 +1931,7 @@ class _policy_info(object):
                     },
                     'SeCreateSymbolicLinkPrivilege': {
                         'Policy': 'Create symbolic links',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreateSymbolicLinkPrivilege'
@@ -1179,11 +1943,7 @@ class _policy_info(object):
                     },
                     'SeDebugPrivilege': {
                         'Policy': 'Debug programs',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDebugPrivilege'
@@ -1194,12 +1954,9 @@ class _policy_info(object):
                         },
                     },
                     'SeDenyNetworkLogonRight': {
-                        'Policy': 'Deny access to this computer from the network',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'Policy': 'Deny access to this computer from the '
+                                  'network',
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyNetworkLogonRight'
@@ -1211,11 +1968,7 @@ class _policy_info(object):
                     },
                     'SeDenyBatchLogonRight': {
                         'Policy': 'Deny log on as a batch job',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyBatchLogonRight'
@@ -1227,11 +1980,7 @@ class _policy_info(object):
                     },
                     'SeDenyServiceLogonRight': {
                         'Policy': 'Deny log on as a service',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyServiceLogonRight'
@@ -1243,11 +1992,7 @@ class _policy_info(object):
                     },
                     'SeDenyInteractiveLogonRight': {
                         'Policy': 'Deny log on locally',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyInteractiveLogonRight'
@@ -1259,11 +2004,7 @@ class _policy_info(object):
                     },
                     'SeDenyRemoteInteractiveLogonRight': {
                         'Policy': 'Deny log on through Remote Desktop Services',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyRemoteInteractiveLogonRight'
@@ -1274,12 +2015,9 @@ class _policy_info(object):
                         },
                     },
                     'SeEnableDelegationPrivilege': {
-                        'Policy': 'Enable computer and user accounts to be trusted for delegation',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'Policy': 'Enable computer and user accounts to be '
+                                  'trusted for delegation',
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeEnableDelegationPrivilege'
@@ -1291,11 +2029,7 @@ class _policy_info(object):
                     },
                     'SeRemoteShutdownPrivilege': {
                         'Policy': 'Force shutdown from a remote system',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeRemoteShutdownPrivilege'
@@ -1307,11 +2041,7 @@ class _policy_info(object):
                     },
                     'SeAuditPrivilege': {
                         'Policy': 'Generate security audits',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeAuditPrivilege'
@@ -1323,11 +2053,7 @@ class _policy_info(object):
                     },
                     'SeImpersonatePrivilege': {
                         'Policy': 'Impersonate a client after authentication',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeImpersonatePrivilege'
@@ -1339,11 +2065,7 @@ class _policy_info(object):
                     },
                     'SeIncreaseWorkingSetPrivilege': {
                         'Policy': 'Increase a process working set',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeIncreaseWorkingSetPrivilege'
@@ -1355,11 +2077,7 @@ class _policy_info(object):
                     },
                     'SeIncreaseBasePriorityPrivilege': {
                         'Policy': 'Increase scheduling priority',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeIncreaseBasePriorityPrivilege'
@@ -1371,11 +2089,7 @@ class _policy_info(object):
                     },
                     'SeLoadDriverPrivilege': {
                         'Policy': 'Load and unload device drivers',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeLoadDriverPrivilege'
@@ -1387,11 +2101,7 @@ class _policy_info(object):
                     },
                     'SeLockMemoryPrivilege': {
                         'Policy': 'Lock pages in memory',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeLockMemoryPrivilege'
@@ -1403,11 +2113,7 @@ class _policy_info(object):
                     },
                     'SeBatchLogonRight': {
                         'Policy': 'Log on as a batch job',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeBatchLogonRight'
@@ -1419,11 +2125,7 @@ class _policy_info(object):
                     },
                     'SeServiceLogonRight': {
                         'Policy': 'Log on as a service',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeServiceLogonRight'
@@ -1435,11 +2137,7 @@ class _policy_info(object):
                     },
                     'SeSecurityPrivilege': {
                         'Policy': 'Manage auditing and security log',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSecurityPrivilege'
@@ -1451,11 +2149,7 @@ class _policy_info(object):
                     },
                     'SeRelabelPrivilege': {
                         'Policy': 'Modify an object label',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeRelabelPrivilege'
@@ -1467,11 +2161,7 @@ class _policy_info(object):
                     },
                     'SeSystemEnvironmentPrivilege': {
                         'Policy': 'Modify firmware environment values',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSystemEnvironmentPrivilege'
@@ -1483,11 +2173,7 @@ class _policy_info(object):
                     },
                     'SeManageVolumePrivilege': {
                         'Policy': 'Perform volume maintenance tasks',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeManageVolumePrivilege'
@@ -1499,11 +2185,7 @@ class _policy_info(object):
                     },
                     'SeProfileSingleProcessPrivilege': {
                         'Policy': 'Profile single process',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeProfileSingleProcessPrivilege'
@@ -1515,11 +2197,7 @@ class _policy_info(object):
                     },
                     'SeSystemProfilePrivilege': {
                         'Policy': 'Profile system performance',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSystemProfilePrivilege'
@@ -1531,11 +2209,7 @@ class _policy_info(object):
                     },
                     'SeUndockPrivilege': {
                         'Policy': 'Remove computer from docking station',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeUndockPrivilege'
@@ -1547,11 +2221,7 @@ class _policy_info(object):
                     },
                     'SeAssignPrimaryTokenPrivilege': {
                         'Policy': 'Replace a process level token',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeAssignPrimaryTokenPrivilege'
@@ -1563,11 +2233,7 @@ class _policy_info(object):
                     },
                     'SeRestorePrivilege': {
                         'Policy': 'Restore files and directories',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeRestorePrivilege'
@@ -1579,11 +2245,7 @@ class _policy_info(object):
                     },
                     'SeShutdownPrivilege': {
                         'Policy': 'Shut down the system',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeShutdownPrivilege'
@@ -1595,11 +2257,7 @@ class _policy_info(object):
                     },
                     'SeSyncAgentPrivilege': {
                         'Policy': 'Synchronize directory service data',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSyncAgentPrivilege'
@@ -1611,11 +2269,7 @@ class _policy_info(object):
                     },
                     'SeTakeOwnershipPrivilege': {
                         'Policy': 'Take ownership of files and other objects',
-                        'lgpo_section': ['Computer Configuration',
-                                         'Windows Settings',
-                                         'Security Settings',
-                                         'Local Policies',
-                                         'User Rights Assignment'],
+                        'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeTakeOwnershipPrivilege'
@@ -1624,6 +2278,34 @@ class _policy_info(object):
                             'Get': '_sidConversion',
                             'Put': '_usernamesToSidObjects',
                         },
+                    },
+                    'RecoveryConsoleSecurityLevel': {
+                        'Policy': 'Recovery console: Allow automatic '
+                                  'adminstrative logon',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\'
+                                    'CurrentVersion\\Setup\\RecoveryConsole',
+                            'Value': 'SecurityLevel',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'RecoveryConsoleSetCommand': {
+                        'Policy': 'Recovery console: Allow floppy copy and '
+                                  'access to all drives and all folders',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Microsoft\\Windows NT\\'
+                                    'CurrentVersion\\Setup\\RecoveryConsole',
+                            'Value': 'SetCommand',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                 }
             },
@@ -1634,17 +2316,27 @@ class _policy_info(object):
         }
         self.admx_registry_classes = {
             'User': {
-                'policy_path': os.path.join(os.getenv('WINDIR'), 'System32', 'GroupPolicy', 'User', 'Registry.pol'),
+                'policy_path': os.path.join(os.getenv('WINDIR'), 'System32',
+                                            'GroupPolicy', 'User',
+                                            'Registry.pol'),
                 'hive': 'HKEY_USERS',
-                'lgpo_section': 'User Configuration'
+                'lgpo_section': 'User Configuration',
+                'gpt_extension_location': 'gPCUserExtensionNames',
+                'gpt_extension_guid': '[{35378EAC-683F-11D2-A89A-00C04FBBCFA2}{D02B1F73-3407-48AE-BA88-E8213C6761F1}]'
             },
             'Machine': {
-                'policy_path': os.path.join(os.getenv('WINDIR'), 'System32', 'GroupPolicy', 'Machine', 'Registry.pol'),
+                'policy_path': os.path.join(os.getenv('WINDIR'), 'System32',
+                                            'GroupPolicy', 'Machine',
+                                            'Registry.pol'),
                 'hive': 'HKEY_LOCAL_MACHINE',
                 'lgpo_section': 'Computer Configuration',
+                'gpt_extension_location': 'gPCMachineExtensionNames',
+                'gpt_extension_guid': '[{35378EAC-683F-11D2-A89A-00C04FBBCFA2}{D02B1F72-3407-48AE-BA88-E8213C6761F1}]'
             },
         }
         self.reg_pol_header = u'\u5250\u6765\x01\x00'
+        self.gpt_ini_path = os.path.join(os.getenv('WINDIR'), 'System32',
+                                         'GroupPolicy', 'gpt.ini')
 
     @classmethod
     def _notEmpty(cls, val, **kwargs):
@@ -1655,83 +2347,6 @@ class _policy_info(object):
             return True
         else:
             return False
-
-    @classmethod
-    def _enable_one_disable_zero_conversion(cls, val, **kwargs):
-        '''
-        converts a reg dword 1/0 value to the strings enable/disable
-        '''
-        if val is not None:
-            if val == 1 or val == "1":
-                return 'Enabled'
-            elif val == 0 or val == "0":
-                return 'Disabled'
-            elif val == '(value not set)':
-                return 'Not Defined'
-            else:
-                return 'Invalid Value'
-        else:
-            return 'Not Defined'
-
-    @classmethod
-    def _enable_one_disable_zero_reverse_conversion(cls, val, **kwargs):
-        '''
-        converts Enable/Disable to 1/0
-        '''
-        return_string = False
-        if 'return_string' in kwargs:
-            return_string = True
-        if val is not None:
-            if val.upper() == 'ENABLED':
-                if return_string:
-                    return '1'
-                else:
-                    return 1
-            elif val.upper() == 'DISABLED':
-                if return_string:
-                    return '0'
-                else:
-                    return 0
-            else:
-                return None
-        else:
-            return None
-
-    @classmethod
-    def _event_audit_conversion(cls, val, **kwargs):
-        '''
-        converts an audit setting # (0, 1, 2, 3) to the string text
-        '''
-        if val is not None:
-            if val == 0 or val == "0":
-                return 'No auditing'
-            elif val == 1 or val == "1":
-                return 'Success'
-            elif val == 2 or val == "2":
-                return 'Failure'
-            elif val == 3 or val == "3":
-                return 'Succes, Failure'
-            else:
-                return 'Invalid Auditing Value'
-        else:
-            return 'Not Defined'
-
-    @classmethod
-    def _event_audit_reverse_conversion(cls, val, **kwargs):
-        '''
-        converts audit strings to numerical values
-        '''
-        if val is not None:
-            if val.upper() == 'NO AUDITING':
-                return 0
-            elif val.upper() == 'SUCCESS':
-                return 1
-            elif val.upper() == 'FAILURE':
-                return 2
-            elif val.upper() == 'SUCCESS, FAILURE':
-                return 3
-        else:
-            return 'Not Defined'
 
     @classmethod
     def _seconds_to_days(cls, val, **kwargs):
@@ -1824,7 +2439,7 @@ class _policy_info(object):
         '''
         if val is not None:
             if val == '0' or val == 0 or val == '':
-                return 'Administrtors'
+                return 'Administrators'
             elif val == '1' or val == 1:
                 return 'Administrators and Power Users'
             elif val == '2' or val == 2:
@@ -1841,14 +2456,15 @@ class _policy_info(object):
         '''
         if val is not None:
             if val.upper() == 'ADMINISTRATORS':
-                # "" also shows 'administrators' in the gui
+                # "" also shows 'administrators' in the GUI
                 return '0'
             elif val.upper() == 'ADMINISTRATORS AND POWER USERS':
                 return '1'
             elif val.upper() == 'ADMINISTRATORS AND INTERACTIVE USERS':
                 return '2'
             elif val.upper() == 'NOT DEFINED':
-                # a setting of anything other than nothing,0,1,2 or if they doesn't exist shows 'not defined'
+                # a setting of anything other than nothing, 0, 1, 2 or if it
+                # doesn't exist show 'not defined'
                 return '9999'
             else:
                 return 'Invalid Value'
@@ -1862,6 +2478,15 @@ class _policy_info(object):
         '''
         minimum = 0
         maximum = 1
+
+        if isinstance(val, string_types):
+            if val.lower() == 'not defined':
+                return True
+            else:
+                try:
+                    val = int(val)
+                except ValueError:
+                    return False
         if 'min' in kwargs:
             minimum = kwargs['min']
         if 'max' in kwargs:
@@ -1877,7 +2502,8 @@ class _policy_info(object):
     @classmethod
     def _driver_signing_reg_conversion(cls, val, **kwargs):
         '''
-        converts the binary value in the registry for driver signing into the correct string representation
+        converts the binary value in the registry for driver signing into the
+        correct string representation
         '''
         log.debug('we have {0} for the driver signing value'.format(val))
         if val is not None:
@@ -1902,7 +2528,8 @@ class _policy_info(object):
     @classmethod
     def _driver_signing_reg_reverse_conversion(cls, val, **kwargs):
         '''
-        converts the string value seen in the gui to the correct registry value for seceit
+        converts the string value seen in the GUI to the correct registry value
+        for secedit
         '''
         if val is not None:
             if val.upper() == 'SILENTLY SUCCEED':
@@ -1952,14 +2579,16 @@ class _policy_info(object):
                 sids.append(sid)
             except Exception as e:
                 raise CommandExecutionError((
-                    'There was an error obtaining the SID of user "{0}".  Error returned: {1}'
+                    'There was an error obtaining the SID of user "{0}". Error '
+                    'returned: {1}'
                     ).format(_user, e))
         return sids
 
     @classmethod
     def _powershell_script_order_conversion(cls, val, **kwargs):
         '''
-        converts true/false/None to the GUI representation of the powershell startup/shutdown script order
+        converts true/false/None to the GUI representation of the powershell
+        startup/shutdown script order
         '''
         log.debug('script order value = {0}'.format(val))
         if val is None or val == 'None':
@@ -1974,7 +2603,8 @@ class _policy_info(object):
     @classmethod
     def _powershell_script_order_reverse_conversion(cls, val, **kwargs):
         '''
-        converts powershell script GUI strings representations to True/False/None
+        converts powershell script GUI strings representations to
+        True/False/None
         '''
         if val.upper() == 'Run Windows PowerShell scripts first'.upper():
             return 'true'
@@ -1985,13 +2615,38 @@ class _policy_info(object):
         else:
             return 'Invalid Value'
 
+    @classmethod
+    def _dict_lookup(cls, item, **kwargs):
+        '''
+        Retrieves the key or value from a dict based on the item
+        kwarg lookup dict to search for item
+        kwarg value_lookup bool to determine if item should be compared to keys
+        or values
+        '''
+        log.debug('item == {0}'.format(item))
+        value_lookup = False
+        if 'value_lookup' in kwargs:
+            value_lookup = kwargs['value_lookup']
+        else:
+            value_lookup = False
+        if 'lookup' in kwargs:
+            for k, v in kwargs['lookup'].iteritems():
+                if value_lookup:
+                    if str(v).lower() == str(item).lower():
+                        log.debug('returning key {0}'.format(k))
+                        return k
+                else:
+                    if str(k).lower() == str(item).lower():
+                        log.debug('returning value {0}'.format(v))
+                        return v
+        return 'Invalid Value'
+
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
     if salt.utils.is_windows() and HAS_WINDOWS_MODULES:
-
         return __virtualname__
     return False
 
@@ -2021,9 +2676,9 @@ def _updateNamespace(item, new_namespace):
 
 def _updatePolicyElements(policy_item, regkey):
     '''
-    helper function to add the reg key to each policies element definitions if the key
-    attribute is not defined to make xpath searching easier
-    for each child in the policy <elements> item
+    helper function to add the reg key to each policies element definitions if
+    the key attribute is not defined to make xpath searching easier for each
+    child in the policy <elements> item
     '''
     for child in policy_item.getiterator():
         if 'valueName' in child.attrib:
@@ -2032,28 +2687,55 @@ def _updatePolicyElements(policy_item, regkey):
     return policy_item
 
 
-def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions', display_language='en-US'):
+def _remove_unicode_encoding(xml_file):
+    '''
+    attempts to remove the "encoding='unicode'" from an xml file
+    as lxml does not support that on a windows node currently
+    see issue #38100
+    '''
+    with open(xml_file, 'rb') as f:
+        xml_content = f.read()
+    modified_xml = re.sub(r' encoding=[\'"]+unicode[\'"]+', '', xml_content.decode('utf-16'), count=1)
+    xmltree = lxml.etree.parse(StringIO(modified_xml))
+    return xmltree
+
+
+def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
+                              display_language='en-US'):
     '''
     helper function to process all ADMX files in the specified policy_def_path
-    and build a single XML doc that we can search/use for admx polic processing
+    and build a single XML doc that we can search/use for ADMX policy processing
     '''
     display_language_fallback = 'en-US'
     t_policy_definitions = lxml.etree.Element('policyDefinitions')
     t_policy_definitions.append(lxml.etree.Element('categories'))
     t_policy_definitions.append(lxml.etree.Element('policies'))
     t_policy_definitions.append(lxml.etree.Element('policyNamespaces'))
-    t_policy_definition_resources = lxml.etree.Element('policyDefinitionResources')
+    t_policy_definition_resources = lxml.etree.Element(
+            'policyDefinitionResources')
     policydefs_policies_xpath = etree.XPath('/policyDefinitions/policies')
     policydefs_categories_xpath = etree.XPath('/policyDefinitions/categories')
-    policydefs_policyns_xpath = etree.XPath('/policyDefinitions/policyNamespaces')
-    policydefs_resources_localname_xpath = etree.XPath('//*[local-name() = "policyDefinitionResources"]/*')
+    policydefs_policyns_xpath = etree.XPath(
+            '/policyDefinitions/policyNamespaces')
+    policydefs_resources_localname_xpath = etree.XPath(
+            '//*[local-name() = "policyDefinitionResources"]/*')
     policydef_resources_xpath = etree.XPath('/policyDefinitionResources')
     for root, dirs, files in os.walk(policy_def_path):
         if root == policy_def_path:
             for t_admfile in files:
                 admfile = os.path.join(root, t_admfile)
                 parser = lxml.etree.XMLParser(remove_comments=True)
-                xmltree = lxml.etree.parse(admfile, parser=parser)
+                # see issue #38100
+                try:
+                    xmltree = lxml.etree.parse(admfile, parser=parser)
+                except lxml.etree.XMLSyntaxError:
+                    try:
+                        xmltree = _remove_unicode_encoding(admfile)
+                    except Exception:
+                        msg = ('A error was found while processing admx file {0},'
+                               ' all policies from this file will be unavailable via this module')
+                        log.error(msg.format(admfile))
+                        continue
                 namespaces = xmltree.getroot().nsmap
                 namespace_string = ''
                 if None in namespaces:
@@ -2090,19 +2772,31 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions', 
                     policydefs_policyns_xpath(t_policy_definitions)[0].append(temp_ns)
                 adml_file = os.path.join(root, display_language, os.path.splitext(t_admfile)[0] + '.adml')
                 if not __salt__['file.file_exists'](adml_file):
-                    msg = ('An adml file in the specified adml language "{0}" does not '
-                           'exist for the admx "{1}", the fallback languange will be tried.')
+                    msg = ('An ADML file in the specified ADML language "{0}" '
+                           'does not exist for the ADMX "{1}", the fallback '
+                           'language will be tried.')
                     log.info(msg.format(display_language, t_admfile))
                     adml_file = os.path.join(root,
                                              display_language_fallback,
                                              os.path.splitext(t_admfile)[0] + '.adml')
                     if not __salt__['file.file_exists'](adml_file):
-                        msg = ('An adml file in the specified adml language "{0}" and the fallback '
-                               'language "{1}" do not exist for the admx "{2}".')
+                        msg = ('An ADML file in the specified ADML language '
+                               '"{0}" and the fallback language "{1}" do not '
+                               'exist for the ADMX "{2}".')
                         raise SaltInvocationError(msg.format(display_language,
                                                              display_language_fallback,
                                                              t_admfile))
-                xmltree = lxml.etree.parse(adml_file)
+                try:
+                    xmltree = lxml.etree.parse(adml_file)
+                except lxml.etree.XMLSyntaxError:
+                    # see issue #38100
+                    try:
+                        xmltree = _remove_unicode_encoding(adml_file)
+                    except Exception:
+                        msg = ('An error was found while processing adml file {0}, all policy'
+                               ' languange data from this file will be unavailable via this module')
+                        log.error(msg.format(adml_file))
+                        continue
                 if None in namespaces:
                     namespaces['None'] = namespaces[None]
                     namespaces.pop(None)
@@ -2131,7 +2825,8 @@ def _findOptionValueInSeceditFile(option):
     '''
     try:
         _d = uuid.uuid4().hex
-        _tfile = '{0}\\{1}'.format(__salt__['config.get']('cachedir'), 'salt-secedit-dump-{0}.txt'.format(_d))
+        _tfile = '{0}\\{1}'.format(__salt__['config.get']('cachedir'),
+                                   'salt-secedit-dump-{0}.txt'.format(_d))
         _ret = __salt__['cmd.run']('secedit /export /cfg {0}'.format(_tfile))
         if _ret:
             _reader = codecs.open(_tfile, 'r', encoding='utf-16')
@@ -2153,8 +2848,10 @@ def _importSeceditConfig(infdata):
     '''
     try:
         _d = uuid.uuid4().hex
-        _tSdbfile = '{0}\\{1}'.format(__salt__['config.get']('cachedir'), 'salt-secedit-import-{0}.sdb'.format(_d))
-        _tInfFile = '{0}\\{1}'.format(__salt__['config.get']('cachedir'), 'salt-secedit-config-{0}.inf'.format(_d))
+        _tSdbfile = '{0}\\{1}'.format(__salt__['config.get']('cachedir'),
+                                      'salt-secedit-import-{0}.sdb'.format(_d))
+        _tInfFile = '{0}\\{1}'.format(__salt__['config.get']('cachedir'),
+                                      'salt-secedit-config-{0}.inf'.format(_d))
         # make sure our temp files don't already exist
         _ret = __salt__['file.remove'](_tSdbfile)
         _ret = __salt__['file.remove'](_tInfFile)
@@ -2174,8 +2871,8 @@ def _importSeceditConfig(infdata):
 
 def _transformValue(value, policy, transform_type):
     '''
-    helper function to transform the policy value into something that more closely matches
-    how the policy is displayed in the gpedit gui
+    helper function to transform the policy value into something that more
+    closely matches how the policy is displayed in the gpedit GUI
     '''
     t_kwargs = {}
     if 'Transform' in policy:
@@ -2187,17 +2884,21 @@ def _transformValue(value, policy, transform_type):
         else:
             return value
     else:
+        if 'Registry' in policy:
+            if value == '(value not set)':
+                return 'Not Defined'
         return value
 
 
 def _validateSetting(value, policy):
     '''
     helper function to validate specified value is appropriate for the policy
-    if the 'Settings' key is a list, the value will checked that it is in the list
-    if the 'Settings' key is a dict
-        we will try to execute the function name from the 'Function' key, passing the value
-        and additional arguments from the 'Args' dict
-    if the 'Settings' key is None, we won't do any validation and just return True
+    if the 'Settings' key is a list, the value will check that it is in the list
+    if the 'Settings' key is a dict we will try to execute the function name
+        from the 'Function' key, passing the value and additional arguments from
+        the 'Args' dict
+    if the 'Settings' key is None, we won't do any validation and just return
+        True
     if the Policy has 'Children', we'll validate their settings too
     '''
     log.debug('validating {0} for policy {1}'.format(value, policy))
@@ -2257,10 +2958,12 @@ def _getRightsAssignments(user_right):
 
 def _getAdmlDisplayName(adml_xml_data, display_name):
     '''
-    helper function to take the 'displayName' attribute of an element and find the value from the ADML data
+    helper function to take the 'displayName' attribute of an element and find
+    the value from the ADML data
 
-    adml_xml_data :: XML data of all adml files to search
-    display_name :: the value of the displayName attribute from the admx entry to search the adml data for
+    adml_xml_data :: XML data of all ADML files to search
+    display_name :: the value of the displayName attribute from the ADMX entry
+                    to search the ADML data for
     '''
     if display_name.startswith('$(') and display_name.endswith(')'):
         display_name = re.sub(r'(^\$\(|\)$)', '', display_name)
@@ -2408,13 +3111,17 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
 
 def _checkListItem(policy_element, policy_name, policy_key, xpath_object, policy_file_data, test_items=True):
     '''
-    helper function to process an enabled/Disabled/true/falseList set
-    if test_items is True, it will determine if the policy is enabled or disabled
-    returning True if all items are configured in the registry.pol file and false if they are not
+    helper function to process an enabled/disabled/true/falseList set
 
-    if test_items is False, the expected strings for the items will be returned as a list
+    if test_items is True, it will determine if the policy is enabled or
+    disabled returning True if all items are configured in the registry.pol file
+    and false if they are not
 
-    returns True if the enabled/disabledList is 100% configured in the registry.pol file, otherwise returns False
+    if test_items is False, the expected strings for the items will be returned
+    as a list
+
+    returns True if the enabled/disabledList is 100% configured in the
+    registry.pol file, otherwise returns False
     '''
     xpath_string = ('.//*[local-name() = "decimal" or local-name() = "delete"'
                     ' or local-name() = "longDecimal" or local-name() = "string"]')
@@ -2432,7 +3139,8 @@ def _checkListItem(policy_element, policy_name, policy_key, xpath_object, policy
             if 'valueName' in item.attrib:
                 item_valuename = item.attrib['valueName']
             else:
-                msg = '{2} item with attributes {0} in policy {1} does not have the required "valueName" attribute'
+                msg = ('{2} item with attributes {0} in policy {1} does not '
+                       'have the required "valueName" attribute')
                 log.error(msg.format(item.attrib, policy_element.attrib, etree.QName(list_element).localname))
                 break
             for value_item in value_item_child_xpath(item):
@@ -2491,9 +3199,11 @@ def _checkValueItemParent(policy_element, policy_name, policy_key,
     return False
 
 
-def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data, check_deleted=False):
+def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
+                                check_deleted=False):
     '''
-    helper function similar to _processValueItem to build a search string for a known key/value/type/data
+    helper function similar to _processValueItem to build a search string for a
+    known key/value/type/data
     '''
     registry = Registry()
     this_element_value = None
@@ -2532,16 +3242,22 @@ def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data, che
 def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                       check_deleted=False, this_element_value=None):
     '''
-    helper function to process an value type item and generate the expected string in the Registry.pol file
+    helper function to process a value type item and generate the expected
+    string in the Registry.pol file
 
     element - the element to process
-    reg_key - the registry key associated with the element (some inherit from their parent policy)
-    reg_valuename - the registry valueName associated with the element (some inherit from their parent policy)
+    reg_key - the registry key associated with the element (some inherit from
+              their parent policy)
+    reg_valuename - the registry valueName associated with the element (some
+                    inherit from their parent policy)
     policy - the parent policy element
-    parent_element - the parent element (primarily passed in to differentiate children of "elements" objects
-    check_deleted - if the returned expected string should be for a deleted value
-    this_element_value - a specific value to place into the expected string returned
-        for "elements" children whose values are specified by the user
+    parent_element - the parent element (primarily passed in to differentiate
+                     children of "elements" objects
+    check_deleted - if the returned expected string should be for a deleted
+                    value
+    this_element_value - a specific value to place into the expected string
+                         returned for "elements" children whose values are
+                         specified by the user
     '''
     registry = Registry()
     expected_string = None
@@ -2555,23 +3271,26 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             for val in struct.unpack('2H', struct.pack('I', int(element.attrib['value']))):
                 this_element_value = this_element_value + unichr(val)
         else:
-            msg = 'The {2} child {1} element for the policy with attributes: {0} does not have the required'
-            msg = ' "value" attribute.  The elment attributes are: {3}'
+            msg = ('The {2} child {1} element for the policy with attributes: '
+                   '{0} does not have the required "value" attribute. The '
+                   'element attributes are: {3}')
             log.error(msg.format(policy.attrib,
                                  etree.QName(element).localname,
                                  etree.QName(parent_element).localname,
                                  element.attrib))
             return None
     elif etree.QName(element).localname == 'longDecimal' and etree.QName(parent_element).localname != 'elements':
-        # WARNING: no longDecimals in current ADMX files included with 2012 server, so untested/assumed
+        # WARNING: no longDecimals in current ADMX files included with 2012
+        # server, so untested/assumed
         this_vtype = 'REG_QWORD'
         if 'value' in element.attrib:
             this_element_value = ''
             for val in struct.unpack('4H', struct.pack('I', int(element.attrib['value']))):
                 this_element_value = this_element_value + unichr(val)
         else:
-            msg = ('The {2} child {1} element for the policy with attributes: {0} does not have the required'
-                   ' "value" attribute.  The elment attributes are: {3}')
+            msg = ('The {2} child {1} element for the policy with attributes: '
+                   '{0} does not have the required "value" attribute. The '
+                   'element attributes are: {3}')
             log.error(msg.format(policy.attrib,
                                  etree.QName(element).localname,
                                  etree.QName(parent_element).localname,
@@ -2583,8 +3302,8 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
     elif etree.QName(parent_element).localname == 'elements':
         standard_element_expected_string = True
         if etree.QName(element).localname == 'boolean':
-            # a boolean element that has no children will add a REG_DWORD == 1 on true
-            # or delete the value on false
+            # a boolean element that has no children will add a REG_DWORD == 1
+            # on true or delete the value on false
             # https://msdn.microsoft.com/en-us/library/dn605978(v=vs.85).aspx
             if this_element_value is False:
                 check_deleted = True
@@ -2595,31 +3314,37 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
         elif etree.QName(element).localname == 'decimal':
             # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
             this_vtype = 'REG_DWORD'
+            requested_val = this_element_value
             if this_element_value is not None:
                 temp_val = ''
                 for v in struct.unpack('2H', struct.pack('I', int(this_element_value))):
+                    # Not Python 3 compliant
+                    # `unichr` not available in Python 3
                     temp_val = temp_val + unichr(v)
                 this_element_value = temp_val
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
                     this_vtype = 'REG_SZ'
-                    if this_element_value is not None:
-                        this_element_value = str(this_element_value)
+                    if requested_val is not None:
+                        this_element_value = str(requested_val)
             if check_deleted:
                 this_vtype = 'REG_SZ'
         elif etree.QName(element).localname == 'longDecimal':
             # https://msdn.microsoft.com/en-us/library/dn606015(v=vs.85).aspx
             this_vtype = 'REG_QWORD'
+            requested_val = this_element_value
             if this_element_value is not None:
                 temp_val = ''
                 for v in struct.unpack('4H', struct.pack('I', int(this_element_value))):
+                    # Not Python 3 compliant
+                    # `unichr` not available in Python 3
                     temp_val = temp_val + unichr(v)
                 this_element_value = temp_val
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
                     this_vtype = 'REG_SZ'
-                    if this_element_value is not None:
-                        this_element_value = str(this_element_value)
+                    if requested_val is not None:
+                        this_element_value = str(requested_val)
         elif etree.QName(element).localname == 'text':
             # https://msdn.microsoft.com/en-us/library/dn605969(v=vs.85).aspx
             this_vtype = 'REG_SZ'
@@ -2696,6 +3421,8 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                         reg_key,
                                         reg_valuename,
                                         chr(registry.vtype[this_vtype]),
+                                        # Not Python 3 compliant
+                                        # `unichr` not available in Python 3
                                         unichr(len(this_element_value.encode('utf-16-le'))),
                                         this_element_value)
             else:
@@ -2712,6 +3439,8 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                     reg_key,
                                     reg_valuename,
                                     chr(registry.vtype[this_vtype]),
+                                    # Not Python 3 compliant
+                                    # `unichr` not available in Python 3
                                     unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
                                     ' ')
         else:
@@ -2720,6 +3449,8 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                     reg_key,
                                     reg_valuename,
                                     chr(registry.vtype[this_vtype]),
+                                    # Not Python 3 compliant
+                                    # `unichr` not available in Python 3
                                     unichr(len(this_element_value.encode('utf-16-le'))),
                                     this_element_value)
     return expected_string
@@ -2732,9 +3463,10 @@ def _checkAllAdmxPolicies(policy_class,
                           hierarchical_return=False,
                           return_not_configured=False):
     '''
-    rewrite of _getAllAdminTemplateSettingsFromRegPolFile where instead of looking only
-    at the contents of the file, we're going to loop through every policy and look
-    in the registry.pol file to determine if it is enabled/disabled/not configured
+    rewrite of _getAllAdminTemplateSettingsFromRegPolFile where instead of
+    looking only at the contents of the file, we're going to loop through every
+    policy and look in the registry.pol file to determine if it is
+    enabled/disabled/not configured
     '''
     log.debug('POLICY CLASS == {0}'.format(policy_class))
     module_policy_data = _policy_info()
@@ -2769,7 +3501,8 @@ def _checkAllAdmxPolicies(policy_class,
             log.debug('returning non configured policies')
             not_configured_policies = ALL_CLASS_POLICY_XPATH(admx_policy_definitions, registry_class=policy_class)
             for policy_item in admx_policies:
-                not_configured_policies.remove(policy_item)
+                if policy_item in not_configured_policies:
+                    not_configured_policies.remove(policy_item)
 
             for not_configured_policy in not_configured_policies:
                 policy_vals[not_configured_policy.attrib['name']] = 'Not Configured'
@@ -2779,6 +3512,11 @@ def _checkAllAdmxPolicies(policy_class,
                             not_configured_policy.attrib['name'],
                             return_full_policy_names,
                             adml_policy_resources)
+                log.debug('building hierarchy for non-configured item {0}'.format(not_configured_policy.attrib['name']))
+                hierarchy[not_configured_policy.attrib['name']] = _build_parent_list(not_configured_policy,
+                                                                                     admx_policy_definitions,
+                                                                                     return_full_policy_names,
+                                                                                     adml_policy_resources)
         for admx_policy in admx_policies:
             this_key = None
             this_valuename = None
@@ -2790,14 +3528,16 @@ def _checkAllAdmxPolicies(policy_class,
             if 'key' in admx_policy.attrib:
                 this_key = admx_policy.attrib['key']
             else:
-                log.error('policy item {0} does not have the required "key" attribute'.format(admx_policy.attrib))
+                log.error('policy item {0} does not have the required "key" '
+                          'attribute'.format(admx_policy.attrib))
                 break
             if 'valueName' in admx_policy.attrib:
                 this_valuename = admx_policy.attrib['valueName']
             if 'name' in admx_policy.attrib:
                 this_policyname = admx_policy.attrib['name']
             else:
-                log.error('policy item {0} does not have the required "name" attribute'.format(admx_policy.attrib))
+                log.error('policy item {0} does not have the required "name" '
+                          'attribute'.format(admx_policy.attrib))
                 break
             if ENABLED_VALUE_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
                 element_only_enabled_disabled = False
@@ -2839,7 +3579,8 @@ def _checkAllAdmxPolicies(policy_class,
                     policy_vals[this_policyname] = this_policy_setting
 
             if not explicit_enable_disable_value_setting and this_valuename:
-                # the policy has a key/valuename but no explicit enabled/Disabled Value or List
+                # the policy has a key/valuename but no explicit enabled/Disabled
+                # Value or List
                 # these seem to default to a REG_DWORD 1 = "Enabled" **del. = "Disabled"
                 if _regexSearchRegPolData(re.escape(_buildKnownDataSearchString(this_key,
                                                                                 this_valuename,
@@ -2903,7 +3644,7 @@ def _checkAllAdmxPolicies(policy_class,
                                             policy_disabled_elements = policy_disabled_elements + 1
                                             msg = 'element {0} is configured false'
                                             log.debug(msg.format(child_item.attrib['id']))
-                                    # WARNING - no standard admx files use true/falseList
+                                    # WARNING - no standard ADMX files use true/falseList
                                     # so this hasn't actually been tested
                                     if TRUE_LIST_XPATH(child_item) and this_element_name not in configured_elements:
                                         log.debug('checking trueList')
@@ -3088,7 +3829,7 @@ def _checkAllAdmxPolicies(policy_class,
                 policy_vals[full_names[policy_item]] = policy_vals.pop(policy_item)
                 unpathed_dict[full_names[policy_item]] = policy_item
         # go back and remove any "unpathed" policies that need a full path
-        for path_needed in pathed_dict.keys():
+        for path_needed in unpathed_dict.keys():
             # remove the item with the same full name and re-add it w/a path'd version
             full_path_list = hierarchy[unpathed_dict[path_needed]]
             full_path_list.reverse()
@@ -3127,7 +3868,8 @@ def _build_parent_list(policy_definition,
                        return_full_policy_names,
                        adml_policy_resources):
     '''
-    helper functioon to build a list containing parent elements of the ADMX policy
+    helper function to build a list containing parent elements of the ADMX
+    policy
     '''
     parent_list = []
     policy_namespace = policy_definition.nsmap.keys()[0]
@@ -3157,7 +3899,8 @@ def _admx_policy_parent_walk(path,
                              return_full_policy_names,
                              adml_policy_resources):
     '''
-    helper function to recursively walk up the ADMX namespaces and build the hierarchy for the policy
+    helper function to recursively walk up the ADMX namespaces and build the
+    hierarchy for the policy
     '''
     category_xpath_string = '/policyDefinitions/categories/{0}:category[@name="{1}"]'
     using_xpath_string = '/policyDefinitions/policyNamespaces/{0}:using'
@@ -3222,17 +3965,98 @@ def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
     return None
 
 
-def _write_regpol_data(data_to_write, policy_file_path):
+def _write_regpol_data(data_to_write,
+                       policy_file_path,
+                       gpt_ini_path,
+                       gpt_extension,
+                       gpt_extension_guid):
     '''
     helper function to actually write the data to a Registry.pol file
+
+    also updates/edits the gpt.ini file to include the ADM policy extensions
+    to let the computer know user and/or machine registry policy files need
+    to be processed
+
+    data_to_write: data to write into the user/machine registry.pol file
+    policy_file_path: path to the registry.pol file
+    gpt_ini_path: path to gpt.ini file
+    gpt_extension: gpt extension list name from _policy_info class for this registry class gpt_extension_location
+    gpt_extension_guid: admx registry extension guid for the class
     '''
     try:
         if data_to_write:
             reg_pol_header = u'\u5250\u6765\x01\x00'
+            if not os.path.exists(policy_file_path):
+                ret = __salt__['file.makedirs'](policy_file_path)
             with open(policy_file_path, 'wb') as pol_file:
                 if not data_to_write.startswith(reg_pol_header):
                     pol_file.write(reg_pol_header.encode('utf-16-le'))
                 pol_file.write(data_to_write.encode('utf-16-le'))
+            try:
+                gpt_ini_data = ''
+                if os.path.exists(gpt_ini_path):
+                    with open(gpt_ini_path, 'rb') as gpt_file:
+                        gpt_ini_data = gpt_file.read()
+                if not _regexSearchRegPolData(r'\[General\]\r\n', gpt_ini_data):
+                    gpt_ini_data = '[General]\r\n' + gpt_ini_data
+                if _regexSearchRegPolData(r'{0}='.format(re.escape(gpt_extension)), gpt_ini_data):
+                    # ensure the line contains the ADM guid
+                    gpt_ext_loc = re.search(r'^{0}=.*\r\n'.format(re.escape(gpt_extension)),
+                                            gpt_ini_data,
+                                            re.IGNORECASE | re.MULTILINE)
+                    gpt_ext_str = gpt_ini_data[gpt_ext_loc.start():gpt_ext_loc.end()]
+                    if not _regexSearchRegPolData(r'{0}'.format(re.escape(gpt_extension_guid)),
+                                                  gpt_ext_str):
+                        gpt_ext_str = gpt_ext_str.split('=')
+                        gpt_ext_str[1] = gpt_extension_guid + gpt_ext_str[1]
+                        gpt_ext_str = '='.join(gpt_ext_str)
+                        gpt_ini_data = gpt_ini_data[0:gpt_ext_loc.start()] + gpt_ext_str + gpt_ini_data[gpt_ext_loc.end():]
+                else:
+                    general_location = re.search(r'^\[General\]\r\n',
+                                                 gpt_ini_data,
+                                                 re.IGNORECASE | re.MULTILINE)
+                    gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+                            gpt_ini_data[general_location.start():general_location.end()],
+                            gpt_extension, gpt_extension_guid,
+                            gpt_ini_data[general_location.end():])
+                # https://technet.microsoft.com/en-us/library/cc978247.aspx
+                if _regexSearchRegPolData(r'Version=', gpt_ini_data):
+                    version_loc = re.search(r'^Version=.*\r\n',
+                                            gpt_ini_data,
+                                            re.IGNORECASE | re.MULTILINE)
+                    version_str = gpt_ini_data[version_loc.start():version_loc.end()]
+                    version_str = version_str.split('=')
+                    version_nums = struct.unpack('>2H', struct.pack('>I', int(version_str[1])))
+                    if gpt_extension.lower() == 'gPCMachineExtensionNames'.lower():
+                        version_nums = (version_nums[0], version_nums[1] + 1)
+                    elif gpt_extension.lower() == 'gPCUserExtensionNames'.lower():
+                        version_nums = (version_nums[0] + 1, version_nums[1])
+                    version_num = int("{0}{1}".format(str(version_nums[0]).zfill(4),
+                                                      str(version_nums[1]).zfill(4)), 16)
+                    gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+                            gpt_ini_data[0:version_loc.start()],
+                            'Version', version_num,
+                            gpt_ini_data[version_loc.end():])
+                else:
+                    general_location = re.search(r'^\[General\]\r\n',
+                                                 gpt_ini_data,
+                                                 re.IGNORECASE | re.MULTILINE)
+                    if gpt_extension.lower() == 'gPCMachineExtensionNames'.lower():
+                        version_nums = (0, 1)
+                    elif gpt_extension.lower() == 'gPCUserExtensionNames'.lower():
+                        version_nums = (1, 0)
+                    gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+                            gpt_ini_data[general_location.start():general_location.end()],
+                            'Version',
+                            int("{0}{1}".format(str(version_nums[0]).zfill(4), str(version_nums[1]).zfill(4)), 16),
+                            gpt_ini_data[general_location.end():])
+                if gpt_ini_data:
+                    with open(gpt_ini_path, 'wb') as gpt_file:
+                        gpt_file.write(gpt_ini_data)
+            except Exception as e:
+                msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(
+                        gpt_ini_path, e)
+                raise CommandExecutionError(msg)
     except Exception as e:
         msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(policy_file_path, e)
         raise CommandExecutionError(msg)
@@ -3240,8 +4064,8 @@ def _write_regpol_data(data_to_write, policy_file_path):
 
 def _policyFileReplaceOrAppendList(string_list, policy_data):
     '''
-    helper function to take a list of strings for registry.pol file data
-    and update existing strings or append the strings
+    helper function to take a list of strings for registry.pol file data and
+    update existing strings or append the strings
     '''
     if not policy_data:
         policy_data = ''
@@ -3267,8 +4091,8 @@ def _policyFileReplaceOrAppendList(string_list, policy_data):
 
 def _policyFileReplaceOrAppend(this_string, policy_data, append_only=False):
     '''
-    helper function to take a admx policy string for registry.pol file data
-    and update existing string or append the string to the data
+    helper function to take a ADMX policy string for registry.pol file data and
+    update existing string or append the string to the data
     '''
     # we are going to clean off the special pre-fixes, so we get only the valuename
     if not policy_data:
@@ -3303,7 +4127,8 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
     u'''
     helper function to prep/write adm template data to the Registry.pol file
 
-    each file begins with REGFILE_SIGNATURE (u'\u5250\u6765') and REGISTRY_FILE_VERSION (u'\x01\00')
+    each file begins with REGFILE_SIGNATURE (u'\u5250\u6765') and
+    REGISTRY_FILE_VERSION (u'\x01\00')
 
     https://msdn.microsoft.com/en-us/library/aa374407(VS.85).aspx
     [Registry Path<NULL>;Reg Value<NULL>;Reg Type<NULL>;SizeInBytes<NULL>;Data<NULL>]
@@ -3615,7 +4440,11 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                                         enabled_value_string,
                                                         existing_data,
                                                         append_only=True)
-        _write_regpol_data(existing_data, policy_data.admx_registry_classes[registry_class]['policy_path'])
+        _write_regpol_data(existing_data,
+                           policy_data.admx_registry_classes[registry_class]['policy_path'],
+                           policy_data.gpt_ini_path,
+                           policy_data.admx_registry_classes[registry_class]['gpt_extension_location'],
+                           policy_data.admx_registry_classes[registry_class]['gpt_extension_guid'])
     except Exception as e:
         log.error('Unhandled exception {0} occurred while attempting to write Adm Template Policy File'.format(e))
         return False
@@ -3627,42 +4456,47 @@ def _getScriptSettingsFromIniFile(policy_info):
     helper function to parse/read a GPO Startup/Shutdown script file
     '''
     _existingData = _read_regpol_file(policy_info['ScriptIni']['IniPath'])
-    _existingData = _existingData.split('\r\n')
-    script_settings = {}
-    this_section = None
-    for eLine in _existingData:
-        if eLine.startswith('[') and eLine.endswith(']'):
-            this_section = eLine.replace('[', '').replace(']', '')
-            log.debug('adding section {0}'.format(this_section))
-            if this_section:
-                script_settings[this_section] = {}
+    if _existingData:
+        _existingData = _existingData.split('\r\n')
+        script_settings = {}
+        this_section = None
+        for eLine in _existingData:
+            if eLine.startswith('[') and eLine.endswith(']'):
+                this_section = eLine.replace('[', '').replace(']', '')
+                log.debug('adding section {0}'.format(this_section))
+                if this_section:
+                    script_settings[this_section] = {}
+            else:
+                if '=' in eLine:
+                    log.debug('working with config line {0}'.format(eLine))
+                    eLine = eLine.split('=')
+                    if this_section in script_settings:
+                        script_settings[this_section][eLine[0]] = eLine[1]
+        if 'SettingName' in policy_info['ScriptIni']:
+            log.debug('Setting Name is in policy_info')
+            if policy_info['ScriptIni']['SettingName'] in script_settings[policy_info['ScriptIni']['Section']]:
+                log.debug('the value is set in the file')
+                return script_settings[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName']]
+            else:
+                return None
+        elif policy_info['ScriptIni']['Section'] in script_settings:
+            log.debug('no setting name')
+            return script_settings[policy_info['ScriptIni']['Section']]
         else:
-            if '=' in eLine:
-                log.debug('working with config line {0}'.format(eLine))
-                eLine = eLine.split('=')
-                if this_section in script_settings:
-                    script_settings[this_section][eLine[0]] = eLine[1]
-    if 'SettingName' in policy_info['ScriptIni']:
-        log.debug('Setting Name is in policy_info')
-        if policy_info['ScriptIni']['SettingName'] in script_settings[policy_info['ScriptIni']['Section']]:
-            log.debug('the value is set in the file')
-            return script_settings[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName']]
-        else:
+            log.debug('broad else')
             return None
-    elif policy_info['ScriptIni']['Section'] in script_settings:
-        log.debug('no setting name')
-        return script_settings[policy_info['ScriptIni']['Section']]
-    else:
-        log.debug('broad else')
-        return None
+    return None
 
 
 def _writeGpoScript(psscript=False):
     '''
     helper function to write local GPO startup/shutdown script
 
-    scripts are stored in scripts.ini and psscripts.ini files in WINDIR\\System32\\GroupPolicy\\Machine|User\\Scripts
+    scripts are stored in scripts.ini and psscripts.ini files in
+    ``WINDIR\\System32\\GroupPolicy\\Machine|User\\Scripts``
+
     these files have the hidden attribute set
+
     files have following format:
         empty line
         [Startup]
@@ -3671,12 +4505,17 @@ def _writeGpoScript(psscript=False):
         [Shutdown]
         0CmdLine=<path to shutdown script 0>
         0Parameters=<shutdown script 0 parameters>
+
     Number is incremented for each script added
-    psscript file also has the option of a [ScriptsConfig] section, which has the following two parameters:
+
+    psscript file also has the option of a [ScriptsConfig] section, which has
+    the following two parameters:
         StartExecutePSFirst
         EndExecutePSFirst
-    these can be set to true/false to denote if the powershell startup/shutdown scripts execute
-    first (true) or last (false), if the value isn't set, then it is 'Not Configured' in the GUI
+
+    these can be set to True/False to denote if the powershell startup/shutdown
+    scripts execute first (True) or last (False), if the value isn't set, then
+    it is 'Not Configured' in the GUI
     '''
     _machineScriptPolicyPath = os.path.join(os.getenv('WINDIR'),
                                             'System32',
@@ -3739,7 +4578,7 @@ def _lookup_admin_template(policy_name,
             policy_aliases.append('\\'.join(full_path_list))
             return (True, the_policy, policy_aliases, None)
         else:
-            msg = 'Admx policy name/id "{0}" is used in multiple admx files'
+            msg = 'ADMX policy name/id "{0}" is used in multiple ADMX files'
             return (False, None, [], msg)
     else:
         adml_search_results = ADML_SEARCH_XPATH(adml_policy_resources,
@@ -3757,8 +4596,11 @@ def _lookup_admin_template(policy_name,
             suggested_policies = ''
             if len(adml_search_results) > 1:
                 multiple_adml_entries = True
+                for adml_search_result in adml_search_results:
+                    if not getattr(adml_search_result, 'text', '').strip() == policy_name:
+                        adml_search_results.remove(adml_search_result)
             for adml_search_result in adml_search_results:
-                dmsg = 'found an adml entry matching the string! {0} -- {1}'
+                dmsg = 'found an ADML entry matching the string! {0} -- {1}'
                 log.debug(dmsg.format(adml_search_result.tag,
                                       adml_search_result.attrib))
                 display_name_searchval = '$({0}.{1})'.format(
@@ -3785,7 +4627,7 @@ def _lookup_admin_template(policy_name,
                             else:
                                 found = True
                             if found:
-                                dmsg = ('found the admx policy matching '
+                                dmsg = ('found the ADMX policy matching '
                                         'the display name {1} -- {0}')
                                 log.debug(dmsg.format(search_result, policy_name))
                                 if 'name' in search_result.attrib:
@@ -3805,7 +4647,7 @@ def _lookup_admin_template(policy_name,
                                     policy_aliases.append('\\'.join(full_path_list))
                                     return (True, search_result, policy_aliases, None)
                                 else:
-                                    msg = ('Admx policy with the display name {0} does not'
+                                    msg = ('ADMX policy with the display name {0} does not'
                                            'have the required name attribtue')
                                     msg = msg.format(policy_name)
                                     return (False, None, [], msg)
@@ -3829,7 +4671,7 @@ def _lookup_admin_template(policy_name,
                     msg = 'Unable to find a policy with the name "{0}".'.format(policy_name)
                     return (False, None, [], msg)
             if suggested_policies:
-                msg = ('Adml policy name "{0}" is used as the display name'
+                msg = ('ADML policy name "{0}" is used as the display name'
                        ' for multiple policies.'
                        '  These policies matched: {1}'
                        '.  You can utilize these long names to'
@@ -3838,28 +4680,28 @@ def _lookup_admin_template(policy_name,
     return (False, None, [], 'Unable to find {0} policy {1}'.format(policy_class, policy_name))
 
 
-def list_configurable_policies(policy_class='Machine',
-                               include_administrative_templates=True,
-                               adml_language='en-US'):
-    '''
-    list the policies that the execution module can configure
-    '''
-
-
 def get_policy_info(policy_name,
                     policy_class,
                     adml_language='en-US'):
     '''
-    returns information about a specified policy
+    Returns information about a specified policy
 
-    :str: policy_name
-        the name of the policy to lookup
+    Args:
+        policy_name (str):
+            The name of the policy to lookup
+        policy_class (str):
+            The class of policy, i.e. machine, user, both
+        adml_language (str):
+            The ADML language to use for Administrative Template data lookup
 
-    :str: policy_class
-        the class of policy, i.e. machine, user, both
+    Returns:
+        dict: Information about the specified policy
 
-    :str: adml_language
-        the adml language to use for Administrative Template data lookup
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lgpo.get_policy_info 'Maximum password age' machine
     '''
     # return the possible policy names and element names
     ret = {'policy_name': policy_name,
@@ -3926,34 +4768,40 @@ def get(policy_class=None, return_full_policy_names=True,
     '''
     Get a policy value
 
-    :param string policy_class:
-        Some policies are both user and computer, by default all policies will be pulled,
-        but this can be used to retrieve only a specific policy class
-        User/USER/user = retrieve user policies
-        Machine/MACHINE/machine/Computer/COMPUTER/computer = retrieve machine/computer policies
+    Args:
 
-    :param boolean return_full_policy_names:
-        True/False to return the policy name as it is seen in the gpedit.msc GUI or
-        to only return the policy key/id.
+        policy_class (str):
+            Some policies are both user and computer, by default all policies
+            will be pulled, but this can be used to retrieve only a specific
+            policy class User/USER/user = retrieve user policies
+            Machine/MACHINE/machine/Computer/COMPUTER/computer = retrieve
+            machine/computer policies
 
-    :param boolean hierarchical_return:
-        True/False to return the policy data in the hierarchy as seen in the gpedit.msc gui
-        The default of False will return data split only into User/Computer configuration sections
+        return_full_policy_names (bool):
+            True/False to return the policy name as it is seen in the
+            ``gpedit.msc`` GUI or to only return the policy key/id.
 
-    :param str adml_language:
-        The adml language to use for processing display/descriptive names
-        and enumeration values of admx template data, defaults to en-US
+        hierarchical_return (bool):
+            True/False to return the policy data in the hierarchy as seen in the
+            ``gpedit.msc`` GUI. The default of False will return data split only
+            into User/Computer configuration sections
 
-    :param boolean return_not_configured:
-        Include Administrative Template policies that are 'Not Configured' in the return data
+        adml_language (str):
+            The ADML language to use for processing display/descriptive names
+            and enumeration values of ADMX template data, defaults to en-US
 
-    :rtype: dict
+        return_not_configured (bool):
+            Include Administrative Template policies that are 'Not Configured'
+            in the return data
+
+    Returns:
+        dict: A dictionary containing the policy values for the specified class
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' lgpo.get return_full_policy_names=True
+        salt '*' lgpo.get machine return_full_policy_names=True
     '''
 
     vals = {}
@@ -4061,21 +4909,27 @@ def set_computer_policy(name,
     '''
     Set a single computer policy
 
-    :param string name
-        the name of the policy to configure
+    Args:
+        name (str):
+            The name of the policy to configure
 
-    :param object setting
-        the setting to configure the named policy with
+        setting (str):
+            The setting to configure the named policy with
 
-    :param bool cumulative_rights_assignments
-        Determine how user rights assignment policies are configured.
+        cumulative_rights_assignments (bool): Determine how user rights
+            assignment policies are configured. If True, user right assignment
+            specifications are simply added to the existing policy. If False,
+            only the users specified will get the right (any existing will have
+            the right revoked)
 
-        If True, user right assignment specifications are simply added to the existing policy
-        If False, only the users specified will get the right (any existing will have the right revoked)
+        adml_language (str): The language files to use for looking up
+            Administrative Template policy data (i.e. how the policy is
+            displayed in the GUI).  Defaults to 'en-US' (U.S. English).
 
-    :param str adml_language:
-        The language files to use for looking up Administrative Template policy data (i.e. how the policy is
-        displayed in the GUI).  Defaults to 'en-US' (U.S. English).
+    Returns:
+        bool: True if successful, otherwise False
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -4083,10 +4937,10 @@ def set_computer_policy(name,
     '''
     pol = {}
     pol[name] = setting
-    ret = set(computer_policy=pol,
-              user_policy=None,
-              cumulative_rights_assignments=cumulative_rights_assignments,
-              adml_language=adml_language)
+    ret = set_(computer_policy=pol,
+               user_policy=None,
+               cumulative_rights_assignments=cumulative_rights_assignments,
+               adml_language=adml_language)
     return ret
 
 
@@ -4096,15 +4950,23 @@ def set_user_policy(name,
     '''
     Set a single user policy
 
-    :param string name
-        the name of the policy to configure
+    Args:
 
-    :param object setting
-        the setting to configure the named policy with
+        name (str):
+            The name of the policy to configure
 
-    :param str adml_language:
-        The language files to use for looking up Administrative Template policy data (i.e. how the policy is
-        displayed in the GUI).  Defaults to 'en-US' (U.S. English).
+        setting (str):
+            The setting to configure the named policy with
+
+        adml_language (str):
+            The language files to use for looking up Administrative Template
+            policy data (i.e. how the policy is displayed in the GUI). Defaults
+            to 'en-US' (U.S. English).
+
+    Returns:
+        bool: True if successful, Otherwise False
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -4112,10 +4974,10 @@ def set_user_policy(name,
     '''
     pol = {}
     pol[name] = setting
-    ret = set(user_policy=pol,
-              computer_policy=None,
-              cumulative_rights_assignments=True,
-              adml_language=adml_language)
+    ret = set_(user_policy=pol,
+               computer_policy=None,
+               cumulative_rights_assignments=True,
+               adml_language=adml_language)
     return ret
 
 
@@ -4125,48 +4987,70 @@ def set_(computer_policy=None, user_policy=None,
     '''
     Set a local server policy.
 
-    :param dict computer_policy:
-        A dictionary of "policyname: value" pairs of computer policies to set
-        'value' should be how it is displayed in the gpedit gui, i.e. if a setting can
-        be 'Enabled'/'Disabled', then that should be passed
+    Args:
 
-        Administrative Template data may require dicts within dicts, to specify each element
-        of the Administrative Template policy.  Administrative Templates policies are always cumulative.
+        computer_policy (dict):
+            A dictionary of "policyname: value" pairs of computer policies to
+            set. 'value' should be how it is displayed in the gpedit GUI, i.e.
+            if a setting can be 'Enabled'/'Disabled', then that should be passed
 
-        Policy names can be specified in a number of ways based on the type of policy:
-            Windows Settings Policies:
-                These policies can be specified using the GUI display name or the key name from
-                the _policy_info class in this module.  The GUI display name is also contained in
-                the _policy_info class in this module.
-            Administrative Template Policies:
-                These can be specified using the policy name as displayed in the GUI (case sensitive).
-                Some policies have the same name, but a different location (for example, "Access data
-                sources across domains").  These can be differentiated by the "path" in the GUI
-                (for example, "Windows Components\\Internet Explorer\\Internet Control Panel\\Security Page\\Internet Zone\\Access data sources across domains").
-                Additionally, policies can be specified using the "name" and "id" attributes from the
-                admx files.
+            Administrative Template data may require dicts within dicts, to
+            specify each element of the Administrative Template policy.
+            Administrative Templates policies are always cumulative.
 
-                For Administrative Templates that have policy elements, each element can be specified using the text string
-                as seen in the GUI or using the ID attribute from the admx file.  Due to the way some of the GUI text is laid out,
-                some policy element names could include descriptive text that appears before the policy element in the gui.
+            Policy names can be specified in a number of ways based on the type
+            of policy:
 
-                Use the get_policy_info function for the policy name to view the element ID/names that the module will accept.
+                Windows Settings Policies:
 
-    :param dict user_policy:
-       The same setup as the computer_policy, except with data to configure the local
-       user policy.
+                    These policies can be specified using the GUI display name
+                    or the key name from the _policy_info class in this module.
+                    The GUI display name is also contained in the _policy_info
+                    class in this module.
 
-    :param boolean cumulative_rights_assignments:
-        Determine how user rights assignment policies are configured.
+                Administrative Template Policies:
 
-        If True, user right assignment specifications are simply added to the existing policy
-        If False, only the users specified will get the right (any existing will have the right revoked)
+                    These can be specified using the policy name as displayed in
+                    the GUI (case sensitive). Some policies have the same name,
+                    but a different location (for example, "Access data sources
+                    across domains"). These can be differentiated by the "path"
+                    in the GUI (for example, "Windows Components\\Internet
+                    Explorer\\Internet Control Panel\\Security Page\\Internet
+                    Zone\\Access data sources across domains").
 
-    :param str adml_language:
-        The language files to use for looking up Administrative Template policy data (i.e. how the policy is
-        displayed in the GUI).  Defaults to 'en-US' (U.S. English).
+                    Additionally, policies can be specified using the "name" and
+                    "id" attributes from the ADMX files.
 
-    :rtype: boolean
+                    For Administrative Templates that have policy elements, each
+                    element can be specified using the text string as seen in
+                    the GUI or using the ID attribute from the ADMX file. Due to
+                    the way some of the GUI text is laid out, some policy
+                    element names could include descriptive text that appears
+                    lbefore the policy element in the GUI.
+
+                    Use the get_policy_info function for the policy name to view
+                    the element ID/names that the module will accept.
+
+        user_policy (dict):
+            The same setup as the computer_policy, except with data to configure
+            the local user policy.
+
+        cumulative_rights_assignments (bool):
+            Determine how user rights assignment policies are configured.
+
+            If True, user right assignment specifications are simply added to
+            the existing policy
+
+            If False, only the users specified will get the right (any existing
+            will have the right revoked)
+
+        adml_language (str):
+            The language files to use for looking up Administrative Template
+            policy data (i.e. how the policy is displayed in the GUI). Defaults
+            to 'en-US' (U.S. English).
+
+    Returns:
+        bool: True is successful, otherwise False
 
     CLI Example:
 
@@ -4352,12 +5236,19 @@ def set_(computer_policy=None, user_policy=None,
                 if _regedits:
                     for regedit in _regedits.keys():
                         log.debug('{0} is a Registry policy'.format(regedit))
-                        _ret = __salt__['reg.set_value'](
-                                _regedits[regedit]['policy']['Registry']['Hive'],
-                                _regedits[regedit]['policy']['Registry']['Path'],
-                                _regedits[regedit]['policy']['Registry']['Value'],
-                                _regedits[regedit]['value'],
-                                _regedits[regedit]['policy']['Registry']['Type'])
+                        # if the value setting is None or "(value not set)", we will delete the value from the registry
+                        if _regedits[regedit]['value'] is not None and _regedits[regedit]['value'] != '(value not set)':
+                            _ret = __salt__['reg.set_value'](
+                                    _regedits[regedit]['policy']['Registry']['Hive'],
+                                    _regedits[regedit]['policy']['Registry']['Path'],
+                                    _regedits[regedit]['policy']['Registry']['Value'],
+                                    _regedits[regedit]['value'],
+                                    _regedits[regedit]['policy']['Registry']['Type'])
+                        else:
+                            _ret = __salt__['reg.delete_value'](
+                                    _regedits[regedit]['polic']['Registry']['Hive'],
+                                    _regedits[regedit]['policy']['Registry']['Path'],
+                                    _regedits[regedit]['policy']['Registry']['Value'])
                         if not _ret:
                             msg = ('Error while attempting to set policy {0} via the registry.'
                                    '  Some changes may not be applied as expected')

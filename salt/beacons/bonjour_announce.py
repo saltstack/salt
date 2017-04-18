@@ -60,6 +60,26 @@ def __validate__(config):
     return True, 'Valid beacon configuration'
 
 
+def _enforce_txt_record_maxlen(key, value):
+    '''
+    Enforces the TXT record maximum length of 255 characters.
+    TXT record length includes key, value, and '='.
+
+    :param str key: Key of the TXT record
+    :param str value: Value of the TXT record
+
+    :rtype: str
+    :return: The value of the TXT record. It may be truncated if it exceeds
+             the maximum permitted length. In case of truncation, '...' is
+             appended to indicate that the entire value is not present.
+    '''
+    # Add 1 for '=' seperator between key and value
+    if len(key) + len(value) + 1 > 255:
+        # 255 - 3 ('...') - 1 ('=') = 251
+        return value[:251 - len(key)] + '...'
+    return value
+
+
 def beacon(config):
     '''
     Broadcast values via zeroconf
@@ -152,11 +172,11 @@ def beacon(config):
                     grain_value = grain_value[grain_index]
                 else:
                     grain_value = ','.join(grain_value)
-            txt[item] = grain_value
+            txt[item] = _enforce_txt_record_maxlen(item, grain_value)
             if LAST_GRAINS and (LAST_GRAINS.get(grain, '') != __grains__.get(grain, '')):
                 changes[str('txt.' + item)] = txt[item]
         else:
-            txt[item] = config['txt'][item]
+            txt[item] = _enforce_txt_record_maxlen(item, config['txt'][item])
 
         if not LAST_GRAINS:
             changes[str('txt.' + item)] = txt[item]
