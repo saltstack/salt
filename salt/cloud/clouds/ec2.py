@@ -3668,7 +3668,10 @@ def show_detailed_monitoring(name=None, instance_id=None, call=None, quiet=False
             'The show_detailed_monitoring action must be provided with a name or instance ID'
         )
     matched = _get_node(name=name, instance_id=instance_id, location=location)
-    result = matched[location]['ec2'][match_key]['monitoring']
+    result = {}
+    for provider in matched.keys():
+        result[provider] = {'ec2': {match_key: {}}}
+        result[provider]['ec2'][match_key]['monitoring'] = matched[location]['ec2'][match_key]['monitoring']
     log.log(
         logging.DEBUG if quiet is True else logging.INFO,
         'Detailed Monitoring is {0} for {1}'.format(result, name)
