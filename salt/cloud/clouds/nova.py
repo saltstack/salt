@@ -620,7 +620,7 @@ def request_instance(vm_=None, call=None):
         'security_groups', vm_, __opts__, search_global=False
     )
     if security_groups is not None:
-        vm_groups = security_groups.split(',')
+        vm_groups = security_groups
         avail_groups = conn.secgroup_list()
         group_list = []
 
