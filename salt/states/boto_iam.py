@@ -250,12 +250,19 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
             for d in devices:
                 serial = d['serial_number']
                 if __opts__['test']:
-                    ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} MFA device {1} is set to be deleted.'.format(name, serial)])
+                    ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} MFA device {1} is set to be deactivated.'.format(name, serial)])
                     ret['result'] = None
                 else:
-                    mfa_deleted = __salt__['boto_iam.deactivate_mfa_device'](user_name=name, serial=serial, region=region, key=key, keyid=keyid, profile=profile)
+                    mfa_deactivated = __salt__['boto_iam.deactivate_mfa_device'](user_name=name, serial=serial, region=region, key=key, keyid=keyid, profile=profile)
+                    if mfa_deactivated:
+                        ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} MFA device {1} is deactivated.'.format(name, serial)])
+                if __opts__['test']:
+                    ret['comment'] = ' '.join([ret['comment'], 'Virtual MFA device {0} is set to be deleted.'.format(serial)])
+                    ret['result'] = None
+                else:
+                    mfa_deleted = __salt__['boto_iam.delete_virtual_mfa_device'](serial=serial, region=region, key=key, keyid=keyid, profile=profile)
                     if mfa_deleted:
-                        ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} MFA device {1} are deleted.'.format(name, serial)])
+                        ret['comment'] = ' '.join([ret['comment'], 'Virtual MFA device {0} is deleted.'.format(serial)])
     # delete the user's login profile
     if delete_profile:
         if __opts__['test']:
