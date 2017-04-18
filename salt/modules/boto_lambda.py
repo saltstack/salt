@@ -712,7 +712,7 @@ def delete_alias(FunctionName, Name, region=None, key=None, keyid=None, profile=
         conn.delete_alias(FunctionName=FunctionName, Name=Name)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': __utils__['.boto3.get_error'](e)}
+        return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def _find_alias(FunctionName, Name, FunctionVersion=None,
@@ -756,7 +756,7 @@ def alias_exists(FunctionName, Name, region=None, key=None,
                             region=region, key=key, keyid=keyid, profile=profile)
         return {'exists': bool(alias)}
     except ClientError as e:
-        return {'error': __utils__['boto3.get_error(e)']}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def describe_alias(FunctionName, Name, region=None, key=None,
