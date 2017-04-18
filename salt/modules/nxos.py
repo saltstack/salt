@@ -36,7 +36,7 @@ def system_info():
 def cmd(command, *args, **kwargs):
     '''
     run commands from __proxy__
-    :doc:`salt.proxy.nxos</ref/proxy/all/salt.proxy.nxos>`
+    :mod:`salt.proxy.nxos<salt.proxy.nxos>`
 
     command
         function from `salt.proxy.nxos` to run

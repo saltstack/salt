@@ -603,7 +603,7 @@ def set_boot_arch(arch='default'):
 
         The setting is not updated. This is either an apple bug, not available
         on the test system, or a result of system files now being locked down in
-        OS X (SIP Protection).
+        macOS (SIP Protection).
 
     :param str arch: A string representing the desired architecture. If no
     value is passed, default is assumed. Valid values include:

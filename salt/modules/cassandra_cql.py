@@ -194,7 +194,7 @@ def _get_ssl_opts():
 
 
 def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None,
-             protocol_version=4):
+             protocol_version=None):
     '''
     Connect to a Cassandra cluster.
 
@@ -295,6 +295,11 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     :type  params:         str
     :return:               A dictionary from the return values of the query
     :rtype:                list[dict]
+
+    .. code-block:: bash
+
+        # CLI Example: Simple CQL query
+        salt '*' cql_query "SELECT * FROM users_by_name WHERE first_name = 'jane'"
     '''
     try:
         cluster, session = _connect(contact_points=contact_points, port=port, cql_user=cql_user, cql_pass=cql_pass)
@@ -363,6 +368,19 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
     :type  params:         str
     :return:               A dictionary from the return values of the query
     :rtype:                list[dict]
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Insert data asynchronously
+        salt this-node cassandra_cql.cql_query_with_prepare "name_insert" "INSERT INTO USERS (first_name, last_name) VALUES (?, ?)" \
+            statement_arguments=['John','Doe'], async=True
+
+        # Select data, should not be asynchronous because there is not currently a facility to return data from a future
+        salt this-node cassandra_cql.cql_query_with_prepare "name_select" "SELECT * FROM USERS WHERE first_name=?" \
+            statement_arguments=['John']
     '''
     try:
         cluster, session = _connect(contact_points=contact_points, port=port,
@@ -663,6 +681,7 @@ def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication
 
     .. code-block:: bash
 
+        # CLI Example:
         salt 'minion1' cassandra_cql.create_keyspace keyspace=newkeyspace
 
         salt 'minion1' cassandra_cql.create_keyspace keyspace=newkeyspace replication_strategy=NetworkTopologyStrategy \
@@ -757,6 +776,8 @@ def list_users(contact_points=None, port=None, cql_user=None, cql_pass=None):
     :return:               The list of existing users.
     :rtype:                dict
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt 'minion1' cassandra_cql.list_users
@@ -799,6 +820,8 @@ def create_user(username, password, superuser=False, contact_points=None, port=N
     :type  port:           int
     :return:
     :rtype:
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -850,6 +873,8 @@ def list_permissions(username=None, resource=None, resource_type='keyspace', per
     :return:               Dictionary of permissions.
     :rtype:                dict
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt 'minion1' cassandra_cql.list_permissions
@@ -857,7 +882,7 @@ def list_permissions(username=None, resource=None, resource_type='keyspace', per
         salt 'minion1' cassandra_cql.list_permissions username=joe resource=test_keyspace permission=select
 
         salt 'minion1' cassandra_cql.list_permissions username=joe resource=test_table resource_type=table \
-        permission=select contact_points=minion1
+          permission=select contact_points=minion1
     '''
     keyspace_cql = "{0} {1}".format(resource_type, resource) if resource else "all keyspaces"
     permission_cql = "{0} permission".format(permission) if permission else "all permissions"
@@ -905,6 +930,8 @@ def grant_permission(username, resource=None, resource_type='keyspace', permissi
     :type  port:           int
     :return:
     :rtype:
+
+    CLI Example:
 
     .. code-block:: bash
 

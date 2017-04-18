@@ -248,13 +248,14 @@ def list_(narrow=None,
     if narrow:
         cmd.append(narrow)
     if salt.utils.is_true(all_versions):
-        cmd.append('-allversions')
+        cmd.append('--allversions')
     if salt.utils.is_true(pre_versions):
-        cmd.append('-prerelease')
+        cmd.append('--prerelease')
     if source:
-        cmd.extend(['-source', source])
+        cmd.extend(['--source', source])
     if local_only:
-        cmd.extend(['-localonly'])
+        cmd.extend(['--localonly'])
+        cmd.extend(['--limitoutput'])
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -264,7 +265,7 @@ def list_(narrow=None,
         raise CommandExecutionError(err)
 
     ret = {}
-    pkg_re = re.compile(r'(\S+)\s+(\S+)')
+    pkg_re = re.compile(r'(\S+)\|(\S+)')
     for line in result['stdout'].split('\n'):
         if line.startswith("No packages"):
             return ret
@@ -291,7 +292,7 @@ def list_webpi():
         salt '*' chocolatey.list_webpi
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
-    cmd = [choc_path, 'list', '-source', 'webpi']
+    cmd = [choc_path, 'list', '--source', 'webpi']
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -317,7 +318,7 @@ def list_windowsfeatures():
         salt '*' chocolatey.list_windowsfeatures
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
-    cmd = [choc_path, 'list', '-source', 'windowsfeatures']
+    cmd = [choc_path, 'list', '--source', 'windowsfeatures']
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -397,23 +398,25 @@ def install(name,
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
     # chocolatey helpfully only supports a single package argument
+    # CORRECTION: it also supports multiple package names separated by spaces
+    # but any additional arguments apply to ALL packages specified
     cmd = [choc_path, 'install', name]
     if version:
-        cmd.extend(['-version', version])
+        cmd.extend(['--version', version])
     if source:
-        cmd.extend(['-source', source])
+        cmd.extend(['--source', source])
     if salt.utils.is_true(force):
-        cmd.append('-force')
+        cmd.append('--force')
     if salt.utils.is_true(pre_versions):
-        cmd.append('-prerelease')
+        cmd.append('--prerelease')
     if install_args:
-        cmd.extend(['-installarguments', install_args])
+        cmd.extend(['--installarguments', install_args])
     if override_args:
-        cmd.append('-overridearguments')
+        cmd.append('--overridearguments')
     if force_x86:
-        cmd.append('-forcex86')
+        cmd.append('--forcex86')
     if package_args:
-        cmd.extend(['-packageparameters', package_args])
+        cmd.extend(['--packageparameters', package_args])
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -529,9 +532,9 @@ def install_missing(name, version=None, source=None):
     # chocolatey helpfully only supports a single package argument
     cmd = [choc_path, 'installmissing', name]
     if version:
-        cmd.extend(['-version', version])
+        cmd.extend(['--version', version])
     if source:
-        cmd.extend(['-source', source])
+        cmd.extend(['--source', source])
     # Shouldn't need this as this code should never run on v0.9.9 and newer
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -657,11 +660,11 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     # chocolatey helpfully only supports a single package argument
     cmd = [choc_path, 'uninstall', name]
     if version:
-        cmd.extend(['-version', version])
+        cmd.extend(['--version', version])
     if uninstall_args:
-        cmd.extend(['-uninstallarguments', uninstall_args])
+        cmd.extend(['--uninstallarguments', uninstall_args])
     if override_args:
-        cmd.extend(['-overridearguments'])
+        cmd.extend(['--overridearguments'])
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -740,19 +743,19 @@ def upgrade(name,
     if version:
         cmd.extend(['-version', version])
     if source:
-        cmd.extend(['-source', source])
+        cmd.extend(['--source', source])
     if salt.utils.is_true(force):
-        cmd.append('-force')
+        cmd.append('--force')
     if salt.utils.is_true(pre_versions):
-        cmd.append('-prerelease')
+        cmd.append('--prerelease')
     if install_args:
-        cmd.extend(['-installarguments', install_args])
+        cmd.extend(['--installarguments', install_args])
     if override_args:
-        cmd.append('-overridearguments')
+        cmd.append('--overridearguments')
     if force_x86:
-        cmd.append('-forcex86')
+        cmd.append('--forcex86')
     if package_args:
-        cmd.extend(['-packageparameters', package_args])
+        cmd.extend(['--packageparameters', package_args])
     cmd.extend(_yes(__context__))
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -795,9 +798,9 @@ def update(name, source=None, pre_versions=False):
 
     cmd = [choc_path, 'update', name]
     if source:
-        cmd.extend(['-source', source])
+        cmd.extend(['--source', source])
     if salt.utils.is_true(pre_versions):
-        cmd.append('-prerelease')
+        cmd.append('--prerelease')
     cmd.extend(_yes(__context__))
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -843,11 +846,11 @@ def version(name, check_remote=False, source=None, pre_versions=False):
 
     cmd = [choc_path, 'list', name]
     if not salt.utils.is_true(check_remote):
-        cmd.append('-localonly')
+        cmd.append('--localonly')
     if salt.utils.is_true(pre_versions):
-        cmd.append('-prerelease')
+        cmd.append('--prerelease')
     if source:
-        cmd.extend(['-source', source])
+        cmd.extend(['--source', source])
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -860,7 +863,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
 
     res = result['stdout'].split('\n')
 
-    ver_re = re.compile(r'(\S+)\s+(.+)')
+    ver_re = re.compile(r'(\S+)\|(.+)')
     for line in res:
         if 'packages found' not in line and 'packages installed' not in line:
             for name, ver in ver_re.findall(line):
@@ -895,11 +898,11 @@ def add_source(name, source_location, username=None, password=None):
 
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
-    cmd = [choc_path, 'sources', 'add', '-name', name, "-source", source_location]
+    cmd = [choc_path, 'sources', 'add', '--name', name, '--source', source_location]
     if username:
-        cmd.extend(['-u', username])
+        cmd.extend(['--user', username])
     if password:
-        cmd.extend(['-p', password])
+        cmd.extend(['--password', password])
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -922,7 +925,7 @@ def _change_source_state(name, state):
 
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
-    cmd = [choc_path, 'source', state, "-name", name]
+    cmd = [choc_path, 'source', state, '--name', name]
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:

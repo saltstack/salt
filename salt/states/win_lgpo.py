@@ -203,12 +203,12 @@ def set_(name,
     else:
         user_policy = {}
         computer_policy = {}
-        if policy_class == 'both':
+        if policy_class.lower() == 'both':
             user_policy[name] = setting
             computer_policy[name] = setting
-        elif policy_class == 'user':
+        elif policy_class.lower() == 'user':
             user_policy[name] = setting
-        elif policy_class == 'machine' or policy_class == 'computer':
+        elif policy_class.lower() == 'machine' or policy_class.lower() == 'computer':
             computer_policy[name] = setting
     pol_data = {}
     pol_data['user'] = {'output_section': 'User Configuration',

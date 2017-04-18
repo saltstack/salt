@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-This module allows you to manage assistive access on OS X minions with 10.9+
+This module allows you to manage assistive access on macOS minions with 10.9+
 
 .. versionadded:: 2016.3.0
 
@@ -30,7 +30,8 @@ def __virtual__():
     '''
     if salt.utils.is_darwin() and LooseVersion(__grains__['osrelease']) >= '10.9':
         return True
-    return False, 'The assistive module cannot be loaded: must be run on OSX 10.9 or newer.'
+    return False, 'The assistive module cannot be loaded: must be run on ' \
+                  'macOS 10.9 or newer.'
 
 
 def install(app_id, enable=True):
