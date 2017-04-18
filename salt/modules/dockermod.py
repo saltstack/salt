@@ -3939,7 +3939,9 @@ def networks(names=None, ids=None):
     return response
 
 
-def create_network(name, driver=None):
+def create_network(name,
+                   driver=None,
+                   driver_opts=None):
     '''
     Create a new network
 
@@ -3949,13 +3951,21 @@ def create_network(name, driver=None):
     driver
         Driver of the network
 
+    driver_opts
+        Options for the network driver.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion docker.create_network web_network driver=bridge
     '''
-    response = _client_wrapper('create_network', name, driver=driver)
+    response = _client_wrapper('create_network',
+                               name,
+                               driver=driver,
+                               options=driver_opts,
+                               check_duplicate=True)
+
     _clear_context()
     # Only non-error return case is a True return, so just return the response
     return response
