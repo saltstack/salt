@@ -41,22 +41,17 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         def list_zones(profile):
             return [DNSTestZone('zone1', 'test.com')]
 
-
         def list_records(zone_id, profile):
             return test_records[zone_id]
-
 
         def create_record(*args):
             return True
 
-
         def delete_record(*args):
             return True
 
-
         def create_zone(*args):
             return True
-
 
         def delete_zone(*args):
             return True

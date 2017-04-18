@@ -19,7 +19,6 @@ import salt.transport.ipc
 import salt.transport.server
 import salt.transport.client
 
-import salt.ext.six as six
 from salt.ext.six.moves import range
 
 # Import Salt Testing libs
