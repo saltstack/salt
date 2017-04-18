@@ -2570,7 +2570,7 @@ def create(vm_):
         config_spec.memoryMB = memory_mb
 
     if devices:
-        specs = _manage_devices(devices, vm=object_ref, new_vm_name=vm_['name'])
+        specs = _manage_devices(devices, vm=object_ref, new_vm_name=vm_name)
         config_spec.deviceChange = specs['device_specs']
 
     if extra_config:
