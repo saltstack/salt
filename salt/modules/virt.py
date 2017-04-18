@@ -716,7 +716,7 @@ def init(name,
                         os.umask(mask)
 
                         if disk_size:
-                            log.debug('Create empty image with size {0}'.format(disk_size))
+                            log.debug('Create empty image with size {0}M'.format(disk_size))
                             __salt__['cmd.run'](
                                 'qemu-img create -f {0} {1} {2}M'
                                 .format(disk_type, img_dest, str(disk_size))
