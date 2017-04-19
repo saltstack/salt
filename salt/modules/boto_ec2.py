@@ -1896,7 +1896,7 @@ def delete_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=N
 
 
 def detach_volume(volume_id, instance_id=None, device=None, force=False,
-                  wait_to_finish=None, region=None, key=None, keyid=None, profile=None):
+                  wait_for_detachement=False, region=None, key=None, keyid=None, profile=None):
     '''
     Detach an EBS volume from an EC2 instance.
 
@@ -1914,8 +1914,8 @@ def detach_volume(volume_id, instance_id=None, device=None, force=False,
                  only as a last resort to detach a volume from a failed instance. The instance
                  will not have an opportunity to flush file system caches nor file system meta data.
                  If you use this option, you must perform file system check and repair procedures.
-    wait_to_finish
-       (int) - The time to wait for detaching volume complete, in second.
+    wait_for_detachement
+       (bool) - Whether or not to wait for volume detachement to complete.
 
     returns
         (bool) - True on success, False on failure.
@@ -1930,15 +1930,10 @@ def detach_volume(volume_id, instance_id=None, device=None, force=False,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         ret = conn.detach_volume(volume_id, instance_id, device, force)
-        if wait_to_finish is not None:
-            wait = 0
-            while True:
-                vols = conn.get_all_volumes(volume_ids=[volume_id])
-                vol = vols[0]
-                wait = wait + 5
-                time.sleep(5)
-                if vol.status == 'available' or wait > wait_to_finish:
-                    break
+        if ret and wait_for_detachement and not _wait_for_volume_available(conn, volume_id):
+            timeout_msg = 'Timed out waiting for the volume status "available".'
+            log.error(timeout_msg)
+            return False
         return ret
     except boto.exception.BotoServerError as e:
         log.error(e)
@@ -1982,6 +1977,21 @@ def delete_volume(volume_id, instance_id=None, device=None, force=False,
         return False
 
 
+def _wait_for_volume_available(conn, volume_id, retries=5, interval=5):
+    i = 0
+    while True:
+        i = i + 1
+        time.sleep(interval)
+        vols = conn.get_all_volumes(volume_ids=[volume_id])
+        if len(vols) != 1:
+            return False
+        vol = vols[0]
+        if vol.status == 'available':
+            return True
+        if i > retries:
+            return False
+
+
 def attach_volume(volume_id, instance_id, device,
                   region=None, key=None, keyid=None, profile=None):
     '''
@@ -2014,7 +2024,7 @@ def attach_volume(volume_id, instance_id, device,
 
 
 def create_volume(zone_name, size=None, snapshot_id=None, volume_type=None,
-                  iops=None, encrypted=False, kms_key_id=None, wait_to_finish=None,
+                  iops=None, encrypted=False, kms_key_id=None, wait_for_creation=False,
                   region=None, key=None, keyid=None, profile=None):
     '''
     Create an EBS volume to an availability zone.
@@ -2040,8 +2050,8 @@ def create_volume(zone_name, size=None, snapshot_id=None, volume_type=None,
         (string) - If encrypted is True, this KMS Key ID may be specified to
                    encrypt volume with this key
                    e.g.: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
-    wait_to_finish
-        (int) - The time to wait for creating volume complete, in seconds.
+    wait_for_creation
+        (bool) - Whether or not to wait for volume creation to complete.
 
     returns
         (string) - created volume id on success, error message on failure.
@@ -2064,14 +2074,12 @@ def create_volume(zone_name, size=None, snapshot_id=None, volume_type=None,
         vol = conn.create_volume(size=size, zone=zone_name, snapshot=snapshot_id,
                                  volume_type=volume_type, iops=iops, encrypted=encrypted,
                                  kms_key_id=kms_key_id)
-        if wait_to_finish is not None:
-            wait = 0
-            while vol.status != 'available' and wait <= wait_to_finish:
-                vols = conn.get_all_volumes(volume_ids=[vol.id])
-                vol = vols[0]
-                wait = wait + 5
-                time.sleep(5)
-        ret['result'] = vol.id
+        if wait_for_creation and not _wait_for_volume_available(conn, vol.id):
+            timeout_msg = 'Timed out waiting for the volume status "available".'
+            log.error(timeout_msg)
+            ret['error'] = timeout_msg
+        else:
+            ret['result'] = vol.id
     except boto.exception.BotoServerError as error:
         ret['error'] = __utils__['boto.get_error'](error)
     return ret

@@ -1362,7 +1362,7 @@ def volume_present(name, volume_name=None, volume_id=None, instance_name=None,
                                                      iops=iops,
                                                      encrypted=encrypted,
                                                      kms_key_id=kms_key_id,
-                                                     wait_to_finish=10, **args)
+                                                     wait_for_creation=True, **args)
             if 'result' in _rt:
                 volume_id = _rt['result']
             else:
@@ -1406,7 +1406,7 @@ def volume_present(name, volume_name=None, volume_id=None, instance_name=None,
                                                                                     device)
                 ret['result'] = None
                 return ret
-            if __salt__['boto_ec2.detach_volume'](volume_id=volume_id, wait_to_finish=10, **args):
+            if __salt__['boto_ec2.detach_volume'](volume_id=volume_id, wait_for_detachement=True, **args):
                 ret['comment'] = 'Volume {0} is detached from {1}({2}).'.format(volume_id,
                                                                                 attach_data.instance_id,
                                                                                 attach_data.device)
