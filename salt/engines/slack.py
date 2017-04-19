@@ -172,11 +172,14 @@ def get_config_groups(groups_conf, groups_pillar_name):
         ret_groups.setdefault(name, {
             "users": set(), "commands": set(), "aliases": dict(), "default_target": dict(), "targets": dict()
         })
-        ret_groups[name]['users'].update(set(config.get('users', [])))
-        ret_groups[name]['commands'].update(set(config.get('commands', [])))
-        ret_groups[name]['aliases'].update(config.get('aliases', {}))
-        ret_groups[name]['default_target'].update(config.get('default_target', {}))
-        ret_groups[name]['targets'].update(config.get('targets', {}))
+        try:
+            ret_groups[name]['users'].update(set(config.get('users', [])))
+            ret_groups[name]['commands'].update(set(config.get('commands', [])))
+            ret_groups[name]['aliases'].update(config.get('aliases', {}))
+            ret_groups[name]['default_target'].update(config.get('default_target', {}))
+            ret_groups[name]['targets'].update(config.get('targets', {}))
+        except IndexError:
+            log.warn("Couldn't use group {}. Check that targets is a dict and not a list".format(name))
 
     log.debug("Got the groups: {}".format(ret_groups))
     return ret_groups
@@ -564,7 +567,7 @@ def get_jobs_from_runner(outstanding_jids):
     returns a dictionary of job id: result
     """
     # Can't use the runner because of https://github.com/saltstack/salt/issues/40671
-    # runner = salt.runner.RunnerClient(__opts__)
+    runner = salt.runner.RunnerClient(__opts__)
     # log.debug("Getting job IDs {} will run via runner jobs.lookup_jid".format(outstanding_jids))
     mm = salt.minion.MasterMinion(__opts__)
     source = __opts__.get('ext_job_cache')
@@ -574,7 +577,11 @@ def get_jobs_from_runner(outstanding_jids):
     results = dict()
     for jid in outstanding_jids:
         # results[jid] = runner.cmd('jobs.lookup_jid', [jid])
-        results[jid] = mm.returners['{}.get_jid'.format(source)](jid)
+        if mm.returners['{}.get_jid'.format(source)](jid):
+            jid_result = runner.cmd('jobs.list_job', [jid]).get('Result', {})
+            # emulate lookup_jid's return, which is just minion:return
+            job_data = json.dumps({k:v['return'] for k,v in jid_result.items()})
+            results[jid] = yaml.load(job_data)
 
     return results
 
@@ -605,7 +612,7 @@ def run_commands_from_slack_async(message_generator, fire_all, tag, control, int
                 log.warn("len(msg) is zero")
                 continue # This one is a dud, get the next message
             if msg.get("done"):
-                log.warn("msg is done")
+                log.debug("msg is done")
                 break
             if fire_all:
                 log.debug("Firing message to the bus with tag: {}".format(tag))
@@ -671,7 +678,7 @@ def run_command_async(msg):
     if cmd in runner_functions:
         runner = salt.runner.RunnerClient(__opts__)
         log.debug("Command {} will run via runner_functions".format(cmd))
-        job_id_dict = runner.async(cmd, {"kwargs":kwargs})
+        job_id_dict = runner.async(cmd, {"args": args, "kwargs":kwargs})
         job_id = job_id_dict['jid']
 
     # Default to trying to run as a client module.
