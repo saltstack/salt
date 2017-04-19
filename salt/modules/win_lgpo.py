@@ -3865,7 +3865,7 @@ def _build_parent_list(policy_definition,
     policy
     '''
     parent_list = []
-    policy_namespace = policy_definition.nsmap.keys()[0]
+    policy_namespace = list(policy_definition.nsmap.keys())[0]
     parent_category = policy_definition.xpath('{0}:parentCategory/@ref'.format(policy_namespace),
                                               namespaces=policy_definition.nsmap)
     if parent_category:
