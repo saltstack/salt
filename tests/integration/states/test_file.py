@@ -34,7 +34,6 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
-from salt.utils.versions import LooseVersion
 
 HAS_PWD = True
 try:
@@ -53,15 +52,6 @@ import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 IS_WINDOWS = salt.utils.is_windows()
-GIT_PYTHON = '0.3.2'
-HAS_GIT_PYTHON = False
-
-try:
-    import git
-    if LooseVersion(git.__version__) >= LooseVersion(GIT_PYTHON):
-        HAS_GIT_PYTHON = True
-except ImportError:
-    HAS_GIT_PYTHON = False
 
 STATE_DIR = os.path.join(FILES, 'file', 'base')
 if IS_WINDOWS:
@@ -387,21 +377,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Check to make sure the file was created
         check_file = self.run_function('file.file_exists', [FILEPILLARDEF])
-        self.assertTrue(check_file)
-
-    @skipIf(not HAS_GIT_PYTHON, "GitFS could not be loaded. Skipping test")
-    def test_managed_file_with_gitpillar_sls(self):
-        '''
-        Test to ensure git pillar data in sls
-        file is rendered properly and is created.
-        '''
-        state_name = 'file-pillargit'
-
-        ret = self.run_function('state.sls', [state_name])
-        self.assertSaltTrueReturn(ret)
-
-        # Check to make sure the file was created
-        check_file = self.run_function('file.file_exists', [FILEPILLARGIT])
         self.assertTrue(check_file)
 
     @skip_if_not_root
