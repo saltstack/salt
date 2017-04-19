@@ -726,7 +726,13 @@ def list_pkgs(versions_as_list=False, **kwargs):
     ret = {}
     out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in salt.utils.itertools.split(out, '\n'):
-        pkg_name, pkg_version = line.split(' - ')
+        # This is a continuation of package description
+        if not line or line[0] == ' ':
+            continue
+
+        # This contains package name, version, and description.
+        # Extract the first two.
+        pkg_name, pkg_version = line.split(' - ', 2)[:2]
         __salt__['pkg_resource.add_pkg'](ret, pkg_name, pkg_version)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
