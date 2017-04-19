@@ -37,7 +37,7 @@ __all__ = [
 
 # To dump OrderedDict objects as regular dicts. Used by the yaml
 # template filter.
-class OrderedDictDumper(yaml.SafeDumper):  # pylint: disable=W0232
+class OrderedDictDumper(yaml.Dumper):  # pylint: disable=W0232
     pass
 
 
