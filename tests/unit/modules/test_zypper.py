@@ -503,7 +503,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             self.assertEqual(len(list_patches), 3)
             self.assertDictEqual(list_patches, PATCHES_RET)
 
-    @patch('glob.glob', MagicMock(return_value=['/var/cache/zypper/packages/foo/bar/test_package.rpm']))
+    @patch('os.walk', MagicMock(return_value=[('test', 'test', 'test')]))
+    @patch('fnmatch.filter', MagicMock(return_value=['/var/cache/zypper/packages/foo/bar/test_package.rpm']))
     def test_list_downloaded(self):
         '''
         Test downloaded packages listing.
