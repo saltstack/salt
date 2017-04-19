@@ -1,0 +1,10 @@
+Port {{ pillar['git_pillar']['sshd_port'] }}
+ListenAddress 127.0.0.1
+PermitRootLogin no
+UsePAM no
+ChallengeResponseAuthentication no
+PasswordAuthentication no
+PubkeyAuthentication yes
+PrintMotd no
+
+HostKey {{ pillar['git_pillar']['sshd_config_dir'] }}/ssh_host_rsa_key
