@@ -45,6 +45,13 @@ test.ping command will be sent out to the three named returners.
 Writing a Returner
 ==================
 
+Returners are Salt modules that allow the redirection of results data to targets other than the Salt Master.
+
+Returners Are Easy To Write!
+----------------------------
+
+Writing a Salt returner is straightforward.
+
 A returner is a Python module containing at minimum a ``returner`` function.
 Other optional functions can be included to add support for
 :conf_master:`master_job_cache`, :ref:`external-job-cache`, and `Event Returners`_.
@@ -81,6 +88,46 @@ Other optional functions can be included to add support for
 
 The above example of a returner set to send the data to a Redis server
 serializes the data as JSON and sets it in redis.
+
+Using Custom Returner Modules
+-----------------------------
+
+Place custom returners in a ``_returners/`` directory within the
+:conf_master:`file_roots` specified by the master config file.
+
+Custom returners are distributed when any of the following are called:
+
+- :mod:`state.apply <salt.modules.state.apply_>`
+- :mod:`saltutil.sync_returners <salt.modules.saltutil.sync_returners>`
+- :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
+
+Any custom returners which have been synced to a minion that are named the
+same as one of Salt's default set of returners will take the place of the
+default returner with the same name.
+
+Naming the Returner
+-------------------
+
+Note that a returner's default name is its filename (i.e. ``foo.py`` becomes
+returner ``foo``), but that its name can be overridden by using a
+:ref:`__virtual__ function <virtual-modules>`. A good example of this can be
+found in the `redis`_ returner, which is named ``redis_return.py`` but is
+loaded as simply ``redis``:
+
+.. code-block:: python
+
+    try:
+        import redis
+        HAS_REDIS = True
+    except ImportError:
+        HAS_REDIS = False
+
+    __virtualname__ = 'redis'
+
+    def __virtual__():
+        if not HAS_REDIS:
+            return False
+        return __virtualname__
 
 Master Job Cache Support
 ------------------------
@@ -281,46 +328,6 @@ contains the jid and therefore is guaranteed to be unique.
              sql = '''INSERT INTO `salt_events` (`tag`, `data`, `master_id` )
                       VALUES (%s, %s, %s)'''
              cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
-
-Custom Returners
-----------------
-
-Place custom returners in a ``_returners`` directory within the
-:conf_master:`file_roots` specified by the master config file.
-
-Custom returners are distributed when any of the following are called:
-
-- :mod:`state.apply <salt.modules.state.apply_>`
-- :mod:`saltutil.sync_returners <salt.modules.saltutil.sync_returners>`
-- :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
-
-Any custom returners which have been synced to a minion that are named the
-same as one of Salt's default set of returners will take the place of the
-default returner with the same name.
-
-Naming the Returner
--------------------
-
-Note that a returner's default name is its filename (i.e. ``foo.py`` becomes
-returner ``foo``), but that its name can be overridden by using a
-:ref:`__virtual__ function <virtual-modules>`. A good example of this can be
-found in the `redis`_ returner, which is named ``redis_return.py`` but is
-loaded as simply ``redis``:
-
-.. code-block:: python
-
-    try:
-        import redis
-        HAS_REDIS = True
-    except ImportError:
-        HAS_REDIS = False
-
-    __virtualname__ = 'redis'
-
-    def __virtual__():
-        if not HAS_REDIS:
-            return False
-        return __virtualname__
 
 
 Testing the Returner
