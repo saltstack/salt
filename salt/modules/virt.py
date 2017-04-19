@@ -748,7 +748,7 @@ def init(name,
                     raise CommandExecutionError(
                         'Unable to create new disk {0}, please specify'
                         ' at least <size> and/or <image> argument'
-                        .format(img_dest)
+                        .format(disk_file_name)
                     )
 
                 img_dest = _qemu_image_create(
