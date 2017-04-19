@@ -805,6 +805,24 @@ restart.
 
 .. conf_minion:: recon_default
 
+``random_startup_delay``
+------------------------
+
+Default: ``0``
+
+The maximum bound for an interval in which a minion will randomly sleep upon starting
+up prior to attempting to connect to a master. This can be used to splay connection attempts
+for cases where many minions starting up at once may place undue load on a master.
+
+For example, setting this to ``5`` will tell a minion to sleep for a value between ``0``
+and ``5`` seconds.
+
+.. code-block:: yaml
+
+    random_startup_delay: 5
+
+.. conf_minion:: random_startup_delay
+
 ``recon_default``
 -----------------
 
