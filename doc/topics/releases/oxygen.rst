@@ -39,3 +39,26 @@ The ``win_service`` module had the following changes:
   ``start_type`` instead.
 - The ``type`` option was removed from the ``create`` function. Please use
   ``service_type`` instead.
+
+State Deprecations
+------------------
+
+The ``archive`` state had the following changes:
+
+- The ``tar_options`` and the ``zip_options`` options were removed from the
+  ``extracted`` function. Please use ``options`` instead.
+
+The ``cmd`` state had the following changes:
+
+- The ``user`` and ``group`` options were removed from the ``run`` function.
+  Please use ``runas`` instead.
+- The ``user`` and ``group`` options were removed from the ``script`` function.
+  Please use ``runas`` instead.
+- The ``user`` and ``group`` options were removed from the ``wait`` function.
+  Please use ``runas`` instead.
+- The ``user`` and ``group`` options were removed from the ``wait_script``
+  function. Please use ``runas`` instead.
+
+The ``file`` state had the following changes:
+
+- The ``show_diff`` option was removed. Please use ``show_changes`` instead.

@@ -5506,7 +5506,6 @@ def serialize(name,
               mode=None,
               backup='',
               makedirs=False,
-              show_diff=None,
               show_changes=True,
               create=True,
               merge_if_exists=False,
@@ -5578,12 +5577,6 @@ def serialize(name,
         Create parent directories for destination file.
 
         .. versionadded:: 2014.1.3
-
-    show_diff
-        DEPRECATED: Please use show_changes.
-
-        If set to ``False``, the diff will not be shown in the return data if
-        changes are made.
 
     show_changes
         Output a unified diff of the old file and the new file. If ``False``
@@ -5722,14 +5715,6 @@ def serialize(name,
 
     # Make sure that any leading zeros stripped by YAML loader are added back
     mode = salt.utils.normalize_mode(mode)
-
-    if show_diff is not None:
-        show_changes = show_diff
-        msg = (
-            'The \'show_diff\' argument to the file.serialized state has been '
-            'deprecated, please use \'show_changes\' instead.'
-        )
-        salt.utils.warn_until('Oxygen', msg)
 
     if __opts__['test']:
         ret['changes'] = __salt__['file.check_managed_changes'](
