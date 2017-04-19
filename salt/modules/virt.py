@@ -353,6 +353,108 @@ def _qemu_image_info(path):
     return ret
 
 
+def _qemu_image_create(vm_name,
+                       disk_file_name,
+                       disk_size,
+                       disk_image,
+                       disk_type='qcow2',
+                       enable_qcow=False,
+                       saltenv='base'):
+    '''
+    Create the image file using specified disk_size or/and disk_image
+
+    Return path to the created image file
+    '''
+    img_dir = __salt__['config.option']('virt.images')
+    log.debug('Image directory from config option `virt.images`'
+              ' is {0}'.format(img_dir))
+    img_dest = os.path.join(
+        img_dir,
+        vm_name,
+        disk_file_name
+    )
+    log.debug('Image destination will be {0}'.format(img_dest))
+    img_dir = os.path.dirname(img_dest)
+    log.debug('Image destination directory is {0}'
+              .format(img_dir))
+    try:
+        os.makedirs(img_dir)
+    except OSError:
+        pass
+
+    if disk_image:
+        log.debug('Create disk from specified image {0}'
+                  .format(disk_image))
+        sfn = __salt__['cp.cache_file'](disk_image, saltenv)
+
+        qcow2 = False
+        if salt.utils.which('qemu-img'):
+            res = __salt__['cmd.run']('qemu-img info {}'.format(sfn))
+            imageinfo = yaml.load(res)
+            qcow2 = imageinfo['file format'] == 'qcow2'
+        try:
+            if enable_qcow and qcow2:
+                log.info('Cloning qcow2 image {0} using copy on write'
+                         .format(sfn))
+                __salt__['cmd.run'](
+                    'qemu-img create -f qcow2 -o backing_file={0} {1}'
+                    .format(sfn, img_dest).split())
+            else:
+                log.debug('Copying {0} to {1}'.format(sfn, img_dest))
+                salt.utils.files.copyfile(sfn, img_dest)
+
+            mask = os.umask(0)
+            os.umask(mask)
+
+            if disk_size and qcow2:
+                log.debug('Resize qcow2 image to {0}M'.format(disk_size))
+                __salt__['cmd.run'](
+                    'qemu-img resize {0} {1}M'
+                    .format(img_dest, str(disk_size))
+                )
+
+            log.debug('Apply umask and remove exec bit')
+            mode = (0o0777 ^ mask) & 0o0666
+            os.chmod(img_dest, mode)
+
+        except (IOError, OSError) as e:
+            raise CommandExecutionError(
+                'Problem while copying image. {0} - {1}'
+                .format(disk_image, e)
+            )
+
+    else:
+        # Create empty disk
+        try:
+            mask = os.umask(0)
+            os.umask(mask)
+
+            if disk_size:
+                log.debug('Create empty image with size {0}M'.format(disk_size))
+                __salt__['cmd.run'](
+                    'qemu-img create -f {0} {1} {2}M'
+                    .format(disk_type, img_dest, str(disk_size))
+                )
+            else:
+                raise CommandExecutionError(
+                    'Unable to create new disk {0},'
+                    ' please specify <size> argument'
+                    .format(img_dest)
+                )
+
+            log.debug('Apply umask and remove exec bit')
+            mode = (0o0777 ^ mask) & 0o0666
+            os.chmod(img_dest, mode)
+
+        except (IOError, OSError) as e:
+            raise CommandExecutionError(
+                'Problem while creating volume {0} - {1}'
+                .format(img_dest, e)
+            )
+
+    return img_dest
+
+
 # TODO: this function is deprecated, should be replaced with
 # _qemu_image_info()
 def _image_type(vda):
@@ -592,7 +694,6 @@ def init(name,
         salt 'hypervisor' virt.init vm_name 4 512 /var/lib/libvirt/images/img.raw
         salt 'hypervisor' virt.init vm_name 4 512 nic=profile disk=profile
     '''
-
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
     log.debug('Using hyperisor {0}'.format(hypervisor))
 
@@ -602,13 +703,15 @@ def init(name,
     diskp = _disk_profile(disk, hypervisor, **kwargs)
 
     if image:
-        # Backward compatibility: if 'image' is specified in the VMs arguments
-        # instead of a disk arguments. In this case, 'image' will be assigned
-        # to the first disk for the VM.
+        # If image is specified in module arguments, then it will be used
+        # for the first disk instead of the image from the disk profile
         disk_name = next(six.iterkeys(diskp[0]))
-        if not diskp[0][disk_name].get('image', None):
-            log.debug('{0} will be used as default image'.format(image))
-            diskp[0][disk_name]['image'] = image
+        log.debug('{0} image from module arguments will be used for disk "{1}"'
+                  ' instead of {2}'
+                  .format(image,
+                          disk_name,
+                          diskp[0][disk_name].get('image', None)))
+        diskp[0][disk_name]['image'] = image
 
     # Create multiple disks, empty or from specified images.
     for disk in diskp:
@@ -636,107 +739,39 @@ def init(name,
 
             elif hypervisor in ['qemu', 'kvm']:
 
-                disk_type = args['format']
-                disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
+                disk_type = args.get('format', 'qcow2')
+                disk_image = args.get('image', None)
                 disk_size = args.get('size', None)
+                disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
 
-                img_dir = __salt__['config.option']('virt.images')
-                log.debug('Image directory from config option `virt.images`'
-                          ' is {0}'.format(img_dir))
-                img_dest = os.path.join(
-                    img_dir,
-                    name,
-                    disk_file_name
+                if not disk_size and not disk_image:
+                    raise CommandExecutionError(
+                        'Unable to create new disk {0}, please specify'
+                        ' at least <size> and/or <image> argument'
+                        .format(img_dest)
+                    )
+
+                img_dest = _qemu_image_create(
+                    vm_name=name,
+                    disk_file_name=disk_file_name,
+                    disk_type=disk_type,
+                    disk_size=disk_size,
+                    disk_image=disk_image,
+                    enable_qcow=enable_qcow,
+                    saltenv=saltenv,
                 )
-                log.debug('Image destination will be {0}'.format(img_dest))
-                img_dir = os.path.dirname(img_dest)
-                log.debug('Image destination directory is {0}'
-                          .format(img_dir))
-                try:
-                    os.makedirs(img_dir)
-                except OSError:
-                    pass
 
-                if 'image' in args:
-                    log.debug('Create disk from specified image {0}'
-                              .format(args['image']))
-                    sfn = __salt__['cp.cache_file'](args['image'], saltenv)
-
-                    qcow2 = False
-                    if salt.utils.which('qemu-img'):
-                        res = __salt__['cmd.run']('qemu-img info {}'.format(sfn))
-                        imageinfo = yaml.load(res)
-                        qcow2 = imageinfo['file format'] == 'qcow2'
-                    try:
-                        if enable_qcow and qcow2:
-                            log.info('Cloning qcow2 image {0} using copy on write'
-                                     .format(sfn))
-                            __salt__['cmd.run'](
-                                'qemu-img create -f qcow2 -o backing_file={0} {1}'
-                                .format(sfn, img_dest).split())
-                        else:
-                            log.debug('Copying {0} to {1}'.format(sfn, img_dest))
-                            salt.utils.files.copyfile(sfn, img_dest)
-
-                        mask = os.umask(0)
-                        os.umask(mask)
-
-                        if disk_size and qcow2:
-                            log.debug('Resize qcow2 image to {0}M'.format(disk_size))
-                            __salt__['cmd.run'](
-                                'qemu-img resize {0} {1}M'
-                                .format(img_dest, str(disk_size))
-                            )
-
-                        log.debug('Apply umask and remove exec bit')
-                        mode = (0o0777 ^ mask) & 0o0666
-                        os.chmod(img_dest, mode)
-
-                    except (IOError, OSError) as e:
-                        raise CommandExecutionError(
-                            'Problem while copying image. {0} - {1}'
-                            .format(args['image'], e)
-                        )
-
-                    if kwargs.get('seed'):
-                        seed_cmd = kwargs.get('seed_cmd', 'seed.apply')
-                        log.debug('Seed command is {0}'.format(seed_cmd))
-                        __salt__[seed_cmd](
-                            img_dest,
-                            id_=name,
-                            config=kwargs.get('config'),
-                            install=install,
-                            pub_key=pub_key,
-                            priv_key=priv_key,
-                        )
-                else:
-                    # Create empty disk
-                    try:
-                        mask = os.umask(0)
-                        os.umask(mask)
-
-                        if disk_size:
-                            log.debug('Create empty image with size {0}M'.format(disk_size))
-                            __salt__['cmd.run'](
-                                'qemu-img create -f {0} {1} {2}M'
-                                .format(disk_type, img_dest, str(disk_size))
-                            )
-                        else:
-                            raise CommandExecutionError(
-                                'Unable to create new disk {0},'
-                                ' please specify <size> argument'
-                                .format(img_dest)
-                            )
-
-                        log.debug('Apply umask and remove exec bit')
-                        mode = (0o0777 ^ mask) & 0o0666
-                        os.chmod(img_dest, mode)
-
-                    except (IOError, OSError) as e:
-                        raise CommandExecutionError(
-                            'Problem while creating volume {0} - {1}'
-                            .format(img_dest, e)
-                        )
+                # Seed only if there is an image specified
+                if seed and disk_image:
+                    log.debug('Seed command is {0}'.format(seed_cmd))
+                    __salt__[seed_cmd](
+                        img_dest,
+                        id_=name,
+                        config=kwargs.get('config'),
+                        install=install,
+                        pub_key=pub_key,
+                        priv_key=priv_key,
+                    )
 
             else:
                 # Unknown hypervisor
