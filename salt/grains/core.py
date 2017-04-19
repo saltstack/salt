@@ -983,6 +983,7 @@ def _windows_platform_data():
             log.debug('Motherboard info not available on this system')
 
         os_release = platform.release()
+        kernel_version = platform.version()
         info = salt.utils.win_osinfo.get_os_version_info()
 
         # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
@@ -1013,7 +1014,7 @@ def _windows_platform_data():
 
         grains = {
             'kernelrelease': _clean_value('kernelrelease', osinfo.Version),
-            'kernelversion': _clean_value('kernelversion', platform.version()), # prelim
+            'kernelversion': _clean_value('kernelversion', kernel_version),
             'osversion': _clean_value('osversion', osinfo.Version),
             'osrelease': _clean_value('osrelease', os_release),
             'osservicepack': _clean_value('osservicepack', service_pack),
