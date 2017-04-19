@@ -6,6 +6,9 @@ Control Apache Traffic Server
 .. versionadded:: 2015.8.0
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt libs
 import salt.utils
 
