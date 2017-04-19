@@ -9,3 +9,33 @@ Configuration Option Deprecations
 
 - The ``requests_lib`` configuration option has been removed. Please use
   ``backend`` instead.
+
+Module Deprecations
+-------------------
+
+The ``win_psget`` module had the following changes:
+
+- The ``psversion`` function was removed. Please use ``cmd.shell_info`` instead.
+
+The ``win_service`` module had the following changes:
+
+- The ``config`` function was removed. Please use the ``modify`` function
+  instead.
+- The ``binpath`` option was removed from the ``create`` function. Please use
+  ``bin_path`` instead.
+- The ``depend`` option was removed from the ``create`` function. Please use
+  ``dependencies`` instead.
+- The ``DisplayName`` option was removed from the ``create`` function. Please
+  use ``display_name`` instead.
+- The ``error`` option was removed from the ``create`` function. Please use
+  ``error_control`` instead.
+- The ``group`` option was removed from the ``create`` function. Please use
+  ``load_order_group`` instead.
+- The ``obj`` option was removed from the ``create`` function. Please use
+  ``account_name`` instead.
+- The ``password`` option was removed from the ``create`` function. Please use
+  ``account_password`` instead.
+- The ``start`` option was removed from the ``create`` function. Please use
+  ``start_type`` instead.
+- The ``type`` option was removed from the ``create`` function. Please use
+  ``service_type`` instead.
