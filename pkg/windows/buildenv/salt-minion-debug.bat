@@ -3,8 +3,8 @@
 :: Accepts all parameters that Salt-Minion Accepts
 
 :: Get current codepage, change codpage to Unicode
-@for /f "tokens=2 delims=:." %%x in ('chcp') do set cp=%%x
-@chcp 65001>nul
+for /f "tokens=2 delims=:." %%x in ('chcp') do set cp=%%x
+chcp 65001 >nul
 
 :: Define Variables
 Set SaltDir=%~dp0
@@ -19,4 +19,4 @@ net stop salt-minion
 "%Python%" "%Script%" -l debug
 
 :: Change codepage back
-@chcp %cp%>nul
+chcp %cp% >nul
