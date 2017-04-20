@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage users with the useradd command
+Manage users with the pw command
 
 .. important::
     If you feel that Salt should be using this module to manage users on a
