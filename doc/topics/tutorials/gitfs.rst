@@ -78,9 +78,6 @@ Additionally, version 0.21.0 of pygit2 introduced a dependency on python-cffi_,
 which in turn depends on newer releases of libffi_. Upgrading libffi_ is not
 advisable as several other applications depend on it, so on older LTS linux
 releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
-While these are not packaged in the official repositories for Debian and
-Ubuntu, SaltStack is actively working on adding packages for these to our
-repositories_. The progress of this effort can be tracked here__.
 
 .. warning::
     pygit2_ is actively developed and :ref:`frequently makes
@@ -98,8 +95,58 @@ repositories_. The progress of this effort can be tracked here__.
 .. _libssh2: http://www.libssh2.org/
 .. _python-cffi: https://pypi.python.org/pypi/cffi
 .. _libffi: http://sourceware.org/libffi/
-.. _repositories: https://repo.saltstack.com
-.. __: https://github.com/saltstack/salt-pack/issues/70
+
+
+RedHat Pygit2 Issues
+~~~~~~~~~~~~~~~~~~~~
+
+The release of RedHat/CentOS 7.3 upgraded both ``python-cffi`` and
+``http-parser``, both of which are dependencies for pygit2_/libgit2_. Both
+pygit2_ and libgit2_ (which are from the EPEL repository and not managed
+directly by RedHat) need to be rebuilt against these updated dependencies.
+
+The below errors will show up in the master log if an incompatible
+``python-pygit2`` package is installed:
+
+.. code-block:: text
+
+    2017-02-10 09:07:34,892 [salt.utils.gitfs ][ERROR ][11211] Import pygit2 failed: CompileError: command 'gcc' failed with exit status 1
+    2017-02-10 09:07:34,907 [salt.utils.gitfs ][ERROR ][11211] gitfs is configured but could not be loaded, are pygit2 and libgit2 installed?
+    2017-02-10 09:07:34,907 [salt.utils.gitfs ][CRITICAL][11211] No suitable gitfs provider module is installed.
+    2017-02-10 09:07:34,912 [salt.master ][CRITICAL][11211] Master failed pre flight checks, exiting
+
+The below errors will show up in the master log if an incompatible ``libgit2``
+package is installed:
+
+.. code-block:: text
+
+    2017-02-15 18:04:45,211 [salt.utils.gitfs ][ERROR   ][6211] Error occurred fetching gitfs remote 'https://foo.com/bar.git': No Content-Type header in response
+
+As of 15 February 2017, ``python-pygit2`` has been rebuilt and is in the stable
+EPEL repository. However, ``libgit2`` remains broken (a `bug report`_ has been
+filed to get it rebuilt).
+
+In the meantime, you can work around this by downgrading ``http-parser``. To do
+this, go to `this page`_ and download the appropriate ``http-parser`` RPM for
+the OS architecture you are using (x86_64, etc.). Then downgrade using the
+``rpm`` command. For example:
+
+.. code-block:: bash
+
+    [root@784e8a8c5028 /]# curl --silent -O https://kojipkgs.fedoraproject.org//packages/http-parser/2.0/5.20121128gitcd01361.el7/x86_64/http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
+    [root@784e8a8c5028 /]# rpm -Uvh --oldpackage http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
+    Preparing...                          ################################# [100%]
+    Updating / installing...
+       1:http-parser-2.0-5.20121128gitcd01################################# [ 50%]
+    Cleaning up / removing...
+       2:http-parser-2.7.1-3.el7          ################################# [100%]
+
+A restart of the salt-master daemon may be required to allow http(s)
+repositories to continue to be fetched.
+
+.. _`this page`: https://koji.fedoraproject.org/koji/buildinfo?buildID=703753
+.. _`bug report`: https://bugzilla.redhat.com/show_bug.cgi?id=1422583
+
 
 GitPython
 ---------
@@ -825,8 +872,8 @@ by this reactor.
 Similarly, the tag name ``salt/fileserver/gitfs/update`` can be replaced by
 anything, so long as the usage is consistent.
 
-The ``root`` user name in the hook script and sudo policy should be changed to match the user under which 
-the minion is running.
+The ``root`` user name in the hook script and sudo policy should be changed to
+match the user under which the minion is running.
 
 .. _`post-receive hook`: http://www.git-scm.com/book/en/Customizing-Git-Git-Hooks#Server-Side-Hooks
 

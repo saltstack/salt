@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import errno
 import logging
 import os
 import re
@@ -1589,6 +1590,7 @@ def latest(name,
             return _uptodate(ret, target, _format_comments(comments))
     else:
         if os.path.isdir(target):
+            target_contents = os.listdir(target)
             if force_clone:
                 # Clone is required, and target directory exists, but the
                 # ``force`` option is enabled, so we need to clear out its
@@ -1607,22 +1609,28 @@ def latest(name,
                     'place (force_clone=True set in git.latest state)'
                     .format(target, name)
                 )
-                try:
-                    if os.path.islink(target):
-                        os.unlink(target)
-                    else:
-                        salt.utils.rm_rf(target)
-                except OSError as exc:
+                removal_errors = {}
+                for target_object in target_contents:
+                    target_path = os.path.join(target, target_object)
+                    try:
+                        salt.utils.rm_rf(target_path)
+                    except OSError as exc:
+                        if exc.errno != errno.ENOENT:
+                            removal_errors[target_path] = exc
+                if removal_errors:
+                    err_strings = [
+                        '  {0}\n    {1}'.format(k, v)
+                        for k, v in six.iteritems(removal_errors)
+                    ]
                     return _fail(
                         ret,
-                        'Unable to remove {0}: {1}'.format(target, exc),
+                        'Unable to remove\n{0}'.format('\n'.join(err_strings)),
                         comments
                     )
-                else:
-                    ret['changes']['forced clone'] = True
+                ret['changes']['forced clone'] = True
             # Clone is required, but target dir exists and is non-empty. We
             # can't proceed.
-            elif os.listdir(target):
+            elif target_contents:
                 return _fail(
                     ret,
                     'Target \'{0}\' exists, is non-empty and is not a git '

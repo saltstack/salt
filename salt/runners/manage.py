@@ -30,7 +30,7 @@ from salt.exceptions import SaltClientError
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
 
-def status(output=True):
+def status(output=True, timeout=None, gather_job_timeout=None):
     '''
     Print the status of all known salt minions
 
@@ -42,8 +42,14 @@ def status(output=True):
     '''
     ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
+
+    if not timeout:
+        timeout = __opts__['timeout']
+    if not gather_job_timeout:
+        gather_job_timeout = __opts__['gather_job_timeout']
+
     try:
-        minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
+        minions = client.cmd('*', 'test.ping', timeout=timeout, gather_job_timeout=gather_job_timeout)
     except SaltClientError as client_error:
         print(client_error)
         return ret
@@ -128,7 +134,7 @@ def down(removekeys=False):
     return ret
 
 
-def up():  # pylint: disable=C0103
+def up(timeout=None, gather_job_timeout=None):  # pylint: disable=C0103
     '''
     Print a list of all of the minions that are up
 
@@ -137,8 +143,13 @@ def up():  # pylint: disable=C0103
     .. code-block:: bash
 
         salt-run manage.up
+        salt-run manage.up timeout=5 gather_job_timeout=5
     '''
-    ret = status(output=False).get('up', [])
+    ret = status(
+        output=False,
+        timeout=timeout,
+        gather_job_timeout=gather_job_timeout
+    ).get('up', [])
     return ret
 
 

@@ -50,7 +50,7 @@ from salt.modules.dockerng import (
     STOP_TIMEOUT,
     VALID_CREATE_OPTS,
     _validate_input,
-    _get_repo_tag
+    _get_repo_tag,
 )
 # pylint: enable=no-name-in-module,import-error
 import salt.utils
@@ -240,6 +240,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 ret.update({item: {'old': actual_ports,
                                    'new': desired_ports}})
             continue
+
         elif item == 'volumes':
             if actual_data is None:
                 actual_data = []
@@ -411,6 +412,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             # sometimes `[]`. We have to deal with it.
             if bool(actual_data) != bool(data):
                 ret.update({item: {'old': actual_data, 'new': data}})
+
         elif item == 'labels':
             if actual_data is None:
                 actual_data = {}
@@ -426,6 +428,23 @@ def _compare(actual, create_kwargs, defaults_from_image):
             if actual_data != data:
                 ret.update({item: {'old': actual_data, 'new': data}})
                 continue
+
+        elif item == 'security_opt':
+            if actual_data is None:
+                actual_data = []
+            if data is None:
+                data = []
+            actual_data = sorted(set(actual_data))
+            desired_data = sorted(set(data))
+            log.trace('dockerng.running ({0}): munged actual value: {1}'
+                      .format(item, actual_data))
+            log.trace('dockerng.running ({0}): munged desired value: {1}'
+                      .format(item, desired_data))
+            if actual_data != desired_data:
+                ret.update({item: {'old': actual_data,
+                                   'new': desired_data}})
+            continue
+
         elif item in ('cmd', 'command', 'entrypoint'):
             if (actual_data is None and item not in create_kwargs and
                     _image_get(config['image_path'])):
@@ -1466,6 +1485,31 @@ def running(name,
 
             This option requires Docker 1.5.0 or newer.
 
+    ulimits
+        List of ulimits. These limits should be passed in
+        the format ``<ulimit_name>:<soft_limit>:<hard_limit>``, with the hard
+        limit being optional.
+
+        .. versionadded:: 2016.3.6,2016.11.4,Nitrogen
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - ulimits: nofile=1024:1024,nproc=60
+
+        Ulimits can be passed as a YAML list instead of a comma-separated list:
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - ulimits:
+                  - nofile=1024:1024
+                  - nproc=60
+
     labels
         Add Metadata to the container. Can be a list of strings/dictionaries
         or a dictionary of strings (keys and values).
@@ -2341,7 +2385,7 @@ def volume_absent(name, driver=None):
     '''
     Ensure that a volume is absent.
 
-    .. versionadded:: 2015.8.4
+    .. versionadded:: 2015.8.4,
 
     name
         Name of the volume
@@ -2383,6 +2427,9 @@ def mod_watch(name, sfun=None, **kwargs):
             watch_kwargs['send_signal'] = True
             watch_kwargs['force'] = False
         return running(name, **watch_kwargs)
+
+    if sfun == 'stopped':
+        return stopped(name, **salt.utils.clean_kwargs(**kwargs))
 
     if sfun == 'image_present':
         # Force image to be updated

@@ -14,7 +14,7 @@ import os
 import salt.version
 import salt.utils
 
-from salt.exceptions import CommandNotFoundError
+from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 from salt.ext import six
 log = logging.getLogger(__name__)
@@ -237,7 +237,12 @@ def managed(name,
 
     # Populate the venv via a requirements file
     if requirements or pip_pkgs:
-        before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
+        try:
+            before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
+            return ret
 
         if requirements:
 

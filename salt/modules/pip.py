@@ -1082,6 +1082,9 @@ def list_(prefix=None,
         elif line.startswith('-e'):
             line = line.split('-e ')[1]
             version_, name = line.split('#egg=')
+        elif len(line.split('===')) >= 2:
+            name = line.split('===')[0]
+            version_ = line.split('===')[1]
         elif len(line.split('==')) >= 2:
             name = line.split('==')[0]
             version_ = line.split('==')[1]

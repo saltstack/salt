@@ -1275,26 +1275,26 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             else:
                 desc = self.suffix_map[suffix]
                 # if it is a directory, we don't open a file
+                try:
+                    mod_namespace = '.'.join((
+                        self.loaded_base_name,
+                        self.mod_type_check(fpath),
+                        self.tag,
+                        name))
+                except TypeError:
+                    mod_namespace = '{0}.{1}.{2}.{3}'.format(
+                        self.loaded_base_name,
+                        self.mod_type_check(fpath),
+                        self.tag,
+                        name)
                 if suffix == '':
-                    mod = imp.load_module(
-                        '{0}.{1}.{2}.{3}'.format(
-                            self.loaded_base_name,
-                            self.mod_type_check(fpath),
-                            self.tag,
-                            name
-                        ), None, fpath, desc)
+                    mod = imp.load_module(mod_namespace, None, fpath, desc)
                     # reload all submodules if necessary
                     if not self.initial_load:
                         self._reload_submodules(mod)
                 else:
                     with salt.utils.fopen(fpath, desc[1]) as fn_:
-                        mod = imp.load_module(
-                            '{0}.{1}.{2}.{3}'.format(
-                                self.loaded_base_name,
-                                self.mod_type_check(fpath),
-                                self.tag,
-                                name
-                            ), fn_, fpath, desc)
+                        mod = imp.load_module(mod_namespace, fn_, fpath, desc)
 
         except IOError:
             raise
@@ -1347,11 +1347,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             except Exception:
                 err_string = '__init__ failed'
                 log.debug(
-                    'Error loading {0}.{1}: {2}'.format(
-                        self.tag,
-                        module_name,
-                        err_string),
-                    exc_info=True)
+                    'Error loading %s.%s: %s',
+                    self.tag, module_name, err_string, exc_info=True
+                )
                 self.missing_modules[module_name] = err_string
                 self.missing_modules[name] = err_string
                 return False
@@ -1364,10 +1362,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 module_name,
             )
             if virtual_err is not None:
-                log.trace('Error loading {0}.{1}: {2}'.format(self.tag,
-                                                              module_name,
-                                                              virtual_err,
-                                                              ))
+                log.trace(
+                    'Error loading %s.%s: %s',
+                    self.tag, module_name, virtual_err
+                )
 
             # if process_virtual returned a non-True value then we are
             # supposed to not process this module

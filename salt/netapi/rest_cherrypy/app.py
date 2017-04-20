@@ -12,7 +12,7 @@ A REST API for Salt
       SSL is enabled, since this version worked the best with SSL in
       internal testing. Versions 3.2.3 - 4.x can be used if SSL is not enabled.
       Be aware that there is a known
-      `SSL error <https://bitbucket.org/cherrypy/cherrypy/issue/1298/ssl-not-working>`_
+      `SSL error <https://github.com/cherrypy/cherrypy/issues/1298>`_
       introduced in version 3.2.5. The issue was reportedly resolved with
       CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
 :optdepends:    - ws4py Python module for websockets support.

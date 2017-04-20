@@ -385,6 +385,8 @@ class ProcessManager(object):
                     yield gen.sleep(10)
                 else:
                     time.sleep(10)
+                if len(self._process_map) == 0:
+                    break
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
@@ -396,6 +398,7 @@ class ProcessManager(object):
         if self._restart_processes is True:
             for pid, mapping in six.iteritems(self._process_map):
                 if not mapping['Process'].is_alive():
+                    log.trace('Process restart of {0}'.format(pid))
                     self.restart_process(pid)
 
     def kill_children(self, *args, **kwargs):
@@ -669,8 +672,8 @@ def default_signals(*signals):
     old_signals = {}
     for signum in signals:
         try:
-            signal.signal(signum, signal.SIG_DFL)
             old_signals[signum] = signal.getsignal(signum)
+            signal.signal(signum, signal.SIG_DFL)
         except ValueError as exc:
             # This happens when a netapi module attempts to run a function
             # using wheel_async, because the process trying to register signals

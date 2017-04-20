@@ -140,8 +140,8 @@ sudo -H $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: libsodium\007"
 
-PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.7.tar.gz"
-PKGDIR="libsodium-1.0.7"
+PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.12.tar.gz"
+PKGDIR="libsodium-1.0.12"
 
 download $PKGURL
 

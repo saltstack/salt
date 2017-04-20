@@ -147,16 +147,17 @@ watched file updated.
 The Top File
 ````````````
 
-The top file controls the mapping between minions and the states which should be
-applied to them.
+The top file controls the mapping between minions and the states which should
+be applied to them.
 
-The top file specifies which minions should have which SLS files applied and which
-environments they should draw those SLS files from.
+The top file specifies which minions should have which SLS files applied and
+which environments they should draw those SLS files from.
 
 The top file works by specifying environments on the top-level.
 
-Each environment contains globs to match minions. Finally, each glob contains a list of
-lists of Salt states to apply to matching minions:
+Each environment contains :ref:`target expressions <targeting>` to match
+minions. Finally, each target expression contains a list of Salt states to
+apply to matching minions:
 
 .. code-block:: yaml
 
@@ -172,12 +173,33 @@ lists of Salt states to apply to matching minions:
 This above example uses the base environment which is built into the default
 Salt setup.
 
-The base environment has two globs. First, the '*' glob contains a list of
-SLS files to apply to all minions.
+The base environment has target expressions. The first one matches all minions,
+and the SLS files below it apply to all minions.
 
-The second glob contains a regular expression that will match all minions with
-an ID matching saltmaster.* and specifies that for those minions, the salt.master
-state should be applied.
+The second expression is a regular expression that will match all minions
+with an ID matching ``saltmaster.*`` and specifies that for those minions, the
+salt.master state should be applied. To
+
+.. important::
+    Since version 2014.7.0, the default matcher (when one is not explicitly
+    defined as in the second expression in the above example) is the
+    :ref:`compound <targeting-compound>` matcher. Since this matcher parses
+    individual words in the expression, minion IDs containing spaces will not
+    match properly using this matcher. Therefore, if your target expression is
+    designed to match a minion ID containing spaces, it will be necessary to
+    specify a different match type (such as ``glob``). For example:
+
+    .. code-block:: yaml
+
+        base:
+          'test minion':
+            - match: glob
+            - foo
+            - bar
+            - baz
+
+A full table of match types available in the top file can be found :ref:`here
+<top-file-match-types>`.
 
 .. _reloading-modules:
 

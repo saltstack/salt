@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Recursively iterate over directories and add all files as Pillar data
+
+``File_tree`` is an external pillar that allows
+values from all files in a directory tree to be imported as Pillar data.
+
+Note this is an external pillar, and is subject to the rules and constraints
+governing external pillars detailed here: :ref:`external-pillars`.
 
 .. versionadded:: 2015.5.0
 

@@ -822,7 +822,10 @@ def symlink(
 
     mode
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
-        on Windows
+        on Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
     '''
     name = os.path.expanduser(name)
 
@@ -1144,7 +1147,7 @@ def managed(name,
         will not be changed or managed.
 
         If the file is hosted on a HTTP or FTP server then the source_hash
-        argument is also required
+        argument is also required.
 
         A list of sources can also be passed in to provide a default source and
         a set of fallbacks. The first source in the list that is found to exist
@@ -1284,7 +1287,10 @@ def managed(name,
 
     mode
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
-        on Windows
+        on Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     template
         If this setting is applied, the named templating engine will be used to
@@ -1306,6 +1312,9 @@ def managed(name,
         If directories are to be created, passing this option specifies the
         permissions for those directories. If this is not set, directories
         will be assigned permissions from the 'mode' argument.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     replace : True
         If set to ``False`` and the file already exists, the file will not be
@@ -1949,11 +1958,17 @@ def directory(name,
 
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
-        Windows
+        Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     file_mode
         The permissions mode to set any files created if 'mode' is run in
-        'recurse'. This defaults to dir_mode. Not supported on Windows
+        'recurse'. This defaults to dir_mode. Not supported on Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     makedirs
         If the directory is located in a path without a parent directory, then
@@ -2044,7 +2059,11 @@ def directory(name,
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
-    if os.path.isfile(name) or (not allow_symlink and os.path.islink(name)):
+
+    # Check for existing file or symlink
+    if os.path.isfile(name) or (not allow_symlink and os.path.islink(name)) \
+       or (force and os.path.islink(name)):
+        # Was a backupname specified
         if backupname is not None:
             # Make a backup first
             if os.path.lexists(backupname):
@@ -2290,15 +2309,24 @@ def recurse(name,
 
     dir_mode
         The permissions mode to set on any directories created. Not supported on
-        Windows
+        Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     file_mode
         The permissions mode to set on any files created. Not supported on
-        Windows
+        Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     sym_mode
         The permissions mode to set on any symlink created. Not supported on
-        Windows
+        Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     template
         If this setting is applied, the named templating engine will be used to
@@ -3055,7 +3083,7 @@ def blockreplace(
         will not be changed or managed.
 
         If the file is hosted on a HTTP or FTP server then the source_hash
-        argument is also required
+        argument is also required.
 
         A list of sources can also be passed in to provide a default source and
         a set of fallbacks. The first source in the list that is found to exist
@@ -3064,7 +3092,8 @@ def blockreplace(
         .. code-block:: yaml
 
             file_override_example:
-              file.managed:
+              file.blockreplace:
+                - name: /etc/example.conf
                 - source:
                   - salt://file_that_does_not_exist
                   - salt://file_that_exists
@@ -3089,45 +3118,8 @@ def blockreplace(
             sha1        40
             md5         32
 
-        **Using a Source Hash File**
-            The file can contain several checksums for several files. Each line
-            must contain both the file name and the hash.  If no file name is
-            matched, the first hash encountered will be used, otherwise the most
-            secure hash with the correct source file name will be used.
-
-            When using a source hash file the source_hash argument needs to be a
-            url, the standard download urls are supported, ftp, http, salt etc:
-
-            Example:
-
-            .. code-block:: yaml
-
-                tomdroid-src-0.7.3.tar.gz:
-                  file.managed:
-                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
-                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
-                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.hash
-
-            The following is an example of the supported source_hash format:
-
-            .. code-block:: text
-
-                /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
-                sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
-                ead48423703509d37c4a90e6a0d53e143b6fc268
-
-            Debian file type ``*.dsc`` files are also supported.
-
-        **Inserting the Source Hash in the sls Data**
-            Examples:
-
-            .. code-block:: yaml
-
-                tomdroid-src-0.7.3.tar.gz:
-                  file.managed:
-                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
-                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
-                    - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
+        See the ``source_hash`` parameter description for :mod:`file.managed
+        <salt.states.file.managed>` function for more details and examples.
 
     template
         The named templating engine will be used to render the downloaded file.
@@ -3568,34 +3560,8 @@ def append(name,
             sha1        40
             md5         32
 
-        The file can contain several checksums for several files. Each line
-        must contain both the file name and the hash.  If no file name is
-        matched, the first hash encountered will be used, otherwise the most
-        secure hash with the correct source file name will be used.
-
-        Debian file type ``*.dsc`` is supported.
-
-        Examples:
-
-        .. code-block:: text
-
-            /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
-            sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
-            ead48423703509d37c4a90e6a0d53e143b6fc268
-
-        Known issues:
-            If the remote server URL has the hash file as an apparent
-            sub-directory of the source file, the module will discover that it
-            has already cached a directory where a file should be cached. For
-            example:
-
-            .. code-block:: yaml
-
-                tomdroid-src-0.7.3.tar.gz:
-                  file.managed:
-                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
-                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
-                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz/+md5
+        See the ``source_hash`` parameter description for :mod:`file.managed
+        <salt.states.file.managed>` function for more details and examples.
 
     template
         The named templating engine will be used to render the appended-to file.
@@ -4202,7 +4168,10 @@ def copy(
 
         The permissions to set on the copied file, aka 644, '0775', '4664'.
         If ``preserve`` is set to ``True``, then this will be ignored.
-        Not supported on Windows
+        Not supported on Windows.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     subdir
         .. versionadded:: 2015.5.0
@@ -4579,7 +4548,10 @@ def serialize(name,
         salt is running as on the minion
 
     mode
-        The permissions to set on this file, aka 644, 0775, 4664
+        The permissions to set on this file, aka 644, 0775, 4664.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     backup
         Overrides the default backup mode for this specific file.
