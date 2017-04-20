@@ -61,7 +61,6 @@ import logging
 import json
 import copy
 import salt.ext.six as six
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -261,7 +260,6 @@ def topic_absent(name, unsubscribe=False, region=None, key=None, keyid=None, pro
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     something_changed = False
-    log.info('%s, %s, %s, %s, %s' % (name, region, key, keyid, profile))
     current = __salt__['boto3_sns.describe_topic'](name, region, key, keyid, profile)
     if not current:
         ret['comment'] = 'AWS SNS topic {0} absent.'.format(name)
@@ -279,7 +277,7 @@ def topic_absent(name, unsubscribe=False, region=None, key=None, keyid=None, pro
                 if sub['SubscriptionArn'] == 'PendingConfirmation':
                     # The API won't let you delete subscriptions in pending status...
                     log.warning('Ignoring PendingConfirmation subscription {0} {1} on topic '
-                                '{2}'.format( sub['Protocol'], sub['Endpoint'], sub['TopicArn']))
+                                '{2}'.format(sub['Protocol'], sub['Endpoint'], sub['TopicArn']))
                     continue
                 if __salt__['boto3_sns.unsubscribe'](sub['SubscriptionArn'], region=region, key=key,
                                                      keyid=keyid, profile=profile):
