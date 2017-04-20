@@ -179,7 +179,7 @@ def query(url,
 
     # Some libraries don't support separation of url and GET parameters
     # Don't need a try/except block, since Salt depends on tornado
-    url_full = tornado.httputil.url_concat(url, params)
+    url_full = tornado.httputil.url_concat(url, params) if params else url
 
     if ca_bundle is None:
         ca_bundle = get_ca_bundle(opts)
