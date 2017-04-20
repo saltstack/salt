@@ -120,15 +120,15 @@ class RunnerReturnsTest(ShellCase):
         with salt.utils.fopen(serialized_return, 'rb') as fp_:
             deserialized = serial.loads(fp_.read())
 
-        self.clean_return(deserialized)
+        self.clean_return(deserialized['return'])
 
         # Now we have something sane we can reliably compare in an assert.
         self.assertEqual(
             deserialized,
-            {'fun': 'runner.test.arg',
-             'fun_args': ['foo', {'bar': 'hello world!'}],
-             'jid': jid,
-             'return': {'args': ['foo'], 'kwargs': {'bar': 'hello world!'}},
-             'success': True,
-             'user': 'root'}
+            {'return': {'fun': 'runner.test.arg',
+                        'fun_args': ['foo', {'bar': 'hello world!'}],
+                        'jid': jid,
+                        'return': {'args': ['foo'], 'kwargs': {'bar': 'hello world!'}},
+                        'success': True,
+                        'user': 'root'}}
         )
