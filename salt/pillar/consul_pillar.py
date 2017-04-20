@@ -72,7 +72,7 @@ Optionally, a root may be specified.
       - consul: my_consul_config
 
     ext_pillar:
-      - consul: my_consul_config root=/salt
+      - consul: my_consul_config root=salt
 
 Using these configuration profiles, multiple consul sources may also be used:
 
@@ -88,9 +88,9 @@ path to expose minion-specific information stored in consul.
 .. code-block:: yaml
 
     ext_pillar:
-      - consul: my_consul_config root=/salt/%(minion_id)s
-      - consul: my_consul_config root=/salt/%(role)s
-      - consul: my_consul_config root=/salt/%(environment)s
+      - consul: my_consul_config root=salt/%(minion_id)s
+      - consul: my_consul_config root=salt/%(role)s
+      - consul: my_consul_config root=salt/%(environment)s
 
 Minion-specific values may override shared values when the minion-specific root
 appears after the shared root:
@@ -98,8 +98,8 @@ appears after the shared root:
 .. code-block:: yaml
 
     ext_pillar:
-      - consul: my_consul_config root=/salt-shared
-      - consul: my_other_consul_config root=/salt-private/%(minion_id)s
+      - consul: my_consul_config root=salt-shared
+      - consul: my_other_consul_config root=salt-private/%(minion_id)s
 
 If using the ``role`` or ``environment`` grain in the consul key path, be sure to define it using
 `/etc/salt/grains`, or similar:
