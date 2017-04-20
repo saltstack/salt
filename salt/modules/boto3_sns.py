@@ -297,7 +297,7 @@ def subscribe(TopicArn, Protocol, Endpoint, region=None, key=None, keyid=None, p
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         ret = conn.subscribe(TopicArn=TopicArn, Protocol=Protocol, Endpoint=Endpoint)
-        log.info('Subscribed {0} {1} to topic {2} with SubscriptionArn {3]'.format(
+        log.info('Subscribed {0} {1} to topic {2} with SubscriptionArn {3}'.format(
                  Protocol, Endpoint, TopicArn, ret['SubscriptionArn']))
         return ret['SubscriptionArn']
     except botocore.exceptions.ClientError as e:
