@@ -460,8 +460,22 @@ Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file
         uninstaller: salt://win/repo/7zip/7z920-x64.msi
         uninstall_flags: '/qn /norestart'
 
-:param bool msiexec: This tells salt to use ``msiexec /i`` to install the
+:param msiexec: This tells salt to use ``msiexec /i`` to install the
     package and ``msiexec /x`` to uninstall. This is for `.msi` installations.
+    Possible options are: True, False or path to msiexec on your system
+
+    7zip:
+      '9.20.00.0':
+        installer: salt://win/repo/7zip/7z920-x64.msi
+        full_name: 7-Zip 9.20 (x64 edition)
+        reboot: False
+        install_flags: '/qn /norestart'
+        msiexec: 'C:\Windows\System32\msiexec.exe'
+        uninstaller: salt://win/repo/7zip/7z920-x64.msi
+        uninstall_flags: '/qn /norestart'
+
+:param str arch: This selects which ``msiexec.exe`` to use. Possible values:
+    ``x86``, ``x64``
 
 :param bool allusers: This parameter is specific to `.msi` installations. It
     tells `msiexec` to install the software for all users. The default is True.
