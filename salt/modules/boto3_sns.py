@@ -93,6 +93,13 @@ def list_topics(region=None, key=None, keyid=None, profile=None):
 
 
 def describe_topic(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Returns details about a specific SNS topic, specified by name or ARN.
+
+    CLI example::
+
+        salt my_favorite_client boto3_sns.describe_topic a_sns_topic_of_my_choice
+    '''
     topics = list_topics(region=region, key=key, keyid=keyid, profile=profile)
     ret = {}
     for topic, arn in topics.items():
