@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
 
+# Import python libs
+from __future__ import absolute_import
 from subprocess import PIPE
 
+# Import salt libs
 import salt.modules.openscap as openscap
 
+# Import salt test libs
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     Mock,
@@ -13,6 +16,9 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -114,12 +120,15 @@ class OpenscapTestCase(TestCase):
             )
 
     def test_openscap_xccdf_eval_fail_no_profile(self):
-        response = openscap.xccdf(
-            'eval --param Default /unknown/param')
+        response = openscap.xccdf('eval --param Default /unknown/param')
+        if six.PY2:
+            error = 'argument --profile is required'
+        else:
+            error = 'the following arguments are required: --profile'
         self.assertEqual(
             response,
             {
-                'error': 'the following arguments are required: --profile',
+                'error': error,
                 'upload_dir': None,
                 'success': False,
                 'returncode': None
