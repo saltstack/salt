@@ -138,7 +138,6 @@ def query(key, keyid, method='GET', params=None, headers=None,
                                           data=data,
                                           verify=verify_ssl,
                                           stream=True)
-        response = result.content
     elif method == 'GET' and local_file and not return_bin:
         result = requests.request(method,
                                   requesturl,
@@ -146,17 +145,16 @@ def query(key, keyid, method='GET', params=None, headers=None,
                                   data=data,
                                   verify=verify_ssl,
                                   stream=True)
-        response = result.content
     else:
         result = requests.request(method,
                                   requesturl,
                                   headers=headers,
                                   data=data,
                                   verify=verify_ssl)
-        response = result.content
+
     if result.status_code >= 400:
         # On error the S3 API response should contain error message
-        log.debug('    Response content: {0}'.format(response))
+        log.debug('    Response content: {0}'.format(result.content))
 
     log.debug('S3 Response Status Code: {0}'.format(result.status_code))
 
@@ -204,10 +202,10 @@ def query(key, keyid, method='GET', params=None, headers=None,
 
     # This can be used to return a binary object wholesale
     if return_bin:
-        return response
+        return result.content
 
-    if response:
-        items = ET.fromstring(response)
+    if result.content:
+        items = ET.fromstring(result.content)
 
         ret = []
         for item in items:
