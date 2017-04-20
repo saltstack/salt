@@ -82,14 +82,14 @@ A simple list of minion IDs would traditionally be defined like this:
 .. code-block:: yaml
 
     nodegroups:
-      - group1: L@host1,host2,host3
+      group1: L@host1,host2,host3
 
 They can now also be defined as a YAML list, like this:
 
 .. code-block:: yaml
 
     nodegroups:
-      - group1:
+      group1:
         - host1
         - host2
         - host3
