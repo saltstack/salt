@@ -65,10 +65,14 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
         cls.server_channel.pre_fork(cls.process_manager)
 
         cls.io_loop = tornado.ioloop.IOLoop()
-        cls.io_loop.make_current()
+
+        def run_loop_in_thread(loop):
+            loop.make_current()
+            loop.start()
+
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
 
-        cls.server_thread = threading.Thread(target=cls.io_loop.start)
+        cls.server_thread = threading.Thread(target=run_loop_in_thread, args=(cls.io_loop,))
         cls.server_thread.daemon = True
         cls.server_thread.start()
 
@@ -185,7 +189,12 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls._server_io_loop = tornado.ioloop.IOLoop()
         cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls._server_io_loop)
 
-        cls.server_thread = threading.Thread(target=cls._server_io_loop.start)
+        def run_loop_in_thread(loop):
+            loop.make_current()
+            loop.start()
+
+        cls.server_thread = threading.Thread(target=run_loop_in_thread, args=(cls._server_io_loop,))
+        cls.server_thread.daemon = True
         cls.server_thread.start()
 
     @classmethod
