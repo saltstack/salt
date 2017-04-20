@@ -9,9 +9,6 @@ Support for Stormpath.
 from __future__ import absolute_import
 import pprint
 
-# Import salt libs
-import salt.utils
-
 
 def __virtual__():
     '''
