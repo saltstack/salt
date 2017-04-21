@@ -103,6 +103,79 @@ and virtual machines are created from templates. Because of this, there is no ne
 profile. The size of the virtual machine is defined in the template.
 
 
+You can now change the size of a VM on creation by cloning an image and expanding the size. You can accomplish this by
+the following cloud profile settings below.
+
+.. code-block:: yaml
+    my-opennebula-profile:
+      provider: my-opennebula-provider
+      image: Ubuntu-14.04
+      disk:
+        disk0:
+          disk_type: clone
+          size: 8096
+          image: centos7-base-image-v2
+        disk1:
+          disk_type: volatile
+          type: swap
+          size: 4096
+        disk2:
+          disk_type: volatile
+          size: 4096
+          type: fs
+          format: ext3
+
+There are currently two different disk_types a user can use: volatile and clone. Clone which is required when specifying devices
+will clone an image in open nebula and will expand it to the size specified in the profile settings. By default this will clone
+the image attached to the template specified in the profile but a user can add the `image` argument under the disk definition.
+
+For example the profile below will not use Ubuntu-14.04 for the cloned disk image. It will use the centos7-base-image image:
+
+.. code-block:: yaml
+    my-opennebula-profile:
+      provider: my-opennebula-provider
+      image: Ubuntu-14.04
+      disk:
+        disk0:
+          disk_type: clone
+          size: 8096
+          image: centos7-base-image
+
+If you want to use the image attached to the template set in the profile you can simply remove the image argument as show below.
+The profile below will clone the image Ubuntu-14.04 and expand the disk to 8GB.:
+
+.. code-block:: yaml
+    my-opennebula-profile:
+      provider: my-opennebula-provider
+      image: Ubuntu-14.04
+      disk:
+        disk0:
+          disk_type: clone
+          size: 8096
+
+A user can also currently specify swap or fs disks. Below is an example of this profile setting:
+
+.. code-block:: yaml
+    my-opennebula-profile:
+      provider: my-opennebula-provider
+      image: Ubuntu-14.04
+      disk:
+        disk0:
+          disk_type: clone
+          size: 8096
+        disk1:
+          disk_type: volatile
+          type: swap
+          size: 4096
+        disk2:
+          disk_type: volatile
+          size: 4096
+          type: fs
+          format: ext3
+
+The example above will attach both a swap disk and a ext3 filesystem with a size of 4GB. To note if you define other disks you have
+to define the image disk to clone because the template will write over the entire 'DISK=[]' template definition on creation.
+
 .. _opennebula-required-settings:
 
 Required Settings
