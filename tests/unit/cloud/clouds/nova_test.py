@@ -40,4 +40,4 @@ class NovaTestCase(TestCase):
         data = MagicMock()
         data.public_ips = []
 
-        assert nova._query_node_data(vm, data).public_ips == ['0.0.0.0']
+        assert nova._query_node_data(vm, data, MagicMock()).public_ips == ['0.0.0.0']

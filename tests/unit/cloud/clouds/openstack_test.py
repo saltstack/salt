@@ -40,4 +40,4 @@ class OpenstackTestCase(TestCase):
         data.public_ips = []
 
         with patch('salt.utils.cloud.is_public_ip', MagicMock(return_value=True)):
-            assert openstack._query_node_data(vm, data, False).public_ips == ['0.0.0.0']
+            assert openstack._query_node_data(vm, data, False, MagicMock()).public_ips == ['0.0.0.0']
