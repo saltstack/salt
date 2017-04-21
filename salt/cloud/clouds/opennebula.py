@@ -1049,11 +1049,12 @@ def create(vm_):
         for disk in get_disks:
             template.append(_get_device_template(disk, get_disks[disk],
                                  template=template_name))
+        if 'CLONE' not in str(template):
+            raise SaltCloudSystemExit(
+                'Missing an image disk to clone. Must define a clone disk alongside all other disk definitions.'
+            )
+
     template_args = "\n".join(template)
-    if 'CLONE' not in template_args:
-        raise SaltCloudSystemExit(
-            'Missing an image disk to clone. Must define a clone disk alongside all other disk definitions.'
-        )
 
     try:
         server, user, password = _get_xml_rpc()
