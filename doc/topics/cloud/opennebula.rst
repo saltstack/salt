@@ -109,6 +109,7 @@ You can now change the size of a VM on creation by cloning an image and expandin
 the following cloud profile settings below.
 
 .. code-block:: yaml
+
     my-opennebula-profile:
       provider: my-opennebula-provider
       image: Ubuntu-14.04
@@ -134,6 +135,7 @@ the image attached to the template specified in the profile but a user can add t
 For example the profile below will not use Ubuntu-14.04 for the cloned disk image. It will use the centos7-base-image image:
 
 .. code-block:: yaml
+
     my-opennebula-profile:
       provider: my-opennebula-provider
       image: Ubuntu-14.04
@@ -147,6 +149,7 @@ If you want to use the image attached to the template set in the profile you can
 The profile below will clone the image Ubuntu-14.04 and expand the disk to 8GB.:
 
 .. code-block:: yaml
+
     my-opennebula-profile:
       provider: my-opennebula-provider
       image: Ubuntu-14.04
@@ -158,6 +161,7 @@ The profile below will clone the image Ubuntu-14.04 and expand the disk to 8GB.:
 A user can also currently specify swap or fs disks. Below is an example of this profile setting:
 
 .. code-block:: yaml
+
     my-opennebula-profile:
       provider: my-opennebula-provider
       image: Ubuntu-14.04
