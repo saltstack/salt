@@ -276,13 +276,10 @@ def set_zone(timezone):
     elif 'Suse' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
-    elif 'Debian' in __grains__['os_family']:
+    elif 'Debian' in __grains__['os_family'] or 'Gentoo' in __grains__['os_family']:
         with salt.utils.fopen('/etc/timezone', 'w') as ofh:
             ofh.write(timezone.strip())
             ofh.write('\n')
-    elif 'Gentoo' in __grains__['os_family']:
-        with salt.utils.fopen('/etc/timezone', 'w') as ofh:
-            ofh.write(timezone)
 
     return True
 
