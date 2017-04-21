@@ -529,13 +529,9 @@ def _virtual(osdata):
 
     # Quick backout for BrandZ (Solaris LX Branded zones)
     # Don't waste time trying other commands to detect the virtual grain
-    uname = salt.utils.which('uname')
-    if osdata['kernel'] == 'Linux' and uname:
-        ret = __salt__['cmd.run_all']('{0} -v'.format(uname))
-        if 'BrandZ' in ret['stdout']:
-            grains['virtual'] = 'zone'
-            grains.update(_mdata())
-            return grains
+    if osdata['kernel'] == 'Linux' and 'BrandZ virtual linux' in os.uname():
+        grains['virtual'] = 'zone'
+        return grains
 
     failed_commands = set()
     for command in _cmds:
@@ -2306,42 +2302,6 @@ def _smartos_zone_data():
 
     grains['zonename'] = __salt__['cmd.run']('zonename')
     grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'', python_shell=True)
-    grains.update(_mdata())
-
-    return grains
-
-
-def _mdata():
-    '''
-    Provide grains from the SmartOS metadata
-    '''
-    grains = {}
-    mdata_list = salt.utils.which('mdata-list')
-    mdata_get = salt.utils.which('mdata-get')
-
-    # parse sdc metadata
-    grains['hypervisor_uuid'] = __salt__['cmd.run']('{0} sdc:server_uuid'.format(mdata_get))
-    if "FAILURE" in grains['hypervisor_uuid'] or "No metadata" in grains['hypervisor_uuid']:
-        grains['hypervisor_uuid'] = "Unknown"
-    grains['datacenter'] = __salt__['cmd.run']('{0} sdc:datacenter_name'.format(mdata_get))
-    if "FAILURE" in grains['datacenter'] or "No metadata" in grains['datacenter']:
-        grains['datacenter'] = "Unknown"
-
-    # parse vmadm metadata
-    for mdata_grain in __salt__['cmd.run'](mdata_list).splitlines():
-        grain_data = __salt__['cmd.run']('{0} {1}'.format(mdata_get, mdata_grain))
-
-        if mdata_grain == 'roles':  # parse roles as roles grain
-            grain_data = grain_data.split(',')
-            grains['roles'] = grain_data
-        else:  # parse other grains into mdata
-            if not mdata_grain.startswith('sdc:'):
-                if 'mdata' not in grains:
-                    grains['mdata'] = {}
-
-                mdata_grain = mdata_grain.replace('-', '_')
-                mdata_grain = mdata_grain.replace(':', '_')
-                grains['mdata'][mdata_grain] = grain_data
 
     return grains
 
