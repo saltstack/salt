@@ -292,6 +292,15 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                             err
                         )
                     )
+                # python-openssl version 0.14, when installed with the "junos-eznc" pip
+                # package, causes an error on this test. Newer versions of PyOpenSSL do not have
+                # this issue. If 0.14 is installed and we hit this error, skip the test.
+                if LooseVersion(OpenSSL.__version__) == LooseVersion('0.14'):
+                    log.exception(err)
+                    self.skipTest(
+                        'Encountered a package conflict. OpenSSL version 0.14 cannot be used with '
+                        'the "junos-eznc" pip package on this test. Skipping.'
+                    )
                 result = {}
 
         remove_not_in_result(ret, result)
