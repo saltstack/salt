@@ -152,7 +152,7 @@ def synchronized(name, source,
         elif _get_changes(result['stdout'])['changed']:
             ret['comment'] = _get_summary(result['stdout'])
             ret['changes'] = _get_changes(result['stdout'])
-            del ret['changes']['changed'] # Don't need to print the boolean
+            del ret['changes']['changed']  # Don't need to print the boolean
         # Clean
         else:
             ret['comment'] = _get_summary(result['stdout'])
