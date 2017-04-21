@@ -46,23 +46,17 @@ if it is private.
 # Import python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion
+import base64
+import hashlib
 import json
+import logging
 import os
 import os.path
-import logging
-import time
-
-try:
-    import fcntl
-    HAS_FCNTL = True
-except ImportError:
-    # fcntl is not available on windows
-    HAS_FCNTL = False
+import shutil
 
 # Import salt libs
 import salt.fileserver
 import salt.utils
-import salt.syspaths
 
 try:
     import azure.storage
@@ -188,7 +182,86 @@ def update():
     Also processes deletions by walking the container caches and comparing
     with the list of blobs in the container
     '''
-    pass
+    for container in __opts__['azurefs']:
+        path = _get_container_path(container)
+        try:
+            if not os.path.exists(path):
+                os.path.mkdir(path)
+            elif not os.path.isdir(path):
+                shutil.rmtree(path)
+                os.path.mkdir(path)
+        except Exception as exc:
+            log.exception('Error occurred creating cache directory for azurefs')
+            continue
+        blob_service = _get_container_service(container)
+        name = container['container_name']
+        try:
+            blob_list = blob_service.list_blobs(name)
+        except Exception as exc:
+            log.exception('Error occurred fetching blob list for azurefs')
+            continue
+
+        # Walk the cache directory searching for deletions
+        blob_names = [blob.name for blob in blob_list]
+        blob_set = set(blob_names)
+        for root, dirs, files in os.walk(path):
+            for f in files:
+                fname = os.path.join(root, f)
+                relpath = os.path.relpath(fname, path)
+                if relpath not in blob_set:
+                    salt.fileserver.wait_lock(fname + '.lk', fname)
+                    try:
+                        os.unlink(fname)
+                    except:
+                        pass
+            if not dirs and not files:
+                shutil.rmtree(root)
+
+        for blob in blob_list:
+            fname = os.path.join(path, blob.name)
+            update = False
+            if os.path.exists(fname):
+                # File exists, check the hashes
+                source_md5 = blob.properties.content_settings.content_md5
+                local_md5 = base64.b64encode(salt.utils.get_hash(fname, 'md5').decode('hex'))
+                if local_md5 != source_md5:
+                    update = True
+            else:
+                update = True
+
+            if update:
+                if not os.path.exists(os.path.dirnam(fname)):
+                    os.makedirs(os.path.dirname(fname))
+                # Lock writes
+                lk_fn = fname + '.lk'
+                salt.fileserver.wait_lock(lk_fn, fname)
+                with salt.utils.fopen(lk_fn, 'w+') as fp_:
+                    fp_.write('')
+
+                try:
+                    blob_service.get_blob_to_path(name, blob.name, fname)
+                except Exception as exc:
+                    log.exception('Error occurred fetching blob from azurefs')
+                    continue
+
+                # Unlock writes
+                try:
+                    os.unlink(lk_fn)
+                except:
+                    pass
+
+        # Write out file list
+        container_list = path + '.list'
+        lk_fn = container_list + '.lk'
+        salt.fileserver.wait_lock(lk_fn, container_list)
+        with salt.utils.fopen(lk_fn, 'w+') as fp_:
+            fp_.write('')
+        with salt.utils.fopen(container_list, 'w') as fp_:
+            fp_.write(json.dumps(blob_names))
+        try:
+            os.unlink(lk_fn)
+        except:
+            pass
 
 
 def file_hash(load, fnd):
@@ -256,11 +329,33 @@ def dir_list(load):
 
 
 def _get_container_path(container):
+    '''
+    Get the cache path for the container in question
+
+    Cache paths are generate by combining the account name, container name,
+    and saltenv, separated by underscores
+    '''
     root = os.path.join(__opts__['cachedir'], 'azurefs')
     container_dir = '{0}_{1}_{2}'.format(container.get('account_name', ''),
                                          container.get('container_name', ''),
                                          container.get('saltenv', 'base'))
     return os.path.join(root, container_dir)
+
+
+def _get_container_service(container):
+    '''
+    Get the azure block blob service for the container in question
+
+    Try account_key, sas_token, and no auth in that order
+    '''
+    if 'account_key' in container:
+        account = azure.storage.CloudStorageAccount(account_name, account_key=container['account_key'])
+    elif 'sas_token' in container:
+        account = azure.storage.CloudStorageAccount(account_name, sas_token=container['sas_token'])
+    else:
+        account = azure.storage.CloudStorageAccount(account_name)
+    blob_service = account.create_block_blob_service()
+    return blob_service
 
 
 def _validate_config():
