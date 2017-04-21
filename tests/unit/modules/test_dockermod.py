@@ -182,8 +182,13 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
             with patch.object(docker_mod, '_get_client', get_client_mock):
-                docker_mod.create_network('foo', driver='bridge')
-        client.create_network.assert_called_once_with('foo', driver='bridge')
+                docker_mod.create_network('foo',
+                                          driver='bridge',
+                                          driver_opts={})
+        client.create_network.assert_called_once_with('foo',
+                                                      driver='bridge',
+                                                      options={},
+                                                      check_duplicate=True)
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')

@@ -33,6 +33,9 @@ module (formerly called **dockerng**) in the Nitrogen release.
 from __future__ import absolute_import
 import logging
 
+# Import salt libs
+import salt.utils
+
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -49,7 +52,10 @@ def __virtual__():
     return (False, __salt__.missing_fun_string('docker.version'))
 
 
-def present(name, driver=None, containers=None):
+def present(name,
+            driver=None,
+            driver_opts=None,
+            containers=None):
     '''
     Ensure that a network is present.
 
@@ -58,6 +64,9 @@ def present(name, driver=None, containers=None):
 
     driver
         Type of driver for that network.
+
+    driver_opts
+        Options for the network driver.
 
     containers:
         List of container names that should be part of this network
@@ -75,6 +84,8 @@ def present(name, driver=None, containers=None):
         network_bar:
           docker_network.present
             - name: bar
+            - driver_opts:
+                - com.docker.network.driver.mtu: "1450"
             - containers:
                 - cont1
                 - cont2
@@ -84,6 +95,10 @@ def present(name, driver=None, containers=None):
            'changes': {},
            'result': False,
            'comment': ''}
+
+    if salt.utils.is_dictlist(driver_opts):
+        driver_opts = salt.utils.repack_dictlist(driver_opts)
+
     if containers is None:
         containers = []
     # map containers to container's Ids.
@@ -110,7 +125,11 @@ def present(name, driver=None, containers=None):
     else:
         try:
             ret['changes']['created'] = __salt__['docker.create_network'](
-                name, driver=driver)
+                name,
+                driver=driver,
+                driver_opts=driver_opts,
+                check_duplicate=True)
+
         except Exception as exc:
             ret['comment'] = ('Failed to create network \'{0}\': {1}'
                               .format(name, exc))
