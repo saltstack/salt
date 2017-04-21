@@ -30,7 +30,6 @@ Full list of Salt Cloud modules
     proxmox
     pyrax
     qingcloud
-    rackspace
     saltify
     scaleway
     softlayer
