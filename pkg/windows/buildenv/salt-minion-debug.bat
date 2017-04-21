@@ -4,7 +4,7 @@
 
 :: Get current codepage, change codpage to Unicode
 for /f "tokens=2 delims=:." %%x in ('chcp') do set cp=%%x
-chcp 65001 >nul
+chcp 65001
 
 :: Define Variables
 Set SaltDir=%~dp0
@@ -18,5 +18,10 @@ net stop salt-minion
 :: Launch script
 "%Python%" "%Script%" -l debug
 
+:: Capture Python Error
+Set PyError=%ERRORLEVEL%
+
 :: Change codepage back
-chcp %cp% >nul
+chcp %cp%
+
+exit /B %PyError%
