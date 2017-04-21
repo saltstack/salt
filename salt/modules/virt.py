@@ -355,8 +355,8 @@ def _qemu_image_info(path):
 
 def _qemu_image_create(vm_name,
                        disk_file_name,
-                       disk_size,
-                       disk_image,
+                       disk_image=None,
+                       disk_size=None,
                        disk_type='qcow2',
                        enable_qcow=False,
                        saltenv='base'):
@@ -365,6 +365,13 @@ def _qemu_image_create(vm_name,
 
     Return path to the created image file
     '''
+    if not disk_size and not disk_image:
+        raise CommandExecutionError(
+            'Unable to create new disk {0}, please specify'
+            ' disk size and/or disk image argument'
+            .format(disk_file_name)
+        )
+
     img_dir = __salt__['config.option']('virt.images')
     log.debug('Image directory from config option `virt.images`'
               ' is {0}'.format(img_dir))
@@ -744,19 +751,12 @@ def init(name,
                 disk_size = args.get('size', None)
                 disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
 
-                if not disk_size and not disk_image:
-                    raise CommandExecutionError(
-                        'Unable to create new disk {0}, please specify'
-                        ' at least <size> and/or <image> argument'
-                        .format(disk_file_name)
-                    )
-
                 img_dest = _qemu_image_create(
                     vm_name=name,
                     disk_file_name=disk_file_name,
-                    disk_type=disk_type,
-                    disk_size=disk_size,
                     disk_image=disk_image,
+                    disk_size=disk_size,
+                    disk_type=disk_type,
                     enable_qcow=enable_qcow,
                     saltenv=saltenv,
                 )
