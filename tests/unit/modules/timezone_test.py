@@ -122,3 +122,18 @@ class TimezoneTestCase(TestCase):
         assert timezone.set_zone(self.TEST_TZ)
         name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
         assert args == ('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="UTC"')
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_set_zone_suse(self):
+        '''
+        Test zone set on SUSE series
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['SUSE']
+        timezone.__salt__
+        assert timezone.set_zone(self.TEST_TZ)
+        name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
+        assert args == ('/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="UTC"')
