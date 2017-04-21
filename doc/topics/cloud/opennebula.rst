@@ -102,6 +102,8 @@ OpenNebula uses an image --> template --> virtual machine paradigm where the tem
 and virtual machines are created from templates. Because of this, there is no need to define a ``size`` in the cloud
 profile. The size of the virtual machine is defined in the template.
 
+Change Disk Size
+================
 
 You can now change the size of a VM on creation by cloning an image and expanding the size. You can accomplish this by
 the following cloud profile settings below.
