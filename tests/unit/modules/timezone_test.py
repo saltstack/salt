@@ -114,7 +114,8 @@ class TimezoneTestCase(TestCase):
     @patch('os.symlink', MagicMock())
     def test_set_zone_redhat(self):
         '''
-        Test
+        Test zone set on RH series
+        :return:
         :return:
         '''
         timezone.__grains__['os_family'] = ['RedHat']
