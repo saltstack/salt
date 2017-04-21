@@ -13,14 +13,9 @@ import os
 import re
 import sys
 import shutil
-import socket
 import stat
 import tempfile
 import textwrap
-import threading
-import tornado.httpserver
-import tornado.ioloop
-import tornado.web
 import filecmp
 
 log = logging.getLogger(__name__)
@@ -29,7 +24,11 @@ log = logging.getLogger(__name__)
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP, TMP_STATE_TREE
-from tests.support.helpers import skip_if_not_root, with_system_user_and_group
+from tests.support.helpers import (
+    skip_if_not_root,
+    with_system_user_and_group,
+    Webserver,
+)
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
@@ -2402,10 +2401,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if check_file:
                 self.run_function('file.remove', [file])
 
-PORT = 9999
-FILE_SOURCE = 'http://localhost:{0}/grail/scene33'.format(PORT)
-FILE_HASH = 'd2feb3beb323c79fc7a0f44f1408b4a3'
-
 
 class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
@@ -2413,38 +2408,15 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
     without skip_verify
     '''
     @classmethod
-    def webserver(cls):
-        '''
-        method to start tornado static web app
-        '''
-        application = tornado.web.Application([
-            (r'/(.*)', tornado.web.StaticFileHandler, {'path': STATE_DIR})
-        ])
-        cls.server = tornado.httpserver.HTTPServer(application)
-        cls.server.listen(PORT)
-        tornado.ioloop.IOLoop.instance().start()
-
-    @classmethod
     def setUpClass(cls):
-        '''
-        start tornado app on thread and wait until it is running
-        '''
-        cls.server_thread = threading.Thread(target=cls.webserver)
-        cls.server_thread.daemon = True
-        cls.server_thread.start()
-        # check if tornado app is up
-        port_closed = True
-        while port_closed:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex(('127.0.0.1', PORT))
-            if result == 0:
-                port_closed = False
+        cls.webserver = Webserver()
+        cls.webserver.start()
+        cls.source = cls.webserver.url('grail/scene33')
+        cls.source_hash = 'd2feb3beb323c79fc7a0f44f1408b4a3'
 
     @classmethod
     def tearDownClass(cls):
-        tornado.ioloop.IOLoop.instance().stop()
-        cls.server_thread.join()
-        cls.server.stop()
+        cls.webserver.stop()
 
     def setUp(self):
         fd_, self.name = tempfile.mkstemp(dir=TMP)
@@ -2470,7 +2442,7 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state('file.managed',
                              name=self.name,
-                             source=FILE_SOURCE,
+                             source=self.source,
                              skip_verify=False)
         log.debug('ret = %s', ret)
         # This should fail because no hash was provided
@@ -2482,8 +2454,8 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state('file.managed',
                              name=self.name,
-                             source=FILE_SOURCE,
-                             source_hash=FILE_HASH,
+                             source=self.source,
+                             source_hash=self.source_hash,
                              skip_verify=False)
         log.debug('ret = %s', ret)
         self.assertSaltTrueReturn(ret)
@@ -2494,7 +2466,7 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state('file.managed',
                              name=self.name,
-                             source=FILE_SOURCE,
+                             source=self.source,
                              skip_verify=True)
         log.debug('ret = %s', ret)
         self.assertSaltTrueReturn(ret)
