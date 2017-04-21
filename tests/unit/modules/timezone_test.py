@@ -137,3 +137,23 @@ class TimezoneTestCase(TestCase):
         assert timezone.set_zone(self.TEST_TZ)
         name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
         assert args == ('/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="UTC"')
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_set_zone_gentoo(self):
+        '''
+        Test zone set on Gentoo series
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Gentoo']
+        timezone.__salt__
+
+        _fopen = MagicMock(return_value=MagicMock(spec=file))
+        with patch('salt.utils.fopen', _fopen):
+            assert timezone.set_zone(self.TEST_TZ)
+            name, args, kwargs = _fopen.mock_calls[0]
+            assert args == ('/etc/timezone', 'w')
+            name, args, kwargs = _fopen.return_value.__enter__.return_value.write.mock_calls[0]
+            assert args == ('UTC',)
