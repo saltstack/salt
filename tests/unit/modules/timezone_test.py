@@ -35,7 +35,7 @@ class TimezoneTestCase(TestCase):
         Setup test
         :return:
         '''
-        timezone.__salt__ = {}
+        timezone.__salt__ = {'file.sed': MagicMock()}
         timezone.__grains__ = {'os': 'unknown'}
 
     def tearDown(self):
@@ -107,3 +107,19 @@ class TimezoneTestCase(TestCase):
         timezone.__grains__['os_family'] = ['AIX']
         with patch('salt.modules.timezone._get_zone_aix', MagicMock(return_value=self.TEST_TZ)):
             assert timezone.get_zone() == self.TEST_TZ
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_set_zone_redhat(self):
+        '''
+        Test
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['RedHat']
+        timezone.__salt__
+        with patch('salt.modules.timezone._get_zone_aix', MagicMock(return_value=self.TEST_TZ)):
+            assert timezone.set_zone(self.TEST_TZ)
+            name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
+            assert args == ('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="UTC"')
