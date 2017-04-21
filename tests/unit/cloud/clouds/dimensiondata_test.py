@@ -48,7 +48,7 @@ VM_NAME = 'winterfell'
 try:
     import certifi
     libcloud.security.CA_CERTS_PATH.append(certifi.where())
-except ImportError:
+except (ImportError, NameError):
     pass
 
 
