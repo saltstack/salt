@@ -120,7 +120,6 @@ class TimezoneTestCase(TestCase):
         '''
         timezone.__grains__['os_family'] = ['RedHat']
         timezone.__salt__
-        with patch('salt.modules.timezone._get_zone_aix', MagicMock(return_value=self.TEST_TZ)):
-            assert timezone.set_zone(self.TEST_TZ)
-            name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
-            assert args == ('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="UTC"')
+        assert timezone.set_zone(self.TEST_TZ)
+        name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
+        assert args == ('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="UTC"')
