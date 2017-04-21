@@ -7,6 +7,7 @@ for /f "tokens=2 delims=:." %%x in ('chcp') do set cp=%%x
 chcp 65001
 
 :: Define Variables
+Set PYTHONIOENCODING=UTF-8
 Set SaltDir=%~dp0
 Set SaltDir=%SaltDir:~0,-1%
 Set Python=%SaltDir%\bin\python.exe
