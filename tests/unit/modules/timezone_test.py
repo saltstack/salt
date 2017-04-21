@@ -48,7 +48,7 @@ class TimezoneTestCase(TestCase):
         Test RedHat and Suse are recognized
         :return: 
         '''
-        for osfamily in ['RedHat', 'SUSE']:
+        for osfamily in ['RedHat', 'Suse']:
             timezone.__grains__ = {'os': 'unknown', 'os_family': [osfamily]}
             with patch('salt.modules.timezone._get_zone_sysconfig', MagicMock(return_value=self.TEST_TZ)):
                 assert timezone.get_zone() == self.TEST_TZ
