@@ -22,8 +22,6 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.modules import timezone
 
-timezone.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TimezoneTestCase(TestCase):
@@ -32,13 +30,28 @@ class TimezoneTestCase(TestCase):
     '''
     TEST_TZ = 'UTC'
 
+    def setUp(self):
+        '''
+        Setup test
+        :return:
+        '''
+        timezone.__salt__ = {}
+        timezone.__grains__ = {'os': 'unknown'}
+
+    def tearDown(self):
+        '''
+        Teardown test
+        :return:
+        '''
+        timezone.__salt__ = timezone.__grains__ = None
+
     @patch('salt.utils.which', MagicMock(return_value=False))
     def test_get_zone_centos(self):
         '''
         Test CentOS is recognized
         :return: 
         '''
-        timezone.__grains__ = {'os': 'centos'}
+        timezone.__grains__['os'] = 'centos'
         with patch('salt.modules.timezone._get_zone_etc_localtime', MagicMock(return_value=self.TEST_TZ)):
             assert timezone.get_zone() == self.TEST_TZ
 
@@ -49,7 +62,7 @@ class TimezoneTestCase(TestCase):
         :return: 
         '''
         for osfamily in ['RedHat', 'Suse']:
-            timezone.__grains__ = {'os': 'unknown', 'os_family': [osfamily]}
+            timezone.__grains__['os_family'] = [osfamily]
             with patch('salt.modules.timezone._get_zone_sysconfig', MagicMock(return_value=self.TEST_TZ)):
                 assert timezone.get_zone() == self.TEST_TZ
 
@@ -60,7 +73,7 @@ class TimezoneTestCase(TestCase):
         :return: 
         '''
         for osfamily in ['Debian', 'Gentoo']:
-            timezone.__grains__ = {'os': 'unknown', 'os_family': [osfamily]}
+            timezone.__grains__['os_family'] = [osfamily]
             with patch('salt.modules.timezone._get_zone_etc_timezone', MagicMock(return_value=self.TEST_TZ)):
                 assert timezone.get_zone() == self.TEST_TZ
 
@@ -71,7 +84,7 @@ class TimezoneTestCase(TestCase):
         :return: 
         '''
         for osfamily in ['FreeBSD', 'OpenBSD', 'NetBSD', 'NILinuxRT']:
-            timezone.__grains__ = {'os': 'unknown', 'os_family': osfamily}
+            timezone.__grains__['os_family'] = osfamily
             with patch('salt.modules.timezone._get_zone_etc_localtime', MagicMock(return_value=self.TEST_TZ)):
                 assert timezone.get_zone() == self.TEST_TZ
 
@@ -81,7 +94,7 @@ class TimezoneTestCase(TestCase):
         Test Slowlaris is recognized
         :return: 
         '''
-        timezone.__grains__ = {'os': 'unknown', 'os_family': ['Solaris']}
+        timezone.__grains__['os_family'] = ['Solaris']
         with patch('salt.modules.timezone._get_zone_solaris', MagicMock(return_value=self.TEST_TZ)):
             assert timezone.get_zone() == self.TEST_TZ
 
@@ -91,6 +104,6 @@ class TimezoneTestCase(TestCase):
         Test IBM AIX is recognized
         :return: 
         '''
-        timezone.__grains__ = {'os': 'unknown', 'os_family': ['AIX']}
+        timezone.__grains__['os_family'] = ['AIX']
         with patch('salt.modules.timezone._get_zone_aix', MagicMock(return_value=self.TEST_TZ)):
             assert timezone.get_zone() == self.TEST_TZ
