@@ -129,6 +129,7 @@ class DimensionDataTestCase(ExtendedTestCase):
             call='function'
         )
 
+    @skipIf(HAS_LIBCLOUD is False, "Install 'libcloud' to be able to run this unit test.")
     def test_avail_sizes(self):
         '''
         Tests that avail_sizes returns an empty dictionary.
