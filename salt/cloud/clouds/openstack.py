@@ -585,7 +585,7 @@ def request_instance(vm_=None, call=None):
     return data, vm_
 
 
-def _query_node_data(vm_, data, floating):
+def _query_node_data(vm_, data, floating, conn):
     try:
         node = show_instance(vm_['name'], 'action')
         log.debug(
@@ -775,7 +775,7 @@ def create(vm_):
     try:
         data = salt.utils.cloud.wait_for_ip(
             _query_node_data,
-            update_args=(vm_, data, vm_['floating']),
+            update_args=(vm_, data, vm_['floating'], conn),
             timeout=config.get_cloud_config_value(
                 'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
             interval=config.get_cloud_config_value(
