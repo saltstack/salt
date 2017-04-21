@@ -132,7 +132,7 @@ class TimezoneTestCase(TestCase):
         Test zone set on SUSE series
         :return:
         '''
-        timezone.__grains__['os_family'] = ['SUSE']
+        timezone.__grains__['os_family'] = ['Suse']
         timezone.__salt__
         assert timezone.set_zone(self.TEST_TZ)
         name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
