@@ -875,7 +875,6 @@ def _query_node_data(vm_, data):
             return data
 
 
-
 def create(vm_):
     '''
     Create a single VM from a data dict
