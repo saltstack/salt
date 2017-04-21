@@ -157,3 +157,23 @@ class TimezoneTestCase(TestCase):
             assert args == ('/etc/timezone', 'w')
             name, args, kwargs = _fopen.return_value.__enter__.return_value.write.mock_calls[0]
             assert args == ('UTC',)
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_set_zone_debian(self):
+        '''
+        Test zone set on Debian series
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Debian']
+        timezone.__salt__
+
+        _fopen = MagicMock(return_value=MagicMock(spec=file))
+        with patch('salt.utils.fopen', _fopen):
+            assert timezone.set_zone(self.TEST_TZ)
+            name, args, kwargs = _fopen.mock_calls[0]
+            assert args == ('/etc/timezone', 'w')
+            name, args, kwargs = _fopen.return_value.__enter__.return_value.write.mock_calls[0]
+            assert args == ('UTC',)
