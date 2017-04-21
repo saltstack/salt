@@ -25,6 +25,7 @@ from salt.exceptions import SaltCloudSystemExit
 from salttesting import TestCase, skipIf
 from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
 from salttesting.helpers import ensure_in_syspath
+from tests.unit.cloud.clouds import _preferred_ip
 
 ensure_in_syspath('../../../')
 
@@ -160,6 +161,30 @@ class DimensionDataTestCase(ExtendedTestCase):
         """
         p = dimensiondata.get_configured_provider()
         self.assertNotEqual(p, None)
+
+    PRIVATE_IPS = ['0.0.0.0', '1.1.1.1', '2.2.2.2']
+
+    @patch('salt.cloud.clouds.dimensiondata.show_instance',
+           MagicMock(return_value={'state': True,
+                                   'name': 'foo',
+                                   'public_ips': [],
+                                   'private_ips': PRIVATE_IPS}))
+    @patch('salt.cloud.clouds.dimensiondata.preferred_ip', _preferred_ip(PRIVATE_IPS, ['0.0.0.0']))
+    @patch('salt.cloud.clouds.dimensiondata.ssh_interface', MagicMock(return_value='private_ips'))
+    def test_query_node_data_filter_preferred_ip_addresses(self):
+        '''
+        Test if query node data is filtering out unpreferred IP addresses.
+        '''
+        dimensiondata.NodeState = MagicMock()
+        dimensiondata.NodeState.RUNNING = True
+        dimensiondata.__opts__ = {}
+
+        vm = {'name': None}
+        data = MagicMock()
+        data.public_ips = []
+
+        assert dimensiondata._query_node_data(vm, data).public_ips == ['0.0.0.0']
+
 
 if __name__ == '__main__':
     from integration import run_tests
