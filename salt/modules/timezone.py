@@ -160,7 +160,7 @@ def get_zone():
         if __grains__['os'].lower() == 'centos':
             return _get_zone_etc_localtime()
         os_family = __grains__['os_family']
-        for family in ('RedHat', 'SUSE'):
+        for family in ('RedHat', 'Suse'):
             if family in os_family:
                 return _get_zone_sysconfig()
         for family in ('Debian', 'Gentoo'):
