@@ -116,7 +116,6 @@ class TimezoneTestCase(TestCase):
         '''
         Test zone set on RH series
         :return:
-        :return:
         '''
         timezone.__grains__['os_family'] = ['RedHat']
         timezone.__salt__
