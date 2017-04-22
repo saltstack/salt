@@ -725,20 +725,12 @@ def request_instance(vm_=None, call=None):
 def _query_node_data(vm_, data, conn):
     try:
         node = show_instance(vm_['name'], 'action')
-        log.debug(
-            'Loaded node data for {0}:\n{1}'.format(
-                vm_['name'],
-                pprint.pformat(node)
-            )
-        )
+        log.debug('Loaded node data for {0}:'
+                  '\n{1}'.format(vm_['name'], pprint.pformat(node)))
     except Exception as err:
-        log.error(
-            'Failed to get nodes list: {0}'.format(
-                err
-            ),
-            # Show the traceback if the debug logging level is enabled
-            exc_info_on_loglevel=logging.DEBUG
-        )
+        # Show the traceback if the debug logging level is enabled
+        log.error('Failed to get nodes list: {0}'.format(err),
+                  exc_info_on_loglevel=logging.DEBUG)
         # Trigger a failure in the wait for IP function
         return False
 
@@ -749,18 +741,14 @@ def _query_node_data(vm_, data, conn):
 
     if rackconnect(vm_) is True:
         extra = node.get('extra', {})
-        rc_status = extra.get('metadata', {}).get(
-            'rackconnect_automation_status', '')
+        rc_status = extra.get('metadata', {}).get('rackconnect_automation_status', '')
         if rc_status != 'DEPLOYED':
             log.debug('Waiting for Rackconnect automation to complete')
             return
 
     if managedcloud(vm_) is True:
-        extra = conn.server_show_libcloud(
-            node['id']
-        ).extra
-        mc_status = extra.get('metadata', {}).get(
-            'rax_service_level_automation', '')
+        extra = conn.server_show_libcloud(node['id']).extra
+        mc_status = extra.get('metadata', {}).get('rax_service_level_automation', '')
 
         if mc_status != 'Complete':
             log.debug('Waiting for managed cloud automation to complete')
@@ -796,15 +784,19 @@ def _query_node_data(vm_, data, conn):
     #         network.  If that network does not exist in the 'addresses' dictionary, then SaltCloud will
     #         use the initial access_ip, and not overwrite anything.
 
-    if any((cloudnetwork(vm_), rackconnect(vm_))) and (ssh_interface(vm_) != 'private_ips' or rcv3) and access_ip != '':
-        data.public_ips = [access_ip, ]
+    if (any((cloudnetwork(vm_), rackconnect(vm_)))
+            and (ssh_interface(vm_) != 'private_ips' or rcv3)
+            and access_ip != ''):
+        data.public_ips = [access_ip]
         return data
 
     result = []
 
-    if 'private_ips' not in node and 'public_ips' not in node and \
-       'floating_ips' not in node and 'fixed_ips' not in node and \
-       'access_ip' in node.get('extra', {}):
+    if ('private_ips' not in node
+            and 'public_ips' not in node
+            and 'floating_ips' not in node
+            and 'fixed_ips' not in node
+            and 'access_ip' in node.get('extra', {})):
         result = [node['extra']['access_ip']]
 
     private = node.get('private_ips', [])
@@ -813,10 +805,8 @@ def _query_node_data(vm_, data, conn):
     floating = node.get('floating_ips', [])
 
     if private and not public:
-        log.warning(
-            'Private IPs returned, but not public... Checking for '
-            'misidentified IPs'
-        )
+        log.warning('Private IPs returned, but not public. '
+                    'Checking for misidentified IPs')
         for private_ip in private:
             private_ip = preferred_ip(vm_, [private_ip])
             if private_ip is False:
@@ -824,12 +814,8 @@ def _query_node_data(vm_, data, conn):
             if salt.utils.cloud.is_public_ip(private_ip):
                 log.warning('{0} is a public IP'.format(private_ip))
                 data.public_ips.append(private_ip)
-                log.warning(
-                    (
-                        'Public IP address was not ready when we last'
-                        ' checked.  Appending public IP address now.'
-                    )
-                )
+                log.warning('Public IP address was not ready when we last checked. '
+                            'Appending public IP address now.')
                 public = data.public_ips
             else:
                 log.warning('{0} is a private IP'.format(private_ip))
