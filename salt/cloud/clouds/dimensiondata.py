@@ -136,12 +136,8 @@ def _query_node_data(vm_, data):
     try:
         node = show_instance(vm_['name'], 'action')
         running = (node['state'] == NodeState.RUNNING)
-        log.debug(
-            'Loaded node data for %s:\nname: %s\nstate: %s',
-            vm_['name'],
-            pprint.pformat(node['name']),
-            node['state']
-            )
+        log.debug('Loaded node data for %s:\nname: %s\nstate: %s',
+                  vm_['name'], pprint.pformat(node['name']), node['state'])
     except Exception as err:
         log.error(
             'Failed to get nodes list: %s', err,
@@ -159,10 +155,7 @@ def _query_node_data(vm_, data):
     public = node['public_ips']
 
     if private and not public:
-        log.warning(
-            'Private IPs returned, but not public... Checking for '
-            'misidentified IPs'
-        )
+        log.warning('Private IPs returned, but not public. Checking for misidentified IPs.')
         for private_ip in private:
             private_ip = preferred_ip(vm_, [private_ip])
             if private_ip is False:
