@@ -149,7 +149,7 @@ def _query_node_data(vm_, data):
             exc_info_on_loglevel=logging.DEBUG
         )
         # Trigger a failure in the wait for IP function
-        return False
+        return running
 
     if not running:
         # Still not running, trigger another iteration
