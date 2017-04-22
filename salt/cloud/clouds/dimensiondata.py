@@ -181,7 +181,7 @@ def _query_node_data(vm_, data):
         if ssh_interface(vm_) != 'private_ips':
             return data
 
-    log.debug('DATA')
+    log.debug('Contents of the node data:')
     log.debug(data)
 
 
