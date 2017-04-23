@@ -1256,11 +1256,16 @@ def os_data():
     # pylint: disable=unpacking-non-sequence
     (grains['kernel'], grains['nodename'],
      grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
+
+    # pylint: enable=unpacking-non-sequence
+    grains['kernelversion'] = platform.version()
+
     # pylint: enable=unpacking-non-sequence
 
     if salt.utils.is_proxy():
         grains['kernel'] = 'proxy'
         grains['kernelrelease'] = 'proxy'
+        grains['kernelversion'] = 'proxy'
         grains['osrelease'] = 'proxy'
         grains['os'] = 'proxy'
         grains['os_family'] = 'proxy'
