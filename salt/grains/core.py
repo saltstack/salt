@@ -938,6 +938,7 @@ def _windows_platform_data():
     '''
     # Provides:
     #    kernelrelease
+    #    kernelversion
     #    osversion
     #    osrelease
     #    osservicepack
@@ -978,6 +979,7 @@ def _windows_platform_data():
             log.debug('Motherboard info not available on this system')
 
         os_release = platform.release()
+        kernel_version = platform.version()
         info = salt.utils.win_osinfo.get_os_version_info()
 
         # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
@@ -1008,6 +1010,7 @@ def _windows_platform_data():
 
         grains = {
             'kernelrelease': _clean_value('kernelrelease', osinfo.Version),
+            'kernelversion': _clean_value('kernelversion', kernel_version),
             'osversion': _clean_value('osversion', osinfo.Version),
             'osrelease': _clean_value('osrelease', os_release),
             'osservicepack': _clean_value('osservicepack', service_pack),
@@ -1255,12 +1258,13 @@ def os_data():
 
     # pylint: disable=unpacking-non-sequence
     (grains['kernel'], grains['nodename'],
-     grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
+     grains['kernelrelease'], grains['kernelversion'], grains['cpuarch'], _) = platform.uname()
     # pylint: enable=unpacking-non-sequence
 
     if salt.utils.is_proxy():
         grains['kernel'] = 'proxy'
         grains['kernelrelease'] = 'proxy'
+        grains['kernelversion'] = 'proxy'
         grains['osrelease'] = 'proxy'
         grains['os'] = 'proxy'
         grains['os_family'] = 'proxy'
