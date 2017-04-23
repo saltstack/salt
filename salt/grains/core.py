@@ -697,7 +697,7 @@ def _virtual(osdata):
                 'to execute them. Grains output might not be accurate.'
             )
 
-    choices = ('Linux', 'OpenBSD', 'HP-UX')
+    choices = ('Linux', 'HP-UX')
     isdir = os.path.isdir
     sysctl = salt.utils.which('sysctl')
     if osdata['kernel'] in choices:
@@ -823,6 +823,9 @@ def _virtual(osdata):
                 grains['virtual_subtype'] = 'jail'
             if 'QEMU Virtual CPU' in model:
                 grains['virtual'] = 'kvm'
+    elif osdata['kernel'] == 'OpenBSD':
+        if osdata['manufacturer'] == 'QEMU':
+            grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'SunOS':
         # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
         zonename = salt.utils.which('zonename')
