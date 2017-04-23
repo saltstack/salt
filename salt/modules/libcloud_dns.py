@@ -37,7 +37,7 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 log = logging.getLogger(__name__)
 
 # Import third party libs
-REQUIRED_LIBCLOUD_VERSION = '0.21.0'
+REQUIRED_LIBCLOUD_VERSION = '2.0.0'
 try:
     #pylint: disable=unused-import
     import libcloud
