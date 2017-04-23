@@ -119,6 +119,35 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              profile='adminv2')
         self.assertTrue(ret['keystone_|-nova_|-nova_|-endpoint_present']['result'])
 
+        # Region Two
+        ret = self.run_state('keystone.endpoint_present',
+                             name='nova',
+                             description='Nova Service',
+                             publicurl='http://localhost:8774/v2.1/%(tenant_id)s',
+                             internalurl='http://localhost:8774/v2.1/%(tenant_id)s',
+                             adminurl='http://localhost:8774/v2.1/%(tenant_id)s',
+                             region='RegionTwo',
+                             profile='adminv2')
+        self.assertTrue(ret['keystone_|-nova_|-nova_|-endpoint_present']['result'])
+
+        # Region One, change publicurl
+        ret = self.run_state('keystone.endpoint_present',
+                             name='nova',
+                             description='Nova Service',
+                             publicurl='http://127.0.0.1:8774/v2.1/%(tenant_id)s',
+                             internalurl='http://localhost:8774/v2.1/%(tenant_id)s',
+                             adminurl='http://localhost:8774/v2.1/%(tenant_id)s',
+                             region='RegionOne',
+                             profile='adminv2')
+        self.assertTrue(ret['keystone_|-nova_|-nova_|-endpoint_present']['result'])
+
+        ret = self.run_state('keystone.endpoint_get',
+                             name='nova',
+                             region='RegionOne',
+                             profile='adminv2')
+        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['publicurl'].start_with('http://127.0.0.1'))
+
         ret = self.run_state('keystone.tenant_present',
                              name='test',
                              description='Test Tenant',
@@ -179,6 +208,52 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              region='RegionOne',
                              profile='adminv3')
         self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+
+        # Region Two
+        ret = self.run_state('keystone.endpoint_present',
+                             name='testv3',
+                             description='Glance Service',
+                             interface='public',
+                             url='http://localhost:9292',
+                             region='RegionTwo',
+                             profile='adminv3')
+        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+
+        ret = self.run_state('keystone.endpoint_present',
+                             name='testv3',
+                             description='Glance Service',
+                             interface='internal',
+                             url='http://localhost:9292',
+                             region='RegionTwo',
+                             profile='adminv3')
+        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+
+        ret = self.run_state('keystone.endpoint_present',
+                             name='testv3',
+                             description='Glance Service',
+                             interface='admin',
+                             url='http://localhost:9292',
+                             region='RegionTwo',
+                             profile='adminv3')
+        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+
+        # Region One, change
+        ret = self.run_state('keystone.endpoint_present',
+                             name='testv3',
+                             description='Glance Service',
+                             interface='public',
+                             url='http://127.0.0.1:9292',
+                             region='RegionOne',
+                             profile='adminv3')
+        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+
+        ret = self.run_state('keystone.endpoint_get',
+                             name='testv3',
+                             region='RegionOne',
+                             interface='public',
+                             profile='adminv3')
+        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['endpoint']['url'] == 'http://127.0.0.1:9292')
 
         ret = self.run_state('keystone.project_present',
                              name='testv3',
