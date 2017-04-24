@@ -39,7 +39,7 @@ Creating a container and uploading a file
 
     web_things:
       libcloud_storage.container_present:
-        name: my_container_name  
+        name: my_container_name
         profile: profile1
       libcloud_storage.object_present:
         name: my_file.jpg
@@ -97,7 +97,6 @@ def container_present(name, profile):
     :type  profile: ``str``
     '''
     containers = __salt__['libcloud_storage.list_containers'](profile)
-    
     match = [z for z in containers if z.name == name]
     if len(match) > 0:
         return state_result(True, "Container already exists")
@@ -117,7 +116,6 @@ def container_absent(name, profile):
     :type  profile: ``str``
     '''
     containers = __salt__['libcloud_storage.list_containers'](profile)
-    
     match = [z for z in containers if z.name == name]
     if len(match) == 0:
         return state_result(True, "Container already absent")
@@ -143,7 +141,6 @@ def object_present(container, name, path, profile):
     :type  profile: ``str``
     '''
     existing_object = __salt__['libcloud_storage.get_container_object'](container, name, profile)
-    
     if existing_object is not None:
         return state_result(True, "Object already present")
     else:
@@ -165,7 +162,6 @@ def object_absent(container, name, profile):
     :type  profile: ``str``
     '''
     existing_object = __salt__['libcloud_storage.get_container_object'](container, name, profile)
-    
     if existing_object is None:
         return state_result(True, "Object already absent")
     else:
