@@ -133,8 +133,8 @@ def get_container(container_name, profile):
     conn = _get_driver(profile=profile)
     return conn.get_container(container_name)
 
-def download_object(container_name, object_name, destination_path, overwrite_existing=False,
-                        delete_on_failure=True, profile):
+def download_object(container_name, object_name, destination_path, profile, 
+                    overwrite_existing=False, delete_on_failure=True):
     """
     Download an object to the specified destination path.
 
@@ -148,6 +148,9 @@ def download_object(container_name, object_name, destination_path, overwrite_exi
                                 incoming file will be saved.
     :type destination_path: ``str``
 
+    :param profile: The profile key
+    :type  profile: ``str``
+
     :param overwrite_existing: True to overwrite an existing file,
                                 defaults to False.
     :type overwrite_existing: ``bool``
@@ -156,9 +159,6 @@ def download_object(container_name, object_name, destination_path, overwrite_exi
                                 the download was not successful (hash
                                 mismatch / file size).
     :type delete_on_failure: ``bool``
-
-    :param profile: The profile key
-    :type  profile: ``str``
 
     :return: True if an object has been successfully downloaded, False
                 otherwise.
@@ -169,7 +169,7 @@ def download_object(container_name, object_name, destination_path, overwrite_exi
     obj = conn.get_object(container_name, object_name)
     return conn.download_object(obj, destination_path, overwrite_existing, delete_on_failure)
 
-def upload_object(self, file_path, container, object_name, extra=None,
+def upload_object(self, file_path, container_name, object_name, profile, extra=None,
                       verify_hash=True, headers=None):
     """
     Upload an object currently located on a disk.
@@ -182,6 +182,9 @@ def upload_object(self, file_path, container, object_name, extra=None,
 
     :param object_name: Object name.
     :type object_name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
 
     :param verify_hash: Verify hash
     :type verify_hash: ``bool``
