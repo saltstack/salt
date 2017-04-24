@@ -77,3 +77,125 @@ def _get_driver(profile):
     args['host'] = config.get('host', None)
     args['port'] = config.get('port', None)
     return cls(**args)
+
+def list_containers(profile):
+    '''
+    Return a list of containers.
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.list_containers profile1
+    '''
+    conn = _get_driver(profile=profile)
+    return conn.list_containers()
+
+def list_container_objects(container_name, profile):
+    '''
+    List container objects (e.g. files) for the given container_id on the given profile
+
+    :param container_name: Container name
+    :type  container_name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.list_container_objects MyFolder profile1
+    '''
+    conn = _get_driver(profile=profile)
+    container = conn.get_container(container_name)
+    return conn.list_container_objects(container)
+
+def get_container(container_name, profile):
+    '''
+    List container details for the given container_name on the given profile
+
+    :param container_name: Container name
+    :type  container_name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.get_container MyFolder profile1
+    '''
+    conn = _get_driver(profile=profile)
+    return conn.get_container(container_name)
+
+def download_object(container_name, object_name, destination_path, overwrite_existing=False,
+                        delete_on_failure=True, profile):
+    """
+    Download an object to the specified destination path.
+
+    :param container_name: Container name
+    :type  container_name: ``str``
+
+    :param object_name: Object name
+    :type  object_name: ``str``
+
+    :param destination_path: Full path to a file or a directory where the
+                                incoming file will be saved.
+    :type destination_path: ``str``
+
+    :param overwrite_existing: True to overwrite an existing file,
+                                defaults to False.
+    :type overwrite_existing: ``bool``
+
+    :param delete_on_failure: True to delete a partially downloaded file if
+                                the download was not successful (hash
+                                mismatch / file size).
+    :type delete_on_failure: ``bool``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :return: True if an object has been successfully downloaded, False
+                otherwise.
+    :rtype: ``bool``
+    """
+    conn = _get_driver(profile=profile)
+    container = conn.get_container(container_name)
+    obj = conn.get_object(container_name, object_name)
+    return conn.download_object(obj, destination_path, overwrite_existing, delete_on_failure)
+
+def upload_object(self, file_path, container, object_name, extra=None,
+                      verify_hash=True, headers=None):
+    """
+    Upload an object currently located on a disk.
+
+    :param file_path: Path to the object on disk.
+    :type file_path: ``str``
+
+    :param container_name: Destination container.
+    :type container_name: ``str``
+
+    :param object_name: Object name.
+    :type object_name: ``str``
+
+    :param verify_hash: Verify hash
+    :type verify_hash: ``bool``
+
+    :param extra: Extra attributes (driver specific). (optional)
+    :type extra: ``dict``
+
+    :param headers: (optional) Additional request headers,
+        such as CORS headers. For example:
+        headers = {'Access-Control-Allow-Origin': 'http://mozilla.com'}
+    :type headers: ``dict``
+
+    :rtype: :class:`Object`
+    """
+    conn = _get_driver(profile=profile)
+    container = conn.get_container(container_name)
+    return conn.upload_object(file_path, container, object_name, extra, verify_hash, headers)
