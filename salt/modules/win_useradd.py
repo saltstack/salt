@@ -75,8 +75,12 @@ def __virtual__():
 
 def _to_unicode(instr):
     '''
-    Internal function for converting to Unicode
-    Needed for Py2 Unicode Handling
+    Internal function for converting to Unicode Strings
+
+    The NetUser* series of API calls in this module requires input parameters to
+    be Unicode Strings. This function ensures the parameter is a Unicode String.
+    This only seems to be an issue in Python 2. All calls to this function
+    should be gated behind a ``if six.PY2`` check.
 
     Args:
         instr (str): String to convert
