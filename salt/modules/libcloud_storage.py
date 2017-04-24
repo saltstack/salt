@@ -3,6 +3,8 @@
 Connection module for Apache Libcloud Storage (object/blob) management for a full list
 of supported clouds, see http://libcloud.readthedocs.io/en/latest/storage/supported_providers.html
 
+Clouds include Amazon S3, Google Storage, Aliyun, Azure Blobs, Ceph, OpenStack swift
+
 .. versionadded:: Nitrogen
 
 :configuration:
@@ -37,7 +39,7 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 log = logging.getLogger(__name__)
 
 # Import third party libs
-REQUIRED_LIBCLOUD_VERSION = '2.0.0'
+REQUIRED_LIBCLOUD_VERSION = '1.5.0
 try:
     #pylint: disable=unused-import
     import libcloud
@@ -307,3 +309,22 @@ def delete_object(container_name, object_name, profile):
     container = conn.get_container(container_name)
     obj = conn.get_object(container_name, object_name)
     return conn.delete_object(obj)
+
+
+def delete_container(container_name, object_name, profile):
+    """
+    Delete an object container in the cloud
+
+    :param container_name: Container name
+    :type  container_name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :return: True if an object container has been successfully deleted, False
+                otherwise.
+    :rtype: ``bool``
+    """
+    conn = _get_driver(profile=profile)
+    container = conn.get_container(container_name)
+    return conn.delete_container(container)
