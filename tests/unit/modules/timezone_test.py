@@ -231,3 +231,19 @@ class TimezoneTestCase(TestCase):
         name, args, kwarg = timezone.__salt__['cmd.run'].mock_calls[0]
         assert args == (['tail', '-n', '1', '/etc/adjtime'],)
         assert kwarg == {'python_shell': False}
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_get_hwclock_debian(self):
+        '''
+        Test get hwclock Solaris
+        :return:
+        '''
+        # Incomplete
+        timezone.__grains__['os_family'] = ['Solaris']
+        assert timezone.get_hwclock() == 'UTC'
+        _fopen = MagicMock(return_value=MagicMock(spec=file))
+        with patch('salt.utils.fopen', _fopen):
+            assert timezone.get_hwclock() == 'localtime'
