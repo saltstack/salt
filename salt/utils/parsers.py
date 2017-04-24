@@ -1926,8 +1926,10 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             default=8,
             dest='batch_safe_size',
             type=float,
-            help=('Executions that have triggered the batch safe limit will '
-                  'be run in batches of this size.')
+            help=('If a the safe batch limit (target > safe-limit), then '
+                  'silently transition to batch size of --batch-safe-size '
+                  'if set or else use default batch size. If no option is '
+                  'set a default batch size of five (5) will be used.')
         )
         self.add_option(
             '--return',

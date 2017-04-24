@@ -94,8 +94,12 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     safe_batch = 8
                 elif int(self.options.batch_safe_size) <= 1:
                     safe_batch = 1
-                else:
+                elif self.options.batch_safe_size:
                     safe_batch = self.options.batch_safe_size
+                elif self.options.batch_size:
+                    safe_batch = self.options.batch_size
+                else:
+                    safe_batch = 5
                 self._run_batch(safe_batch)
                 return
 
