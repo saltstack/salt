@@ -77,10 +77,10 @@ def _to_unicode(instr):
     '''
     Internal function for converting to Unicode
     Needed for Py2 Unicode Handling
-    
+
     Args:
         instr (str): String to convert
-        
+
     Returns:
         str: Unicode type string
     '''
@@ -101,7 +101,7 @@ def add(name,
         logonscript=None):
     '''
     Add a user to the minion.
-    
+
     Args:
         name (str): User name
         password (str, optional): User's password in plain text.
@@ -326,7 +326,7 @@ def delete(name,
         force (bool, optional): Boolean value indicating that the user account
             should be deleted even if the user is logged in. True will log the
             user out and delete user.
-            
+
     Returns:
         bool: True if successful, otherwise False
 
@@ -419,7 +419,7 @@ def getUserSid(username):
 
     Args:
         username (str): The user name for which to look up the SID
-        
+
     Returns:
         str: The user SID
 
@@ -543,7 +543,7 @@ def chhome(name, home, **kwargs):
     Args:
         name (str): The name of the user whose home directory you wish to change
         home (str): The new location of the home directory
-    
+
     Returns:
         bool: True if successful, otherwise False
 
@@ -635,7 +635,7 @@ def chgroups(name, groups, append=True):
         append (bool, optional): True adds the passed groups to the user's
             current groups. False sets the user's groups to the passed groups
             only. Default is True.
-    
+
     Returns:
         bool: True if successful, otherwise False
 
@@ -688,7 +688,7 @@ def info(name):
 
     Args:
         name (str): Username for which to display information
-    
+
     Returns:
         dict: A dictionary containing user information
             - fullname
@@ -795,11 +795,11 @@ def _get_userprofile_from_registry(user, sid):
     '''
     In case net user doesn't return the userprofile we can get it from the
     registry
-    
+
     Args:
         user (str): The user name, used in debug message
         sid (str): The sid to lookup in the registry
-    
+
     Returns:
         str: Profile directory
     '''
@@ -845,11 +845,11 @@ def list_groups(name):
 def getent(refresh=False):
     '''
     Return the list of all info for all users
-    
+
     Args:
         refresh (bool, optional): Refresh the cached user information. Useful
             when used from within a state function. Default is False.
-    
+
     Returns:
         dict: A dictionary containing information about all users on the system
 
@@ -884,7 +884,7 @@ def getent(refresh=False):
 def list_users():
     '''
     Return a list of all users on Windows
-    
+
     Returns:
         list: A list of all users on the system
 
