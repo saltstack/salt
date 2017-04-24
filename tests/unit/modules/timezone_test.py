@@ -16,7 +16,7 @@ from salttesting.mock import (
 )
 
 from salttesting.helpers import ensure_in_syspath
-from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.exceptions import SaltInvocationError
 
 ensure_in_syspath('../../')
 
@@ -52,7 +52,7 @@ class TimezoneTestCase(TestCase):
     def test_get_zone_centos(self):
         '''
         Test CentOS is recognized
-        :return: 
+        :return:
         '''
         timezone.__grains__['os'] = 'centos'
         with patch('salt.modules.timezone._get_zone_etc_localtime', MagicMock(return_value=self.TEST_TZ)):
@@ -62,7 +62,7 @@ class TimezoneTestCase(TestCase):
     def test_get_zone_os_family_rh_suse(self):
         '''
         Test RedHat and Suse are recognized
-        :return: 
+        :return:
         '''
         for osfamily in ['RedHat', 'Suse']:
             timezone.__grains__['os_family'] = [osfamily]
@@ -73,7 +73,7 @@ class TimezoneTestCase(TestCase):
     def test_get_zone_os_family_debian_gentoo(self):
         '''
         Test Debian and Gentoo are recognized
-        :return: 
+        :return:
         '''
         for osfamily in ['Debian', 'Gentoo']:
             timezone.__grains__['os_family'] = [osfamily]
@@ -84,7 +84,7 @@ class TimezoneTestCase(TestCase):
     def test_get_zone_os_family_allbsd_nilinuxrt(self):
         '''
         Test *BSD and NILinuxRT are recognized
-        :return: 
+        :return:
         '''
         for osfamily in ['FreeBSD', 'OpenBSD', 'NetBSD', 'NILinuxRT']:
             timezone.__grains__['os_family'] = osfamily
@@ -95,7 +95,7 @@ class TimezoneTestCase(TestCase):
     def test_get_zone_os_family_slowlaris(self):
         '''
         Test Slowlaris is recognized
-        :return: 
+        :return:
         '''
         timezone.__grains__['os_family'] = ['Solaris']
         with patch('salt.modules.timezone._get_zone_solaris', MagicMock(return_value=self.TEST_TZ)):
@@ -105,7 +105,7 @@ class TimezoneTestCase(TestCase):
     def test_get_zone_os_family_aix(self):
         '''
         Test IBM AIX is recognized
-        :return: 
+        :return:
         '''
         timezone.__grains__['os_family'] = ['AIX']
         with patch('salt.modules.timezone._get_zone_aix', MagicMock(return_value=self.TEST_TZ)):
