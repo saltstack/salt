@@ -191,12 +191,27 @@ class TimezoneTestCase(TestCase):
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
+    def test_get_hwclock_suse(self):
+        '''
+        Test get hwclock SUSE
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Suse']
+        timezone.get_hwclock()
+        name, args, kwarg = timezone.__salt__['cmd.run'].mock_calls[0]
+        assert args == (['tail', '-n', '1', '/etc/adjtime'],)
+        assert kwarg == {'python_shell': False}
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
     def test_get_hwclock_redhat(self):
         '''
         Test get hwclock RedHat
         :return:
         '''
-        timezone.__grains__['os_family'] = ['Suse']
+        timezone.__grains__['os_family'] = ['RedHat']
         timezone.get_hwclock()
         name, args, kwarg = timezone.__salt__['cmd.run'].mock_calls[0]
         assert args == (['tail', '-n', '1', '/etc/adjtime'],)
