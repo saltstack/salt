@@ -103,7 +103,7 @@ def present(name,
                 - build: /home/myuser/docker/myimage
                 - dockerfile: Dockerfile.alternative
 
-            .. versionadded:: 2016.11.0
+        .. versionadded:: 2016.11.0
 
         The image will be built using :py:func:`docker.build
         <salt.modules.dockermod.build>` and the specified image name and tag
