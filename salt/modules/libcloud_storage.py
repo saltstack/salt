@@ -192,7 +192,7 @@ def download_object(container_name, object_name, destination_path, profile,
     obj = conn.get_object(container_name, object_name)
     return conn.download_object(obj, destination_path, overwrite_existing, delete_on_failure)
 
-def upload_object(self, file_path, container_name, object_name, profile, extra=None,
+def upload_object(file_path, container_name, object_name, profile, extra=None,
                       verify_hash=True, headers=None):
     """
     Upload an object currently located on a disk.
