@@ -657,10 +657,11 @@ def endpoint_present(name,
     endpoint = __salt__['keystone.endpoint_get'](name, region,
                                                  profile=profile,
                                                  **connection_args)
+
     def _changes(desc):
         return ret.get('comment', '') + desc + '\n'
 
-    def _createEndpoint():
+    def _create_endpoint():
         if _OS_IDENTITY_API_VERSION > 2:
             ret['changes'] = __salt__['keystone.endpoint_create'](
                 name,
@@ -678,7 +679,6 @@ def endpoint_present(name,
                 internalurl=internalurl,
                 profile=profile,
                 **connection_args)
-
 
     if endpoint and 'Error' not in endpoint and endpoint.get('region') == region:
 
@@ -722,7 +722,12 @@ def endpoint_present(name,
 
             if endpoint.get('internalurl', None) != internalurl:
                 change_internalurl = True
-                ret['comment'] = _changes('Internal URL changes from "{0}" to "{1}"'.format(endpoint.get('internal', None), internal))
+                ret['comment'] = _changes(
+                    'Internal URL changes from "{0}" to "{1}"'.format(
+                        endpoint.get('internalurl', None),
+                        internalurl
+                    )
+                )
 
             if __opts__.get('test') and (change_publicurl or change_adminurl or change_internalurl):
                 ret['result'] = None
@@ -739,9 +744,9 @@ def endpoint_present(name,
             if change_internalurl:
                 ret['changes']['internalurl'] = internalurl
 
-        if ret['comment']: # changed
+        if ret['comment']:  # changed
             __salt__['keystone.endpoint_delete'](name, region, profile=profile, **connection_args)
-            _createEndpoint()
+            _create_endpoint()
             ret['comment'] += 'Endpoint for service "{0}" has been updated'.format(name)
 
     else:
@@ -751,10 +756,10 @@ def endpoint_present(name,
             ret['changes']['Endpoint'] = 'Will be created'
             ret['comment'] = 'Endpoint for service "{0}" will be added'.format(name)
             return ret
-        _createEndpoint()
+        _create_endpoint()
         ret['comment'] = 'Endpoint for service "{0}" has been added'.format(name)
 
-    if ret['comment'] == '': #=> no changes
+    if ret['comment'] == '':  # => no changes
         ret['result'] = None
         ret['comment'] = 'Endpoint for service "{0}" already exists'.format(name)
     return ret
