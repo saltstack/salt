@@ -102,6 +102,7 @@ def list_containers(profile):
         })
     return ret
 
+
 def list_container_objects(container_name, profile):
     '''
     List container objects (e.g. files) for the given container_id on the given profile
@@ -133,6 +134,31 @@ def list_container_objects(container_name, profile):
         })
     return ret
 
+
+def get_container(container_name, profile):
+    '''
+    Create a container in the cloud
+
+    :param container_name: Container name
+    :type  container_name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.get_container MyFolder profile1
+    '''
+    conn = _get_driver(profile=profile)
+    container = conn.create_container(container_name)
+    return {
+            'name': container.name,
+            'extra': container.extra
+            }
+
+
 def get_container(container_name, profile):
     '''
     List container details for the given container_name on the given profile
@@ -155,6 +181,37 @@ def get_container(container_name, profile):
             'name': container.name,
             'extra': container.extra
             }
+
+
+def get_container_object(container_name, object_name, profile):
+    '''
+    Get the details for a container object (file or object in the cloud)
+
+    :param container_name: Container name
+    :type  container_name: ``str``
+
+    :param object_name: Object name
+    :type  object_name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.get_container_object MyFolder MyFile.xyz profile1
+    '''
+    conn = _get_driver(profile=profile)
+    obj = conn.get_container_object(container_name, object_name)
+    return {
+        'name': obj.name,
+        'size': obj.size,
+        'hash': obj.hash,
+        'container': obj.container.name,
+        'extra': obj.extra,
+        'meta_data': obj.meta_data}
+
 
 def download_object(container_name, object_name, destination_path, profile, 
                     overwrite_existing=False, delete_on_failure=True):
@@ -192,6 +249,7 @@ def download_object(container_name, object_name, destination_path, profile,
     obj = conn.get_object(container_name, object_name)
     return conn.download_object(obj, destination_path, overwrite_existing, delete_on_failure)
 
+
 def upload_object(file_path, container_name, object_name, profile, extra=None,
                       verify_hash=True, headers=None):
     """
@@ -226,3 +284,26 @@ def upload_object(file_path, container_name, object_name, profile, extra=None,
     container = conn.get_container(container_name)
     obj = conn.upload_object(file_path, container, object_name, extra, verify_hash, headers)
     return obj.name
+
+
+def delete_object(container_name, object_name, profile):
+    """
+    Delete an object in the cloud
+
+    :param container_name: Container name
+    :type  container_name: ``str``
+
+    :param object_name: Object name
+    :type  object_name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :return: True if an object has been successfully deleted, False
+                otherwise.
+    :rtype: ``bool``
+    """
+    conn = _get_driver(profile=profile)
+    container = conn.get_container(container_name)
+    obj = conn.get_object(container_name, object_name)
+    return conn.delete_object(obj)
