@@ -3611,6 +3611,7 @@ def list_nodes_select(call=None):
 def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     '''
     Show the details from EC2 concerning an instance's termination protection state
+
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
