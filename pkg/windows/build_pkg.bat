@@ -132,6 +132,7 @@ If Defined ProgramFiles(x86) (
 "%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
 "%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.%PyVerMinor%.exe"
 "%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.exe"
+"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\wheel.exe"
 @echo.
 
 @echo Cleaning up unused files and directories...
