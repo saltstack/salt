@@ -316,7 +316,7 @@ def gen_locale(locale, **kwargs):
             append_if_not_found=True
         )
 
-    if salt.utils.which('locale-gen') is not None:
+    if salt.utils.which('locale-gen'):
         cmd = ['locale-gen']
         if on_gentoo:
             cmd.append('--generate')
@@ -324,7 +324,7 @@ def gen_locale(locale, **kwargs):
             cmd.append(salt.utils.locales.normalize_locale(locale))
         else:
             cmd.append(locale)
-    elif salt.utils.which('localedef') is not None:
+    elif salt.utils.which('localedef'):
         cmd = ['localedef', '--force', '-i', locale_search_str, '-f', locale_info['codeset'],
                '{0}.{1}'.format(locale_search_str,
                                 locale_info['codeset']),
