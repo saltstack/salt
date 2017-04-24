@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
+Apache Libcloud Storage Management
+==================================
+
 Connection module for Apache Libcloud Storage (object/blob) management for a full list
 of supported clouds, see http://libcloud.readthedocs.io/en/latest/storage/supported_providers.html
 
 Clouds include Amazon S3, Google Storage, Aliyun, Azure Blobs, Ceph, OpenStack swift
 
-.. versionadded:: Nitrogen
+.. versionadded:: Oxygen
 
 :configuration:
     This module uses a configuration profile for one or multiple Storage providers
@@ -217,7 +220,7 @@ def get_container_object(container_name, object_name, profile):
 
 def download_object(container_name, object_name, destination_path, profile,
                     overwrite_existing=False, delete_on_failure=True):
-    """
+    '''
     Download an object to the specified destination path.
 
     :param container_name: Container name
@@ -252,7 +255,7 @@ def download_object(container_name, object_name, destination_path, profile,
 
         salt myminion libcloud_storage.download_object MyFolder me.jpg /tmp/me.jpg profile1
 
-    """
+    '''
     conn = _get_driver(profile=profile)
     obj = conn.get_object(container_name, object_name)
     return conn.download_object(obj, destination_path, overwrite_existing, delete_on_failure)
@@ -260,7 +263,7 @@ def download_object(container_name, object_name, destination_path, profile,
 
 def upload_object(file_path, container_name, object_name, profile, extra=None,
                       verify_hash=True, headers=None):
-    """
+    '''
     Upload an object currently located on a disk.
 
     :param file_path: Path to the object on disk.
@@ -286,13 +289,16 @@ def upload_object(file_path, container_name, object_name, profile, extra=None,
         headers = {'Access-Control-Allow-Origin': 'http://mozilla.com'}
     :type headers: ``dict``
 
+    :return: The object name in the cloud
+    :rtype: ``str``
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion libcloud_storage.upload_object /file/to/me.jpg MyFolder me.jpg profile1
 
-    """
+    '''
     conn = _get_driver(profile=profile)
     container = conn.get_container(container_name)
     obj = conn.upload_object(file_path, container, object_name, extra, verify_hash, headers)
@@ -300,7 +306,7 @@ def upload_object(file_path, container_name, object_name, profile, extra=None,
 
 
 def delete_object(container_name, object_name, profile):
-    """
+    '''
     Delete an object in the cloud
 
     :param container_name: Container name
@@ -321,14 +327,14 @@ def delete_object(container_name, object_name, profile):
     .. code-block:: bash
 
         salt myminion libcloud_storage.delete_object MyFolder me.jpg profile1
-    """
+    '''
     conn = _get_driver(profile=profile)
     obj = conn.get_object(container_name, object_name)
     return conn.delete_object(obj)
 
 
 def delete_container(container_name, object_name, profile):
-    """
+    '''
     Delete an object container in the cloud
 
     :param container_name: Container name
@@ -346,7 +352,7 @@ def delete_container(container_name, object_name, profile):
     .. code-block:: bash
 
         salt myminion libcloud_storage.delete_container MyFolder profile1
-    """
+    '''
     conn = _get_driver(profile=profile)
     container = conn.get_container(container_name)
     return conn.delete_container(container)
