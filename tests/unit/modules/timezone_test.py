@@ -37,7 +37,8 @@ class TimezoneTestCase(TestCase):
         :return:
         '''
         timezone.__salt__ = {'file.sed': MagicMock(),
-                             'cmd.run': MagicMock()}
+                             'cmd.run': MagicMock(),
+                             'cmd.retcode': MagicMock(return_value=0)}
         timezone.__grains__ = {'os': 'unknown'}
 
     def tearDown(self):
@@ -275,3 +276,24 @@ class TimezoneTestCase(TestCase):
         with self.assertRaises(SaltInvocationError):
             assert timezone.set_hwclock('forty two')
         assert timezone.set_hwclock('UTC')
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    @patch('salt.modules.timezone.get_zone', MagicMock(return_value='TEST_TIMEZONE'))
+    def test_set_hwclock_solaris(self):
+        '''
+        Test set hwclock on Solaris
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Solaris']
+        timezone.__grains__['cpuarch'] = 'x86'
+
+        with self.assertRaises(SaltInvocationError):
+            assert timezone.set_hwclock('forty two')
+        assert timezone.set_hwclock('UTC')
+        name, args, kwargs = timezone.__salt__['cmd.retcode'].mock_calls[0]
+        assert args == (['rtc', '-z', 'GMT'],)
+        assert kwargs == {'python_shell': False}
+
