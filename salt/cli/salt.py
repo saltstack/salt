@@ -39,8 +39,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
         try:
             # We don't need to bail on config file permission errors
-            # if the CLI
-            # process is run with the -a flag
+            # if the CLI process is run with the -a flag
             skip_perm_errors = self.options.eauth != ''
 
             self.local_client = salt.client.get_local_client(
@@ -61,6 +60,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
         if self.options.preview_target:
             self._preview_target()
+            self._output_ret(minion_list, self.config.get('output', 'nested'))
             return
 
         if self.options.timeout <= 0:
@@ -87,6 +87,17 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             kwargs['tgt_type'] = self.selected_target_option
         else:
             kwargs['tgt_type'] = 'glob'
+            if self.options.batch_safe_limit and len(self._preview_target()) >= self.options.batch_safe_limit:
+                # If a single target was not specified and a batch safety threshold was configured, then run
+                # a batch job if the glob matches too many minions.
+                if not self.options.batch_safe_size:
+                    safe_batch = 8
+                elif int(self.options.batch_safe_size) <= 1:
+                    safe_batch = 1
+                else:
+                    safe_batch = self.options.batch_safe_size
+                self._run_batch(safe_batch)
+                return
 
         if getattr(self.options, 'return'):
             kwargs['ret'] = getattr(self.options, 'return')
@@ -202,10 +213,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         Return a list of minions from a given target
         '''
-        minion_list = self.local_client.gather_minions(self.config['tgt'], self.selected_target_option or 'glob')
-        self._output_ret(minion_list, self.config.get('output', 'nested'))
+        return self.local_client.gather_minions(self.config['tgt'], self.selected_target_option or 'glob')
 
-    def _run_batch(self):
+    def _run_batch(self, safe_batch = False):
         import salt.cli.batch
         eauth = {}
         if 'token' in self.config:
@@ -254,9 +264,12 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             except salt.exceptions.SaltClientError as exc:
                 # We will print errors to the console further down the stack
                 sys.exit(1)
+            if safe_batch:
+                # Batch was triggered by safe limit check, use safe_batch size
+                batch.opts['batch'] = str(safe_batch)
             # Printing the output is already taken care of in run() itself
             retcode = 0
-            for res in batch.run():
+            for res in batch.run(safe_batch):
                 for ret in six.itervalues(res):
                     job_retcode = salt.utils.job.get_retcode(ret)
                     if job_retcode > retcode:
