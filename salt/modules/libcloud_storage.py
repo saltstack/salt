@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
+Apache Libcloud Storage Management
+==================================
+
 Connection module for Apache Libcloud Storage (object/blob) management for a full list
 of supported clouds, see http://libcloud.readthedocs.io/en/latest/storage/supported_providers.html
 
 Clouds include Amazon S3, Google Storage, Aliyun, Azure Blobs, Ceph, OpenStack swift
 
-.. versionadded:: Nitrogen
+.. versionadded:: Oxygen
 
 :configuration:
     This module uses a configuration profile for one or multiple Storage providers
@@ -285,6 +288,9 @@ def upload_object(file_path, container_name, object_name, profile, extra=None,
         such as CORS headers. For example:
         headers = {'Access-Control-Allow-Origin': 'http://mozilla.com'}
     :type headers: ``dict``
+
+    :return: The object name in the cloud
+    :rtype: ``str``
 
     CLI Example:
 
