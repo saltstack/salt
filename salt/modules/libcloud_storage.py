@@ -254,7 +254,6 @@ def download_object(container_name, object_name, destination_path, profile,
 
     """
     conn = _get_driver(profile=profile)
-    container = conn.get_container(container_name)
     obj = conn.get_object(container_name, object_name)
     return conn.download_object(obj, destination_path, overwrite_existing, delete_on_failure)
 
@@ -324,7 +323,6 @@ def delete_object(container_name, object_name, profile):
         salt myminion libcloud_storage.delete_object MyFolder me.jpg profile1
     """
     conn = _get_driver(profile=profile)
-    container = conn.get_container(container_name)
     obj = conn.get_object(container_name, object_name)
     return conn.delete_object(obj)
 
