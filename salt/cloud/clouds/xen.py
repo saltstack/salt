@@ -69,18 +69,23 @@ import salt.config as config
 
 # Import Salt-Cloud Libs
 import salt.utils.cloud
-from salt.exceptions import SaltCloudException
+from salt.exceptions import (
+    SaltCloudSystemExit,
+    SaltCloudException
+)
 
 # Get logging started
 log = logging.getLogger(__name__)
 
 try:
     import XenAPI
+
     HAS_XEN_API = True
 except ImportError:
     HAS_XEN_API = False
 
 __virtualname__ = 'xen'
+cache = None
 
 
 def __virtual__():
@@ -91,6 +96,10 @@ def __virtual__():
         return False
     if _get_dependencies() is False:
         return False
+
+    global cache  # pylint: disable=global-statement,invalid-name
+    cache = salt.cache.Cache(__opts__)
+
     return __virtualname__
 
 
@@ -217,9 +226,9 @@ def get_vm_ip(name=None, session=None, call=None):
                     name,
                     net["0/ip"]))
             ret = net["0/ip"]
-            return ret
-    except:
-        return None
+    # except Exception as ex:
+    except XenAPI.Failure:
+        log.info('Could not get vm metrics at this time')
     return ret
 
 
@@ -257,8 +266,9 @@ def set_vm_ip(name=None,
             try:
                 session.xenapi.VIF.configure_ipv4(
                     vif, mode, ipv4_cidr, ipv4_gw)
-            except:
-                log.warn('Static IP assignment could not be performed.')
+            except XenAPI.Failure:
+                log.info('Static IP assignment could not be performed.')
+
     return True
 
 
@@ -287,7 +297,18 @@ def list_nodes_full(session=None):
             vm_cfg['state'] = record['power_state']
             vm_cfg['private_ips'] = get_vm_ip(record['name_label'], session)
             vm_cfg['public_ips'] = None
+            if 'snapshot_time' in vm_cfg.keys():
+                del vm_cfg['snapshot_time']
             ret[record['name_label']] = vm_cfg
+
+    provider = __active_provider_name__ or 'xen'
+    if ':' in provider:
+        comps = provider.split(':')
+        provider = comps[0]
+    log.debug('ret: {}'.format(ret))
+    log.debug('provider: {}'.format(provider))
+    log.debug('__opts__: {}'.format(__opts__))
+    __utils__['cloud.cache_node_list'](ret, provider, __opts__)
     return ret
 
 
@@ -434,7 +455,52 @@ def show_instance(name, session=None, call=None):
                'state': record['power_state'],
                'private_ips': get_vm_ip(name, session),
                'public_ips': None}
+
+        __utils__['cloud.cache_node'](
+            ret,
+            __active_provider_name__,
+            __opts__
+        )
     return ret
+
+
+def _determine_resource_pool(session, vm_):
+    '''
+    Called by create() used to determine resource pool
+    '''
+    resource_pool = ''
+    if 'resource_pool' in vm_.keys():
+        resource_pool = _get_pool(vm_['resource_pool'], session)
+    else:
+        pool = session.xenapi.pool.get_all()
+        if len(pool) <= 0:
+            resource_pool = None
+        else:
+            first_pool = session.xenapi.pool.get_all()[0]
+            resource_pool = first_pool
+    pool_record = session.xenapi.pool.get_record(resource_pool)
+    log.debug('resource pool: {}'.format(pool_record['name_label']))
+    return resource_pool
+
+
+def _determine_storage_repo(session, resource_pool, vm_):
+    '''
+    Called by create() used to determine storage repo for create
+    '''
+    storage_repo = ''
+    if 'storage_repo' in vm_.keys():
+        storage_repo = _get_sr(vm_['storage_repo'], session)
+    else:
+        storage_repo = None
+        if resource_pool:
+            default_sr = session.xenapi.pool.get_default_SR(resource_pool)
+            sr_record = session.xenapi.SR.get_record(default_sr)
+            log.debug('storage repository: {}'.format(sr_record['name_label']))
+            storage_repo = default_sr
+        else:
+            storage_repo = None
+    log.debug('storage repository: {}'.format(storage_repo))
+    return storage_repo
 
 
 def create(vm_):
@@ -448,8 +514,9 @@ def create(vm_):
         salt-cloud -p some_profile xenvm01
 
     '''
-    ret = {}
     name = vm_['name']
+    record = {}
+    ret = {}
 
     # Since using "provider: <provider-engine>" is deprecated, alias provider
     # to use driver: "driver: <provider-engine>"
@@ -469,39 +536,19 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-
-    record = {}
+    log.debug('Adding {} to cloud cache.'.format(name))
+    __utils__['cloud.cachedir_index_add'](
+        vm_['name'], vm_['profile'], 'xen', vm_['driver']
+    )
 
     # connect to xen
     session = _get_session()
 
     # determine resource pool
-    if 'resource_pool' in vm_.keys():
-        resource_pool = _get_pool(vm_['resource_pool'], session)
-    else:
-        pool = session.xenapi.pool.get_all()
-        if len(pool) <= 0:
-            resource_pool = None
-        else:
-            first_pool = session.xenapi.pool.get_all()[0]
-            resource_pool = first_pool
-
-    pool_record = session.xenapi.pool.get_record(resource_pool)
-    log.debug('resource pool: {}'.format(pool_record['name_label']))
+    resource_pool = _determine_resource_pool(session, vm_)
 
     # determine storage repo
-    if 'storage_repo' in vm_.keys():
-        storage_repo = _get_sr(vm_['storage_repo'], session)
-    else:
-        storage_repo = None
-        if resource_pool:
-            default_sr = session.xenapi.pool.get_default_SR(resource_pool)
-            sr_record = session.xenapi.SR.get_record(default_sr)
-            log.debug('storage repository: {}'.format(sr_record['name_label']))
-            storage_repo = default_sr
-        else:
-            storage_repo = None
-    log.debug('storage repository: {}'.format(storage_repo))
+    storage_repo = _determine_storage_repo(session, resource_pool, vm_)
 
     # build VM
     image = vm_.get('image')
@@ -510,7 +557,7 @@ def create(vm_):
         clone = True
     log.debug('Clone: {} '.format(clone))
 
-    # read properties of new VM
+    # fire event to read new vm properties (requesting)
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
@@ -518,6 +565,7 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
+
     # create by cloning template
     if clone:
         _clone_vm(image, name, session)
@@ -535,6 +583,78 @@ def create(vm_):
     vm = _get_vm(name, session)
 
     # wait for vm to report IP via guest tools
+    _wait_for_ip(name, session)
+
+    # set static IP if configured
+    _set_static_ip(name, session, vm_)
+
+    # if not deploying salt then exit
+    deploy = vm_.get('deploy', True)
+    log.debug('delopy is set to {}'.format(deploy))
+    if deploy:
+        record = session.xenapi.VM.get_record(vm)
+        if record is not None:
+            _deploy_salt_minion(name, session, vm_)
+    else:
+        log.debug(
+            'The Salt minion will not be installed, deploy: {}'.format(
+                vm_['deploy'])
+        )
+    record = session.xenapi.VM.get_record(vm)
+    ret = show_instance(name)
+    ret.update({'extra': record})
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'created instance',
+        'salt/cloud/{0}/created'.format(name),
+        args={
+            'name': name,
+            'profile': vm_['profile'],
+            'provider': vm_['driver'],
+        },
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+    return ret
+
+
+def _deploy_salt_minion(name, session, vm_):
+    '''
+    Deploy salt minion during create()
+    '''
+    # Get bootstrap values
+    vm_['ssh_host'] = get_vm_ip(name, session)
+    vm_['user'] = vm_.get('user', 'root')
+    vm_['password'] = vm_.get('password', 'p@ssw0rd!')
+    log.debug('{} has IP of {}'.format(name, vm_['ssh_host']))
+    # Bootstrap Salt minion!
+    if vm_['ssh_host'] is not None:
+        log.info('Installing Salt minion  on {0}'.format(name))
+        boot_ret = __utils__['cloud.bootstrap'](vm_, __opts__)
+        log.debug('boot return: {}'.format(boot_ret))
+
+
+def _set_static_ip(name, session, vm_):
+    '''
+    Set static IP during create() if defined
+    '''
+    ipv4_cidr = ''
+    ipv4_gw = ''
+    if 'ipv4_gw' in vm_.keys():
+        log.debug('ipv4_gw is found in keys')
+        ipv4_gw = vm_['ipv4_gw']
+    if 'ipv4_cidr' in vm_.keys():
+        log.debug('ipv4_cidr is found in keys')
+        ipv4_cidr = vm_['ipv4_cidr']
+        log.debug('attempting to set IP in instance')
+        set_vm_ip(name, ipv4_cidr, ipv4_gw, session, None)
+
+
+def _wait_for_ip(name, session):
+    '''
+    Wait for IP  to be available during create()
+    '''
     start_time = datetime.now()
     status = None
     while status is None:
@@ -552,65 +672,11 @@ def create(vm_):
             break
         time.sleep(5)
 
-    # set static IP if configured
-    ipv4_cidr = ''
-    ipv4_gw = ''
-    if 'ipv4_gw' in vm_.keys():
-        log.debug('ipv4_gw is found in keys')
-        ipv4_gw = vm_['ipv4_gw']
-    if 'ipv4_cidr' in vm_.keys():
-        log.debug('ipv4_cidr is found in keys')
-        ipv4_cidr = vm_['ipv4_cidr']
-        log.debug('attempting to set IP in instance')
-        set_vm_ip(name, ipv4_cidr, ipv4_gw, session, None)
-
-    # if not deploying salt then exit
-    deploy = vm_.get('deploy', True)
-    log.debug('delopy is set to {}'.format(deploy))
-    if deploy:
-        # prepare for deploying salt minion
-        record = session.xenapi.VM.get_record(vm)
-        if record is not None:
-            # Get bootstrap values
-            vm_['ssh_host'] = get_vm_ip(name, session)
-            vm_['user'] = vm_.get('user', 'root')
-            vm_['password'] = vm_.get('password', 'p@ssw0rd!')
-            log.debug('{} has IP of {}'.format(name, vm_['ssh_host']))
-            # Bootstrap Salt minion!
-            if vm_['ssh_host'] is not None:
-                log.info('Installing Salt minion  on {0}'.format(name))
-                boot_ret = __utils__['cloud.bootstrap'](vm_, __opts__)
-                log.debug('boot return: {}'.format(boot_ret))
-                ret = show_instance(name)
-                ret.update({'extra': record})
-    else:
-        log.debug(
-            'The Salt minion will not be installed, deploy: {}'.format(
-                vm_['deploy'])
-        )
-        record = session.xenapi.VM.get_record(vm)
-        ret = show_instance(name)
-        ret.update({'extra': record})
-
-    __utils__['cloud.fire_event'](
-        'event',
-        'created instance',
-        'salt/cloud/{0}/created'.format(name),
-        args={
-            'name': name,
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
-        sock_dir=__opts__['sock_dir'],
-        transport=__opts__['transport']
-    )
-    log.debug('Adding {} to cloud cache.'.format(name))
-    __utils__['cloud.cachedir_index_add'](
-        vm_['name'], vm_['profile'], 'xen', vm_['driver'])
-    return ret
-
 
 def _run_async_task(task=None, session=None):
+    '''
+    Run  XenAPI task in async mode to prevent timeouts
+    '''
     if task is None or session is None:
         return None
     task_name = session.xenapi.task.get_name_label(task)
