@@ -157,7 +157,7 @@ def create_balancer(name, port, protocol, profile, algorithm=None, members=None)
         algorithm = Algorithm.ROUND_ROBIN
     if members is None:
         members = []
-    
+
     conn = _get_driver(profile=profile)
     balancer = conn.create_balancer(name, port, protocol, algorithm, members)
     return _simple_balancer(balancer)
