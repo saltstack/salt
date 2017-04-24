@@ -35,7 +35,8 @@ class TimezoneTestCase(TestCase):
         Setup test
         :return:
         '''
-        timezone.__salt__ = {'file.sed': MagicMock()}
+        timezone.__salt__ = {'file.sed': MagicMock(),
+                             'cmd.run': MagicMock()}
         timezone.__grains__ = {'os': 'unknown'}
 
     def tearDown(self):
@@ -185,3 +186,18 @@ class TimezoneTestCase(TestCase):
             assert timezone.get_hwclock() == 'UTC'
         with patch('salt.modules.timezone._timedatectl', MagicMock(return_value={'stdout': 'rtc in local tz:yes'})):
             assert timezone.get_hwclock() == 'localtime'
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_get_hwclock_redhat(self):
+        '''
+        Test get hwclock RedHat
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Suse']
+        timezone.get_hwclock()
+        name, args, kwarg = timezone.__salt__['cmd.run'].mock_calls[0]
+        assert args == (['tail', '-n', '1', '/etc/adjtime'],)
+        assert kwarg == {'python_shell': False}
