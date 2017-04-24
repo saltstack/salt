@@ -14,7 +14,7 @@ class LibcloudDNSTest(ModuleCase):
         '''
         # Simple profile (no special kwargs)
         supported_records = self.run_function(
-            'libcloud_dns.list_record_types', 
+            'libcloud_dns.list_record_types',
             ['profile_test1'])
         self.assertTrue('SPF' in supported_records, msg="Failed to find record type 'SPF' in {0}".format(supported_records))
 
