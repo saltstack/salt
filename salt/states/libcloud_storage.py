@@ -56,7 +56,7 @@ This example will download the file from the remote cloud and keep it locally
 
     web_things:
       libcloud_storage.file_present:
-        object_name: my_file.jpg
+        name: my_file.jpg
         container: my_container_name
         path: /path/to/local/file.jpg
         profile: profile1
@@ -96,13 +96,13 @@ def container_present(name, profile):
     :param profile: The profile key
     :type  profile: ``str``
     '''
-    containers = __salt__['libcloud_dns.list_containers'](profile)
+    containers = __salt__['libcloud_storage.list_containers'](profile)
     
     match = [z for z in containers if z.name == name]
     if len(match) > 0:
         return state_result(True, "Container already exists")
     else:
-        result = __salt__['libcloud_dns.create_container'](name, profile)
+        result = __salt__['libcloud_storage.create_container'](name, profile)
         return state_result(result, "Created new container")
 
 
@@ -116,11 +116,81 @@ def container_absent(name, profile):
     :param profile: The profile key
     :type  profile: ``str``
     '''
-    containers = __salt__['libcloud_dns.list_containers'](profile)
+    containers = __salt__['libcloud_storage.list_containers'](profile)
     
     match = [z for z in containers if z.name == name]
     if len(match) == 0:
         return state_result(True, "Container already absent")
     else:
-        result = __salt__['libcloud_dns.delete_container'](name, profile)
+        result = __salt__['libcloud_storage.delete_container'](name, profile)
         return state_result(result, "Deleted container")
+
+
+def object_present(container, name, path, profile):
+    '''
+    Ensures a object is presnt.
+
+    :param container: Container name
+    :type  container: ``str``
+
+    :param name: Object name in cloud
+    :type  name: ``str``
+
+    :param path: Local path to file
+    :type  path: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+    '''
+    existing_object = __salt__['libcloud_storage.get_container_object'](container, name, profile)
+    
+    if existing_object is not None:
+        return state_result(True, "Object already present")
+    else:
+        result = __salt__['libcloud_storage.upload_object'](path, container, name, profile
+        return state_result(result, "Uploaded object")
+
+
+def object_absent(container, name, profile):
+    '''
+    Ensures a object is absent.
+
+    :param container: Container name
+    :type  container: ``str``
+
+    :param name: Object name in cloud
+    :type  name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+    '''
+    existing_object = __salt__['libcloud_storage.get_container_object'](container, name, profile)
+    
+    if existing_object is None:
+        return state_result(True, "Object already absent")
+    else:
+        result = __salt__['libcloud_storage.delete_object'](container, name, profile
+        return state_result(result, "Deleted object")
+
+
+def file_present(container, name, path, profile, overwrite_existing=False):
+    '''
+    Ensures a object is downloaded locally.
+
+    :param container: Container name
+    :type  container: ``str``
+
+    :param name: Object name in cloud
+    :type  name: ``str``
+
+    :param path: Local path to file
+    :type  path: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param overwrite_existing: Replace if already exists
+    :type  overwrite_existing: ``bool``
+    '''
+    result = __salt__['libcloud_storage.download_object'](path, container, name, profile, overwrite_existing)
+    return state_result(result, "Downloaded object")
