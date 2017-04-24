@@ -329,3 +329,19 @@ class TimezoneTestCase(TestCase):
         assert timezone.set_hwclock('UTC')
         name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
         assert args == ('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="TEST_TIMEZONE"')
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    @patch('salt.modules.timezone.get_zone', MagicMock(return_value='TEST_TIMEZONE'))
+    def test_set_hwclock_suse(self):
+        '''
+        Test set hwclock on SUSE
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Suse']
+
+        assert timezone.set_hwclock('UTC')
+        name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
+        assert args == ('/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="TEST_TIMEZONE"')
