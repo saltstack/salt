@@ -347,6 +347,18 @@ This is similar to how Salt handles MySQL, MongoDB, Zabbix, and other cases
 where the same execution module is used to manage several different kinds
 of objects (users, databases, roles, etc.).
 
+.. note::
+    With the `Moby announcement`_ coming at this year's DockerCon_, Salt's
+    :mod:`docker <salt.modules.dockermod>` execution module (as well as the
+    state modules) work interchangably when **docker** is replaced with
+    **moby** (e.g.  :py:func:`moby_container.running
+    <salt.states.docker_container.running>`, :py:func:`moby_image.present
+    <salt.states.docker_image.present>`, :py:func:`moby.inspect_container
+    <salt.modules.dockermod.inspect_container>`, etc.)
+
+.. _`Moby announcement`: https://blog.docker.com/2017/04/introducing-the-moby-project/
+.. _DockerCon: http://2017.dockercon.com/
+
 The old syntax will continue to work until the **Fluorine** release of Salt.
 The old ``dockerng`` naming will also continue to work until that release, so
 no immediate changes need to be made to your SLS files (unless you were still
