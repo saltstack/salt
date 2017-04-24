@@ -219,7 +219,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         return self.local_client.gather_minions(self.config['tgt'], self.selected_target_option or 'glob')
 
-    def _run_batch(self, safe_batch = False):
+    def _run_batch(self, safe_batch=False):
         import salt.cli.batch
         eauth = {}
         if 'token' in self.config:
