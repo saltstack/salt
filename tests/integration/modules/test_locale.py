@@ -27,7 +27,6 @@ class LocaleModuleTest(ModuleCase):
     def test_get_locale(self):
         locale = self.run_function('locale.get_locale')
         self.assertNotIn('Unsupported platform!', locale)
-        self.assertNotEqual('', locale)
 
     @destructiveTest
     def test_gen_locale(self):
