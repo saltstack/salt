@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
+Apache Libcloud DNS Management
+==============================
+
 Connection module for Apache Libcloud DNS management
 
 .. versionadded:: 2016.11.0
