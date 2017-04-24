@@ -147,7 +147,7 @@ def object_present(container, name, path, profile):
     if existing_object is not None:
         return state_result(True, "Object already present")
     else:
-        result = __salt__['libcloud_storage.upload_object'](path, container, name, profile
+        result = __salt__['libcloud_storage.upload_object'](path, container, name, profile)
         return state_result(result, "Uploaded object")
 
 
@@ -169,7 +169,7 @@ def object_absent(container, name, profile):
     if existing_object is None:
         return state_result(True, "Object already absent")
     else:
-        result = __salt__['libcloud_storage.delete_object'](container, name, profile
+        result = __salt__['libcloud_storage.delete_object'](container, name, profile)
         return state_result(result, "Deleted object")
 
 
