@@ -115,6 +115,12 @@ def list_protocols(profile):
 
     :return: a list of supported protocols
     :rtype: ``list`` of ``str``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.list_protocols profile1
     '''
     conn = _get_driver(profile=profile)
     return conn.list_protocols()
@@ -140,6 +146,12 @@ def create_balancer(name, port, protocol, profile, algorithm=1, members=[]):
     :type  profile: ``str``
 
     :return: The details of the new balancer
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.create_balancer my_balancer 80 http profile1
     '''
     conn = _get_driver(profile=profile)
     balancer = conn.create_balancer(name, port, protocol, algorithm, [])
@@ -158,6 +170,12 @@ def destroy_balancer(balancer_id, profile):
 
     :return: ``True`` if the destroy was successful, otherwise ``False``.
     :rtype: ``bool``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.destroy_balancer balancer_1 profile1
     '''
     balancer = get_balancer(balancer_id, profile)
     conn = _get_driver(profile=profile)
@@ -175,12 +193,18 @@ def get_balancer_by_name(name, profile):
     :type  profile: ``str``
 
     :return: the load balancer details
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.get_balancer_by_name my_balancer profile1
     '''
     conn = _get_driver(profile=profile)
     balancers = conn.list_balancers()
     match = [b for b in balancers if b.name == name]
     if len(match) == 1:
-        return _simple_balancer(balancer)
+        return _simple_balancer(match[0])
     elif len(match) > 1:
         raise ValueError("Ambiguous argument, found mulitple records")
     else:
@@ -198,6 +222,12 @@ def get_balancer(balancer_id, profile):
     :type  profile: ``str``
 
     :return: the load balancer details
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.get_balancer balancer123 profile1
     '''
     conn = _get_driver(profile=profile)
     balancer = conn.get_balancer(balancer_id)
@@ -212,21 +242,102 @@ def list_supported_algorithms(profile):
     :type  profile: ``str``
 
     :return: The supported algorithms
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.list_supported_algorithms profile1
     '''
     conn = _get_driver(profile=profile)
     return conn.list_supported_algorithms()
 
 
-def balancer_attach_member(balancer_id, ip, port, profile):
-    pass
+def balancer_attach_member(balancer_id, ip, port, profile, extra=None):
+    '''
+    Add a new member to the load balancer
+
+    :param balancer_id: id of a load balancer you want to fetch
+    :type  balancer_id: ``str``
+
+    :param ip: IP address for the new member
+    :type  ip: ``str``
+
+    :param port: Port for the new member
+    :type  port: ``int``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.balancer_attach_member balancer123 1.2.3.4 80 profile1
+    '''
+    member = Member(id=None, ip=ip, port=port, balancer=None, extra=extra)
+    balancer = get_balancer(balancer_id)
+    conn = _get_driver(profile=profile)
+    member_saved = conn.balancer_attach_member(balancer, member)
+    return _simple_member(member_saved)
 
 
 def balancer_detach_member(balancer_id, member_id, profile):
-    pass
+    '''
+    Add a new member to the load balancer
+
+    :param balancer_id: id of a load balancer you want to fetch
+    :type  balancer_id: ``str``
+
+    :param ip: IP address for the new member
+    :type  ip: ``str``
+
+    :param port: Port for the new member
+    :type  port: ``int``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.balancer_detach_member balancer123 member123 profile1
+    '''
+    members = list_balancer_members(balancer_id)
+    match = [member for member in members if member.id == member_id]
+    if len(match) > 1:
+        raise ValueError("Ambiguous argument, found mulitple records")
+    elif len(match) == 0:
+        raise ValueError("Bad argument, found no records")
+    else:
+        member = match[0]
+    balancer = get_balancer(balancer_id)
+    conn = _get_driver(profile=profile)
+    return conn.balancer_detach_member(balancer=balancer, member=member)
 
 
-def list_balancer_members(balancer, profile):
-    pass
+def list_balancer_members(balancer_id, profile):
+    '''
+    List the members of a load balancer
+
+    :param balancer_id: id of a load balancer you want to fetch
+    :type  balancer_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.list_balancer_members balancer123 profile1
+    '''
+    balancer = get_balancer(balancer_id)
+    conn = _get_driver(profile=profile)
+    members = conn.balancer_list_members(balancer=balancer)
+    return [_simple_member(member) for member in members]
+
 
 def _simple_balancer(balancer):
     return {
