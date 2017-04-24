@@ -118,7 +118,6 @@ class TimezoneTestCase(TestCase):
         :return:
         '''
         timezone.__grains__['os_family'] = ['RedHat']
-        timezone.__salt__
         assert timezone.set_zone(self.TEST_TZ)
         name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
         assert args == ('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="UTC"')
@@ -133,7 +132,6 @@ class TimezoneTestCase(TestCase):
         :return:
         '''
         timezone.__grains__['os_family'] = ['Suse']
-        timezone.__salt__
         assert timezone.set_zone(self.TEST_TZ)
         name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
         assert args == ('/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="UTC"')
@@ -148,8 +146,6 @@ class TimezoneTestCase(TestCase):
         :return:
         '''
         timezone.__grains__['os_family'] = ['Gentoo']
-        timezone.__salt__
-
         _fopen = MagicMock(return_value=MagicMock(spec=file))
         with patch('salt.utils.fopen', _fopen):
             assert timezone.set_zone(self.TEST_TZ)
@@ -168,8 +164,6 @@ class TimezoneTestCase(TestCase):
         :return:
         '''
         timezone.__grains__['os_family'] = ['Debian']
-        timezone.__salt__
-
         _fopen = MagicMock(return_value=MagicMock(spec=file))
         with patch('salt.utils.fopen', _fopen):
             assert timezone.set_zone(self.TEST_TZ)
