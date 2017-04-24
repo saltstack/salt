@@ -88,127 +88,39 @@ def state_result(result, message):
 
 def container_present(name, profile):
     '''
-    Ensures a record is present.
+    Ensures a container is present.
 
-    :param domain: Zone name, i.e. the domain name
-    :type  domain: ``str``
-
-    :param type: Zone type (master / slave), defaults to master
-    :type  type: ``str``
-
-    :param profile: The profile key
-    :type  profile: ``str``
-    '''
-    zones = __salt__['libcloud_dns.list_containers'](profile)
-    if not type:
-        type = 'master'
-    matching_zone = [z for z in zones if z.domain == domain]
-    if len(matching_zone) > 0:
-        return state_result(True, "Zone already exists")
-    else:
-        result = __salt__['libcloud_dns.create_zone'](domain, profile, type)
-        return state_result(result, "Created new zone")
-
-
-def zone_absent(domain, profile):
-    '''
-    Ensures a record is absent.
-
-    :param domain: Zone name, i.e. the domain name
-    :type  domain: ``str``
-
-    :param profile: The profile key
-    :type  profile: ``str``
-    '''
-    zones = __salt__['libcloud_dns.list_zones'](profile)
-    matching_zone = [z for z in zones if z.domain == domain]
-    if len(matching_zone) == 0:
-        return state_result(True, "Zone already absent")
-    else:
-        result = __salt__['libcloud_dns.delete_zone'](matching_zone[0].id, profile)
-        return state_result(result, "Deleted zone")
-
-
-def record_present(name, zone, type, data, profile):
-    '''
-    Ensures a record is present.
-
-    :param name: Record name without the domain name (e.g. www).
-                 Note: If you want to create a record for a base domain
-                 name, you should specify empty string ('') for this
-                 argument.
+    :param name: Container name
     :type  name: ``str``
 
-    :param zone: Zone where the requested record is created, the domain name
-    :type  zone: ``str``
-
-    :param type: DNS record type (A, AAAA, ...).
-    :type  type: ``str``
-
-    :param data: Data for the record (depends on the record type).
-    :type  data: ``str``
-
     :param profile: The profile key
     :type  profile: ``str``
     '''
-    zones = __salt__['libcloud_dns.list_zones'](profile)
-    try:
-        matching_zone = [z for z in zones if z.domain == zone][0]
-    except IndexError:
-        return state_result(False, "Could not locate zone")
-    records = __salt__['libcloud_dns.list_records'](matching_zone.id, profile)
-    matching_records = [record for record in records
-                        if record.name == name and
-                        record.type == type and
-                        record.data == data]
-    if len(matching_records) == 0:
-        result = __salt__['libcloud_dns.create_record'](
-            name, matching_zone.id,
-            type, data, profile)
-        return state_result(result, "Created new record")
+    containers = __salt__['libcloud_dns.list_containers'](profile)
+    
+    match = [z for z in containers if z.name == name]
+    if len(match) > 0:
+        return state_result(True, "Container already exists")
     else:
-        return state_result(True, "Record already exists")
+        result = __salt__['libcloud_dns.create_container'](name, profile)
+        return state_result(result, "Created new container")
 
 
-def record_absent(name, zone, type, data, profile):
+def container_absent(name, profile):
     '''
-    Ensures a record is absent.
+    Ensures a container is absent.
 
-    :param name: Record name without the domain name (e.g. www).
-                 Note: If you want to create a record for a base domain
-                 name, you should specify empty string ('') for this
-                 argument.
+    :param name: Container name
     :type  name: ``str``
 
-    :param zone: Zone where the requested record is created, the domain name
-    :type  zone: ``str``
-
-    :param type: DNS record type (A, AAAA, ...).
-    :type  type: ``str``
-
-    :param data: Data for the record (depends on the record type).
-    :type  data: ``str``
-
     :param profile: The profile key
     :type  profile: ``str``
     '''
-    zones = __salt__['libcloud_dns.list_zones'](profile)
-    try:
-        matching_zone = [z for z in zones if z.domain == zone][0]
-    except IndexError:
-        return state_result(False, "Zone could not be found")
-    records = __salt__['libcloud_dns.list_records'](matching_zone.id, profile)
-    matching_records = [record for record in records
-                        if record.name == name and
-                        record.type == type and
-                        record.data == data]
-    if len(matching_records) > 0:
-        result = []
-        for record in matching_records:
-            result.append(__salt__['libcloud_dns.delete_record'](
-                matching_zone.id,
-                record.id,
-                profile))
-        return state_result(all(result), "Removed {0} records".format(len(result)))
+    containers = __salt__['libcloud_dns.list_containers'](profile)
+    
+    match = [z for z in containers if z.name == name]
+    if len(match) == 0:
+        return state_result(True, "Container already absent")
     else:
-        return state_result(True, "Records already absent")
+        result = __salt__['libcloud_dns.delete_container'](name, profile)
+        return state_result(result, "Deleted container")
