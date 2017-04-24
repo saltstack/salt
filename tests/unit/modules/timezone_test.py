@@ -194,7 +194,7 @@ class TimezoneTestCase(TestCase):
     @patch('os.symlink', MagicMock())
     def test_get_hwclock_suse(self):
         '''
-        Test get hwclock SUSE
+        Test get hwclock on SUSE
         :return:
         '''
         timezone.__grains__['os_family'] = ['Suse']
@@ -209,7 +209,7 @@ class TimezoneTestCase(TestCase):
     @patch('os.symlink', MagicMock())
     def test_get_hwclock_redhat(self):
         '''
-        Test get hwclock RedHat
+        Test get hwclock on RedHat
         :return:
         '''
         timezone.__grains__['os_family'] = ['RedHat']
@@ -224,7 +224,7 @@ class TimezoneTestCase(TestCase):
     @patch('os.symlink', MagicMock())
     def test_get_hwclock_debian(self):
         '''
-        Test get hwclock Debian
+        Test get hwclock on Debian
         :return:
         '''
         timezone.__grains__['os_family'] = ['Debian']
@@ -239,7 +239,7 @@ class TimezoneTestCase(TestCase):
     @patch('os.symlink', MagicMock())
     def test_get_hwclock_solaris(self):
         '''
-        Test get hwclock Solaris
+        Test get hwclock on Solaris
         :return:
         '''
         # Incomplete
@@ -255,7 +255,7 @@ class TimezoneTestCase(TestCase):
     @patch('os.symlink', MagicMock())
     def test_get_hwclock_aix(self):
         '''
-        Test get hwclock AIX
+        Test get hwclock on AIX
         :return:
         '''
         # Incomplete
@@ -268,7 +268,7 @@ class TimezoneTestCase(TestCase):
     @patch('os.symlink', MagicMock())
     def test_set_hwclock_aix(self):
         '''
-        Test set hwclock AIX
+        Test set hwclock on AIX
         :return:
         '''
         timezone.__grains__['os_family'] = ['AIX']
