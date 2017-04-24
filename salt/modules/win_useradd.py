@@ -104,17 +104,25 @@ def add(name,
 
     Args:
         name (str): User name
+
         password (str, optional): User's password in plain text.
+
         fullname (str, optional): The user's full name.
+
         description (str, optional): A brief description of the user account.
+
         groups (str, optional): A list of groups to add the user to.
             (see chgroups)
+
         home (str, optional): The path to the user's home directory.
+
         homedrive (str, optional): The drive letter to assign to the home
             directory. Must be the Drive Letter followed by a colon. ie: U:
+
         profile (str, optional): An explicit path to a profile. Can be a UNC or
             a folder on the system. If left blank, windows uses it's default
             profile directory.
+
         logonscript (str, optional): Path to a login script to run when the user
             logs on.
 
@@ -192,28 +200,41 @@ def update(name,
 
     Args:
         name (str): The user name to update.
+
         password (str, optional): New user password in plain text.
+
         fullname (str, optional): The user's full name.
+
         description (str, optional): A brief description of the user account.
+
         home (str, optional): The path to the user's home directory.
+
         homedrive (str, optional): The drive letter to assign to the home
             directory. Must be the Drive Letter followed by a colon. ie: U:
+
         logonscript (str, optional): The path to the logon script.
+
         profile (str, optional): The path to the user's profile directory.
+
         expiration_date (date, optional): The date and time when the account
             expires. Can be a valid date/time string. To set to never expire
             pass the string 'Never'.
+
         expired (bool, optional): Pass `True` to expire the account. The user
             will be prompted to change their password at the next logon. Pass
             `False` to mark the account as 'not expired'. You can't use this to
             negate the expiration if the expiration was caused by the account
             expiring. You'll have to change the `expiration_date` as well.
+
         account_disabled (bool, optional): True disables the account. False
             enables the account.
+
         unlock_account (bool, optional): True unlocks a locked user account.
             False is ignored.
+
         password_never_expires (bool, optional): True sets the password to never
             expire. False allows the password to expire.
+
         disallow_change_password (bool, optional): True blocks the user from
             changing the password. False allows the user to change the password.
 
@@ -320,9 +341,11 @@ def delete(name,
 
     Args:
         name (str): The name of the user to delete
+
         purge (bool, optional): Boolean value indicating that the user profile
             should also be removed when the user account is deleted. If set to
             True the profile will be removed. Default is False.
+
         force (bool, optional): Boolean value indicating that the user account
             should be deleted even if the user is logged in. True will log the
             user out and delete user.
@@ -447,6 +470,7 @@ def setpassword(name, password):
 
     Args:
         name (str): The user name for which to set the password
+
         password (str): The new password
 
     Returns:
@@ -467,6 +491,7 @@ def addgroup(name, group):
 
     Args:
         name (str): The user name to add to the group
+
         group (str): The name of the group to which to add the user
 
     Returns:
@@ -503,6 +528,7 @@ def removegroup(name, group):
 
     Args:
         name (str): The user name to remove from the group
+
         group (str): The name of the group from which to remove the user
 
     Returns:
@@ -542,6 +568,7 @@ def chhome(name, home, **kwargs):
 
     Args:
         name (str): The name of the user whose home directory you wish to change
+
         home (str): The new location of the home directory
 
     Returns:
@@ -588,6 +615,7 @@ def chprofile(name, profile):
 
     Args:
         name (str): The name of the user whose profile you wish to change
+
         profile (str): The new location of the profile
 
     Returns:
@@ -608,6 +636,7 @@ def chfullname(name, fullname):
 
     Args:
         name (str): The user name for which to change the full name
+
         fullname (str): The new value for the full name
 
     Returns:
@@ -629,9 +658,11 @@ def chgroups(name, groups, append=True):
 
     Args:
         name (str): The user name for which to change groups
+
         groups (str, list): A single group or a list of groups to assign to the
             user. For multiple groups this can be a comma delimited string or a
             list.
+
         append (bool, optional): True adds the passed groups to the user's
             current groups. False sets the user's groups to the passed groups
             only. Default is True.
@@ -798,6 +829,7 @@ def _get_userprofile_from_registry(user, sid):
 
     Args:
         user (str): The user name, used in debug message
+
         sid (str): The sid to lookup in the registry
 
     Returns:
@@ -920,6 +952,7 @@ def rename(name, new_name):
 
     Args:
         name (str): The user name to change
+
         new_name (str): The new name for the current user
 
     Returns:
