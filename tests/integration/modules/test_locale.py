@@ -37,8 +37,7 @@ class LocaleModuleTest(ModuleCase):
         if char_maps['stdout'] == '':
             self.skipTest('locale charmaps not available. Skipping test.')
 
-        err_msg = 'cannot read character map directory'
-        if char_maps['retcode'] != 0 and err_msg in char_maps['stderr']:
+        if char_maps['retcode'] and char_maps['stderr']:
             self.skipTest('{0}. Cannot generate locale. Skipping test.'.format(
                 char_maps['stderr'])
             )
