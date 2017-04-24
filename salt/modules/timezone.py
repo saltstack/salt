@@ -370,7 +370,7 @@ def get_hwclock():
 
     else:
         os_family = __grains__['os_family']
-        for family in ('RedHat', 'SUSE'):
+        for family in ('RedHat', 'Suse'):
             if family in os_family:
                 cmd = ['tail', '-n', '1', '/etc/adjtime']
                 return __salt__['cmd.run'](cmd, python_shell=False)
