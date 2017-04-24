@@ -16,6 +16,7 @@ from salttesting.mock import (
 )
 
 from salttesting.helpers import ensure_in_syspath
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 ensure_in_syspath('../../')
 
@@ -260,3 +261,17 @@ class TimezoneTestCase(TestCase):
         # Incomplete
         timezone.__grains__['os_family'] = ['AIX']
         assert timezone.get_hwclock() == 'localtime'
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_set_hwclock_aix(self):
+        '''
+        Test set hwclock AIX
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['AIX']
+        with self.assertRaises(SaltInvocationError):
+            assert timezone.set_hwclock('forty two')
+        assert timezone.set_hwclock('UTC')
