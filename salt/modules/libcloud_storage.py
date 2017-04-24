@@ -137,7 +137,7 @@ def list_container_objects(container_name, profile):
     return ret
 
 
-def get_container(container_name, profile):
+def create_container(container_name, profile):
     '''
     Create a container in the cloud
 
@@ -151,7 +151,7 @@ def get_container(container_name, profile):
 
     .. code-block:: bash
 
-        salt myminion libcloud_storage.get_container MyFolder profile1
+        salt myminion libcloud_storage.create_container MyFolder profile1
     '''
     conn = _get_driver(profile=profile)
     container = conn.create_container(container_name)
@@ -215,7 +215,7 @@ def get_container_object(container_name, object_name, profile):
         'meta_data': obj.meta_data}
 
 
-def download_object(container_name, object_name, destination_path, profile, 
+def download_object(container_name, object_name, destination_path, profile,
                     overwrite_existing=False, delete_on_failure=True):
     """
     Download an object to the specified destination path.
@@ -245,6 +245,13 @@ def download_object(container_name, object_name, destination_path, profile,
     :return: True if an object has been successfully downloaded, False
                 otherwise.
     :rtype: ``bool``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.download_object MyFolder me.jpg /tmp/me.jpg profile1
+
     """
     conn = _get_driver(profile=profile)
     container = conn.get_container(container_name)
@@ -280,7 +287,12 @@ def upload_object(file_path, container_name, object_name, profile, extra=None,
         headers = {'Access-Control-Allow-Origin': 'http://mozilla.com'}
     :type headers: ``dict``
 
-    :rtype: :class:`Object`
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.upload_object /file/to/me.jpg MyFolder me.jpg profile1
+
     """
     conn = _get_driver(profile=profile)
     container = conn.get_container(container_name)
@@ -304,6 +316,12 @@ def delete_object(container_name, object_name, profile):
     :return: True if an object has been successfully deleted, False
                 otherwise.
     :rtype: ``bool``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.delete_object MyFolder me.jpg profile1
     """
     conn = _get_driver(profile=profile)
     container = conn.get_container(container_name)
@@ -324,6 +342,12 @@ def delete_container(container_name, object_name, profile):
     :return: True if an object container has been successfully deleted, False
                 otherwise.
     :rtype: ``bool``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.delete_container MyFolder profile1
     """
     conn = _get_driver(profile=profile)
     container = conn.get_container(container_name)
