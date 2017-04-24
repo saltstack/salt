@@ -47,6 +47,7 @@ try:
     #pylint: disable=unused-import
     import libcloud
     from libcloud.loadbalancer.providers import get_driver
+    from libcloud.loadbalancer.base import Member
     #pylint: enable=unused-import
     if hasattr(libcloud, '__version__') and _LooseVersion(libcloud.__version__) < _LooseVersion(REQUIRED_LIBCLOUD_VERSION):
         raise ImportError()
@@ -145,12 +146,104 @@ def create_balancer(name, port, protocol, profile, algorithm=1, members=[]):
     return _simple_balancer(balancer)
 
 
+def destroy_balancer(balancer_id, profile):
+    '''
+    Destroy a load balancer
+
+    :param balancer_id: LoadBalancer ID which should be used
+    :type  balancer_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :return: ``True`` if the destroy was successful, otherwise ``False``.
+    :rtype: ``bool``
+    '''
+    balancer = get_balancer(balancer_id, profile)
+    conn = _get_driver(profile=profile)
+    return conn.destroy_balancer(balancer)
+
+
+def get_balancer_by_name(name, profile):
+    '''
+    Get the details for a load balancer by name
+
+    :param name: Name of a load balancer you want to fetch
+    :type  name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :return: the load balancer details
+    '''
+    conn = _get_driver(profile=profile)
+    balancers = conn.list_balancers()
+    match = [b for b in balancers if b.name == name]
+    if len(match) == 1:
+        return _simple_balancer(balancer)
+    elif len(match) > 1:
+        raise ValueError("Ambiguous argument, found mulitple records")
+    else:
+        raise ValueError("Bad argument, found no records")
+
+
+def get_balancer(balancer_id, profile):
+    '''
+    Get the details for a load balancer by ID
+
+    :param balancer_id: id of a load balancer you want to fetch
+    :type  balancer_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :return: the load balancer details
+    '''
+    conn = _get_driver(profile=profile)
+    balancer = conn.get_balancer(balancer_id)
+    return _simple_balancer(balancer)
+
+
+def list_supported_algorithms(profile):
+    '''
+    Get the supported algorithms for a profile
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :return: The supported algorithms
+    '''
+    conn = _get_driver(profile=profile)
+    return conn.list_supported_algorithms()
+
+
+def balancer_attach_member(balancer_id, ip, port, profile):
+    pass
+
+
+def balancer_detach_member(balancer_id, member_id, profile):
+    pass
+
+
+def list_balancer_members(balancer, profile):
+    pass
+
 def _simple_balancer(balancer):
     return {
-        'id' = balancer.id,
-        'name' = balancer.name,
-        'state' = balancer.state,
-        'ip' = balancer.ip,
-        'port' = balancer.port,
-        'extra' = balancer.extra
+        'id': balancer.id,
+        'name': balancer.name,
+        'state': balancer.state,
+        'ip': balancer.ip,
+        'port': balancer.port,
+        'extra': balancer.extra
+    }
+
+
+def _simple_member(member):
+    return {
+        'id': member.id,
+        'ip': member.ip,
+        'port': member.port,
+        'balancer': _simple_balancer(member.balancer),
+        'extra': member.extra
     }
