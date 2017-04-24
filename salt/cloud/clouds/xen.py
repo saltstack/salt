@@ -288,7 +288,7 @@ def list_nodes_full(session=None):
     vms = session.xenapi.VM.get_all()
     for vm in vms:
         record = session.xenapi.VM.get_record(vm)
-        if not(record['is_a_template']) and not(record['is_control_domain']):
+        if not record['is_a_template'] and not record['is_control_domain']:
             vm_cfg = session.xenapi.VM.get_record(vm)
             vm_cfg['id'] = record['uuid']
             vm_cfg['name'] = record['name_label']
@@ -447,7 +447,7 @@ def show_instance(name, session=None, call=None):
         session = _get_session()
     vm = _get_vm(name, session=session)
     record = session.xenapi.VM.get_record(vm)
-    if not(record['is_a_template']) and not(record['is_control_domain']):
+    if not record['is_a_template'] and not record['is_control_domain']:
         ret = {'id': record['uuid'],
                'image': record['other_config']['base_template_name'],
                'name': record['name_label'],
