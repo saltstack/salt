@@ -317,10 +317,10 @@ def _get_docker_py_versioninfo():
         pass
 
 
-def _get_client(**kwargs):
+def _get_client(timeout=NOTSET, **kwargs):
     client_kwargs = {}
-    if 'client_timeout' in kwargs:
-        client_kwargs['timeout'] = kwargs.pop('client_timeout')
+    if timeout is not NOTSET:
+        client_kwargs['timeout'] = timeout
     for key, val in (('base_url', 'docker.url'),
                      ('version', 'docker.version')):
         param = __salt__['config.get'](val, NOTSET)
@@ -389,9 +389,22 @@ def _docker_client(wrapped):
         '''
         Ensure that the client is present
         '''
-        if 'docker.client' not in __context__:
-            __context__['docker.client'] = _get_client(**kwargs)
-        return wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
+        kwargs = salt.utils.clean_kwargs(**kwargs)
+        timeout = kwargs.pop('client_timeout', NOTSET)
+        if 'docker.client' not in __context__ \
+                or not hasattr(__context__['docker.client'], 'timeout'):
+            __context__['docker.client'] = _get_client(timeout=timeout, **kwargs)
+        orig_timeout = None
+        if timeout is not NOTSET \
+                and hasattr(__context__['docker.client'], 'timeout') \
+                and __context__['docker.client'].timeout != timeout:
+            # Temporarily override timeout
+            orig_timeout = __context__['docker.client'].timeout
+            __context__['docker.client'].timeout = timeout
+        ret = wrapped(*args, **kwargs)
+        if orig_timeout is not None:
+            __context__['docker.client'].timeout = orig_timeout
+        return ret
     return wrapper
 
 
