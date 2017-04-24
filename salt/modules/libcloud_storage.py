@@ -79,11 +79,6 @@ def _get_driver(profile):
     return cls(**args)
 
 
-def list_profiles():
-    keys, _ = __salt__['config.option']('libcloud_storage').items()
-    return keys
-
-
 def list_containers(profile):
     '''
     Return a list of containers.
@@ -98,7 +93,14 @@ def list_containers(profile):
         salt myminion libcloud_storage.list_containers profile1
     '''
     conn = _get_driver(profile=profile)
-    return conn.list_containers()
+    containers = conn.list_containers()
+    ret = []
+    for container in containers:
+        ret.append({
+            'name': container.name,
+            'extra': container.extra
+        })
+    return ret
 
 def list_container_objects(container_name, profile):
     '''
@@ -118,7 +120,18 @@ def list_container_objects(container_name, profile):
     '''
     conn = _get_driver(profile=profile)
     container = conn.get_container(container_name)
-    return conn.list_container_objects(container)
+    objects = conn.list_container_objects(container)
+    ret = []
+    for obj in objects:
+        ret.append({
+            'name': obj.name,
+            'size': obj.size,
+            'hash': obj.hash,
+            'container': obj.container.name,
+            'extra': obj.extra,
+            'meta_data': obj.meta_data
+        })
+    return ret
 
 def get_container(container_name, profile):
     '''
@@ -137,7 +150,11 @@ def get_container(container_name, profile):
         salt myminion libcloud_storage.get_container MyFolder profile1
     '''
     conn = _get_driver(profile=profile)
-    return conn.get_container(container_name)
+    container = conn.get_container(container_name)
+    return {
+            'name': container.name,
+            'extra': container.extra
+            }
 
 def download_object(container_name, object_name, destination_path, profile, 
                     overwrite_existing=False, delete_on_failure=True):
@@ -207,4 +224,5 @@ def upload_object(self, file_path, container_name, object_name, profile, extra=N
     """
     conn = _get_driver(profile=profile)
     container = conn.get_container(container_name)
-    return conn.upload_object(file_path, container, object_name, extra, verify_hash, headers)
+    obj = conn.upload_object(file_path, container, object_name, extra, verify_hash, headers)
+    return obj.name
