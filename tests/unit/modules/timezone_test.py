@@ -297,3 +297,20 @@ class TimezoneTestCase(TestCase):
         assert args == (['rtc', '-z', 'GMT'],)
         assert kwargs == {'python_shell': False}
 
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    @patch('salt.modules.timezone.get_zone', MagicMock(return_value='TEST_TIMEZONE'))
+    def test_set_hwclock_arch(self):
+        '''
+        Test set hwclock on arch
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Arch']
+        timezone.__grains__['cpuarch'] = 'x86'
+
+        assert timezone.set_hwclock('UTC')
+        name, args, kwargs = timezone.__salt__['cmd.retcode'].mock_calls[0]
+        assert args == (['timezonectl', 'set-local-rtc', 'false'],)
+        assert kwargs == {'python_shell': False}
