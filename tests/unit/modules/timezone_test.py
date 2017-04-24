@@ -236,7 +236,7 @@ class TimezoneTestCase(TestCase):
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
-    def test_get_hwclock_debian(self):
+    def test_get_hwclock_solaris(self):
         '''
         Test get hwclock Solaris
         :return:
@@ -247,3 +247,16 @@ class TimezoneTestCase(TestCase):
         _fopen = MagicMock(return_value=MagicMock(spec=file))
         with patch('salt.utils.fopen', _fopen):
             assert timezone.get_hwclock() == 'localtime'
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_get_hwclock_aix(self):
+        '''
+        Test get hwclock AIX
+        :return:
+        '''
+        # Incomplete
+        timezone.__grains__['os_family'] = ['AIX']
+        assert timezone.get_hwclock() == 'localtime'
