@@ -333,7 +333,7 @@ def delete_object(container_name, object_name, profile):
     return conn.delete_object(obj)
 
 
-def delete_container(container_name, object_name, profile):
+def delete_container(container_name, profile):
     '''
     Delete an object container in the cloud
 
