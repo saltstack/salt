@@ -268,7 +268,7 @@ def gen_locale(locale, **kwargs):
         return locale in __salt__['locale.list_avail']()
 
     locale_info = salt.utils.locales.split_locale(locale)
-    locale_search_str = '{0}_{1}'.format(locale['language'], locale_info['territory'])
+    locale_search_str = '{0}_{1}'.format(locale_info['language'], locale_info['territory'])
 
     # if the charmap has not been supplied, normalize by appening it
     if not locale_info['charmap'] and not on_ubuntu:
