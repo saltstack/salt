@@ -177,3 +177,17 @@ class TimezoneTestCase(TestCase):
             assert args == ('/etc/timezone', 'w')
             name, args, kwargs = _fopen.return_value.__enter__.return_value.write.mock_calls[0]
             assert args == ('UTC',)
+
+    @patch('salt.utils.which', MagicMock(return_value=True))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_get_hwclock_timedate_utc(self):
+        '''
+        Test get hwclock UTC/localtime
+        :return:
+        '''
+        with patch('salt.modules.timezone._timedatectl', MagicMock(return_value={'stdout': 'rtc in local tz'})):
+            assert timezone.get_hwclock() == 'UTC'
+        with patch('salt.modules.timezone._timedatectl', MagicMock(return_value={'stdout': 'rtc in local tz:yes'})):
+            assert timezone.get_hwclock() == 'localtime'
