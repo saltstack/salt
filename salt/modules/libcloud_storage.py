@@ -78,6 +78,12 @@ def _get_driver(profile):
     args['port'] = config.get('port', None)
     return cls(**args)
 
+
+def list_profiles():
+    keys, _ = __salt__['config.option']('libcloud_storage').items()
+    return keys
+
+
 def list_containers(profile):
     '''
     Return a list of containers.
