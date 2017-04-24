@@ -47,7 +47,7 @@ try:
     #pylint: disable=unused-import
     import libcloud
     from libcloud.loadbalancer.providers import get_driver
-    from libcloud.loadbalancer.base import Member
+    from libcloud.loadbalancer.base import Member, Algorithm
     #pylint: enable=unused-import
     if hasattr(libcloud, '__version__') and _LooseVersion(libcloud.__version__) < _LooseVersion(REQUIRED_LIBCLOUD_VERSION):
         raise ImportError()
@@ -126,7 +126,7 @@ def list_protocols(profile):
     return conn.list_protocols()
 
 
-def create_balancer(name, port, protocol, profile, algorithm=1, members=[]):
+def create_balancer(name, port, protocol, profile, algorithm=None, members=None):
     '''
     Create a new load balancer instance
 
@@ -153,8 +153,13 @@ def create_balancer(name, port, protocol, profile, algorithm=1, members=[]):
 
         salt myminion libcloud_storage.create_balancer my_balancer 80 http profile1
     '''
+    if algorithm is None:
+        algorithm = Algorithm.ROUND_ROBIN
+    if members is None:
+        members = []
+    
     conn = _get_driver(profile=profile)
-    balancer = conn.create_balancer(name, port, protocol, algorithm, [])
+    balancer = conn.create_balancer(name, port, protocol, algorithm, members)
     return _simple_balancer(balancer)
 
 
@@ -276,7 +281,7 @@ def balancer_attach_member(balancer_id, ip, port, profile, extra=None):
         salt myminion libcloud_storage.balancer_attach_member balancer123 1.2.3.4 80 profile1
     '''
     member = Member(id=None, ip=ip, port=port, balancer=None, extra=extra)
-    balancer = get_balancer(balancer_id)
+    balancer = get_balancer(balancer_id, profile)
     conn = _get_driver(profile=profile)
     member_saved = conn.balancer_attach_member(balancer, member)
     return _simple_member(member_saved)
@@ -304,7 +309,7 @@ def balancer_detach_member(balancer_id, member_id, profile):
 
         salt myminion libcloud_storage.balancer_detach_member balancer123 member123 profile1
     '''
-    members = list_balancer_members(balancer_id)
+    members = list_balancer_members(balancer_id, profile)
     match = [member for member in members if member.id == member_id]
     if len(match) > 1:
         raise ValueError("Ambiguous argument, found mulitple records")
@@ -312,7 +317,7 @@ def balancer_detach_member(balancer_id, member_id, profile):
         raise ValueError("Bad argument, found no records")
     else:
         member = match[0]
-    balancer = get_balancer(balancer_id)
+    balancer = get_balancer(balancer_id, profile)
     conn = _get_driver(profile=profile)
     return conn.balancer_detach_member(balancer=balancer, member=member)
 
@@ -333,7 +338,7 @@ def list_balancer_members(balancer_id, profile):
 
         salt myminion libcloud_storage.list_balancer_members balancer123 profile1
     '''
-    balancer = get_balancer(balancer_id)
+    balancer = get_balancer(balancer_id, profile)
     conn = _get_driver(profile=profile)
     members = conn.balancer_list_members(balancer=balancer)
     return [_simple_member(member) for member in members]
