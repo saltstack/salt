@@ -59,7 +59,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             return
 
         if self.options.preview_target:
-            self._preview_target()
+            minion_list = self._preview_target()
             self._output_ret(minion_list, self.config.get('output', 'nested'))
             return
 
