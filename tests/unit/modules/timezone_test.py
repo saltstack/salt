@@ -319,9 +319,9 @@ class TimezoneTestCase(TestCase):
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
     @patch('salt.modules.timezone.get_zone', MagicMock(return_value='TEST_TIMEZONE'))
-    def test_set_hwclock_arch(self):
+    def test_set_hwclock_redhat(self):
         '''
-        Test set hwclock on arch
+        Test set hwclock on RedHat
         :return:
         '''
         timezone.__grains__['os_family'] = ['RedHat']
