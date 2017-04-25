@@ -97,7 +97,7 @@ def container_present(name, profile):
     :type  profile: ``str``
     '''
     containers = __salt__['libcloud_storage.list_containers'](profile)
-    match = [z for z in containers if z.name == name]
+    match = [z for z in containers if z['name'] == name]
     if len(match) > 0:
         return state_result(True, "Container already exists")
     else:
@@ -116,7 +116,7 @@ def container_absent(name, profile):
     :type  profile: ``str``
     '''
     containers = __salt__['libcloud_storage.list_containers'](profile)
-    match = [z for z in containers if z.name == name]
+    match = [z for z in containers if z['name'] == name]
     if len(match) == 0:
         return state_result(True, "Container already absent")
     else:

@@ -37,6 +37,7 @@ import logging
 
 # Import salt libs
 import salt.utils.compat
+import salt.ext.six as six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -70,6 +71,18 @@ def __virtual__():
 
 def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
+
+
+def _algorithm_maps():
+    return {
+        'RANDOM': Algorithm.RANDOM,
+        'ROUND_ROBIN': Algorithm.ROUND_ROBIN,
+        'LEAST_CONNECTIONS': Algorithm.LEAST_CONNECTIONS,
+        'WEIGHTED_ROUND_ROBIN': Algorithm.WEIGHTED_ROUND_ROBIN,
+        'WEIGHTED_LEAST_CONNECTIONS': Algorithm.WEIGHTED_LEAST_CONNECTIONS,
+        'SHORTEST_RESPONSE': Algorithm.SHORTEST_RESPONSE,
+        'PERSISTENT_IP': Algorithm.PERSISTENT_IP
+    }
 
 
 def _get_driver(profile):
@@ -139,8 +152,9 @@ def create_balancer(name, port, protocol, profile, algorithm=None, members=None)
     :param protocol: Loadbalancer protocol, defaults to http.
     :type  protocol: ``str``
 
-    :param algorithm: Load balancing algorithm, defaults to ROUND_ROBIN (1).
-    :type algorithm: ``int``
+    :param algorithm: Load balancing algorithm, defaults to ROUND_ROBIN. See Algorithm type
+        in Libcloud documentation for a full listing.
+    :type algorithm: ``str``
 
     :param profile: The profile key
     :type  profile: ``str``
@@ -155,6 +169,9 @@ def create_balancer(name, port, protocol, profile, algorithm=None, members=None)
     '''
     if algorithm is None:
         algorithm = Algorithm.ROUND_ROBIN
+    else:
+        if isinstance(algorithm, six.string_types):
+            algorithm = _algorithm_maps()[algorithm]
     if members is None:
         members = []
 
@@ -182,8 +199,8 @@ def destroy_balancer(balancer_id, profile):
 
         salt myminion libcloud_storage.destroy_balancer balancer_1 profile1
     '''
-    balancer = get_balancer(balancer_id, profile)
     conn = _get_driver(profile=profile)
+    balancer = conn.get_balancer(balancer_id)
     return conn.destroy_balancer(balancer)
 
 
@@ -280,9 +297,9 @@ def balancer_attach_member(balancer_id, ip, port, profile, extra=None):
 
         salt myminion libcloud_storage.balancer_attach_member balancer123 1.2.3.4 80 profile1
     '''
-    member = Member(id=None, ip=ip, port=port, balancer=None, extra=extra)
-    balancer = get_balancer(balancer_id, profile)
     conn = _get_driver(profile=profile)
+    member = Member(id=None, ip=ip, port=port, balancer=None, extra=extra)
+    balancer = conn.get_balancer(balancer_id)
     member_saved = conn.balancer_attach_member(balancer, member)
     return _simple_member(member_saved)
 
@@ -309,7 +326,9 @@ def balancer_detach_member(balancer_id, member_id, profile):
 
         salt myminion libcloud_storage.balancer_detach_member balancer123 member123 profile1
     '''
-    members = list_balancer_members(balancer_id, profile)
+    conn = _get_driver(profile=profile)
+    balancer = conn.get_balancer(balancer_id)
+    members = conn.balancer_list_members(balancer=balancer)
     match = [member for member in members if member.id == member_id]
     if len(match) > 1:
         raise ValueError("Ambiguous argument, found mulitple records")
@@ -317,8 +336,6 @@ def balancer_detach_member(balancer_id, member_id, profile):
         raise ValueError("Bad argument, found no records")
     else:
         member = match[0]
-    balancer = get_balancer(balancer_id, profile)
-    conn = _get_driver(profile=profile)
     return conn.balancer_detach_member(balancer=balancer, member=member)
 
 
@@ -338,8 +355,8 @@ def list_balancer_members(balancer_id, profile):
 
         salt myminion libcloud_storage.list_balancer_members balancer123 profile1
     '''
-    balancer = get_balancer(balancer_id, profile)
     conn = _get_driver(profile=profile)
+    balancer = conn.get_balancer(balancer_id)
     members = conn.balancer_list_members(balancer=balancer)
     return [_simple_member(member) for member in members]
 
