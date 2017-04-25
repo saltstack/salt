@@ -37,6 +37,7 @@ import logging
 
 # Import salt libs
 import salt.utils.compat
+import salt.ext.six as six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -70,6 +71,18 @@ def __virtual__():
 
 def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
+
+
+def _algorithm_maps():
+    return {
+        'RANDOM': Algorithm.RANDOM,
+        'ROUND_ROBIN':Algorithm.ROUND_ROBIN,
+        'LEAST_CONNECTIONS': Algorithm.LEAST_CONNECTIONS,
+        'WEIGHTED_ROUND_ROBIN': Algorithm.WEIGHTED_ROUND_ROBIN,
+        'WEIGHTED_LEAST_CONNECTIONS': Algorithm.WEIGHTED_LEAST_CONNECTIONS,
+        'SHORTEST_RESPONSE': Algorithm.SHORTEST_RESPONSE,
+        'PERSISTENT_IP': Algorithm.PERSISTENT_IP
+    }
 
 
 def _get_driver(profile):
@@ -139,8 +152,9 @@ def create_balancer(name, port, protocol, profile, algorithm=None, members=None)
     :param protocol: Loadbalancer protocol, defaults to http.
     :type  protocol: ``str``
 
-    :param algorithm: Load balancing algorithm, defaults to ROUND_ROBIN (1).
-    :type algorithm: ``int``
+    :param algorithm: Load balancing algorithm, defaults to ROUND_ROBIN. See Algorithm type
+        in Libcloud documentation for a full listing.
+    :type algorithm: ``str``
 
     :param profile: The profile key
     :type  profile: ``str``
@@ -155,6 +169,9 @@ def create_balancer(name, port, protocol, profile, algorithm=None, members=None)
     '''
     if algorithm is None:
         algorithm = Algorithm.ROUND_ROBIN
+    else:
+        if isinstance(algorithm, six.string_types):
+            algorithm = _algorithm_maps()[algorithm]
     if members is None:
         members = []
 

@@ -54,7 +54,7 @@ def state_result(result, message):
     return {'result': result, 'comment': message}
 
 
-def balancer_present(name, port, protocol, profile):
+def balancer_present(name, port, protocol, profile, algorithm=None):
     '''
     Ensures a load balancer is present.
 
@@ -69,13 +69,17 @@ def balancer_present(name, port, protocol, profile):
 
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param algorithm: Load balancing algorithm, defaults to ROUND_ROBIN. See Algorithm type
+        in Libcloud documentation for a full listing.
+    :type algorithm: ``str``
     '''
     balancers = __salt__['libcloud_loadbalancer.list_balancers'](profile)
     match = [z for z in balancers if z['name'] == name]
     if len(match) > 0:
         return state_result(True, "Balancer already exists")
     else:
-        result = __salt__['libcloud_loadbalancer.create_balancer'](name, port, protocol, profile)
+        result = __salt__['libcloud_loadbalancer.create_balancer'](name, port, protocol, profile, algorithm=algorithm)
         return state_result(result, "Created new load balancer")
 
 
