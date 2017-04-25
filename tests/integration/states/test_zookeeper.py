@@ -16,7 +16,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 import salt.utils
 
 try:
-    import kazoo
+    import kazoo  # pylint: disable=import-error,unused-import
     HAS_KAZOO = True
 except ImportError:
     HAS_KAZOO = False
