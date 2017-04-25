@@ -36,8 +36,6 @@ class NovaTestCase(TestCase):
         '''
         Test if query node data is filtering out unpreferred IP addresses.
         '''
-        nova.__opts__ = {}
-
         vm = {'name': None}
         data = MagicMock()
         data.public_ips = []

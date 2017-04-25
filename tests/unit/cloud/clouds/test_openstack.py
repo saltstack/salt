@@ -33,9 +33,8 @@ class OpenstackTestCase(TestCase):
         '''
         Test if query node data is filtering out unpreferred IP addresses.
         '''
-        openstack.NodeState = MagicMock()
+        openstack.NodeState = MagicMock() # pylint: disable=blacklisted-unmocked-patching
         openstack.NodeState.RUNNING = True
-        openstack.__opts__ = {}
 
         vm = {'name': None}
         data = MagicMock()
