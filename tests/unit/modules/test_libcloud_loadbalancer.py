@@ -17,20 +17,24 @@ from tests.support.mock import (
 )
 import salt.modules.libcloud_loadbalancer as libcloud_loadbalancer
 
-from libcloud.loadbalancer.base import BaseDriver, LoadBalancer, Algorithm
+from libcloud.loadbalancer.base import BaseDriver, LoadBalancer, Algorithm, Member
 
 
 class MockLBDriver(BaseDriver):
     def __init__(self):
         self._TEST_BALANCER = LoadBalancer(
-            id='test_id', name='test_balancer', 
+            id='test_id', name='test_balancer',
             state=0,  # RUNNING
-            ip='1.2.3.4', 
-            port=80, driver=self, 
+            ip='1.2.3.4',
+            port=80, driver=self,
             extra={})
+        self._TEST_MEMBER = Member(
+            id='member_id', ip='12.3.4.5',
+            port=443, balancer=self._TEST_BALANCER,
+            extra=None)
 
     def get_balancer(self, balancer_id):
-        assert balancer_id == 'test_balancer'
+        assert balancer_id == 'test_id'
         return self._TEST_BALANCER
 
     def list_balancers(self):
@@ -50,6 +54,26 @@ class MockLBDriver(BaseDriver):
     def destroy_balancer(self, balancer):
         assert balancer == self._TEST_BALANCER
         return True
+
+    def balancer_attach_member(self, balancer, member):
+        assert isinstance(balancer, LoadBalancer)
+        assert isinstance(member, Member)
+        assert member.id is None
+        assert balancer.id == 'test_id'
+        return self._TEST_MEMBER
+
+    def balancer_detach_member(self, balancer, member):
+        assert isinstance(balancer, LoadBalancer)
+        assert isinstance(member, Member)
+        assert member.id is 'member_id'
+        assert balancer.id == 'test_id'
+        return True
+
+    def balancer_list_members(self, balancer):
+        assert isinstance(balancer, LoadBalancer)
+        assert balancer.id == 'test_id'
+        return [self._TEST_MEMBER]
+
 
 def get_mock_driver():
     return MockLBDriver()
@@ -88,6 +112,10 @@ class LibcloudLoadBalancerModuleTestCase(TestCase, LoaderModuleMockMixin):
     def _validate_balancer(self, balancer):
         self.assertEqual(balancer['name'], 'test_balancer')
 
+    def _validate_member(self, member):
+        self.assertEqual(member['id'], 'member_id')
+        self.assertEqual(member['ip'], '12.3.4.5')
+
     def test_list_balancers(self):
         balancers = libcloud_loadbalancer.list_balancers('test')
         self.assertEqual(len(balancers), 1)
@@ -103,5 +131,25 @@ class LibcloudLoadBalancerModuleTestCase(TestCase, LoaderModuleMockMixin):
         self._validate_balancer(balancer)
 
     def test_destroy_balancer(self):
-        result = libcloud_loadbalancer.destroy_balancer('test_balancer', 'test')
+        result = libcloud_loadbalancer.destroy_balancer('test_id', 'test')
         self.assertTrue(result)
+
+    def test_get_balancer_by_name(self):
+        balancer = libcloud_loadbalancer.get_balancer_by_name('test_balancer', 'test')
+        self._validate_balancer(balancer)
+
+    def test_get_balancer(self):
+        balancer = libcloud_loadbalancer.get_balancer('test_id', 'test')
+        self._validate_balancer(balancer)
+
+    def test_balancer_attach_member(self):
+        member = libcloud_loadbalancer.balancer_attach_member('test_id', '12.3.4.5', 443, 'test')
+        self._validate_member(member)
+
+    def test_balancer_detach_member(self):
+        result = libcloud_loadbalancer.balancer_detach_member('test_id', 'member_id', 'test')
+        self.assertTrue(result)
+
+    def test_list_balancer_members(self):
+        members = libcloud_loadbalancer.list_balancer_members('test_id', 'test')
+        self._validate_member(members[0])

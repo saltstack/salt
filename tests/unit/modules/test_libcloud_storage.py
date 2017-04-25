@@ -23,11 +23,11 @@ from libcloud.storage.base import Container, BaseDriver, Object
 class MockStorageDriver(BaseDriver):
     def __init__(self):
         self._TEST_CONTAINER = Container(name='test_container', extra={}, driver=self)
-        self._TEST_OBJECT = Object(name='test_obj', 
-                                   size=1234, 
-                                   hash='123sdfsdf', 
-                                   extra={}, 
-                                   meta_data={'key': 'value'}, 
+        self._TEST_OBJECT = Object(name='test_obj',
+                                   size=1234,
+                                   hash='123sdfsdf',
+                                   extra={},
+                                   meta_data={'key': 'value'},
                                    container=self._TEST_CONTAINER,
                                    driver=self)
 
