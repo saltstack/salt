@@ -98,3 +98,49 @@ def balancer_absent(name, profile):
         return state_result(result, "Deleted load balancer")
 
 
+def member_present(ip, port, balancer_id, profile):
+    '''
+    Ensure a load balancer member is present
+
+    :param ip: IP address for the new member
+    :type  ip: ``str``
+
+    :param port: Port for the new member
+    :type  port: ``int``
+
+    :param balancer_id: id of a load balancer you want to attach the member to
+    :type  balancer_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+    '''
+    existing_members = __salt__['libcloud_loadbalancer.list_balancer_members'](balancer_id, profile)
+    for member in existing_members:
+        if member['ip'] == ip and member['port'] == port:
+            return state_result(True, "Member already present")
+    member = __salt__['libcloud_loadbalancer.balancer_attach_member'](balancer_id, ip, port, profile)
+    return state_result(True, "Member added to balancer, id: {0}".format(member['id']))
+
+
+def member_absent(ip, port, balancer_id, profile):
+    '''
+    Ensure a load balancer member is absent, based on IP and Port
+
+    :param ip: IP address for the member
+    :type  ip: ``str``
+
+    :param port: Port for the member
+    :type  port: ``int``
+
+    :param balancer_id: id of a load balancer you want to detach the member from
+    :type  balancer_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+    '''
+    existing_members = __salt__['libcloud_loadbalancer.list_balancer_members'](balancer_id, profile)
+    for member in existing_members:
+        if member['ip'] == ip and member['port'] == port:
+            result = __salt__['libcloud_loadbalancer.balancer_detach_member'](balancer_id, member['id'], profile)
+            return state_result(result, "Member removed")
+    return state_result(True, "Member already absent")
