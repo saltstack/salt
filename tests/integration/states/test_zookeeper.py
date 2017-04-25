@@ -15,9 +15,16 @@ from tests.support.mixins import SaltReturnAssertsMixin
 # Import Salt Libs
 import salt.utils
 
+try:
+    import kazoo
+    HAS_KAZOO = True
+except ImportError:
+    HAS_KAZOO = False
+
 
 @destructiveTest
 @skipIf(not salt.utils.which('dockerd'), 'Docker not installed')
+@skipIf(not HAS_KAZOO, 'kazoo python library not installed')
 class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test zookeeper states
