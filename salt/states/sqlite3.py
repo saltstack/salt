@@ -394,7 +394,7 @@ def table_present(name, db, schema, force=False):
         if len(tables) == 1:
             sql = None
             if isinstance(schema, str):
-                sql = schema
+                sql = schema.strip()
             else:
                 sql = _get_sql_from_schema(name, schema)
 
