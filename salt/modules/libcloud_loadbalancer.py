@@ -76,7 +76,7 @@ def __init__(opts):
 def _algorithm_maps():
     return {
         'RANDOM': Algorithm.RANDOM,
-        'ROUND_ROBIN':Algorithm.ROUND_ROBIN,
+        'ROUND_ROBIN': Algorithm.ROUND_ROBIN,
         'LEAST_CONNECTIONS': Algorithm.LEAST_CONNECTIONS,
         'WEIGHTED_ROUND_ROBIN': Algorithm.WEIGHTED_ROUND_ROBIN,
         'WEIGHTED_LEAST_CONNECTIONS': Algorithm.WEIGHTED_LEAST_CONNECTIONS,
