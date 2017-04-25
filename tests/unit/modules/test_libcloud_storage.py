@@ -17,10 +17,39 @@ from tests.support.mock import (
 )
 import salt.modules.libcloud_storage as libcloud_storage
 
+from libcloud.storage.base import Container, BaseDriver, Object
 
-class MockStorageDriver(object):
+
+class MockStorageDriver(BaseDriver):
     def __init__(self):
-        pass
+        self._TEST_CONTAINER = Container(name='test_container', extra={}, driver=self)
+        self._TEST_OBJECT = Object(name='test_obj', 
+                                   size=1234, 
+                                   hash='123sdfsdf', 
+                                   extra={}, 
+                                   meta_data={'key': 'value'}, 
+                                   container=self._TEST_CONTAINER,
+                                   driver=self)
+
+    def list_containers(self):
+        return [self._TEST_CONTAINER]
+
+    def get_container(self, container_name):
+        assert container_name == 'test_container'
+        return self._TEST_CONTAINER
+
+    def list_container_objects(self, container):
+        assert container.name == 'test_container'
+        return [self._TEST_OBJECT]
+
+    def create_container(self, container_name):
+        assert container_name == 'new_test_container'
+        return self._TEST_CONTAINER
+
+    def get_container_object(self, container_name, object_name):
+        assert container_name == 'test_container'
+        assert object_name == 'test_obj'
+        return self._TEST_OBJECT
 
 
 def get_mock_driver():
@@ -56,3 +85,27 @@ class LibcloudStorageModuleTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.compat.pack_dunder', return_value=False) as dunder:
             libcloud_storage.__init__(None)
             dunder.assert_called_with('salt.modules.libcloud_storage')
+
+    def test_list_containers(self):
+        containers = libcloud_storage.list_containers('test')
+        self.assertEqual(len(containers), 1)
+        self.assertEqual(containers[0]['name'], 'test_container')
+
+    def test_list_container_objects(self):
+        objects = libcloud_storage.list_container_objects('test_container', 'test')
+        self.assertEqual(len(objects), 1)
+        self.assertEqual(objects[0]['name'], 'test_obj')
+        self.assertEqual(objects[0]['size'], 1234)
+
+    def test_create_container(self):
+        container = libcloud_storage.create_container('new_test_container', 'test')
+        self.assertEqual(container['name'], 'test_container')
+
+    def test_get_container(self):
+        container = libcloud_storage.get_container('test_container', 'test')
+        self.assertEqual(container['name'], 'test_container')
+
+    def test_get_container_object(self):
+        obj = libcloud_storage.get_container_object('test_container', 'test_obj', 'test')
+        self.assertEqual(obj['name'], 'test_obj')
+        self.assertEqual(obj['size'], 1234)
