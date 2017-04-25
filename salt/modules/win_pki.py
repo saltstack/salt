@@ -167,6 +167,8 @@ def get_cert_file(name, cert_format=_DEFAULT_FORMAT):
     :param str name: The filesystem path of the certificate file.
     :param str cert_format: The certificate format. Specify 'cer' for X.509, or
         'pfx' for PKCS #12.
+    :param str password: The password of the certificate. Only applicable to pfx
+        format.
 
     :return: A dictionary of the certificate thumbprints and properties.
     :rtype: dict
@@ -189,9 +191,18 @@ def get_cert_file(name, cert_format=_DEFAULT_FORMAT):
         return ret
 
     if cert_format == 'pfx':
-        cmd.append(r"Get-PfxCertificate -FilePath '{0}'".format(name))
-        cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
-                   'Thumbprint, Version')
+        if password:
+            cmd.append('$CertObject = New-Object')
+            cmd.append(' System.Security.Cryptography.X509Certificates.X509Certificate2;')
+            cmd.append(r" $CertObject.Import('{0}'".format(name))
+            cmd.append(",'{0}'".format(password))
+            cmd.append(",'DefaultKeySet') ; $CertObject")
+            cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
+                    'Thumbprint, Version')
+        else:
+            cmd.append(r"Get-PfxCertificate -FilePath '{0}'".format(name))
+            cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
+                    'Thumbprint, Version')
     else:
         cmd.append('$CertObject = New-Object')
         cmd.append(' System.Security.Cryptography.X509Certificates.X509Certificate2;')
@@ -258,7 +269,10 @@ def import_cert(name,
         _LOG.error('Unable to get cached copy of file: %s', name)
         return False
 
-    cert_props = get_cert_file(name=cached_source_path)
+    if password:
+        cert_props = get_cert_file(name=cached_source_path, password=password)
+    else:
+        cert_props = get_cert_file(name=cached_source_path)
 
     current_certs = get_certs(context=context, store=store)
 
