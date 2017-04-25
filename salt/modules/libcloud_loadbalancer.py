@@ -182,8 +182,8 @@ def destroy_balancer(balancer_id, profile):
 
         salt myminion libcloud_storage.destroy_balancer balancer_1 profile1
     '''
-    balancer = get_balancer(balancer_id, profile)
     conn = _get_driver(profile=profile)
+    balancer = conn.get_balancer(balancer_id)
     return conn.destroy_balancer(balancer)
 
 
