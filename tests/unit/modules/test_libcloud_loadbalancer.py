@@ -130,6 +130,10 @@ class LibcloudLoadBalancerModuleTestCase(TestCase, LoaderModuleMockMixin):
         balancer = libcloud_loadbalancer.create_balancer('new_test_balancer', 80, 'http', 'test')
         self._validate_balancer(balancer)
 
+    def test_create_balancer_custom_algorithm(self):
+        balancer = libcloud_loadbalancer.create_balancer('new_test_balancer', 80, 'http', 'test', algorithm='LEAST_CONNECTIONS')
+        self._validate_balancer(balancer)
+
     def test_destroy_balancer(self):
         result = libcloud_loadbalancer.destroy_balancer('test_id', 'test')
         self.assertTrue(result)
