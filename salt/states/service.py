@@ -349,6 +349,9 @@ def running(name,
     # Check if the service is available
     try:
         if not _available(name, ret):
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = 'Service {0} would have been started'.format(name)
             return ret
     except CommandExecutionError as exc:
         ret['result'] = False
