@@ -134,6 +134,7 @@ state modules
     layman
     ldap
     libcloud_dns
+    libcloud_storage
     linux_acl
     locale
     logadm
