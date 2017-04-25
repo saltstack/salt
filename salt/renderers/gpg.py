@@ -244,11 +244,16 @@ def _get_key_dir():
     '''
     return the location of the GPG key directory
     '''
+    gpg_keydir = None
     if 'config.get' in __salt__:
         gpg_keydir = __salt__['config.get']('gpg_keydir')
-    else:
+    if not gpg_keydir:
         gpg_keydir = __opts__.get('gpg_keydir')
-    return gpg_keydir or os.path.join(__opts__['config_dir'], 'gpgkeys')
+    if not gpg_keydir and 'config_dir' in __opts__:
+        gpg_keydir = os.path.join(__opts__['config_dir'], 'gpgkeys')
+    else:
+        gpg_keydir = os.path.join(os.path.split(__opts__['conf_file'])[0], 'gpgkeys')
+    return gpg_keydir
 
 
 def _decrypt_ciphertext(cipher, translate_newlines=False):
