@@ -268,6 +268,7 @@ def gen_locale(locale, **kwargs):
         return locale in __salt__['locale.list_avail']()
 
     locale_info = salt.utils.locales.split_locale(locale)
+    locale_search_str = '{0}_{1}'.format(locale_info['language'], locale_info['territory'])
 
     # if the charmap has not been supplied, normalize by appening it
     if not locale_info['charmap'] and not on_ubuntu:
@@ -284,9 +285,9 @@ def gen_locale(locale, **kwargs):
             search = '/usr/share/locale'
         else:
             search = '/usr/share/i18n/locales'
+
         try:
-            valid = "{0}_{1}".format(locale_info['language'],
-                                     locale_info['territory']) in os.listdir(search)
+            valid = locale_search_str in os.listdir(search)
         except OSError as ex:
             log.error(ex)
             raise CommandExecutionError(
@@ -315,7 +316,7 @@ def gen_locale(locale, **kwargs):
             append_if_not_found=True
         )
 
-    if salt.utils.which("locale-gen") is not None:
+    if salt.utils.which('locale-gen'):
         cmd = ['locale-gen']
         if on_gentoo:
             cmd.append('--generate')
@@ -323,15 +324,11 @@ def gen_locale(locale, **kwargs):
             cmd.append(salt.utils.locales.normalize_locale(locale))
         else:
             cmd.append(locale)
-    elif salt.utils.which("localedef") is not None:
-        cmd = ['localedef', '--force',
-               '-i', "{0}_{1}".format(locale_info['language'],
-                                      locale_info['territory']),
-               '-f', locale_info['codeset'],
-               '{0}_{1}.{2}'.format(locale_info['language'],
-                                    locale_info['territory'],
-                                    locale_info['codeset'])]
-        cmd.append(kwargs.get('verbose', False) and '--verbose' or '--quiet')
+    elif salt.utils.which('localedef'):
+        cmd = ['localedef', '--force', '-i', locale_search_str, '-f', locale_info['codeset'],
+               '{0}.{1}'.format(locale_search_str,
+                                locale_info['codeset']),
+               kwargs.get('verbose', False) and '--verbose' or '--quiet']
     else:
         raise CommandExecutionError(
             'Command "locale-gen" or "localedef" was not found on this system.')
