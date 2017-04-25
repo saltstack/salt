@@ -165,25 +165,25 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
         p = dimensiondata.get_configured_provider()
         self.assertNotEqual(p, None)
 
-    PRIVATE_IPS = ['0.0.0.0', '1.1.1.1', '2.2.2.2']
-
-    @patch('salt.cloud.clouds.dimensiondata.show_instance',
-           MagicMock(return_value={'state': True,
-                                   'name': 'foo',
-                                   'public_ips': [],
-                                   'private_ips': PRIVATE_IPS}))
-    @patch('salt.cloud.clouds.dimensiondata.preferred_ip', _preferred_ip(PRIVATE_IPS, ['0.0.0.0']))
-    @patch('salt.cloud.clouds.dimensiondata.ssh_interface', MagicMock(return_value='private_ips'))
     def test_query_node_data_filter_preferred_ip_addresses(self):
         '''
         Test if query node data is filtering out unpreferred IP addresses.
         '''
-        dimensiondata.NodeState = MagicMock()
-        dimensiondata.NodeState.RUNNING = True
-        dimensiondata.__opts__ = {}
-
+        zero_ip = '0.0.0.0'
+        private_ips = [zero_ip, '1.1.1.1', '2.2.2.2']
         vm = {'name': None}
         data = MagicMock()
         data.public_ips = []
+        dimensiondata.NodeState = MagicMock()  # pylint: disable=blacklisted-unmocked-patching
+        dimensiondata.NodeState.RUNNING = True
 
-        assert dimensiondata._query_node_data(vm, data).public_ips == ['0.0.0.0']
+        with patch('salt.cloud.clouds.dimensiondata.show_instance',
+                   MagicMock(return_value={'state': True,
+                                           'name': 'foo',
+                                           'public_ips': [],
+                                           'private_ips': private_ips})):
+            with patch('salt.cloud.clouds.dimensiondata.preferred_ip',
+                       _preferred_ip(private_ips, [zero_ip])):
+                with patch('salt.cloud.clouds.dimensiondata.ssh_interface',
+                           MagicMock(return_value='private_ips')):
+                    self.assertEqual(dimensiondata._query_node_data(vm, data).public_ips, [zero_ip])
