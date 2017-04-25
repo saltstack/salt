@@ -280,9 +280,9 @@ def balancer_attach_member(balancer_id, ip, port, profile, extra=None):
 
         salt myminion libcloud_storage.balancer_attach_member balancer123 1.2.3.4 80 profile1
     '''
-    member = Member(id=None, ip=ip, port=port, balancer=None, extra=extra)
-    balancer = get_balancer(balancer_id, profile)
     conn = _get_driver(profile=profile)
+    member = Member(id=None, ip=ip, port=port, balancer=None, extra=extra)
+    balancer = conn.get_balancer(balancer_id)
     member_saved = conn.balancer_attach_member(balancer, member)
     return _simple_member(member_saved)
 
@@ -309,7 +309,9 @@ def balancer_detach_member(balancer_id, member_id, profile):
 
         salt myminion libcloud_storage.balancer_detach_member balancer123 member123 profile1
     '''
-    members = list_balancer_members(balancer_id, profile)
+    conn = _get_driver(profile=profile)
+    balancer = conn.get_balancer(balancer_id)
+    members = conn.balancer_list_members(balancer=balancer)
     match = [member for member in members if member.id == member_id]
     if len(match) > 1:
         raise ValueError("Ambiguous argument, found mulitple records")
@@ -317,8 +319,6 @@ def balancer_detach_member(balancer_id, member_id, profile):
         raise ValueError("Bad argument, found no records")
     else:
         member = match[0]
-    balancer = get_balancer(balancer_id, profile)
-    conn = _get_driver(profile=profile)
     return conn.balancer_detach_member(balancer=balancer, member=member)
 
 
@@ -338,8 +338,8 @@ def list_balancer_members(balancer_id, profile):
 
         salt myminion libcloud_storage.list_balancer_members balancer123 profile1
     '''
-    balancer = get_balancer(balancer_id, profile)
     conn = _get_driver(profile=profile)
+    balancer = conn.get_balancer(balancer_id)
     members = conn.balancer_list_members(balancer=balancer)
     return [_simple_member(member) for member in members]
 
