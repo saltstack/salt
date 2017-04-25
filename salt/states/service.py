@@ -351,7 +351,7 @@ def running(name,
         if not _available(name, ret):
             if __opts__['test']:
                 ret['result'] = None
-                ret['comment'] = 'Service {0} would have been started'.format(name)
+                ret['comment'] = 'Service {0} not present; if created in this state run, it would have been started'.format(name)
             return ret
     except CommandExecutionError as exc:
         ret['result'] = False
@@ -486,9 +486,13 @@ def dead(name,
     # Check if the service is available
     try:
         if not _available(name, ret):
-            # A non-available service is OK here, don't let the state fail
-            # because of it.
-            ret['result'] = True
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = 'Service {0} not present; if created in this state run, it would have been stopped'.format(name)
+            else:
+                # A non-available service is OK here, don't let the state fail
+                # because of it.
+                ret['result'] = True
             return ret
     except CommandExecutionError as exc:
         ret['result'] = False
