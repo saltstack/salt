@@ -28,9 +28,9 @@ class MockWin32Gui(object):
         pass
 
     @staticmethod
-    def SendMessageTimeout(*args):
+    def SendMessage(*args):
         '''
-            Mock method for SendMessageTimeOut
+            Mock method for SendMessage
         '''
         return [args[0]]
 
