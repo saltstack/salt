@@ -7,10 +7,12 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase
-from salt.cloud.clouds import nova
-from salttesting.mock import MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 from tests.unit.cloud.clouds import _preferred_ip
+
+# Import Salt libs
+from salt.cloud.clouds import nova
 
 
 class NovaTestCase(TestCase):
