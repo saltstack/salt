@@ -40,7 +40,7 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 log = logging.getLogger(__name__)
 
 # Import third party libs
-REQUIRED_LIBCLOUD_VERSION = '0.21.0'
+REQUIRED_LIBCLOUD_VERSION = '2.0.0'
 try:
     #pylint: disable=unused-import
     import libcloud
@@ -114,7 +114,7 @@ def list_zones(profile):
         salt myminion libcloud_dns.list_zones profile1
     '''
     conn = _get_driver(profile=profile)
-    return conn.list_zones()
+    return [_simple_zone(zone) for zone in conn.list_zones()]
 
 
 def list_records(zone_id, profile):
@@ -155,7 +155,7 @@ def get_zone(zone_id, profile):
         salt myminion libcloud_dns.get_zone google.com profile1
     '''
     conn = _get_driver(profile=profile)
-    return conn.get_zone(zone_id)
+    return _simple_zone(conn.get_zone(zone_id))
 
 
 def get_record(zone_id, record_id, profile):
@@ -204,7 +204,8 @@ def create_zone(domain, profile, type='master', ttl=None):
         salt myminion libcloud_dns.create_zone google.com profile1
     '''
     conn = _get_driver(profile=profile)
-    return conn.create_record(domain, type=type, ttl=ttl)
+    zone = conn.create_record(domain, type=type, ttl=ttl)
+    return _simple_zone(zone)
 
 
 def update_zone(zone_id, domain, profile, type='master', ttl=None):
@@ -357,3 +358,12 @@ def _string_to_record_type(string):
     string = string.upper()
     record_type = getattr(RecordType, string)
     return record_type
+
+def _simple_zone(zone):
+    return {
+        'id': zone.id, 
+        'domain': zone.domain, 
+        'type': zone.type, 
+        'ttl': zone.ttl,
+        'extra': zone.extra
+    }
