@@ -2939,7 +2939,7 @@ def _get_patches(installed_only=False):
     '''
     patches = {}
 
-    cmd = [_yum(), '--quiet', 'updateinfo', 'list', 'security', 'all']
+    cmd = [_yum(), '--quiet', 'updateinfo', 'list', 'all']
     ret = __salt__['cmd.run_stdout'](
         cmd,
         python_shell=False
