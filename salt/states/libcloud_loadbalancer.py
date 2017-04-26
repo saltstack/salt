@@ -54,7 +54,7 @@ def __init__(opts):
 def state_result(result, message, name, changes=None):
     if changes is None:
         changes = {}
-    return {'result': result, 
+    return {'result': result,
             'comment': message,
             'name': name,
             'changes': changes}
@@ -92,7 +92,7 @@ def balancer_present(name, port, protocol, profile, algorithm=None, members=None
         if members is not None:
             starting_members = []
             for m in members:
-                starting_members.append(Member(id=None, ip=m['ip'], port=m['port']))
+                starting_members.append({'ip': m['ip'], 'port': m['port']})
         balancer = __salt__['libcloud_loadbalancer.create_balancer'](
             name, port, protocol,
             profile, algorithm=algorithm,

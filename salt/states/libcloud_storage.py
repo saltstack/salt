@@ -84,7 +84,7 @@ def __init__(opts):
 
 
 def state_result(result, message, name, changes):
-    return {'result': result, 
+    return {'result': result,
             'comment': message,
             'name': name,
             'changes': changes}

@@ -183,12 +183,17 @@ def create_balancer(name, port, protocol, profile, algorithm=None, members=None,
     else:
         if isinstance(algorithm, six.string_types):
             algorithm = _algorithm_maps()[algorithm]
-    if members is None:
-        members = []
+    starting_members = []
+    if members is not None:
+        if isinstance(members, list):
+            for m in members:
+                starting_members.append(Member(id=None, ip=m['ip'], port=m['port']))
+        else:
+            raise ValueError("members must be of type list")
 
     _sanitize_kwargs(libcloud_kwargs)
     conn = _get_driver(profile=profile)
-    balancer = conn.create_balancer(name, port, protocol, algorithm, members, **libcloud_kwargs)
+    balancer = conn.create_balancer(name, port, protocol, algorithm, starting_members, **libcloud_kwargs)
     return _simple_balancer(balancer)
 
 
