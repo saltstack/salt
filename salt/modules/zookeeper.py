@@ -7,6 +7,8 @@ Zookeeper Module
 :platform:      all
 :depends:       kazoo
 
+.. versionadded:: Oxygen
+
 Configuration
 =============
 
@@ -513,4 +515,39 @@ def delete(path, version=-1, recursive=False, profile=None, hosts=None, scheme=N
 
 def make_digest_acl(username, password, read=False, write=False, create=False, delete=False, admin=False,
                     allperms=False):
+    '''
+    Generate acl object
+
+    .. note:: This is heavily used in the zookeeper state and probably is not useful as a cli module
+
+    username
+        username of acl
+
+    password
+        plain text password of acl
+
+    read
+        read acl
+
+    write
+        write acl
+
+    create
+        create acl
+
+    delete
+        delete acl
+
+    admin
+        admin acl
+
+    allperms
+        set all other acls to True
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minion1 zookeeper.make_digest_acl username=daniel password=mypass allperms=True
+    '''
     return kazoo.security.make_digest_acl(username, password, read, write, create, delete, admin, allperms)
