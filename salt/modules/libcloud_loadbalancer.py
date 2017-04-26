@@ -92,6 +92,8 @@ def _get_driver(profile):
     del args['driver']
     args['key'] = config.get('key')
     args['secret'] = config.get('secret', None)
+    if args['secret'] is None:
+        del args['secret']
     args['secure'] = config.get('secure', True)
     args['host'] = config.get('host', None)
     args['port'] = config.get('port', None)

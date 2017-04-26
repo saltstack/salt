@@ -29,6 +29,19 @@ Clouds include Amazon ELB, ALB, Google, Aliyun, CloudStack, Softlayer
               key: 12345
               secret: mysecret
 
+Example:
+
+Using States to deploy a load balancer with extended arguments to specify region
+
+.. code-block:: yaml
+    lb_test:
+        libcloud_loadbalancer.balancer_present:
+            - name: example
+            - port: 80
+            - protocol: http
+            - profile: google
+            - ex_region: us-east1
+
 :depends: apache-libcloud
 '''
 
@@ -60,7 +73,7 @@ def state_result(result, message, name, changes=None):
             'changes': changes}
 
 
-def balancer_present(name, port, protocol, profile, algorithm=None, members=None):
+def balancer_present(name, port, protocol, profile, algorithm=None, members=None, **libcloud_kwargs):
     '''
     Ensures a load balancer is present.
 
@@ -96,11 +109,12 @@ def balancer_present(name, port, protocol, profile, algorithm=None, members=None
         balancer = __salt__['libcloud_loadbalancer.create_balancer'](
             name, port, protocol,
             profile, algorithm=algorithm,
-            members=starting_members)
+            members=starting_members,
+            **libcloud_kwargs)
         return state_result(True, "Created new load balancer", name, balancer)
 
 
-def balancer_absent(name, profile):
+def balancer_absent(name, profile, **libcloud_kwargs):
     '''
     Ensures a load balancer is absent.
 
@@ -115,11 +129,11 @@ def balancer_absent(name, profile):
     if len(match) == 0:
         return state_result(True, "Balancer already absent", name)
     else:
-        result = __salt__['libcloud_loadbalancer.delete_balancer'](match['id'], profile)
+        result = __salt__['libcloud_loadbalancer.destroy_balancer'](match[0]['id'], profile, **libcloud_kwargs)
         return state_result(result, "Deleted load balancer", name)
 
 
-def member_present(ip, port, balancer_id, profile):
+def member_present(ip, port, balancer_id, profile, **libcloud_kwargs):
     '''
     Ensure a load balancer member is present
 
@@ -139,11 +153,11 @@ def member_present(ip, port, balancer_id, profile):
     for member in existing_members:
         if member['ip'] == ip and member['port'] == port:
             return state_result(True, "Member already present", balancer_id)
-    member = __salt__['libcloud_loadbalancer.balancer_attach_member'](balancer_id, ip, port, profile)
+    member = __salt__['libcloud_loadbalancer.balancer_attach_member'](balancer_id, ip, port, profile, **libcloud_kwargs)
     return state_result(True, "Member added to balancer, id: {0}".format(member['id']), balancer_id, member)
 
 
-def member_absent(ip, port, balancer_id, profile):
+def member_absent(ip, port, balancer_id, profile, **libcloud_kwargs):
     '''
     Ensure a load balancer member is absent, based on IP and Port
 
@@ -162,6 +176,6 @@ def member_absent(ip, port, balancer_id, profile):
     existing_members = __salt__['libcloud_loadbalancer.list_balancer_members'](balancer_id, profile)
     for member in existing_members:
         if member['ip'] == ip and member['port'] == port:
-            result = __salt__['libcloud_loadbalancer.balancer_detach_member'](balancer_id, member['id'], profile)
+            result = __salt__['libcloud_loadbalancer.balancer_detach_member'](balancer_id, member['id'], profile, **libcloud_kwargs)
             return state_result(result, "Member removed", balancer_id)
     return state_result(True, "Member already absent", balancer_id)

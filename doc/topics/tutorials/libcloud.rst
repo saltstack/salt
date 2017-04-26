@@ -158,29 +158,42 @@ This could be combined with a multi-cloud load balancer deployment,
 
     webserver:
       libcloud_dns.zone_present:
-        name: mywebsite.com
-        profile: godaddy
+        - name: mywebsite.com
+        - profile: godaddy
         ...
       libcloud_loadbalancer.balancer_present:
-        name: web_main
-        port: 80
-        protocol: http
-        members:
+        - name: web_main
+        - port: 80
+        - protocol: http
+        - members:
             - ip: 1.2.4.5
               port: 80
             - ip: 2.4.5.6
               port: 80
-        profile: google_gce
+        - profile: google_gce
       libcloud_loadbalancer.balancer_present:
-        name: web_main
-        port: 80
-        protocol: http
-        members:
+        - name: web_main
+        - port: 80
+        - protocol: http
+        - members:
             - ip: 1.2.4.5
               port: 80
             - ip: 2.4.5.6
               port: 80
-        profile: amazon_elb
+        - profile: amazon_elb
+
+Extended parameters can be passed to the specific cloud, for example you can specify the region with the Google Cloud API, because
+`create_balancer` can accept a `ex_region` argument. Adding this argument to the state will pass the additional command to the driver.
+
+.. code-block:: yaml
+
+    lb_test:
+        libcloud_loadbalancer.balancer_absent:
+            - name: example
+            - port: 80
+            - protocol: http
+            - profile: google
+            - ex_region: us-east1
 
 Accessing custom arguments in execution modules
 ===============================================
@@ -208,3 +221,19 @@ accepts a list of keyword arguments to pass onto the driver method, for example,
 
     $ salt myminion libcloud_storage.extra ex_get_permissions google container_name=my_container object_name=me.jpg --out=yaml
 
+Example profiles
+================
+
+Google Cloud
+~~~~~~~~~~~~
+
+Using Service Accounts with GCE, you can provide a path to the JSON file and the project name in the parameters.
+
+.. code-block:: yaml
+
+    google:
+        driver: gce
+        user_id: 234234-compute@developer.gserviceaccount.com
+        key: /path/to/service_account_download.json
+        auth_type: SA
+        project: project-name
