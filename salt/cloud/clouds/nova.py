@@ -69,8 +69,8 @@ option in the provider config.
 Note: by default the nova driver will attempt to verify its connection
 utilizing the system certificates. If you need to verify against another bundle
 of CA certificates or want to skip verification altogether you will need to
-specify the verify option. You can specify True or False to verify (or not) 
-against system certificates, a path to a bundle or CA certs to check against, or 
+specify the verify option. You can specify True or False to verify (or not)
+against system certificates, a path to a bundle or CA certs to check against, or
 None to allow keystoneauth to search for the certificates on its own.(defaults to True)
 
 For local installations that only use private IP address ranges, the
