@@ -73,7 +73,7 @@ def __init__(opts):
 def _get_driver(profile):
     config = __salt__['config.option']('libcloud_dns')[profile]
     cls = get_driver(config['driver'])
-    args = config
+    args = config.copy()
     del args['driver']
     args['key'] = config.get('key')
     args['secret'] = config.get('secret', None)
