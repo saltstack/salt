@@ -66,7 +66,7 @@ def __init__(opts):
 def state_result(result, message, name, changes=None):
     if changes is None:
         changes = {}
-    return {'result': result, 
+    return {'result': result,
             'comment': message,
             'name': name,
             'changes': changes}
