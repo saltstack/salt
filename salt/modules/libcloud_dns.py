@@ -393,9 +393,9 @@ def _string_to_record_type(string):
 
 def _simple_zone(zone):
     return {
-        'id': zone.id, 
-        'domain': zone.domain, 
-        'type': zone.type, 
+        'id': zone.id,
+        'domain': zone.domain,
+        'type': zone.type,
         'ttl': zone.ttl,
         'extra': zone.extra
     }
@@ -403,11 +403,11 @@ def _simple_zone(zone):
 
 def _simple_record(record):
     return {
-        'id': record.id, 
-        'name': record.name, 
-        'type': record.type, 
-        'data': record.data, 
-        'zone': _simple_zone(record.zone), 
+        'id': record.id,
+        'name': record.name,
+        'type': record.type,
+        'data': record.data,
+        'zone': _simple_zone(record.zone),
         'ttl': record.ttl,
         'extra': record.extra
     }
