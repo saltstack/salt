@@ -29,6 +29,9 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
     If merge_lists=True, will aggregate list object types instead of replace.
     This behavior is only activated when recursive_update=True. By default
     merge_lists=False.
+
+    .. versionchanged: 2016.11.6
+        When merging lists, duplicate values are removed.
     '''
     if (not isinstance(dest, collections.Mapping)) \
             or (not isinstance(upd, collections.Mapping)):
@@ -50,7 +53,7 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
             elif isinstance(dest_subkey, list) \
                      and isinstance(val, list):
                 if merge_lists:
-                    dest[key] = dest.get(key, []) + val
+                    dest[key] = list(set(dest_subkey).union(val))
                 else:
                     dest[key] = upd[key]
             else:
