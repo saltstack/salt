@@ -106,7 +106,7 @@ def container_present(name, profile):
         return state_result(True, "Container already exists", name, {})
     else:
         result = __salt__['libcloud_storage.create_container'](name, profile)
-        return state_result(result, "Created new container", name, {})
+        return state_result(True, "Created new container", name, result)
 
 
 def container_absent(name, profile):
