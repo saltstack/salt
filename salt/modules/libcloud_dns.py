@@ -117,7 +117,7 @@ def list_zones(profile):
     return [_simple_zone(zone) for zone in conn.list_zones()]
 
 
-def list_records(zone_id, profile):
+def list_records(zone_id, profile, type=None):
     '''
     List records for the given zone_id on the given profile
 
@@ -127,6 +127,9 @@ def list_records(zone_id, profile):
     :param profile: The profile key
     :type  profile: ``str``
 
+    :param type: The record type, e.g. A, NS
+    :type  type: ``str``
+
     CLI Example:
 
     .. code-block:: bash
@@ -135,7 +138,10 @@ def list_records(zone_id, profile):
     '''
     conn = _get_driver(profile=profile)
     zone = conn.get_zone(zone_id)
-    return conn.list_records(zone)
+    if type is not None:
+        return [_simple_record(record) for record in conn.list_records(zone) if record.type == type]
+    else:
+        return [_simple_record(record) for record in conn.list_records(zone)]
 
 
 def get_zone(zone_id, profile):
@@ -178,7 +184,7 @@ def get_record(zone_id, record_id, profile):
         salt myminion libcloud_dns.get_record google.com www profile1
     '''
     conn = _get_driver(profile=profile)
-    return conn.get_record(zone_id, record_id)
+    return _simple_record(conn.get_record(zone_id, record_id))
 
 
 def create_zone(domain, profile, type='master', ttl=None):
@@ -235,7 +241,7 @@ def update_zone(zone_id, domain, profile, type='master', ttl=None):
     '''
     conn = _get_driver(profile=profile)
     zone = conn.get_zone(zone_id)
-    return conn.update_zone(zone=zone, domain=domain, type=type, ttl=ttl)
+    return _simple_zone(conn.update_zone(zone=zone, domain=domain, type=type, ttl=ttl))
 
 
 def create_record(name, zone_id, type, data, profile):
@@ -269,7 +275,7 @@ def create_record(name, zone_id, type, data, profile):
     conn = _get_driver(profile=profile)
     record_type = _string_to_record_type(type)
     zone = conn.get_zone(zone_id)
-    return conn.create_record(name, zone, record_type, data)
+    return _simple_record(conn.create_record(name, zone, record_type, data))
 
 
 def delete_zone(zone_id, profile):
@@ -359,6 +365,7 @@ def _string_to_record_type(string):
     record_type = getattr(RecordType, string)
     return record_type
 
+
 def _simple_zone(zone):
     return {
         'id': zone.id, 
@@ -366,4 +373,16 @@ def _simple_zone(zone):
         'type': zone.type, 
         'ttl': zone.ttl,
         'extra': zone.extra
+    }
+
+
+def _simple_record(record):
+    return {
+        'id': record.id, 
+        'name': record.name, 
+        'type': record.type, 
+        'data': record.data, 
+        'zone': _simple_zone(record.zone), 
+        'ttl': record.ttl,
+        'extra': record.extra
     }
