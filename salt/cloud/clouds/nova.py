@@ -309,9 +309,9 @@ def get_conn():
     if 'password' in vm_:
         kwargs['password'] = vm_['password']
 
-    if 'verify' in vm_ and vm_['use_keystoneauth'] == True:
+    if 'verify' in vm_ and vm_['use_keystoneauth'] is True:
         kwargs['verify'] = vm_['verify']
-    elif 'verify' in vm_ and vm_['use_keystoneauth'] == False:
+    elif 'verify' in vm_ and vm_['use_keystoneauth'] is False:
         log.warning('SSL Certificate verification option is specified but use_keystoneauth is False or not present')
     conn = nova.SaltNova(**kwargs)
 
