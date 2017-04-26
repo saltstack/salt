@@ -351,6 +351,31 @@ def get_bind_data(zone_id, profile):
     return conn.export_zone_to_bind_format(zone)
 
 
+def extra(method, profile, **libcloud_kwargs):
+    '''
+    Call an extended method on the driver
+
+    :param method: Driver's method name
+    :type  method: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's delete_container method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_dns.extra ex_get_permissions google container_name=my_container object_name=me.jpg --out=yaml
+    '''
+    _sanitize_kwargs(libcloud_kwargs)
+    conn = _get_driver(profile=profile)
+    connection_method = getattr(conn, method)
+    return connection_method(**libcloud_kwargs)
+
+
 def _string_to_record_type(string):
     '''
     Return a string representation of a DNS record type to a

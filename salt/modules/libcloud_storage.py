@@ -394,6 +394,31 @@ def delete_container(container_name, profile, **libcloud_kwargs):
     return conn.delete_container(container, **libcloud_kwargs)
 
 
+def extra(method, profile, **libcloud_kwargs):
+    '''
+    Call an extended method on the driver
+
+    :param method: Driver's method name
+    :type  method: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's delete_container method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_storage.extra ex_get_permissions google container_name=my_container object_name=me.jpg --out=yaml
+    '''
+    _sanitize_kwargs(libcloud_kwargs)
+    conn = _get_driver(profile=profile)
+    connection_method = getattr(conn, method)
+    return connection_method(**libcloud_kwargs)
+
+
 def _sanitize_kwargs(kwargs):
     '''
     Remove internal arguments from the command line keyword listing
