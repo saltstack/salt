@@ -171,9 +171,9 @@ def create_container(container_name, profile, **libcloud_kwargs):
     _sanitize_kwargs(libcloud_kwargs)
     container = conn.create_container(container_name, **libcloud_kwargs)
     return {
-            'name': container.name,
-            'extra': container.extra
-            }
+        'name': container.name,
+        'extra': container.extra
+        }
 
 
 def get_container(container_name, profile, **libcloud_kwargs):
@@ -199,9 +199,9 @@ def get_container(container_name, profile, **libcloud_kwargs):
     _sanitize_kwargs(libcloud_kwargs)
     container = conn.get_container(container_name, **libcloud_kwargs)
     return {
-            'name': container.name,
-            'extra': container.extra
-            }
+        'name': container.name,
+        'extra': container.extra
+        }
 
 
 def get_container_object(container_name, object_name, profile, **libcloud_kwargs):
@@ -286,7 +286,7 @@ def download_object(container_name, object_name, destination_path, profile,
 
 
 def upload_object(file_path, container_name, object_name, profile, extra=None,
-                      verify_hash=True, headers=None, **libcloud_kwargs):
+                  verify_hash=True, headers=None, **libcloud_kwargs):
     '''
     Upload an object currently located on a disk.
 
