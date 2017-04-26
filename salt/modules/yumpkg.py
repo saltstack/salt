@@ -18,6 +18,7 @@ Support for YUM/DNF
 from __future__ import absolute_import
 import contextlib
 import copy
+import datetime
 import fnmatch
 import itertools
 import logging
