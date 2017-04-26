@@ -160,7 +160,7 @@ def get_certs(context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
     return ret
 
 
-def get_cert_file(name, cert_format=_DEFAULT_FORMAT):
+def get_cert_file(name, cert_format=_DEFAULT_FORMAT, password=''):
     '''
     Get the details of the certificate file.
 
