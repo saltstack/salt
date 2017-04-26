@@ -1795,6 +1795,13 @@ class Minion(MinionBase):
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
+    def beacons_refresh(self):
+        '''
+        Refresh the functions and returners.
+        '''
+        log.debug('Refreshing beacons.')
+        self.beacons = salt.beacons.Beacon(self.opts, self.functions)
+
     # TODO: only allow one future in flight at a time?
     @tornado.gen.coroutine
     def pillar_refresh(self, force_refresh=False):
@@ -1957,6 +1964,8 @@ class Minion(MinionBase):
             yield self.pillar_refresh(
                 force_refresh=data.get('force_refresh', False)
             )
+        elif tag.startswith('beacons_refresh'):
+            self.beacons_refresh()
         elif tag.startswith('manage_schedule'):
             self.manage_schedule(tag, data)
         elif tag.startswith('manage_beacons'):
