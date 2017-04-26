@@ -14,12 +14,16 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 import salt.states.libcloud_dns as libcloud_dns
+from salt.modules.libcloud_dns import _simple_record, _simple_zone
 
 
 class TestZone(object):
     def __init__(self, id, domain):
         self.id = id
+        self.type = 'master'
+        self.ttl = 4400
         self.domain = domain
+        self.extra = {}
 
 
 class TestRecord(object):
@@ -27,7 +31,10 @@ class TestRecord(object):
         self.id = id
         self.name = name
         self.type = type
+        self.ttl = 4400
         self.data = data
+        self.zone = TestZone('test', 'domain')
+        self.extra = {}
 
 
 class MockDNSDriver(object):
@@ -40,12 +47,12 @@ def get_mock_driver():
 
 
 test_records = {
-    'zone1': [TestRecord(0, 'www', 'A', '127.0.0.1')]
+    'zone1': [_simple_record(TestRecord(0, 'www', 'A', '127.0.0.1'))]
 }
 
 
 def list_zones(profile):
-    return [TestZone('zone1', 'test.com')]
+    return [_simple_zone(TestZone('zone1', 'test.com'))]
 
 
 def list_records(zone_id, profile):
