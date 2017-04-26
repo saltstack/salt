@@ -51,8 +51,13 @@ def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
 
 
-def state_result(result, message):
-    return {'result': result, 'comment': message}
+def state_result(result, message, name, changes=None):
+    if changes is None:
+        changes = {}
+    return {'result': result, 
+            'comment': message,
+            'name': name,
+            'changes': changes}
 
 
 def balancer_present(name, port, protocol, profile, algorithm=None):
@@ -78,10 +83,10 @@ def balancer_present(name, port, protocol, profile, algorithm=None):
     balancers = __salt__['libcloud_loadbalancer.list_balancers'](profile)
     match = [z for z in balancers if z['name'] == name]
     if len(match) > 0:
-        return state_result(True, "Balancer already exists")
+        return state_result(True, "Balancer already exists", name)
     else:
-        result = __salt__['libcloud_loadbalancer.create_balancer'](name, port, protocol, profile, algorithm=algorithm)
-        return state_result(result, "Created new load balancer")
+        balancer = __salt__['libcloud_loadbalancer.create_balancer'](name, port, protocol, profile, algorithm=algorithm)
+        return state_result(True, "Created new load balancer", name, balancer)
 
 
 def balancer_absent(name, profile):
@@ -97,10 +102,10 @@ def balancer_absent(name, profile):
     balancers = __salt__['libcloud_loadbalancer.list_balancers'](profile)
     match = [z for z in balancers if z['name'] == name]
     if len(match) == 0:
-        return state_result(True, "Balancer already absent")
+        return state_result(True, "Balancer already absent", name)
     else:
         result = __salt__['libcloud_loadbalancer.delete_balancer'](match['id'], profile)
-        return state_result(result, "Deleted load balancer")
+        return state_result(result, "Deleted load balancer", name)
 
 
 def member_present(ip, port, balancer_id, profile):
@@ -122,9 +127,9 @@ def member_present(ip, port, balancer_id, profile):
     existing_members = __salt__['libcloud_loadbalancer.list_balancer_members'](balancer_id, profile)
     for member in existing_members:
         if member['ip'] == ip and member['port'] == port:
-            return state_result(True, "Member already present")
+            return state_result(True, "Member already present", balancer_id)
     member = __salt__['libcloud_loadbalancer.balancer_attach_member'](balancer_id, ip, port, profile)
-    return state_result(True, "Member added to balancer, id: {0}".format(member['id']))
+    return state_result(True, "Member added to balancer, id: {0}".format(member['id']), balancer_id, member)
 
 
 def member_absent(ip, port, balancer_id, profile):
@@ -147,5 +152,5 @@ def member_absent(ip, port, balancer_id, profile):
     for member in existing_members:
         if member['ip'] == ip and member['port'] == port:
             result = __salt__['libcloud_loadbalancer.balancer_detach_member'](balancer_id, member['id'], profile)
-            return state_result(result, "Member removed")
-    return state_result(True, "Member already absent")
+            return state_result(result, "Member removed", balancer_id)
+    return state_result(True, "Member already absent", balancer_id)
