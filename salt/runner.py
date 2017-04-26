@@ -74,7 +74,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
         reserved_kwargs = dict([(i, low.pop(i)) for i in [
             'username', 'password', 'eauth', 'token', 'client', 'user', 'key',
-            '__current_eauth_groups','__current_eauth_user',
+            '__current_eauth_groups', '__current_eauth_user',
         ] if i in low])
 
         # Run name=value args through parse_input. We don't need to run kwargs
