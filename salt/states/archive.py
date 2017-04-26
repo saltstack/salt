@@ -208,7 +208,6 @@ def extracted(name,
                 - source: salt://apps/src/myapp-16.2.4.tar.gz
                 - user: www
                 - group: www
-                - tar_options: --strip-components=1
 
         With the rewrite for 2016.11.0, these workarounds are no longer
         necessary. ``if_missing`` is still a supported argument, but it is no
@@ -413,8 +412,6 @@ def extracted(name,
         ``tar``/``unzip`` implementation on the minion's OS.
 
         .. versionadded:: 2016.11.0
-            The ``tar_options`` and ``zip_options`` parameters have been
-            deprecated in favor of a single argument name.
         .. versionchanged:: 2015.8.11,2016.3.2
             XZ-compressed tar archives no longer require ``J`` to manually be
             set in the ``options``, they are now detected automatically and
@@ -425,15 +422,6 @@ def extracted(name,
         .. note::
             For tar archives, main operators like ``-x``, ``--extract``,
             ``--get``, ``-c`` and ``-f``/``--file`` should *not* be used here.
-
-    tar_options
-        .. deprecated:: 2016.11.0
-            Use ``options`` instead.
-
-    zip_options
-        .. versionadded:: 2016.3.1
-        .. deprecated:: 2016.11.0
-            Use ``options`` instead.
 
     list_options
         **For tar archives only.** This state uses :py:func:`archive.list
@@ -760,21 +748,6 @@ def extracted(name,
             )
         )
         return ret
-
-    tar_options = kwargs.pop('tar_options', None)
-    zip_options = kwargs.pop('zip_options', None)
-    if tar_options:
-        msg = ('The \'tar_options\' argument has been deprecated, please use '
-               '\'options\' instead.')
-        salt.utils.warn_until('Oxygen', msg)
-        ret.setdefault('warnings', []).append(msg)
-        options = tar_options
-    elif zip_options:
-        msg = ('The \'zip_options\' argument has been deprecated, please use '
-               '\'options\' instead.')
-        salt.utils.warn_until('Oxygen', msg)
-        ret.setdefault('warnings', []).append(msg)
-        options = zip_options
 
     if options is not None and not isinstance(options, six.string_types):
         options = str(options)

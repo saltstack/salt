@@ -255,7 +255,7 @@ NOTSET = object()
 
 # Define the module's virtual name and alias
 __virtualname__ = 'docker'
-__virtual_aliases__ = ('dockerng',)
+__virtual_aliases__ = ('dockerng', 'moby')
 
 
 def __virtual__():
