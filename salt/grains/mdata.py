@@ -128,6 +128,7 @@ def _sdc_mdata(mdata_list=None, mdata_get=None):
 def _legacy_grains(grains):
     '''
     Grains for backwards compatibility
+    Remove this function in Neon
     '''
     # parse legacy sdc grains
     if 'mdata' in grains and 'sdc' in grains['mdata']:
@@ -158,6 +159,7 @@ def mdata():
 
     grains = salt.utils.dictupdate.update(grains, _user_mdata(mdata_list, mdata_get), merge_lists=True)
     grains = salt.utils.dictupdate.update(grains, _sdc_mdata(mdata_list, mdata_get), merge_lists=True)
+    ## remove _legacy_grains in Neon
     grains = _legacy_grains(grains)
 
     return grains
