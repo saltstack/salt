@@ -100,14 +100,9 @@ def present(
 
     fingerprint_hash_type
         The public key fingerprint hash type that the public key fingerprint
-        was originally hashed with. This defaults to ``md5`` if not specified.
+        was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-
-        .. note::
-
-            The default value of the ``fingerprint_hash_type`` will change to
-            ``sha256`` in Salt Nitrogen.
 
     '''
     ret = {'name': name,
