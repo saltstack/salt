@@ -1,8 +1,7 @@
 -r base.txt
 
 mock
-# apache-libcloud>=2.0.0
-https://people.apache.org/~anthonyshaw/libcloud/2.0.0/apache-libcloud-2.0.0.zip#egg=apache-libcloud
+apache-libcloud>=2.0.0
 boto>=2.32.1
 boto3>=1.2.1
 moto>=0.3.6
