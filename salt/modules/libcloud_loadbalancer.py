@@ -401,6 +401,31 @@ def list_balancer_members(balancer_id, profile, **libcloud_kwargs):
     return [_simple_member(member) for member in members]
 
 
+def extra(method, profile, **libcloud_kwargs):
+    '''
+    Call an extended method on the driver
+
+    :param method: Driver's method name
+    :type  method: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's delete_container method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_loadbalancer.extra ex_get_permissions google container_name=my_container object_name=me.jpg --out=yaml
+    '''
+    _sanitize_kwargs(libcloud_kwargs)
+    conn = _get_driver(profile=profile)
+    connection_method = getattr(conn, method)
+    return connection_method(**libcloud_kwargs)
+
+
 def _simple_balancer(balancer):
     return {
         'id': balancer.id,
