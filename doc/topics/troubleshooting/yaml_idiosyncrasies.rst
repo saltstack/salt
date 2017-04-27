@@ -129,44 +129,17 @@ string literal:
         - source: salt://ssh_keys/chease.pub
         - config: '%h/.ssh/authorized_keys'
 
-Integers are Parsed as Integers
-===============================
+Time Expressions
+================
 
-NOTE: This has been fixed in salt 0.10.0, as of this release passing an
-integer that is preceded by a 0 will be correctly parsed
+PyYAML will load a time expression as the integer value of that, assuming
+``HH:MM``. So for example, ``12:00`` is loaded by PyYAML as ``720``. An
+excellent explanation for why can be found here__.
 
-When passing :func:`integers <python2:int>` into an SLS file, they are
-passed as integers. This means that if a state accepts a string value
-and an integer is passed, that an integer will be sent. The solution here
-is to send the integer as a string.
+To keep time expressions like this from being loaded as integers, always quote
+them.
 
-This is best explained when setting the mode for a file:
-
-.. code-block:: yaml
-
-    /etc/vimrc:
-      file:
-        - managed
-        - source: salt://edit/vimrc
-        - user: root
-        - group: root
-        - mode: 644
-
-Salt manages this well, since the mode is passed as 644, but if the mode is
-zero padded as 0644, then it is read by YAML as an integer and evaluated as
-an octal value, 0644 becomes 420. Therefore, if the file mode is
-preceded by a 0 then it needs to be passed as a string:
-
-.. code-block:: yaml
-
-    /etc/vimrc:
-      file:
-        - managed
-        - source: salt://edit/vimrc
-        - user: root
-        - group: root
-        - mode: '0644'
-
+.. __: http://stackoverflow.com/a/31007425
 
 YAML does not like "Double Short Decs"
 ======================================
