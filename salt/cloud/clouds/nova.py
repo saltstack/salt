@@ -60,10 +60,18 @@ option in the provider config.
       compute_name: nova
       compute_region: RegionOne
       service_type: compute
+      verify: '/path/to/custom/certs/ca-bundle.crt'
       tenant: admin
       user: admin
       password: passwordgoeshere
       driver: nova
+
+Note: by default the nova driver will attempt to verify its connection
+utilizing the system certificates. If you need to verify against another bundle
+of CA certificates or want to skip verification altogether you will need to
+specify the verify option. You can specify True or False to verify (or not)
+against system certificates, a path to a bundle or CA certs to check against, or
+None to allow keystoneauth to search for the certificates on its own.(defaults to True)
 
 For local installations that only use private IP address ranges, the
 following option may be useful. Using the old syntax:
@@ -301,6 +309,10 @@ def get_conn():
     if 'password' in vm_:
         kwargs['password'] = vm_['password']
 
+    if 'verify' in vm_ and vm_['use_keystoneauth'] is True:
+        kwargs['verify'] = vm_['verify']
+    elif 'verify' in vm_ and vm_['use_keystoneauth'] is False:
+        log.warning('SSL Certificate verification option is specified but use_keystoneauth is False or not present')
     conn = nova.SaltNova(**kwargs)
 
     return conn
@@ -608,7 +620,7 @@ def request_instance(vm_=None, call=None):
         'security_groups', vm_, __opts__, search_global=False
     )
     if security_groups is not None:
-        vm_groups = security_groups.split(',')
+        vm_groups = security_groups
         avail_groups = conn.secgroup_list()
         group_list = []
 
