@@ -120,9 +120,14 @@ SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py'
 SALT_VERSION_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_version.py')
 SALT_SYSPATHS_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_syspaths.py')
 SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.txt')
-SALT_WINDOWS_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'windows.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
 SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'raet.txt')
+if IS_PY3:
+    SALT_WINDOWS_REQS = os.path.join(
+        os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req_3.txt')
+else:
+    SALT_WINDOWS_REQS = os.path.join(
+        os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req_3.txt')
 
 # Salt SSH Packaging Detection
 PACKAGED_FOR_SALT_SSH_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), '.salt-ssh-package')
