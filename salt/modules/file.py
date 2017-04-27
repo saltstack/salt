@@ -3838,6 +3838,8 @@ def get_managed(
                 source_sum = {'hsum': cached_sum, 'hash_type': htype}
             elif cached_sum != source_sum.get('hsum', __opts__['hash_type']):
                 cache_refetch = True
+            else:
+                sfn = cached_dest
 
         # If we didn't have the template or remote file, let's get it
         # Similarly when the file has been updated and the cache has to be refreshed
