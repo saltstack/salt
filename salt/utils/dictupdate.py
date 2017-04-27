@@ -31,7 +31,8 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
     merge_lists=False.
 
     .. versionchanged: 2016.11.6
-        When merging lists, duplicate values are removed.
+        When merging lists, duplicate values are removed and the resulting list
+        is sorted.
     '''
     if (not isinstance(dest, collections.Mapping)) \
             or (not isinstance(upd, collections.Mapping)):
@@ -53,7 +54,7 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
             elif isinstance(dest_subkey, list) \
                      and isinstance(val, list):
                 if merge_lists:
-                    dest[key] = list(set(dest_subkey).union(val))
+                    dest[key] = sorted((set(dest_subkey + val)))
                 else:
                     dest[key] = upd[key]
             else:
