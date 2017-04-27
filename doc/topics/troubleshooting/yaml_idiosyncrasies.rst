@@ -139,6 +139,31 @@ excellent explanation for why can be found here__.
 To keep time expressions like this from being loaded as integers, always quote
 them.
 
+.. note::
+    When using a jinja ``load_yaml`` map, items must be quoted twice. For
+    example:
+
+    .. code-block:: yaml
+
+        {% load_yaml as wsus_schedule %}
+
+        FRI_10:
+          time: '"23:00"'
+          day: 6 - Every Friday
+        SAT_10:
+          time: '"06:00"'
+          day: 7 - Every Saturday
+        SAT_20:
+          time: '"14:00"'
+          day: 7 - Every Saturday
+        SAT_30:
+          time: '"22:00"'
+          day: 7 - Every Saturday
+        SUN_10:
+          time: '"06:00"'
+          day: 1 - Every Sunday
+        {% endload %}
+
 .. __: http://stackoverflow.com/a/31007425
 
 YAML does not like "Double Short Decs"
