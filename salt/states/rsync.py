@@ -62,10 +62,15 @@ def _get_changes(rsync_out):
         else:
             copied.append(line)
 
-    return {
+    ret = {
         'copied': os.linesep.join(sorted(copied)) or "N/A",
         'deleted': os.linesep.join(sorted(deleted)) or "N/A",
     }
+
+    # Return whether anything really changed
+    ret['changed'] = not ((ret['copied'] == 'N/A') and (ret['deleted'] == 'N/A'))
+
+    return ret
 
 
 def synchronized(name, source,
@@ -135,12 +140,18 @@ def synchronized(name, source,
             ret['comment'] = _get_summary(result['stdout'])
             return ret
 
+        # Failed
         if result.get('retcode'):
             ret['result'] = False
             ret['comment'] = result['stderr']
             ret['changes'] = result['stdout']
-        else:
+        # Changed
+        elif _get_changes(result['stdout'])['changed']:
             ret['comment'] = _get_summary(result['stdout'])
             ret['changes'] = _get_changes(result['stdout'])
-
+            del ret['changes']['changed']  # Don't need to print the boolean
+        # Clean
+        else:
+            ret['comment'] = _get_summary(result['stdout'])
+            ret['changes'] = {}
     return ret
