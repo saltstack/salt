@@ -349,7 +349,7 @@ def running(name,
     # Check if the service is available
     try:
         if not _available(name, ret):
-            if 'test' in __opts__ and __opts__['test']:
+            if __opts__.get('test'):
                 ret['result'] = None
                 ret['comment'] = 'Service {0} not present; if created in this state run, it would have been started'.format(name)
             return ret
@@ -486,7 +486,7 @@ def dead(name,
     # Check if the service is available
     try:
         if not _available(name, ret):
-            if 'test' in __opts__ and __opts__['test']:
+            if __opts__.get('test'):
                 ret['result'] = None
                 ret['comment'] = 'Service {0} not present; if created in this state run, it would have been stopped'.format(name)
             else:
