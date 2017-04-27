@@ -36,7 +36,15 @@ class UtilDictupdateTestCase(TestCase):
         mdict['A'] = [1, 2]
         res = dictupdate.update(copy.deepcopy(mdict), {'A': [3, 4]},
                                 merge_lists=True)
-        mdict['A'] = [1, 2, 3, 4]
+        mdict['A'] = sorted([1, 2, 3, 4])
+        self.assertEqual(res, mdict)
+
+        # level 1 value changes (list merge, remove duplicates)
+        mdict = copy.deepcopy(self.dict1)
+        mdict['A'] = [1, 2]
+        res = dictupdate.update(copy.deepcopy(mdict), {'A': [1, 2, 3, 4]},
+                                merge_lists=True)
+        mdict['A'] = sorted([1, 2, 3, 4])
         self.assertEqual(res, mdict)
 
         # level 2 value changes
@@ -58,7 +66,16 @@ class UtilDictupdateTestCase(TestCase):
         mdict['C']['D'] = ['a', 'b']
         res = dictupdate.update(copy.deepcopy(mdict), {'C': {'D': ['c', 'd']}},
                                 merge_lists=True)
-        mdict['C']['D'] = ['a', 'b', 'c', 'd']
+        mdict['C']['D'] = sorted(['a', 'b', 'c', 'd'])
+        self.assertEqual(res, mdict)
+
+        # level 2 value changes (list merge, remove duplicates)
+        mdict = copy.deepcopy(self.dict1)
+        mdict['C']['D'] = ['a', 'b']
+        res = dictupdate.update(copy.deepcopy(mdict),
+                                {'C': {'D': ['a', 'b', 'c', 'd']}},
+                                merge_lists=True)
+        mdict['C']['D'] = sorted(['a', 'b', 'c', 'd'])
         self.assertEqual(res, mdict)
 
         # level 3 value changes
@@ -83,7 +100,15 @@ class UtilDictupdateTestCase(TestCase):
         mdict['C']['F']['G'] = ['a', 'b']
         res = dictupdate.update(copy.deepcopy(mdict),
             {'C': {'F': {'G': ['c', 'd']}}}, merge_lists=True)
-        mdict['C']['F']['G'] = ['a', 'b', 'c', 'd']
+        mdict['C']['F']['G'] = sorted(['a', 'b', 'c', 'd'])
+        self.assertEqual(res, mdict)
+
+        # level 3 value changes (list merge, remove duplicates)
+        mdict = copy.deepcopy(self.dict1)
+        mdict['C']['F']['G'] = ['a', 'b']
+        res = dictupdate.update(copy.deepcopy(mdict),
+            {'C': {'F': {'G': ['a', 'b', 'c', 'd']}}}, merge_lists=True)
+        mdict['C']['F']['G'] = sorted(['a', 'b', 'c', 'd'])
         self.assertEqual(res, mdict)
 
         # replace a sub-dictionary
