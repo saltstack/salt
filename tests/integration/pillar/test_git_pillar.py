@@ -17,7 +17,7 @@ from tests.support.helpers import (
     skip_if_not_root,
     Webserver,
 )
-from tests.support.git_pillar import HTTPTestBase, SSHTestBase
+from tests.support.git_pillar import GitPillarSSHTestBase, GitPillarHTTPTestBase
 from tests.support.paths import TMP
 from tests.support.unit import skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
@@ -40,56 +40,15 @@ try:
 except ImportError:
     HAS_PYGIT2 = False
 
-NOTSET = object()
 USERNAME = 'gitpillaruser'
 PASSWORD = 'saltrules'
 
 
-@http_basic_auth(lambda u, p: u == USERNAME and p == PASSWORD)  # pylint: disable=W0223
-class HTTPBasicAuthHandler(tornado.web.StaticFileHandler):
-    pass
-
-
-@destructiveTest
-@skipIf(not salt.utils.which('sshd'), 'sshd not present')
-@skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
-@skipIf(salt.utils.is_windows(), 'minion is windows')
-@skip_if_not_root
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestGitPythonSSH(SSHTestBase):
+class GitPythonMixin(object):
     '''
-    Test git_pillar with GitPython using SSH authentication
-
-    NOTE: Any tests added to this test class should have equivalent tests (if
-    possible) in the TestPygit2SSH class. Also, bear in mind that the pygit2
-    versions of these tests need to be more complex in that they need to test
-    both with passphraseless and passphrase-protecteed keys, both with global
-    and per-remote configuration. So for every time we run a GitPython test, we
-    need to run that same test four different ways for pygit2. This is because
-    GitPython's ability to use git-over-SSH is limited to passphraseless keys.
-    So, unlike pygit2, we don't need to test global or per-repo credential
-    config params since GitPython doesn't use them.
+    GitPython doesn't support anything fancy in terms of authentication
+    options, so all of the tests for GitPython can be re-used via this mixin.
     '''
-    username = USERNAME
-    passphrase = PASSWORD
-    sshd_config_dir = tempfile.mkdtemp(dir=TMP)
-
-    def get_pillar(self, ext_pillar_conf):
-        '''
-        Wrap the parent class' get_pillar() func in logic that temporarily
-        changes the GIT_SSH to use our custom script, ensuring that the
-        passphraselsess key is used to auth without needing to modify the root
-        user's ssh config file.
-        '''
-        orig_git_ssh = os.environ.pop('GIT_SSH', NOTSET)
-        os.environ['GIT_SSH'] = self.git_ssh
-        try:
-            return super(TestGitPythonSSH, self).get_pillar(ext_pillar_conf)
-        finally:
-            os.environ.pop('GIT_SSH', None)
-            if orig_git_ssh is not NOTSET:
-                os.environ['GIT_SSH'] = orig_git_ssh
-
     def test_git_pillar_single_source(self):
         '''
         Test using a single ext_pillar repo
@@ -305,11 +264,83 @@ class TestGitPythonSSH(SSHTestBase):
 
 @destructiveTest
 @skipIf(not salt.utils.which('sshd'), 'sshd not present')
+@skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
+@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skip_if_not_root
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
+    '''
+    Test git_pillar with GitPython using SSH authentication
+
+    NOTE: Any tests added to this test class should have equivalent tests (if
+    possible) in the TestPygit2SSH class. Also, bear in mind that the pygit2
+    versions of these tests need to be more complex in that they need to test
+    both with passphraseless and passphrase-protecteed keys, both with global
+    and per-remote configuration. So for every time we run a GitPython test, we
+    need to run that same test four different ways for pygit2. This is because
+    GitPython's ability to use git-over-SSH is limited to passphraseless keys.
+    So, unlike pygit2, we don't need to test global or per-repo credential
+    config params since GitPython doesn't use them.
+    '''
+    sshd_config_dir = tempfile.mkdtemp(dir=TMP)
+    username = USERNAME
+    passphrase = PASSWORD
+
+
+@skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
+@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skip_if_not_root
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
+    '''
+    Test git_pillar with GitPython using unauthenticated HTTP
+    '''
+    root_dir = tempfile.mkdtemp(dir=TMP)
+
+
+@skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
+@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skip_if_not_root
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
+    '''
+    Since GitPython doesn't support passing credentials, we can test
+    authenticated GitPython by encoding the username:password pair into the
+    repository's URL. The configuration will otherwise remain the same, so we
+    can reuse all of the tests from TestGitPythonHTTP.
+
+    The same cannot be done for pygit2 however, since using authentication
+    requires that specific params are set in the YAML config, so the YAML we
+    use to drive the tests will be significantly different for authenticated
+    repositories.
+    '''
+    root_dir = tempfile.mkdtemp(dir=TMP)
+    username = USERNAME
+    password = PASSWORD
+
+    @classmethod
+    def setUpClass(cls):
+        '''
+        Create start the webserver
+        '''
+        super(TestGitPythonAuthenticatedHTTP, cls).setUpClass()
+        # Override the URL set up in the parent class
+        cls.url = 'http://{username}:{password}@127.0.0.1:{port}/repo.git'.format(
+            username=cls.username,
+            password=cls.password,
+            port=cls.nginx_port)
+        cls.ext_opts['url'] = cls.url
+        cls.ext_opts['username'] = cls.username
+        cls.ext_opts['password'] = cls.password
+
+
+@destructiveTest
+@skipIf(not salt.utils.which('sshd'), 'sshd not present')
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} required'.format(PYGIT2_MINVER))
 @skipIf(salt.utils.is_windows(), 'minion is windows')
 @skip_if_not_root
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestPygit2SSH(SSHTestBase):
+class TestPygit2SSH(GitPillarSSHTestBase):
     '''
     Test git_pillar with pygit2 using SSH authentication
 
@@ -971,59 +1002,3 @@ class TestPygit2SSH(SSHTestBase):
                   - env: base
             ''')
         self.assertEqual(ret, expected)
-
-
-@skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
-@skipIf(salt.utils.is_windows(), 'minion is windows')
-@skip_if_not_root
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestGitPythonHTTP(HTTPTestBase):
-    '''
-    Test git_pillar with GitPython using unauthenticated HTTP
-
-    NOTE: Tests will have to wait until later for this, as the current method
-    set up in tests.support.git_pillar uses a tornado webserver, and to serve
-    Git over HTTP the setup needs to be a bit more complicated as we need the
-    webserver to forward the request to git on the "remote" server.
-    '''
-    username = USERNAME
-    password = PASSWORD
-    root_dir = tempfile.mkdtemp(dir=TMP)
-
-
-class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP):
-    '''
-    Since GitPython doesn't support passing credentials, we can test
-    authenticated GitPython by encoding the username:password pair into the
-    repository's URL. The configuration will otherwise remain the same, so we
-    can reuse all of the tests from TestGitPythonHTTP.
-
-    The same cannot be done for pygit2 however, since using authentication
-    requires that specific params are set in the YAML config, so the YAML we
-    use to drive the tests will be significantly different for authenticated
-    repositories.
-    '''
-    root_dir = tempfile.mkdtemp(dir=TMP)
-
-    @classmethod
-    def setUpClass(cls):
-        '''
-        Create start the webserver
-        '''
-        super(TestGitPythonAuthenticatedHTTP, cls).setUpClass()
-        # Override the URL set up in the parent class
-        cls.url = 'http://{username}:{password}@127.0.0.1:{port}/repo.git'.format(
-            username=cls.username,
-            password=cls.password,
-            port=cls.port)
-        cls.ext_opts['url'] = cls.url
-
-    @classmethod
-    def create_webserver(cls):
-        '''
-        Use HTTPBasicAuthHandler to force an auth prompt for these tests
-        '''
-        if cls.root_dir is None:
-            raise Exception('root_dir not defined in test class')
-        return Webserver(root=cls.root_dir, port=cls.port,
-                         handler=HTTPBasicAuthHandler)

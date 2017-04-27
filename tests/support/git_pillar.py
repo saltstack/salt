@@ -5,12 +5,14 @@ Base classes for git_pillar integration tests
 
 # Import python libs
 from __future__ import absolute_import
+import copy
 import errno
 import logging
 import os
 import psutil
 import random
 import shutil
+import signal
 import string
 import tempfile
 import textwrap
@@ -19,6 +21,7 @@ import yaml
 
 # Import Salt libs
 import salt.utils
+from salt.fileserver import gitfs
 from salt.pillar import git_pillar
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
@@ -36,60 +39,222 @@ from tests.support.mock import patch
 log = logging.getLogger(__name__)
 
 
+_OPTS = {
+    '__role': 'minion',
+    'environment': None,
+    'pillarenv': None,
+    'hash_type': 'sha256',
+    'file_roots': {},
+    'state_top': 'top.sls',
+    'state_top_saltenv': None,
+    'renderer': 'yaml_jinja',
+    'renderer_whitelist': [],
+    'renderer_blacklist': [],
+    'pillar_merge_lists': False,
+    'git_pillar_base': 'master',
+    'git_pillar_branch': 'master',
+    'git_pillar_env': '',
+    'git_pillar_root': '',
+    'git_pillar_ssl_verify': True,
+    'git_pillar_global_lock': True,
+    'git_pillar_user': '',
+    'git_pillar_password': '',
+    'git_pillar_insecure_auth': False,
+    'git_pillar_privkey': '',
+    'git_pillar_pubkey': '',
+    'git_pillar_passphrase': '',
+    'git_pillar_refspecs': [
+        '+refs/heads/*:refs/remotes/origin/*',
+        '+refs/tags/*:refs/tags/*',
+    ],
+    'git_pillar_includes': True,
+}
+PROC_TIMEOUT = 10
+NOTSET = object()
+
+
 def _rand_key_name(length):
     return 'id_rsa_{0}'.format(
         ''.join(random.choice(string.ascii_letters) for _ in range(length))
     )
 
 
-class GitPillarTestBase(ModuleCase,
-                        LoaderModuleMockMixin,
-                        SaltReturnAssertsMixin):
+class ProcessManager(object):
     '''
-    Base class for all git_pillar tests
+    Functions used both to set up self-contained SSH/HTTP servers for testing
+    '''
+    wait = 10
+
+    def find_proc(self, name=None, search=None):
+        def _search(proc):
+            return any([search in x for x in proc.cmdline()])
+        if name is None and search is None:
+            raise ValueError('one of name or search is required')
+        for proc in psutil.process_iter():
+            if name is not None:
+                if search is None:
+                    if name in proc.name():
+                        return proc
+                elif name in proc.name() and _search(proc):
+                    return proc
+            else:
+                if _search(proc):
+                    return proc
+        return None
+
+    def wait_proc(self, name=None, search=None, timeout=PROC_TIMEOUT):
+        for idx in range(1, self.wait + 1):
+            proc = self.find_proc(name=name, search=search)
+            if proc is not None:
+                return proc
+            else:
+                if idx != self.wait:
+                    log.debug(
+                        'Waiting for %s process (%d of %d)',
+                        name, idx, self.wait
+                    )
+                    time.sleep(1)
+                else:
+                    log.debug(
+                        'Failed fo find %s process after %d seconds',
+                        name, self.wait
+                    )
+        else:
+            raise Exception(
+                'Unable to find {0} process running from temp config file '
+                '{1} using psutil. Check to see if an instance of nginx from '
+                'an earlier aborted run of these tests is running, if so then '
+                'manually kill it and re-run test(s).'.format(name, search)
+            )
+
+
+class SSHDMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
+    '''
+    Functions to stand up an SSHD server to serve up git repos for tests.
+    '''
+    sshd_proc = None
+
+    @classmethod
+    def prep_server(cls):
+        cls.sshd_config = os.path.join(cls.sshd_config_dir, 'sshd_config')
+        cls.sshd_port = get_unused_localhost_port()
+        cls.url = 'ssh://{username}@127.0.0.1:{port}/~/repo.git'.format(
+            username=cls.username,
+            port=cls.sshd_port)
+        home = '/root/.ssh'
+        cls.ext_opts = {
+            'url': cls.url,
+            'privkey_nopass': os.path.join(home, cls.id_rsa_nopass),
+            'pubkey_nopass': os.path.join(home, cls.id_rsa_nopass + '.pub'),
+            'privkey_withpass': os.path.join(home, cls.id_rsa_withpass),
+            'pubkey_withpass': os.path.join(home, cls.id_rsa_withpass + '.pub'),
+            'passphrase': cls.passphrase}
+
+    def spawn_server(self):
+        ret = self.run_function(
+            'state.apply',
+            mods='git_pillar.ssh',
+            pillar={'git_pillar': {'git_ssh': self.git_ssh,
+                                   'id_rsa_nopass': self.id_rsa_nopass,
+                                   'id_rsa_withpass': self.id_rsa_withpass,
+                                   'sshd_bin': self.sshd_bin,
+                                   'sshd_port': self.sshd_port,
+                                   'sshd_config_dir': self.sshd_config_dir,
+                                   'master_user': self.master_opts['user'],
+                                   'user': self.username}}
+        )
+
+        try:
+            self.sshd_proc = self.wait_proc(name='sshd',
+                                            search=self.sshd_config)
+        finally:
+            # Do the assert after we check for the PID so that we can track
+            # it regardless of whether or not something else in the SLS
+            # failed (but the SSH server still started).
+            self.assertSaltTrueReturn(ret)
+
+
+class WebserverMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
+    '''
+    Functions to stand up an nginx + uWSGI + git-http-backend webserver to
+    serve up git repos for tests.
+    '''
+    nginx_proc = uwsgi_proc = None
+
+    @classmethod
+    def prep_server(cls):
+        '''
+        Set up all the webserver paths. Designed to be run once in a
+        setUpClass function.
+        '''
+        cls.root_dir = tempfile.mkdtemp(dir=TMP)
+        cls.config_dir = os.path.join(cls.root_dir, 'config')
+        cls.nginx_conf = os.path.join(cls.config_dir, 'nginx.conf')
+        cls.uwsgi_conf = os.path.join(cls.config_dir, 'uwsgi.yml')
+        cls.git_dir = os.path.join(cls.root_dir, 'git')
+        cls.repo_dir = os.path.join(cls.git_dir, 'repos')
+        cls.venv_dir = os.path.join(cls.root_dir, 'venv')
+        cls.uwsgi_bin = os.path.join(cls.venv_dir, 'bin', 'uwsgi')
+        cls.nginx_port = cls.uwsgi_port = get_unused_localhost_port()
+        while cls.uwsgi_port == cls.nginx_port:
+            # Ensure we don't hit a corner case in which two sucessive calls to
+            # get_unused_localhost_port() return identical port numbers.
+            cls.uwsgi_port = get_unused_localhost_port()
+        cls.url = 'http://127.0.0.1:{port}/repo.git'.format(port=cls.nginx_port)
+        cls.ext_opts = {'url': cls.url}
+
+    @requires_system_grains
+    def spawn_server(self, grains):
+        auth_enabled = hasattr(self, 'username') and hasattr(self, 'password')
+        pillar = {'git_pillar': {'config_dir': self.config_dir,
+                                 'git_dir': self.git_dir,
+                                 'venv_dir': self.venv_dir,
+                                 'root_dir': self.root_dir,
+                                 'nginx_port': self.nginx_port,
+                                 'uwsgi_port': self.uwsgi_port,
+                                 'auth_enabled': auth_enabled}}
+
+        if grains['os_family'] in ('Debian',):
+            # Different libexec dir for git backend on Debian-based systems
+            pillar['git_pillar']['libexec_dir'] = '/usr/lib'
+
+        ret = self.run_function(
+            'state.apply',
+            mods='git_pillar.http',
+            pillar=pillar)
+
+        try:
+            self.nginx_proc = self.wait_proc(name='nginx',
+                                             search=self.nginx_conf)
+            self.uwsgi_proc = self.wait_proc(name='uwsgi',
+                                             search=self.uwsgi_conf)
+        finally:
+            # Do the assert after we check for the PID so that we can track
+            # it regardless of whether or not something else in the SLS
+            # failed (but the webserver still started).
+            self.assertSaltTrueReturn(ret)
+
+
+class GitTestBase(ModuleCase):
+    '''
+    Base class for all gitfs/git_pillar tests. Must be subclassed and paired
+    with either SSHDMixin or WebserverMixin to provide the server.
     '''
     case = port = bare_repo = admin_repo = None
     maxDiff = None
     git_opts = '-c user.name="Foo Bar" -c user.email=foo@bar.com'
     ext_opts = {}
 
-    @requires_system_grains
-    def setup_loader_modules(self, grains):  # pylint: disable=W0221
-        return {
-            git_pillar: {
-                '__opts__': {
-                    '__role': 'minion',
-                    'environment': None,
-                    'pillarenv': None,
-                    'hash_type': 'sha256',
-                    'file_roots': {},
-                    'state_top': 'top.sls',
-                    'state_top_saltenv': None,
-                    'renderer': 'yaml_jinja',
-                    'renderer_whitelist': [],
-                    'renderer_blacklist': [],
-                    'pillar_merge_lists': False,
-                    'git_pillar_base': 'master',
-                    'git_pillar_branch': 'master',
-                    'git_pillar_env': '',
-                    'git_pillar_root': '',
-                    'git_pillar_ssl_verify': True,
-                    'git_pillar_global_lock': True,
-                    'git_pillar_user': '',
-                    'git_pillar_password': '',
-                    'git_pillar_insecure_auth': False,
-                    'git_pillar_privkey': '',
-                    'git_pillar_pubkey': '',
-                    'git_pillar_passphrase': '',
-                    'git_pillar_refspecs': [
-                        '+refs/heads/*:refs/remotes/origin/*',
-                        '+refs/tags/*:refs/tags/*',
-                    ],
-                    'git_pillar_includes': True,
-                },
-                '__grains__': grains,
-            }
-        }
+    @classmethod
+    def setUpClass(cls):
+        cls.prep_server()
+
+    def setUp(self):
+        # Make the test class available to the tearDownClass so we can clean up
+        # after ourselves. This (and the gated block below) prevent us from
+        # needing to spend the extra time creating an ssh server and user and
+        # then tear them down separately for each test.
+        self.update_class(self)
 
     @classmethod
     def update_class(cls, case):
@@ -101,16 +266,36 @@ class GitPillarTestBase(ModuleCase,
         if getattr(cls, 'case') is None:
             setattr(cls, 'case', case)
 
-    @classmethod
-    def setUpClass(cls):
-        cls.port = get_unused_localhost_port()
+    def make_repo(self, root_dir, user='root'):
+        raise NotImplementedError()
 
-    def setUp(self):
-        # Make the test class available to the tearDownClass so we can clean up
-        # after ourselves. This (and the gated block below) prevent us from
-        # needing to spend the extra time creating an ssh server and user and
-        # then tear them down separately for each test.
-        self.update_class(self)
+
+class GitFSTestBase(GitTestBase, LoaderModuleMockMixin):
+    '''
+    Base class for all gitfs tests
+    '''
+    @requires_system_grains
+    def setup_loader_modules(self, grains):  # pylint: disable=W0221
+        return {
+            gitfs: {
+                '__opts__': copy.copy(_OPTS),
+                '__grains__': grains,
+            }
+        }
+
+
+class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
+    '''
+    Base class for all git_pillar tests
+    '''
+    @requires_system_grains
+    def setup_loader_modules(self, grains):  # pylint: disable=W0221
+        return {
+            git_pillar: {
+                '__opts__': copy.copy(_OPTS),
+                '__grains__': grains,
+            }
+        }
 
     def get_pillar(self, ext_pillar_conf):
         '''
@@ -253,94 +438,22 @@ class GitPillarTestBase(ModuleCase,
         _push('top_only', 'add top_only branch')
 
 
-class HTTPTestBase(GitPillarTestBase):
+class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
     '''
-    Base class for GitPython and Pygit2 HTTP tests
-
-    NOTE: root_dir must be overridden in a subclass
+    Base class for GitPython and Pygit2 SSH tests. Redefine sshd_config_dir in
+    a subclass using tempfile.mkdtemp()
     '''
-    goot_dir = None
-
-    @classmethod
-    def setUpClass(cls):
-        '''
-        Create start the webserver
-        '''
-        super(HTTPTestBase, cls).setUpClass()
-        cls.webserver = cls.create_webserver()
-        cls.webserver.start()
-        cls.url = 'http://127.0.0.1:{port}/repo.git'.format(port=cls.port)
-        cls.ext_opts = {
-            'url': cls.url,
-            'username': cls.username,
-            'password': cls.password}
-
-    @classmethod
-    def tearDownClass(cls):
-        '''
-        Stop the webserver and cleanup the repo
-        '''
-        cls.webserver.stop()
-        shutil.rmtree(cls.root_dir, ignore_errors=True)
-
-    @classmethod
-    def create_webserver(cls):
-        '''
-        Override this in a subclass with the handler argument to use a custom
-        handler for HTTP Basic Authentication
-        '''
-        if cls.root_dir is None:
-            raise Exception('root_dir not defined in test class')
-        return Webserver(root=cls.root_dir, port=cls.port)
-
-    def setUp(self):
-        '''
-        Create and start the webserver, and create the git repo
-        '''
-        super(HTTPTestBase, self).setUp()
-        self.make_repo(self.root_dir)
-
-
-class SSHTestBase(GitPillarTestBase):
-    '''
-    Base class for GitPython and Pygit2 SSH tests
-    '''
-    # Define a few variables and set to None so they're not culled in the
-    # cleanup when the test function completes, and remain available to the
-    # tearDownClass.
-    sshd_proc = None
+    sshd_config_dir = None
     # Creates random key names to (hopefully) ensure we're not overwriting an
     # existing key in /root/.ssh. Even though these are destructive tests, we
     # don't want to mess with something as important as ssh.
     id_rsa_nopass = _rand_key_name(8)
     id_rsa_withpass = _rand_key_name(8)
-    sshd_wait = 10
-
-    @classmethod
-    def setUpClass(cls):
-        super(SSHTestBase, cls).setUpClass()
-        cls.url = 'ssh://{username}@127.0.0.1:{port}/~/repo.git'.format(
-            username=cls.username,
-            port=cls.port)
-        home = '/root/.ssh'
-        cls.ext_opts = {
-            'url': cls.url,
-            'privkey_nopass': os.path.join(home, cls.id_rsa_nopass),
-            'pubkey_nopass': os.path.join(home, cls.id_rsa_nopass + '.pub'),
-            'privkey_withpass': os.path.join(home, cls.id_rsa_withpass),
-            'pubkey_withpass': os.path.join(home, cls.id_rsa_withpass + '.pub'),
-            'passphrase': cls.passphrase}
 
     @classmethod
     def tearDownClass(cls):
-        '''
-        Stop the SSH server, remove the user, and clean up the config dir
-        '''
-        if cls.case.sshd_proc:
-            try:
-                cls.case.sshd_proc.kill()
-            except psutil.NoSuchProcess:
-                pass
+        if cls.case.sshd_proc is not None:
+            cls.case.sshd_proc.send_signal(signal.SIGTERM)
         cls.case.run_state('user.absent', name=cls.username, purge=True)
         for dirname in (cls.sshd_config_dir, cls.case.admin_repo,
                         cls.case.bare_repo):
@@ -358,66 +471,20 @@ class SSHTestBase(GitPillarTestBase):
         '''
         Create the SSH server and user, and create the git repo
         '''
-        super(SSHTestBase, self).setUp()
-        sshd_config_file = os.path.join(self.sshd_config_dir, 'sshd_config')
-        self.sshd_proc = self.find_sshd(sshd_config_file)
+        super(GitPillarSSHTestBase, self).setUp()
+        self.sshd_proc = self.find_proc(name='sshd',
+                                        search=self.sshd_config)
         self.sshd_bin = salt.utils.which('sshd')
         self.git_ssh = '/tmp/git_ssh'
 
         if self.sshd_proc is None:
-            user_files = os.listdir(
-                os.path.join(FILES, 'file/base/git_pillar/ssh/user/files')
-            )
-            ret = self.run_function(
-                'state.apply',
-                mods='git_pillar.ssh',
-                pillar={'git_pillar': {'git_ssh': self.git_ssh,
-                                       'id_rsa_nopass': self.id_rsa_nopass,
-                                       'id_rsa_withpass': self.id_rsa_withpass,
-                                       'sshd_bin': self.sshd_bin,
-                                       'sshd_port': self.port,
-                                       'sshd_config_dir': self.sshd_config_dir,
-                                       'master_user': self.master_opts['user'],
-                                       'user': self.username,
-                                       'user_files': user_files}}
-            )
-
-            try:
-                for idx in range(1, self.sshd_wait + 1):
-                    self.sshd_proc = self.find_sshd(sshd_config_file)
-                    if self.sshd_proc is not None:
-                        break
-                    else:
-                        if idx != self.sshd_wait:
-                            log.debug(
-                                'Waiting for sshd process (%d of %d)',
-                                idx, self.sshd_wait
-                            )
-                            time.sleep(1)
-                        else:
-                            log.debug(
-                                'Failed fo find sshd process after %d seconds',
-                                self.sshd_wait
-                            )
-                else:
-                    raise Exception(
-                        'Unable to find an sshd process running from temp '
-                        'config file {0} using psutil. Check to see if an '
-                        'instance of sshd from an earlier aborted run of '
-                        'these tests is running, if so then manually kill '
-                        'it and re-run test(s).'.format(sshd_config_file)
-                    )
-            finally:
-                # Do the assert after we check for the PID so that we can track
-                # it regardless of whether or not something else in the SLS
-                # failed (but the SSH server still started).
-                self.assertSaltTrueReturn(ret)
+            self.spawn_server()
 
             known_hosts_ret = self.run_function(
                 'ssh.set_known_host',
                 user=self.master_opts['user'],
                 hostname='127.0.0.1',
-                port=self.port,
+                port=self.sshd_port,
                 enc='ssh-rsa',
                 fingerprint='fd:6f:7f:5d:06:6b:f2:06:0d:26:93:9e:5a:b5:19:46',
                 hash_known_hosts=False,
@@ -440,9 +507,48 @@ class SSHTestBase(GitPillarTestBase):
             )
         self.make_repo(root_dir, user=self.username)
 
-    def find_sshd(self, sshd_config_file):
-        for proc in psutil.process_iter():
-            if 'sshd' in proc.name():
-                if sshd_config_file in proc.cmdline():
-                    return proc
-        return None
+    def get_pillar(self, ext_pillar_conf):
+        '''
+        Wrap the parent class' get_pillar() func in logic that temporarily
+        changes the GIT_SSH to use our custom script, ensuring that the
+        passphraselsess key is used to auth without needing to modify the root
+        user's ssh config file.
+        '''
+        orig_git_ssh = os.environ.pop('GIT_SSH', NOTSET)
+        os.environ['GIT_SSH'] = self.git_ssh
+        try:
+            return super(GitPillarSSHTestBase, self).get_pillar(ext_pillar_conf)
+        finally:
+            os.environ.pop('GIT_SSH', None)
+            if orig_git_ssh is not NOTSET:
+                os.environ['GIT_SSH'] = orig_git_ssh
+
+
+class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):
+    '''
+    Base class for GitPython and Pygit2 HTTP tests
+    '''
+    @classmethod
+    def tearDownClass(cls):
+        for proc in (cls.case.nginx_proc, cls.case.uwsgi_proc):
+            if proc is not None:
+                try:
+                    proc.send_signal(signal.SIGQUIT)
+                except psutil.NoSuchProcess:
+                    pass
+        shutil.rmtree(cls.root_dir, ignore_errors=True)
+
+    def setUp(self):
+        '''
+        Create and start the webserver, and create the git repo
+        '''
+        super(GitPillarHTTPTestBase, self).setUp()
+        self.nginx_proc = self.find_proc(name='nginx',
+                                         search=self.nginx_conf)
+        self.uwsgi_proc = self.find_proc(name='uwsgi',
+                                         search=self.uwsgi_conf)
+
+        if self.nginx_proc is None and self.uwsgi_proc is None:
+            self.spawn_server()
+
+        self.make_repo(self.repo_dir)
