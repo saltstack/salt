@@ -23,7 +23,8 @@ environment. Normal first-found rules apply, and storage containers are
 searched in the order they are defined.
 
 You must have either an account_key or a sas_token defined for each container,
-if it is private.
+if it is private. If you use a sas_token, it must have READ and LIST
+permissions.
 
 .. code-block:: yaml
 
