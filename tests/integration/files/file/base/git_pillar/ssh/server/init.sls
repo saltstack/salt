@@ -24,6 +24,14 @@
     - mode: 644
     - template: jinja
 
+{%- if grains['os_family'] == 'Debian' %}
+/var/run/sshd:
+  file.directory:
+    - user: root
+    - group: root
+    - mode: 755
+{%- endif %}
+
 start_sshd:
   cmd.run:
     - name: '{{ pillar['git_pillar']['sshd_bin'] }} -f {{ sshd_config_dir }}/sshd_config'
@@ -31,3 +39,6 @@ start_sshd:
       - file: {{ sshd_config_dir }}/sshd_config
       - file: {{ sshd_config_dir }}/ssh_host_rsa_key
       - file: {{ sshd_config_dir }}/ssh_host_rsa_key.pub
+{%- if grains['os_family'] == 'Debian' %}
+      - file: /var/run/sshd
+{%- endif %}

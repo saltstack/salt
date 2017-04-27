@@ -1,7 +1,6 @@
 Port {{ pillar['git_pillar']['sshd_port'] }}
 ListenAddress 127.0.0.1
 PermitRootLogin no
-UsePAM no
 ChallengeResponseAuthentication no
 PasswordAuthentication no
 PubkeyAuthentication yes

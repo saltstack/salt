@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Base classes for git_pillar integration tests
+Base classes for gitfs/git_pillar integration tests
 '''
 
 # Import python libs
@@ -10,10 +10,8 @@ import errno
 import logging
 import os
 import psutil
-import random
 import shutil
 import signal
-import string
 import tempfile
 import textwrap
 import time
@@ -28,16 +26,17 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
-from tests.support.paths import FILES, TMP
+from tests.support.paths import TMP
 from tests.support.helpers import (
     get_unused_localhost_port,
     requires_system_grains,
-    Webserver,
 )
 from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
 
+USERNAME = 'gitpillaruser'
+PASSWORD = 'saltrules'
 
 _OPTS = {
     '__role': 'minion',
@@ -71,12 +70,6 @@ _OPTS = {
 }
 PROC_TIMEOUT = 10
 NOTSET = object()
-
-
-def _rand_key_name(length):
-    return 'id_rsa_{0}'.format(
-        ''.join(random.choice(string.ascii_letters) for _ in range(length))
-    )
 
 
 class ProcessManager(object):
@@ -119,13 +112,10 @@ class ProcessManager(object):
                         'Failed fo find %s process after %d seconds',
                         name, self.wait
                     )
-        else:
-            raise Exception(
-                'Unable to find {0} process running from temp config file '
-                '{1} using psutil. Check to see if an instance of nginx from '
-                'an earlier aborted run of these tests is running, if so then '
-                'manually kill it and re-run test(s).'.format(name, search)
-            )
+        raise Exception(
+            'Unable to find {0} process running from temp config file {1} '
+            'using psutil'.format(name, search)
+        )
 
 
 class SSHDMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
@@ -136,6 +126,7 @@ class SSHDMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
 
     @classmethod
     def prep_server(cls):
+        cls.sshd_config_dir = tempfile.mkdtemp(dir=TMP)
         cls.sshd_config = os.path.join(cls.sshd_config_dir, 'sshd_config')
         cls.sshd_port = get_unused_localhost_port()
         cls.url = 'ssh://{username}@127.0.0.1:{port}/~/repo.git'.format(
@@ -202,6 +193,11 @@ class WebserverMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
             cls.uwsgi_port = get_unused_localhost_port()
         cls.url = 'http://127.0.0.1:{port}/repo.git'.format(port=cls.nginx_port)
         cls.ext_opts = {'url': cls.url}
+        # Add auth params if present (if so this will trigger the spawned
+        # server to turn on HTTP basic auth).
+        for credential_param in ('user', 'password'):
+            if hasattr(cls, credential_param):
+                cls.ext_opts[credential_param] = getattr(cls, credential_param)
 
     @requires_system_grains
     def spawn_server(self, grains):
@@ -283,6 +279,9 @@ class GitFSTestBase(GitTestBase, LoaderModuleMockMixin):
             }
         }
 
+    def make_repo(self, root_dir, user='root'):
+        raise NotImplementedError()
+
 
 class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
     '''
@@ -302,7 +301,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         Run git_pillar with the specified configuration
         '''
         cachedir = tempfile.mkdtemp(dir=TMP)
-        self.addCleanup(shutil.rmtree, cachedir, ignore_errors=True)
+        #self.addCleanup(shutil.rmtree, cachedir, ignore_errors=True)
         ext_pillar_opts = yaml.safe_load(
             ext_pillar_conf.format(
                 cachedir=cachedir,
@@ -440,15 +439,9 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
 
 class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
     '''
-    Base class for GitPython and Pygit2 SSH tests. Redefine sshd_config_dir in
-    a subclass using tempfile.mkdtemp()
+    Base class for GitPython and Pygit2 SSH tests
     '''
-    sshd_config_dir = None
-    # Creates random key names to (hopefully) ensure we're not overwriting an
-    # existing key in /root/.ssh. Even though these are destructive tests, we
-    # don't want to mess with something as important as ssh.
-    id_rsa_nopass = _rand_key_name(8)
-    id_rsa_withpass = _rand_key_name(8)
+    id_rsa_nopass = id_rsa_withpass = None
 
     @classmethod
     def tearDownClass(cls):
@@ -460,7 +453,11 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
             if dirname is not None:
                 shutil.rmtree(dirname, ignore_errors=True)
         ssh_dir = os.path.expanduser('~/.ssh')
-        for filename in (cls.id_rsa_nopass, cls.id_rsa_withpass, cls.case.git_ssh):
+        for filename in (cls.id_rsa_nopass,
+                         cls.id_rsa_nopass + '.pub',
+                         cls.id_rsa_withpass,
+                         cls.id_rsa_withpass + '.pub',
+                         cls.case.git_ssh):
             try:
                 os.remove(os.path.join(ssh_dir, filename))
             except OSError as exc:
@@ -549,6 +546,6 @@ class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):
                                          search=self.uwsgi_conf)
 
         if self.nginx_proc is None and self.uwsgi_proc is None:
-            self.spawn_server()
+            self.spawn_server()  # pylint: disable=E1120
 
         self.make_repo(self.repo_dir)
