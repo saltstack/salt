@@ -118,7 +118,7 @@ def list_balancers(profile, **libcloud_kwargs):
         salt myminion libcloud_storage.list_balancers profile1
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     balancers = conn.list_balancers(**libcloud_kwargs)
     ret = []
     for balancer in balancers:
@@ -146,7 +146,7 @@ def list_protocols(profile, **libcloud_kwargs):
         salt myminion libcloud_storage.list_protocols profile1
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     return conn.list_protocols(**libcloud_kwargs)
 
 
@@ -194,7 +194,7 @@ def create_balancer(name, port, protocol, profile, algorithm=None, members=None,
         else:
             raise ValueError("members must be of type list")
 
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     conn = _get_driver(profile=profile)
     balancer = conn.create_balancer(name, port, protocol, algorithm, starting_members, **libcloud_kwargs)
     return _simple_balancer(balancer)
@@ -223,7 +223,7 @@ def destroy_balancer(balancer_id, profile, **libcloud_kwargs):
         salt myminion libcloud_storage.destroy_balancer balancer_1 profile1
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     balancer = conn.get_balancer(balancer_id)
     return conn.destroy_balancer(balancer, **libcloud_kwargs)
 
@@ -250,7 +250,7 @@ def get_balancer_by_name(name, profile, **libcloud_kwargs):
         salt myminion libcloud_storage.get_balancer_by_name my_balancer profile1
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     balancers = conn.list_balancers(**libcloud_kwargs)
     match = [b for b in balancers if b.name == name]
     if len(match) == 1:
@@ -283,7 +283,7 @@ def get_balancer(balancer_id, profile, **libcloud_kwargs):
         salt myminion libcloud_storage.get_balancer balancer123 profile1
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     balancer = conn.get_balancer(balancer_id, **libcloud_kwargs)
     return _simple_balancer(balancer)
 
@@ -307,7 +307,7 @@ def list_supported_algorithms(profile, **libcloud_kwargs):
         salt myminion libcloud_storage.list_supported_algorithms profile1
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     return conn.list_supported_algorithms(**libcloud_kwargs)
 
 
@@ -337,7 +337,7 @@ def balancer_attach_member(balancer_id, ip, port, profile, extra=None, **libclou
         salt myminion libcloud_storage.balancer_attach_member balancer123 1.2.3.4 80 profile1
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     member = Member(id=None, ip=ip, port=port, balancer=None, extra=extra)
     balancer = conn.get_balancer(balancer_id)
     member_saved = conn.balancer_attach_member(balancer, member, **libcloud_kwargs)
@@ -379,7 +379,7 @@ def balancer_detach_member(balancer_id, member_id, profile, **libcloud_kwargs):
         raise ValueError("Bad argument, found no records")
     else:
         member = match[0]
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     return conn.balancer_detach_member(balancer=balancer, member=member, **libcloud_kwargs)
 
 
@@ -404,7 +404,7 @@ def list_balancer_members(balancer_id, profile, **libcloud_kwargs):
     '''
     conn = _get_driver(profile=profile)
     balancer = conn.get_balancer(balancer_id)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     members = conn.balancer_list_members(balancer=balancer, **libcloud_kwargs)
     return [_simple_member(member) for member in members]
 
@@ -428,7 +428,7 @@ def extra(method, profile, **libcloud_kwargs):
 
         salt myminion libcloud_loadbalancer.extra ex_get_permissions google container_name=my_container object_name=me.jpg --out=yaml
     '''
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     conn = _get_driver(profile=profile)
     connection_method = getattr(conn, method)
     return connection_method(**libcloud_kwargs)
