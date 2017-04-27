@@ -162,7 +162,7 @@ def serve_file(load, fnd):
     fpath = os.path.normpath(fnd['path'])
     with salt.utils.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
-        data = fp_.read(self.opts['file_buffer_size'])
+        data = fp_.read(__opts__['file_buffer_size'])
         if data and six.PY3 and not salt.utils.is_bin_file(fpath):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
@@ -186,10 +186,10 @@ def update():
         path = _get_container_path(container)
         try:
             if not os.path.exists(path):
-                os.path.mkdir(path)
+                os.makedirs(path)
             elif not os.path.isdir(path):
                 shutil.rmtree(path)
-                os.path.mkdir(path)
+                os.makedirs(path)
         except Exception as exc:
             log.exception('Error occurred creating cache directory for azurefs')
             continue
@@ -230,7 +230,7 @@ def update():
                 update = True
 
             if update:
-                if not os.path.exists(os.path.dirnam(fname)):
+                if not os.path.exists(os.path.dirname(fname)):
                     os.makedirs(os.path.dirname(fname))
                 # Lock writes
                 lk_fn = fname + '.lk'
@@ -349,11 +349,11 @@ def _get_container_service(container):
     Try account_key, sas_token, and no auth in that order
     '''
     if 'account_key' in container:
-        account = azure.storage.CloudStorageAccount(account_name, account_key=container['account_key'])
+        account = azure.storage.CloudStorageAccount(container['account_name'], account_key=container['account_key'])
     elif 'sas_token' in container:
-        account = azure.storage.CloudStorageAccount(account_name, sas_token=container['sas_token'])
+        account = azure.storage.CloudStorageAccount(container['account_name'], sas_token=container['sas_token'])
     else:
-        account = azure.storage.CloudStorageAccount(account_name)
+        account = azure.storage.CloudStorageAccount(container['account_name'])
     blob_service = account.create_block_blob_service()
     return blob_service
 
