@@ -62,3 +62,11 @@ The ``cmd`` state had the following changes:
 The ``file`` state had the following changes:
 
 - The ``show_diff`` option was removed. Please use ``show_changes`` instead.
+
+Grain Deprecations
+------------------
+
+For ``smartos`` some grains have been deprecated. These grains will be removed in Neon.
+
+- The ``hypervisor_uuid`` has been replaced with ``mdata:sdc:server_uuid`` grain.
+- The ``datacenter`` has been replaced with ``mdata:sdc:datacenter_name`` grain.
