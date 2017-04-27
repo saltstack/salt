@@ -102,7 +102,7 @@ def list_containers(profile, **libcloud_kwargs):
         salt myminion libcloud_storage.list_containers profile1
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     containers = conn.list_containers(**libcloud_kwargs)
     ret = []
     for container in containers:
@@ -134,7 +134,7 @@ def list_container_objects(container_name, profile, **libcloud_kwargs):
     '''
     conn = _get_driver(profile=profile)
     container = conn.get_container(container_name)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     objects = conn.list_container_objects(container, **libcloud_kwargs)
     ret = []
     for obj in objects:
@@ -169,7 +169,7 @@ def create_container(container_name, profile, **libcloud_kwargs):
         salt myminion libcloud_storage.create_container MyFolder profile1
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     container = conn.create_container(container_name, **libcloud_kwargs)
     return {
         'name': container.name,
@@ -197,7 +197,7 @@ def get_container(container_name, profile, **libcloud_kwargs):
         salt myminion libcloud_storage.get_container MyFolder profile1
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     container = conn.get_container(container_name, **libcloud_kwargs)
     return {
         'name': container.name,
@@ -228,7 +228,7 @@ def get_container_object(container_name, object_name, profile, **libcloud_kwargs
         salt myminion libcloud_storage.get_container_object MyFolder MyFile.xyz profile1
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     obj = conn.get_container_object(container_name, object_name, **libcloud_kwargs)
     return {
         'name': obj.name,
@@ -282,7 +282,7 @@ def download_object(container_name, object_name, destination_path, profile,
     '''
     conn = _get_driver(profile=profile)
     obj = conn.get_object(container_name, object_name)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     return conn.download_object(obj, destination_path, overwrite_existing, delete_on_failure, **libcloud_kwargs)
 
 
@@ -328,7 +328,7 @@ def upload_object(file_path, container_name, object_name, profile, extra=None,
 
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     container = conn.get_container(container_name)
     obj = conn.upload_object(file_path, container, object_name, extra, verify_hash, headers, **libcloud_kwargs)
     return obj.name
@@ -361,7 +361,7 @@ def delete_object(container_name, object_name, profile, **libcloud_kwargs):
         salt myminion libcloud_storage.delete_object MyFolder me.jpg profile1
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     obj = conn.get_object(container_name, object_name, **libcloud_kwargs)
     return conn.delete_object(obj)
 
@@ -390,7 +390,7 @@ def delete_container(container_name, profile, **libcloud_kwargs):
         salt myminion libcloud_storage.delete_container MyFolder profile1
     '''
     conn = _get_driver(profile=profile)
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     container = conn.get_container(container_name)
     return conn.delete_container(container, **libcloud_kwargs)
 
@@ -414,7 +414,7 @@ def extra(method, profile, **libcloud_kwargs):
 
         salt myminion libcloud_storage.extra ex_get_permissions google container_name=my_container object_name=me.jpg --out=yaml
     '''
-    clean_kwargs(libcloud_kwargs)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     conn = _get_driver(profile=profile)
     connection_method = getattr(conn, method)
     return connection_method(**libcloud_kwargs)
