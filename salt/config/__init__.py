@@ -2053,23 +2053,24 @@ def prepend_root_dir(opts, path_options):
     Prepends the options that represent filesystem paths with value of the
     'root_dir' option.
     '''
-    root_dir = os.path.abspath(opts['root_dir'])
-    root_opt = opts['root_dir'].rstrip(os.sep)
-    def_root_dir = salt.syspaths.ROOT_DIR.rstrip(os.sep)
+    root_dir = opts['root_dir']
+    root_opt_val = opts['root_dir']
+    if not os.path.isabs(root_dir):
+        # default root dir is always absolute and it needs to prefix the
+        # relative root_dir which is relative
+        def_root_dir = salt.syspaths.ROOT_DIR.rstrip(os.sep)
+        root_dir = salt.utils.path_join(def_root_dir, root_dir)
+
     for path_option in path_options:
         if path_option in opts:
             path = opts[path_option]
-            # When running testsuite, salt.syspaths.ROOT_DIR is often empty
-            if def_root_dir != '' and (path == def_root_dir or path.startswith(def_root_dir + os.sep)):
-                # Remove the default root dir so we can add the override
-                path = path[len(def_root_dir):]
-            elif path == root_opt or path.startswith(root_opt + os.sep):
+            if os.path.isabs(path):
+                # Absolute path - no prepending required
+                continue
+            elif path == root_opt_val or \
+                    path.startswith(root_opt_val + os.sep):
                 # Remove relative root dir so we can add the absolute root dir
                 path = path[len(root_opt):]
-            elif os.path.isabs(path_option):
-                # Absolute path (not default or overriden root_dir)
-                # No prepending required
-                continue
             # Prepending the root dir
             opts[path_option] = salt.utils.path_join(root_dir, path)
     logging.getLogger(__name__).trace('log_file = {}'.format(opts.get(
