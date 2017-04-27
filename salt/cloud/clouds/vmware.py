@@ -2366,7 +2366,7 @@ def create(vm_):
         'private_key', vm_, __opts__, search_global=False, default=None
     )
     deploy = config.get_cloud_config_value(
-        'deploy', vm_, __opts__, search_global=False, default=True
+        'deploy', vm_, __opts__, search_global=True, default=True
     )
     wait_for_ip_timeout = config.get_cloud_config_value(
         'wait_for_ip_timeout', vm_, __opts__, default=20 * 60
