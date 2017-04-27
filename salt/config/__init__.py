@@ -19,6 +19,7 @@ import types
 
 # Import third party libs
 import yaml
+
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
@@ -96,15 +97,15 @@ _DFLT_IPC_WBUFFER = _gather_buffer_space() * .5
 _DFLT_IPC_RBUFFER = _gather_buffer_space() * .5
 
 FLO_DIR = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        'daemons', 'flo')
+    os.path.dirname(os.path.dirname(__file__)),
+    'daemons', 'flo')
 
 VALID_OPTS = {
     # The address of the salt master. May be specified as IP address or hostname
     'master': (string_types, list),
 
     # The TCP/UDP port of the master to connect to in order to listen to publications
-    'master_port': (string_types, int),
+    'master_port': int,
 
     # The behaviour of the minion when connecting to a master. Can specify 'failover',
     # 'disable' or 'func'. If 'func' is specified, the 'master' option should be set to an
@@ -958,7 +959,6 @@ VALID_OPTS = {
 
     # Permit or deny allowing minions to request revoke of its own key
     'allow_minion_key_revoke': bool,
-
 }
 
 # default configurations
@@ -1019,7 +1019,7 @@ DEFAULT_MINION_OPTS = {
     'use_master_when_local': False,
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
-                 salt.syspaths.SPM_FORMULA_PATH]
+                    salt.syspaths.SPM_FORMULA_PATH]
     },
     'top_file_merging_strategy': 'merge',
     'env_order': [],
@@ -1034,7 +1034,7 @@ DEFAULT_MINION_OPTS = {
     'fileserver_ignoresymlinks': False,
     'pillar_roots': {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
-                 salt.syspaths.SPM_PILLAR_PATH]
+                    salt.syspaths.SPM_PILLAR_PATH]
     },
     'on_demand_ext_pillar': ['libvirt', 'virtkey'],
     'git_pillar_base': 'master',
@@ -1223,14 +1223,14 @@ DEFAULT_MASTER_OPTS = {
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
-                 salt.syspaths.SPM_FORMULA_PATH]
+                    salt.syspaths.SPM_FORMULA_PATH]
     },
     'master_roots': {
         'base': [salt.syspaths.BASE_MASTER_ROOTS_DIR],
     },
     'pillar_roots': {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
-                 salt.syspaths.SPM_PILLAR_PATH]
+                    salt.syspaths.SPM_PILLAR_PATH]
     },
     'on_demand_ext_pillar': ['libvirt', 'virtkey'],
     'thorium_interval': 0.5,
@@ -1483,9 +1483,7 @@ DEFAULT_MASTER_OPTS = {
 
 
 # ----- Salt Proxy Minion Configuration Defaults ----------------------------------->
-# Note DEFAULT_MINION_OPTS
-# is loaded first, then if we are setting up a proxy, the config is overwritten with
-# these settings.
+#
 DEFAULT_PROXY_MINION_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
