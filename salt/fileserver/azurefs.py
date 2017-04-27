@@ -298,6 +298,8 @@ def file_list(load):
     ret = set()
     try:
         for container in __opts__['azurefs']:
+            if container.get('saltenv', 'base') != load['saltenv']:
+                continue
             container_list = _get_container_path(container) + '.list'
             lk = container_list + '.lk'
             salt.fileserver.wait_lock(lk, container_list, 5)
