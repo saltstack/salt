@@ -26,6 +26,27 @@ cache driver but helps for more complex drivers like ``consul``.
 For more details see ``memcache_expire_seconds`` and other ``memcache_*``
 options in the master config reverence.
 
+
+Docker Fixes
+============
+
+- Docker authentication has been re-organized. Instead of attempting a login
+  for each push/pull (which was unnecessary), a new function called
+  :py:func:`dockerng.login <salt.modules.dockerng.login>` has been added, which
+  authenticates to the registry and adds the credential token to the
+  ``~/.docker/config.json``. After upgrading, if you have not already performed
+  a ``docker login`` on the minion using the docker CLI, you will need to run
+  :py:func:`dockerng.login <salt.modules.dockerng.login>` to login. This only
+  needs to be done once.
+- A bug in resolving the tag name for images in a custom registry (where a
+  colon can appear in the image name, e.g.
+  ``myregistry.com:5000/image:tagname``) has been fixed. In previous releases,
+  Salt would use the colon to separate the tag name from the image name, and if
+  there was no colon, the default tag name of ``latest`` would be assumed.
+  However, this caused custom registry images to be misidentified when no
+  explicit tag name was passed (e.g. ``myregistry.com:5000/image``). To work
+  around this in earlier releases, simply specify the tag name.
+
 Salt-Cloud Fixes
 ================
 
@@ -617,7 +638,7 @@ Changes:
 - **PR** `#40495`_: (*rallytime*) [2016.11] Merge forward from 2016.3 to 2016.11
   @ *2017-04-03T18:36:16Z*
 
-  - **ISSUE** `#37322`_: (*kiemlicz*) master_tops generating improper top file 
+  - **ISSUE** `#37322`_: (*kiemlicz*) master_tops generating improper top file
     | refs: `#40427`_
   - **PR** `#40427`_: (*terminalmage*) Clarify the master_tops documentation
   * 02a1f64 Merge pull request `#40495`_ from rallytime/merge-2016.11
@@ -700,7 +721,7 @@ Changes:
 - **PR** `#40387`_: (*redbaron4*) More complete fix for 39692
   @ *2017-03-30T22:29:05Z*
 
-  - **ISSUE** `#39692`_: (*djsly*) tuned module and state are broken on 7.3 families. 
+  - **ISSUE** `#39692`_: (*djsly*) tuned module and state are broken on 7.3 families.
     | refs: `#39719`_ `#39768`_ `#40387`_ `#40387`_
   * dfaa670 Merge pull request `#40387`_ from redbaron4/`fix-39692`_
   * 77a40a0 Lint fixes
@@ -1557,7 +1578,7 @@ Changes:
     | refs: `#39624`_
   - **ISSUE** `#39336`_: (*GevatterGaul*) salt-minion fails with IPv6
     | refs: `#39766`_
-  - **ISSUE** `#39333`_: (*jagguli*) Not Available error - Scheduling custom runner functions 
+  - **ISSUE** `#39333`_: (*jagguli*) Not Available error - Scheduling custom runner functions
     | refs: `#39791`_
   - **ISSUE** `#39119`_: (*frogunder*) Head of 2016.3 - Salt-Master uses 90 seconds to restart
     | refs: `#39796`_
@@ -1870,7 +1891,7 @@ Changes:
 - **PR** `#39768`_: (*rallytime*) Back-port `#39719`_ to 2016.11
   @ *2017-03-02T02:54:40Z*
 
-  - **ISSUE** `#39692`_: (*djsly*) tuned module and state are broken on 7.3 families. 
+  - **ISSUE** `#39692`_: (*djsly*) tuned module and state are broken on 7.3 families.
     | refs: `#39719`_ `#39768`_ `#40387`_ `#40387`_
   - **PR** `#39719`_: (*Seb-Solon*) Support new version of tuned-adm binary
     | refs: `#39768`_
