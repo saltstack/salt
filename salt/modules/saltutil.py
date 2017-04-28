@@ -909,7 +909,7 @@ def clear_cache():
     return True
 
 
-def find_job(jid):
+def find_job(jid, **kwargs):
     '''
     Return the data for a specific job id that is currently running.
 
