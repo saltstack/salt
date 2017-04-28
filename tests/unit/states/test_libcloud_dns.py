@@ -16,13 +16,13 @@ from tests.support.mock import (
 import salt.states.libcloud_dns as libcloud_dns
 
 
-class TestZone(object):
+class DNSTestZone(object):
     def __init__(self, id, domain):
         self.id = id
         self.domain = domain
 
 
-class TestRecord(object):
+class DNSTestRecord(object):
     def __init__(self, id, name, type, data):
         self.id = id
         self.name = name
@@ -30,48 +30,32 @@ class TestRecord(object):
         self.data = data
 
 
-class MockDNSDriver(object):
-    def __init__(self):
-        pass
-
-
-def get_mock_driver():
-    return MockDNSDriver()
-
-
-test_records = {
-    'zone1': [TestRecord(0, 'www', 'A', '127.0.0.1')]
-}
-
-
-def list_zones(profile):
-    return [TestZone('zone1', 'test.com')]
-
-
-def list_records(zone_id, profile):
-    return test_records[zone_id]
-
-
-def create_record(*args):
-    return True
-
-
-def delete_record(*args):
-    return True
-
-
-def create_zone(*args):
-    return True
-
-
-def delete_zone(*args):
-    return True
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
+        test_records = {
+            'zone1': [DNSTestRecord(0, 'www', 'A', '127.0.0.1')]
+        }
+
+        def list_zones(profile):
+            return [DNSTestZone('zone1', 'test.com')]
+
+        def list_records(zone_id, profile):
+            return test_records[zone_id]
+
+        def create_record(*args):
+            return True
+
+        def delete_record(*args):
+            return True
+
+        def create_zone(*args):
+            return True
+
+        def delete_zone(*args):
+            return True
+
         return {
             libcloud_dns: {
                 '__salt__': {

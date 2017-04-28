@@ -128,6 +128,8 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTes
         return application
 
     def decode_body(self, response):
+        if response is None:
+            return response
         if six.PY2:
             return response
         if response.body:

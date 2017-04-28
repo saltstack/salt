@@ -814,6 +814,7 @@ def urlencoded_processor(entity):
         body_bytes.seek(0)
         # Patch fp
         entity.fp = body_bytes
+        del contents
     # First call out to CherryPy's default processor
     cherrypy._cpreqbody.process_urlencoded(entity)
     cherrypy._cpreqbody.process_urlencoded(entity)
@@ -836,6 +837,7 @@ def json_processor(entity):
         body = entity.fp.read(fp_out=contents)
         contents.seek(0)
         body = contents.read()
+        del contents
     try:
         cherrypy.serving.request.unserialized_data = json.loads(body)
     except ValueError:
