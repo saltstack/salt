@@ -2085,6 +2085,8 @@ def prepend_root_dir(opts, path_options):
                 continue
             # Prepending the root dir
             opts[path_option] = salt.utils.path_join(root_dir, path)
+    logging.getLogger(__name__).trace('log_file = {}'.format(opts.get(
+        'log_file')))
 
 
 def insert_system_path(opts, paths):
@@ -3285,6 +3287,24 @@ def _update_ssl_config(opts):
         opts['ssl'][key] = getattr(ssl, val)
 
 
+def _adjust_log_file_override(overrides, default_log_file):
+    '''
+    Adjusts the log_file based on the log_dir override
+    '''
+    if overrides.get('log_dir'):
+        # Adjust log_file if a log_dir override is introduced
+        if overrides.get('log_file'):
+            if not os.path.abspath(overrides['log_file']):
+                # Prepend log_dir if log_file is relative
+                overrides['log_file'] = os.path.join(overrides['log_dir'],
+                                                     overrides['log_file'])
+        else:
+            # Create the log_file override
+            overrides['log_file'] = \
+                os.path.join(overrides['log_dir'],
+                             os.path.basename(default_log_file))
+
+
 def apply_minion_config(overrides=None,
                         defaults=None,
                         cache_minion_id=False,
@@ -3297,6 +3317,7 @@ def apply_minion_config(overrides=None,
 
     opts = defaults.copy()
     opts['__role'] = 'minion'
+    _adjust_log_file_override(overrides, defaults['log_file'])
     if overrides:
         opts.update(overrides)
 
@@ -3448,6 +3469,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     opts = defaults.copy()
     opts['__role'] = 'master'
+    _adjust_log_file_override(overrides, defaults['log_file'])
     if overrides:
         opts.update(overrides)
 
@@ -3691,6 +3713,7 @@ def apply_spm_config(overrides, defaults):
     .. versionadded:: 2015.8.1
     '''
     opts = defaults.copy()
+    _adjust_log_file_override(overrides, defaults['log_file'])
     if overrides:
         opts.update(overrides)
 
