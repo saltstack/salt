@@ -241,6 +241,12 @@ class GitTestBase(ModuleCase):
     git_opts = '-c user.name="Foo Bar" -c user.email=foo@bar.com'
     ext_opts = {}
 
+    # We need to temporarily skip pygit2 tests on EL7 until the EPEL packager
+    # updates pygit2 to bring it up-to-date with libgit2.
+    @requires_system_grains
+    def is_el7(self, grains):
+        return grains['os_family'] == 'RedHat' and grains['osmajorrelease'] == 7
+
     @classmethod
     def setUpClass(cls):
         cls.prep_server()
