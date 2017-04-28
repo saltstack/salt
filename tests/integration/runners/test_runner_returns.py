@@ -11,6 +11,7 @@ import yaml
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
+from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.payload
@@ -130,5 +131,6 @@ class RunnerReturnsTest(ShellCase):
                         'jid': jid,
                         'return': {'args': ['foo'], 'kwargs': {'bar': 'hello world!'}},
                         'success': True,
+                        'user': RUNTIME_VARS.RUNNING_TESTS_USER}}
                         'user': 'root'}}
         )
