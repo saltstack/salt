@@ -745,12 +745,13 @@ def install(name=None,
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
 
-    state = get_selections(state='hold')
-    hold_pkgs = state.get('hold')
-    to_unhold = []
-    for _pkg in hold_pkgs:
-        if _pkg in all_pkgs:
-            to_unhold.append(_pkg)
+    hold_pkgs = get_selections(state='hold').get('hold', [])
+    # all_pkgs contains the argument to be passed to apt-get install, which
+    # when a specific version is requested will be in the format name=version.
+    # Strip off the '=' if present so we can compare the held package names
+    # against the pacakges we are trying to install.
+    targeted_names = [x.split('=')[0] for x in all_pkgs]
+    to_unhold = [x for x in hold_pkgs if x in targeted_names]
 
     if to_unhold:
         unhold(pkgs=to_unhold)
