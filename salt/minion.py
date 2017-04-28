@@ -671,6 +671,7 @@ class SMinion(MinionBase):
         # If configured, cache pillar data on the minion
         if self.opts['file_client'] == 'remote' and self.opts.get('minion_pillar_cache', False):
             import yaml
+            from salt.utils.yamldumper import SafeOrderedDumper
             pdir = os.path.join(self.opts['cachedir'], 'pillar')
             if not os.path.isdir(pdir):
                 os.makedirs(pdir, 0o700)
@@ -681,11 +682,21 @@ class SMinion(MinionBase):
                 penv = 'base'
             cache_top = {penv: {self.opts['id']: ['cache']}}
             with salt.utils.fopen(ptop, 'wb') as fp_:
-                fp_.write(yaml.dump(cache_top))
+                fp_.write(
+                    yaml.dump(
+                        cache_top,
+                        Dumper=SafeOrderedDumper
+                    )
+                )
                 os.chmod(ptop, 0o600)
             cache_sls = os.path.join(pdir, 'cache.sls')
             with salt.utils.fopen(cache_sls, 'wb') as fp_:
-                fp_.write(yaml.dump(self.opts['pillar']))
+                fp_.write(
+                    yaml.dump(
+                        self.opts['pillar'],
+                        Dumper=SafeOrderedDumper
+                    )
+                )
                 os.chmod(cache_sls, 0o600)
 
     def gen_modules(self, initial_load=False):

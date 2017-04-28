@@ -42,6 +42,7 @@ from salt.utils.verify import verify_files
 import salt.exceptions
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.utils.yamldumper import SafeOrderedDumper
 
 
 def _sorted(mixins_or_funcs):
@@ -1996,7 +1997,13 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
         # Dump the master configuration file, exit normally at the end.
         if self.options.config_dump:
             cfg = config.master_config(self.get_config_file_path())
-            sys.stdout.write(yaml.dump(cfg, default_flow_style=False))
+            sys.stdout.write(
+                yaml.dump(
+                    cfg,
+                    default_flow_style=False,
+                    Dumper=SafeOrderedDumper
+                )
+            )
             sys.exit(salt.defaults.exitcodes.EX_OK)
 
         if self.options.doc:

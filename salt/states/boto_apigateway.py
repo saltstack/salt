@@ -59,6 +59,7 @@ import yaml
 # Import Salt Libs
 import salt.ext.six as six
 import salt.utils
+from salt.utils.yamlloader import SaltYamlSafeLoader
 
 log = logging.getLogger(__name__)
 
@@ -675,7 +676,10 @@ class _Swagger(object):
                 self._swagger_file = swagger_file_path
                 self._md5_filehash = _gen_md5_filehash(self._swagger_file)
                 with salt.utils.fopen(self._swagger_file, 'rb') as sf:
-                    self._cfg = yaml.load(sf)
+                    self._cfg = yaml.load(
+                        sf,
+                        Loader=SaltYamlSafeLoader
+                    )
                 self._swagger_version = ''
             else:
                 raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
