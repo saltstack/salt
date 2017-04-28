@@ -241,7 +241,7 @@ class SaltNova(object):
                            os_auth_plugin=os_auth_plugin,
                            **kwargs)
 
-    def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, **kwargs):
+    def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, verify=True, **kwargs):
         if auth is None:
             auth = {}
 
@@ -281,7 +281,7 @@ class SaltNova(object):
 
         self.client_kwargs = sanatize_novaclient(self.client_kwargs)
         options = loader.load_from_options(**self.kwargs)
-        self.session = keystoneauth1.session.Session(auth=options)
+        self.session = keystoneauth1.session.Session(auth=options, verify=verify)
         conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
         self.kwargs['auth_token'] = conn.client.session.get_token()
         self.catalog = conn.client.session.get('/auth/catalog', endpoint_filter={'service_type': 'identity'}).json().get('catalog', [])

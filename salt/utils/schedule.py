@@ -349,6 +349,7 @@ import salt.log.setup as log_setup
 import salt.defaults.exitcodes
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running, default_signals, SignalHandlingMultiprocessingProcess
+from salt.utils.yamldumper import SafeOrderedDumper
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -473,7 +474,10 @@ class Schedule(object):
             with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(
                     salt.utils.to_bytes(
-                        yaml.dump({'schedule': self._get_schedule(include_pillar=False)})
+                        yaml.dump(
+                            {'schedule': self._get_schedule(include_pillar=False)},
+                            Dumper=SafeOrderedDumper
+                        )
                     )
                 )
         except (IOError, OSError):
