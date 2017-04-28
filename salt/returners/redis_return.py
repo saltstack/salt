@@ -49,6 +49,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 # Import python libs
 from __future__ import absolute_import
 import json
+import logging
 
 # Import Salt libs
 import salt.ext.six as six
@@ -62,6 +63,8 @@ try:
     HAS_REDIS = True
 except ImportError:
     HAS_REDIS = False
+
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'redis'
@@ -221,14 +224,16 @@ def clean_old_jobs():
     do manually cleaning here.
     '''
     serv = _get_serv(ret=None)
+    ret_jids = serv.keys('ret:*')
     living_jids = set(serv.keys('load:*'))
     to_remove = []
-    for ret_key in serv.keys('ret:*'):
+    for ret_key in ret_jids:
         load_key = ret_key.replace('ret:', 'load:', 1)
         if load_key not in living_jids:
             to_remove.append(ret_key)
     if len(to_remove) != 0:
         serv.delete(*to_remove)
+        log.debug('clean old jobs: {0}'.format(to_remove))
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
