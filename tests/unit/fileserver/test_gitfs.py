@@ -185,7 +185,7 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
         Instead, we'll create a temporary repo on the fly for the tests to examine.
         '''
         if not gitfs.__virtual__():
-            self.skip("GitFS could not be loaded. Skipping GitFS tests!")
+            self.skipTest("GitFS could not be loaded. Skipping GitFS tests!")
         self.integration_base_files = os.path.join(FILES, 'file', 'base')
 
         # Create the dir if it doesn't already exist

@@ -2106,7 +2106,8 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
     if not ret['changes'] and not ret['comment']:
         status = 'downloaded' if downloadonly else 'installed'
         ret['result'] = True
-        ret['comment'] = 'Related packages are already {}'.format(status)
+        ret['comment'] = ('Advisory patch is not needed or related packages '
+                          'are already {0}'.format(status))
 
     return ret
 

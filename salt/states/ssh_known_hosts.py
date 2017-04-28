@@ -61,6 +61,9 @@ def present(
 
     name
         The name of the remote host (e.g. "github.com")
+        Note that only a single hostname is supported, if foo.example.com and
+        bar.example.com have the same host you will need two separate Salt
+        States to represent them.
 
     user
         The user who owns the ssh authorized keys file to modify
@@ -197,6 +200,9 @@ def absent(name, user=None, config=None):
 
     name
         The host name
+        Note that only single host names are supported.  If foo.example.com
+        and bar.example.com are the same machine and you need to exclude both,
+        you will need one Salt state for each.
 
     user
         The user who owns the ssh authorized keys file to modify

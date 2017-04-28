@@ -13,10 +13,12 @@ import salt.modules.uwsgi as uwsgi
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.utils.which', Mock(return_value='/usr/bin/uwsgi'))
 class UwsgiTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
+        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/uwsgi'))
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return {uwsgi: {}}
 
     def test_uwsgi_stats(self):

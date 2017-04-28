@@ -3143,7 +3143,7 @@ def to_str(s, encoding=None):
             # https://docs.python.org/3/howto/unicode.html#the-unicode-type
             # replace error with U+FFFD, REPLACEMENT CHARACTER
             return s.decode(encoding or __salt_system_encoding__, "replace")
-        raise TypeError('expected str, bytes, or bytearray')
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
             return str(s)

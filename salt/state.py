@@ -2103,8 +2103,17 @@ class State(object):
                                 if req_key == 'id' or chunk['state'] == req_key:
                                     found = True
                                     reqs[r_state].append(chunk)
-                        except KeyError:
-                            raise SaltRenderError('Could not locate requisite of [{0}] present in state with name [{1}]'.format(req_key, chunk['name']))
+                        except KeyError as exc:
+                            raise SaltRenderError(
+                                'Could not locate requisite of [{0}] present in state with name [{1}]'.format(
+                                    req_key, chunk['name']))
+                        except TypeError:
+                            # On Python 2, the above req_val, being an OrderedDict, will raise a KeyError,
+                            # however on Python 3 it will raise a TypeError
+                            # This was found when running tests.unit.test_state.StateCompilerTestCase.test_render_error_on_invalid_requisite
+                            raise SaltRenderError(
+                                'Could not locate requisite of [{0}] present in state with name [{1}]'.format(
+                                    req_key, chunk['name']))
                     if not found:
                         return 'unmet', ()
         fun_stats = set()

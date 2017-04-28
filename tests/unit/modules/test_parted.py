@@ -40,48 +40,42 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
 
     # Test __virtual__ function for module registration
 
-    @patch('salt.utils.is_windows', lambda: True)
     def test_virtual_bails_on_windows(self):
         '''If running windows, __virtual__ shouldn't register module'''
-        ret = parted.__virtual__()
-        err = (False, 'The parted execution module failed to load Windows systems are not supported.')
-        self.assertEqual(err, ret)
+        with patch('salt.utils.is_windows', lambda: True):
+            ret = parted.__virtual__()
+            err = (False, 'The parted execution module failed to load Windows systems are not supported.')
+            self.assertEqual(err, ret)
 
-    @patch('salt.utils.which', lambda exe: not exe == "parted")
     def test_virtual_bails_without_parted(self):
         '''If parted not in PATH, __virtual__ shouldn't register module'''
-        ret = parted.__virtual__()
-        err = (False, 'The parted execution module failed to load parted binary is not in the path.')
-        self.assertEqual(err, ret)
+        with patch('salt.utils.which', lambda exe: not exe == "parted"):
+            ret = parted.__virtual__()
+            err = (False, 'The parted execution module failed to load parted binary is not in the path.')
+            self.assertEqual(err, ret)
 
-    @patch('salt.utils.which', lambda exe: not exe == "lsblk")
     def test_virtual_bails_without_lsblk(self):
         '''If lsblk not in PATH, __virtual__ shouldn't register module'''
-        ret = parted.__virtual__()
-        err = (False, 'The parted execution module failed to load lsblk binary is not in the path.')
-        self.assertEqual(err, ret)
+        with patch('salt.utils.which', lambda exe: not exe == "lsblk"):
+            ret = parted.__virtual__()
+            err = (False, 'The parted execution module failed to load lsblk binary is not in the path.')
+            self.assertEqual(err, ret)
 
-    @patch('salt.utils.which', lambda exe: not exe == "partprobe")
     def test_virtual_bails_without_partprobe(self):
         '''If partprobe not in PATH, __virtual__ shouldn't register module'''
-        ret = parted.__virtual__()
-        err = (False, 'The parted execution module failed to load partprobe binary is not in the path.')
-        self.assertEqual(err, ret)
+        with patch('salt.utils.which', lambda exe: not exe == "partprobe"):
+            ret = parted.__virtual__()
+            err = (False, 'The parted execution module failed to load partprobe binary is not in the path.')
+            self.assertEqual(err, ret)
 
-    @patch('salt.utils.is_windows', lambda: False)
-    @patch('salt.utils.which',
-           lambda exe: (
-               exe == "parted"
-               or
-               exe == "lsblk"
-               or
-               exe == "partprobe"))
     def test_virtual(self):
         '''On expected platform with correct utils in PATH, register
         "partition" module'''
-        ret = parted.__virtual__()
-        expect = 'partition'
-        self.assertEqual(ret, expect)
+        with patch('salt.utils.is_windows', lambda: False), \
+                patch('salt.utils.which', lambda exe: exe in ('parted', 'lsblk', 'partprobe')):
+            ret = parted.__virtual__()
+            expect = 'partition'
+            self.assertEqual(ret, expect)
 
     # Test probe function
 
@@ -89,15 +83,15 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
         parted.probe()
         self.cmdrun.assert_called_once_with('partprobe -- ')
 
-    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_probe_w_single_arg(self):
-        parted.probe('/dev/sda')
-        self.cmdrun.assert_called_once_with('partprobe -- /dev/sda')
+        with patch('salt.modules.parted._validate_device', MagicMock()):
+            parted.probe('/dev/sda')
+            self.cmdrun.assert_called_once_with('partprobe -- /dev/sda')
 
-    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_probe_w_multiple_args(self):
-        parted.probe('/dev/sda', '/dev/sdb')
-        self.cmdrun.assert_called_once_with('partprobe -- /dev/sda /dev/sdb')
+        with patch('salt.modules.parted._validate_device', MagicMock()):
+            parted.probe('/dev/sda', '/dev/sdb')
+            self.cmdrun.assert_called_once_with('partprobe -- /dev/sda /dev/sdb')
 
     # Test _list function
 
@@ -141,191 +135,191 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
     def test_list__without_device(self):
         self.assertRaises(TypeError, parted.list_)
 
-    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__empty_cmd_output(self):
-        self.cmdrun_stdout.return_value = self.parted_print_output('empty')
-        output = parted.list_('/dev/sda')
-        self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
-        expected = {'info': {}, 'partitions': {}}
-        self.assertEqual(output, expected)
+        with patch('salt.modules.parted._validate_device', MagicMock()):
+            self.cmdrun_stdout.return_value = self.parted_print_output('empty')
+            output = parted.list_('/dev/sda')
+            self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
+            expected = {'info': {}, 'partitions': {}}
+            self.assertEqual(output, expected)
 
-    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__valid_unit_empty_cmd_output(self):
-        self.cmdrun_stdout.return_value = self.parted_print_output('empty')
-        output = parted.list_('/dev/sda', unit='s')
-        self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda unit s print')
-        expected = {'info': {}, 'partitions': {}}
-        self.assertEqual(output, expected)
+        with patch('salt.modules.parted._validate_device', MagicMock()):
+            self.cmdrun_stdout.return_value = self.parted_print_output('empty')
+            output = parted.list_('/dev/sda', unit='s')
+            self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda unit s print')
+            expected = {'info': {}, 'partitions': {}}
+            self.assertEqual(output, expected)
 
     def test_list__invalid_unit(self):
         self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda',
                           unit='badbadbad')
         self.assertFalse(self.cmdrun.called)
 
-    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__bad_header(self):
-        self.cmdrun_stdout.return_value = self.parted_print_output('bad_header')
-        self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
-        self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
+        with patch('salt.modules.parted._validate_device', MagicMock()):
+            self.cmdrun_stdout.return_value = self.parted_print_output('bad_header')
+            self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
+            self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
 
-    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__bad_label_info(self):
-        self.cmdrun_stdout.return_value = self.parted_print_output('bad_label_info')
-        self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
-        self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
+        with patch('salt.modules.parted._validate_device', MagicMock()):
+            self.cmdrun_stdout.return_value = self.parted_print_output('bad_label_info')
+            self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
+            self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
 
-    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__bad_partition(self):
-        self.cmdrun_stdout.return_value = self.parted_print_output('bad_partition')
-        self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
-        self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
+        with patch('salt.modules.parted._validate_device', MagicMock()):
+            self.cmdrun_stdout.return_value = self.parted_print_output('bad_partition')
+            self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
+            self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
 
-    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__valid_cmd_output(self):
-        self.cmdrun_stdout.return_value = self.parted_print_output('valid')
-        output = parted.list_('/dev/sda')
-        self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
-        expected = {
-            'info': {
-                'logical sector': '512',
-                'physical sector': '512',
-                'interface': 'scsi',
-                'model': 'AMCC 9650SE-24M DISK',
-                'disk': '/dev/sda',
-                'disk flags': '',
-                'partition table': 'gpt',
-                'size': '4000GB'
-            },
-            'partitions': {
-                '1': {
-                    'end': '150MB',
-                    'number': '1',
-                    'start': '17.4kB',
-                    'file system': '',
-                    'flags': 'boot',
-                    'type': 'ext3',
-                    'size': '150MB'},
-                '2': {
-                    'end': '4000GB',
-                    'number': '2',
-                    'start': '3921GB',
-                    'file system': '',
-                    'flags': '',
-                    'type': 'linux-swap(v1)',
-                    'size': '79.3GB'
+        with patch('salt.modules.parted._validate_device', MagicMock()):
+            self.cmdrun_stdout.return_value = self.parted_print_output('valid')
+            output = parted.list_('/dev/sda')
+            self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
+            expected = {
+                'info': {
+                    'logical sector': '512',
+                    'physical sector': '512',
+                    'interface': 'scsi',
+                    'model': 'AMCC 9650SE-24M DISK',
+                    'disk': '/dev/sda',
+                    'disk flags': '',
+                    'partition table': 'gpt',
+                    'size': '4000GB'
+                },
+                'partitions': {
+                    '1': {
+                        'end': '150MB',
+                        'number': '1',
+                        'start': '17.4kB',
+                        'file system': '',
+                        'flags': 'boot',
+                        'type': 'ext3',
+                        'size': '150MB'},
+                    '2': {
+                        'end': '4000GB',
+                        'number': '2',
+                        'start': '3921GB',
+                        'file system': '',
+                        'flags': '',
+                        'type': 'linux-swap(v1)',
+                        'size': '79.3GB'
+                    }
                 }
             }
-        }
-        self.assertEqual(output, expected)
+            self.assertEqual(output, expected)
 
-    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__valid_unit_valid_cmd_output(self):
-        self.cmdrun_stdout.return_value = self.parted_print_output('valid')
-        output = parted.list_('/dev/sda', unit='s')
-        self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda unit s print')
-        expected = {
-            'info': {
-                'logical sector': '512',
-                'physical sector': '512',
-                'interface': 'scsi',
-                'model': 'AMCC 9650SE-24M DISK',
-                'disk': '/dev/sda',
-                'disk flags': '',
-                'partition table': 'gpt',
-                'size': '4000GB'
-            },
-            'partitions': {
-                '1': {
-                    'end': '150MB',
-                    'number': '1',
-                    'start': '17.4kB',
-                    'file system': '',
-                    'flags': 'boot',
-                    'type': 'ext3',
-                    'size': '150MB'},
-                '2': {
-                    'end': '4000GB',
-                    'number': '2',
-                    'start': '3921GB',
-                    'file system': '',
-                    'flags': '',
-                    'type': 'linux-swap(v1)',
-                    'size': '79.3GB'
+        with patch('salt.modules.parted._validate_device', MagicMock()):
+            self.cmdrun_stdout.return_value = self.parted_print_output('valid')
+            output = parted.list_('/dev/sda', unit='s')
+            self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda unit s print')
+            expected = {
+                'info': {
+                    'logical sector': '512',
+                    'physical sector': '512',
+                    'interface': 'scsi',
+                    'model': 'AMCC 9650SE-24M DISK',
+                    'disk': '/dev/sda',
+                    'disk flags': '',
+                    'partition table': 'gpt',
+                    'size': '4000GB'
+                },
+                'partitions': {
+                    '1': {
+                        'end': '150MB',
+                        'number': '1',
+                        'start': '17.4kB',
+                        'file system': '',
+                        'flags': 'boot',
+                        'type': 'ext3',
+                        'size': '150MB'},
+                    '2': {
+                        'end': '4000GB',
+                        'number': '2',
+                        'start': '3921GB',
+                        'file system': '',
+                        'flags': '',
+                        'type': 'linux-swap(v1)',
+                        'size': '79.3GB'
+                    }
                 }
             }
-        }
-        self.assertEqual(output, expected)
+            self.assertEqual(output, expected)
 
-    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__valid_legacy_cmd_output(self):
-        self.cmdrun_stdout.return_value = self.parted_print_output('valid_legacy')
-        output = parted.list_('/dev/sda')
-        self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
-        expected = {
-            'info': {
-                'logical sector': '512',
-                'physical sector': '512',
-                'interface': 'scsi',
-                'model': 'AMCC 9650SE-24M DISK',
-                'disk': '/dev/sda',
-                'partition table': 'gpt',
-                'size': '4000GB'
-            },
-            'partitions': {
-                '1': {
-                    'end': '150MB',
-                    'number': '1',
-                    'start': '17.4kB',
-                    'file system': '',
-                    'flags': 'boot',
-                    'type': 'ext3',
-                    'size': '150MB'},
-                '2': {
-                    'end': '4000GB',
-                    'number': '2',
-                    'start': '3921GB',
-                    'file system': '',
-                    'flags': '',
-                    'type': 'linux-swap(v1)',
-                    'size': '79.3GB'
+        with patch('salt.modules.parted._validate_device', MagicMock()):
+            self.cmdrun_stdout.return_value = self.parted_print_output('valid_legacy')
+            output = parted.list_('/dev/sda')
+            self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda print')
+            expected = {
+                'info': {
+                    'logical sector': '512',
+                    'physical sector': '512',
+                    'interface': 'scsi',
+                    'model': 'AMCC 9650SE-24M DISK',
+                    'disk': '/dev/sda',
+                    'partition table': 'gpt',
+                    'size': '4000GB'
+                },
+                'partitions': {
+                    '1': {
+                        'end': '150MB',
+                        'number': '1',
+                        'start': '17.4kB',
+                        'file system': '',
+                        'flags': 'boot',
+                        'type': 'ext3',
+                        'size': '150MB'},
+                    '2': {
+                        'end': '4000GB',
+                        'number': '2',
+                        'start': '3921GB',
+                        'file system': '',
+                        'flags': '',
+                        'type': 'linux-swap(v1)',
+                        'size': '79.3GB'
+                    }
                 }
             }
-        }
-        self.assertEqual(output, expected)
+            self.assertEqual(output, expected)
 
-    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__valid_unit_valid_legacy_cmd_output(self):
-        self.cmdrun_stdout.return_value = self.parted_print_output('valid_legacy')
-        output = parted.list_('/dev/sda', unit='s')
-        self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda unit s print')
-        expected = {
-            'info': {
-                'logical sector': '512',
-                'physical sector': '512',
-                'interface': 'scsi',
-                'model': 'AMCC 9650SE-24M DISK',
-                'disk': '/dev/sda',
-                'partition table': 'gpt',
-                'size': '4000GB'
-            },
-            'partitions': {
-                '1': {
-                    'end': '150MB',
-                    'number': '1',
-                    'start': '17.4kB',
-                    'file system': '',
-                    'flags': 'boot',
-                    'type': 'ext3',
-                    'size': '150MB'},
-                '2': {
-                    'end': '4000GB',
-                    'number': '2',
-                    'start': '3921GB',
-                    'file system': '',
-                    'flags': '',
-                    'type': 'linux-swap(v1)',
-                    'size': '79.3GB'
+        with patch('salt.modules.parted._validate_device', MagicMock()):
+            self.cmdrun_stdout.return_value = self.parted_print_output('valid_legacy')
+            output = parted.list_('/dev/sda', unit='s')
+            self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda unit s print')
+            expected = {
+                'info': {
+                    'logical sector': '512',
+                    'physical sector': '512',
+                    'interface': 'scsi',
+                    'model': 'AMCC 9650SE-24M DISK',
+                    'disk': '/dev/sda',
+                    'partition table': 'gpt',
+                    'size': '4000GB'
+                },
+                'partitions': {
+                    '1': {
+                        'end': '150MB',
+                        'number': '1',
+                        'start': '17.4kB',
+                        'file system': '',
+                        'flags': 'boot',
+                        'type': 'ext3',
+                        'size': '150MB'},
+                    '2': {
+                        'end': '4000GB',
+                        'number': '2',
+                        'start': '3921GB',
+                        'file system': '',
+                        'flags': '',
+                        'type': 'linux-swap(v1)',
+                        'size': '79.3GB'
+                    }
                 }
             }
-        }
-        self.assertEqual(output, expected)
+            self.assertEqual(output, expected)

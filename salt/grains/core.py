@@ -1123,6 +1123,7 @@ _OS_NAME_MAP = {
     'slesexpand': 'RES',
     'void': 'Void',
     'linuxmint': 'Mint',
+    'neon': 'KDE neon',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1183,6 +1184,7 @@ _OS_FAMILY_MAP = {
     'antiX': 'Debian',
     'NILinuxRT': 'NILinuxRT',
     'NILinuxRT-XFCE': 'NILinuxRT',
+    'KDE neon': 'Debian',
     'Void': 'Void',
 }
 

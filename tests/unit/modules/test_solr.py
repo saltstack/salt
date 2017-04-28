@@ -425,99 +425,53 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
 
                                 self.assertEqual(solr.abort_import('h'), 'A')
 
-    @patch('salt.modules.solr._format_url', MagicMock(return_value='A'))
     def test_full_import(self):
         '''
         Test to submits an import command to the specified handler using
         specified options.
         '''
-        with patch.object(solr, '_is_master', side_effect=[False, True, True,
-                                                           True, True, True]):
-            with patch.object(solr, '_get_return_dict',
-                              return_value={'A': 'a'}):
-                with patch.object(solr, '_get_none_or_value',
-                                  side_effect=[None, True, True, True, True]):
-                    with patch.object(solr, '_check_for_cores',
-                                      side_effect=[True, False, False, False,
-                                                   False]):
-                        with patch.object(solr,
-                                          '_pre_index_check',
-                                          side_effect=[{'success':
-                                                        False},
-                                                       {'success': True},
-                                                       {'success': True}]):
-                            with patch.object(solr,
-                                              '_merge_options',
-                                              side_effect=[{'clean': True},
-                                                           {'clean': False}]):
-                                with patch.object(solr,
-                                                  'set_replication_enabled',
-                                                  return_value={'success':
-                                                                False}):
-                                    with patch.object(solr,
-                                                      '_http_request',
-                                                      return_value='A'):
+        with patch('salt.modules.solr._format_url', MagicMock(return_value='A')), \
+                patch.object(solr, '_is_master', side_effect=[False, True, True, True, True, True]), \
+                patch.object(solr, '_get_return_dict', return_value={'A': 'a'}), \
+                patch.object(solr, '_get_none_or_value', side_effect=[None, True, True, True, True]), \
+                patch.object(solr, '_check_for_cores', side_effect=[True, False, False, False, False]), \
+                patch.object(solr, '_pre_index_check', side_effect=[{'success': False},
+                                                                    {'success': True},
+                                                                    {'success': True}]), \
+                patch.object(solr, '_merge_options', side_effect=[{'clean': True},
+                                                                  {'clean': False}]), \
+                patch.object(solr, 'set_replication_enabled', return_value={'success': False}), \
+                patch.object(solr, '_http_request', return_value='A'):
 
-                                        self.assertDictEqual(solr.full_import
-                                                             ('h'), {'A': 'a'})
+            self.assertDictEqual(solr.full_import('h'), {'A': 'a'})
+            self.assertDictEqual(solr.full_import('h'), {'A': 'a'})
+            self.assertDictEqual(solr.full_import('h'), {'success': False})
+            self.assertDictEqual(solr.full_import('h'), {'A': 'a'})
+            self.assertEqual(solr.full_import('h'), 'A')
 
-                                        self.assertDictEqual(solr.full_import
-                                                             ('h'), {'A': 'a'})
-
-                                        self.assertDictEqual(solr.full_import
-                                                             ('h'),
-                                                             {'success': False})
-
-                                        self.assertDictEqual(solr.full_import
-                                                             ('h'), {'A': 'a'})
-
-                                        self.assertEqual(solr.full_import
-                                                         ('h'), 'A')
-
-    @patch('salt.modules.solr._format_url', MagicMock(return_value='A'))
     def test_delta_import(self):
         '''
         Test to submits an import command to the specified handler using
         specified options.
         '''
-        with patch.object(solr, '_is_master', side_effect=[False, True, True,
-                                                           True, True]):
-            with patch.object(solr, '_get_none_or_value',
-                              side_effect=[None, True, True, True, True]):
-                with patch.object(solr, '_get_return_dict',
-                                  return_value={'A': 'a'}):
-                    with patch.object(solr,
-                                      '_pre_index_check',
-                                      side_effect=[{'success': False},
-                                                   {'success': True},
-                                                   {'success': True},
-                                                   {'success': True}]):
-                        with patch.object(solr,
-                                          '_merge_options',
-                                          side_effect=[{'clean': True},
-                                                       {'clean': False}]):
-                            with patch.object(solr, '_check_for_cores',
-                                              side_effect=[True, False]):
-                                with patch.object(solr,
-                                                  'set_replication_enabled',
-                                                  return_value={'success':
-                                                                False}):
-                                    with patch.object(solr,
-                                                      '_http_request',
-                                                      return_value='A'):
+        with patch('salt.modules.solr._format_url', MagicMock(return_value='A')), \
+                patch.object(solr, '_is_master', side_effect=[False, True, True, True, True]), \
+                patch.object(solr, '_get_none_or_value', side_effect=[None, True, True, True, True]), \
+                patch.object(solr, '_get_return_dict', return_value={'A': 'a'}), \
+                patch.object(solr, '_pre_index_check', side_effect=[{'success': False},
+                                                                    {'success': True},
+                                                                    {'success': True},
+                                                                    {'success': True}]), \
+                patch.object(solr, '_merge_options', side_effect=[{'clean': True},
+                                                                  {'clean': False}]), \
+                patch.object(solr, '_check_for_cores', side_effect=[True, False]), \
+                patch.object(solr, 'set_replication_enabled', return_value={'success': False}), \
+                patch.object(solr, '_http_request', return_value='A'):
 
-                                        self.assertDictEqual(solr.delta_import
-                                                             ('h'), {'A': 'a'})
-
-                                        self.assertDictEqual(solr.delta_import
-                                                             ('h'),
-                                                             {'success': False})
-
-                                        self.assertDictEqual(solr.delta_import
-                                                             ('h'), {'A': 'a'})
-
-                                        self.assertEqual(solr.delta_import
-                                                         ('h'), 'A')
+            self.assertDictEqual(solr.delta_import('h'), {'A': 'a'})
+            self.assertDictEqual(solr.delta_import('h'), {'success': False})
+            self.assertDictEqual(solr.delta_import('h'), {'A': 'a'})
+            self.assertEqual(solr.delta_import('h'), 'A')
 
     def test_import_status(self):
         '''

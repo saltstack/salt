@@ -24,6 +24,7 @@ from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch, __version__ as mock_version
+from tests.unit.cloud.clouds import _preferred_ip
 
 VM_NAME = 'winterfell'
 
@@ -32,7 +33,7 @@ try:
     if HAS_LIBCLOUD:
         import certifi
         libcloud.security.CA_CERTS_PATH.append(certifi.where())
-except ImportError:
+except (ImportError, NameError):
     pass
 
 
@@ -51,7 +52,6 @@ class ExtendedTestCase(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.cloud.clouds.dimensiondata.__virtual__', MagicMock(return_value='dimensiondata'))
 class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.dimensiondata module.
@@ -60,6 +60,7 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             dimensiondata: {
+                '__virtual__': MagicMock(return_value='dimensiondata'),
                 '__active_provider_name__': '',
                 '__opts__': {
                     'providers': {
@@ -132,7 +133,7 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
             call='function'
         )
 
-    @skipIf(HAS_LIBCLOUD is False, 'libcloud not found')
+    @skipIf(HAS_LIBCLOUD is False, "Install 'libcloud' to be able to run this unit test.")
     def test_avail_sizes(self):
         '''
         Tests that avail_sizes returns an empty dictionary.
@@ -163,3 +164,26 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
         """
         p = dimensiondata.get_configured_provider()
         self.assertNotEqual(p, None)
+
+    def test_query_node_data_filter_preferred_ip_addresses(self):
+        '''
+        Test if query node data is filtering out unpreferred IP addresses.
+        '''
+        zero_ip = '0.0.0.0'
+        private_ips = [zero_ip, '1.1.1.1', '2.2.2.2']
+        vm = {'name': None}
+        data = MagicMock()
+        data.public_ips = []
+        dimensiondata.NodeState = MagicMock()  # pylint: disable=blacklisted-unmocked-patching
+        dimensiondata.NodeState.RUNNING = True
+
+        with patch('salt.cloud.clouds.dimensiondata.show_instance',
+                   MagicMock(return_value={'state': True,
+                                           'name': 'foo',
+                                           'public_ips': [],
+                                           'private_ips': private_ips})):
+            with patch('salt.cloud.clouds.dimensiondata.preferred_ip',
+                       _preferred_ip(private_ips, [zero_ip])):
+                with patch('salt.cloud.clouds.dimensiondata.ssh_interface',
+                           MagicMock(return_value='private_ips')):
+                    self.assertEqual(dimensiondata._query_node_data(vm, data).public_ips, [zero_ip])

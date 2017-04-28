@@ -23,21 +23,21 @@ from salt.exceptions import CommandExecutionError
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.utils.which', lambda bin_name: bin_name)
 class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         base_virtualenv_mock = MagicMock()
         base_virtualenv_mock.__version__ = '1.9.1'
-        sys_modules_patcher = patch.dict('sys.modules', {'virtualenv': base_virtualenv_mock})
-        sys_modules_patcher.start()
-        self.addCleanup(sys_modules_patcher.stop)
+        patcher = patch('salt.utils.which', lambda exe: exe)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return {
             virtualenv_mod: {
                 '__opts__': {'venv_bin': 'virtualenv'},
                 '_install_script': MagicMock(return_value={'retcode': 0,
                                                            'stdout': 'Installed script!',
-                                                           'stderr': ''})
+                                                           'stderr': ''}),
+                'sys.modules': {'virtualenv': base_virtualenv_mock}
             }
         }
 

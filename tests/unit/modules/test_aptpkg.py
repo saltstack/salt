@@ -151,41 +151,41 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {'pkg_resource.version': mock}):
             self.assertEqual(aptpkg.version(*['wget']), version)
 
-    @patch('salt.modules.aptpkg.latest_version',
-           MagicMock(return_value=''))
     def test_upgrade_available(self):
         '''
         Test - Check whether or not an upgrade is available for a given package.
         '''
-        self.assertFalse(aptpkg.upgrade_available('wget'))
+        with patch('salt.modules.aptpkg.latest_version',
+                   MagicMock(return_value='')):
+            self.assertFalse(aptpkg.upgrade_available('wget'))
 
-    @patch('salt.modules.aptpkg.get_repo_keys',
-           MagicMock(return_value=REPO_KEYS))
     def test_add_repo_key(self):
         '''
         Test - Add a repo key.
         '''
-        mock = MagicMock(return_value={
-            'retcode': 0,
-            'stdout': 'OK'
-        })
-        with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(aptpkg.add_repo_key(keyserver='keyserver.ubuntu.com',
-                                                keyid='FBB75451'))
+        with patch('salt.modules.aptpkg.get_repo_keys',
+                   MagicMock(return_value=REPO_KEYS)):
+            mock = MagicMock(return_value={
+                'retcode': 0,
+                'stdout': 'OK'
+            })
+            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
+                self.assertTrue(aptpkg.add_repo_key(keyserver='keyserver.ubuntu.com',
+                                                    keyid='FBB75451'))
 
-    @patch('salt.modules.aptpkg.get_repo_keys',
-           MagicMock(return_value=REPO_KEYS))
     def test_add_repo_key_failed(self):
         '''
         Test - Add a repo key using incomplete input data.
         '''
-        kwargs = {'keyserver': 'keyserver.ubuntu.com'}
-        mock = MagicMock(return_value={
-            'retcode': 0,
-            'stdout': 'OK'
-        })
-        with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(SaltInvocationError, aptpkg.add_repo_key, **kwargs)
+        with patch('salt.modules.aptpkg.get_repo_keys',
+                   MagicMock(return_value=REPO_KEYS)):
+            kwargs = {'keyserver': 'keyserver.ubuntu.com'}
+            mock = MagicMock(return_value={
+                'retcode': 0,
+                'stdout': 'OK'
+            })
+            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
+                self.assertRaises(SaltInvocationError, aptpkg.add_repo_key, **kwargs)
 
     def test_get_repo_keys(self):
         '''
@@ -285,55 +285,55 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(CommandExecutionError, aptpkg.refresh_db, **kwargs)
 
-    @patch('salt.modules.aptpkg.list_pkgs',
-           MagicMock(return_value=PACKAGES))
     def test_autoremove(self):
         '''
         Test - Remove packages not required by another package.
         '''
-        patch_kwargs = {
-            '__salt__': {
-                'config.get': MagicMock(return_value=True),
-                'cmd.run': MagicMock(return_value=AUTOREMOVE)
+        with patch('salt.modules.aptpkg.list_pkgs',
+                   MagicMock(return_value=PACKAGES)):
+            patch_kwargs = {
+                '__salt__': {
+                    'config.get': MagicMock(return_value=True),
+                    'cmd.run': MagicMock(return_value=AUTOREMOVE)
+                }
             }
-        }
-        with patch.multiple(aptpkg, **patch_kwargs):
-            self.assertEqual(aptpkg.autoremove(), dict())
-            self.assertEqual(aptpkg.autoremove(purge=True), dict())
-            self.assertEqual(aptpkg.autoremove(list_only=True), list())
-            self.assertEqual(aptpkg.autoremove(list_only=True, purge=True), list())
+            with patch.multiple(aptpkg, **patch_kwargs):
+                self.assertEqual(aptpkg.autoremove(), dict())
+                self.assertEqual(aptpkg.autoremove(purge=True), dict())
+                self.assertEqual(aptpkg.autoremove(list_only=True), list())
+                self.assertEqual(aptpkg.autoremove(list_only=True, purge=True), list())
 
-    @patch('salt.modules.aptpkg._uninstall',
-           MagicMock(return_value=UNINSTALL))
     def test_remove(self):
         '''
         Test - Remove packages.
         '''
-        self.assertEqual(aptpkg.remove(name='tmux'), UNINSTALL)
+        with patch('salt.modules.aptpkg._uninstall',
+                   MagicMock(return_value=UNINSTALL)):
+            self.assertEqual(aptpkg.remove(name='tmux'), UNINSTALL)
 
-    @patch('salt.modules.aptpkg._uninstall',
-           MagicMock(return_value=UNINSTALL))
     def test_purge(self):
         '''
         Test - Remove packages along with all configuration files.
         '''
-        self.assertEqual(aptpkg.purge(name='tmux'), UNINSTALL)
+        with patch('salt.modules.aptpkg._uninstall',
+                   MagicMock(return_value=UNINSTALL)):
+            self.assertEqual(aptpkg.purge(name='tmux'), UNINSTALL)
 
-    @patch('salt.modules.aptpkg.list_pkgs',
-           MagicMock(return_value=PACKAGES))
     def test_upgrade(self):
         '''
         Test - Upgrades all packages.
         '''
-        mock_cmd = MagicMock(return_value={
-            'retcode': 0,
-            'stdout': UPGRADE
-        })
-        patch_kwargs = {
-            '__salt__': {
-                'config.get': MagicMock(return_value=True),
-                'cmd.run_all': mock_cmd
+        with patch('salt.modules.aptpkg.list_pkgs',
+                   MagicMock(return_value=UNINSTALL)):
+            mock_cmd = MagicMock(return_value={
+                'retcode': 0,
+                'stdout': UPGRADE
+            })
+            patch_kwargs = {
+                '__salt__': {
+                    'config.get': MagicMock(return_value=True),
+                    'cmd.run_all': mock_cmd
+                }
             }
-        }
-        with patch.multiple(aptpkg, **patch_kwargs):
-            self.assertEqual(aptpkg.upgrade(), dict())
+            with patch.multiple(aptpkg, **patch_kwargs):
+                self.assertEqual(aptpkg.upgrade(), dict())

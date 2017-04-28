@@ -248,44 +248,37 @@ class NetworkTestCase(TestCase):
                     remotes = network._freebsd_remotes_on('4506', 'remote')
                     self.assertEqual(remotes, set(['127.0.0.1']))
 
-    @patch('platform.node', MagicMock(return_value='nodename'))
-    @patch('socket.gethostname', MagicMock(return_value='hostname'))
-    @patch('socket.getfqdn', MagicMock(return_value='hostname.domainname.blank'))
-    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'attrname', ('127.0.1.1', 0))]))
-    @patch('salt.utils.fopen', MagicMock(return_value=False))
-    @patch('os.path.exists', MagicMock(return_value=False))
-    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
     def test_generate_minion_id_distinct(self):
         '''
         Test if minion IDs are distinct in the pool.
 
         :return:
         '''
-        self.assertEqual(network._generate_minion_id(),
-                         ['hostname.domainname.blank', 'nodename', 'hostname', '1.2.3.4', '5.6.7.8'])
+        with patch('platform.node', MagicMock(return_value='nodename')), \
+                patch('socket.gethostname', MagicMock(return_value='hostname')), \
+                patch('socket.getfqdn', MagicMock(return_value='hostname.domainname.blank')), \
+                patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'attrname', ('127.0.1.1', 0))])), \
+                patch('salt.utils.fopen', MagicMock(return_value=False)), \
+                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8'])):
+            self.assertEqual(network._generate_minion_id(),
+                             ['hostname.domainname.blank', 'nodename', 'hostname', '1.2.3.4', '5.6.7.8'])
 
-    @patch('platform.node', MagicMock(return_value='hostname'))
-    @patch('socket.gethostname', MagicMock(return_value='hostname'))
-    @patch('socket.getfqdn', MagicMock(return_value='hostname'))
-    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))]))
-    @patch('salt.utils.fopen', MagicMock(return_value=False))
-    @patch('os.path.exists', MagicMock(return_value=False))
-    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4']))
     def test_generate_minion_id_duplicate(self):
         '''
         Test if IP addresses in the minion IDs are distinct in the pool
 
         :return:
         '''
-        self.assertEqual(network._generate_minion_id(), ['hostname', '1.2.3.4'])
+        with patch('platform.node', MagicMock(return_value='hostname')), \
+                patch('socket.gethostname', MagicMock(return_value='hostname')), \
+                patch('socket.getfqdn', MagicMock(return_value='hostname')), \
+                patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))])), \
+                patch('salt.utils.fopen', MagicMock(return_value=False)), \
+                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4'])):
+            self.assertEqual(network._generate_minion_id(), ['hostname', '1.2.3.4'])
 
-    @patch('platform.node', MagicMock(return_value='very.long.and.complex.domain.name'))
-    @patch('socket.gethostname', MagicMock(return_value='hostname'))
-    @patch('socket.getfqdn', MagicMock(return_value=''))
-    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))]))
-    @patch('salt.utils.fopen', MagicMock(return_value=False))
-    @patch('os.path.exists', MagicMock(return_value=False))
-    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4']))
     def test_generate_minion_id_platform_used(self):
         '''
         Test if platform.node is used for the first occurrence.
@@ -293,94 +286,101 @@ class NetworkTestCase(TestCase):
 
         :return:
         '''
-        self.assertEqual(network.generate_minion_id(), 'very.long.and.complex.domain.name')
+        with patch('platform.node', MagicMock(return_value='very.long.and.complex.domain.name')), \
+                patch('socket.gethostname', MagicMock(return_value='hostname')), \
+                patch('socket.getfqdn', MagicMock(return_value='')), \
+                patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))])), \
+                patch('salt.utils.fopen', MagicMock(return_value=False)), \
+                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4'])):
+            self.assertEqual(network.generate_minion_id(), 'very.long.and.complex.domain.name')
 
-    @patch('platform.node', MagicMock(return_value='localhost'))
-    @patch('socket.gethostname', MagicMock(return_value='pick.me'))
-    @patch('socket.getfqdn', MagicMock(return_value='hostname.domainname.blank'))
-    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))]))
-    @patch('salt.utils.fopen', MagicMock(return_value=False))
-    @patch('os.path.exists', MagicMock(return_value=False))
-    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4']))
     def test_generate_minion_id_platform_localhost_filtered(self):
         '''
         Test if localhost is filtered from the first occurrence.
 
         :return:
         '''
-        self.assertEqual(network.generate_minion_id(), 'hostname.domainname.blank')
+        with patch('platform.node', MagicMock(return_value='localhost')), \
+                patch('socket.gethostname', MagicMock(return_value='pick.me')), \
+                patch('socket.getfqdn', MagicMock(return_value='hostname.domainname.blank')), \
+                patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))])), \
+                patch('salt.utils.fopen', MagicMock(return_value=False)), \
+                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4'])):
+            self.assertEqual(network.generate_minion_id(), 'hostname.domainname.blank')
 
-    @patch('platform.node', MagicMock(return_value='localhost'))
-    @patch('socket.gethostname', MagicMock(return_value='ip6-loopback'))
-    @patch('socket.getfqdn', MagicMock(return_value='ip6-localhost'))
-    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))]))
-    @patch('salt.utils.fopen', MagicMock(return_value=False))
-    @patch('os.path.exists', MagicMock(return_value=False))
-    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1', '1.2.3.4']))
     def test_generate_minion_id_platform_localhost_filtered_all(self):
         '''
         Test if any of the localhost is filtered from everywhere.
 
         :return:
         '''
-        self.assertEqual(network.generate_minion_id(), '1.2.3.4')
+        with patch('platform.node', MagicMock(return_value='localhost')), \
+                patch('socket.gethostname', MagicMock(return_value='ip6-loopback')), \
+                patch('socket.getfqdn', MagicMock(return_value='ip6-localhost')), \
+                patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))])), \
+                patch('salt.utils.fopen', MagicMock(return_value=False)), \
+                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1', '1.2.3.4'])):
+            self.assertEqual(network.generate_minion_id(), '1.2.3.4')
 
-    @patch('platform.node', MagicMock(return_value='localhost'))
-    @patch('socket.gethostname', MagicMock(return_value='ip6-loopback'))
-    @patch('socket.getfqdn', MagicMock(return_value='ip6-localhost'))
-    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))]))
-    @patch('salt.utils.fopen', MagicMock(return_value=False))
-    @patch('os.path.exists', MagicMock(return_value=False))
-    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1']))
     def test_generate_minion_id_platform_localhost_only(self):
         '''
         Test if there is no other choice but localhost.
 
         :return:
         '''
-        self.assertEqual(network.generate_minion_id(), 'localhost')
+        with patch('platform.node', MagicMock(return_value='localhost')), \
+                patch('socket.gethostname', MagicMock(return_value='ip6-loopback')), \
+                patch('socket.getfqdn', MagicMock(return_value='ip6-localhost')), \
+                patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))])), \
+                patch('salt.utils.fopen', MagicMock(return_value=False)), \
+                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1'])):
+            self.assertEqual(network.generate_minion_id(), 'localhost')
 
-    @patch('platform.node', MagicMock(return_value='localhost'))
-    @patch('socket.gethostname', MagicMock(return_value='ip6-loopback'))
-    @patch('socket.getfqdn', MagicMock(return_value='pick.me'))
-    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))]))
-    @patch('salt.utils.fopen', MagicMock(return_value=False))
-    @patch('os.path.exists', MagicMock(return_value=False))
-    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1']))
     def test_generate_minion_id_platform_fqdn(self):
         '''
         Test if fqdn is picked up.
 
         :return:
         '''
-        self.assertEqual(network.generate_minion_id(), 'pick.me')
+        with patch('platform.node', MagicMock(return_value='localhost')), \
+                patch('socket.gethostname', MagicMock(return_value='ip6-loopback')), \
+                patch('socket.getfqdn', MagicMock(return_value='pick.me')), \
+                patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))])), \
+                patch('salt.utils.fopen', MagicMock(return_value=False)), \
+                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1'])):
+            self.assertEqual(network.generate_minion_id(), 'pick.me')
 
-    @patch('platform.node', MagicMock(return_value='localhost'))
-    @patch('socket.gethostname', MagicMock(return_value='ip6-loopback'))
-    @patch('socket.getfqdn', MagicMock(return_value='ip6-localhost'))
-    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'pick.me', ('127.0.1.1', 0))]))
-    @patch('salt.utils.fopen', MagicMock(return_value=False))
-    @patch('os.path.exists', MagicMock(return_value=False))
-    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1']))
     def test_generate_minion_id_platform_localhost_addrinfo(self):
         '''
         Test if addinfo is picked up.
 
         :return:
         '''
-        self.assertEqual(network.generate_minion_id(), 'pick.me')
+        with patch('platform.node', MagicMock(return_value='localhost')), \
+                patch('socket.gethostname', MagicMock(return_value='ip6-loopback')), \
+                patch('socket.getfqdn', MagicMock(return_value='ip6-localhost')), \
+                patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'pick.me', ('127.0.1.1', 0))])), \
+                patch('salt.utils.fopen', MagicMock(return_value=False)), \
+                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1'])):
+            self.assertEqual(network.generate_minion_id(), 'pick.me')
 
-    @patch('platform.node', MagicMock(return_value='localhost'))
-    @patch('socket.gethostname', MagicMock(return_value='ip6-loopback'))
-    @patch('socket.getfqdn', MagicMock(return_value='ip6-localhost'))
-    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))]))
-    @patch('salt.utils.fopen', MagicMock(return_value=False))
-    @patch('os.path.exists', MagicMock(return_value=False))
-    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1', '1.2.3.4']))
     def test_generate_minion_id_platform_ip_addr_only(self):
         '''
         Test if IP address is the only what is used as a Minion ID in case no DNS name.
 
         :return:
         '''
-        self.assertEqual(network.generate_minion_id(), '1.2.3.4')
+        with patch('platform.node', MagicMock(return_value='localhost')), \
+                patch('socket.gethostname', MagicMock(return_value='ip6-loopback')), \
+                patch('socket.getfqdn', MagicMock(return_value='ip6-localhost')), \
+                patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))])), \
+                patch('salt.utils.fopen', MagicMock(return_value=False)), \
+                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1', '1.2.3.4'])):
+            self.assertEqual(network.generate_minion_id(), '1.2.3.4')
