@@ -21,7 +21,7 @@ def sdb_get(uri, opts):
     if not uri.startswith('sdb://'):
         return uri
 
-    comps = uri.replace('sdb://', '').split('/')
+    comps = uri.replace('sdb://', '').split('/', 1)
 
     if len(comps) < 2:
         return uri
@@ -49,7 +49,7 @@ def sdb_set(uri, value, opts):
     if not uri.startswith('sdb://'):
         return False
 
-    comps = uri.replace('sdb://', '').split('/')
+    comps = uri.replace('sdb://', '').split('/', 1)
 
     if len(comps) < 2:
         return False
