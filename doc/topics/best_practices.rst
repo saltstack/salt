@@ -344,7 +344,7 @@ modification of static values:
             'service': 'httpd',
             'conf': '/etc/httpd/httpd.conf',
         },
-    }, merge=salt['pillar.get']('apache:lookup')) %}
+    }, grain='os', merge=salt['pillar.get']('apache:lookup')) %}
 
 /srv/pillar/apache.sls:
 
@@ -400,7 +400,7 @@ to be broken into two states.
             'service': 'httpd',
             'conf': '/etc/httpd/httpd.conf',
         },
-    }, merge=salt['pillar.get']('apache:lookup')) %}
+    }, grain='os', merge=salt['pillar.get']('apache:lookup')) %}
 
 ``/srv/pillar/apache.sls``:
 
