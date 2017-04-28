@@ -412,6 +412,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
     username = USERNAME
     passphrase = PASSWORD
 
+    def setUp(self):
+        super(TestPygit2SSH, self).setUp()
+        if self.is_el7():  # pylint: disable=E1120
+            self.skipTest(
+                'skipped until EPEL7 fixes pygit2/libgit2 version mismatch')
+
     @requires_system_grains
     def test_single_source(self, grains):
         '''
@@ -1115,6 +1121,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
     '''
     Test git_pillar with pygit2 using SSH authentication
     '''
+    def setUp(self):
+        super(TestPygit2HTTP, self).setUp()
+        if self.is_el7():  # pylint: disable=E1120
+            self.skipTest(
+                'skipped until EPEL7 fixes pygit2/libgit2 version mismatch')
+
     def test_single_source(self):
         '''
         Test using a single ext_pillar repo
@@ -1351,6 +1363,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     '''
     user = USERNAME
     password = PASSWORD
+
+    def setUp(self):
+        super(TestPygit2AuthenticatedHTTP, self).setUp()
+        if self.is_el7():  # pylint: disable=E1120
+            self.skipTest(
+                'skipped until EPEL7 fixes pygit2/libgit2 version mismatch')
 
     def test_single_source(self):
         '''
