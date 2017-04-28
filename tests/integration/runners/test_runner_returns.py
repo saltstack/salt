@@ -132,5 +132,4 @@ class RunnerReturnsTest(ShellCase):
                         'return': {'args': ['foo'], 'kwargs': {'bar': 'hello world!'}},
                         'success': True,
                         'user': RUNTIME_VARS.RUNNING_TESTS_USER}}
-                        'user': 'root'}}
         )
