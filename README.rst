@@ -1,6 +1,11 @@
+=============
+SaltConf 2016
+=============
+
 ==================
 What is SaltStack?
 ==================
+
 
 SaltStack makes software for complex systems management at scale.
 SaltStack is the company that created and maintains the Salt Open
