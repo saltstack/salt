@@ -58,68 +58,68 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {network: {}}
 
-    @patch('salt.states.network.salt.utils.network', MockNetwork())
-    @patch('salt.states.network.salt.loader', MockGrains())
     def test_managed(self):
         '''
             Test to ensure that the named interface is configured properly
         '''
-        ret = {'name': 'salt',
-               'changes': {},
-               'result': False,
-               'comment': ''}
+        with patch('salt.states.network.salt.utils.network', MockNetwork()), \
+                patch('salt.states.network.salt.loader', MockGrains()):
+            ret = {'name': 'salt',
+                   'changes': {},
+                   'result': False,
+                   'comment': ''}
 
-        change = {'interface': '--- \n+++ \n@@ -1 +1 @@\n-A\n+B',
-                  'status': 'Interface salt restart to validate'}
+            change = {'interface': '--- \n+++ \n@@ -1 +1 @@\n-A\n+B',
+                      'status': 'Interface salt restart to validate'}
 
-        mock = MagicMock(side_effect=[AttributeError, 'A', 'A', 'A', 'A', 'A'])
-        with patch.dict(network.__salt__, {"ip.get_interface": mock}):
-            self.assertDictEqual(network.managed('salt',
-                                                 'stack', test='a'), ret)
+            mock = MagicMock(side_effect=[AttributeError, 'A', 'A', 'A', 'A', 'A'])
+            with patch.dict(network.__salt__, {"ip.get_interface": mock}):
+                self.assertDictEqual(network.managed('salt',
+                                                     'stack', test='a'), ret)
 
-            mock = MagicMock(return_value='B')
-            with patch.dict(network.__salt__, {"ip.build_interface": mock}):
-                mock = MagicMock(side_effect=AttributeError)
-                with patch.dict(network.__salt__, {"ip.get_bond": mock}):
-                    self.assertDictEqual(network.managed('salt',
-                                                         'bond',
+                mock = MagicMock(return_value='B')
+                with patch.dict(network.__salt__, {"ip.build_interface": mock}):
+                    mock = MagicMock(side_effect=AttributeError)
+                    with patch.dict(network.__salt__, {"ip.get_bond": mock}):
+                        self.assertDictEqual(network.managed('salt',
+                                                             'bond',
+                                                             test='a'), ret)
+
+                    ret.update({'comment': 'Interface salt is set to be'
+                                ' updated:\n--- \n+++ \n@@ -1 +1 @@\n-A\n+B',
+                                'result': None})
+                    self.assertDictEqual(network.managed('salt', 'stack',
                                                          test='a'), ret)
 
-                ret.update({'comment': 'Interface salt is set to be'
-                            ' updated:\n--- \n+++ \n@@ -1 +1 @@\n-A\n+B',
-                            'result': None})
-                self.assertDictEqual(network.managed('salt', 'stack',
-                                                     test='a'), ret)
+                    mock = MagicMock(return_value=True)
+                    with patch.dict(network.__salt__, {"ip.down": mock}):
+                        with patch.dict(network.__salt__, {"ip.up": mock}):
+                            ret.update({'comment': 'Interface salt updated.',
+                                        'result': True,
+                                        'changes': change})
+                            self.assertDictEqual(network.managed('salt', 'stack'),
+                                                 ret)
 
-                mock = MagicMock(return_value=True)
-                with patch.dict(network.__salt__, {"ip.down": mock}):
-                    with patch.dict(network.__salt__, {"ip.up": mock}):
-                        ret.update({'comment': 'Interface salt updated.',
-                                    'result': True,
-                                    'changes': change})
-                        self.assertDictEqual(network.managed('salt', 'stack'),
-                                             ret)
+                            with patch.dict(network.__grains__, {"A": True}):
+                                with patch.dict(network.__salt__,
+                                                {"saltutil.refresh_modules": mock}
+                                                ):
+                                    ret.update({'result': True,
+                                                'changes': {'interface': '--- \n+'
+                                                            '++ \n@@ -1 +1 @@\n-A'
+                                                            '\n+B',
+                                                            'status': 'Interface'
+                                                            ' salt down'}})
+                                    self.assertDictEqual(network.managed('salt',
+                                                                         'stack',
+                                                                         False),
+                                                         ret)
 
-                        with patch.dict(network.__grains__, {"A": True}):
-                            with patch.dict(network.__salt__,
-                                            {"saltutil.refresh_modules": mock}
-                                            ):
-                                ret.update({'result': True,
-                                            'changes': {'interface': '--- \n+'
-                                                        '++ \n@@ -1 +1 @@\n-A'
-                                                        '\n+B',
-                                                        'status': 'Interface'
-                                                        ' salt down'}})
-                                self.assertDictEqual(network.managed('salt',
-                                                                     'stack',
-                                                                     False),
-                                                     ret)
-
-                ret.update({'changes': {'interface':
-                                        '--- \n+++ \n@@ -1 +1 @@\n-A\n+B'},
-                            'result': False,
-                            'comment': "'ip.down'"})
-                self.assertDictEqual(network.managed('salt', 'stack'), ret)
+                    ret.update({'changes': {'interface':
+                                            '--- \n+++ \n@@ -1 +1 @@\n-A\n+B'},
+                                'result': False,
+                                'comment': "'ip.down'"})
+                    self.assertDictEqual(network.managed('salt', 'stack'), ret)
 
     def test_routes(self):
         '''

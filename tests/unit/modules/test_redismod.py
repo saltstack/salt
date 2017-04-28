@@ -12,8 +12,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
-    MagicMock,
-    patch)
+    MagicMock)
 
 # Import Salt Libs
 import salt.modules.redismod as redismod
@@ -268,13 +267,17 @@ class MockConnect(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.modules.redismod._connect', MagicMock(return_value=MockConnect()))
 class RedismodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.redismod
     '''
     def setup_loader_modules(self):
-        return {redismod: {'redis': Mockredis}}
+        return {
+            redismod: {
+                'redis': Mockredis,
+                '_connect': MagicMock(return_value=MockConnect())
+            }
+        }
 
     def test_bgrewriteaof(self):
         '''

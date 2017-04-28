@@ -69,12 +69,12 @@ class UtilsTestCase(TestCase):
         self.assertEqual(utils.jid.jid_to_time(incorrect_jid_length), '')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('random.randint', return_value=1)
-    def test_gen_mac(self, random_mock):
-        self.assertEqual(random_mock.return_value, 1)
-        ret = utils.gen_mac('00:16:3E')
-        expected_mac = '00:16:3E:01:01:01'
-        self.assertEqual(ret, expected_mac)
+    def test_gen_mac(self):
+        with patch('random.randint', return_value=1) as random_mock:
+            self.assertEqual(random_mock.return_value, 1)
+            ret = utils.gen_mac('00:16:3E')
+            expected_mac = '00:16:3E:01:01:01'
+            self.assertEqual(ret, expected_mac)
 
     def test_mac_str_to_bytes(self):
         self.assertRaises(ValueError, utils.mac_str_to_bytes, '31337')
@@ -96,12 +96,12 @@ class UtilsTestCase(TestCase):
         self.assertFalse(utils.jid.is_jid('2013121911070012348911111'))  # Wrong length
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('salt.utils.is_windows', return_value=False)
-    def test_path_join(self, is_windows_mock):
-        self.assertFalse(is_windows_mock.return_value)
-        expected_path = '/a/b/c/d'
-        ret = utils.path_join('/a/b/c', 'd')
-        self.assertEqual(ret, expected_path)
+    def test_path_join(self):
+        with patch('salt.utils.is_windows', return_value=False) as is_windows_mock:
+            self.assertFalse(is_windows_mock.return_value)
+            expected_path = '/a/b/c/d'
+            ret = utils.path_join('/a/b/c', 'd')
+            self.assertEqual(ret, expected_path)
 
     def test_build_whitespace_split_regex(self):
         expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,' \
@@ -128,10 +128,10 @@ class UtilsTestCase(TestCase):
         self.assertEqual(expected_dict, ret)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('os.remove')
-    def test_safe_rm(self, os_remove_mock):
-        utils.safe_rm('dummy_tgt')
-        self.assertTrue(os_remove_mock.called)
+    def test_safe_rm(self):
+        with patch('os.remove') as os_remove_mock:
+            utils.safe_rm('dummy_tgt')
+            self.assertTrue(os_remove_mock.called)
 
     @skipIf(os.path.exists('/tmp/no_way_this_is_a_file_nope.sh'), 'Test file exists! Skipping safe_rm_exceptions test!')
     def test_safe_rm_exceptions(self):
@@ -143,25 +143,25 @@ class UtilsTestCase(TestCase):
         self.assertFalse(error, 'utils.safe_rm raised exception when it should not have')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('salt.utils.arg_lookup')
-    def test_format_call(self, arg_lookup):
-        def dummy_func(first=None, second=None, third=None):
-            pass
-        arg_lookup.return_value = {'args': ['first', 'second', 'third'], 'kwargs': {}}
-        get_function_argspec = DEFAULT
-        get_function_argspec.return_value = namedtuple('ArgSpec', 'args varargs keywords defaults')(
-            args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
+    def test_format_call(self):
+        with patch('salt.utils.arg_lookup') as arg_lookup:
+            def dummy_func(first=None, second=None, third=None):
+                pass
+            arg_lookup.return_value = {'args': ['first', 'second', 'third'], 'kwargs': {}}
+            get_function_argspec = DEFAULT
+            get_function_argspec.return_value = namedtuple('ArgSpec', 'args varargs keywords defaults')(
+                args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
 
-        # Make sure we raise an error if we don't pass in the requisite number of arguments
-        self.assertRaises(SaltInvocationError, utils.format_call, dummy_func, {'1': 2})
+            # Make sure we raise an error if we don't pass in the requisite number of arguments
+            self.assertRaises(SaltInvocationError, utils.format_call, dummy_func, {'1': 2})
 
-        # Make sure we warn on invalid kwargs
-        ret = utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3})
-        self.assertGreaterEqual(len(ret['warnings']), 1)
+            # Make sure we warn on invalid kwargs
+            ret = utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3})
+            self.assertGreaterEqual(len(ret['warnings']), 1)
 
-        ret = utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3},
-                                expected_extra_kws=('first', 'second', 'third'))
-        self.assertDictEqual(ret, {'args': [], 'kwargs': {}})
+            ret = utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3},
+                                    expected_extra_kws=('first', 'second', 'third'))
+            self.assertDictEqual(ret, {'args': [], 'kwargs': {}})
 
     def test_isorted(self):
         test_list = ['foo', 'Foo', 'bar', 'Bar']

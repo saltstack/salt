@@ -32,25 +32,25 @@ class APIConfigTestCase(TestCase):
     TestCase for the api_config function in salt.config.__init__.py
     '''
 
-    @patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS))
     def test_api_config_log_file_values(self):
         '''
         Tests the opts value of the 'log_file' after running through the
         various default dict updates. 'log_file' should be updated to match
         the DEFAULT_API_OPTS 'api_logfile' value.
         '''
-        ret = salt.config.api_config('/some/fake/path')
-        self.assertEqual(ret['log_file'], '/var/log/salt/api')
+        with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+            ret = salt.config.api_config('/some/fake/path')
+            self.assertEqual(ret['log_file'], '/var/log/salt/api')
 
-    @patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS))
     def test_api_config_pidfile_values(self):
         '''
         Tests the opts value of the 'pidfile' after running through the
         various default dict updates. 'pidfile' should be updated to match
         the DEFAULT_API_OPTS 'api_pidfile' value.
         '''
-        ret = salt.config.api_config('/some/fake/path')
-        self.assertEqual(ret['pidfile'], '/var/run/salt-api.pid')
+        with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+            ret = salt.config.api_config('/some/fake/path')
+            self.assertEqual(ret['pidfile'], '/var/run/salt-api.pid')
 
     @destructiveTest
     def test_master_config_file_overrides_defaults(self):

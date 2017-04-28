@@ -55,12 +55,12 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         if os.path.exists(TMP_CACHE_DIR):
             shutil.rmtree(TMP_CACHE_DIR)
 
-    @patch('os.path.exists', MagicMock(return_value=False))
     def test_clean_old_jobs_no_jid_root(self):
         '''
         Tests that the function returns None when no jid_root is found.
         '''
-        self.assertEqual(local_cache.clean_old_jobs(), None)
+        with patch('os.path.exists', MagicMock(return_value=False)):
+            self.assertEqual(local_cache.clean_old_jobs(), None)
 
     def test_clean_old_jobs_empty_jid_dir_removed(self):
         '''

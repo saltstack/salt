@@ -111,22 +111,22 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(rpm.__salt__, {'file.file_exists': mock, 'cmd.retcode': mock}):
             self.assertDictEqual(rpm.checksum("file1.rpm", "file2.rpm", "file3.rpm"), ret)
 
-    @patch('salt.modules.rpm.HAS_RPM', True)
     def test_version_cmp_rpm(self):
         '''
         Test package version is called RPM version if RPM-Python is installed
 
         :return:
         '''
-        with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)):
+        with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)), \
+                patch('salt.modules.rpm.HAS_RPM', True):
             self.assertEqual(0, rpm.version_cmp('1', '2'))  # mock returns 0, which means RPM was called
 
-    @patch('salt.modules.rpm.HAS_RPM', False)
     def test_version_cmp_fallback(self):
         '''
         Test package version is called RPM version if RPM-Python is installed
 
         :return:
         '''
-        with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)):
+        with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)), \
+                patch('salt.modules.rpm.HAS_RPM', False):
             self.assertEqual(-1, rpm.version_cmp('1', '2'))  # mock returns -1, a python implementation was called
