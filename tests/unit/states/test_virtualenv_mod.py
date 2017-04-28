@@ -21,9 +21,6 @@ from tests.support.mock import (
 import salt.states.virtualenv_mod as virtualenv_mod
 
 
-@patch('salt.states.virtualenv_mod.salt.utils.is_windows',
-       MagicMock(return_value=True))
-@patch('salt.states.virtualenv_mod.os.path.join', MagicMock(return_value=True))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
     '''

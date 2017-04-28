@@ -38,7 +38,11 @@ class InspectorCollectorTestCase(TestCase):
     '''
     Test inspectlib:collector:Inspector
     '''
-    @patch("os.mkdir", MagicMock())
+    def setUp(self):
+        patcher = patch("os.mkdir", MagicMock())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_env_loader(self):
         '''
         Get packages on the different distros.
@@ -49,7 +53,6 @@ class InspectorCollectorTestCase(TestCase):
         self.assertEqual(inspector.dbfile, '/foo/cache/_minion_collector.db')
         self.assertEqual(inspector.pidfile, '/foo/pid/bar.pid')
 
-    @patch("os.mkdir", MagicMock())
     def test_file_tree(self):
         '''
         Test file tree.
@@ -72,7 +75,6 @@ class InspectorCollectorTestCase(TestCase):
         tree_result = tuple(tree_result)
         self.assertEqual(expected_tree, tree_result)
 
-    @patch("os.mkdir", MagicMock())
     def test_get_unmanaged_files(self):
         '''
         Test get_unmanaged_files.
@@ -93,7 +95,6 @@ class InspectorCollectorTestCase(TestCase):
         self.assertEqual(inspector._get_unmanaged_files(managed=managed, system_all=system_all),
                          ([], ['E'], ['G', 'H']))
 
-    @patch("os.mkdir", MagicMock())
     def test_pkg_get(self):
         '''
         Test if grains switching the pkg get method.

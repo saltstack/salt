@@ -7,9 +7,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    patch,
+    MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
 )
@@ -471,14 +472,16 @@ class MockNeutron(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.modules.neutron._auth', return_value=MockNeutron())
-class NeutronTestCase(TestCase):
+class NeutronTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.neutron
     '''
+    def setup_loader_modules(self):
+        return {neutron: {'_auth': MagicMock(return_value=MockNeutron())}}
+
     # 'get_quotas_tenant' function tests: 1
 
-    def test_get_quotas_tenant(self, mock):
+    def test_get_quotas_tenant(self):
         '''
         Test if it fetches tenant info in server's context for
         following quota operation
@@ -487,7 +490,7 @@ class NeutronTestCase(TestCase):
 
     # 'list_quotas' function tests: 1
 
-    def test_list_quotas(self, mock):
+    def test_list_quotas(self):
         '''
         Test if it fetches all tenants quotas
         '''
@@ -495,7 +498,7 @@ class NeutronTestCase(TestCase):
 
     # 'show_quota' function tests: 1
 
-    def test_show_quota(self, mock):
+    def test_show_quota(self):
         '''
         Test if it fetches information of a certain tenant's quotas
         '''
@@ -503,7 +506,7 @@ class NeutronTestCase(TestCase):
 
     # 'update_quota' function tests: 1
 
-    def test_update_quota(self, mock):
+    def test_update_quota(self):
         '''
         Test if it update a tenant's quota
         '''
@@ -515,7 +518,7 @@ class NeutronTestCase(TestCase):
 
     # 'delete_quota' function tests: 1
 
-    def test_delete_quota(self, mock):
+    def test_delete_quota(self):
         '''
         Test if it delete the specified tenant's quota value
         '''
@@ -523,7 +526,7 @@ class NeutronTestCase(TestCase):
 
     # 'list_extensions' function tests: 1
 
-    def test_list_extensions(self, mock):
+    def test_list_extensions(self):
         '''
         Test if it fetches a list of all extensions on server side
         '''
@@ -531,7 +534,7 @@ class NeutronTestCase(TestCase):
 
     # 'list_ports' function tests: 1
 
-    def test_list_ports(self, mock):
+    def test_list_ports(self):
         '''
         Test if it fetches a list of all networks for a tenant
         '''
@@ -539,7 +542,7 @@ class NeutronTestCase(TestCase):
 
     # 'show_port' function tests: 1
 
-    def test_show_port(self, mock):
+    def test_show_port(self):
         '''
         Test if it fetches information of a certain port
         '''
@@ -547,7 +550,7 @@ class NeutronTestCase(TestCase):
 
     # 'create_port' function tests: 1
 
-    def test_create_port(self, mock):
+    def test_create_port(self):
         '''
         Test if it creates a new port
         '''
@@ -558,7 +561,7 @@ class NeutronTestCase(TestCase):
 
     # 'update_port' function tests: 1
 
-    def test_update_port(self, mock):
+    def test_update_port(self):
         '''
         Test if it updates a port
         '''
@@ -568,7 +571,7 @@ class NeutronTestCase(TestCase):
 
     # 'delete_port' function tests: 1
 
-    def test_delete_port(self, mock):
+    def test_delete_port(self):
         '''
         Test if it deletes the specified port
         '''
@@ -576,7 +579,7 @@ class NeutronTestCase(TestCase):
 
     # 'list_networks' function tests: 1
 
-    def test_list_networks(self, mock):
+    def test_list_networks(self):
         '''
         Test if it fetches a list of all networks for a tenant
         '''
@@ -584,7 +587,7 @@ class NeutronTestCase(TestCase):
 
     # 'show_network' function tests: 1
 
-    def test_show_network(self, mock):
+    def test_show_network(self):
         '''
         Test if it fetches information of a certain network
         '''
@@ -593,7 +596,7 @@ class NeutronTestCase(TestCase):
 
     # 'create_network' function tests: 1
 
-    def test_create_network(self, mock):
+    def test_create_network(self):
         '''
         Test if it creates a new network
         '''
@@ -602,7 +605,7 @@ class NeutronTestCase(TestCase):
 
     # 'update_network' function tests: 1
 
-    def test_update_network(self, mock):
+    def test_update_network(self):
         '''
         Test if it updates a network
         '''
@@ -611,7 +614,7 @@ class NeutronTestCase(TestCase):
 
     # 'delete_network' function tests: 1
 
-    def test_delete_network(self, mock):
+    def test_delete_network(self):
         '''
         Test if it deletes the specified network
         '''
@@ -620,7 +623,7 @@ class NeutronTestCase(TestCase):
 
     # 'list_subnets' function tests: 1
 
-    def test_list_subnets(self, mock):
+    def test_list_subnets(self):
         '''
         Test if it fetches a list of all networks for a tenant
         '''
@@ -628,7 +631,7 @@ class NeutronTestCase(TestCase):
 
     # 'show_subnet' function tests: 1
 
-    def test_show_subnet(self, mock):
+    def test_show_subnet(self):
         '''
         Test if it fetches information of a certain subnet
         '''
@@ -637,7 +640,7 @@ class NeutronTestCase(TestCase):
 
     # 'create_subnet' function tests: 1
 
-    def test_create_subnet(self, mock):
+    def test_create_subnet(self):
         '''
         Test if it creates a new subnet
         '''
@@ -649,7 +652,7 @@ class NeutronTestCase(TestCase):
 
     # 'update_subnet' function tests: 1
 
-    def test_update_subnet(self, mock):
+    def test_update_subnet(self):
         '''
         Test if it updates a subnet
         '''
@@ -659,7 +662,7 @@ class NeutronTestCase(TestCase):
 
     # 'delete_subnet' function tests: 1
 
-    def test_delete_subnet(self, mock):
+    def test_delete_subnet(self):
         '''
         Test if it deletes the specified subnet
         '''
@@ -668,7 +671,7 @@ class NeutronTestCase(TestCase):
 
     # 'list_routers' function tests: 1
 
-    def test_list_routers(self, mock):
+    def test_list_routers(self):
         '''
         Test if it fetches a list of all routers for a tenant
         '''
@@ -676,7 +679,7 @@ class NeutronTestCase(TestCase):
 
     # 'show_router' function tests: 1
 
-    def test_show_router(self, mock):
+    def test_show_router(self):
         '''
         Test if it fetches information of a certain router
         '''
@@ -685,7 +688,7 @@ class NeutronTestCase(TestCase):
 
     # 'create_router' function tests: 1
 
-    def test_create_router(self, mock):
+    def test_create_router(self):
         '''
         Test if it creates a new router
         '''
@@ -696,7 +699,7 @@ class NeutronTestCase(TestCase):
 
     # 'update_router' function tests: 1
 
-    def test_update_router(self, mock):
+    def test_update_router(self):
         '''
         Test if it updates a router
         '''
@@ -706,7 +709,7 @@ class NeutronTestCase(TestCase):
 
     # 'delete_router' function tests: 1
 
-    def test_delete_router(self, mock):
+    def test_delete_router(self):
         '''
         Test if it delete the specified router
         '''
@@ -715,7 +718,7 @@ class NeutronTestCase(TestCase):
 
     # 'add_interface_router' function tests: 1
 
-    def test_add_interface_router(self, mock):
+    def test_add_interface_router(self):
         '''
         Test if it adds an internal network interface to the specified router
         '''
@@ -725,7 +728,7 @@ class NeutronTestCase(TestCase):
 
     # 'remove_interface_router' function tests: 1
 
-    def test_remove_interface_router(self, mock):
+    def test_remove_interface_router(self):
         '''
         Test if it removes an internal network interface from the specified
         router
@@ -735,7 +738,7 @@ class NeutronTestCase(TestCase):
 
     # 'add_gateway_router' function tests: 1
 
-    def test_add_gateway_router(self, mock):
+    def test_add_gateway_router(self):
         '''
         Test if it adds an external network gateway to the specified router
         '''
@@ -744,7 +747,7 @@ class NeutronTestCase(TestCase):
 
     # 'remove_gateway_router' function tests: 1
 
-    def test_remove_gateway_router(self, mock):
+    def test_remove_gateway_router(self):
         '''
         Test if it removes an external network gateway from the specified router
         '''
@@ -754,7 +757,7 @@ class NeutronTestCase(TestCase):
 
     # 'list_floatingips' function tests: 1
 
-    def test_list_floatingips(self, mock):
+    def test_list_floatingips(self):
         '''
         Test if it fetch a list of all floatingIPs for a tenant
         '''
@@ -762,7 +765,7 @@ class NeutronTestCase(TestCase):
 
     # 'show_floatingip' function tests: 1
 
-    def test_show_floatingip(self, mock):
+    def test_show_floatingip(self):
         '''
         Test if it fetches information of a certain floatingIP
         '''
@@ -771,7 +774,7 @@ class NeutronTestCase(TestCase):
 
     # 'create_floatingip' function tests: 1
 
-    def test_create_floatingip(self, mock):
+    def test_create_floatingip(self):
         '''
         Test if it creates a new floatingIP
         '''
@@ -780,7 +783,7 @@ class NeutronTestCase(TestCase):
 
     # 'update_floatingip' function tests: 1
 
-    def test_update_floatingip(self, mock):
+    def test_update_floatingip(self):
         '''
         Test if it updates a floatingIP
         '''
@@ -789,7 +792,7 @@ class NeutronTestCase(TestCase):
 
     # 'delete_floatingip' function tests: 1
 
-    def test_delete_floatingip(self, mock):
+    def test_delete_floatingip(self):
         '''
         Test if it deletes the specified floating IP
         '''
@@ -798,7 +801,7 @@ class NeutronTestCase(TestCase):
 
     # 'list_security_groups' function tests: 1
 
-    def test_list_security_groups(self, mock):
+    def test_list_security_groups(self):
         '''
         Test if it fetches a list of all security groups for a tenant
         '''
@@ -806,7 +809,7 @@ class NeutronTestCase(TestCase):
 
     # 'show_security_group' function tests: 1
 
-    def test_show_security_group(self, mock):
+    def test_show_security_group(self):
         '''
         Test if it fetches information of a certain security group
         '''
@@ -815,7 +818,7 @@ class NeutronTestCase(TestCase):
 
     # 'create_security_group' function tests: 1
 
-    def test_create_security_group(self, mock):
+    def test_create_security_group(self):
         '''
         Test if it creates a new security group
         '''
@@ -825,7 +828,7 @@ class NeutronTestCase(TestCase):
 
     # 'update_security_group' function tests: 1
 
-    def test_update_security_group(self, mock):
+    def test_update_security_group(self):
         '''
         Test if it updates a security group
         '''
@@ -835,7 +838,7 @@ class NeutronTestCase(TestCase):
 
     # 'delete_security_group' function tests: 1
 
-    def test_delete_security_group(self, mock):
+    def test_delete_security_group(self):
         '''
         Test if it deletes the specified security group
         '''
@@ -844,7 +847,7 @@ class NeutronTestCase(TestCase):
 
     # 'list_security_group_rules' function tests: 1
 
-    def test_list_security_group_rules(self, mock):
+    def test_list_security_group_rules(self):
         '''
         Test if it fetches a list of all security group rules for a tenant
         '''
@@ -853,7 +856,7 @@ class NeutronTestCase(TestCase):
 
     # 'show_security_group_rule' function tests: 1
 
-    def test_show_security_group_rule(self, mock):
+    def test_show_security_group_rule(self):
         '''
         Test if it fetches information of a certain security group rule
         '''
@@ -862,7 +865,7 @@ class NeutronTestCase(TestCase):
 
     # 'create_security_group_rule' function tests: 1
 
-    def test_create_security_group_rule(self, mock):
+    def test_create_security_group_rule(self):
         '''
         Test if it creates a new security group rule
         '''
@@ -871,7 +874,7 @@ class NeutronTestCase(TestCase):
 
     # 'delete_security_group_rule' function tests: 1
 
-    def test_delete_security_group_rule(self, mock):
+    def test_delete_security_group_rule(self):
         '''
         Test if it deletes the specified security group rule
         '''
@@ -880,7 +883,7 @@ class NeutronTestCase(TestCase):
 
     # 'list_vpnservices' function tests: 1
 
-    def test_list_vpnservices(self, mock):
+    def test_list_vpnservices(self):
         '''
         Test if it fetches a list of all configured VPN services for a tenant
         '''
@@ -889,7 +892,7 @@ class NeutronTestCase(TestCase):
 
     # 'show_vpnservice' function tests: 1
 
-    def test_show_vpnservice(self, mock):
+    def test_show_vpnservice(self):
         '''
         Test if it fetches information of a specific VPN service
         '''
@@ -898,7 +901,7 @@ class NeutronTestCase(TestCase):
 
     # 'create_vpnservice' function tests: 1
 
-    def test_create_vpnservice(self, mock):
+    def test_create_vpnservice(self):
         '''
         Test if it creates a new VPN service
         '''
@@ -908,7 +911,7 @@ class NeutronTestCase(TestCase):
 
     # 'update_vpnservice' function tests: 1
 
-    def test_update_vpnservice(self, mock):
+    def test_update_vpnservice(self):
         '''
         Test if it updates a VPN service
         '''
@@ -917,7 +920,7 @@ class NeutronTestCase(TestCase):
 
     # 'delete_vpnservice' function tests: 1
 
-    def test_delete_vpnservice(self, mock):
+    def test_delete_vpnservice(self):
         '''
         Test if it deletes the specified VPN service
         '''
@@ -926,7 +929,7 @@ class NeutronTestCase(TestCase):
 
     # 'list_ipsec_site_connections' function tests: 1
 
-    def test_list_ipsec_site(self, mock):
+    def test_list_ipsec_site(self):
         '''
         Test if it fetches all configured IPsec Site Connections for a tenant
         '''
@@ -935,7 +938,7 @@ class NeutronTestCase(TestCase):
 
     # 'show_ipsec_site_connection' function tests: 1
 
-    def test_show_ipsec_site_connection(self, mock):
+    def test_show_ipsec_site_connection(self):
         '''
         Test if it fetches information of a specific IPsecSiteConnection
         '''
@@ -944,7 +947,7 @@ class NeutronTestCase(TestCase):
 
     # 'create_ipsec_site_connection' function tests: 1
 
-    def test_create_ipsec_site(self, mock):
+    def test_create_ipsec_site(self):
         '''
         Test if it creates a new IPsecSiteConnection
         '''
@@ -955,7 +958,7 @@ class NeutronTestCase(TestCase):
 
     # 'delete_ipsec_site_connection' function tests: 1
 
-    def test_delete_ipsec_site(self, mock):
+    def test_delete_ipsec_site(self):
         '''
         Test if it deletes the specified IPsecSiteConnection
         '''
@@ -964,7 +967,7 @@ class NeutronTestCase(TestCase):
 
     # 'list_ikepolicies' function tests: 1
 
-    def test_list_ikepolicies(self, mock):
+    def test_list_ikepolicies(self):
         '''
         Test if it fetches a list of all configured IKEPolicies for a tenant
         '''
@@ -972,7 +975,7 @@ class NeutronTestCase(TestCase):
 
     # 'show_ikepolicy' function tests: 1
 
-    def test_show_ikepolicy(self, mock):
+    def test_show_ikepolicy(self):
         '''
         Test if it fetches information of a specific IKEPolicy
         '''
@@ -981,7 +984,7 @@ class NeutronTestCase(TestCase):
 
     # 'create_ikepolicy' function tests: 1
 
-    def test_create_ikepolicy(self, mock):
+    def test_create_ikepolicy(self):
         '''
         Test if it creates a new IKEPolicy
         '''
@@ -990,7 +993,7 @@ class NeutronTestCase(TestCase):
 
     # 'delete_ikepolicy' function tests: 1
 
-    def test_delete_ikepolicy(self, mock):
+    def test_delete_ikepolicy(self):
         '''
         Test if it deletes the specified IKEPolicy
         '''
@@ -999,7 +1002,7 @@ class NeutronTestCase(TestCase):
 
     # 'list_ipsecpolicies' function tests: 1
 
-    def test_list_ipsecpolicies(self, mock):
+    def test_list_ipsecpolicies(self):
         '''
         Test if it fetches a list of all configured IPsecPolicies for a tenant
         '''
@@ -1007,7 +1010,7 @@ class NeutronTestCase(TestCase):
 
     # 'show_ipsecpolicy' function tests: 1
 
-    def test_show_ipsecpolicy(self, mock):
+    def test_show_ipsecpolicy(self):
         '''
         Test if it fetches information of a specific IPsecPolicy
         '''
@@ -1016,7 +1019,7 @@ class NeutronTestCase(TestCase):
 
     # 'create_ipsecpolicy' function tests: 1
 
-    def test_create_ipsecpolicy(self, mock):
+    def test_create_ipsecpolicy(self):
         '''
         Test if it creates a new IPsecPolicy
         '''
@@ -1025,7 +1028,7 @@ class NeutronTestCase(TestCase):
 
     # 'delete_ipsecpolicy' function tests: 1
 
-    def test_delete_ipsecpolicy(self, mock):
+    def test_delete_ipsecpolicy(self):
         '''
         Test if it deletes the specified IPsecPolicy
         '''

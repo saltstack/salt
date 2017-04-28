@@ -33,9 +33,12 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
     This class contains a set of functions that test salt.modules.zpool module
     '''
     def setup_loader_modules(self):
+        patcher = patch('salt.modules.zpool._check_zpool',
+                        MagicMock(return_value='/sbin/zpool'))
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return {zpool: {}}
 
-    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
     def test_exists_success(self):
         '''
         Tests successful return of exists function
@@ -48,7 +51,6 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertTrue(zpool.exists('myzpool'))
 
-    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
     def test_exists_failure(self):
         '''
         Tests failure return of exists function
@@ -61,7 +63,6 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertFalse(zpool.exists('myzpool'))
 
-    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
     def test_healthy(self):
         '''
         Tests successful return of healthy function
@@ -74,7 +75,6 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertTrue(zpool.healthy())
 
-    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
     def test_status(self):
         '''
         Tests successful return of status function
@@ -101,7 +101,6 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             ret = zpool.status()
             self.assertEqual('ONLINE', ret['mypool']['state'])
 
-    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
     def test_iostat(self):
         '''
         Tests successful return of iostat function
@@ -124,8 +123,6 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             ret = zpool.iostat('mypool')
             self.assertEqual('46.7G', ret['mypool']['mypool']['capacity-alloc'])
 
-    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
-    @patch('salt.modules.zpool._check_features', MagicMock(return_value=False))
     def test_list(self):
         '''
         Tests successful return of list function
@@ -135,12 +132,13 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         ret['stderr'] = ""
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
-        with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
+        with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}), \
+                patch('salt.modules.zpool._check_features',
+                      MagicMock(return_value=False)):
             ret = zpool.list_()
             res = OrderedDict([('mypool', {'alloc': '47.4G', 'cap': '42%', 'free': '63.6G', 'health': 'ONLINE', 'size': '111G'})])
             self.assertEqual(res, ret)
 
-    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
     def test_get(self):
         '''
         Tests successful return of get function

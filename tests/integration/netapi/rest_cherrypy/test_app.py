@@ -126,13 +126,15 @@ class TestRun(cptc.BaseRestCherryPyTest):
 
 
 class TestWebhookDisableAuth(cptc.BaseRestCherryPyTest):
-    __opts__ = {
-        'rest_cherrypy': {
-            'port': 8000,
-            'debug': True,
-            'webhook_disable_auth': True,
-        },
-    }
+
+    def __get_opts__(self):
+        return {
+            'rest_cherrypy': {
+                'port': 8000,
+                'debug': True,
+                'webhook_disable_auth': True,
+            },
+        }
 
     def test_webhook_noauth(self):
         '''
