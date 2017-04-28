@@ -374,6 +374,8 @@ def get_file_str(path, saltenv='base', env=None):
 
     Returns ``False`` if Salt was unable to cache a file from a URL.
 
+    Returns ``False`` if Salt was unable to cache a file from a URL.
+
     CLI Example:
 
     .. code-block:: bash
