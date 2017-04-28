@@ -17,7 +17,7 @@ import salt.states.libcloud_dns as libcloud_dns
 from salt.modules.libcloud_dns import _simple_record, _simple_zone
 
 
-class DNSTestZone(object):
+class DNSTestZone(dict):
     def __init__(self, id, domain):
         self.id = id
         self.type = 'master'
@@ -25,8 +25,11 @@ class DNSTestZone(object):
         self.domain = domain
         self.extra = {}
 
+    def __getitem__(self, key):
+        return getattr(self, key)
 
-class DNSTestRecord(object):
+
+class DNSTestRecord(dict):
     def __init__(self, id, name, type, data):
         self.id = id
         self.name = name
@@ -35,6 +38,9 @@ class DNSTestRecord(object):
         self.data = data
         self.zone = DNSTestZone('test', 'domain')
         self.extra = {}
+
+    def __getitem__(self, key):
+        return getattr(self, key)
 
 
 class MockDNSDriver(object):
