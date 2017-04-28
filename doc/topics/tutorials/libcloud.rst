@@ -12,8 +12,8 @@ Using Apache Libcloud for declarative and procedural multi-cloud orchestration
     :ref:`Salt Walkthrough <tutorial-salt-walk-through>`.
 
 Apache Libcloud is a Python library which hides differences between different cloud provider APIs and allows
- you to manage different cloud resources through a unified and easy to use API. Apache Libcloud supports over
-  60 cloud platforms, including Amazon, Microsoft Azure, Digital Ocean, Google Cloud Platform and OpenStack.
+you to manage different cloud resources through a unified and easy to use API. Apache Libcloud supports over
+60 cloud platforms, including Amazon, Microsoft Azure, Digital Ocean, Google Cloud Platform and OpenStack.
 
 Execution and state modules are available for DNS, Storage and Load Balancer drivers from Apache Libcloud in
  SaltStack.
@@ -109,7 +109,7 @@ For example, listing buckets in the Google Storage platform:
 
 
 The Apache Libcloud storage module can be used to syncronize files between multiple storage clouds,
- such as Google Storage, S3 and OpenStack Swift
+such as Google Storage, S3 and OpenStack Swift
 
 .. code-block:: bash
 
