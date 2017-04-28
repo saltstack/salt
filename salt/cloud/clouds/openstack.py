@@ -572,6 +572,10 @@ def request_instance(vm_=None, call=None):
     if not isinstance(kwargs['ex_metadata'], dict):
         raise SaltCloudConfigError('\'metadata\' should be a dict.')
 
+    kwargs['ex_availability_zone'] = config.get_cloud_config_value(
+        'availability_zone', vm_, __opts__, search_global=False
+    )
+
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
