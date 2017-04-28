@@ -83,65 +83,65 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 all=True,
                 filters={'label': 'KEY'})
 
-    @patch.object(docker_mod, '_get_exec_driver')
-    def test_check_mine_cache_is_refreshed_on_container_change_event(self, _):
+    def test_check_mine_cache_is_refreshed_on_container_change_event(self):
         '''
         Every command that might modify docker containers state.
         Should trig an update on ``mine.send``
         '''
-        client_args_mock = MagicMock(return_value={
-            'create_container': [
-                'image', 'command', 'hostname', 'user', 'detach', 'stdin_open',
-                'tty', 'ports', 'environment', 'volumes', 'network_disabled',
-                'name', 'entrypoint', 'working_dir', 'domainname', 'cpuset',
-                'host_config', 'mac_address', 'labels', 'volume_driver',
-                'stop_signal', 'networking_config', 'healthcheck',
-                'stop_timeout'],
-           'host_config': [
-               'binds', 'port_bindings', 'lxc_conf', 'publish_all_ports',
-               'links', 'privileged', 'dns', 'dns_search', 'volumes_from',
-               'network_mode', 'restart_policy', 'cap_add', 'cap_drop',
-               'devices', 'extra_hosts', 'read_only', 'pid_mode', 'ipc_mode',
-               'security_opt', 'ulimits', 'log_config', 'mem_limit',
-               'memswap_limit', 'mem_reservation', 'kernel_memory',
-               'mem_swappiness', 'cgroup_parent', 'group_add', 'cpu_quota',
-               'cpu_period', 'blkio_weight', 'blkio_weight_device',
-               'device_read_bps', 'device_write_bps', 'device_read_iops',
-               'device_write_iops', 'oom_kill_disable', 'shm_size', 'sysctls',
-               'tmpfs', 'oom_score_adj', 'dns_opt', 'cpu_shares',
-               'cpuset_cpus', 'userns_mode', 'pids_limit', 'isolation',
-               'auto_remove', 'storage_opt'],
-           'networking_config': [
-               'aliases', 'links', 'ipv4_address', 'ipv6_address',
-               'link_local_ips'],
-           }
+        with patch.object(docker_mod, '_get_exec_driver'):
+            client_args_mock = MagicMock(return_value={
+                'create_container': [
+                    'image', 'command', 'hostname', 'user', 'detach', 'stdin_open',
+                    'tty', 'ports', 'environment', 'volumes', 'network_disabled',
+                    'name', 'entrypoint', 'working_dir', 'domainname', 'cpuset',
+                    'host_config', 'mac_address', 'labels', 'volume_driver',
+                    'stop_signal', 'networking_config', 'healthcheck',
+                    'stop_timeout'],
+               'host_config': [
+                   'binds', 'port_bindings', 'lxc_conf', 'publish_all_ports',
+                   'links', 'privileged', 'dns', 'dns_search', 'volumes_from',
+                   'network_mode', 'restart_policy', 'cap_add', 'cap_drop',
+                   'devices', 'extra_hosts', 'read_only', 'pid_mode', 'ipc_mode',
+                   'security_opt', 'ulimits', 'log_config', 'mem_limit',
+                   'memswap_limit', 'mem_reservation', 'kernel_memory',
+                   'mem_swappiness', 'cgroup_parent', 'group_add', 'cpu_quota',
+                   'cpu_period', 'blkio_weight', 'blkio_weight_device',
+                   'device_read_bps', 'device_write_bps', 'device_read_iops',
+                   'device_write_iops', 'oom_kill_disable', 'shm_size', 'sysctls',
+                   'tmpfs', 'oom_score_adj', 'dns_opt', 'cpu_shares',
+                   'cpuset_cpus', 'userns_mode', 'pids_limit', 'isolation',
+                   'auto_remove', 'storage_opt'],
+               'networking_config': [
+                   'aliases', 'links', 'ipv4_address', 'ipv6_address',
+                   'link_local_ips'],
+               }
 
-        )
+            )
 
-        for command_name, args in (('create', ()),
-                                   ('rm_', ()),
-                                   ('kill', ()),
-                                   ('pause', ()),
-                                   ('signal_', ('KILL',)),
-                                   ('start', ()),
-                                   ('stop', ()),
-                                   ('unpause', ()),
-                                   ('_run', ('command',)),
-                                   ('_script', ('command',)),
-                                   ):
-            mine_send = Mock()
-            command = getattr(docker_mod, command_name)
-            client = MagicMock()
-            client.api_version = '1.12'
-            with patch.dict(docker_mod.__salt__,
-                            {'mine.send': mine_send,
-                             'container_resource.run': MagicMock(),
-                             'cp.cache_file': MagicMock(return_value=False),
-                             'docker.get_client_args': client_args_mock}):
-                with patch.object(docker_mod, '_get_client', client):
-                    command('container', *args)
-            mine_send.assert_called_with('docker.ps', verbose=True, all=True,
-                                         host=True)
+            for command_name, args in (('create', ()),
+                                       ('rm_', ()),
+                                       ('kill', ()),
+                                       ('pause', ()),
+                                       ('signal_', ('KILL',)),
+                                       ('start', ()),
+                                       ('stop', ()),
+                                       ('unpause', ()),
+                                       ('_run', ('command',)),
+                                       ('_script', ('command',)),
+                                       ):
+                mine_send = Mock()
+                command = getattr(docker_mod, command_name)
+                client = MagicMock()
+                client.api_version = '1.12'
+                with patch.dict(docker_mod.__salt__,
+                                {'mine.send': mine_send,
+                                 'container_resource.run': MagicMock(),
+                                 'cp.cache_file': MagicMock(return_value=False),
+                                 'docker.get_client_args': client_args_mock}):
+                    with patch.object(docker_mod, '_get_client', client):
+                        command('container', *args)
+                mine_send.assert_called_with('docker.ps', verbose=True, all=True,
+                                             host=True)
 
     @skipIf(_docker_py_version() < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')

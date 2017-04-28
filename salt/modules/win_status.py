@@ -18,14 +18,13 @@ import sys
 import time
 import datetime
 import logging
-
+import subprocess
 log = logging.getLogger(__name__)
 
 # Import Salt Libs
 import salt.utils
 import salt.ext.six as six
 import salt.utils.event
-from salt._compat import subprocess
 from salt.utils.network import host_to_ips as _host_to_ips
 # pylint: disable=W0611
 from salt.modules.status import ping_master, time_

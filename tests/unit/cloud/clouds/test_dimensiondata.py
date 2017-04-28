@@ -52,7 +52,6 @@ class ExtendedTestCase(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.cloud.clouds.dimensiondata.__virtual__', MagicMock(return_value='dimensiondata'))
 class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.dimensiondata module.
@@ -61,6 +60,7 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             dimensiondata: {
+                '__virtual__': MagicMock(return_value='dimensiondata'),
                 '__active_provider_name__': '',
                 '__opts__': {
                     'providers': {

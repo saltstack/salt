@@ -50,6 +50,7 @@ import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
+import salt.log.setup
 from salt.utils.odict import OrderedDict
 
 # Define the pytest plugins we rely on
@@ -156,14 +157,12 @@ class SaltTerminalReporter(TerminalReporter):
             return
 
         test_daemon = getattr(self._session, 'test_daemon', None)
-        if self.verbosity == 1 or test_daemon is None:
+        if self.verbosity == 1:
             line = ' [CPU:{0}%|MEM:{1}%]'.format(psutil.cpu_percent(),
                                                psutil.virtual_memory().percent)
             self._tw.write(line)
             return
         else:
-            if test_daemon is None:
-                return
             self.ensure_newline()
             template = ' {}  -  CPU: {:6.2f} %   MEM: {:6.2f} %   SWAP: {:6.2f} %\n'
             self._tw.write(
@@ -180,6 +179,13 @@ class SaltTerminalReporter(TerminalReporter):
                     mem = psproc.memory_percent('vms')
                     swap = psproc.memory_percent('swap')
                     self._tw.write(template.format(name, cpu, mem, swap))
+
+
+def pytest_sessionstart(session):
+    session.stats_processes = OrderedDict((
+        #('Log Server', test_daemon.log_server),
+        ('    Test Suite Run', psutil.Process(os.getpid())),
+    ))
 # <---- CLI Terminal Reporter ----------------------------------------------------------------------------------------
 
 
@@ -190,6 +196,25 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     '''
+    # Configure the console logger based on the catch_log settings.
+    # Most importantly, shutdown Salt's null, store and temporary logging queue handlers
+    catch_log = config.pluginmanager.getplugin('_catch_log')
+    cli_logging_handler = catch_log.log_cli_handler
+    # Add the pytest_catchlog CLI log handler to the logging root
+    logging.root.addHandler(cli_logging_handler)
+    cli_level = cli_logging_handler.level
+    cli_level = config._catchlog_log_cli_level
+    cli_format = cli_logging_handler.formatter._fmt
+    cli_date_format = cli_logging_handler.formatter.datefmt
+    # Setup the console logger which shuts down the null and the temporary queue handlers
+    salt.log.setup_console_logger(
+        log_level=salt.log.setup.LOG_VALUES_TO_LEVELS.get(cli_level, 'error'),
+        log_format=cli_format,
+        date_format=cli_date_format
+    )
+    # Disable the store logging queue handler
+    salt.log.setup.setup_extended_logging({'extension_modules': ''})
+
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'templates'))
     config.addinivalue_line(
         'markers',
@@ -637,16 +662,13 @@ def test_daemon(request):
     test_daemon = TestDaemon(fake_parser)
     with test_daemon as test_daemon_running:
         request.session.test_daemon = test_daemon_running
-        stats_processes = OrderedDict((
-            #('Log Server', test_daemon.log_server),
-            ('    Test Suite Run', psutil.Process(os.getpid())),
+        request.session.stats_processes.update(OrderedDict((
             ('       Salt Master', psutil.Process(test_daemon.master_process.pid)),
             ('       Salt Minion', psutil.Process(test_daemon.minion_process.pid)),
             ('   Salt Sub Minion', psutil.Process(test_daemon.sub_minion_process.pid)),
             ('Salt Syndic Master', psutil.Process(test_daemon.smaster_process.pid)),
             ('       Salt Syndic', psutil.Process(test_daemon.syndic_process.pid)),
-        ))
-        request.session.stats_processes = stats_processes
+        )).items())
         yield
     TestDaemon.clean()
 # <---- Custom Fixtures Definitions ----------------------------------------------------------------------------------

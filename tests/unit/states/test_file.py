@@ -19,7 +19,6 @@ NO_DATEUTIL_REASON = 'python-dateutil is not installed'
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import destructiveTest
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -132,7 +131,6 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             # likely as simple as updating the 2nd index below.
             self.assertEqual(expected, returner.call_args[0][-5])
 
-    @destructiveTest
     def test_symlink(self):
         '''
         Test to create a symlink.
@@ -512,178 +510,178 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'managed' function tests: 1
 
-    @patch('salt.states.file._load_accumulators',
-           MagicMock(return_value=([], [])))
     def test_managed(self):
         '''
         Test to manage a given file, this function allows for a file to be
         downloaded from the salt master and potentially run through a templating
         system.
         '''
-        name = '/etc/grub.conf'
-        user = 'salt'
-        group = 'saltstack'
+        with patch('salt.states.file._load_accumulators',
+                   MagicMock(return_value=([], []))):
+            name = '/etc/grub.conf'
+            user = 'salt'
+            group = 'saltstack'
 
-        ret = {'name': name,
-               'result': False,
-               'comment': '',
-               'changes': {}}
+            ret = {'name': name,
+                   'result': False,
+                   'comment': '',
+                   'changes': {}}
 
-        mock_t = MagicMock(return_value=True)
-        mock_f = MagicMock(return_value=False)
-        mock_cmd_fail = MagicMock(return_value={'retcode': 1})
-        mock_uid = MagicMock(side_effect=['', 'U12', 'U12', 'U12', 'U12', 'U12',
-                                          'U12', 'U12', 'U12', 'U12', 'U12',
-                                          'U12', 'U12', 'U12', 'U12', 'U12'])
-        mock_gid = MagicMock(side_effect=['', 'G12', 'G12', 'G12', 'G12', 'G12',
-                                          'G12', 'G12', 'G12', 'G12', 'G12',
-                                          'G12', 'G12', 'G12', 'G12', 'G12'])
-        mock_if = MagicMock(side_effect=[True, False, False, False, False,
-                                         False, False, False])
-        mock_ret = MagicMock(return_value=(ret, None))
-        mock_dict = MagicMock(return_value={})
-        mock_cp = MagicMock(side_effect=[Exception, True])
-        mock_ex = MagicMock(side_effect=[Exception, {'changes': {name: name}},
-                                         True, Exception])
-        mock_mng = MagicMock(side_effect=[Exception, ('', '', ''), ('', '', ''),
-                                          ('', '', True), ('', '', True),
-                                          ('', '', ''), ('', '', '')])
-        mock_file = MagicMock(side_effect=[CommandExecutionError, ('', ''),
-                                           ('', ''), ('', ''), ('', ''),
-                                           ('', ''), ('', ''), ('', ''),
-                                           ('', '')])
-        with patch.dict(filestate.__salt__,
-                        {'config.manage_mode': mock_t,
-                         'file.user_to_uid': mock_uid,
-                         'file.group_to_gid': mock_gid,
-                         'file.file_exists': mock_if,
-                         'file.check_perms': mock_ret,
-                         'file.check_managed_changes': mock_dict,
-                         'file.get_managed': mock_mng,
-                         'file.source_list': mock_file,
-                         'file.copy': mock_cp,
-                         'file.manage_file': mock_ex,
-                         'cmd.run_all': mock_cmd_fail}):
-            comt = ('Must provide name to file.managed')
-            ret.update({'comment': comt, 'name': '', 'pchanges': {}})
-            self.assertDictEqual(filestate.managed(''), ret)
+            mock_t = MagicMock(return_value=True)
+            mock_f = MagicMock(return_value=False)
+            mock_cmd_fail = MagicMock(return_value={'retcode': 1})
+            mock_uid = MagicMock(side_effect=['', 'U12', 'U12', 'U12', 'U12', 'U12',
+                                              'U12', 'U12', 'U12', 'U12', 'U12',
+                                              'U12', 'U12', 'U12', 'U12', 'U12'])
+            mock_gid = MagicMock(side_effect=['', 'G12', 'G12', 'G12', 'G12', 'G12',
+                                              'G12', 'G12', 'G12', 'G12', 'G12',
+                                              'G12', 'G12', 'G12', 'G12', 'G12'])
+            mock_if = MagicMock(side_effect=[True, False, False, False, False,
+                                             False, False, False])
+            mock_ret = MagicMock(return_value=(ret, None))
+            mock_dict = MagicMock(return_value={})
+            mock_cp = MagicMock(side_effect=[Exception, True])
+            mock_ex = MagicMock(side_effect=[Exception, {'changes': {name: name}},
+                                             True, Exception])
+            mock_mng = MagicMock(side_effect=[Exception, ('', '', ''), ('', '', ''),
+                                              ('', '', True), ('', '', True),
+                                              ('', '', ''), ('', '', '')])
+            mock_file = MagicMock(side_effect=[CommandExecutionError, ('', ''),
+                                               ('', ''), ('', ''), ('', ''),
+                                               ('', ''), ('', ''), ('', ''),
+                                               ('', '')])
+            with patch.dict(filestate.__salt__,
+                            {'config.manage_mode': mock_t,
+                             'file.user_to_uid': mock_uid,
+                             'file.group_to_gid': mock_gid,
+                             'file.file_exists': mock_if,
+                             'file.check_perms': mock_ret,
+                             'file.check_managed_changes': mock_dict,
+                             'file.get_managed': mock_mng,
+                             'file.source_list': mock_file,
+                             'file.copy': mock_cp,
+                             'file.manage_file': mock_ex,
+                             'cmd.run_all': mock_cmd_fail}):
+                comt = ('Must provide name to file.managed')
+                ret.update({'comment': comt, 'name': '', 'pchanges': {}})
+                self.assertDictEqual(filestate.managed(''), ret)
 
-            with patch.object(os.path, 'isfile', mock_f):
-                comt = ('File {0} is not present and is not set for '
-                        'creation'.format(name))
-                ret.update({'comment': comt, 'name': name, 'result': True})
-                self.assertDictEqual(filestate.managed(name, create=False),
-                                     ret)
+                with patch.object(os.path, 'isfile', mock_f):
+                    comt = ('File {0} is not present and is not set for '
+                            'creation'.format(name))
+                    ret.update({'comment': comt, 'name': name, 'result': True})
+                    self.assertDictEqual(filestate.managed(name, create=False),
+                                         ret)
 
-            comt = ('User salt is not available Group saltstack'
-                    ' is not available')
-            ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(filestate.managed(name, user=user,
-                                                   group=group), ret)
-
-            with patch.object(os.path, 'isabs', mock_f):
-                comt = ('Specified file {0} is not an absolute path'
-                        .format(name))
+                comt = ('User salt is not available Group saltstack'
+                        ' is not available')
                 ret.update({'comment': comt, 'result': False})
                 self.assertDictEqual(filestate.managed(name, user=user,
                                                        group=group), ret)
 
-            with patch.object(os.path, 'isabs', mock_t):
-                with patch.object(os.path, 'isdir', mock_t):
-                    comt = ('Specified target {0} is a directory'.format(name))
-                    ret.update({'comment': comt})
+                with patch.object(os.path, 'isabs', mock_f):
+                    comt = ('Specified file {0} is not an absolute path'
+                            .format(name))
+                    ret.update({'comment': comt, 'result': False})
                     self.assertDictEqual(filestate.managed(name, user=user,
                                                            group=group), ret)
 
-                with patch.object(os.path, 'isdir', mock_f):
-                    comt = ('Context must be formed as a dict')
-                    ret.update({'comment': comt})
-                    self.assertDictEqual(filestate.managed(name, user=user,
-                                                           group=group,
-                                                           context=True), ret)
+                with patch.object(os.path, 'isabs', mock_t):
+                    with patch.object(os.path, 'isdir', mock_t):
+                        comt = ('Specified target {0} is a directory'.format(name))
+                        ret.update({'comment': comt})
+                        self.assertDictEqual(filestate.managed(name, user=user,
+                                                               group=group), ret)
 
-                    comt = ('Defaults must be formed as a dict')
-                    ret.update({'comment': comt})
-                    self.assertDictEqual(filestate.managed(name, user=user,
-                                                           group=group,
-                                                           defaults=True), ret)
+                    with patch.object(os.path, 'isdir', mock_f):
+                        comt = ('Context must be formed as a dict')
+                        ret.update({'comment': comt})
+                        self.assertDictEqual(filestate.managed(name, user=user,
+                                                               group=group,
+                                                               context=True), ret)
 
-                    comt = ('Only one of \'contents\', \'contents_pillar\', '
-                            'and \'contents_grains\' is permitted')
-                    ret.update({'comment': comt})
-                    self.assertDictEqual(filestate.managed
-                                         (name, user=user, group=group,
-                                          contents='A', contents_grains='B',
-                                          contents_pillar='C'), ret)
+                        comt = ('Defaults must be formed as a dict')
+                        ret.update({'comment': comt})
+                        self.assertDictEqual(filestate.managed(name, user=user,
+                                                               group=group,
+                                                               defaults=True), ret)
 
-                    with patch.object(os.path, 'exists', mock_t):
-                        with patch.dict(filestate.__opts__, {'test': True}):
-                            comt = ('File {0} not updated'.format(name))
-                            ret.update({'comment': comt})
-                            self.assertDictEqual(filestate.managed
-                                                 (name, user=user, group=group,
-                                                  replace=False), ret)
+                        comt = ('Only one of \'contents\', \'contents_pillar\', '
+                                'and \'contents_grains\' is permitted')
+                        ret.update({'comment': comt})
+                        self.assertDictEqual(filestate.managed
+                                             (name, user=user, group=group,
+                                              contents='A', contents_grains='B',
+                                              contents_pillar='C'), ret)
 
-                            comt = ('The file {0} is in the correct state'
-                                    .format(name))
-                            ret.update({'comment': comt, 'result': True})
-                            self.assertDictEqual(filestate.managed
-                                                 (name, user=user, contents='A',
-                                                  group=group), ret)
+                        with patch.object(os.path, 'exists', mock_t):
+                            with patch.dict(filestate.__opts__, {'test': True}):
+                                comt = ('File {0} not updated'.format(name))
+                                ret.update({'comment': comt})
+                                self.assertDictEqual(filestate.managed
+                                                     (name, user=user, group=group,
+                                                      replace=False), ret)
 
-                    with patch.object(os.path, 'exists', mock_f):
-                        with patch.dict(filestate.__opts__,
-                                        {'test': False}):
-                            comt = ('Unable to manage file: ')
-                            ret.update({'comment': comt, 'result': False})
-                            self.assertDictEqual(filestate.managed
-                                                 (name, user=user, group=group,
-                                                  contents='A'), ret)
+                                comt = ('The file {0} is in the correct state'
+                                        .format(name))
+                                ret.update({'comment': comt, 'result': True})
+                                self.assertDictEqual(filestate.managed
+                                                     (name, user=user, contents='A',
+                                                      group=group), ret)
 
-                            comt = ('Unable to manage file: ')
-                            ret.update({'comment': comt, 'result': False})
-                            self.assertDictEqual(filestate.managed
-                                                 (name, user=user, group=group,
-                                                  contents='A'), ret)
-
-                            with patch.object(salt.utils.files, 'mkstemp',
-                                              return_value=name):
-                                comt = ('Unable to copy file {0} to {1}: '
-                                        .format(name, name))
+                        with patch.object(os.path, 'exists', mock_f):
+                            with patch.dict(filestate.__opts__,
+                                            {'test': False}):
+                                comt = ('Unable to manage file: ')
                                 ret.update({'comment': comt, 'result': False})
                                 self.assertDictEqual(filestate.managed
-                                                     (name, user=user,
-                                                      group=group,
+                                                     (name, user=user, group=group,
+                                                      contents='A'), ret)
+
+                                comt = ('Unable to manage file: ')
+                                ret.update({'comment': comt, 'result': False})
+                                self.assertDictEqual(filestate.managed
+                                                     (name, user=user, group=group,
+                                                      contents='A'), ret)
+
+                                with patch.object(salt.utils.files, 'mkstemp',
+                                                  return_value=name):
+                                    comt = ('Unable to copy file {0} to {1}: '
+                                            .format(name, name))
+                                    ret.update({'comment': comt, 'result': False})
+                                    self.assertDictEqual(filestate.managed
+                                                         (name, user=user,
+                                                          group=group,
+                                                          check_cmd='A'), ret)
+
+                                comt = ('Unable to check_cmd file: ')
+                                ret.update({'comment': comt, 'result': False})
+                                self.assertDictEqual(filestate.managed
+                                                     (name, user=user, group=group,
                                                       check_cmd='A'), ret)
 
-                            comt = ('Unable to check_cmd file: ')
-                            ret.update({'comment': comt, 'result': False})
-                            self.assertDictEqual(filestate.managed
-                                                 (name, user=user, group=group,
-                                                  check_cmd='A'), ret)
+                                comt = ('check_cmd execution failed')
+                                ret.update({'comment': comt, 'result': False, 'skip_watch': True})
+                                ret.pop('pchanges')
+                                self.assertDictEqual(filestate.managed
+                                                     (name, user=user, group=group,
+                                                      check_cmd='A'), ret)
 
-                            comt = ('check_cmd execution failed')
-                            ret.update({'comment': comt, 'result': False, 'skip_watch': True})
-                            ret.pop('pchanges')
-                            self.assertDictEqual(filestate.managed
-                                                 (name, user=user, group=group,
-                                                  check_cmd='A'), ret)
+                                comt = ('check_cmd execution failed')
+                                ret.update({'comment': True, 'pchanges': {}})
+                                ret.pop('skip_watch', None)
+                                self.assertDictEqual(filestate.managed
+                                                     (name, user=user, group=group),
+                                                     ret)
 
-                            comt = ('check_cmd execution failed')
-                            ret.update({'comment': True, 'pchanges': {}})
-                            ret.pop('skip_watch', None)
-                            self.assertDictEqual(filestate.managed
-                                                 (name, user=user, group=group),
-                                                 ret)
+                                self.assertTrue(filestate.managed
+                                                (name, user=user, group=group))
 
-                            self.assertTrue(filestate.managed
-                                            (name, user=user, group=group))
-
-                            comt = ('Unable to manage file: ')
-                            ret.update({'comment': comt})
-                            self.assertDictEqual(filestate.managed
-                                                 (name, user=user, group=group),
-                                                 ret)
+                                comt = ('Unable to manage file: ')
+                                ret.update({'comment': comt})
+                                self.assertDictEqual(filestate.managed
+                                                     (name, user=user, group=group),
+                                                     ret)
 
     # 'directory' function tests: 1
 
@@ -930,151 +928,149 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'blockreplace' function tests: 1
 
-    @patch('salt.states.file._load_accumulators',
-           MagicMock(return_value=([], [])))
     def test_blockreplace(self):
         '''
         Test to maintain an edit in a file in a zone
         delimited by two line markers.
         '''
-        name = '/etc/hosts'
+        with patch('salt.states.file._load_accumulators',
+                   MagicMock(return_value=([], []))):
+            name = '/etc/hosts'
 
-        ret = {'name': name,
-               'result': False,
-               'comment': '',
-               'pchanges': {},
-               'changes': {}}
+            ret = {'name': name,
+                   'result': False,
+                   'comment': '',
+                   'pchanges': {},
+                   'changes': {}}
 
-        comt = ('Must provide name to file.blockreplace')
-        ret.update({'comment': comt, 'name': ''})
-        self.assertDictEqual(filestate.blockreplace(''), ret)
+            comt = ('Must provide name to file.blockreplace')
+            ret.update({'comment': comt, 'name': ''})
+            self.assertDictEqual(filestate.blockreplace(''), ret)
 
-        mock_t = MagicMock(return_value=True)
-        mock_f = MagicMock(return_value=False)
-        with patch.object(os.path, 'isabs', mock_f):
-            comt = ('Specified file {0} is not an absolute path'.format(name))
-            ret.update({'comment': comt, 'name': name})
-            self.assertDictEqual(filestate.blockreplace(name), ret)
+            mock_t = MagicMock(return_value=True)
+            mock_f = MagicMock(return_value=False)
+            with patch.object(os.path, 'isabs', mock_f):
+                comt = ('Specified file {0} is not an absolute path'.format(name))
+                ret.update({'comment': comt, 'name': name})
+                self.assertDictEqual(filestate.blockreplace(name), ret)
 
-        with patch.object(os.path, 'isabs', mock_t):
-            with patch.dict(filestate.__salt__, {'file.blockreplace': mock_t}):
-                with patch.dict(filestate.__opts__, {'test': True}):
-                    comt = ('Changes would be made')
-                    ret.update({'comment': comt, 'result': None,
-                                'changes': {},
-                                'pchanges': {'diff': True}})
-                    self.assertDictEqual(filestate.blockreplace(name), ret)
+            with patch.object(os.path, 'isabs', mock_t):
+                with patch.dict(filestate.__salt__, {'file.blockreplace': mock_t}):
+                    with patch.dict(filestate.__opts__, {'test': True}):
+                        comt = ('Changes would be made')
+                        ret.update({'comment': comt, 'result': None,
+                                    'changes': {},
+                                    'pchanges': {'diff': True}})
+                        self.assertDictEqual(filestate.blockreplace(name), ret)
 
     # 'comment' function tests: 1
 
-    @destructiveTest
-    @patch.object(os.path, 'exists', MagicMock(return_value=True))
     def test_comment(self):
         '''
         Test to comment out specified lines in a file.
         '''
-        name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
-        regex = 'bind 127.0.0.1'
+        with patch.object(os.path, 'exists', MagicMock(return_value=True)):
+            name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
+            regex = 'bind 127.0.0.1'
 
-        ret = {'name': name,
-               'result': False,
-               'comment': '',
-               'pchanges': {},
-               'changes': {}}
+            ret = {'name': name,
+                   'result': False,
+                   'comment': '',
+                   'pchanges': {},
+                   'changes': {}}
 
-        comt = ('Must provide name to file.comment')
-        ret.update({'comment': comt, 'name': ''})
-        self.assertDictEqual(filestate.comment('', regex), ret)
+            comt = ('Must provide name to file.comment')
+            ret.update({'comment': comt, 'name': ''})
+            self.assertDictEqual(filestate.comment('', regex), ret)
 
-        mock_t = MagicMock(return_value=True)
-        mock_f = MagicMock(return_value=False)
-        with patch.object(os.path, 'isabs', mock_f):
-            comt = ('Specified file {0} is not an absolute path'.format(name))
-            ret.update({'comment': comt, 'name': name})
-            self.assertDictEqual(filestate.comment(name, regex), ret)
-
-        with patch.object(os.path, 'isabs', mock_t):
-            with patch.dict(filestate.__salt__,
-                            {'file.search': MagicMock(side_effect=[True, True, True, False, False])}):
-                comt = ('Pattern already commented')
-                ret.update({'comment': comt, 'result': True})
+            mock_t = MagicMock(return_value=True)
+            mock_f = MagicMock(return_value=False)
+            with patch.object(os.path, 'isabs', mock_f):
+                comt = ('Specified file {0} is not an absolute path'.format(name))
+                ret.update({'comment': comt, 'name': name})
                 self.assertDictEqual(filestate.comment(name, regex), ret)
 
-                comt = ('{0}: Pattern not found'.format(regex))
-                ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(filestate.comment(name, regex), ret)
-
-            with patch.dict(filestate.__salt__,
-                            {'file.search': MagicMock(side_effect=[False, True, False, True, True]),
-                             'file.comment': mock_t,
-                             'file.comment_line': mock_t}):
-                with patch.dict(filestate.__opts__, {'test': True}):
-                    comt = ('File {0} is set to be updated'.format(name))
-                    ret.update({'comment': comt, 'result': None, 'pchanges': {name: 'updated'}})
+            with patch.object(os.path, 'isabs', mock_t):
+                with patch.dict(filestate.__salt__,
+                                {'file.search': MagicMock(side_effect=[True, True, True, False, False])}):
+                    comt = ('Pattern already commented')
+                    ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
-                with patch.dict(filestate.__opts__, {'test': False}):
-                    with patch.object(salt.utils, 'fopen',
-                                      MagicMock(mock_open())):
-                        comt = ('Commented lines successfully')
-                        ret.update({'comment': comt, 'result': True})
-                        self.assertDictEqual(filestate.comment(name, regex),
-                                             ret)
+                    comt = ('{0}: Pattern not found'.format(regex))
+                    ret.update({'comment': comt, 'result': False})
+                    self.assertDictEqual(filestate.comment(name, regex), ret)
+
+                with patch.dict(filestate.__salt__,
+                                {'file.search': MagicMock(side_effect=[False, True, False, True, True]),
+                                 'file.comment': mock_t,
+                                 'file.comment_line': mock_t}):
+                    with patch.dict(filestate.__opts__, {'test': True}):
+                        comt = ('File {0} is set to be updated'.format(name))
+                        ret.update({'comment': comt, 'result': None, 'pchanges': {name: 'updated'}})
+                        self.assertDictEqual(filestate.comment(name, regex), ret)
+
+                    with patch.dict(filestate.__opts__, {'test': False}):
+                        with patch.object(salt.utils, 'fopen',
+                                          MagicMock(mock_open())):
+                            comt = ('Commented lines successfully')
+                            ret.update({'comment': comt, 'result': True})
+                            self.assertDictEqual(filestate.comment(name, regex),
+                                                 ret)
 
     # 'uncomment' function tests: 1
 
-    @destructiveTest
-    @patch.object(os.path, 'exists', MagicMock(return_value=True))
     def test_uncomment(self):
         '''
         Test to uncomment specified commented lines in a file
         '''
-        name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
-        regex = 'bind 127.0.0.1'
+        with patch.object(os.path, 'exists', MagicMock(return_value=True)):
+            name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
+            regex = 'bind 127.0.0.1'
 
-        ret = {'name': name,
-               'pchanges': {},
-               'result': False,
-               'comment': '',
-               'changes': {}}
+            ret = {'name': name,
+                   'pchanges': {},
+                   'result': False,
+                   'comment': '',
+                   'changes': {}}
 
-        comt = ('Must provide name to file.uncomment')
-        ret.update({'comment': comt, 'name': ''})
-        self.assertDictEqual(filestate.uncomment('', regex), ret)
+            comt = ('Must provide name to file.uncomment')
+            ret.update({'comment': comt, 'name': ''})
+            self.assertDictEqual(filestate.uncomment('', regex), ret)
 
-        mock_t = MagicMock(return_value=True)
-        mock_f = MagicMock(return_value=False)
-        mock = MagicMock(side_effect=[True, False, False, False, True, False,
-                                      True, True])
-        with patch.object(os.path, 'isabs', mock_f):
-            comt = ('Specified file {0} is not an absolute path'.format(name))
-            ret.update({'comment': comt, 'name': name})
-            self.assertDictEqual(filestate.uncomment(name, regex), ret)
-
-        with patch.object(os.path, 'isabs', mock_t):
-            with patch.dict(filestate.__salt__,
-                            {'file.search': mock,
-                             'file.uncomment': mock_t,
-                             'file.comment_line': mock_t}):
-                comt = ('Pattern already uncommented')
-                ret.update({'comment': comt, 'result': True})
+            mock_t = MagicMock(return_value=True)
+            mock_f = MagicMock(return_value=False)
+            mock = MagicMock(side_effect=[True, False, False, False, True, False,
+                                          True, True])
+            with patch.object(os.path, 'isabs', mock_f):
+                comt = ('Specified file {0} is not an absolute path'.format(name))
+                ret.update({'comment': comt, 'name': name})
                 self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
-                comt = ('{0}: Pattern not found'.format(regex))
-                ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(filestate.uncomment(name, regex), ret)
-
-                with patch.dict(filestate.__opts__, {'test': True}):
-                    comt = ('File {0} is set to be updated'.format(name))
-                    ret.update({'comment': comt, 'result': None, 'pchanges': {name: 'updated'}, })
+            with patch.object(os.path, 'isabs', mock_t):
+                with patch.dict(filestate.__salt__,
+                                {'file.search': mock,
+                                 'file.uncomment': mock_t,
+                                 'file.comment_line': mock_t}):
+                    comt = ('Pattern already uncommented')
+                    ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
-                with patch.dict(filestate.__opts__, {'test': False}):
-                    with patch.object(salt.utils, 'fopen',
-                                      MagicMock(mock_open())):
-                        comt = ('Uncommented lines successfully')
-                        ret.update({'comment': comt, 'result': True})
+                    comt = ('{0}: Pattern not found'.format(regex))
+                    ret.update({'comment': comt, 'result': False})
+                    self.assertDictEqual(filestate.uncomment(name, regex), ret)
+
+                    with patch.dict(filestate.__opts__, {'test': True}):
+                        comt = ('File {0} is set to be updated'.format(name))
+                        ret.update({'comment': comt, 'result': None, 'pchanges': {name: 'updated'}, })
                         self.assertDictEqual(filestate.uncomment(name, regex), ret)
+
+                    with patch.dict(filestate.__opts__, {'test': False}):
+                        with patch.object(salt.utils, 'fopen',
+                                          MagicMock(mock_open())):
+                            comt = ('Uncommented lines successfully')
+                            ret.update({'comment': comt, 'result': True})
+                            self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
     # 'prepend' function tests: 1
 
@@ -1481,127 +1477,127 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'accumulated' function tests: 1
 
-    @patch('salt.states.file._load_accumulators',
-           MagicMock(return_value=({}, {})))
-    @patch('salt.states.file._persist_accummulators',
-           MagicMock(return_value=True))
     def test_accumulated(self):
         '''
         Test to prepare accumulator which can be used in template in file.
         '''
-        name = 'animals_doing_things'
-        filename = '/tmp/animal_file.txt'
-        text = ' jumps over the lazy dog.'
+        with patch('salt.states.file._load_accumulators',
+                   MagicMock(return_value=({}, {}))), \
+                           patch('salt.states.file._persist_accummulators',
+                                 MagicMock(return_value=True)):
+            name = 'animals_doing_things'
+            filename = '/tmp/animal_file.txt'
+            text = ' jumps over the lazy dog.'
 
-        ret = {'name': name,
-               'result': False,
-               'comment': '',
-               'changes': {}}
+            ret = {'name': name,
+                   'result': False,
+                   'comment': '',
+                   'changes': {}}
 
-        comt = ('Must provide name to file.accumulated')
-        ret.update({'comment': comt, 'name': ''})
-        self.assertDictEqual(filestate.accumulated('', filename, text), ret)
+            comt = ('Must provide name to file.accumulated')
+            ret.update({'comment': comt, 'name': ''})
+            self.assertDictEqual(filestate.accumulated('', filename, text), ret)
 
-        comt = ('No text supplied for accumulator')
-        ret.update({'comment': comt, 'name': name})
-        self.assertDictEqual(filestate.accumulated(name, filename, None), ret)
-
-        with patch.dict(filestate.__low__, {'require_in': 'file',
-                                            'watch_in': 'salt',
-                                            '__sls__': 'SLS', '__id__': 'ID'}):
-            comt = ('Orphaned accumulator animals_doing_things in SLS:ID')
+            comt = ('No text supplied for accumulator')
             ret.update({'comment': comt, 'name': name})
-            self.assertDictEqual(filestate.accumulated(name, filename, text),
-                                 ret)
+            self.assertDictEqual(filestate.accumulated(name, filename, None), ret)
 
-        with patch.dict(filestate.__low__, {'require_in': [{'file': 'A'}],
-                                            'watch_in': [{'B': 'C'}],
-                                            '__sls__': 'SLS', '__id__': 'ID'}):
-            comt = ('Accumulator {0} for file {1} '
-                    'was charged by text'.format(name, filename))
-            ret.update({'comment': comt, 'name': name, 'result': True})
-            self.assertDictEqual(filestate.accumulated(name, filename, text),
-                                 ret)
+            with patch.dict(filestate.__low__, {'require_in': 'file',
+                                                'watch_in': 'salt',
+                                                '__sls__': 'SLS', '__id__': 'ID'}):
+                comt = ('Orphaned accumulator animals_doing_things in SLS:ID')
+                ret.update({'comment': comt, 'name': name})
+                self.assertDictEqual(filestate.accumulated(name, filename, text),
+                                     ret)
 
-    # 'serialize' function tests: 1
+            with patch.dict(filestate.__low__, {'require_in': [{'file': 'A'}],
+                                                'watch_in': [{'B': 'C'}],
+                                                '__sls__': 'SLS', '__id__': 'ID'}):
+                comt = ('Accumulator {0} for file {1} '
+                        'was charged by text'.format(name, filename))
+                ret.update({'comment': comt, 'name': name, 'result': True})
+                self.assertDictEqual(filestate.accumulated(name, filename, text),
+                                     ret)
 
-    def test_serialize_into_managed_file(self):
-        '''
-        Test to serializes dataset and store it into managed file.
-        '''
-        name = '/etc/dummy/package.json'
+        # 'serialize' function tests: 1
 
-        ret = {'name': name,
-               'result': False,
-               'comment': '',
-               'changes': {}}
+        def test_serialize_into_managed_file(self):
+            '''
+            Test to serializes dataset and store it into managed file.
+            '''
+            name = '/etc/dummy/package.json'
 
-        comt = ('Must provide name to file.serialize')
-        ret.update({'comment': comt, 'name': ''})
-        self.assertDictEqual(filestate.serialize(''), ret)
+            ret = {'name': name,
+                   'result': False,
+                   'comment': '',
+                   'changes': {}}
 
-        mock_t = MagicMock(return_value=True)
-        mock_f = MagicMock(return_value=False)
-        with patch.object(os.path, 'isfile', mock_f):
-            comt = ('File {0} is not present and is not set for '
-                    'creation'.format(name))
-            ret.update({'comment': comt, 'name': name, 'result': True})
-            self.assertDictEqual(filestate.serialize(name, create=False), ret)
+            comt = ('Must provide name to file.serialize')
+            ret.update({'comment': comt, 'name': ''})
+            self.assertDictEqual(filestate.serialize(''), ret)
 
-        comt = ("Only one of 'dataset' and 'dataset_pillar' is permitted")
-        ret.update({'comment': comt, 'result': False})
-        self.assertDictEqual(filestate.serialize(name, dataset=True,
-                                                 dataset_pillar=True), ret)
+            mock_t = MagicMock(return_value=True)
+            mock_f = MagicMock(return_value=False)
+            with patch.object(os.path, 'isfile', mock_f):
+                comt = ('File {0} is not present and is not set for '
+                        'creation'.format(name))
+                ret.update({'comment': comt, 'name': name, 'result': True})
+                self.assertDictEqual(filestate.serialize(name, create=False), ret)
 
-        comt = ("Neither 'dataset' nor 'dataset_pillar' was defined")
-        ret.update({'comment': comt, 'result': False})
-        self.assertDictEqual(filestate.serialize(name), ret)
-
-        with patch.object(os.path, 'isfile', mock_t):
-            comt = ('Python format is not supported for merging')
+            comt = ("Only one of 'dataset' and 'dataset_pillar' is permitted")
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(filestate.serialize(name, dataset=True,
-                                                     merge_if_exists=True,
-                                                     formatter='python'), ret)
+                                                     dataset_pillar=True), ret)
 
-        comt = ('A format is not supported')
-        ret.update({'comment': comt, 'result': False})
-        self.assertDictEqual(filestate.serialize(name, dataset=True,
-                                                 formatter='A'), ret)
-        mock_changes = MagicMock(return_value=True)
-        mock_no_changes = MagicMock(return_value=False)
+            comt = ("Neither 'dataset' nor 'dataset_pillar' was defined")
+            ret.update({'comment': comt, 'result': False})
+            self.assertDictEqual(filestate.serialize(name), ret)
 
-        # __opts__['test']=True with changes
-        with patch.dict(filestate.__salt__,
-                        {'file.check_managed_changes': mock_changes}):
-            with patch.dict(filestate.__opts__, {'test': True}):
-                comt = ('Dataset will be serialized and stored into {0}'
-                        .format(name))
-                ret.update({'comment': comt, 'result': None, 'changes': True})
-                self.assertDictEqual(
-                    filestate.serialize(name, dataset=True,
-                                        formatter='python'), ret)
-
-        # __opts__['test']=True without changes
-        with patch.dict(filestate.__salt__,
-                        {'file.check_managed_changes': mock_no_changes}):
-            with patch.dict(filestate.__opts__, {'test': True}):
-                comt = ('The file {0} is in the correct state'
-                        .format(name))
-                ret.update({'comment': comt, 'result': True, 'changes': False})
-                self.assertDictEqual(
-                    filestate.serialize(name,
-                                        dataset=True, formatter='python'), ret)
-
-        mock = MagicMock(return_value=ret)
-        with patch.dict(filestate.__opts__, {'test': False}):
-            with patch.dict(filestate.__salt__, {'file.manage_file': mock}):
-                comt = ('Dataset will be serialized and stored into {0}'
-                        .format(name))
-                ret.update({'comment': comt, 'result': None})
+            with patch.object(os.path, 'isfile', mock_t):
+                comt = ('Python format is not supported for merging')
+                ret.update({'comment': comt, 'result': False})
                 self.assertDictEqual(filestate.serialize(name, dataset=True,
-                                                         formatter='python'),
-                                     ret)
+                                                         merge_if_exists=True,
+                                                         formatter='python'), ret)
+
+            comt = ('A format is not supported')
+            ret.update({'comment': comt, 'result': False})
+            self.assertDictEqual(filestate.serialize(name, dataset=True,
+                                                     formatter='A'), ret)
+            mock_changes = MagicMock(return_value=True)
+            mock_no_changes = MagicMock(return_value=False)
+
+            # __opts__['test']=True with changes
+            with patch.dict(filestate.__salt__,
+                            {'file.check_managed_changes': mock_changes}):
+                with patch.dict(filestate.__opts__, {'test': True}):
+                    comt = ('Dataset will be serialized and stored into {0}'
+                            .format(name))
+                    ret.update({'comment': comt, 'result': None, 'changes': True})
+                    self.assertDictEqual(
+                        filestate.serialize(name, dataset=True,
+                                            formatter='python'), ret)
+
+            # __opts__['test']=True without changes
+            with patch.dict(filestate.__salt__,
+                            {'file.check_managed_changes': mock_no_changes}):
+                with patch.dict(filestate.__opts__, {'test': True}):
+                    comt = ('The file {0} is in the correct state'
+                            .format(name))
+                    ret.update({'comment': comt, 'result': True, 'changes': False})
+                    self.assertDictEqual(
+                        filestate.serialize(name,
+                                            dataset=True, formatter='python'), ret)
+
+            mock = MagicMock(return_value=ret)
+            with patch.dict(filestate.__opts__, {'test': False}):
+                with patch.dict(filestate.__salt__, {'file.manage_file': mock}):
+                    comt = ('Dataset will be serialized and stored into {0}'
+                            .format(name))
+                    ret.update({'comment': comt, 'result': None})
+                    self.assertDictEqual(filestate.serialize(name, dataset=True,
+                                                             formatter='python'),
+                                         ret)
 
     # 'mknod' function tests: 1
 

@@ -47,12 +47,15 @@ class Mockwinapi(object):
         def __init__(self):
             pass
 
-        @staticmethod
-        def Com():
+        class Com(object):
             '''
             Mock Com method
             '''
-            return True
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc_info):
+                return False
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -153,17 +156,17 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'interfaces_names' function tests: 1
 
-    @patch('salt.utils', Mockwinapi)
     def test_interfaces_names(self):
         '''
         Test if it return a list of all the interfaces names
         '''
         self.WMI.Win32_NetworkAdapter = MagicMock(return_value=Mockwmi)
-        with patch('salt.utils.winapi.Com', MagicMock()):
-            with patch.object(self.WMI, 'Win32_NetworkAdapter',
-                              return_value=[Mockwmi()]):
-                self.assertListEqual(win_network.interfaces_names(),
-                                     ['Ethernet'])
+        with patch('salt.utils.winapi.Com', MagicMock()), \
+                patch.object(self.WMI, 'Win32_NetworkAdapter',
+                             return_value=[Mockwmi()]), \
+                patch('salt.utils', Mockwinapi):
+            self.assertListEqual(win_network.interfaces_names(),
+                                 ['Ethernet'])
 
     # 'interfaces' function tests: 1
 
