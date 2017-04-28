@@ -33,7 +33,7 @@ class DNSTestRecord(object):
         self.type = type
         self.ttl = 4400
         self.data = data
-        self.zone = TestZone('test', 'domain')
+        self.zone = DNSTestZone('test', 'domain')
         self.extra = {}
 
 
@@ -47,12 +47,12 @@ def get_mock_driver():
 
 
 test_records = {
-    'zone1': [_simple_record(TestRecord(0, 'www', 'A', '127.0.0.1'))]
+    'zone1': [_simple_record(DNSTestRecord(0, 'www', 'A', '127.0.0.1'))]
 }
 
 
 def list_zones(profile):
-    return [_simple_zone(TestZone('zone1', 'test.com'))]
+    return [_simple_zone(DNSTestZone('zone1', 'test.com'))]
 
 
 def list_records(zone_id, profile):
