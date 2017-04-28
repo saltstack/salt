@@ -40,6 +40,7 @@ AUTH_CREDS = {
     'eauth': 'pam'}
 
 
+@skipIf(salt.utils.is_darwin(), 'Skip until user passwords can be automated on MacOS')
 @skipIf(HAS_CHERRYPY is False, 'CherryPy not installed')
 class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
     '''
