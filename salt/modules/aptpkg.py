@@ -771,7 +771,7 @@ def install(name=None,
     hold_pkgs = state.get('hold')
     to_unhold = []
     for _pkg in hold_pkgs:
-        if _pkg in all_pkgs:
+        if any(_pkg in _a_pkg for _a_pkg in all_pkgs):
             to_unhold.append(_pkg)
 
     if to_unhold:
