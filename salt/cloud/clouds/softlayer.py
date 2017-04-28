@@ -407,7 +407,7 @@ def create(vm_):
     private_wds = config.get_cloud_config_value(
         'private_windows', vm_, __opts__, default=False
     )
-    if private_ssh or private_wds or public_vlan is None or public_vlan is False:
+    if private_ssh or private_wds or public_vlan is None:
         ip_type = 'primaryBackendIpAddress'
 
     def wait_for_ip():
