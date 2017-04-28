@@ -46,9 +46,8 @@ permissions.
 
 # Import python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion
+from salt.utils.versions import LooseVersion
 import base64
-import hashlib
 import json
 import logging
 import os
@@ -213,7 +212,7 @@ def update():
                     salt.fileserver.wait_lock(fname + '.lk', fname)
                     try:
                         os.unlink(fname)
-                    except:
+                    except Exception:
                         pass
             if not dirs and not files:
                 shutil.rmtree(root)
@@ -248,7 +247,7 @@ def update():
                 # Unlock writes
                 try:
                     os.unlink(lk_fn)
-                except:
+                except Exception:
                     pass
 
         # Write out file list
@@ -261,7 +260,7 @@ def update():
             fp_.write(json.dumps(blob_names))
         try:
             os.unlink(lk_fn)
-        except:
+        except Exception:
             pass
 
 
