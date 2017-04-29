@@ -27,11 +27,13 @@ class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.openstack_config
     '''
     def setup_loader_modules(self):
+        patcher = patch('salt.utils.which', MagicMock(return_value=True))
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return {openstack_config: {}}
 
     # 'set_' function tests: 1
 
-    @patch('salt.utils.which', MagicMock(return_value=True))
     def test_set(self):
         '''
         Test if it set a value in an OpenStack configuration file.
@@ -52,7 +54,6 @@ class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get' function tests: 1
 
-    @patch('salt.utils.which', MagicMock(return_value=True))
     def test_get(self):
         '''
         Test if it get a value from an OpenStack configuration file.
@@ -71,7 +72,6 @@ class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete' function tests: 1
 
-    @patch('salt.utils.which', MagicMock(return_value=True))
     def test_delete(self):
         '''
         Test if it delete a value from an OpenStack configuration file.
