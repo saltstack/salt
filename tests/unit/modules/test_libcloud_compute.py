@@ -45,6 +45,14 @@ class MockComputeDriver(BaseDriver):
     def list_locations(self):
         return [self._TEST_LOCATION]
 
+    def reboot_node(self, node):
+        assert node.id == 'test_id'
+        return True
+
+    def destroy_node(self, node):
+        assert node.id == 'test_id'
+        return True
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.libcloud_compute._get_driver',
@@ -112,3 +120,19 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
         locations = libcloud_compute.list_locations('test')
         self.assertEqual(len(locations), 1)
         self._validate_location(locations[0])
+
+    def test_reboot_node(self):
+        result = libcloud_compute.reboot_node('test_id', 'test')
+        self.assertTrue(result)
+
+    def test_reboot_node_invalid(self):
+        with self.assertRaises(ValueError):
+            libcloud_compute.reboot_node('foo_node', 'test')
+
+    def test_destroy_node(self):
+        result = libcloud_compute.destroy_node('test_id', 'test')
+        self.assertTrue(result)
+
+    def test_destroy_node_invalid(self):
+        with self.assertRaises(ValueError):
+            libcloud_compute.destroy_node('foo_node', 'test')

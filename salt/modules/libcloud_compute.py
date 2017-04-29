@@ -177,6 +177,72 @@ def list_locations(profile, **libcloud_kwargs):
     return ret
 
 
+def create_node(profile):
+    # TODO
+    pass
+
+
+def deploy_node(profile):
+    # TODO
+    pass
+
+
+def reboot_node(node_id, profile, **libcloud_kwargs):
+    '''
+    Reboot a node in the cloud
+
+    :param node_id: Unique ID of the node to reboot
+    :type  node_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's reboot_node method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.reboot_node as-2346 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    matches = [node for node in conn.list_nodes(**libcloud_kwargs) if node.id == node_id]
+    if len(matches) == 0:
+        raise ValueError('Could not find a matching node')
+    elif len(matches) > 1:
+        raise ValueError('The node_id matched {0} nodes, not 1'.format(len(matches)))
+    return conn.reboot_node(matches[0], **libcloud_kwargs)
+
+
+def destroy_node(node_id, profile, **libcloud_kwargs):
+    '''
+    Destroy a node in the cloud
+
+    :param node_id: Unique ID of the node to destory
+    :type  node_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's destroy_node method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.destry_node as-2346 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    matches = [node for node in conn.list_nodes(**libcloud_kwargs) if node.id == node_id]
+    if len(matches) == 0:
+        raise ValueError('Could not find a matching node')
+    elif len(matches) > 1:
+        raise ValueError('The node_id matched {0} nodes, not 1'.format(len(matches)))
+    return conn.destroy_node(matches[0], **libcloud_kwargs)
+
+
 def _simple_location(location):
     return {
         'id': location.id,
