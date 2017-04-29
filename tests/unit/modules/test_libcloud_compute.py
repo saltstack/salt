@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 import salt.modules.libcloud_compute as libcloud_compute
 
-from libcloud.compute.base import BaseDriver, Node, NodeSize, NodeState
+from libcloud.compute.base import BaseDriver, Node, NodeSize, NodeState, NodeLocation
 
 
 class MockComputeDriver(BaseDriver):
@@ -31,6 +31,8 @@ class MockComputeDriver(BaseDriver):
             size=self._TEST_SIZE, extra={
                 'ex_key': 'ex_value'
             })
+        self._TEST_LOCATION = NodeLocation(id='test_location',
+            name='location1', country='Australia', driver=self)
     
     def list_nodes(self):
         return [self._TEST_NODE]
@@ -39,6 +41,9 @@ class MockComputeDriver(BaseDriver):
         if location:
             assert location.id == 'test_location'
         return [self._TEST_SIZE]
+
+    def list_locations(self):
+        return [self._TEST_LOCATION]
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -83,6 +88,11 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(size['name'], 'test_size')
         self.assertEqual(size['ram'], 4096)
 
+    def _validate_location(self, location):
+        self.assertEqual(location['id'], 'test_location')
+        self.assertEqual(location['name'], 'location1')
+        self.assertEqual(location['country'], 'Australia')
+
     def test_list_nodes(self):
         nodes = libcloud_compute.list_nodes('test')
         self.assertEqual(len(nodes), 1)
@@ -92,3 +102,13 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
         sizes = libcloud_compute.list_sizes('test')
         self.assertEqual(len(sizes), 1)
         self._validate_size(sizes[0])
+
+    def test_list_sizes_location(self):
+        sizes = libcloud_compute.list_sizes('test', location_id='test_location')
+        self.assertEqual(len(sizes), 1)
+        self._validate_size(sizes[0])
+
+    def test_list_locations(self):
+        locations = libcloud_compute.list_locations('test')
+        self.assertEqual(len(locations), 1)
+        self._validate_location(locations[0])
