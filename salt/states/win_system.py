@@ -16,6 +16,7 @@ description.
     This is Erik's computer, don't touch!:
       system.computer_desc: []
 '''
+from __future__ import absolute_import
 
 from __future__ import absolute_import
 
