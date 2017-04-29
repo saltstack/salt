@@ -103,8 +103,8 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        elb = conn.get_all_load_balancers(load_balancer_names=[name])
-        if elb:
+        lb = conn.get_all_load_balancers(load_balancer_names=[name])
+        if lb:
             return True
         else:
             msg = 'The load balancer does not exist in region {0}'.format(region)
