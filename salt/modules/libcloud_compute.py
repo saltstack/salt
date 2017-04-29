@@ -177,16 +177,6 @@ def list_locations(profile, **libcloud_kwargs):
     return ret
 
 
-def create_node(profile):
-    # TODO
-    pass
-
-
-def deploy_node(profile):
-    # TODO
-    pass
-
-
 def reboot_node(node_id, profile, **libcloud_kwargs):
     '''
     Reboot a node in the cloud
@@ -268,6 +258,30 @@ def list_volumes(profile, **libcloud_kwargs):
         ret.append(_simple_volume(volume))
     return ret
 
+'''
+Remaining functions to implement:
+
+    def create_node(self, **kwargs):
+    def deploy_node(self, **kwargs):
+    def list_volume_snapshots(self, volume):
+    def create_volume(self, size, name, location=None, snapshot=None):
+    def create_volume_snapshot(self, volume, name=None):
+    def attach_volume(self, node, volume, device=None):
+    def detach_volume(self, volume):
+    def destroy_volume(self, volume):
+    def destroy_volume_snapshot(self, snapshot):
+    def list_images(self, location=None):
+    def create_image(self, node, name, description=None):
+    def delete_image(self, node_image):
+    def get_image(self, image_id):
+    def copy_image(self, source_region, node_image, name, description=None):
+    def list_key_pairs(self):
+    def get_key_pair(self, name):
+    def create_key_pair(self, name):
+    def import_key_pair_from_string(self, name, key_material):
+    def import_key_pair_from_file(self, name, key_file_path):
+    def delete_key_pair(self, key_pair):
+'''
 
 def _simple_volume(volume):
     return {
