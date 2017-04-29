@@ -1772,7 +1772,7 @@ class Logout(LowDataAdapter):
         'tools.lowdata_fmt.on': False,
     })
 
-    def POST(self):
+    def GET(self):
         '''
         Destroy the currently active session and expire the session cookie
         '''
