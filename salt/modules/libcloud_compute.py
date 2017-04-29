@@ -243,6 +243,42 @@ def destroy_node(node_id, profile, **libcloud_kwargs):
     return conn.destroy_node(matches[0], **libcloud_kwargs)
 
 
+def list_volumes(profile, **libcloud_kwargs):
+    '''
+    Return a list of storage volumes for this cloud
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's list_volumes method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.list_volumes profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    volumes = conn.list_volumes(**libcloud_kwargs)
+    
+    ret = []
+    for volume in volumes:
+        ret.append(_simple_volume(volume))
+    return ret
+
+
+def _simple_volume(volume):
+    return {
+        'id': volume.id,
+        'name': volume.name,
+        'size': volume.size,
+        'state': volume.state,
+        'extra': volume.extra
+    }
+
+
 def _simple_location(location):
     return {
         'id': location.id,
