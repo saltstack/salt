@@ -114,10 +114,62 @@ def list_nodes(profile, **libcloud_kwargs):
     return ret
 
 
+def list_sizes(profile, location_id=None, **libcloud_kwargs):
+    '''
+    Return a list of node sizes
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param location_id: The location key, from list_locations
+    :type  location_id: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's list_sizes method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.list_sizes profile1
+        salt myminion libcloud_compute.list_sizes profile1 us-east1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    if location_id is not None:
+        locations = [loc for loc in conn.list_locations if location.id == location_id]
+        if len(locations) == 0:
+            raise ValueError("Location not found")
+        else:
+            sizes = conn.list_sizes(location=locations[0], **libcloud_kwargs)
+    else:
+        sizes = conn.list_sizes(**libcloud_kwargs)
+    
+    ret = []
+    for size in sizes:
+        ret.append(_simple_size(size))
+    return ret
+
+
+def _simple_size(size):
+    return {
+        'id': size.id,
+        'name': size.name,
+        'ram': size.ram,
+        'disk': size.disk,
+        'bandwidth': size.bandwidth,
+        'price': size.price,
+        'extra': size.extra
+    }
+
+
 def _simple_node(node):
     return {
         'id': node.id,
         'name': node.name,
-        'state': node.state,
+        'state': str(node.state),
+        'public_ips': node.public_ips,
+        'private_ips': node.private_ips,
+        'size': _simple_size(node.size) if node.size else {},
         'extra': node.extra
     }
