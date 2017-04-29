@@ -17,7 +17,7 @@ import salt.states.libcloud_dns as libcloud_dns
 from salt.modules.libcloud_dns import _simple_record, _simple_zone
 
 
-class DNSTestZone(dict):
+class DNSTestZone(object):
     def __init__(self, id, domain):
         self.id = id
         self.type = 'master'
@@ -25,48 +25,16 @@ class DNSTestZone(dict):
         self.domain = domain
         self.extra = {}
 
-    def __getitem__(self, key):
-        return getattr(self, key)
 
-
-class DNSTestRecord(dict):
-    def __init__(self, id, name, type, data):
+class DNSTestRecord(object):
+    def __init__(self, id, name, record_type, data):
         self.id = id
         self.name = name
-        self.type = type
+        self.type = record_type
         self.ttl = 4400
         self.data = data
         self.zone = DNSTestZone('test', 'domain')
         self.extra = {}
-
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-
-class MockDNSDriver(object):
-    def __init__(self):
-        pass
-
-
-def get_mock_driver():
-    return MockDNSDriver()
-
-
-test_records = {
-    'zone1': [_simple_record(DNSTestRecord(0, 'www', 'A', '127.0.0.1'))]
-}
-
-
-def list_zones(profile):
-    return [_simple_zone(DNSTestZone('zone1', 'test.com'))]
-
-
-def list_records(zone_id, profile):
-    return test_records[zone_id]
-
-
-def create_record(*args):
-    return True
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -74,11 +42,11 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         test_records = {
-            'zone1': [DNSTestRecord(0, 'www', 'A', '127.0.0.1')]
+            'zone1': [_simple_record(DNSTestRecord(0, 'www', 'A', '127.0.0.1'))]
         }
 
         def list_zones(profile):
-            return [DNSTestZone('zone1', 'test.com')]
+            return [_simple_zone(DNSTestZone('zone1', 'test.com'))]
 
         def list_records(zone_id, profile):
             return test_records[zone_id]
