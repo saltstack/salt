@@ -2545,7 +2545,7 @@ def request_instance(vm_):
         )
 
     try:
-        node_dict = show_instance(node_data['name'], 'action')
+        node_dict = show_instance(node_data.name, 'action')
     except TypeError:
         # node_data is a libcloud Node which is unsubscriptable
         node_dict = show_instance(node_data.name, 'action')
