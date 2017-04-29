@@ -12,9 +12,10 @@ from tests.support.cherrypy_testclasses import BaseToolsTest
 
 
 class TestOutFormats(BaseToolsTest):
-    _cp_config = {
-        'tools.hypermedia_out.on': True,
-    }
+    def __get_cp_config__(self):
+        return {
+            'tools.hypermedia_out.on': True,
+        }
 
     def test_default_accept(self):
         request, response = self.request('/')
@@ -40,9 +41,10 @@ class TestOutFormats(BaseToolsTest):
 
 
 class TestInFormats(BaseToolsTest):
-    _cp_config = {
-        'tools.hypermedia_in.on': True,
-    }
+    def __get_cp_config__(self):
+        return {
+            'tools.hypermedia_in.on': True,
+        }
 
     def test_urlencoded_ctype(self):
         data = {'valid': 'stuff'}

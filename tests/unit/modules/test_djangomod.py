@@ -20,18 +20,18 @@ import salt.modules.djangomod as djangomod
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.utils.which', lambda exe: exe)
 class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.djangomod
     '''
     def setup_loader_modules(self):
-        return {djangomod: {}}
+        patcher = patch('salt.utils.which', lambda exe: exe)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return {djangomod: {'_get_django_admin': MagicMock(return_value=True)}}
 
     # 'command' function tests: 1
 
-    @patch('salt.modules.djangomod._get_django_admin',
-           MagicMock(return_value=True))
     def test_command(self):
         '''
         Test if it runs arbitrary django management command
@@ -43,8 +43,6 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'syncdb' function tests: 1
 
-    @patch('salt.modules.djangomod._get_django_admin',
-           MagicMock(return_value=True))
     def test_syncdb(self):
         '''
         Test if it runs the Django-Admin syncdb command
@@ -55,8 +53,6 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'createsuperuser' function tests: 1
 
-    @patch('salt.modules.djangomod._get_django_admin',
-           MagicMock(return_value=True))
     def test_createsuperuser(self):
         '''
         Test if it create a super user for the database.
@@ -69,8 +65,6 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'loaddata' function tests: 1
 
-    @patch('salt.modules.djangomod._get_django_admin',
-           MagicMock(return_value=True))
     def test_loaddata(self):
         '''
         Test if it loads fixture data
@@ -82,8 +76,6 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'collectstatic' function tests: 1
 
-    @patch('salt.modules.djangomod._get_django_admin',
-           MagicMock(return_value=True))
     def test_collectstatic(self):
         '''
         Test if it collect static files from each of your applications
@@ -92,6 +84,18 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=True)
         with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
             self.assertTrue(djangomod.collectstatic('DJANGO_SETTINGS_MODULE'))
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
+    '''
+    Test cases for salt.modules.djangomod
+    '''
+    def setup_loader_modules(self):
+        patcher = patch('salt.utils.which', lambda exe: exe)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return {djangomod: {}}
 
     def test_django_admin_cli_command(self):
         mock = MagicMock()

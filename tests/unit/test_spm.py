@@ -8,42 +8,12 @@ import tempfile
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
+from tests.support.mock import patch
 from tests.support.helpers import destructiveTest
-
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 import salt.config
 import salt.utils
 import salt.spm
-
-_TMP_SPM = tempfile.mkdtemp()
-
-config = salt.config.minion_config(None)
-config['file_roots'] = {'base': [os.path.join(_TMP_SPM, 'salt')]}
-config['pillar_roots'] = {'base': [os.path.join(_TMP_SPM, 'pillar')]}
-
-__opts__ = salt.config.DEFAULT_MINION_OPTS
-
-__opts__.update({
-    'spm_logfile': os.path.join(_TMP_SPM, 'log'),
-    'spm_repos_config': os.path.join(_TMP_SPM, 'etc', 'spm.repos'),
-    'spm_cache_dir': os.path.join(_TMP_SPM, 'cache'),
-    'spm_build_dir': os.path.join(_TMP_SPM, 'build'),
-    'spm_build_exclude': ['.git'],
-    'spm_db_provider': 'sqlite3',
-    'spm_files_provider': 'local',
-    'spm_db': os.path.join(_TMP_SPM, 'packages.db'),
-    'extension_modules': os.path.join(_TMP_SPM, 'modules'),
-    'file_roots': {'base': [_TMP_SPM, ]},
-    'formula_path': os.path.join(_TMP_SPM, 'spm'),
-    'pillar_path': os.path.join(_TMP_SPM, 'pillar'),
-    'reactor_path': os.path.join(_TMP_SPM, 'reactor'),
-    'assume_yes': True,
-    'force': False,
-    'verbose': False,
-    'cache': 'localfs',
-    'cachedir': os.path.join(_TMP_SPM, 'cache'),
-    'spm_repo_dups': 'ignore',
-    'spm_share_dir': os.path.join(_TMP_SPM, 'share'),
-})
 
 _F1 = {
     'definition': {
@@ -88,21 +58,41 @@ class SPMTestUserInterface(salt.spm.SPMUserInterface):
         self._error.append(msg)
 
 
-class SPMTest(TestCase):
+class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
-        shutil.rmtree(_TMP_SPM, ignore_errors=True)
-        os.mkdir(_TMP_SPM)
-        self.ui = SPMTestUserInterface()
-        self.client = salt.spm.SPMClient(self.ui, __opts__)
-        master_cache = salt.config.DEFAULT_MASTER_OPTS['cachedir']
-        if not os.path.exists(master_cache):
-            os.makedirs(master_cache)
+        self._tmp_spm = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self._tmp_spm, ignore_errors=True)
 
-    def tearDown(self):
-        shutil.rmtree(_TMP_SPM, ignore_errors=True)
+        minion_config = self.get_temp_config('minion', **{
+            'spm_logfile': os.path.join(self._tmp_spm, 'log'),
+            'spm_repos_config': os.path.join(self._tmp_spm, 'etc', 'spm.repos'),
+            'spm_cache_dir': os.path.join(self._tmp_spm, 'cache'),
+            'spm_build_dir': os.path.join(self._tmp_spm, 'build'),
+            'spm_build_exclude': ['.git'],
+            'spm_db_provider': 'sqlite3',
+            'spm_files_provider': 'local',
+            'spm_db': os.path.join(self._tmp_spm, 'packages.db'),
+            'extension_modules': os.path.join(self._tmp_spm, 'modules'),
+            'file_roots': {'base': [self._tmp_spm, ]},
+            'formula_path': os.path.join(self._tmp_spm, 'spm'),
+            'pillar_path': os.path.join(self._tmp_spm, 'pillar'),
+            'reactor_path': os.path.join(self._tmp_spm, 'reactor'),
+            'assume_yes': True,
+            'force': False,
+            'verbose': False,
+            'cache': 'localfs',
+            'cachedir': os.path.join(self._tmp_spm, 'cache'),
+            'spm_repo_dups': 'ignore',
+            'spm_share_dir': os.path.join(self._tmp_spm, 'share'),
+        })
+        self.ui = SPMTestUserInterface()
+        self.client = salt.spm.SPMClient(self.ui, minion_config)
+        self.minion_config = minion_config
+        for attr in ('client', 'ui', '_tmp_spm', 'minion_config'):
+            self.addCleanup(delattr, self, attr)
 
     def _create_formula_files(self, formula):
-        fdir = os.path.join(_TMP_SPM, formula['definition']['name'])
+        fdir = os.path.join(self._tmp_spm, formula['definition']['name'])
         shutil.rmtree(fdir, ignore_errors=True)
         os.mkdir(fdir)
         for path, contents in formula['contents']:
@@ -124,7 +114,7 @@ class SPMTest(TestCase):
         self.client.run(['local', 'install', pkgpath])
         # Check filesystem
         for path, contents in _F1['contents']:
-            path = os.path.join(__opts__['file_roots']['base'][0], _F1['definition']['name'], path)
+            path = os.path.join(self.minion_config['file_roots']['base'][0], _F1['definition']['name'], path)
             assert os.path.exists(path)
             with salt.utils.fopen(path, 'r') as rfh:
                 assert rfh.read() == contents
@@ -142,11 +132,10 @@ class SPMTest(TestCase):
         self.client.run(['local', 'install', pkgpath])
         assert len(self.ui._error) > 0
         # Reinstall with force=True, should succeed
-        __opts__['force'] = True
-        self.ui._error = []
-        self.client.run(['local', 'install', pkgpath])
-        assert len(self.ui._error) == 0
-        __opts__['force'] = False
+        with patch.dict(self.minion_config, {'force': True}):
+            self.ui._error = []
+            self.client.run(['local', 'install', pkgpath])
+            assert len(self.ui._error) == 0
 
     def test_failure_paths(self):
         fail_args = (

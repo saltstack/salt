@@ -42,33 +42,33 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'keys' function tests: 1
 
-    @patch('os.path.isfile', MagicMock(return_value=False))
     def test_keys(self):
         '''
         Test to manage libvirt keys.
         '''
-        name = 'sunrise'
+        with patch('os.path.isfile', MagicMock(return_value=False)):
+            name = 'sunrise'
 
-        ret = {'name': name,
-               'result': True,
-               'comment': '',
-               'changes': {}}
+            ret = {'name': name,
+                   'result': True,
+                   'comment': '',
+                   'changes': {}}
 
-        mock = MagicMock(side_effect=[[], ['libvirt.servercert.pem'],
-                                      {'libvirt.servercert.pem': 'A'}])
-        with patch.dict(virt.__salt__, {'pillar.ext': mock}):
-            comt = ('All keys are correct')
-            ret.update({'comment': comt})
-            self.assertDictEqual(virt.keys(name, basepath=self.pki_dir), ret)
-
-            with patch.dict(virt.__opts__, {'test': True}):
-                comt = ('Libvirt keys are set to be updated')
-                ret.update({'comment': comt, 'result': None})
+            mock = MagicMock(side_effect=[[], ['libvirt.servercert.pem'],
+                                          {'libvirt.servercert.pem': 'A'}])
+            with patch.dict(virt.__salt__, {'pillar.ext': mock}):
+                comt = ('All keys are correct')
+                ret.update({'comment': comt})
                 self.assertDictEqual(virt.keys(name, basepath=self.pki_dir), ret)
 
-            with patch.dict(virt.__opts__, {'test': False}):
-                with patch.object(salt.utils, 'fopen', MagicMock(mock_open())):
-                    comt = ('Updated libvirt certs and keys')
-                    ret.update({'comment': comt, 'result': True,
-                                'changes': {'servercert': 'new'}})
+                with patch.dict(virt.__opts__, {'test': True}):
+                    comt = ('Libvirt keys are set to be updated')
+                    ret.update({'comment': comt, 'result': None})
                     self.assertDictEqual(virt.keys(name, basepath=self.pki_dir), ret)
+
+                with patch.dict(virt.__opts__, {'test': False}):
+                    with patch.object(salt.utils, 'fopen', MagicMock(mock_open())):
+                        comt = ('Updated libvirt certs and keys')
+                        ret.update({'comment': comt, 'result': True,
+                                    'changes': {'servercert': 'new'}})
+                        self.assertDictEqual(virt.keys(name, basepath=self.pki_dir), ret)

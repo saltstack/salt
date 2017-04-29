@@ -17,7 +17,7 @@ import salt.states.libcloud_dns as libcloud_dns
 from salt.modules.libcloud_dns import _simple_record, _simple_zone
 
 
-class TestZone(object):
+class DNSTestZone(object):
     def __init__(self, id, domain):
         self.id = id
         self.type = 'master'
@@ -26,59 +26,43 @@ class TestZone(object):
         self.extra = {}
 
 
-class TestRecord(object):
-    def __init__(self, id, name, type, data):
+class DNSTestRecord(object):
+    def __init__(self, id, name, record_type, data):
         self.id = id
         self.name = name
-        self.type = type
+        self.type = record_type
         self.ttl = 4400
         self.data = data
-        self.zone = TestZone('test', 'domain')
+        self.zone = DNSTestZone('test', 'domain')
         self.extra = {}
-
-
-class MockDNSDriver(object):
-    def __init__(self):
-        pass
-
-
-def get_mock_driver():
-    return MockDNSDriver()
-
-
-test_records = {
-    'zone1': [_simple_record(TestRecord(0, 'www', 'A', '127.0.0.1'))]
-}
-
-
-def list_zones(profile):
-    return [_simple_zone(TestZone('zone1', 'test.com'))]
-
-
-def list_records(zone_id, profile):
-    return test_records[zone_id]
-
-
-def create_record(*args):
-    return True
-
-
-def delete_record(*args):
-    return True
-
-
-def create_zone(*args):
-    return True
-
-
-def delete_zone(*args):
-    return True
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
+        test_records = {
+            'zone1': [_simple_record(DNSTestRecord(0, 'www', 'A', '127.0.0.1'))]
+        }
+
+        def list_zones(profile):
+            return [_simple_zone(DNSTestZone('zone1', 'test.com'))]
+
+        def list_records(zone_id, profile):
+            return test_records[zone_id]
+
+        def create_record(*args):
+            return True
+
+        def delete_record(*args):
+            return True
+
+        def create_zone(*args):
+            return True
+
+        def delete_zone(*args):
+            return True
+
         return {
             libcloud_dns: {
                 '__salt__': {

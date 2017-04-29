@@ -30,7 +30,6 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 import salt.modules.tls as tls
@@ -143,9 +142,6 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             tls.set_ca_path(ca_path)
             self.assertEqual(tls.__context__, ret)
 
-    @patch('os.path.exists', MagicMock(return_value=False))
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_ca_exists(self):
         '''
         Test to see if ca does not exist
@@ -153,12 +149,12 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         ca_path = '/tmp/test_tls'
         ca_name = 'test_ca'
         mock_opt = MagicMock(return_value=ca_path)
-        with patch.dict(tls.__salt__, {'config.option': mock_opt}):
+        with patch.dict(tls.__salt__, {'config.option': mock_opt}), \
+                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.modules.tls.maybe_fix_ssl_version',
+                      MagicMock(return_value=True)):
             self.assertFalse(tls.ca_exists(ca_name))
 
-    @patch('os.path.exists', MagicMock(return_value=True))
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_ca_exists_true(self):
         '''
         Test to see if ca exists
@@ -166,12 +162,12 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         ca_path = '/tmp/test_tls'
         ca_name = 'test_ca'
         mock_opt = MagicMock(return_value=ca_path)
-        with patch.dict(tls.__salt__, {'config.option': mock_opt}):
+        with patch.dict(tls.__salt__, {'config.option': mock_opt}), \
+                patch('os.path.exists', MagicMock(return_value=True)), \
+                patch('salt.modules.tls.maybe_fix_ssl_version',
+                      MagicMock(return_value=True)):
             self.assertTrue(tls.ca_exists(ca_name))
 
-    @patch('os.path.exists', MagicMock(return_value=False))
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_get_ca_fail(self):
         '''
         Test get_ca failure
@@ -179,12 +175,12 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         ca_path = '/tmp/test_tls'
         ca_name = 'test_ca'
         mock_opt = MagicMock(return_value=ca_path)
-        with patch.dict(tls.__salt__, {'config.option': mock_opt}):
+        with patch.dict(tls.__salt__, {'config.option': mock_opt}), \
+                patch('os.path.exists', MagicMock(return_value=False)), \
+                patch('salt.modules.tls.maybe_fix_ssl_version',
+                      MagicMock(return_value=True)):
             self.assertRaises(ValueError, tls.get_ca, ca_name)
 
-    @patch('os.path.exists', MagicMock(return_value=True))
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_get_ca_text(self):
         '''
         Test get_ca text
@@ -193,14 +189,14 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         ca_name = 'test_ca'
         mock_opt = MagicMock(return_value=ca_path)
         with patch('salt.utils.fopen',
-                   mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
-            with patch.dict(tls.__salt__, {'config.option': mock_opt}):
-                self.assertEqual(tls.get_ca(ca_name, as_text=True),
-                                 _TLS_TEST_DATA['ca_cert'])
+                   mock_open(read_data=_TLS_TEST_DATA['ca_cert'])), \
+                patch.dict(tls.__salt__, {'config.option': mock_opt}), \
+                patch('os.path.exists', MagicMock(return_value=True)), \
+                patch('salt.modules.tls.maybe_fix_ssl_version',
+                      MagicMock(return_value=True)):
+            self.assertEqual(tls.get_ca(ca_name, as_text=True),
+                             _TLS_TEST_DATA['ca_cert'])
 
-    @patch('os.path.exists', MagicMock(return_value=True))
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_get_ca(self):
         '''
         Test get_ca
@@ -212,103 +208,104 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             ca_name,
             ca_name)
         mock_opt = MagicMock(return_value=ca_path)
-        with patch.dict(tls.__salt__, {'config.option': mock_opt}):
+        with patch.dict(tls.__salt__, {'config.option': mock_opt}), \
+                patch('os.path.exists', MagicMock(return_value=True)), \
+                patch('salt.modules.tls.maybe_fix_ssl_version',
+                      MagicMock(return_value=True)):
             self.assertEqual(tls.get_ca(ca_name), certp)
 
-    @patch('os.path.exists', MagicMock(return_value=True))
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_cert_info(self):
         '''
         Test cert info
         '''
-        ca_path = '/tmp/test_tls'
-        ca_name = 'test_ca'
-        certp = '{0}/{1}/{2}_ca_cert.crt'.format(
-            ca_path,
-            ca_name,
-            ca_name)
-        ret = {
-            'not_after': 1462379961,
-            'signature_algorithm': 'sha256WithRSAEncryption',
-            'extensions': None,
-            'fingerprint': ('96:72:B3:0A:1D:34:37:05:75:57:44:7E:08:81:A7:09:'
-                            '0C:E1:8F:5F:4D:0C:49:CE:5B:D2:6B:45:D3:4D:FF:31'),
-            'serial_number': 284092004844685647925744086791559203700,
-            'subject': {
-                'C': 'US',
-                'CN': 'localhost',
-                'L': 'Salt Lake City',
-                'O': 'SaltStack',
-                'ST': 'Utah',
-                'emailAddress':
-                'xyz@pdq.net'},
-            'not_before': 1430843961,
-            'issuer': {
-                'C': 'US',
-                'CN': 'localhost',
-                'L': 'Salt Lake City',
-                'O': 'SaltStack',
-                'ST': 'Utah',
-                'emailAddress': 'xyz@pdq.net'}
-        }
+        self.maxDiff = None
+        with patch('os.path.exists', MagicMock(return_value=True)), \
+                patch('salt.modules.tls.maybe_fix_ssl_version',
+                      MagicMock(return_value=True)):
+            ca_path = '/tmp/test_tls'
+            ca_name = 'test_ca'
+            certp = '{0}/{1}/{2}_ca_cert.crt'.format(
+                ca_path,
+                ca_name,
+                ca_name)
+            ret = {
+                'not_after': 1462379961,
+                'signature_algorithm': 'sha256WithRSAEncryption',
+                'extensions': None,
+                'fingerprint': ('96:72:B3:0A:1D:34:37:05:75:57:44:7E:08:81:A7:09:'
+                                '0C:E1:8F:5F:4D:0C:49:CE:5B:D2:6B:45:D3:4D:FF:31'),
+                'serial_number': 284092004844685647925744086791559203700,
+                'subject': {
+                    'C': 'US',
+                    'CN': 'localhost',
+                    'L': 'Salt Lake City',
+                    'O': 'SaltStack',
+                    'ST': 'Utah',
+                    'emailAddress':
+                    'xyz@pdq.net'},
+                'not_before': 1430843961,
+                'issuer': {
+                    'C': 'US',
+                    'CN': 'localhost',
+                    'L': 'Salt Lake City',
+                    'O': 'SaltStack',
+                    'ST': 'Utah',
+                    'emailAddress': 'xyz@pdq.net'}
+            }
 
-        def ignore_extensions(data):
-            '''
-            Ignore extensions pending a resolution of issue 24338
-            '''
-            if 'extensions' in data.keys():
-                data['extensions'] = None
-            return data
+            def ignore_extensions(data):
+                '''
+                Ignore extensions pending a resolution of issue 24338
+                '''
+                if 'extensions' in data.keys():
+                    data['extensions'] = None
+                return data
 
-        # older pyopenssl versions don't have extensions or
-        # signature_algorithms
-        def remove_not_in_result(source, reference):
-            if 'signature_algorithm' not in reference:
-                del source['signature_algorithm']
-            if 'extensions' not in reference:
-                del source['extensions']
+            # older pyopenssl versions don't have extensions or
+            # signature_algorithms
+            def remove_not_in_result(source, reference):
+                if 'signature_algorithm' not in reference:
+                    del source['signature_algorithm']
+                if 'extensions' not in reference:
+                    del source['extensions']
 
-        with patch('salt.utils.fopen',
-                   mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
-            try:
-                result = ignore_extensions(tls.cert_info(certp))
-            except AttributeError as err:
-                # PyOpenSSL version 16.0.0 has an upstream bug in it where a call is made
-                # in OpenSSL/crypto.py in the get_signature_algorithm function referencing
-                # the cert_info attribute, which doesn't exist. This was fixed in subsequent
-                # releases of PyOpenSSL with https://github.com/pyca/pyopenssl/pull/476
-                if '\'_cffi_backend.CDataGCP\' object has no attribute \'cert_info\'' == str(err):
-                    log.exception(err)
-                    self.skipTest(
-                        'Encountered an upstream error with PyOpenSSL: {0}'.format(
-                            err
+            with patch('salt.utils.fopen',
+                       mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
+                try:
+                    result = ignore_extensions(tls.cert_info(certp))
+                except AttributeError as err:
+                    # PyOpenSSL version 16.0.0 has an upstream bug in it where a call is made
+                    # in OpenSSL/crypto.py in the get_signature_algorithm function referencing
+                    # the cert_info attribute, which doesn't exist. This was fixed in subsequent
+                    # releases of PyOpenSSL with https://github.com/pyca/pyopenssl/pull/476
+                    if '\'_cffi_backend.CDataGCP\' object has no attribute \'cert_info\'' == str(err):
+                        log.exception(err)
+                        self.skipTest(
+                            'Encountered an upstream error with PyOpenSSL: {0}'.format(
+                                err
+                            )
                         )
-                    )
-                if '\'_cffi_backend.CDataGCP\' object has no attribute \'object\'' == str(err):
-                    log.exception(err)
-                    self.skipTest(
-                        'Encountered an upstream error with PyOpenSSL: {0}'.format(
-                            err
+                    if '\'_cffi_backend.CDataGCP\' object has no attribute \'object\'' == str(err):
+                        log.exception(err)
+                        self.skipTest(
+                            'Encountered an upstream error with PyOpenSSL: {0}'.format(
+                                err
+                            )
                         )
-                    )
-                # python-openssl version 0.14, when installed with the "junos-eznc" pip
-                # package, causes an error on this test. Newer versions of PyOpenSSL do not have
-                # this issue. If 0.14 is installed and we hit this error, skip the test.
-                if LooseVersion(OpenSSL.__version__) == LooseVersion('0.14'):
-                    log.exception(err)
-                    self.skipTest(
-                        'Encountered a package conflict. OpenSSL version 0.14 cannot be used with '
-                        'the "junos-eznc" pip package on this test. Skipping.'
-                    )
-                result = {}
+                    # python-openssl version 0.14, when installed with the "junos-eznc" pip
+                    # package, causes an error on this test. Newer versions of PyOpenSSL do not have
+                    # this issue. If 0.14 is installed and we hit this error, skip the test.
+                    if LooseVersion(OpenSSL.__version__) == LooseVersion('0.14'):
+                        log.exception(err)
+                        self.skipTest(
+                            'Encountered a package conflict. OpenSSL version 0.14 cannot be used with '
+                            'the "junos-eznc" pip package on this test. Skipping.'
+                        )
+                    result = {}
 
-        remove_not_in_result(ret, result)
-        self.assertEqual(result, ret)
+            remove_not_in_result(ret, result)
+            self.assertEqual(result, ret)
 
-    @destructiveTest
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_create_ca(self):
         '''
         Test creating CA cert
@@ -328,23 +325,21 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 certk, ca_name, certp)
             mock_opt = MagicMock(return_value=ca_path)
             mock_ret = MagicMock(return_value=0)
-            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret}):
-                with patch.dict(tls.__opts__, {'hash_type': 'sha256',
-                                               'cachedir': ca_path}):
-                    self.assertEqual(
-                        tls.create_ca(
-                            ca_name,
-                            days=365,
-                            fixmode=False,
-                            **_TLS_TEST_DATA['create_ca']),
-                        ret)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret}), \
+                    patch.dict(tls.__opts__, {'hash_type': 'sha256', 'cachedir': ca_path}), \
+                    patch('salt.modules.tls.maybe_fix_ssl_version',
+                          MagicMock(return_value=True)):
+                self.assertEqual(
+                    tls.create_ca(
+                        ca_name,
+                        days=365,
+                        fixmode=False,
+                        **_TLS_TEST_DATA['create_ca']),
+                    ret)
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_recreate_ca(self):
         '''
         Test creating CA cert when one already exists
@@ -364,26 +359,23 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 certk, ca_name, certp)
             mock_opt = MagicMock(return_value=ca_path)
             mock_ret = MagicMock(return_value=0)
-            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret}):
-                with patch.dict(tls.__opts__, {'hash_type': 'sha256',
-                                               'cachedir': ca_path}):
-                    with patch.dict(_TLS_TEST_DATA['create_ca'],
-                                    {'replace': True}):
-                        tls.create_ca(ca_name)
-                        self.assertEqual(
-                            tls.create_ca(
-                                ca_name,
-                                days=365,
-                                fixmode=False,
-                                **_TLS_TEST_DATA['create_ca']),
-                            ret)
+            with patch('salt.modules.tls.maybe_fix_ssl_version',
+                       MagicMock(return_value=True)), \
+                    patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret}), \
+                    patch.dict(tls.__opts__, {'hash_type': 'sha256', 'cachedir': ca_path}), \
+                    patch.dict(_TLS_TEST_DATA['create_ca'], {'replace': True}):
+                tls.create_ca(ca_name)
+                self.assertEqual(
+                    tls.create_ca(
+                        ca_name,
+                        days=365,
+                        fixmode=False,
+                        **_TLS_TEST_DATA['create_ca']),
+                    ret)
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_create_csr(self):
         '''
         Test creating certificate signing request
@@ -405,22 +397,20 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             mock_opt = MagicMock(return_value=ca_path)
             mock_ret = MagicMock(return_value=0)
             mock_pgt = MagicMock(return_value=False)
-            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret, 'pillar.get': mock_pgt}):
-                with patch.dict(tls.__opts__, {'hash_type': 'sha256',
-                                               'cachedir': ca_path}):
-                    tls.create_ca(ca_name)
-                    self.assertEqual(
-                        tls.create_csr(
-                            ca_name,
-                            **_TLS_TEST_DATA['create_ca']),
-                        ret)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret, 'pillar.get': mock_pgt}), \
+                    patch.dict(tls.__opts__, {'hash_type': 'sha256', 'cachedir': ca_path}), \
+                    patch('salt.modules.tls.maybe_fix_ssl_version',
+                          MagicMock(return_value=True)):
+                tls.create_ca(ca_name)
+                self.assertEqual(
+                    tls.create_csr(
+                        ca_name,
+                        **_TLS_TEST_DATA['create_ca']),
+                    ret)
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_recreate_csr(self):
         '''
         Test creating certificate signing request when one already exists
@@ -442,25 +432,25 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             mock_opt = MagicMock(return_value=ca_path)
             mock_ret = MagicMock(return_value=0)
             mock_pgt = MagicMock(return_value=False)
-            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret, 'pillar.get': mock_pgt}):
-                with patch.dict(tls.__opts__, {'hash_type': 'sha256',
-                                               'cachedir': ca_path}):
-                    with patch.dict(_TLS_TEST_DATA['create_ca'],
-                                    {'replace': True}):
-                        tls.create_ca(ca_name)
-                        tls.create_csr(ca_name)
-                        self.assertEqual(
-                            tls.create_csr(
-                                ca_name,
-                                **_TLS_TEST_DATA['create_ca']),
-                            ret)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt,
+                                           'cmd.retcode': mock_ret,
+                                           'pillar.get': mock_pgt}), \
+                    patch.dict(tls.__opts__, {'hash_type': 'sha256',
+                                              'cachedir': ca_path}), \
+                    patch.dict(_TLS_TEST_DATA['create_ca'], {'replace': True}), \
+                    patch('salt.modules.tls.maybe_fix_ssl_version',
+                          MagicMock(return_value=True)):
+                tls.create_ca(ca_name)
+                tls.create_csr(ca_name)
+                self.assertEqual(
+                    tls.create_csr(
+                        ca_name,
+                        **_TLS_TEST_DATA['create_ca']),
+                    ret)
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_create_self_signed_cert(self):
         '''
         Test creating self signed certificate
@@ -480,22 +470,21 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                    'Created Certificate: "{1}."').format(
                        certk, certp)
             mock_opt = MagicMock(return_value=ca_path)
-            with patch.dict(tls.__salt__, {'config.option': mock_opt}):
-                with patch.dict(tls.__opts__, {'hash_type': 'sha256',
-                                               'cachedir': ca_path}):
-                    self.assertEqual(
-                        tls.create_self_signed_cert(
-                            tls_dir=tls_dir,
-                            days=365,
-                            **_TLS_TEST_DATA['create_ca']),
-                        ret)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt}), \
+                    patch.dict(tls.__opts__, {'hash_type': 'sha256',
+                                              'cachedir': ca_path}), \
+                    patch('salt.modules.tls.maybe_fix_ssl_version',
+                          MagicMock(return_value=True)):
+                self.assertEqual(
+                    tls.create_self_signed_cert(
+                        tls_dir=tls_dir,
+                        days=365,
+                        **_TLS_TEST_DATA['create_ca']),
+                    ret)
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_recreate_self_signed_cert(self):
         '''
         Test creating self signed certificate when one already exists
@@ -515,22 +504,21 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                    'Created Certificate: "{1}."').format(
                        certk, certp)
             mock_opt = MagicMock(return_value=ca_path)
-            with patch.dict(tls.__salt__, {'config.option': mock_opt}):
-                with patch.dict(tls.__opts__, {'hash_type': 'sha256',
-                                               'cachedir': ca_path}):
-                    self.assertEqual(
-                        tls.create_self_signed_cert(
-                            tls_dir=tls_dir,
-                            days=365,
-                            **_TLS_TEST_DATA['create_ca']),
-                        ret)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt}), \
+                    patch.dict(tls.__opts__, {'hash_type': 'sha256',
+                                              'cachedir': ca_path}), \
+                    patch('salt.modules.tls.maybe_fix_ssl_version',
+                          MagicMock(return_value=True)):
+                self.assertEqual(
+                    tls.create_self_signed_cert(
+                        tls_dir=tls_dir,
+                        days=365,
+                        **_TLS_TEST_DATA['create_ca']),
+                    ret)
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_create_ca_signed_cert(self):
         '''
         Test signing certificate from request
@@ -547,23 +535,24 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             mock_opt = MagicMock(return_value=ca_path)
             mock_ret = MagicMock(return_value=0)
             mock_pgt = MagicMock(return_value=False)
-            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret, 'pillar.get': mock_pgt}):
-                with patch.dict(tls.__opts__, {'hash_type': 'sha256',
-                                               'cachedir': ca_path}):
-                    tls.create_ca(ca_name)
-                    tls.create_csr(ca_name, **_TLS_TEST_DATA['create_ca'])
-                    self.assertEqual(
-                        tls.create_ca_signed_cert(
-                            ca_name,
-                            _TLS_TEST_DATA['create_ca']['CN']),
-                        ret)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt,
+                                           'cmd.retcode': mock_ret,
+                                           'pillar.get': mock_pgt}), \
+                    patch.dict(tls.__opts__, {'hash_type': 'sha256',
+                                              'cachedir': ca_path}), \
+                    patch('salt.modules.tls.maybe_fix_ssl_version',
+                          MagicMock(return_value=True)):
+                tls.create_ca(ca_name)
+                tls.create_csr(ca_name, **_TLS_TEST_DATA['create_ca'])
+                self.assertEqual(
+                    tls.create_ca_signed_cert(
+                        ca_name,
+                        _TLS_TEST_DATA['create_ca']['CN']),
+                    ret)
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_recreate_ca_signed_cert(self):
         '''
         Test signing certificate from request when certificate exists
@@ -580,26 +569,27 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             mock_opt = MagicMock(return_value=ca_path)
             mock_ret = MagicMock(return_value=0)
             mock_pgt = MagicMock(return_value=False)
-            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret, 'pillar.get': mock_pgt}):
-                with patch.dict(tls.__opts__, {'hash_type': 'sha256',
-                                               'cachedir': ca_path}):
-                    tls.create_ca(ca_name)
-                    tls.create_csr(ca_name)
-                    tls.create_ca_signed_cert(ca_name,
-                                              _TLS_TEST_DATA['create_ca']['CN'])
-                    self.assertEqual(
-                        tls.create_ca_signed_cert(
-                            ca_name,
-                            _TLS_TEST_DATA['create_ca']['CN'],
-                            replace=True),
-                        ret)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt,
+                                           'cmd.retcode': mock_ret,
+                                           'pillar.get': mock_pgt}), \
+                    patch.dict(tls.__opts__, {'hash_type': 'sha256',
+                                              'cachedir': ca_path}), \
+                    patch('salt.modules.tls.maybe_fix_ssl_version',
+                          MagicMock(return_value=True)):
+                tls.create_ca(ca_name)
+                tls.create_csr(ca_name)
+                tls.create_ca_signed_cert(ca_name,
+                                          _TLS_TEST_DATA['create_ca']['CN'])
+                self.assertEqual(
+                    tls.create_ca_signed_cert(
+                        ca_name,
+                        _TLS_TEST_DATA['create_ca']['CN'],
+                        replace=True),
+                    ret)
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_create_pkcs12(self):
         '''
         Test creating pkcs12
@@ -616,25 +606,26 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             mock_opt = MagicMock(return_value=ca_path)
             mock_ret = MagicMock(return_value=0)
             mock_pgt = MagicMock(return_value=False)
-            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret, 'pillar.get': mock_pgt}):
-                with patch.dict(tls.__opts__, {'hash_type': 'sha256',
-                                               'cachedir': ca_path}):
-                    tls.create_ca(ca_name)
-                    tls.create_csr(ca_name, **_TLS_TEST_DATA['create_ca'])
-                    tls.create_ca_signed_cert(ca_name,
-                                              _TLS_TEST_DATA['create_ca']['CN'])
-                    self.assertEqual(
-                        tls.create_pkcs12(ca_name,
-                                          _TLS_TEST_DATA['create_ca']['CN'],
-                                          'password'),
-                        ret)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt,
+                                           'cmd.retcode': mock_ret,
+                                           'pillar.get': mock_pgt}), \
+                    patch.dict(tls.__opts__, {'hash_type': 'sha256',
+                                              'cachedir': ca_path}), \
+                    patch('salt.modules.tls.maybe_fix_ssl_version',
+                          MagicMock(return_value=True)):
+                tls.create_ca(ca_name)
+                tls.create_csr(ca_name, **_TLS_TEST_DATA['create_ca'])
+                tls.create_ca_signed_cert(ca_name,
+                                          _TLS_TEST_DATA['create_ca']['CN'])
+                self.assertEqual(
+                    tls.create_pkcs12(ca_name,
+                                      _TLS_TEST_DATA['create_ca']['CN'],
+                                      'password'),
+                    ret)
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
-    @destructiveTest
-    @patch('salt.modules.tls.maybe_fix_ssl_version',
-           MagicMock(return_value=True))
     def test_recreate_pkcs12(self):
         '''
         Test creating pkcs12 when it already exists
@@ -651,25 +642,28 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             mock_opt = MagicMock(return_value=ca_path)
             mock_ret = MagicMock(return_value=0)
             mock_pgt = MagicMock(return_value=False)
-            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret, 'pillar.get': mock_pgt}):
-                with patch.dict(tls.__opts__, {'hash_type': 'sha256',
-                                               'cachedir': ca_path}):
-                    with patch.dict(_TLS_TEST_DATA['create_ca'],
-                                    {'replace': True}):
-                        tls.create_ca(ca_name)
-                        tls.create_csr(ca_name)
-                        tls.create_ca_signed_cert(ca_name,
-                                                  _TLS_TEST_DATA['create_ca']['CN'])
-                        tls.create_pkcs12(ca_name,
-                                          _TLS_TEST_DATA['create_ca']['CN'],
-                                          'password')
-                        self.assertEqual(
-                            tls.create_pkcs12(ca_name,
-                                              _TLS_TEST_DATA[
-                                                  'create_ca']['CN'],
-                                              'password',
-                                              replace=True),
-                            ret)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt,
+                                           'cmd.retcode': mock_ret,
+                                           'pillar.get': mock_pgt}), \
+                    patch.dict(tls.__opts__, {'hash_type': 'sha256',
+                                              'cachedir': ca_path}), \
+                    patch.dict(_TLS_TEST_DATA['create_ca'], {'replace': True}), \
+                    patch('salt.modules.tls.maybe_fix_ssl_version',
+                          MagicMock(return_value=True)):
+                tls.create_ca(ca_name)
+                tls.create_csr(ca_name)
+                tls.create_ca_signed_cert(ca_name,
+                                          _TLS_TEST_DATA['create_ca']['CN'])
+                tls.create_pkcs12(ca_name,
+                                  _TLS_TEST_DATA['create_ca']['CN'],
+                                  'password')
+                self.assertEqual(
+                    tls.create_pkcs12(ca_name,
+                                      _TLS_TEST_DATA[
+                                          'create_ca']['CN'],
+                                      'password',
+                                      replace=True),
+                    ret)
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
@@ -704,7 +698,6 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(tls.get_extensions('server'), pillarval)
                 self.assertEqual(tls.get_extensions('client'), pillarval)
 
-    @destructiveTest
     def test_pyOpenSSL_version_destructive(self):
         '''
         Test extension logic with different pyOpenSSL versions

@@ -12,6 +12,7 @@ import types
 import socket
 import logging
 import platform
+import subprocess
 from string import ascii_letters, digits
 
 # Import 3rd-party libs
@@ -26,7 +27,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt._compat import subprocess, ipaddress
+from salt._compat import ipaddress
 
 # inet_pton does not exist in Windows, this is a workaround
 if salt.utils.is_windows():
