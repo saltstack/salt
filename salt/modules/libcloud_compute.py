@@ -137,7 +137,7 @@ def list_sizes(profile, location_id=None, **libcloud_kwargs):
     conn = _get_driver(profile=profile)
     libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     if location_id is not None:
-        locations = [loc for loc in conn.list_locations if location.id == location_id]
+        locations = [loc for loc in conn.list_locations() if loc.id == location_id]
         if len(locations) == 0:
             raise ValueError("Location not found")
         else:
@@ -149,6 +149,40 @@ def list_sizes(profile, location_id=None, **libcloud_kwargs):
     for size in sizes:
         ret.append(_simple_size(size))
     return ret
+
+
+def list_locations(profile, **libcloud_kwargs):
+    '''
+    Return a list of locations for this cloud
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's list_locations method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.list_locations profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    locations = conn.list_locations(**libcloud_kwargs)
+    
+    ret = []
+    for loc in locations:
+        ret.append(_simple_location(loc))
+    return ret
+
+
+def _simple_location(location):
+    return {
+        'id': location.id,
+        'name': location.name,
+        'country': location.country
+    }
 
 
 def _simple_size(size):
