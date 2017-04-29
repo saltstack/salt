@@ -17,7 +17,9 @@ from tests.support.mock import (
 )
 import salt.modules.libcloud_compute as libcloud_compute
 
-from libcloud.compute.base import BaseDriver, Node, NodeSize, NodeState, NodeLocation
+from libcloud.compute.base import (BaseDriver, Node, 
+    NodeSize, NodeState, NodeLocation, 
+    StorageVolume, StorageVolumeState)
 
 
 class MockComputeDriver(BaseDriver):
@@ -31,8 +33,21 @@ class MockComputeDriver(BaseDriver):
             size=self._TEST_SIZE, extra={
                 'ex_key': 'ex_value'
             })
-        self._TEST_LOCATION = NodeLocation(id='test_location',
-            name='location1', country='Australia', driver=self)
+        self._TEST_LOCATION = NodeLocation(
+            id='test_location',
+            name='location1',
+            country='Australia',
+            driver=self)
+        self._TEST_VOLUME = StorageVolume(
+            id='vol1',
+            name='vol_name',
+            size=40960,
+            driver=self,
+            state=StorageVolumeState.AVAILABLE,
+            extra={
+                'ex_key': 'ex_value'
+            }
+        )
     
     def list_nodes(self):
         return [self._TEST_NODE]
@@ -52,6 +67,9 @@ class MockComputeDriver(BaseDriver):
     def destroy_node(self, node):
         assert node.id == 'test_id'
         return True
+
+    def list_volumes(self):
+        return [self._TEST_VOLUME]
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -101,6 +119,13 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(location['name'], 'location1')
         self.assertEqual(location['country'], 'Australia')
 
+    def _validate_volume(self, volume):
+        self.assertEqual(volume['id'], 'vol1')
+        self.assertEqual(volume['name'], 'vol_name')
+        self.assertEqual(volume['size'], 40960)
+        self.assertEqual(volume['state'], 'available')
+        self.assertEqual(volume['extra'], {'ex_key': 'ex_value'})
+
     def test_list_nodes(self):
         nodes = libcloud_compute.list_nodes('test')
         self.assertEqual(len(nodes), 1)
@@ -136,3 +161,8 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
     def test_destroy_node_invalid(self):
         with self.assertRaises(ValueError):
             libcloud_compute.destroy_node('foo_node', 'test')
+
+    def test_list_volumes(self):
+        volumes = libcloud_compute.list_volumes('test')
+        self.assertEqual(len(volumes), 1)
+        self._validate_volume(volumes[0])
