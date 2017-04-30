@@ -197,6 +197,7 @@ execution modules
     layman
     ldap3
     ldapmod
+    libcloud_compute
     libcloud_dns
     libcloud_loadbalancer
     libcloud_storage
