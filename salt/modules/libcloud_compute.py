@@ -493,15 +493,128 @@ def list_images(profile, location_id=None, **libcloud_kwargs):
         ret.append(_simple_image(image))
     return ret
 
+
+def create_image(node_id, name, profile, description=None, **libcloud_kwargs):
+    '''
+    Create an image from a node
+
+    :param node_id: Node to run the task on.
+    :type node_id: ``str``
+
+    :param name: name for new image.
+    :type name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param description: description for new image.
+    :type description: ``description``
+
+    :param libcloud_kwargs: Extra arguments for the driver's create_image method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.create_image server1 my_image profile1
+        salt myminion libcloud_compute.create_image server1 my_image profile1 description='test image'
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    node = _get_by_id(conn.list_nodes(), node_id)
+    return _simple_image(conn.create_image(node, name, description=description, **libcloud_kwargs))
+
+
+def delete_image(image_id, profile, **libcloud_kwargs):
+    '''
+    Delete an image of a node
+
+    :param image_id: Image to delete
+    :type image_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's delete_image method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.delete_image image1 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    image = _get_by_id(conn.list_images(), image_id)
+    return conn.delete_image(image, **libcloud_kwargs)
+
+
+def get_image(image_id, profile, **libcloud_kwargs):
+    '''
+    Get an image of a node
+
+    :param image_id: Image to fetch
+    :type image_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's delete_image method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.get_image image1 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    image = conn.get_image(image_id, **libcloud_kwargs)
+    return _simple_image(image)
+
+
+def copy_image(source_region, image_id, name, profile, description=None, **libcloud_kwargs):
+    '''
+    Copies an image from a source region to the current region.
+
+    :param source_region: Region to copy the node from.
+    :type source_region: ``str``
+
+    :param image_id: Image to copy.
+    :type image_id: ``str``
+
+    :param name: name for new image.
+    :type name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param description: description for new image.
+    :type name: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's copy_image method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.copy_image us-east1 image1 'new image' profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    image = conn.get_image(image_id, **libcloud_kwargs)
+    new_image = conn.copy_image(source_region, image, name, description=description, **libcloud_kwargs)
+    return _simple_image(new_image)
+
 '''
 Remaining functions to implement:
 
     def create_node(self, **kwargs):
     def deploy_node(self, **kwargs):
-    def create_image(self, node, name, description=None):
-    def delete_image(self, node_image):
-    def get_image(self, image_id):
-    def copy_image(self, source_region, node_image, name, description=None):
     def list_key_pairs(self):
     def get_key_pair(self, name):
     def create_key_pair(self, name):

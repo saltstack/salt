@@ -128,6 +128,23 @@ class MockComputeDriver(BaseDriver):
             assert location.id == 'test_location'
         return [self._TEST_IMAGE]
 
+    def create_image(self, node, name, description=None):
+        assert node.id == 'test_id'
+        return self._TEST_IMAGE
+
+    def delete_image(self, node_image):
+        return True
+
+    def get_image(self, image_id):
+        assert image_id == 'image1'
+        return self._TEST_IMAGE
+
+    def copy_image(self, source_region, node_image, name, description=None):
+        assert source_region == 'us-east1'
+        assert node_image.id == 'image1'
+        assert name == 'copy_test'
+        return self._TEST_IMAGE
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.libcloud_compute._get_driver',
@@ -280,3 +297,19 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
         images = libcloud_compute.list_images('test', location_id='test_location')
         self.assertEqual(len(images), 1)
         self._validate_image(images[0])
+
+    def test_create_image(self):
+        image = libcloud_compute.create_image('test_id', 'new_image', 'test')
+        self._validate_image(image)
+
+    def test_delete_image(self):
+        result = libcloud_compute.delete_image('image1', 'test')
+        self.assertTrue(result)
+
+    def test_get_image(self):
+        image = libcloud_compute.get_image('image1', 'test')
+        self._validate_image(image)
+
+    def test_copy_image(self):
+        new_image = libcloud_compute.copy_image('us-east1', 'image1', 'copy_test', 'test')
+        self._validate_image(new_image)
