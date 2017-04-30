@@ -76,7 +76,7 @@ class MockComputeDriver(BaseDriver):
                 'ex_key': 'ex_value'
             }
         )
-    
+
     def list_nodes(self):
         return [self._TEST_NODE]
 
@@ -301,7 +301,7 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
     def test_create_volume(self):
         volume = libcloud_compute.create_volume(9000, 'test_new_volume', 'test')
         self._validate_volume(volume)
-    
+
     def test_create_volume_in_location(self):
         volume = libcloud_compute.create_volume(9000, 'test_new_volume', 'test', location_id='test_location')
         self._validate_volume(volume)
