@@ -197,12 +197,8 @@ def reboot_node(node_id, profile, **libcloud_kwargs):
         salt myminion libcloud_compute.reboot_node as-2346 profile1
     '''
     conn = _get_driver(profile=profile)
-    matches = [node for node in conn.list_nodes(**libcloud_kwargs) if node.id == node_id]
-    if len(matches) == 0:
-        raise ValueError('Could not find a matching node')
-    elif len(matches) > 1:
-        raise ValueError('The node_id matched {0} nodes, not 1'.format(len(matches)))
-    return conn.reboot_node(matches[0], **libcloud_kwargs)
+    node = _get_by_id(conn.list_nodes(**libcloud_kwargs), node_id)
+    return conn.reboot_node(node, **libcloud_kwargs)
 
 
 def destroy_node(node_id, profile, **libcloud_kwargs):
@@ -225,12 +221,8 @@ def destroy_node(node_id, profile, **libcloud_kwargs):
         salt myminion libcloud_compute.destry_node as-2346 profile1
     '''
     conn = _get_driver(profile=profile)
-    matches = [node for node in conn.list_nodes(**libcloud_kwargs) if node.id == node_id]
-    if len(matches) == 0:
-        raise ValueError('Could not find a matching node')
-    elif len(matches) > 1:
-        raise ValueError('The node_id matched {0} nodes, not 1'.format(len(matches)))
-    return conn.destroy_node(matches[0], **libcloud_kwargs)
+    node = _get_by_id(conn.list_nodes(**libcloud_kwargs), node_id)
+    return conn.destroy_node(node, **libcloud_kwargs)
 
 
 def list_volumes(profile, **libcloud_kwargs):
@@ -258,19 +250,254 @@ def list_volumes(profile, **libcloud_kwargs):
         ret.append(_simple_volume(volume))
     return ret
 
+
+def list_volume_snapshots(volume_id, profile, **libcloud_kwargs):
+    '''
+    Return a list of storage volumes snapshots for this cloud
+
+    :param volume_id: The volume identifier
+    :type  volume_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's list_volume_snapshots method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.list_volume_snapshots vol1 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    volume = _get_by_id(conn.list_volumes(), volume_id)
+    snapshots = conn.list_volume_snapshots(volume, **libcloud_kwargs)
+    
+    ret = []
+    for snapshot in snapshots:
+        ret.append(_simple_volume_snapshot(snapshot))
+    return ret
+
+def create_volume(size, name, profile, location_id=None, **libcloud_kwargs):
+    '''
+    Create a storage volume
+
+    :param size: Size of volume in gigabytes (required)
+    :type size: ``int``
+
+    :param name: Name of the volume to be created
+    :type name: ``str``
+
+    :param location_id: Which data center to create a volume in. If
+                            empty, undefined behavior will be selected.
+                            (optional)
+    :type location_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's list_volumes method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.create_volume 1000 vol1 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    if location_id is not None:
+        location = _get_by_id(conn.list_locations(), location_id)
+    else:
+        location = None
+    # TODO : Support creating from volume snapshot
+
+    volume = conn.create_volume(size, name, location, snapshot=None, **libcloud_kwargs)
+    return _simple_volume(volume)
+
+
+def create_volume_snapshot(volume_id, profile, name=None, **libcloud_kwargs):
+    '''
+    Create a storage volume snapshot
+
+    :param volume_id:  Volume ID from which to create the new
+                        snapshot.
+    :type  volume_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param name: Name of the snapshot to be created (optional)
+    :type name: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's create_volume_snapshot method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.create_volume_snapshot vol1 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    volume = _get_by_id(conn.list_volumes(), volume_id)
+
+    snapshot = conn.create_volume_snapshot(volume, name=name, **libcloud_kwargs)
+    return _simple_volume_snapshot(snapshot)
+
+
+def attach_volume(node_id, volume_id, profile, device=None, **libcloud_kwargs):
+    '''
+    Attaches volume to node.
+
+    :param node_id:  Node ID to target
+    :type  node_id: ``str``
+
+    :param volume_id:  Volume ID from which to attach
+    :type  volume_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param device: Where the device is exposed, e.g. '/dev/sdb'
+    :type device: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's attach_volume method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.detach_volume vol1 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    volume = _get_by_id(conn.list_volumes(), volume_id)
+    node = _get_by_id(conn.list_nodes(), node_id)
+    return conn.attach_volume(node, volume, device=device, **libcloud_kwargs)
+
+
+def detach_volume(volume_id, profile, **libcloud_kwargs):
+    '''
+    Detaches a volume from a node.
+
+    :param volume_id:  Volume ID from which to detach
+    :type  volume_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's detach_volume method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.detach_volume vol1 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    volume = _get_by_id(conn.list_volumes(), volume_id)
+    return conn.detach_volume(volume, **libcloud_kwargs)
+
+
+def destroy_volume(volume_id, profile, **libcloud_kwargs):
+    '''
+    Destroy a volume.
+
+    :param volume_id:  Volume ID from which to destroy
+    :type  volume_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's destroy_volume method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.destroy_volume vol1 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    volume = _get_by_id(conn.list_volumes(), volume_id)
+    return conn.destroy_volume(volume, **libcloud_kwargs)
+
+
+def destroy_volume_snapshot(volume_id, snapshot_id, profile, **libcloud_kwargs):
+    '''
+    Destroy a volume snapshot.
+
+    :param volume_id:  Volume ID from which the snapshot belongs
+    :type  volume_id: ``str``
+
+    :param snapshot_id:  Volume Snapshot ID from which to destroy
+    :type  snapshot_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's destroy_volume_snapshot method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.destroy_volume_snapshot snap1 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    volume = _get_by_id(conn.list_volumes(), volume_id)
+    snapshot = _get_by_id(conn.list_volume_snapshots(volume), snapshot_id)
+    return conn.destroy_volume_snapshot(snapshot, **libcloud_kwargs)
+
+
+def list_images(profile, location_id=None, **libcloud_kwargs):
+    '''
+    Return a list of images for this cloud
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param location_id: The location key, from list_locations
+    :type  location_id: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's list_images method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.list_images profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    if location_id is not None:
+        location = _get_by_id(conn.list_locations(), location_id)
+    else:
+        location = None
+    images = conn.list_images(location=location, **libcloud_kwargs)
+    
+    ret = []
+    for image in images:
+        ret.append(_simple_image(image))
+    return ret
+
 '''
 Remaining functions to implement:
 
     def create_node(self, **kwargs):
     def deploy_node(self, **kwargs):
-    def list_volume_snapshots(self, volume):
-    def create_volume(self, size, name, location=None, snapshot=None):
-    def create_volume_snapshot(self, volume, name=None):
-    def attach_volume(self, node, volume, device=None):
-    def detach_volume(self, volume):
-    def destroy_volume(self, volume):
-    def destroy_volume_snapshot(self, snapshot):
-    def list_images(self, location=None):
     def create_image(self, node, name, description=None):
     def delete_image(self, node_image):
     def get_image(self, image_id):
@@ -282,6 +509,17 @@ Remaining functions to implement:
     def import_key_pair_from_file(self, name, key_file_path):
     def delete_key_pair(self, key_pair):
 '''
+def _get_by_id(collection, id):
+    '''
+    Get item from a list by the id field
+    '''
+    matches = [item for item in collection if item.id == id]
+    if len(matches) == 0:
+        raise ValueError('Could not find a matching item')
+    elif len(matches) > 1:
+        raise ValueError('The id matched {0} items, not 1'.format(len(matches)))
+    return matches[0]
+
 
 def _simple_volume(volume):
     return {
@@ -322,4 +560,23 @@ def _simple_node(node):
         'private_ips': node.private_ips,
         'size': _simple_size(node.size) if node.size else {},
         'extra': node.extra
+    }
+
+
+def _simple_volume_snapshot(snapshot):
+    return {
+        'id': snapshot.id,
+        'name': snapshot.name,
+        'size': snapshot.size,
+        'extra': snapshot.extra,
+        'created': snapshot.created,
+        'state': snapshot.state
+    }
+
+
+def _simple_image(image):
+    return {
+        'id': image.id,
+        'name': image.name,
+        'extra': image.extra,
     }
