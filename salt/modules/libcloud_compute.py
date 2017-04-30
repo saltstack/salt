@@ -608,7 +608,7 @@ def copy_image(source_region, image_id, name, profile, description=None, **libcl
     conn = _get_driver(profile=profile)
     libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     image = conn.get_image(image_id, **libcloud_kwargs)
-    new_image = conn.copy_image(source_region, image, name, 
+    new_image = conn.copy_image(source_region, image, name,
                                 description=description, **libcloud_kwargs)
     return _simple_image(new_image)
 
@@ -717,12 +717,12 @@ def import_key_pair(name, key, profile, key_type=None, **libcloud_kwargs):
     conn = _get_driver(profile=profile)
     libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     if os.path.exists(key) or key_type == 'FILE':
-        return _simple_key_pair(conn.import_key_pair_from_file(name, 
-                                                               key, 
+        return _simple_key_pair(conn.import_key_pair_from_file(name,
+                                                               key,
                                                                **libcloud_kwargs))
     else:
-        return _simple_key_pair(conn.import_key_pair_from_string(name, 
-                                                                 key, 
+        return _simple_key_pair(conn.import_key_pair_from_string(name,
+                                                                 key,
                                                                  **libcloud_kwargs))
 
 
