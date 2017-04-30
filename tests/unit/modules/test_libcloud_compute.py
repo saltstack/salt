@@ -17,18 +17,21 @@ from tests.support.mock import (
 )
 import salt.modules.libcloud_compute as libcloud_compute
 
-from libcloud.compute.base import (BaseDriver, Node, 
-    NodeSize, NodeState, NodeLocation, 
+from libcloud.compute.base import (
+    BaseDriver, Node,
+    NodeSize, NodeState, NodeLocation,
     StorageVolume, StorageVolumeState,
-    VolumeSnapshot, NodeImage)
+    VolumeSnapshot, NodeImage, KeyPair)
 
 
 class MockComputeDriver(BaseDriver):
     def __init__(self):
-        self._TEST_SIZE = NodeSize(id='test_id', name='test_size',
+        self._TEST_SIZE = NodeSize(
+            id='test_id', name='test_size',
             ram=4096, disk=10240, bandwidth=100000, price=0,
             driver=self)
-        self._TEST_NODE = Node(id='test_id', name='test_node',
+        self._TEST_NODE = Node(
+            id='test_id', name='test_node',
             state=NodeState.RUNNING, public_ips=['1.2.3.4'],
             private_ips=['2.3.4.5'], driver=self,
             size=self._TEST_SIZE, extra={
@@ -63,7 +66,16 @@ class MockComputeDriver(BaseDriver):
             },
             driver=self
         )
-
+        self._TEST_KEY_PAIR = KeyPair(
+            name='test_key',
+            fingerprint='abc123',
+            public_key='pub123',
+            private_key='priv123',
+            driver=self,
+            extra={
+                'ex_key': 'ex_value'
+            }
+        )
     
     def list_nodes(self):
         return [self._TEST_NODE]
@@ -112,7 +124,7 @@ class MockComputeDriver(BaseDriver):
         return True
 
     def detach_volume(self, volume):
-        assert volume.id  == 'vol1'
+        assert volume.id == 'vol1'
         return True
 
     def destroy_volume(self, volume):
@@ -144,6 +156,31 @@ class MockComputeDriver(BaseDriver):
         assert node_image.id == 'image1'
         assert name == 'copy_test'
         return self._TEST_IMAGE
+
+    def list_key_pairs(self):
+        return [self._TEST_KEY_PAIR]
+
+    def get_key_pair(self, name):
+        assert name == 'test_key'
+        return self._TEST_KEY_PAIR
+
+    def create_key_pair(self, name):
+        assert name == 'test_key'
+        return self._TEST_KEY_PAIR
+
+    def import_key_pair_from_string(self, name, key_material):
+        assert name == 'test_key'
+        assert key_material == 'test_key_value'
+        return self._TEST_KEY_PAIR
+
+    def import_key_pair_from_file(self, name, key_file_path):
+        assert name == 'test_key'
+        assert key_file_path == '/path/to/key'
+        return self._TEST_KEY_PAIR
+
+    def delete_key_pair(self, key_pair):
+        assert key_pair.name == 'test_key'
+        return True
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -209,6 +246,11 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(image['id'], 'image1')
         self.assertEqual(image['name'], 'test_image')
         self.assertEqual(image['extra'], {'ex_key': 'ex_value'})
+
+    def _validate_key_pair(self, key):
+        self.assertEqual(key['name'], 'test_key')
+        self.assertEqual(key['fingerprint'], 'abc123')
+        self.assertEqual(key['extra'], {'ex_key': 'ex_value'})
 
     def test_list_nodes(self):
         nodes = libcloud_compute.list_nodes('test')
@@ -313,3 +355,28 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
     def test_copy_image(self):
         new_image = libcloud_compute.copy_image('us-east1', 'image1', 'copy_test', 'test')
         self._validate_image(new_image)
+
+    def test_list_key_pairs(self):
+        keys = libcloud_compute.list_key_pairs('test')
+        self.assertEqual(len(keys), 1)
+        self._validate_key_pair(keys[0])
+
+    def test_get_key_pair(self):
+        key = libcloud_compute.get_key_pair('test_key', 'test')
+        self._validate_key_pair(key)
+
+    def test_create_key_pair(self):
+        key = libcloud_compute.create_key_pair('test_key', 'test')
+        self._validate_key_pair(key)
+
+    def test_import_key_string(self):
+        key = libcloud_compute.import_key_pair('test_key', 'test_key_value', 'test')
+        self._validate_key_pair(key)
+
+    def test_import_key_file(self):
+        key = libcloud_compute.import_key_pair('test_key', '/path/to/key', 'test', key_type='FILE')
+        self._validate_key_pair(key)
+
+    def test_delete_key_pair(self):
+        result = libcloud_compute.delete_key_pair('test_key', 'test')
+        self.assertTrue(result)
