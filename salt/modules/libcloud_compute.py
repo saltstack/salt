@@ -34,10 +34,10 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+import os.path
 
 # Import salt libs
 import salt.utils.compat
-import salt.ext.six as six
 from salt.utils import clean_kwargs
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -144,7 +144,7 @@ def list_sizes(profile, location_id=None, **libcloud_kwargs):
             sizes = conn.list_sizes(location=locations[0], **libcloud_kwargs)
     else:
         sizes = conn.list_sizes(**libcloud_kwargs)
-    
+
     ret = []
     for size in sizes:
         ret.append(_simple_size(size))
@@ -170,7 +170,7 @@ def list_locations(profile, **libcloud_kwargs):
     conn = _get_driver(profile=profile)
     libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     locations = conn.list_locations(**libcloud_kwargs)
-    
+
     ret = []
     for loc in locations:
         ret.append(_simple_location(loc))
@@ -244,7 +244,7 @@ def list_volumes(profile, **libcloud_kwargs):
     conn = _get_driver(profile=profile)
     libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     volumes = conn.list_volumes(**libcloud_kwargs)
-    
+
     ret = []
     for volume in volumes:
         ret.append(_simple_volume(volume))
@@ -274,11 +274,12 @@ def list_volume_snapshots(volume_id, profile, **libcloud_kwargs):
     libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     volume = _get_by_id(conn.list_volumes(), volume_id)
     snapshots = conn.list_volume_snapshots(volume, **libcloud_kwargs)
-    
+
     ret = []
     for snapshot in snapshots:
         ret.append(_simple_volume_snapshot(snapshot))
     return ret
+
 
 def create_volume(size, name, profile, location_id=None, **libcloud_kwargs):
     '''
@@ -487,7 +488,7 @@ def list_images(profile, location_id=None, **libcloud_kwargs):
     else:
         location = None
     images = conn.list_images(location=location, **libcloud_kwargs)
-    
+
     ret = []
     for image in images:
         ret.append(_simple_image(image))
@@ -607,21 +608,174 @@ def copy_image(source_region, image_id, name, profile, description=None, **libcl
     conn = _get_driver(profile=profile)
     libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     image = conn.get_image(image_id, **libcloud_kwargs)
-    new_image = conn.copy_image(source_region, image, name, description=description, **libcloud_kwargs)
+    new_image = conn.copy_image(source_region, image, name, 
+                                description=description, **libcloud_kwargs)
     return _simple_image(new_image)
 
-'''
-Remaining functions to implement:
 
-    def create_node(self, **kwargs):
-    def deploy_node(self, **kwargs):
-    def list_key_pairs(self):
-    def get_key_pair(self, name):
-    def create_key_pair(self, name):
-    def import_key_pair_from_string(self, name, key_material):
-    def import_key_pair_from_file(self, name, key_file_path):
-    def delete_key_pair(self, key_pair):
-'''
+def list_key_pairs(profile, **libcloud_kwargs):
+    '''
+    List all the available key pair objects.
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's list_key_pairs method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.list_key_pairs profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    keys = conn.list_key_pairs(**libcloud_kwargs)
+
+    ret = []
+    for key in keys:
+        ret.append(_simple_key_pair(key))
+    return ret
+
+
+def get_key_pair(name, profile, **libcloud_kwargs):
+    '''
+    Get a single key pair by name
+
+    :param name: Name of the key pair to retrieve.
+    :type name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's get_key_pair method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.get_key_pair pair1 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    return _simple_key_pair(conn.get_key_pair(name, **libcloud_kwargs))
+
+
+def create_key_pair(name, profile, **libcloud_kwargs):
+    '''
+    Create a single key pair by name
+
+    :param name: Name of the key pair to create.
+    :type name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's create_key_pair method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.create_key_pair pair1 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    return _simple_key_pair(conn.create_key_pair(name, **libcloud_kwargs))
+
+
+def import_key_pair(name, key, profile, key_type=None, **libcloud_kwargs):
+    '''
+    Import a new public key from string or a file path
+
+    :param name: Key pair name.
+    :type name: ``str``
+
+    :param key: Public key material, the string or a path to a file
+    :type  key: ``str`` or path ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param key_type: The key pair type, either `FILE` or `STRING`. Will detect if not provided
+        and assume that if the string is a path to an existing path it is a FILE, else STRING.
+    :type  key_type: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's import_key_pair_from_xxx method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.import_key_pair pair1 key_value_data123 profile1
+        salt myminion libcloud_compute.import_key_pair pair1 /path/to/key profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    if os.path.exists(key) or key_type == 'FILE':
+        return _simple_key_pair(conn.import_key_pair_from_file(name, 
+                                                               key, 
+                                                               **libcloud_kwargs))
+    else:
+        return _simple_key_pair(conn.import_key_pair_from_string(name, 
+                                                                 key, 
+                                                                 **libcloud_kwargs))
+
+
+def delete_key_pair(name, profile, **libcloud_kwargs):
+    '''
+    Delete a key pair
+
+    :param name: Key pair name.
+    :type  name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's import_key_pair_from_xxx method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.delete_key_pair pair1 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    key = conn.get_key_pair(name)
+    return conn.delete_key_pair(key, **libcloud_kwargs)
+
+
+def extra(method, profile, **libcloud_kwargs):
+    '''
+    Call an extended method on the driver
+
+    :param method: Driver's method name
+    :type  method: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_compute.extra ex_get_permissions google container_name=my_container object_name=me.jpg --out=yaml
+    '''
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    conn = _get_driver(profile=profile)
+    connection_method = getattr(conn, method)
+    return connection_method(**libcloud_kwargs)
+
+
 def _get_by_id(collection, id):
     '''
     Get item from a list by the id field
@@ -692,4 +846,14 @@ def _simple_image(image):
         'id': image.id,
         'name': image.name,
         'extra': image.extra,
+    }
+
+
+def _simple_key_pair(key):
+    return {
+        'name': key.name,
+        'fingerprint': key.fingerprint,
+        'public_key': key.public_key,
+        'private_key': key.private_key,
+        'extra': key.extra
     }
