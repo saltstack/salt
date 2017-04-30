@@ -19,7 +19,8 @@ import salt.modules.libcloud_compute as libcloud_compute
 
 from libcloud.compute.base import (BaseDriver, Node, 
     NodeSize, NodeState, NodeLocation, 
-    StorageVolume, StorageVolumeState)
+    StorageVolume, StorageVolumeState,
+    VolumeSnapshot, NodeImage)
 
 
 class MockComputeDriver(BaseDriver):
@@ -48,6 +49,21 @@ class MockComputeDriver(BaseDriver):
                 'ex_key': 'ex_value'
             }
         )
+        self._TEST_VOLUME_SNAPSHOT = VolumeSnapshot(
+            id='snap1',
+            name='snap_name',
+            size=80960,
+            driver=self
+        )
+        self._TEST_IMAGE = NodeImage(
+            id='image1',
+            name='test_image',
+            extra={
+                'ex_key': 'ex_value'
+            },
+            driver=self
+        )
+
     
     def list_nodes(self):
         return [self._TEST_NODE]
@@ -70,6 +86,47 @@ class MockComputeDriver(BaseDriver):
 
     def list_volumes(self):
         return [self._TEST_VOLUME]
+
+    def list_volume_snapshots(self, volume):
+        assert volume.id == 'vol1'
+        return [self._TEST_VOLUME_SNAPSHOT]
+
+    def create_volume(self, size, name, location=None, snapshot=None):
+        assert size == 9000
+        assert name == 'test_new_volume'
+        if location:
+            assert location.country == 'Australia'
+        return self._TEST_VOLUME
+
+    def create_volume_snapshot(self, volume, name=None):
+        assert volume.id == 'vol1'
+        if name:
+            assert name == 'test_snapshot'
+        return self._TEST_VOLUME_SNAPSHOT
+
+    def attach_volume(self, node, volume, device=None):
+        assert node.id == 'test_id'
+        assert volume.id == 'vol1'
+        if device:
+            assert device == '/dev/sdc'
+        return True
+
+    def detach_volume(self, volume):
+        assert volume.id  == 'vol1'
+        return True
+
+    def destroy_volume(self, volume):
+        assert volume.id == 'vol1'
+        return True
+
+    def destroy_volume_snapshot(self, snapshot):
+        assert snapshot.id == 'snap1'
+        return True
+
+    def list_images(self, location=None):
+        if location:
+            assert location.id == 'test_location'
+        return [self._TEST_IMAGE]
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -126,6 +183,16 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(volume['state'], 'available')
         self.assertEqual(volume['extra'], {'ex_key': 'ex_value'})
 
+    def _validate_volume_snapshot(self, volume):
+        self.assertEqual(volume['id'], 'snap1')
+        self.assertEqual(volume['name'], 'snap_name')
+        self.assertEqual(volume['size'], 80960)
+
+    def _validate_image(self, image):
+        self.assertEqual(image['id'], 'image1')
+        self.assertEqual(image['name'], 'test_image')
+        self.assertEqual(image['extra'], {'ex_key': 'ex_value'})
+
     def test_list_nodes(self):
         nodes = libcloud_compute.list_nodes('test')
         self.assertEqual(len(nodes), 1)
@@ -166,3 +233,50 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
         volumes = libcloud_compute.list_volumes('test')
         self.assertEqual(len(volumes), 1)
         self._validate_volume(volumes[0])
+
+    def test_list_volume_snapshots(self):
+        volumes = libcloud_compute.list_volume_snapshots('vol1', 'test')
+        self.assertEqual(len(volumes), 1)
+        self._validate_volume_snapshot(volumes[0])
+
+    def test_create_volume(self):
+        volume = libcloud_compute.create_volume(9000, 'test_new_volume', 'test')
+        self._validate_volume(volume)
+    
+    def test_create_volume_in_location(self):
+        volume = libcloud_compute.create_volume(9000, 'test_new_volume', 'test', location_id='test_location')
+        self._validate_volume(volume)
+
+    def test_create_volume_snapshot(self):
+        snapshot = libcloud_compute.create_volume_snapshot('vol1', 'test')
+        self._validate_volume_snapshot(snapshot)
+
+    def test_create_volume_snapshot_named(self):
+        snapshot = libcloud_compute.create_volume_snapshot('vol1', 'test', name='test_snapshot')
+        self._validate_volume_snapshot(snapshot)
+
+    def test_attach_volume(self):
+        result = libcloud_compute.attach_volume('test_id', 'vol1', 'test')
+        self.assertTrue(result)
+
+    def test_detatch_volume(self):
+        result = libcloud_compute.detach_volume('vol1', 'test')
+        self.assertTrue(result)
+
+    def test_destroy_volume(self):
+        result = libcloud_compute.destroy_volume('vol1', 'test')
+        self.assertTrue(result)
+
+    def test_destroy_volume_snapshot(self):
+        result = libcloud_compute.destroy_volume_snapshot('vol1', 'snap1', 'test')
+        self.assertTrue(result)
+
+    def test_list_images(self):
+        images = libcloud_compute.list_images('test')
+        self.assertEqual(len(images), 1)
+        self._validate_image(images[0])
+
+    def test_list_images_in_location(self):
+        images = libcloud_compute.list_images('test', location_id='test_location')
+        self.assertEqual(len(images), 1)
+        self._validate_image(images[0])
