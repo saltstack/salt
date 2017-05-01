@@ -354,6 +354,8 @@ tremendous amount of customization. Here's some example usage:
         - user: joe
         - password: mysupersecretpassword
         - insecure_auth: True
+      - http://foo.com/quux.git:
+        - all_saltenvs: master
 
 .. important::
 
@@ -365,8 +367,8 @@ tremendous amount of customization. Here's some example usage:
 
     2. Per-remote configuration parameters are named like the global versions,
        with the ``gitfs_`` removed from the beginning. The exception being the
-       ``name`` and ``saltenv`` parameters, which are only available to
-       per-remote configurations.
+       ``name``, ``saltenv``, and ``all_saltenvs`` (new in Oxygen) parameters,
+       which are only available to per-remote configurations.
 
 In the example configuration above, the following is true:
 
@@ -392,6 +394,9 @@ In the example configuration above, the following is true:
 5. The fourth remote overrides the default behavior of :ref:`not authenticating
    to insecure (non-HTTPS) remotes <gitfs-insecure-auth>`.
 
+6. The fifth remote defines itself as an `all_saltenvs` remote. This means that
+   the branch/tag ``master`` will automatically be used for merging the states
+   together no matter what the value of saltenv is.
 
 .. _gitfs-per-saltenv-config:
 
@@ -499,6 +504,33 @@ would only fetch branches and tags (the default).
           - '+refs/tags/*:refs/tags/*'
           - '+refs/pull/*/head:refs/remotes/origin/pr/*'
           - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
+
+.. _gitfs-global-remotes:
+
+Global Remotes
+==============
+
+.. versionadded:: Oxygen
+
+Global Remotes allows you to define a remote using the per-remote-only configuration
+option ``all_saltenvs`` which instructs SaltStack to merged the defined branch/tag
+into the current ``saltenv``.
+
+This feature provides a very powerful option when it comes to working with GitFS remotes.
+
+The code example below shows a remote with ``all_saltenvs`` enabled. In the context of a
+saltformula_ this will allow you to define your formula once in a single branch, before this
+feature you would have had to clone your states to every branch or tag to match your ``saltenv``
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://foo.com/quux.git:
+        - all_saltenvs: anything
+
+.. _saltformulas: https://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html
+
 
 Configuration Order of Precedence
 =================================
