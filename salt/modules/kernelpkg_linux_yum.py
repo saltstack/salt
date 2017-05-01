@@ -32,7 +32,7 @@ def __virtual__():
             in ('amazon', 'xcp', 'xenserver', 'virtuozzolinux'):
         return __virtualname__
 
-    return (False, "Module yumkernelpkg: no yum based system detected")
+    return (False, "Module kernelpkg_linux_yum: no YUM based system detected")
 
 
 def current():

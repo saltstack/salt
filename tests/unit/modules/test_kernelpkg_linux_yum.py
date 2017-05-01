@@ -16,7 +16,7 @@ from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 from tests.unit.modules.test_kernelpkg import KernelPkgTestCase
-import salt.modules.yumkernelpkg as kernelpkg
+import salt.modules.kernelpkg_linux_yum as kernelpkg
 import salt.modules.yumpkg as pkg
 
 

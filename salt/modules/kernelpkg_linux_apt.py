@@ -33,7 +33,7 @@ def __virtual__():
     elif __grains__.get('os_family', False) == 'Cumulus':
         return __virtualname__
 
-    return (False, "Module aptkernel: no apt based system detected")
+    return (False, "Module kernelpkg_linux_apt: no APT based system detected")
 
 
 def current():
