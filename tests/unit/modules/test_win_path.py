@@ -52,7 +52,11 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         Test cases for salt.modules.win_path
     '''
     def setup_loader_modules(self):
-        return {win_path: {'win32api': MockWin32API, 'win32con': MockWin32Con}}
+        return {win_path: {'win32api': MockWin32API,
+                           'win32con': MockWin32Con,
+                           'SendMessage': MagicMock,
+                           'HWND_BROADCAST': MagicMock,
+                           'WM_SETTINGCHANGE': MagicMock}}
 
     def test_rehash(self):
         '''
