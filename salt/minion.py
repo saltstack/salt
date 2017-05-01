@@ -151,7 +151,7 @@ def resolve_dns(opts, fallback=True):
             if opts['master'] == '':
                 raise SaltSystemExit
             ret['master_ip'] = \
-                    salt.utils.dns_check(opts['master'], opts['master_port'], True, opts['ipv6'])
+                    salt.utils.dns_check(opts['master'], int(opts['master_port']), True, opts['ipv6'])
         except SaltClientError:
             if opts['retry_dns']:
                 while True:
@@ -165,7 +165,7 @@ def resolve_dns(opts, fallback=True):
                     time.sleep(opts['retry_dns'])
                     try:
                         ret['master_ip'] = salt.utils.dns_check(
-                            opts['master'], opts['master_port'], True, opts['ipv6']
+                            opts['master'], int(opts['master_port']), True, opts['ipv6']
                         )
                         break
                     except SaltClientError:
@@ -672,6 +672,7 @@ class SMinion(MinionBase):
         # If configured, cache pillar data on the minion
         if self.opts['file_client'] == 'remote' and self.opts.get('minion_pillar_cache', False):
             import yaml
+            from salt.utils.yamldumper import SafeOrderedDumper
             pdir = os.path.join(self.opts['cachedir'], 'pillar')
             if not os.path.isdir(pdir):
                 os.makedirs(pdir, 0o700)
@@ -682,11 +683,21 @@ class SMinion(MinionBase):
                 penv = 'base'
             cache_top = {penv: {self.opts['id']: ['cache']}}
             with salt.utils.fopen(ptop, 'wb') as fp_:
-                fp_.write(yaml.dump(cache_top))
+                fp_.write(
+                    yaml.dump(
+                        cache_top,
+                        Dumper=SafeOrderedDumper
+                    )
+                )
                 os.chmod(ptop, 0o600)
             cache_sls = os.path.join(pdir, 'cache.sls')
             with salt.utils.fopen(cache_sls, 'wb') as fp_:
-                fp_.write(yaml.dump(self.opts['pillar']))
+                fp_.write(
+                    yaml.dump(
+                        self.opts['pillar'],
+                        Dumper=SafeOrderedDumper
+                    )
+                )
                 os.chmod(cache_sls, 0o600)
 
     def gen_modules(self, initial_load=False):
@@ -1999,23 +2010,27 @@ class Minion(MinionBase):
             if self.connected:
                 # we are not connected anymore
                 self.connected = False
-                # modify the scheduled job to fire only on reconnect
-                if self.opts['transport'] != 'tcp':
-                    schedule = {
-                       'function': 'status.master',
-                       'seconds': self.opts['master_alive_interval'],
-                       'jid_include': True,
-                       'maxrunning': 1,
-                       'return_job': False,
-                       'kwargs': {'master': self.opts['master'],
-                                  'connected': False}
-                    }
-                    self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
-                                             schedule=schedule)
-
                 log.info('Connection to master {0} lost'.format(self.opts['master']))
 
-                if self.opts['master_type'] == 'failover':
+                if self.opts['master_type'] != 'failover':
+                    # modify the scheduled job to fire on reconnect
+                    if self.opts['transport'] != 'tcp':
+                        schedule = {
+                           'function': 'status.master',
+                           'seconds': self.opts['master_alive_interval'],
+                           'jid_include': True,
+                           'maxrunning': 1,
+                           'return_job': False,
+                           'kwargs': {'master': self.opts['master'],
+                                      'connected': False}
+                        }
+                        self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
+                                                 schedule=schedule)
+                else:
+                    # delete the scheduled job to don't interfere with the failover process
+                    if self.opts['transport'] != 'tcp':
+                        self.schedule.delete_job(name=master_event(type='alive'))
+
                     log.info('Trying to tune in to next master from master-list')
 
                     if hasattr(self, 'pub_channel'):
@@ -2085,7 +2100,10 @@ class Minion(MinionBase):
 
         elif tag.startswith(master_event(type='connected')):
             # handle this event only once. otherwise it will pollute the log
-            if not self.connected:
+            # also if master type is failover all the reconnection work is done
+            # by `disconnected` event handler and this event must never happen,
+            # anyway check it to be sure
+            if not self.connected and self.opts['master_type'] != 'failover':
                 log.info('Connection to master {0} re-established'.format(self.opts['master']))
                 self.connected = True
                 # modify the __master_alive job to only fire,

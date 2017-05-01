@@ -111,7 +111,7 @@ VALID_OPTS = {
     'master': (string_types, list),
 
     # The TCP/UDP port of the master to connect to in order to listen to publications
-    'master_port': int,
+    'master_port': (string_types, int),
 
     # The behaviour of the minion when connecting to a master. Can specify 'failover',
     # 'disable' or 'func'. If 'func' is specified, the 'master' option should be set to an
