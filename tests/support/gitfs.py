@@ -448,6 +448,7 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
     Base class for GitPython and Pygit2 SSH tests
     '''
     id_rsa_nopass = id_rsa_withpass = None
+    git_ssh = '/tmp/git_ssh'
 
     @classmethod
     def tearDownClass(cls):
@@ -463,7 +464,7 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
                          cls.id_rsa_nopass + '.pub',
                          cls.id_rsa_withpass,
                          cls.id_rsa_withpass + '.pub',
-                         cls.case.git_ssh):
+                         cls.git_ssh):
             try:
                 os.remove(os.path.join(ssh_dir, filename))
             except OSError as exc:
@@ -478,7 +479,6 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
         self.sshd_proc = self.find_proc(name='sshd',
                                         search=self.sshd_config)
         self.sshd_bin = salt.utils.which('sshd')
-        self.git_ssh = '/tmp/git_ssh'
 
         if self.sshd_proc is None:
             self.spawn_server()
