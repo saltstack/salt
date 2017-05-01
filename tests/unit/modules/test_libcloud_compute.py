@@ -238,7 +238,6 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def _validate_volume_snapshot(self, volume):
         self.assertEqual(volume['id'], 'snap1')
-        self.assertEqual(volume['name'], 'snap_name')
         self.assertEqual(volume['size'], 80960)
 
     def _validate_image(self, image):
