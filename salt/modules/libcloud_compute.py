@@ -833,7 +833,7 @@ def _simple_node(node):
 def _simple_volume_snapshot(snapshot):
     return {
         'id': snapshot.id,
-        'name': snapshot.name,
+        'name': snapshot.name if hasattr(snapshot, 'name') else snapshot.id,
         'size': snapshot.size,
         'extra': snapshot.extra,
         'created': snapshot.created,
