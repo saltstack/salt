@@ -50,7 +50,7 @@ import logging
 
 PER_REMOTE_OVERRIDES = ('base', 'mountpoint', 'root', 'ssl_verify',
                         'env_whitelist', 'env_blacklist', 'refspecs')
-PER_REMOTE_ONLY = ('formula', 'name', 'saltenv')
+PER_REMOTE_ONLY = ('all_saltenvs', 'name', 'saltenv')
 
 # Auth support (auth params can be global or per-remote, too)
 AUTH_PROVIDERS = ('pygit2',)
