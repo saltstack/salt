@@ -1199,22 +1199,22 @@ def netdev():
                 # Support lines both like eth0:999 and eth0: 9999
                 comps.insert(1, line.split(':')[1].strip().split()[0])
                 ret[comps[0]] = {'iface': comps[0],
-                                 'rx_bytes': _number(comps[1]),
-                                 'rx_compressed': _number(comps[7]),
-                                 'rx_drop': _number(comps[4]),
-                                 'rx_errs': _number(comps[3]),
-                                 'rx_fifo': _number(comps[5]),
-                                 'rx_frame': _number(comps[6]),
-                                 'rx_multicast': _number(comps[8]),
-                                 'rx_packets': _number(comps[2]),
-                                 'tx_bytes': _number(comps[9]),
-                                 'tx_carrier': _number(comps[15]),
-                                 'tx_colls': _number(comps[14]),
-                                 'tx_compressed': _number(comps[16]),
-                                 'tx_drop': _number(comps[12]),
-                                 'tx_errs': _number(comps[11]),
-                                 'tx_fifo': _number(comps[13]),
-                                 'tx_packets': _number(comps[10])}
+                                 'rx_bytes': _number(comps[2]),
+                                 'rx_compressed': _number(comps[8]),
+                                 'rx_drop': _number(comps[5]),
+                                 'rx_errs': _number(comps[4]),
+                                 'rx_fifo': _number(comps[6]),
+                                 'rx_frame': _number(comps[7]),
+                                 'rx_multicast': _number(comps[9]),
+                                 'rx_packets': _number(comps[3]),
+                                 'tx_bytes': _number(comps[10]),
+                                 'tx_carrier': _number(comps[16]),
+                                 'tx_colls': _number(comps[15]),
+                                 'tx_compressed': _number(comps[17]),
+                                 'tx_drop': _number(comps[13]),
+                                 'tx_errs': _number(comps[12]),
+                                 'tx_fifo': _number(comps[14]),
+                                 'tx_packets': _number(comps[11])}
         return ret
 
     def freebsd_netdev():
