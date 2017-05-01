@@ -79,7 +79,7 @@ def start(docker_url='unix://var/run/docker.sock',
     try:
         events = client.events()
         for event in events:
-            data = json.loads(event)
+            data = json.loads(event.decode(__salt_system_encoding__, errors='replace'))
             fire('{0}/{1}'.format(tag, data['status']), data)
     except Exception:
         traceback.print_exc()
