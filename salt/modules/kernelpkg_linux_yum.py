@@ -26,9 +26,9 @@ def __virtual__():
     if not HAS_REQUIRED_LIBS:
         return (False, "Required library could not be imported")
 
-    if __grains__.get('os_family') == 'RedHat':
+    if __grains__.get('os_family', '') == 'RedHat':
         return __virtualname__
-    elif __grains__.get('os').lower() \
+    elif __grains__.get('os', '').lower() \
             in ('amazon', 'xcp', 'xenserver', 'virtuozzolinux'):
         return __virtualname__
 

@@ -28,9 +28,9 @@ def __virtual__():
     if not HAS_REQUIRED_LIBS:
         return (False, "Required library could not be imported")
 
-    if __grains__.get('os_family') in ('Kali', 'Debian'):
+    if __grains__.get('os_family', '') in ('Kali', 'Debian'):
         return __virtualname__
-    elif __grains__.get('os_family', False) == 'Cumulus':
+    elif __grains__.get('os_family', '') == 'Cumulus':
         return __virtualname__
 
     return (False, "Module kernelpkg_linux_apt: no APT based system detected")
