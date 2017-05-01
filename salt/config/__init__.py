@@ -122,24 +122,6 @@ VALID_OPTS = {
     # a master fingerprint with `salt-key -F master`
     'master_finger': str,
 
-    # The TCP/UDP port of the master to connect to in order to listen to publications
-    'master_port': int,
-
-    # The behaviour of the minion when connecting to a master. Can specify 'failover',
-    # 'disable' or 'func'. If 'func' is specified, the 'master' option should be set to an
-    # exec module function to run to determine the master hostname. If 'disable' is specified
-    # the minion will run, but will not try to connect to a master.
-    'master_type': str,
-
-    # Specify the format in which the master address will be specified. Can
-    # specify 'default' or 'ip_only'. If 'ip_only' is specified, then the
-    # master address will not be split into IP and PORT.
-    'master_uri_format': str,
-
-    # The fingerprint of the master key may be specified to increase security. Generate
-    # a master fingerprint with `salt-key -F master`
-    'master_finger': str,
-
     # Selects a random master when starting a minion up in multi-master mode
     'master_shuffle': bool,
 
@@ -1529,13 +1511,11 @@ DEFAULT_PROXY_MINION_OPTS = {
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'proxy'),
     'id': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'proxy'),
-    'append_minionid_config_dirs': [],
     'cache_jobs': False,
     'grains_cache': False,
     'grains_cache_expiration': 300,
     'grains_deep_merge': False,
-    'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'minion'),
-    'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
+    'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'proxy'),
     'backup_mode': '',
     'renderer': 'yaml_jinja',
     'renderer_whitelist': [],
@@ -1635,7 +1615,6 @@ DEFAULT_PROXY_MINION_OPTS = {
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
-    'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'log_level': 'warning',
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
@@ -1663,7 +1642,6 @@ DEFAULT_PROXY_MINION_OPTS = {
     'verify_env': True,
     'grains': {},
     'permissive_pki_access': False,
-    'default_include': 'proxy.d/*.conf',
     'update_url': False,
     'update_restart_services': [],
     'retry_dns': 30,
