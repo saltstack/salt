@@ -411,6 +411,12 @@ class GitProvider(object):
             # Get saltenv-specific configuration
             saltenv_conf = self.saltenv.get(tgt_env, {})
             if name == 'ref':
+                # Return formula if remote is a formula
+                try:
+                    return self.formula
+                except AttributeError as e:
+                    pass
+
                 if tgt_env == 'base':
                     return self.base
                 else:
