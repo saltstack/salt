@@ -54,7 +54,6 @@ class MockComputeDriver(BaseDriver):
         )
         self._TEST_VOLUME_SNAPSHOT = VolumeSnapshot(
             id='snap1',
-            name='snap_name',
             size=80960,
             driver=self
         )
