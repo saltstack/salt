@@ -1710,6 +1710,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'minion_jid_queue_hwm': 100,
     'ssl': None,
     'cache': 'localfs',
+    'random_startup_delay': 0,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
