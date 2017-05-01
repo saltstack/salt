@@ -105,6 +105,24 @@ VALID_OPTS = {
     'master': (string_types, list),
 
     # The TCP/UDP port of the master to connect to in order to listen to publications
+    'master_port': (string_types, int),
+
+    # The behaviour of the minion when connecting to a master. Can specify 'failover',
+    # 'disable' or 'func'. If 'func' is specified, the 'master' option should be set to an
+    # exec module function to run to determine the master hostname. If 'disable' is specified
+    # the minion will run, but will not try to connect to a master.
+    'master_type': str,
+
+    # Specify the format in which the master address will be specified. Can
+    # specify 'default' or 'ip_only'. If 'ip_only' is specified, then the
+    # master address will not be split into IP and PORT.
+    'master_uri_format': str,
+
+    # The fingerprint of the master key may be specified to increase security. Generate
+    # a master fingerprint with `salt-key -F master`
+    'master_finger': str,
+
+    # The TCP/UDP port of the master to connect to in order to listen to publications
     'master_port': int,
 
     # The behaviour of the minion when connecting to a master. Can specify 'failover',
