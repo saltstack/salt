@@ -1782,7 +1782,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
                 if ('key_filename' in kwargs and kwargs['key_filename']
                     and SSH_PASSWORD_PROMP_SUDO_RE.search(stdout)
                 ):
-                    proc.sendline(kwargs['sudo_password', None])
+                    proc.sendline(kwargs['sudo_password'])
                 # elif authenticating via password and haven't exhausted our
                 # password_retires
                 elif (
