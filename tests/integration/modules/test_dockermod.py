@@ -70,7 +70,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
                        name=self.random_name,
                        force=True)
         self.run_state('docker_image.absent',
-                       name=self.random_name,
+                       images=[self.random_name, 'docker.io/opensuse/python:latest'],
                        force=True)
 
     def test_docker_call(self):
