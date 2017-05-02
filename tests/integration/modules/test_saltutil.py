@@ -73,6 +73,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
         Test syncing all ModuleCase
         '''
         expected_return = {'engines': [],
+                           'clouds': [],
                            'grains': [],
                            'beacons': [],
                            'utils': [],
@@ -95,6 +96,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
         Test syncing all ModuleCase with whitelist
         '''
         expected_return = {'engines': [],
+                           'clouds': [],
                            'grains': [],
                            'beacons': [],
                            'utils': [],
@@ -114,6 +116,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
         Test syncing all ModuleCase with blacklist
         '''
         expected_return = {'engines': [],
+                           'clouds': [],
                            'grains': [],
                            'beacons': [],
                            'utils': [],
@@ -135,6 +138,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
         Test syncing all ModuleCase with whitelist and blacklist
         '''
         expected_return = {'engines': [],
+                           'clouds': [],
                            'grains': [],
                            'beacons': [],
                            'utils': [],

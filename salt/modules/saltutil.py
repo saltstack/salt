@@ -579,6 +579,41 @@ def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
 sync_outputters = salt.utils.alias_function(sync_output, 'sync_outputters')
 
 
+def sync_clouds(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: Nitrogen
+
+    Sync utility modules from ``salt://_cloud`` to the minion
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new utility modules are
+        synced. Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_clouds
+        salt '*' saltutil.sync_clouds saltenv=dev
+        salt '*' saltutil.sync_clouds saltenv=base,dev
+    '''
+    ret = _sync('clouds', saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2014.7.0
@@ -763,6 +798,7 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
     '''
     log.debug('Syncing all')
     ret = {}
+    ret['clouds'] = sync_clouds(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['beacons'] = sync_beacons(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['modules'] = sync_modules(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['states'] = sync_states(saltenv, False, extmod_whitelist, extmod_blacklist)

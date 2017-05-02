@@ -5,22 +5,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 from tests.support.paths import TMP_STATE_TREE
-from tests.support.helpers import requires_network
-
-# Import salt libs
-from salt.utils.versions import LooseVersion
-
-GIT_PYTHON = '0.3.2'
-HAS_GIT_PYTHON = False
-
-try:
-    import git
-    if LooseVersion(git.__version__) >= LooseVersion(GIT_PYTHON):
-        HAS_GIT_PYTHON = True
-except ImportError:
-    pass
 
 
 class PillarModuleTest(ModuleCase):
@@ -39,32 +24,6 @@ class PillarModuleTest(ModuleCase):
             self.assertEqual(pillar['class'], 'redhat')
         else:
             self.assertEqual(pillar['class'], 'other')
-
-    @requires_network()
-    @skipIf(HAS_GIT_PYTHON is False,
-            'GitPython must be installed and >= version {0}'.format(GIT_PYTHON))
-    def test_two_ext_pillar_sources_override(self):
-        '''
-        https://github.com/saltstack/salt/issues/12647
-        '''
-
-        self.assertEqual(
-            self.run_function('pillar.data')['info'],
-            'bar'
-        )
-
-    @requires_network()
-    @skipIf(HAS_GIT_PYTHON is False,
-            'GitPython must be installed and >= version {0}'.format(GIT_PYTHON))
-    def test_two_ext_pillar_sources(self):
-        '''
-        https://github.com/saltstack/salt/issues/12647
-        '''
-
-        self.assertEqual(
-            self.run_function('pillar.data')['abc'],
-            'def'
-        )
 
     def test_issue_5449_report_actual_file_roots_in_pillar(self):
         '''
@@ -91,24 +50,6 @@ class PillarModuleTest(ModuleCase):
             TMP_STATE_TREE,
             self.run_function('pillar.data')['test_ext_pillar_opts']['file_roots']['base']
         )
-
-    def no_test_issue_10408_ext_pillar_gitfs_url_update(self):
-        import os
-        from salt.pillar import git_pillar
-        original_url = 'git+ssh://original@example.com/home/git/test'
-        changed_url = 'git+ssh://changed@example.com/home/git/test'
-        rp_location = os.path.join(self.master_opts['cachedir'], 'pillar_gitfs/0/.git')
-        opts = {
-            'ext_pillar': [{'git': 'master {0}'.format(original_url)}],
-            'cachedir': self.master_opts['cachedir'],
-        }
-
-        git_pillar._LegacyGitPillar('master', original_url, opts)
-        opts['ext_pillar'] = [{'git': 'master {0}'.format(changed_url)}]
-        grepo = git_pillar._LegacyGitPillar('master', changed_url, opts)
-        repo = git.Repo(rp_location)
-
-        self.assertEqual(grepo.rp_location, repo.remotes.origin.url)
 
     def test_pillar_items(self):
         '''

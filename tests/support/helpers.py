@@ -13,16 +13,20 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import os
-import sys
-import time
+import base64
 import errno
-import types
-import signal
-import socket
+import functools
 import inspect
 import logging
-import functools
+import os
+import signal
+import socket
+import sys
+import threading
+import time
+import tornado.ioloop
+import tornado.web
+import types
 
 # Import 3rd-party libs
 import psutil  # pylint: disable=3rd-party-module-not-gated
@@ -44,6 +48,7 @@ except ImportError:
 # Import Salt Tests Support libs
 from tests.support.unit import skip, _id
 from tests.support.mock import patch
+from tests.support.paths import FILES
 
 log = logging.getLogger(__name__)
 
@@ -1272,3 +1277,180 @@ def repeat(caller=None, condition=True, times=5):
             caller(cls)
         return cls
     return wrap
+
+
+def http_basic_auth(login_cb=lambda username, password: False):
+    '''
+    A crude decorator to force a handler to request HTTP Basic Authentication
+
+    Example usage:
+
+    .. code-block:: python
+
+        @http_basic_auth(lambda u, p: u == 'foo' and p == 'bar')
+        class AuthenticatedHandler(tornado.web.RequestHandler):
+            pass
+    '''
+    def wrapper(handler_class):
+        def wrap_execute(handler_execute):
+            def check_auth(handler, kwargs):
+
+                auth = handler.request.headers.get('Authorization')
+
+                if auth is None or not auth.startswith('Basic '):
+                    # No username/password entered yet, we need to return a 401
+                    # and set the WWW-Authenticate header to request login.
+                    handler.set_status(401)
+                    handler.set_header(
+                        'WWW-Authenticate', 'Basic realm=Restricted')
+
+                else:
+                    # Strip the 'Basic ' from the beginning of the auth header
+                    # leaving the base64-encoded secret
+                    username, password = \
+                        base64.b64decode(auth[6:]).split(':', 1)
+
+                    if login_cb(username, password):
+                        # Authentication successful
+                        return
+                    else:
+                        # Authentication failed
+                        handler.set_status(403)
+
+                handler._transforms = []
+                handler.finish()
+
+            def _execute(self, transforms, *args, **kwargs):
+                check_auth(self, kwargs)
+                return handler_execute(self, transforms, *args, **kwargs)
+
+            return _execute
+
+        handler_class._execute = wrap_execute(handler_class._execute)
+        return handler_class
+    return wrapper
+
+
+class Webserver(object):
+    '''
+    Starts a tornado webserver on 127.0.0.1 on a random available port
+
+    USAGE:
+
+    .. code-block:: python
+
+        from tests.support.helpers import Webserver
+
+        webserver = Webserver('/path/to/web/root')
+        webserver.start()
+        webserver.stop()
+    '''
+    def __init__(self,
+                 root=None,
+                 port=None,
+                 wait=5,
+                 handler=None):
+        '''
+        root
+            Root directory of webserver. If not passed, it will default to the
+            location of the base environment of the integration suite's file
+            roots (tests/integration/files/file/base/)
+
+        port
+            Port on which to listen. If not passed, a random one will be chosen
+            at the time the start() function is invoked.
+
+        wait : 5
+            Number of seconds to wait for the socket to be open before raising
+            an exception
+
+        handler
+            Can be used to use a subclass of tornado.web.StaticFileHandler,
+            such as when enforcing authentication with the http_basic_auth
+            decorator.
+        '''
+        if port is not None and not isinstance(port, six.integer_types):
+            raise ValueError('port must be an integer')
+
+        if root is None:
+            root = os.path.join(FILES, 'file', 'base')
+        try:
+            self.root = os.path.realpath(root)
+        except AttributeError:
+            raise ValueError('root must be a string')
+
+        self.port = port
+        self.wait = wait
+        self.handler = handler \
+            if handler is not None \
+            else tornado.web.StaticFileHandler
+        self.web_root = None
+
+    def target(self):
+        '''
+        Threading target which stands up the tornado application
+        '''
+        self.ioloop = tornado.ioloop.IOLoop()
+        self.ioloop.make_current()
+        self.application = tornado.web.Application(
+            [(r'/(.*)', self.handler, {'path': self.root})])
+        self.application.listen(self.port)
+        self.ioloop.start()
+
+    @property
+    def listening(self):
+        if self.port is None:
+            return False
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        return sock.connect_ex(('127.0.0.1', self.port)) == 0
+
+    def url(self, path):
+        '''
+        Convenience function which, given a file path, will return a URL that
+        points to that path. If the path is relative, it will just be appended
+        to self.web_root.
+        '''
+        if self.web_root is None:
+            raise RuntimeError('Webserver instance has not been started')
+        err_msg = 'invalid path, must be either a relative path or a path ' \
+                  'within {0}'.format(self.root)
+        try:
+            relpath = path \
+                if not os.path.isabs(path) \
+                else os.path.relpath(path, self.root)
+            if relpath.startswith('..' + os.sep):
+                raise ValueError(err_msg)
+            return '/'.join((self.web_root, relpath))
+        except AttributeError:
+            raise ValueError(err_msg)
+
+    def start(self):
+        '''
+        Starts the webserver
+        '''
+        if self.port is None:
+            self.port = get_unused_localhost_port()
+
+        self.web_root = 'http://127.0.0.1:{0}'.format(self.port)
+
+        self.server_thread = threading.Thread(target=self.target)
+        self.server_thread.daemon = True
+        self.server_thread.start()
+
+        for idx in range(self.wait + 1):
+            if self.listening:
+                break
+            if idx != self.wait:
+                time.sleep(1)
+        else:
+            raise Exception(
+                'Failed to start tornado webserver on 127.0.0.1:{0} within '
+                '{1} seconds'.format(self.port, self.wait)
+            )
+
+    def stop(self):
+        '''
+        Stops the webserver
+        '''
+        self.ioloop.add_callback(self.ioloop.stop)
+        self.server_thread.join()
