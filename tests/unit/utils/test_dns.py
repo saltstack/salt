@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Python
 import socket
+import textwrap
 from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 
 # Salt
@@ -15,10 +16,16 @@ import salt.utils.dns
 from salt.utils.dns import _to_port, _tree, _weighted_order, _data2rec, _data2rec_group
 from salt.utils.dns import _lookup_gai, _lookup_dig, _lookup_drill, _lookup_host, _lookup_nslookup
 
+# Integrations
+try:
+    import dns.resolver
+    HAS_DNSPYTHON = True
+except ImportError:
+    HAS_DNSPYTHON = False
+
 # Testing
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-
 
 # Debug
 import pprint
@@ -328,23 +335,24 @@ class DNSlookupsCase(TestCase):
 
     def test_drill(self):
         # all Drill returns look like this
-        RES_TMPL = ''';; ->>HEADER<<- opcode: QUERY, rcode: NOERROR, id: 58233
-;; flags: qr rd ra ; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
-;; QUESTION SECTION:
-;; mocksrvr.example.com.	IN	A
+        RES_TMPL = textwrap.dedent('''\
+            ;; ->>HEADER<<- opcode: QUERY, rcode: NOERROR, id: 58233
+            ;; flags: qr rd ra ; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+            ;; QUESTION SECTION:
+            ;; mocksrvr.example.com.	IN	A
 
-;; ANSWER SECTION:
-{}
+            ;; ANSWER SECTION:
+            {}
 
-;; AUTHORITY SECTION:
+            ;; AUTHORITY SECTION:
 
-;; ADDITIONAL SECTION:
+            ;; ADDITIONAL SECTION:
 
-;; Query time: 37 msec
-;; SERVER: 10.100.150.129
-;; WHEN: Tue Apr  4 19:03:51 2017
-;; MSG SIZE  rcvd: 50
-'''
+            ;; Query time: 37 msec
+            ;; SERVER: 10.100.150.129
+            ;; WHEN: Tue Apr  4 19:03:51 2017
+            ;; MSG SIZE  rcvd: 50
+        ''')
 
         # Not even a different retcode!?
         wrong_type = {'stdout': RES_TMPL.format('mocksrvr.example.com.\t4404\tIN\tA\t10.1.1.1\n')}
@@ -474,13 +482,24 @@ class DNSlookupsCase(TestCase):
 
         self._test_cmd_lookup(_lookup_host, wrong_type=wrong_type, wrong=wrongs, right=rights, empty=empty)
 
+    @skipIf(not HAS_DNSPYTHON, 'Unable to import dnspython')
     def test_dnspython(self):
+        import dns.rdtypes.IN.A
+        bal = dns.rdtypes.IN.A()
 
         pass
 
     def test_nslookup(self):
         # all nslookup returns look like this
-        RES_TMPL = 'Server:\t\t10.11.12.13\nAddress:\t10.11.12.13#53\n\nNon-authoritative answer:\n{}\n\nAuthoritative answers can be found from:'
+        RES_TMPL = textwrap.dedent('''\
+            Server:\t\t10.11.12.13
+            Address:\t10.11.12.13#53
+
+            Non-authoritative answer:
+            {}
+
+            Authoritative answers can be found from:
+        ''')
 
         wrong_type = {'stdout': 'unknown query type: WRONG' +
                                 RES_TMPL.format('Name:\tmocksrvr.example.com\nAddress: 10.1.1.1')}
@@ -490,7 +509,7 @@ class DNSlookupsCase(TestCase):
         ]
 
         empty = {'stdout': RES_TMPL.format(
-            "*** Can't find www.google.com: No answer\n\nAuthoritative answers can be found from:")}
+            "*** Can't find www.google.com: No answer")}
 
         rights = {
             'A': [
