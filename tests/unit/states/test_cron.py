@@ -80,15 +80,13 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         super(CronTestCase, self).setUp()
         set_crontab('')
+        for mod, mock in (('salt.modules.cron.raw_cron', MagicMock(side_effect=get_crontab)),
+                          ('salt.modules.cron._write_cron_lines', MagicMock(side_effect=write_crontab))):
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.addCleanup(set_crontab, '')
 
-    def tearDown(self):
-        super(CronTestCase, self).tearDown()
-        set_crontab('')
-
-    @patch('salt.modules.cron.raw_cron',
-           new=MagicMock(side_effect=get_crontab))
-    @patch('salt.modules.cron._write_cron_lines',
-           new=MagicMock(side_effect=write_crontab))
     def test_present(self):
         cron.present(
             name='foo',
@@ -176,10 +174,6 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
              '* 2 * * * foo\n'
              '* 2 * * * foo'))
 
-    @patch('salt.modules.cron.raw_cron',
-           new=MagicMock(side_effect=get_crontab))
-    @patch('salt.modules.cron._write_cron_lines',
-           new=MagicMock(side_effect=write_crontab))
     def test_remove(self):
         with patch.dict(cron.__opts__, {'test': True}):
             set_crontab(
@@ -238,10 +232,6 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 '# Lines below here are managed by Salt, do not edit'
             )
 
-    @patch('salt.modules.cron.raw_cron',
-           new=MagicMock(side_effect=get_crontab))
-    @patch('salt.modules.cron._write_cron_lines',
-           new=MagicMock(side_effect=write_crontab))
     def test_multiline_comments_are_updated(self):
         set_crontab(
             '# Lines below here are managed by Salt, do not edit\n'
@@ -276,10 +266,6 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             '# multi-line comment SALT_CRON_IDENTIFIER:2\n'
             '* 1 * * * foo')
 
-    @patch('salt.modules.cron.raw_cron',
-           new=MagicMock(side_effect=get_crontab))
-    @patch('salt.modules.cron._write_cron_lines',
-           new=MagicMock(side_effect=write_crontab))
     def test_existing_unmanaged_jobs_are_made_managed(self):
         set_crontab(
             '# Lines below here are managed by Salt, do not edit\n'
@@ -299,10 +285,6 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret['changes'], {})
         self.assertEqual(ret['comment'], 'Cron foo already present')
 
-    @patch('salt.modules.cron.raw_cron',
-           new=MagicMock(side_effect=get_crontab))
-    @patch('salt.modules.cron._write_cron_lines',
-           new=MagicMock(side_effect=write_crontab))
     def test_existing_noid_jobs_are_updated_with_identifier(self):
         set_crontab(
             '# Lines below here are managed by Salt, do not edit\n'
@@ -320,10 +302,6 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             '# SALT_CRON_IDENTIFIER:foo\n'
             '1 * * * * foo')
 
-    @patch('salt.modules.cron.raw_cron',
-           new=MagicMock(side_effect=get_crontab))
-    @patch('salt.modules.cron._write_cron_lines',
-           new=MagicMock(side_effect=write_crontab))
     def test_existing_duplicate_unmanaged_jobs_are_merged_and_given_id(self):
         set_crontab(
             '# Lines below here are managed by Salt, do not edit\n'

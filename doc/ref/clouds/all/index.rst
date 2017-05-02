@@ -30,7 +30,6 @@ Full list of Salt Cloud modules
     proxmox
     pyrax
     qingcloud
-    rackspace
     saltify
     scaleway
     softlayer
@@ -38,3 +37,4 @@ Full list of Salt Cloud modules
     virtualbox
     vmware
     vultrpy
+    xen

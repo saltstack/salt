@@ -26,21 +26,21 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'available' function tests: 1
 
-    @patch('salt.modules.kmod.available', MagicMock(return_value=['kvm']))
     def test_available(self):
         '''
         Tests return a list of all available kernel modules
         '''
-        self.assertEqual(['kvm'], kmod.available())
+        with patch('salt.modules.kmod.available', MagicMock(return_value=['kvm'])):
+            self.assertEqual(['kvm'], kmod.available())
 
     # 'check_available' function tests: 1
 
-    @patch('salt.modules.kmod.available', MagicMock(return_value=['kvm']))
     def test_check_available(self):
         '''
         Tests if the specified kernel module is available
         '''
-        self.assertTrue(kmod.check_available('kvm'))
+        with patch('salt.modules.kmod.available', MagicMock(return_value=['kvm'])):
+            self.assertTrue(kmod.check_available('kvm'))
 
     # 'lsmod' function tests: 1
 
@@ -99,12 +99,12 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'is_loaded' function tests: 1
 
-    @patch('salt.modules.kmod.mod_list', MagicMock(return_value=set(['lp'])))
     def test_is_loaded(self):
         '''
         Tests if specified kernel module is loaded.
         '''
-        self.assertTrue(kmod.is_loaded('lp'))
+        with patch('salt.modules.kmod.mod_list', MagicMock(return_value=set(['lp']))):
+            self.assertTrue(kmod.is_loaded('lp'))
 
     # 'remove' function tests: 1
 

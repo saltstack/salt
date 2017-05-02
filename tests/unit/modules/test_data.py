@@ -30,30 +30,30 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'clear' function tests: 1
 
-    @patch('os.remove', MagicMock(return_value=''))
     def test_clear(self):
         '''
         Test if it clear out all of the data in the minion datastore
         '''
-        mock = MagicMock(return_value='')
-        with patch.dict(data.__opts__, {'cachedir': mock}):
-            self.assertTrue(data.clear())
+        with patch('os.remove', MagicMock(return_value='')):
+            mock = MagicMock(return_value='')
+            with patch.dict(data.__opts__, {'cachedir': mock}):
+                self.assertTrue(data.clear())
 
     # 'load' function tests: 1
 
-    @patch('salt.payload.Serial.load', MagicMock(return_value=True))
     def test_load(self):
         '''
         Test if it return all of the data in the minion datastore
         '''
-        mocked_fopen = MagicMock(return_value=True)
-        mocked_fopen.__enter__ = MagicMock(return_value=mocked_fopen)
-        mocked_fopen.__exit__ = MagicMock()
-        mock = MagicMock(return_value='/')
-        with patch('salt.utils.fopen', MagicMock(return_value=mocked_fopen)):
-            with patch('salt.payload.Serial.loads', MagicMock(return_value=True)):
-                with patch.dict(data.__opts__, {'cachedir': mock}):
-                    self.assertTrue(data.load())
+        with patch('salt.payload.Serial.load', MagicMock(return_value=True)):
+            mocked_fopen = MagicMock(return_value=True)
+            mocked_fopen.__enter__ = MagicMock(return_value=mocked_fopen)
+            mocked_fopen.__exit__ = MagicMock()
+            mock = MagicMock(return_value='/')
+            with patch('salt.utils.fopen', MagicMock(return_value=mocked_fopen)):
+                with patch('salt.payload.Serial.loads', MagicMock(return_value=True)):
+                    with patch.dict(data.__opts__, {'cachedir': mock}):
+                        self.assertTrue(data.load())
 
     # 'dump' function tests: 3
 
@@ -66,12 +66,12 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.fopen', mock_open()):
                 self.assertTrue(data.dump('{"eggs": "spam"}'))
 
-    @patch('ast.literal_eval', MagicMock(return_value=''))
     def test_dump_isinstance(self):
         '''
         Test if it replace the entire datastore with a passed data structure
         '''
-        self.assertFalse(data.dump('salt'))
+        with patch('ast.literal_eval', MagicMock(return_value='')):
+            self.assertFalse(data.dump('salt'))
 
     def test_dump_ioerror(self):
         '''
@@ -85,55 +85,55 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update' function tests: 1
 
-    @patch('salt.modules.data.load', MagicMock(return_value={}))
-    @patch('salt.modules.data.dump', MagicMock(return_value=True))
     def test_update(self):
         '''
         Test if it update a key with a value in the minion datastore
         '''
-        self.assertTrue(data.update('foo', 'salt'))
+        with patch('salt.modules.data.load', MagicMock(return_value={})), \
+                patch('salt.modules.data.dump', MagicMock(return_value=True)):
+            self.assertTrue(data.update('foo', 'salt'))
 
     # 'get' function tests: 2
 
-    @patch('salt.modules.data.load', MagicMock(return_value={'salt': 'SALT'}))
     def test_get(self):
         '''
         Test if it gets a value from the minion datastore
         '''
-        self.assertEqual(data.get('salt'), 'SALT')
+        with patch('salt.modules.data.load', MagicMock(return_value={'salt': 'SALT'})):
+            self.assertEqual(data.get('salt'), 'SALT')
 
-    @patch('salt.modules.data.load',
-           MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'}))
     def test_get_vals(self):
         '''
         Test if it gets values from the minion datastore
         '''
-        self.assertEqual(data.get(['salt', 'salt1']), ['SALT', 'SALT1'])
+        with patch('salt.modules.data.load',
+                   MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'})):
+            self.assertEqual(data.get(['salt', 'salt1']), ['SALT', 'SALT1'])
 
     # 'cas' function tests: 1
 
-    @patch('salt.modules.data.load',
-           MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'}))
     def test_cas_not_load(self):
         '''
         Test if it check and set a value in the minion datastore
         '''
-        self.assertFalse(data.cas('salt3', 'SALT', 'SALTSTACK'))
+        with patch('salt.modules.data.load',
+                   MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'})):
+            self.assertFalse(data.cas('salt3', 'SALT', 'SALTSTACK'))
 
-    @patch('salt.modules.data.load',
-           MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'}))
     def test_cas_not_equal(self):
         '''
         Test if it check and set a value in the minion datastore
         '''
-        self.assertFalse(data.cas('salt', 'SALT', 'SALTSTACK'))
+        with patch('salt.modules.data.load',
+                   MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'})):
+            self.assertFalse(data.cas('salt', 'SALT', 'SALTSTACK'))
 
-    @patch('salt.modules.data.load',
-           MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'}))
-    @patch('salt.modules.data.dump',
-           MagicMock(return_value=True))
     def test_cas(self):
         '''
         Test if it check and set a value in the minion datastore
         '''
-        self.assertTrue(data.cas('salt', 'SALTSTACK', 'SALT'))
+        with patch('salt.modules.data.load',
+                   MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'})), \
+                           patch('salt.modules.data.dump',
+                                 MagicMock(return_value=True)):
+            self.assertTrue(data.cas('salt', 'SALTSTACK', 'SALT'))

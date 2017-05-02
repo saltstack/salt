@@ -197,6 +197,9 @@ execution modules
     layman
     ldap3
     ldapmod
+    libcloud_dns
+    libcloud_loadbalancer
+    libcloud_storage
     linux_acl
     linux_ip
     linux_lvm

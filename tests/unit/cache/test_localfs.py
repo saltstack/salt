@@ -50,17 +50,15 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
     # 'store' function tests: 4
 
-    @patch('os.path.isdir', MagicMock(return_value=None))
-    @patch('os.makedirs', MagicMock(side_effect=OSError))
     def test_store_no_base_cache_dir(self):
         '''
         Tests that a SaltCacheError is raised when the base directory doesn't exist and
         cannot be created.
         '''
-        self.assertRaises(SaltCacheError, localfs.store, bank='', key='', data='', cachedir='')
+        with patch('os.path.isdir', MagicMock(return_value=None)):
+            with patch('os.makedirs', MagicMock(side_effect=OSError)):
+                self.assertRaises(SaltCacheError, localfs.store, bank='', key='', data='', cachedir='')
 
-    @patch('os.path.isdir', MagicMock(return_value=True))
-    @patch('tempfile.mkstemp', MagicMock(return_value=(12345, 'foo')))
     def test_store_close_mkstemp_file_handle(self):
         '''
         Tests that the file descriptor that is opened by os.open during the mkstemp call
@@ -69,18 +67,20 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         This test mocks the call to mkstemp, but forces an OSError to be raised when the
         close() function is called on a file descriptor that doesn't exist.
         '''
-        self.assertRaises(OSError, localfs.store, bank='', key='', data='', cachedir='')
+        with patch('os.path.isdir', MagicMock(return_value=True)):
+            with patch('tempfile.mkstemp', MagicMock(return_value=(12345, 'foo'))):
+                self.assertRaises(OSError, localfs.store, bank='', key='', data='', cachedir='')
 
-    @patch('os.path.isdir', MagicMock(return_value=True))
-    @patch('tempfile.mkstemp', MagicMock(return_value=('one', 'two')))
-    @patch('os.close', MagicMock(return_value=None))
-    @patch('salt.utils.fopen', MagicMock(side_effect=IOError))
     def test_store_error_writing_cache(self):
         '''
         Tests that a SaltCacheError is raised when there is a problem writing to the
         cache file.
         '''
-        self.assertRaises(SaltCacheError, localfs.store, bank='', key='', data='', cachedir='')
+        with patch('os.path.isdir', MagicMock(return_value=True)):
+            with patch('tempfile.mkstemp', MagicMock(return_value=('one', 'two'))):
+                with patch('os.close', MagicMock(return_value=None)):
+                    with patch('salt.utils.fopen', MagicMock(side_effect=IOError)):
+                        self.assertRaises(SaltCacheError, localfs.store, bank='', key='', data='', cachedir='')
 
     def test_store_success(self):
         '''
@@ -99,22 +99,22 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
     # 'fetch' function tests: 3
 
-    @patch('os.path.isfile', MagicMock(return_value=False))
     def test_fetch_return_when_cache_file_does_not_exist(self):
         '''
         Tests that the fetch function returns an empty dic when the cache key file
         doesn't exist.
         '''
-        self.assertEqual(localfs.fetch(bank='', key='', cachedir=''), {})
+        with patch('os.path.isfile', MagicMock(return_value=False)):
+            self.assertEqual(localfs.fetch(bank='', key='', cachedir=''), {})
 
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('salt.utils.fopen', MagicMock(side_effect=IOError))
     def test_fetch_error_reading_cache(self):
         '''
         Tests that a SaltCacheError is raised when there is a problem reading the cache
         file.
         '''
-        self.assertRaises(SaltCacheError, localfs.fetch, bank='', key='', cachedir='')
+        with patch('os.path.isfile', MagicMock(return_value=True)):
+            with patch('salt.utils.fopen', MagicMock(side_effect=IOError)):
+                self.assertRaises(SaltCacheError, localfs.fetch, bank='', key='', cachedir='')
 
     def test_fetch_success(self):
         '''
@@ -136,22 +136,22 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
     # 'updated' function tests: 3
 
-    @patch('os.path.isfile', MagicMock(return_value=False))
     def test_updated_return_when_cache_file_does_not_exist(self):
         '''
         Tests that the updated function returns None when the cache key file doesn't
         exist.
         '''
-        self.assertIsNone(localfs.updated(bank='', key='', cachedir=''))
+        with patch('os.path.isfile', MagicMock(return_value=False)):
+            self.assertIsNone(localfs.updated(bank='', key='', cachedir=''))
 
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.path.getmtime', MagicMock(side_effect=IOError))
     def test_updated_error_when_reading_mtime(self):
         '''
         Tests that a SaltCacheError is raised when there is a problem reading the mtime
         of the cache file.
         '''
-        self.assertRaises(SaltCacheError, localfs.updated, bank='', key='', cachedir='')
+        with patch('os.path.isfile', MagicMock(return_value=True)):
+            with patch('os.path.getmtime', MagicMock(side_effect=IOError)):
+                self.assertRaises(SaltCacheError, localfs.updated, bank='', key='', cachedir='')
 
     def test_updated_success(self):
         '''
@@ -168,65 +168,65 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
     # 'flush' function tests: 4
 
-    @patch('os.path.isdir', MagicMock(return_value=False))
     def test_flush_key_is_none_and_no_target_dir(self):
         '''
         Tests that the flush function returns False when no key is passed in and the
         target directory doesn't exist.
         '''
-        self.assertFalse(localfs.flush(bank='', key=None, cachedir=''))
+        with patch('os.path.isdir', MagicMock(return_value=False)):
+            self.assertFalse(localfs.flush(bank='', key=None, cachedir=''))
 
-    @patch('os.path.isfile', MagicMock(return_value=False))
     def test_flush_key_provided_and_no_key_file_false(self):
         '''
         Tests that the flush function returns False when a key file is provided but
         the target key file doesn't exist in the cache bank.
         '''
-        self.assertFalse(localfs.flush(bank='', key='key', cachedir=''))
+        with patch('os.path.isfile', MagicMock(return_value=False)):
+            self.assertFalse(localfs.flush(bank='', key='key', cachedir=''))
 
-    @patch('os.path.isfile', MagicMock(return_value=True))
     def test_flush_success(self):
         '''
         Tests that the flush function returns True when a key file is provided and
         the target key exists in the cache bank.
         '''
-        # Create a temporary cache dir
-        tmp_dir = tempfile.mkdtemp(dir=TMP)
+        with patch('os.path.isfile', MagicMock(return_value=True)):
+            # Create a temporary cache dir
+            tmp_dir = tempfile.mkdtemp(dir=TMP)
 
-        # Use the helper function to create the cache file using localfs.store()
-        self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
+            # Use the helper function to create the cache file using localfs.store()
+            self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
 
-        # Now test the return of the flush function
-        with patch.dict(localfs.__opts__, {'cachedir': tmp_dir}):
-            self.assertTrue(localfs.flush(bank='bank', key='key', cachedir=tmp_dir))
+            # Now test the return of the flush function
+            with patch.dict(localfs.__opts__, {'cachedir': tmp_dir}):
+                self.assertTrue(localfs.flush(bank='bank', key='key', cachedir=tmp_dir))
 
-    @patch('os.path.isfile', MagicMock(return_value=True))
-    @patch('os.remove', MagicMock(side_effect=OSError))
     def test_flush_error_raised(self):
         '''
         Tests that a SaltCacheError is raised when there is a problem removing the
         key file from the cache bank
         '''
-        self.assertRaises(SaltCacheError, localfs.flush, bank='', key='key', cachedir='/var/cache/salt')
+        with patch('os.path.isfile', MagicMock(return_value=True)):
+            with patch('os.remove', MagicMock(side_effect=OSError)):
+                self.assertRaises(SaltCacheError, localfs.flush, bank='', key='key', cachedir='/var/cache/salt')
 
     # 'ls' function tests: 3
 
-    @patch('os.path.isdir', MagicMock(return_value=False))
     def test_ls_no_base_dir(self):
         '''
         Tests that the ls function returns an empty list if the bank directory
         doesn't exist.
         '''
-        self.assertEqual(localfs.ls(bank='', cachedir=''), [])
+        with patch('os.path.isdir', MagicMock(return_value=False)):
+            self.assertEqual(localfs.ls(bank='', cachedir=''), [])
 
-    @patch('os.path.isdir', MagicMock(return_value=True))
-    @patch('os.listdir', MagicMock(side_effect=OSError))
     def test_ls_error_raised_no_bank_directory_access(self):
         '''
         Tests that a SaltCacheError is raised when there is a problem accessing the
         cache bank directory.
         '''
-        self.assertRaises(SaltCacheError, localfs.ls, bank='', cachedir='')
+        with patch('os.path.isdir', MagicMock(return_value=True)):
+            with patch('os.listdir', MagicMock(side_effect=OSError)):
+                self.assertRaises(SaltCacheError, localfs.ls, bank='', cachedir='')
 
     def test_ls_success(self):
         '''

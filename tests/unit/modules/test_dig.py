@@ -121,18 +121,18 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
                 ['2607:f8b0:400f:801::1014']
             )
 
-    @patch('salt.modules.dig.A', MagicMock(return_value=['ns4.google.com.']))
     def test_ns(self):
-        dig_mock = MagicMock(
-            return_value={
-                'pid': 26136,
-                'retcode': 0,
-                'stderr': '',
-                'stdout': 'ns4.google.com.'
-            }
-        )
-        with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
-            self.assertEqual(dig.NS('google.com'), ['ns4.google.com.'])
+        with patch('salt.modules.dig.A', MagicMock(return_value=['ns4.google.com.'])):
+            dig_mock = MagicMock(
+                return_value={
+                    'pid': 26136,
+                    'retcode': 0,
+                    'stderr': '',
+                    'stdout': 'ns4.google.com.'
+                }
+            )
+            with patch.dict(dig.__salt__, {'cmd.run_all': dig_mock}):
+                self.assertEqual(dig.NS('google.com'), ['ns4.google.com.'])
 
     def test_spf(self):
         dig_mock = MagicMock(side_effect=_spf_side_effect)

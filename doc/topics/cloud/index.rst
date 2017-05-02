@@ -129,6 +129,7 @@ Cloud Provider Specifics
         Getting Started With Vexxhost <vexxhost>
         Getting Started With Virtualbox <virtualbox>
         Getting Started With VMware <vmware>
+        Getting Started With Xen <xen>
 
 
 Miscellaneous Options

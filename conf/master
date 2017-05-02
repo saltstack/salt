@@ -874,7 +874,7 @@
 #pillar_cache_ttl: 3600
 
 # If and only if a master has set `pillar_cache: True`, one of several storage providers
-# can be utililzed.
+# can be utilized.
 #
 # `disk`: The default storage backend. This caches rendered pillars to the master cache.
 #         Rendered pillars are serialized and deserialized as msgpack structures for speed.

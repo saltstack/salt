@@ -121,88 +121,88 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with('pkgutil --pkgs')
             self.assertEqual(out, expected)
 
-    @patch('salt.modules.mac_package._get_pkg_id_from_pkginfo')
-    def test_get_pkg_id_with_files(self, pkg_id_pkginfo_mock):
+    def test_get_pkg_id_with_files(self):
         '''
             Test getting a the id for a package
         '''
-        expected = ['com.apple.this']
-        cmd_mock = MagicMock(side_effect=[
-            '/path/to/PackageInfo\n/path/to/some/other/fake/PackageInfo',
-            '',
-            ''
-        ])
-        pkg_id_pkginfo_mock.side_effect = [['com.apple.this'], []]
-        temp_mock = MagicMock(return_value='/tmp/dmg-ABCDEF')
-        remove_mock = MagicMock()
+        with patch('salt.modules.mac_package._get_pkg_id_from_pkginfo') as pkg_id_pkginfo_mock:
+            expected = ['com.apple.this']
+            cmd_mock = MagicMock(side_effect=[
+                '/path/to/PackageInfo\n/path/to/some/other/fake/PackageInfo',
+                '',
+                ''
+            ])
+            pkg_id_pkginfo_mock.side_effect = [['com.apple.this'], []]
+            temp_mock = MagicMock(return_value='/tmp/dmg-ABCDEF')
+            remove_mock = MagicMock()
 
-        with patch.dict(macpackage.__salt__, {'cmd.run': cmd_mock,
-                                              'temp.dir': temp_mock,
-                                              'file.remove': remove_mock}):
-            out = macpackage.get_pkg_id('/path/to/file.pkg')
+            with patch.dict(macpackage.__salt__, {'cmd.run': cmd_mock,
+                                                  'temp.dir': temp_mock,
+                                                  'file.remove': remove_mock}):
+                out = macpackage.get_pkg_id('/path/to/file.pkg')
 
-            temp_mock.assert_called_once_with(prefix='pkg-')
-            cmd_calls = [
-                call('xar -t -f /path/to/file.pkg | grep PackageInfo', python_shell=True, output_loglevel='quiet'),
-                call('xar -x -f /path/to/file.pkg /path/to/PackageInfo /path/to/some/other/fake/PackageInfo',
-                     cwd='/tmp/dmg-ABCDEF', output_loglevel='quiet')
-            ]
-            cmd_mock.assert_has_calls(cmd_calls)
+                temp_mock.assert_called_once_with(prefix='pkg-')
+                cmd_calls = [
+                    call('xar -t -f /path/to/file.pkg | grep PackageInfo', python_shell=True, output_loglevel='quiet'),
+                    call('xar -x -f /path/to/file.pkg /path/to/PackageInfo /path/to/some/other/fake/PackageInfo',
+                         cwd='/tmp/dmg-ABCDEF', output_loglevel='quiet')
+                ]
+                cmd_mock.assert_has_calls(cmd_calls)
 
-            pkg_id_pkginfo_calls = [
-                call('/path/to/PackageInfo'),
-                call('/path/to/some/other/fake/PackageInfo')
-            ]
-            pkg_id_pkginfo_mock.assert_has_calls(pkg_id_pkginfo_calls)
-            remove_mock.assert_called_once_with('/tmp/dmg-ABCDEF')
+                pkg_id_pkginfo_calls = [
+                    call('/path/to/PackageInfo'),
+                    call('/path/to/some/other/fake/PackageInfo')
+                ]
+                pkg_id_pkginfo_mock.assert_has_calls(pkg_id_pkginfo_calls)
+                remove_mock.assert_called_once_with('/tmp/dmg-ABCDEF')
 
-            self.assertEqual(out, expected)
+                self.assertEqual(out, expected)
 
-    @patch('salt.modules.mac_package._get_pkg_id_dir')
-    def test_get_pkg_id_with_dir(self, pkg_id_dir_mock):
+    def test_get_pkg_id_with_dir(self):
         '''
             Test getting a the id for a package with a directory
         '''
-        expected = ['com.apple.this']
-        pkg_id_dir_mock.return_value = ['com.apple.this']
-        cmd_mock = MagicMock(return_value='Error opening /path/to/file.pkg')
-        temp_mock = MagicMock(return_value='/tmp/dmg-ABCDEF')
-        remove_mock = MagicMock()
+        with patch('salt.modules.mac_package._get_pkg_id_dir') as pkg_id_dir_mock:
+            expected = ['com.apple.this']
+            pkg_id_dir_mock.return_value = ['com.apple.this']
+            cmd_mock = MagicMock(return_value='Error opening /path/to/file.pkg')
+            temp_mock = MagicMock(return_value='/tmp/dmg-ABCDEF')
+            remove_mock = MagicMock()
 
-        with patch.dict(macpackage.__salt__, {'cmd.run': cmd_mock,
-                                              'temp.dir': temp_mock,
-                                              'file.remove': remove_mock}):
-            out = macpackage.get_pkg_id('/path/to/file.pkg')
+            with patch.dict(macpackage.__salt__, {'cmd.run': cmd_mock,
+                                                  'temp.dir': temp_mock,
+                                                  'file.remove': remove_mock}):
+                out = macpackage.get_pkg_id('/path/to/file.pkg')
 
-            temp_mock.assert_called_once_with(prefix='pkg-')
-            cmd_mock.assert_called_once_with('xar -t -f /path/to/file.pkg | grep PackageInfo',
-                                             python_shell=True, output_loglevel='quiet')
-            pkg_id_dir_mock.assert_called_once_with('/path/to/file.pkg')
-            remove_mock.assert_called_once_with('/tmp/dmg-ABCDEF')
+                temp_mock.assert_called_once_with(prefix='pkg-')
+                cmd_mock.assert_called_once_with('xar -t -f /path/to/file.pkg | grep PackageInfo',
+                                                 python_shell=True, output_loglevel='quiet')
+                pkg_id_dir_mock.assert_called_once_with('/path/to/file.pkg')
+                remove_mock.assert_called_once_with('/tmp/dmg-ABCDEF')
 
-            self.assertEqual(out, expected)
+                self.assertEqual(out, expected)
 
-    @patch('salt.modules.mac_package.get_pkg_id')
-    def test_get_mpkg_ids(self, get_pkg_id_mock):
+    def test_get_mpkg_ids(self):
         '''
             Test getting the ids of a mpkg file
         '''
-        expected = ['com.apple.this', 'com.salt.other']
-        mock = MagicMock(return_value='/tmp/dmg-X/file.pkg\n/tmp/dmg-X/other.pkg')
-        get_pkg_id_mock.side_effect = [['com.apple.this'], ['com.salt.other']]
+        with patch('salt.modules.mac_package.get_pkg_id') as get_pkg_id_mock:
+            expected = ['com.apple.this', 'com.salt.other']
+            mock = MagicMock(return_value='/tmp/dmg-X/file.pkg\n/tmp/dmg-X/other.pkg')
+            get_pkg_id_mock.side_effect = [['com.apple.this'], ['com.salt.other']]
 
-        with patch.dict(macpackage.__salt__, {'cmd.run': mock}):
-            out = macpackage.get_mpkg_ids('/path/to/file.mpkg')
+            with patch.dict(macpackage.__salt__, {'cmd.run': mock}):
+                out = macpackage.get_mpkg_ids('/path/to/file.mpkg')
 
-            mock.assert_called_once_with('find /path/to -name *.pkg', python_shell=True)
+                mock.assert_called_once_with('find /path/to -name *.pkg', python_shell=True)
 
-            calls = [
-                call('/tmp/dmg-X/file.pkg'),
-                call('/tmp/dmg-X/other.pkg')
-            ]
-            get_pkg_id_mock.assert_has_calls(calls)
+                calls = [
+                    call('/tmp/dmg-X/file.pkg'),
+                    call('/tmp/dmg-X/other.pkg')
+                ]
+                get_pkg_id_mock.assert_has_calls(calls)
 
-            self.assertEqual(out, expected)
+                self.assertEqual(out, expected)
 
     def test_get_pkg_id_from_pkginfo(self):
         '''

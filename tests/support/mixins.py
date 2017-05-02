@@ -31,6 +31,7 @@ from tests.support.paths import CODE_DIR
 
 # Import salt libs
 #import salt.config
+import salt.utils
 import salt.version
 import salt.exceptions
 from salt.utils.verify import verify_env
@@ -38,6 +39,7 @@ from salt.utils.immutabletypes import freeze
 from salt._compat import ElementTree as etree
 
 # Import 3rd-party libs
+import yaml
 import salt.ext.six as six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
@@ -73,7 +75,7 @@ class AdaptedConfigurationTestCaseMixin(object):
     @staticmethod
     def get_temp_config(config_for, **config_overrides):
         rootdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        #self.addCleanup(shutil.rmtree, rootdir)
+        conf_dir = os.path.join(rootdir, 'conf')
         for key in ('cachedir', 'pki_dir', 'sock_dir'):
             if key not in config_overrides:
                 config_overrides[key] = key
@@ -103,8 +105,14 @@ class AdaptedConfigurationTestCaseMixin(object):
                     os.path.join(rdict['pki_dir'], 'pending'),
                     os.path.dirname(rdict['log_file']),
                     rdict['sock_dir'],
+                    conf_dir
                    ],
                    RUNTIME_VARS.RUNNING_TESTS_USER)
+
+        rdict['config_dir'] = conf_dir
+        rdict['conf_file'] = os.path.join(conf_dir, config_for)
+        with salt.utils.fopen(rdict['conf_file'], 'w') as wfh:
+            wfh.write(yaml.dump(rdict, default_flow_style=False))
         return rdict
 
     @staticmethod

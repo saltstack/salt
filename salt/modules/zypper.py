@@ -15,7 +15,7 @@ Package support for openSUSE via the zypper package manager
 # Import python libs
 from __future__ import absolute_import
 import copy
-import glob
+import fnmatch
 import logging
 import re
 import os
@@ -1794,10 +1794,17 @@ def list_downloaded():
     CACHE_DIR = '/var/cache/zypp/packages/'
 
     ret = {}
-    # Zypper storage is repository_tag/arch/package-version.rpm
-    for package_path in glob.glob(os.path.join(CACHE_DIR, '*/*/*.rpm')):
-        pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)
-        ret.setdefault(pkg_info['name'], {})[pkg_info['version']] = package_path
+    for root, dirnames, filenames in os.walk(CACHE_DIR):
+        for filename in fnmatch.filter(filenames, '*.rpm'):
+            package_path = os.path.join(root, filename)
+            pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)
+            pkg_timestamp = int(os.path.getctime(package_path))
+            ret.setdefault(pkg_info['name'], {})[pkg_info['version']] = {
+                'path': package_path,
+                'size': os.path.getsize(package_path),
+                'creation_date_time_t': pkg_timestamp,
+                'creation_date_time': datetime.datetime.fromtimestamp(pkg_timestamp).isoformat(),
+            }
     return ret
 
 

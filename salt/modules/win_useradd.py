@@ -9,13 +9,16 @@ Module for managing Windows Users
     <module-provider-override>`.
 
 :depends:
+        - pythoncom
         - pywintypes
         - win32api
+        - win32con
         - win32net
         - win32netcon
         - win32profile
         - win32security
         - win32ts
+        - wmi
 
 .. note::
     This currently only works with local user accounts, not domain accounts
@@ -31,6 +34,7 @@ except:  # pylint: disable=W0702
 
 # Import salt libs
 import salt.utils
+from salt.ext import six
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 import logging
@@ -58,11 +62,36 @@ __virtualname__ = 'user'
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Windows
+    Requires Windows and Windows Modules
     '''
-    if HAS_WIN32NET_MODS and salt.utils.is_windows():
-        return __virtualname__
-    return (False, "Module win_useradd: module has failed dependencies or is not on Windows client")
+    if not salt.utils.is_windows():
+        return False, 'Module win_useradd: Windows Only'
+
+    if not HAS_WIN32NET_MODS:
+        return False, 'Module win_useradd: Missing Win32 Modules'
+
+    return __virtualname__
+
+
+def _to_unicode(instr):
+    '''
+    Internal function for converting to Unicode Strings
+
+    The NetUser* series of API calls in this module requires input parameters to
+    be Unicode Strings. This function ensures the parameter is a Unicode String.
+    This only seems to be an issue in Python 2. All calls to this function
+    should be gated behind a ``if six.PY2`` check.
+
+    Args:
+        instr (str): String to convert
+
+    Returns:
+        str: Unicode type string
+    '''
+    if instr is None or isinstance(instr, six.text_type):
+        return instr
+    else:
+        return six.text_type(instr, 'utf-8')
 
 
 def add(name,
@@ -77,38 +106,32 @@ def add(name,
     '''
     Add a user to the minion.
 
-    :param str name:
-        User name
+    Args:
+        name (str): User name
 
-    :param str password:
-        User's password in plain text.
+        password (str, optional): User's password in plain text.
 
-    :param str fullname:
-        The user's full name.
+        fullname (str, optional): The user's full name.
 
-    :param str description:
-        A brief description of the user account.
+        description (str, optional): A brief description of the user account.
 
-    :param list groups:
-        A list of groups to add the user to.
+        groups (str, optional): A list of groups to add the user to.
+            (see chgroups)
 
-    :param str home:
-        The path to the user's home directory.
+        home (str, optional): The path to the user's home directory.
 
-    :param str homedrive:
-        The drive letter to assign to the home directory. Must be the Drive Letter
-        followed by a colon. ie: U:
+        homedrive (str, optional): The drive letter to assign to the home
+            directory. Must be the Drive Letter followed by a colon. ie: U:
 
-    :param str profile:
-        An explicit path to a profile. Can be a UNC or a folder on the system. If
-        left blank, windows uses it's default profile directory.
+        profile (str, optional): An explicit path to a profile. Can be a UNC or
+            a folder on the system. If left blank, windows uses it's default
+            profile directory.
 
-    :param str logonscript:
-        Path to a login script to run when the user logs on.
+        logonscript (str, optional): Path to a login script to run when the user
+            logs on.
 
-    :return:
-        True if successful. False is unsuccessful.
-    :rtype: bool
+    Returns:
+        bool: True if successful. False is unsuccessful.
 
     CLI Example:
 
@@ -116,6 +139,17 @@ def add(name,
 
         salt '*' user.add name password
     '''
+    if six.PY2:
+        name = _to_unicode(name)
+        password = _to_unicode(password)
+        fullname = _to_unicode(fullname)
+        description = _to_unicode(description)
+        groups = _to_unicode(groups)
+        home = _to_unicode(home)
+        homedrive = _to_unicode(homedrive)
+        profile = _to_unicode(profile)
+        logonscript = _to_unicode(logonscript)
+
     user_info = {}
     if name:
         user_info['name'] = name
@@ -133,9 +167,9 @@ def add(name,
     except win32net.error as exc:
         (number, context, message) = exc
         log.error('Failed to create user {0}'.format(name))
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: {0}'.format(exc.winerror))
+        log.error('ctx: {0}'.format(exc.funcname))
+        log.error('msg: {0}'.format(exc.strerror))
         return False
 
     update(name=name,
@@ -168,55 +202,48 @@ def update(name,
 
     .. versionadded:: 2015.8.0
 
-    :param str name:
-        The user name to update.
+    Args:
+        name (str): The user name to update.
 
-    :param str password:
-        New user password in plain text.
+        password (str, optional): New user password in plain text.
 
-    :param str fullname:
-        The user's full name.
+        fullname (str, optional): The user's full name.
 
-    :param str description:
-        A brief description of the user account.
+        description (str, optional): A brief description of the user account.
 
-    :param str home:
-        The path to the user's home directory.
+        home (str, optional): The path to the user's home directory.
 
-    :param str homedrive:
-        The drive letter to assign to the home directory. Must be the Drive Letter
-        followed by a colon. ie: U:
+        homedrive (str, optional): The drive letter to assign to the home
+            directory. Must be the Drive Letter followed by a colon. ie: U:
 
-    :param str logonscript:
-        The path to the logon script.
+        logonscript (str, optional): The path to the logon script.
 
-    :param str profile:
-        The path to the user's profile directory.
+        profile (str, optional): The path to the user's profile directory.
 
-    :param date expiration_date: The date and time when the account expires. Can
-        be a valid date/time string. To set to never expire pass the string 'Never'.
+        expiration_date (date, optional): The date and time when the account
+            expires. Can be a valid date/time string. To set to never expire
+            pass the string 'Never'.
 
-    :param bool expired: Pass `True` to expire the account. The user will be
-        prompted to change their password at the next logon. Pass `False` to mark
-        the account as 'not expired'. You can't use this to negate the expiration if
-        the expiration was caused by the account expiring. You'll have to change
-        the `expiration_date` as well.
+        expired (bool, optional): Pass `True` to expire the account. The user
+            will be prompted to change their password at the next logon. Pass
+            `False` to mark the account as 'not expired'. You can't use this to
+            negate the expiration if the expiration was caused by the account
+            expiring. You'll have to change the `expiration_date` as well.
 
-    :param bool account_disabled: True disables the account. False enables the
-        account.
+        account_disabled (bool, optional): True disables the account. False
+            enables the account.
 
-    :param bool unlock_account: True unlocks a locked user account. False is
-        ignored.
+        unlock_account (bool, optional): True unlocks a locked user account.
+            False is ignored.
 
-    :param bool password_never_expires: True sets the password to never expire.
-        False allows the password to expire.
+        password_never_expires (bool, optional): True sets the password to never
+            expire. False allows the password to expire.
 
-    :param bool disallow_change_password: True blocks the user from changing
-        the password. False allows the user to change the password.
+        disallow_change_password (bool, optional): True blocks the user from
+            changing the password. False allows the user to change the password.
 
-    :return: True if successful. False is unsuccessful.
-
-    :rtype: bool
+    Returns:
+        bool: True if successful. False is unsuccessful.
 
     CLI Example:
 
@@ -225,6 +252,15 @@ def update(name,
         salt '*' user.update bob password=secret profile=C:\Users\Bob
                  home=\\server\homeshare\bob homedrive=U:
     '''
+    if six.PY2:
+        name = _to_unicode(name)
+        password = _to_unicode(password)
+        fullname = _to_unicode(fullname)
+        description = _to_unicode(description)
+        home = _to_unicode(home)
+        homedrive = _to_unicode(homedrive)
+        logonscript = _to_unicode(logonscript)
+        profile = _to_unicode(profile)
 
     # Make sure the user exists
     # Return an object containing current settings for the user
@@ -233,9 +269,9 @@ def update(name,
     except win32net.error as exc:
         (number, context, message) = exc
         log.error('Failed to update user {0}'.format(name))
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: {0}'.format(exc.winerror))
+        log.error('ctx: {0}'.format(exc.funcname))
+        log.error('msg: {0}'.format(exc.strerror))
         return False
 
     # Check parameters to update
@@ -293,9 +329,9 @@ def update(name,
     except win32net.error as exc:
         (number, context, message) = exc
         log.error('Failed to update user {0}'.format(name))
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: {0}'.format(exc.winerror))
+        log.error('ctx: {0}'.format(exc.funcname))
+        log.error('msg: {0}'.format(exc.strerror))
         return False
 
     return True
@@ -307,20 +343,19 @@ def delete(name,
     '''
     Remove a user from the minion
 
-    :param str name:
-        The name of the user to delete
+    Args:
+        name (str): The name of the user to delete
 
-    :param bool purge:
-        Boolean value indicating that the user profile should also be removed when
-        the user account is deleted. If set to True the profile will be removed.
+        purge (bool, optional): Boolean value indicating that the user profile
+            should also be removed when the user account is deleted. If set to
+            True the profile will be removed. Default is False.
 
-    :param bool force:
-        Boolean value indicating that the user account should be deleted even if the
-        user is logged in. True will log the user out and delete user.
+        force (bool, optional): Boolean value indicating that the user account
+            should be deleted even if the user is logged in. True will log the
+            user out and delete user.
 
-    :return:
-        True if successful
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -328,15 +363,17 @@ def delete(name,
 
         salt '*' user.delete name
     '''
+    if six.PY2:
+        name = _to_unicode(name)
+
     # Check if the user exists
     try:
         user_info = win32net.NetUserGetInfo(None, name, 4)
     except win32net.error as exc:
-        (number, context, message) = exc
         log.error('User not found: {0}'.format(name))
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: {0}'.format(exc.winerror))
+        log.error('ctx: {0}'.format(exc.funcname))
+        log.error('msg: {0}'.format(exc.strerror))
         return False
 
     # Check if the user is logged in
@@ -344,11 +381,10 @@ def delete(name,
     try:
         sess_list = win32ts.WTSEnumerateSessions()
     except win32ts.error as exc:
-        (number, context, message) = exc
         log.error('No logged in users found')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: {0}'.format(exc.winerror))
+        log.error('ctx: {0}'.format(exc.funcname))
+        log.error('msg: {0}'.format(exc.strerror))
 
     # Is the user one that is logged in
     logged_in = False
@@ -365,11 +401,10 @@ def delete(name,
             try:
                 win32ts.WTSLogoffSession(win32ts.WTS_CURRENT_SERVER_HANDLE, session_id, True)
             except win32ts.error as exc:
-                (number, context, message) = exc
                 log.error('User not found: {0}'.format(name))
-                log.error('nbr: {0}'.format(number))
-                log.error('ctx: {0}'.format(context))
-                log.error('msg: {0}'.format(message))
+                log.error('nbr: {0}'.format(exc.winerror))
+                log.error('ctx: {0}'.format(exc.funcname))
+                log.error('msg: {0}'.format(exc.strerror))
                 return False
         else:
             log.error('User {0} is currently logged in.'.format(name))
@@ -386,9 +421,9 @@ def delete(name,
                 pass
             else:
                 log.error('Failed to remove profile for {0}'.format(name))
-                log.error('nbr: {0}'.format(number))
-                log.error('ctx: {0}'.format(context))
-                log.error('msg: {0}'.format(message))
+                log.error('nbr: {0}'.format(exc.winerror))
+                log.error('ctx: {0}'.format(exc.funcname))
+                log.error('msg: {0}'.format(exc.strerror))
                 return False
 
     # And finally remove the user account
@@ -397,9 +432,9 @@ def delete(name,
     except win32net.error as exc:
         (number, context, message) = exc
         log.error('Failed to delete user {0}'.format(name))
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: {0}'.format(exc.winerror))
+        log.error('ctx: {0}'.format(exc.funcname))
+        log.error('msg: {0}'.format(exc.strerror))
         return False
 
     return True
@@ -409,12 +444,11 @@ def getUserSid(username):
     '''
     Get the Security ID for the user
 
-    :param str username:
-        user name for which to look up the SID
+    Args:
+        username (str): The user name for which to look up the SID
 
-    :return:
-        Returns the user SID
-    :rtype: str
+    Returns:
+        str: The user SID
 
     CLI Example:
 
@@ -422,27 +456,29 @@ def getUserSid(username):
 
         salt '*' user.getUserSid jsnuffy
     '''
+    if six.PY2:
+        username = _to_unicode(username)
+
     domain = win32api.GetComputerName()
     if username.find(u'\\') != -1:
         domain = username.split(u'\\')[0]
         username = username.split(u'\\')[-1]
     domain = domain.upper()
-    return win32security.ConvertSidToStringSid(win32security.LookupAccountName(None, domain + u'\\' + username)[0])
+    return win32security.ConvertSidToStringSid(
+        win32security.LookupAccountName(None, domain + u'\\' + username)[0])
 
 
 def setpassword(name, password):
     '''
     Set the user's password
 
-    :param str name:
-        user name for which to set the password
+    Args:
+        name (str): The user name for which to set the password
 
-    :param str password:
-        the new password
+        password (str): The new password
 
-    :return:
-        True if successful. False is unsuccessful.
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -457,15 +493,13 @@ def addgroup(name, group):
     '''
     Add user to a group
 
-    :param str name:
-        user name to add to the group
+    Args:
+        name (str): The user name to add to the group
 
-    :param str group:
-        name of the group to which to add the user
+        group (str): The name of the group to which to add the user
 
-    :return:
-        True if successful. False is unsuccessful.
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -473,6 +507,10 @@ def addgroup(name, group):
 
         salt '*' user.addgroup jsnuffy 'Power Users'
     '''
+    if six.PY2:
+        name = _to_unicode(name)
+        group = _to_unicode(group)
+
     name = _cmd_quote(name)
     group = _cmd_quote(group).lstrip('\'').rstrip('\'')
 
@@ -492,15 +530,13 @@ def removegroup(name, group):
     '''
     Remove user from a group
 
-    :param str name:
-        user name to remove from the group
+    Args:
+        name (str): The user name to remove from the group
 
-    :param str group:
-        name of the group from which to remove the user
+        group (str): The name of the group from which to remove the user
 
-    :return:
-        True if successful. False is unsuccessful.
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -508,6 +544,10 @@ def removegroup(name, group):
 
         salt '*' user.removegroup jsnuffy 'Power Users'
     '''
+    if six.PY2:
+        name = _to_unicode(name)
+        group = _to_unicode(group)
+
     name = _cmd_quote(name)
     group = _cmd_quote(group).lstrip('\'').rstrip('\'')
 
@@ -530,15 +570,13 @@ def chhome(name, home, **kwargs):
     Change the home directory of the user, pass True for persist to move files
     to the new home directory if the old home directory exist.
 
-    :param str name:
-        name of the user whose home directory you wish to change
+    Args:
+        name (str): The name of the user whose home directory you wish to change
 
-    :param str home:
-        new location of the home directory
+        home (str): The new location of the home directory
 
-    :return:
-        True if successful. False is unsuccessful.
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -546,6 +584,10 @@ def chhome(name, home, **kwargs):
 
         salt '*' user.chhome foo \\\\fileserver\\home\\foo True
     '''
+    if six.PY2:
+        name = _to_unicode(name)
+        home = _to_unicode(home)
+
     kwargs = salt.utils.clean_kwargs(**kwargs)
     persist = kwargs.pop('persist', False)
     if kwargs:
@@ -575,15 +617,13 @@ def chprofile(name, profile):
     '''
     Change the profile directory of the user
 
-    :param str name:
-        name of the user whose profile you wish to change
+    Args:
+        name (str): The name of the user whose profile you wish to change
 
-    :param str profile:
-        new location of the profile
+        profile (str): The new location of the profile
 
-    :return: True if successful. False is unsuccessful.
-
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -598,15 +638,13 @@ def chfullname(name, fullname):
     '''
     Change the full name of the user
 
-    :param str name:
-        user name for which to change the full name
+    Args:
+        name (str): The user name for which to change the full name
 
-    :param str fullname:
-        the new value for the full name
+        fullname (str): The new value for the full name
 
-    :return:
-        True if successful. False is unsuccessful.
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -622,20 +660,19 @@ def chgroups(name, groups, append=True):
     Change the groups this user belongs to, add append=False to make the user a
     member of only the specified groups
 
-    :param str name:
-        user name for which to change groups
+    Args:
+        name (str): The user name for which to change groups
 
-    :param groups:
-        a single group or a list of groups to assign to the user
-    :type groups: list, str
+        groups (str, list): A single group or a list of groups to assign to the
+            user. For multiple groups this can be a comma delimited string or a
+            list.
 
-    :param bool append:
-        True adds the passed groups to the user's current groups
-        False sets the user's groups to the passed groups only
+        append (bool, optional): True adds the passed groups to the user's
+            current groups. False sets the user's groups to the passed groups
+            only. Default is True.
 
-    :return:
-        True if successful. False is unsuccessful.
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -643,10 +680,16 @@ def chgroups(name, groups, append=True):
 
         salt '*' user.chgroups jsnuffy Administrators,Users True
     '''
+    if six.PY2:
+        name = _to_unicode(name)
+
     if isinstance(groups, string_types):
         groups = groups.split(',')
 
     groups = [x.strip(' *') for x in groups]
+    if six.PY2:
+        groups = [_to_unicode(x) for x in groups]
+
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
         return True
@@ -678,11 +721,11 @@ def info(name):
     '''
     Return user information
 
-    :param str name:
-        Username for which to display information
+    Args:
+        name (str): Username for which to display information
 
-    :returns:
-        A dictionary containing user information
+    Returns:
+        dict: A dictionary containing user information
             - fullname
             - username
             - SID
@@ -704,7 +747,6 @@ def info(name):
             - password_never_expires
             - disallow_change_password
             - gid
-    :rtype: dict
 
     CLI Example:
 
@@ -712,6 +754,9 @@ def info(name):
 
         salt '*' user.info jsnuffy
     '''
+    if six.PY2:
+        name = _to_unicode(name)
+
     ret = {}
     items = {}
     try:
@@ -783,8 +828,16 @@ def info(name):
 
 def _get_userprofile_from_registry(user, sid):
     '''
-    In case net user doesn't return the userprofile
-    we can get it from the registry
+    In case net user doesn't return the userprofile we can get it from the
+    registry
+
+    Args:
+        user (str): The user name, used in debug message
+
+        sid (str): The sid to lookup in the registry
+
+    Returns:
+        str: Profile directory
     '''
     profile_dir = __salt__['reg.read_value'](
         'HKEY_LOCAL_MACHINE',
@@ -799,12 +852,11 @@ def list_groups(name):
     '''
     Return a list of groups the named user belongs to
 
-    :param str name:
-        user name for which to list groups
+    Args:
+        name (str): The user name for which to list groups
 
-    :return:
-        list of groups to which the user belongs
-    :rtype: list
+    Returns:
+        list: A list of groups to which the user belongs
 
     CLI Example:
 
@@ -812,6 +864,9 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
+    if six.PY2:
+        name = _to_unicode(name)
+
     ugrp = set()
     try:
         user = info(name)['groups']
@@ -827,13 +882,12 @@ def getent(refresh=False):
     '''
     Return the list of all info for all users
 
-    :param bool refresh:
-        Refresh the cached user information. Default is False. Useful when used from
-        within a state function.
+    Args:
+        refresh (bool, optional): Refresh the cached user information. Useful
+            when used from within a state function. Default is False.
 
-    :return:
-        A dictionary containing information about all users on the system
-    :rtype: dict
+    Returns:
+        dict: A dictionary containing information about all users on the system
 
     CLI Example:
 
@@ -865,11 +919,10 @@ def getent(refresh=False):
 
 def list_users():
     '''
-    Return a list of users on Windows
+    Return a list of all users on Windows
 
-    :return:
-        list of users on the system
-    :rtype: list
+    Returns:
+        list: A list of all users on the system
 
     CLI Example:
 
@@ -878,7 +931,6 @@ def list_users():
         salt '*' user.list_users
     '''
     res = 0
-    users = []
     user_list = []
     dowhile = True
     try:
@@ -902,15 +954,13 @@ def rename(name, new_name):
     '''
     Change the username for a named user
 
-    :param str name:
-        user name to change
+    Args:
+        name (str): The user name to change
 
-    :param str new_name:
-        the new name for the current user
+        new_name (str): The new name for the current user
 
-    :return:
-        True if successful. False is unsuccessful.
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -918,6 +968,10 @@ def rename(name, new_name):
 
         salt '*' user.rename jsnuffy jshmoe
     '''
+    if six.PY2:
+        name = _to_unicode(name)
+        new_name = _to_unicode(new_name)
+
     # Load information for the current name
     current_info = info(name)
     if not current_info:
@@ -975,16 +1029,13 @@ def current(sam=False):
 
     .. versionadded:: 2015.5.6
 
-    :param bool sam:
-        False returns just the username without any domain notation. True
-        returns the domain with the username in the SAM format. Ie:
+    Args:
+        sam (bool, optional): False returns just the username without any domain
+            notation. True returns the domain with the username in the SAM
+            format. Ie: ``domain\\username``
 
-        ``domain\\username``
-
-    :return:
-        Returns False if the username cannot be returned. Otherwise returns the
-        username.
-    :rtype: bool str
+    Returns:
+        str: Returns username
 
     CLI Example:
 
@@ -998,14 +1049,13 @@ def current(sam=False):
         else:
             user_name = win32api.GetUserName()
     except pywintypes.error as exc:
-        (number, context, message) = exc
         log.error('Failed to get current user')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
-        return False
+        log.error('nbr: {0}'.format(exc.winerror))
+        log.error('ctx: {0}'.format(exc.funcname))
+        log.error('msg: {0}'.format(exc.strerror))
+        raise CommandExecutionError('Failed to get current user', info=exc)
 
     if not user_name:
-        return False
+        raise CommandExecutionError('Failed to get current user')
 
     return user_name

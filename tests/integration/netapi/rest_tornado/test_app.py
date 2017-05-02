@@ -28,7 +28,7 @@ except ImportError:
 
 
 def json_loads(data):
-    if six.PY3:
+    if six.PY3 and isinstance(data, bytes):
         data = data.decode('utf-8')
     return json.loads(data)
 

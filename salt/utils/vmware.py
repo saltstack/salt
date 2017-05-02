@@ -79,7 +79,6 @@ import atexit
 import errno
 import logging
 import time
-from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
 
 # Import Salt Libs
 import salt.exceptions
@@ -88,6 +87,8 @@ import salt.utils
 
 
 # Import Third Party Libs
+import salt.ext.six as six
+from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
 try:
     from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub
     from pyVmomi import vim, vmodl
@@ -549,8 +550,9 @@ def get_gssapi_token(principal, host, domain):
     while not ctx.established:
         out_token = ctx.step(in_token)
         if out_token:
-            encoded_token = base64.b64encode(out_token)
-            return encoded_token
+            if six.PY2:
+                return base64.b64encode(out_token)
+            return base64.b64encode(salt.utils.to_bytes(out_token))
         if ctx.established:
             break
         if not in_token:
