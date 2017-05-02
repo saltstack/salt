@@ -43,6 +43,54 @@ ARGS = None
 #%%OPTS
 
 
+def get_system_encoding():
+    '''
+        Get system encoding. Most of this code is a part of salt/__init__.py
+    '''
+    # This is the most trustworthy source of the system encoding, though, if
+    # salt is being imported after being daemonized, this information is lost
+    # and reset to None
+    encoding = None
+
+    if not sys.platform.startswith('win') and sys.stdin is not None:
+        # On linux we can rely on sys.stdin for the encoding since it
+        # most commonly matches the filesystem encoding. This however
+        # does not apply to windows
+        encoding = sys.stdin.encoding
+
+    if not encoding:
+        # If the system is properly configured this should return a valid
+        # encoding. MS Windows has problems with this and reports the wrong
+        # encoding
+        import locale
+        try:
+            encoding = locale.getdefaultlocale()[-1]
+        except ValueError:
+            # A bad locale setting was most likely found:
+            #   https://github.com/saltstack/salt/issues/26063
+            pass
+
+        # This is now garbage collectable
+        del locale
+        if not encoding:
+            # This is most likely ascii which is not the best but we were
+            # unable to find a better encoding. If this fails, we fall all
+            # the way back to ascii
+            encoding = sys.getdefaultencoding()
+        if not encoding:
+            if sys.platform.startswith('darwin'):
+                # Mac OS X uses UTF-8
+                encoding = 'utf-8'
+            elif sys.platform.startswith('win'):
+                # Windows uses a configurable encoding; on Windows, Python uses the name "mbcs"
+                # to refer to whatever the currently configured encoding is.
+                encoding = 'mbcs'
+            else:
+                # On linux default to ascii as a last resort
+                encoding = 'ascii'
+    return encoding
+
+
 def is_windows():
     '''
     Simple function to return if a host is Windows or not
@@ -231,8 +279,9 @@ def main(argv):  # pylint: disable=W0613
     if OPTIONS.cmd_umask is not None:
         old_umask = os.umask(OPTIONS.cmd_umask)
     if OPTIONS.tty:
+        # Returns bytes instead of string on python 3
         stdout, _ = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-        sys.stdout.write(stdout)
+        sys.stdout.write(stdout.decode(encoding=get_system_encoding(), errors="replace"))
         sys.stdout.flush()
         if OPTIONS.wipe:
             shutil.rmtree(OPTIONS.saltdir)
