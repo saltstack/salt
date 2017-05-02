@@ -13,12 +13,15 @@ import tempfile
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
-from tests.support.paths import FILES, TMP
+from tests.support.paths import TMP
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
 import salt.utils
+
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 def _random_name(prefix=''):
@@ -48,10 +51,11 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
     @with_random_name
     def setUp(self, name):
         '''
+        setup docker.call tests
         '''
         # Create temp dir
         self.random_name = name
-        self.tmp_build_dir= tempfile.mkdtemp(dir=TMP)
+        self.tmp_build_dir = tempfile.mkdtemp(dir=TMP)
 
         self.run_state('file.managed',
                        source='salt://docker_non_root/Dockerfile',
@@ -64,6 +68,9 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
                        image=self.random_name)
 
     def tearDown(self):
+        '''
+        teardown docker.call tests
+        '''
         self.run_state('file.absent',
                        name=self.tmp_build_dir)
         self.run_state('docker_container.absent',
@@ -74,5 +81,8 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
                        force=True)
 
     def test_docker_call(self):
+        '''
+        check that docker.call works, and works with a container not running as root
+        '''
         ret = self.run_function('docker.call', [self.random_name, 'test.ping'])
         self.assertTrue(ret)
