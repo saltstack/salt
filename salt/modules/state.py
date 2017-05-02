@@ -812,7 +812,7 @@ def highstate(test=None,
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
-        err += __pillar__['_errors']
+        err += st_.opts['pillar']['_errors']
         return err
 
     st_.push_active()
@@ -1018,7 +1018,7 @@ def sls(mods,
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
-        err += __pillar__['_errors']
+        err += st_.opts['pillar']['_errors']
         return err
 
     orchestration_jid = kwargs.get('orchestration_jid')
@@ -1125,7 +1125,7 @@ def top(topfn,
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
-        err += __pillar__['_errors']
+        err += st_.opts['pillar']['_errors']
         return err
 
     st_.push_active()
@@ -1258,7 +1258,7 @@ def sls_id(
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
-        err += __pillar__['_errors']
+        err += st_.opts['pillar']['_errors']
         return err
 
     if isinstance(mods, six.string_types):
