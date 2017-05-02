@@ -112,6 +112,9 @@ TEST_SUITES = {
     'client':
        {'display_name': 'Client',
         'path': 'integration/client'},
+    'ext_pillar':
+       {'display_name': 'External Pillar',
+        'path': 'integration/pillar'},
     'grains':
        {'display_name': 'Grains',
         'path': 'integration/grains'},
@@ -254,6 +257,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Run tests for client'
+        )
+        self.test_selection_group.add_option(
+            '-I',
+            '--ext-pillar',
+            '--ext-pillar-tests',
+            dest='ext_pillar',
+            default=False,
+            action='store_true',
+            help='Run ext_pillar tests'
         )
         self.test_selection_group.add_option(
             '-G',
