@@ -89,7 +89,7 @@ class Batch(object):
                 else:
                     return int(res)
             else:
-                return int(self.opts['batch'])
+                return int(float(self.opts['batch']))
         except ValueError:
             if not self.quiet:
                 print_cli('Invalid batch data sent: {0}\nData must be in the '
@@ -103,7 +103,7 @@ class Batch(object):
         if i:
             del wait[:i]
 
-    def run(self):
+    def run(self, safe_batch = False):
         '''
         Execute the batch run
         '''
@@ -113,6 +113,8 @@ class Batch(object):
                 self.opts['timeout'],
                 'list',
                 ]
+        if safe_batch:
+            self.opts['batch'] = str(safe_batch)
         bnum = self.get_bnum()
         # No targets to run
         if not self.minions:

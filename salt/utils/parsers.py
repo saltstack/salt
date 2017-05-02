@@ -1914,6 +1914,25 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                   'before freeing the slot in the batch for the next one.')
         )
         self.add_option(
+            '--batch-safe-limit',
+            default=0,
+            dest='batch_safe_limit',
+            type=float,
+            help=('When set, verify that a glob will not execute on more than '
+                  'this many minions. If this trigger is hit, then the '
+                  'requested job will be executed as a batch job.')
+        )
+        self.add_option(
+            '--batch-safe-size',
+            default=8,
+            dest='batch_safe_size',
+            type=float,
+            help=('If a the safe batch limit (target > safe-limit), then '
+                  'silently transition to batch size of --batch-safe-size '
+                  'if set or else use default batch size. If no option is '
+                  'set a default batch size of five (5) will be used.')
+        )
+        self.add_option(
             '--return',
             default='',
             metavar='RETURNER',
