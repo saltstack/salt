@@ -41,6 +41,7 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # Define the module's virtual name
 __virtualname__ = 'docker_volume'
+__virtual_aliases__ = ('moby_volume',)
 
 
 def __virtual__():
