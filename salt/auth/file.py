@@ -2,7 +2,7 @@
 '''
 Provide authentication using local files
 
-.. versionadded:: TBD
+.. versionadded:: Oxygen
 
 The `file` auth module allows simple authentication via local files. Different
 filetypes are supported, including:
@@ -68,7 +68,7 @@ This would authenticate users against a file of the following format:
 
     The :py:func:`hashutil.digest <salt.modules.hashutil.digest>` execution
     function is used for comparing hashed passwords, so any algorithm
-    supported by that function will work. (currently md5, sha256, sha512)
+    supported by that function will work.
 
 There is also support for Apache-style ``htpasswd`` and ``htdigest`` files:
 
@@ -97,12 +97,11 @@ When using ``htdigest`` the ``^realm`` must be set:
 
 # Import python libs
 from __future__ import absolute_import
-import io
 import logging
 import os
 
 # Import salt utils
-from salt.utils import version_cmp
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -114,7 +113,10 @@ def __virtual__():
 
 
 def _get_file_auth_config():
-    # salt.auth.file external_auth configuration defaults
+    '''
+    Setup defaults and check configuration variables for auth backends
+    '''
+
     config = {
         'filetype': 'text',
         'hashtype': 'plaintext',
@@ -147,8 +149,9 @@ def _text(username, password, **kwargs):
     '''
     The text file function can authenticate plaintext and digest methods
     that are available in the :py:func:`hashutil.digest <salt.modules.hashutil.digest>`
-    function. (currently md5, sha256, sha512)
+    function.
     '''
+
     filename = kwargs['filename']
     hashtype = kwargs['hashtype']
     field_separator = kwargs['field_separator']
@@ -156,7 +159,7 @@ def _text(username, password, **kwargs):
     password_field = kwargs['password_field']-1
 
     # add exception handling for out of range fields
-    with io.open(filename, 'r') as pwfile:
+    with salt.utils.fopen(filename, 'r') as pwfile:
         for line in pwfile.readlines():
             fields = line.strip().split(field_separator)
 
@@ -165,11 +168,13 @@ def _text(username, password, **kwargs):
             except IndexError:
                 log.error('salt.auth.file: username field ({0}) does not exist '
                           'in file {1}'.format(username_field, filename))
+                return False
             try:
                 this_password = fields[password_field]
             except IndexError:
                 log.error('salt.auth.file: password field ({0}) does not exist '
                           'in file {1}'.format(password_field, filename))
+                return False
 
             if this_username == username:
                 if hashtype == 'plaintext':
@@ -186,18 +191,26 @@ def _text(username, password, **kwargs):
 
 
 def _htpasswd(username, password, **kwargs):
+    '''
+    Provide authentication via Apache-style htpasswd files
+    '''
+
     from passlib.apache import HtpasswdFile
 
     pwfile = HtpasswdFile(kwargs['filename'])
 
     # passlib below version 1.6 uses 'verify' function instead of 'check_password'
-    if version_cmp(kwargs['passlib_version'], '1.6') < 0:
+    if salt.utils.version_cmp(kwargs['passlib_version'], '1.6') < 0:
         return pwfile.verify(username, password)
     else:
         return pwfile.check_password(username, password)
 
 
 def _htdigest(username, password, **kwargs):
+    '''
+    Provide authentication via Apache-style htdigest files
+    '''
+
     realm = kwargs.get('realm', None)
     if not realm:
         log.error('salt.auth.file: A ^realm must be defined in '
@@ -209,13 +222,17 @@ def _htdigest(username, password, **kwargs):
     pwfile = HtdigestFile(kwargs['filename'])
 
     # passlib below version 1.6 uses 'verify' function instead of 'check_password'
-    if version_cmp(kwargs['passlib_version'], '1.6') < 0:
+    if salt.utils.version_cmp(kwargs['passlib_version'], '1.6') < 0:
         return pwfile.verify(username, realm, password)
     else:
         return pwfile.check_password(username, realm, password)
 
 
 def _htfile(username, password, **kwargs):
+    '''
+    Gate function for _htpasswd and _htdigest authentication backends
+    '''
+
     filetype = kwargs.get('filetype', 'htpasswd').lower()
 
     try:
