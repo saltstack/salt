@@ -27,7 +27,7 @@ class HandleErrorTest(integration.ModuleCase):
         # State salttest.hello found in sls issue-... is unavailable
         ret = self.run_function('state.sls', ['issue-9983-handleerror'])
         self.assertTrue(
-            'An exception occurred in this state: Traceback'
+            'Reason: \'salttest.hello\' is not available.'
             in ret[[a for a in ret][0]]['comment'])
 
 
