@@ -1403,7 +1403,7 @@ class Pygit2(GitProvider):
             try:
                 try:
                     self.repo = pygit2.Repository(self.cachedir)
-                except pygit2.GitError as exc:
+                except GitError as exc:
                     import pwd
                     # https://github.com/libgit2/pygit2/issues/339
                     # https://github.com/libgit2/libgit2/issues/2122
