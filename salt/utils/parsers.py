@@ -2586,12 +2586,6 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
             help=('Force a refresh of the grains cache.')
         )
         self.add_option(
-            '--cachedir',
-            default='/var/cache/salt/',
-            dest='cachedir',
-            help=('Cache Directory')
-        )
-        self.add_option(
             '-t', '--timeout',
             default=60,
             dest='auth_timeout',

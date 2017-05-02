@@ -51,20 +51,27 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         '''
         # Create temp dir
         self.random_name = name
-        tmp_build_dir= tempfile.mkdtemp(dir=TMP)
+        self.tmp_build_dir= tempfile.mkdtemp(dir=TMP)
 
         self.run_state('file.managed',
                        source='salt://docker_non_root/Dockerfile',
-                       name='{0}/Dockerfile'.format(tmp_build_dir))
+                       name='{0}/Dockerfile'.format(self.tmp_build_dir))
         self.run_state('docker_image.present',
-                       build=tmp_build_dir,
+                       build=self.tmp_build_dir,
                        name=self.random_name)
         self.run_state('docker_container.running',
                        name=self.random_name,
                        image=self.random_name)
 
     def tearDown(self):
-        pass
+        self.run_state('file.absent',
+                       name=self.tmp_build_dir)
+        self.run_state('docker_container.absent',
+                       name=self.random_name,
+                       force=True)
+        self.run_state('docker_image.absent',
+                       name=self.random_name,
+                       force=True)
 
     def test_docker_call(self):
         ret = self.run_function('docker.call', [self.random_name, 'test.ping'])
