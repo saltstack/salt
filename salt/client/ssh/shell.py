@@ -11,6 +11,7 @@ import sys
 import json
 import time
 import logging
+import shlex
 import subprocess
 
 # Import salt libs
@@ -146,7 +147,7 @@ class Shell(object):
 
         ret = []
         for option in options:
-            ret.append('-o {0} '.format(option))
+            ret.append('-o {0} '.format(shlex.quote(option)))
         return ''.join(ret)
 
     def _passwd_opts(self):
@@ -186,11 +187,11 @@ class Shell(object):
 
         ret = []
         for option in options:
-            ret.append('-o {0} '.format(option))
+            ret.append('-o {0} '.format(shlex.quote(option)))
         return ''.join(ret)
 
     def _ssh_opts(self):
-        return ' '.join(['-o {0}'.format(opt)
+        return ' '.join(['-o {0}'.format(shlex.quote(opt))
                         for opt in self.ssh_options])
 
     def _copy_id_str_old(self):
