@@ -142,6 +142,7 @@ def _get_file_auth_config():
 
     return config
 
+
 def _text(username, password, **kwargs):
     '''
     The text file function can authenticate plaintext and digest methods
