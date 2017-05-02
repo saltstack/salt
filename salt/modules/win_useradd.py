@@ -67,7 +67,7 @@ def __virtual__():
 
 def add(name,
         password=None,
-        fullname=False,
+        fullname=None,
         description=None,
         groups=None,
         home=None,
