@@ -33,7 +33,7 @@ try:
 
     class OrderedDict(collections.OrderedDict):
         __hash__ = None
-except (ImportError, AttributeError):
+except ImportError:
     try:
         import ordereddict
 
