@@ -80,6 +80,13 @@ def start(docker_url='unix://var/run/docker.sock',
         events = client.events()
         for event in events:
             data = json.loads(event)
-            fire('{0}/{1}'.format(tag, data['status']), data)
+            # https://github.com/docker/cli/blob/master/cli/command/system/events.go#L109
+            # https://github.com/docker/engine-api/blob/master/types/events/events.go
+            # Each output includes the event type, actor id, name and action.
+            # status field can be ommited
+            if data['Action']:
+                fire('{0}/{1}'.format(tag, data['Action']), data)
+            else:
+                fire('{0}/{1}'.format(tag, data['status']), data)
     except Exception:
         traceback.print_exc()
