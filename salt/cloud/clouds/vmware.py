@@ -2326,6 +2326,9 @@ def create(vm_):
     folder = config.get_cloud_config_value(
         'folder', vm_, __opts__, default=None
     )
+    parent_folder = config.get_cloud_config_value(
+        'parent', vm_, __opts__, default=None
+    )
     datacenter = config.get_cloud_config_value(
         'datacenter', vm_, __opts__, default=None
     )
@@ -2434,6 +2437,11 @@ def create(vm_):
             log.error("Specified resource pool: '{0}' does not exist".format(resourcepool))
             if not clone_type or clone_type == "template":
                 raise SaltCloudSystemExit('You must specify a resource pool that exists.')
+        elif parent_folder:
+            object_list = salt.utils.vmware.get_mors_with_properties(si, vim.ResourcePool, property_list=['parent'], container_ref=container_ref)
+            for obj in object_list:
+                if obj['parent'] == parent_folder and obj['name'] == resourcepool:
+                    resourcepool_ref = obj['object']
     elif cluster:
         cluster_ref = salt.utils.vmware.get_mor_by_property(si, vim.ClusterComputeResource, cluster, container_ref=container_ref)
         if not cluster_ref:
@@ -2461,6 +2469,11 @@ def create(vm_):
             log.error("Specified folder: '{0}' does not exist".format(folder))
             log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
             folder_ref = object_ref.parent
+        elif parent_folder:
+            object_list = salt.utils.vmware.get_mors_with_properties(si, vim.Folder, property_list=['parent'], container_ref=container_ref)
+            for obj in object_list:
+                if obj['parent'] == parent_folder and obj['name'] == folder:
+                    folder_ref = obj['object']
     elif datacenter:
         if not datacenter_ref:
             log.error("Specified datacenter: '{0}' does not exist".format(datacenter))
