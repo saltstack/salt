@@ -64,7 +64,8 @@ class Shell(object):
             mods=None,
             identities_only=False,
             sudo_user=None,
-            remote_port_forwards=None):
+            remote_port_forwards=None,
+            ssh_options=None):
         self.opts = opts
         # ssh <ipv6>, but scp [<ipv6]:/path
         self.host = host.strip('[]')
@@ -78,6 +79,7 @@ class Shell(object):
         self.mods = mods
         self.identities_only = identities_only
         self.remote_port_forwards = remote_port_forwards
+        self.ssh_options=ssh_options
 
     def get_error(self, errstr):
         '''
@@ -169,6 +171,10 @@ class Shell(object):
             ret.append('-o {0} '.format(option))
         return ''.join(ret)
 
+    def _ssh_opts(self):
+        return ' '.join(['-o {0}'.format(opt)
+                        for opt in self.ssh_options])
+
     def _copy_id_str_old(self):
         '''
         Return the string to execute ssh-copy-id
@@ -176,11 +182,12 @@ class Shell(object):
         if self.passwd:
             # Using single quotes prevents shell expansion and
             # passwords containing '$'
-            return "{0} {1} '{2} -p {3} {4}@{5}'".format(
+            return "{0} {1} '{2} -p {3} {4} {5}@{6}'".format(
                     'ssh-copy-id',
                     '-i {0}.pub'.format(self.priv),
                     self._passwd_opts(),
                     self.port,
+                    self._ssh_opts(),
                     self.user,
                     self.host)
         return None
@@ -193,11 +200,12 @@ class Shell(object):
         if self.passwd:
             # Using single quotes prevents shell expansion and
             # passwords containing '$'
-            return "{0} {1} {2} -p {3} {4}@{5}".format(
+            return "{0} {1} {2} -p {3} {4} {5}@{6}".format(
                     'ssh-copy-id',
                     '-i {0}.pub'.format(self.priv),
                     self._passwd_opts(),
                     self.port,
+                    self._ssh_opts(),
                     self.user,
                     self.host)
         return None
@@ -229,6 +237,9 @@ class Shell(object):
         if ssh != 'scp' and self.remote_port_forwards:
             command.append(' '.join(['-R {0}'.format(item)
                                      for item in self.remote_port_forwards.split(',')]))
+        if self.ssh_options:
+            command.append(self._ssh_opts())
+
         command.append(cmd)
 
         return ' '.join(command)
