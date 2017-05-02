@@ -158,7 +158,6 @@ def _text(username, password, **kwargs):
     username_field = kwargs['username_field']-1
     password_field = kwargs['password_field']-1
 
-    # add exception handling for out of range fields
     with salt.utils.fopen(filename, 'r') as pwfile:
         for line in pwfile.readlines():
             fields = line.strip().split(field_separator)
