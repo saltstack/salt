@@ -367,8 +367,10 @@ tremendous amount of customization. Here's some example usage:
 
     2. Per-remote configuration parameters are named like the global versions,
        with the ``gitfs_`` removed from the beginning. The exception being the
-       ``name``, ``saltenv``, and ``all_saltenvs`` (new in Oxygen) parameters,
-       which are only available to per-remote configurations.
+       ``name``, ``saltenv``, and ``all_saltenvs`` parameters, which are only
+       available to per-remote configurations.
+
+    The ``all_saltenvs`` parameter is new in the Oxygen release.
 
 In the example configuration above, the following is true:
 
