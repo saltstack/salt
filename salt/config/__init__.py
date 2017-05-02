@@ -868,6 +868,9 @@ VALID_OPTS = {
 
     # Default returners minion should use. List or comma-delimited string
     'return': (str, list),
+
+    # Permit or deny allowing minions to request revoke of its own key
+    'allow_minion_key_revoke': bool,
 }
 
 # default configurations
@@ -1346,6 +1349,7 @@ DEFAULT_MASTER_OPTS = {
     'python2_bin': 'python2',
     'python3_bin': 'python3',
     'thin_extra_mods': '',
+    'allow_minion_key_revoke': True,
 }
 
 

@@ -175,6 +175,9 @@
 # a previous deleted minion ID.
 #preserve_minion_cache: False
 
+# Allow or deny minions from requesting their own key revocation
+#allow_minion_key_revoke: True
+
 # If max_minions is used in large installations, the master might experience
 # high-load situations because of having to check the number of connected
 # minions for every authentication. This cache provides the minion-ids of

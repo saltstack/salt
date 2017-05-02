@@ -1006,6 +1006,22 @@ Do not disable this unless it is absolutely clear what this does.
     rotate_aes_key: True
 
 
+.. conf_master:: allow_minion_key_revoke
+
+``allow_minion_key_revoke``
+------------------
+
+Default: ``True``
+
+Controls whether a minion can request its own key revocation.  When True
+the master will honor the minion's request and revoke its key.  When False,
+the master will drop the request and the minion's key will remain accepted.
+
+
+.. code-block:: yaml
+
+    rotate_aes_key: True
+
 Master Module Management
 ========================
 
