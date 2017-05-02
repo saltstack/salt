@@ -7,6 +7,7 @@ Integration tests for the docker_container states
 from __future__ import absolute_import
 import functools
 import random
+import string
 import tempfile
 
 # Import Salt Testing Libs
@@ -15,6 +16,9 @@ from tests.support.case import ModuleCase
 from tests.support.paths import FILES, TMP
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
+
+# Import Salt Libs
+import salt.utils
 
 
 def _random_name(prefix=''):
@@ -50,7 +54,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         tmp_build_dir= tempfile.mkdtemp(dir=TMP)
 
         self.run_state('file.managed',
-                       source='salt://docker_non_root/Dockerfile'
+                       source='salt://docker_non_root/Dockerfile',
                        name='{0}/Dockerfile'.format(tmp_build_dir))
         self.run_state('docker_image.present',
                        build=tmp_build_dir,
