@@ -413,7 +413,7 @@ class GitProvider(object):
             if name == 'ref':
                 try:
                     return self.all_saltenvs
-                except AttributeError as e:
+                except AttributeError:
                     pass
 
                 if tgt_env == 'base':
