@@ -3,3 +3,9 @@ Salt 2016.3.7 Release Notes
 ===========================
 
 Version 2016.3.7 is a bugfix release for :ref:`2016.3.0 <release-2016-3-0>`.
+
+New master configuration option `allow_minion_key_revoke`, defaults to True.  This option
+controls whether a minion can request that the master revoke its key.  When True, a minion
+can request a key revocation and the master will comply.  If it is False, the key will not
+be revoked by the msater.
+
