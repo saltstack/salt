@@ -13,7 +13,7 @@ filetypes are supported, including:
 
 .. note::
 
-    The python-passlib module is required when using a ``^filetype`` of
+    The ``python-passlib`` library is required when using a ``^filetype`` of
     ``htpasswd`` or ``htdigest``.
 
 The simplest example is a plaintext file with usernames and passwords:
@@ -238,8 +238,8 @@ def _htfile(username, password, **kwargs):
         import passlib
         kwargs['passlib_version'] = passlib.__version__
     except ImportError:
-        log.error('salt.auth.file: The passlib module is required for '
-                  '{0} filetype'.format(filetype))
+        log.error('salt.auth.file: The python-passlib library is required '
+                  'for {0} filetype'.format(filetype))
         return False
 
     if filetype == 'htdigest':
