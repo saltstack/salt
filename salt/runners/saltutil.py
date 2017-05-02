@@ -448,7 +448,7 @@ def sync_cache(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
 
 def sync_fileserver(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     Sync utils modules from ``salt://_fileserver`` to the master
 
