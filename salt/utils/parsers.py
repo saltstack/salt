@@ -1214,6 +1214,18 @@ class ProxyIdMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
 
+class CacheDirMixIn(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio = 40
+
+    def _mixin_setup(self):
+        self.add_option(
+            '--cachedir',
+            default='/var/cache/salt/',
+            dest='cachedir',
+            help=('Cache Directory')
+        )
+
+
 class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
 
     _mixin_prio_ = 40
@@ -2453,7 +2465,8 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
                                               HardCrashMixin,
                                               SaltfileMixIn,
                                               ArgsStdinMixIn,
-                                              ProfilingPMixIn)):
+                                              ProfilingPMixIn,
+                                              CacheDirMixIn)):
 
     description = (
         'salt-call is used to execute module functions locally on a Salt Minion'
@@ -2571,6 +2584,12 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             action='store_true',
             help=('Force a refresh of the grains cache.')
+        )
+        self.add_option(
+            '--cachedir',
+            default='/var/cache/salt/',
+            dest='cachedir',
+            help=('Cache Directory')
         )
         self.add_option(
             '-t', '--timeout',
