@@ -419,7 +419,7 @@ def extra(method, profile, **libcloud_kwargs):
     :param profile: The profile key
     :type  profile: ``str``
 
-    :param libcloud_kwargs: Extra arguments for the driver's delete_container method
+    :param libcloud_kwargs: Extra arguments for the driver's method
     :type  libcloud_kwargs: ``dict``
 
     CLI Example:

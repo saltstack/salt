@@ -15,15 +15,18 @@ Apache Libcloud is a Python library which hides differences between different cl
 you to manage different cloud resources through a unified and easy to use API. Apache Libcloud supports over
 60 cloud platforms, including Amazon, Microsoft Azure, Digital Ocean, Google Cloud Platform and OpenStack.
 
-Execution and state modules are available for DNS, Storage and Load Balancer drivers from Apache Libcloud in
+Execution and state modules are available for Compute, DNS, Storage and Load Balancer drivers from Apache Libcloud in
  SaltStack.
 
-* :mod:`libcloud_storage <salt.modules.libcloud_storage>` - Cloud Object Storage and CDN - 
-    services such as Amazon S3 and Rackspace CloudFiles, OpenStack Swift
-* :mod:`libcloud_loadbalancer <salt.modules.libcloud_loadbalancer>` - Load Balancers as a Service - 
-    services such as Amazon Elastic Load Balancer and GoGrid LoadBalancers
+* :mod:`libcloud_compute <salt.modules.libcloud_compute>` - Compute - 
+    services such as OpenStack Nova, Amazon EC2, Microsoft Azure VMs
 * :mod:`libcloud_dns <salt.modules.libcloud_dns>` - DNS as a Service - 
     services such as Amazon Route 53 and Zerigo
+* :mod:`libcloud_loadbalancer <salt.modules.libcloud_loadbalancer>` - Load Balancers as a Service - 
+    services such as Amazon Elastic Load Balancer and GoGrid LoadBalancers
+* :mod:`libcloud_storage <salt.modules.libcloud_storage>` - Cloud Object Storage and CDN - 
+    services such as Amazon S3 and Rackspace CloudFiles, OpenStack Swift
+
 
 These modules are designed as a way of having a multi-cloud deployment and abstracting simple differences 
 between platform to design a high-availability architecture.
@@ -78,18 +81,20 @@ Using the execution modules
 ===========================
 
 Amongst over 60 clouds that Apache Libcloud supports, you can add profiles to your Salt configuration to access and control these clouds. 
-Each of the libcloud execution modules exposes the common API methods for controlling DNS, Load Balancers and Object Storage. 
+Each of the libcloud execution modules exposes the common API methods for controlling Compute, DNS, Load Balancers and Object Storage. 
 To see which functions are supported across specific clouds, see the Libcloud `supported methods 
 <http://libcloud.readthedocs.io/en/latest/supported_providers.html#supported-methods-block-storage>`_ documentation.
 
 The module documentation explains each of the API methods and how to leverage them.
 
-* :mod:`libcloud_storage <salt.modules.libcloud_storage>` - Cloud Object Storage and CDN 
-    - services such as Amazon S3 and Rackspace CloudFiles, OpenStack Swift
-* :mod:`libcloud_loadbalancer <salt.modules.libcloud_loadbalancer>` - Load Balancers as a Service 
-    - services such as Amazon Elastic Load Balancer and GoGrid LoadBalancers
-* :mod:`libcloud_dns <salt.modules.libcloud_dns>` - DNS as a Service 
-    - services such as Amazon Route 53 and Zerigo
+* :mod:`libcloud_compute <salt.modules.libcloud_compute>` - Compute - 
+    services such as OpenStack Nova, Amazon EC2, Microsoft Azure VMs
+* :mod:`libcloud_dns <salt.modules.libcloud_dns>` - DNS as a Service - 
+    services such as Amazon Route 53 and Zerigo
+* :mod:`libcloud_loadbalancer <salt.modules.libcloud_loadbalancer>` - Load Balancers as a Service - 
+    services such as Amazon Elastic Load Balancer and GoGrid LoadBalancers
+* :mod:`libcloud_storage <salt.modules.libcloud_storage>` - Cloud Object Storage and CDN - 
+    services such as Amazon S3 and Rackspace CloudFiles, OpenStack Swift
 
 For example, listing buckets in the Google Storage platform: 
 
