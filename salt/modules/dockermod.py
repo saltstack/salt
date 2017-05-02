@@ -2627,7 +2627,7 @@ cp = salt.utils.alias_function(copy_from, 'cp')
 def copy_to(name,
             source,
             dest,
-            exec_driver='docker-exec',
+            exec_driver=None,
             overwrite=False,
             makedirs=False):
     '''
@@ -2669,6 +2669,8 @@ def copy_to(name,
 
         salt myminion docker.copy_to mycontainer /tmp/foo /root/foo
     '''
+    if exec_driver is None:
+        exec_driver = _get_exec_driver()
     return __salt__['container_resource.copy_to'](
         name,
         __salt__['container_resource.cache_file'](source),
