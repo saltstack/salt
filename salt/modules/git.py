@@ -146,6 +146,21 @@ def _format_opts(opts):
     return opts
 
 
+def _format_git_opts(opts):
+    '''
+    Do a version check and make sure that the installed version of git can
+    support git -c
+    '''
+    if opts:
+        version_ = version(versioninfo=False)
+        if _LooseVersion(version_) < _LooseVersion('1.7.2'):
+            raise SaltInvocationError(
+                'git_opts is only supported for git versions >= 1.7.2 '
+                '(detected: {0})'.format(version_)
+            )
+    return _format_opts(opts)
+
+
 def _git_run(command, cwd=None, user=None, password=None, identity=None,
              ignore_retcode=False, failhard=True, redirect_stderr=False,
              saltenv='base', **kwargs):
@@ -386,6 +401,9 @@ def add(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -415,7 +433,7 @@ def add(cwd,
     cwd = _expand_path(cwd, user)
     if not isinstance(filename, six.string_types):
         filename = str(filename)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.extend(['add', '--verbose'])
     command.extend(
         [x for x in _format_opts(opts) if x not in ('-v', '--verbose')]
@@ -508,6 +526,9 @@ def archive(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -544,7 +565,7 @@ def archive(cwd,
     if kwargs:
         salt.utils.invalid_kwargs(kwargs)
 
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('archive')
     # If prefix was set to '' then we skip adding the --prefix option
     if prefix != '':
@@ -610,6 +631,9 @@ def branch(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -643,7 +667,7 @@ def branch(cwd,
         salt myminion git.branch /path/to/repo newbranch opts='-m oldbranch'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('branch')
     command.extend(_format_opts(opts))
     if name is not None:
@@ -685,6 +709,9 @@ def checkout(cwd,
         configuration.
 
         .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     rev
         The remote branch or revision to checkout.
@@ -728,7 +755,7 @@ def checkout(cwd,
         salt myminion git.checkout /path/to/repo opts='-b newbranch'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('checkout')
     if force:
         command.append('--force')
@@ -796,6 +823,9 @@ def clone(cwd,
         run git with temporary changes to the git configuration.
 
         .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -872,7 +902,7 @@ def clone(cwd,
     except ValueError as exc:
         raise SaltInvocationError(exc.__str__())
 
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('clone')
     command.extend(_format_opts(opts))
     command.extend(['--', url])
@@ -938,6 +968,9 @@ def commit(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -976,7 +1009,7 @@ def commit(cwd,
         salt myminion git.commit /path/to/repo 'The commit message' filename=foo/bar.py
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.extend(['commit', '-m', message])
     command.extend(_format_opts(opts))
     if filename:
@@ -1565,6 +1598,9 @@ def diff(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -1625,7 +1661,7 @@ def diff(cwd,
             'The \'no_index\' and \'cached\' options cannot be used together'
         )
 
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('diff')
     command.extend(_format_opts(opts))
 
@@ -1733,6 +1769,9 @@ def fetch(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -1788,7 +1827,7 @@ def fetch(cwd,
         salt myminion git.fetch /path/to/repo identity=/root/.ssh/id_rsa
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('fetch')
     if force:
         command.append('--force')
@@ -1900,6 +1939,9 @@ def init(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -1931,7 +1973,7 @@ def init(cwd,
         salt myminion git.init /path/to/bare/repo.git bare=True
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('init')
     if bare:
         command.append('--bare')
@@ -2466,6 +2508,9 @@ def ls_remote(cwd=None,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -2539,7 +2584,7 @@ def ls_remote(cwd=None,
                                                     https_only=True)
     except ValueError as exc:
         raise SaltInvocationError(exc.__str__())
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('ls-remote')
     command.extend(_format_opts(opts))
     if not isinstance(remote, six.string_types):
@@ -2601,6 +2646,9 @@ def merge(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -2636,7 +2684,7 @@ def merge(cwd,
         salt.utils.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('merge')
     command.extend(_format_opts(opts))
     if rev:
@@ -2730,6 +2778,9 @@ def merge_base(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -2819,7 +2870,7 @@ def merge_base(cwd,
                               password=password,
                               ignore_retcode=ignore_retcode) == first_commit
 
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('merge-base')
     command.extend(_format_opts(opts))
     if all_:
@@ -2953,6 +3004,9 @@ def pull(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -3006,7 +3060,7 @@ def pull(cwd,
         salt myminion git.pull /path/to/repo opts='--rebase origin master'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('pull')
     command.extend(_format_opts(opts))
     return _git_run(command,
@@ -3061,6 +3115,9 @@ def push(cwd,
         run git with temporary changes to the git configuration.
 
         .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -3125,7 +3182,7 @@ def push(cwd,
         salt.utils.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('push')
     command.extend(_format_opts(opts))
     if not isinstance(remote, six.string_types):
@@ -3173,6 +3230,9 @@ def rebase(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -3204,7 +3264,7 @@ def rebase(cwd,
     opts = _format_opts(opts)
     if any(x for x in opts if x in ('-i', '--interactive')):
         raise SaltInvocationError('Interactive rebases are not supported')
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('rebase')
     command.extend(opts)
     if not isinstance(rev, six.string_types):
@@ -3619,6 +3679,9 @@ def reset(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -3648,7 +3711,7 @@ def reset(cwd,
         salt myminion git.reset /path/to/repo opts='--hard origin/master'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('reset')
     command.extend(_format_opts(opts))
     return _git_run(command,
@@ -3691,6 +3754,9 @@ def rev_parse(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -3726,7 +3792,7 @@ def rev_parse(cwd,
         salt myminion git.rev_parse /path/to/repo opts='--is-bare-repository'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('rev-parse')
     command.extend(_format_opts(opts))
     if rev is not None:
@@ -3829,6 +3895,9 @@ def rm_(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -3857,7 +3926,7 @@ def rm_(cwd,
         salt myminion git.rm /path/to/repo foo/baz opts='-r'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('rm')
     command.extend(_format_opts(opts))
     command.extend(['--', filename])
@@ -3895,6 +3964,9 @@ def stash(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -3928,7 +4000,7 @@ def stash(cwd,
         # No numeric actions but this will prevent a traceback when the git
         # command is run.
         action = str(action)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.extend(['stash', action])
     command.extend(_format_opts(opts))
     return _git_run(command,
@@ -4043,6 +4115,9 @@ def submodule(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     init : False
         If ``True``, ensures that new submodules are initialized
 
@@ -4128,7 +4203,7 @@ def submodule(cwd,
         )
     if not isinstance(command, six.string_types):
         command = str(command)
-    cmd = ['git'] + _format_opts(git_opts)
+    cmd = ['git'] + _format_git_opts(git_opts)
     cmd.extend(['submodule', command])
     cmd.extend(_format_opts(opts))
     return _git_run(cmd,
@@ -4178,6 +4253,9 @@ def symbolic_ref(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -4209,7 +4287,7 @@ def symbolic_ref(cwd,
         salt myminion git.symbolic_ref /path/to/repo FOO opts='--delete'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('symbolic-ref')
     opts = _format_opts(opts)
     if value is not None and any(x in opts for x in ('-d', '--delete')):
@@ -4346,6 +4424,9 @@ def worktree_add(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -4384,7 +4465,7 @@ def worktree_add(cwd,
             'Only one of \'branch\' and \'detach\' is allowed'
         )
 
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.extend(['worktree', 'add'])
     if detach:
         if force:
@@ -4468,6 +4549,9 @@ def worktree_prune(cwd,
 
         .. versionadded:: Nitrogen
 
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -4498,7 +4582,7 @@ def worktree_prune(cwd,
     '''
     _check_worktree_support()
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.extend(['worktree', 'prune'])
     if dry_run:
         command.append('--dry-run')
