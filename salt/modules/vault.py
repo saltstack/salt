@@ -67,6 +67,8 @@ Functions to interact with Hashicorp Vault.
         peer_run:
             .*:
                 - vault.generate_token
+
+.. _vault-setup
 '''
 from __future__ import absolute_import
 import logging
