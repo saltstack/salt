@@ -210,7 +210,7 @@ class WebserverMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
                                  'uwsgi_port': self.uwsgi_port,
                                  'auth_enabled': auth_enabled}}
 
-        if grains['os_family'] in ('Debian',):
+        if grains['os_family'] in ('Debian', 'Arch'):
             # Different libexec dir for git backend on Debian-based systems
             pillar['git_pillar']['libexec_dir'] = '/usr/lib'
 
@@ -307,7 +307,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         Run git_pillar with the specified configuration
         '''
         cachedir = tempfile.mkdtemp(dir=TMP)
-        #self.addCleanup(shutil.rmtree, cachedir, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, cachedir, ignore_errors=True)
         ext_pillar_opts = yaml.safe_load(
             ext_pillar_conf.format(
                 cachedir=cachedir,
