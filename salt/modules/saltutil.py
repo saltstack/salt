@@ -68,34 +68,12 @@ __proxyenabled__ = ['*']
 log = logging.getLogger(__name__)
 
 
-def _get_top_file_envs():
-    '''
-    Get all environments from the top file
-    '''
-    try:
-        return __context__['saltutil._top_file_envs']
-    except KeyError:
-        try:
-            st_ = salt.state.HighState(__opts__)
-            top = st_.get_top()
-            if top:
-                envs = list(st_.top_matches(top).keys()) or 'base'
-            else:
-                envs = 'base'
-        except SaltRenderError as exc:
-            raise CommandExecutionError(
-                'Unable to render top file(s): {0}'.format(exc)
-            )
-        __context__['saltutil._top_file_envs'] = envs
-        return envs
-
-
 def _sync(form, saltenv=None):
     '''
     Sync the given directory in the given environment
     '''
     if saltenv is None:
-        saltenv = _get_top_file_envs()
+        saltenv = ['base']
     if isinstance(saltenv, six.string_types):
         saltenv = saltenv.split(',')
     ret, touched = salt.utils.extmods.sync(__opts__, form, saltenv=saltenv)
@@ -585,6 +563,10 @@ def sync_pillar(saltenv=None, refresh=True):
     environment to grab the contents of the ``_pillar`` directory from that
     environment. The default environment, if none is specified,  is ``base``.
 
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
     refresh : True
         Also refresh the execution modules available to the minion, and refresh
         pillar data.
@@ -620,6 +602,10 @@ def sync_all(saltenv=None, refresh=True):
     Sync down all of the dynamic modules from the file server for a specific
     environment. This function synchronizes custom modules, states, beacons,
     grains, returners, output modules, renderers, and utils.
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
 
     refresh : True
         Also refresh the execution modules and recompile pillar data available
