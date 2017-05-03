@@ -2070,7 +2070,7 @@ def prepend_root_dir(opts, path_options):
             elif path == root_opt_val or \
                     path.startswith(root_opt_val + os.sep):
                 # Remove relative root dir so we can add the absolute root dir
-                path = path[len(root_opt):]
+                path = path[len(root_opt_val):]
             # Prepending the root dir
             opts[path_option] = salt.utils.path_join(root_dir, path)
     logging.getLogger(__name__).trace('log_file = {}'.format(opts.get(
