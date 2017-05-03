@@ -1,6 +1,6 @@
 uwsgi:
   socket: 127.0.0.1:{{ pillar['git_pillar']['uwsgi_port'] }}
-  cgi: {{ salt['pillar.get']('git_pillar:libexec_dir', '/usr/libexec') }}/git-core/git-http-backend
+  cgi: {{ pillar['git_pillar']['git-http-backend'] }}
   chdir: %d
   daemonize: {{ pillar['git_pillar']['config_dir'] }}/uwsgi.log
   pidfile: {{ pillar['git_pillar']['config_dir'] }}/uwsgi.pid
