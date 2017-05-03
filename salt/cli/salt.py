@@ -92,7 +92,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         # potentially switch to batch execution
         if self.options.batch_safe_limit > 1:
             if len(self._preview_target()) >= self.options.batch_safe_limit:
-                print_cli('Too many minions targeted, switching to batch execution.')
+                print_cli('\nNOTICE: Too many minions targeted, switching to batch execution.')
                 self.options.batch = self.options.batch_safe_size
                 self._run_batch()
                 return
