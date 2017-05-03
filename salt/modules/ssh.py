@@ -237,23 +237,16 @@ def _fingerprint(public_key, fingerprint_hash_type=None):
 
     fingerprint_hash_type
         The public key fingerprint hash type that the public key fingerprint
-        was originally hashed with. This defaults to ``md5`` if not specified.
+        was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-
-        .. note::
-
-            The default value of the ``fingerprint_hash_type`` will change to
-            ``sha256`` in Salt Nitrogen.
+        .. versionchanged:: Nitrogen: default changed from ``md5`` to ``sha256``
 
     '''
     if fingerprint_hash_type:
         hash_type = fingerprint_hash_type.lower()
     else:
-        # Set fingerprint_hash_type to md5 as default
-        log.warning('Public Key hashing currently defaults to "md5". This will '
-                    'change to "sha256" in the Nitrogen release.')
-        hash_type = 'md5'
+        hash_type = 'sha256'
 
     try:
         hash_func = getattr(hashlib, hash_type)
@@ -829,14 +822,10 @@ def recv_known_host(hostname,
 
     fingerprint_hash_type
         The public key fingerprint hash type that the public key fingerprint
-        was originally hashed with. This defaults to ``md5`` if not specified.
+        was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-
-        .. note::
-
-            The default value of the ``fingerprint_hash_type`` will change to
-            ``sha256`` in Salt Nitrogen.
+        .. versionchanged:: Nitrogen: default changed from ``md5`` to ``sha256``
 
     CLI Example:
 
@@ -1006,14 +995,10 @@ def set_known_host(user=None,
 
     fingerprint_hash_type
         The public key fingerprint hash type that the public key fingerprint
-        was originally hashed with. This defaults to ``md5`` if not specified.
+        was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-
-        .. note::
-
-            The default value of the ``fingerprint_hash_type`` will change to
-            ``sha256`` in Salt Nitrogen.
+        .. versionchanged:: Nitrogen: default changed from ``md5`` to ``sha256``
 
     CLI Example:
 

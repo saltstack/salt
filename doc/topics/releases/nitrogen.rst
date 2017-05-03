@@ -106,6 +106,10 @@ State Module Changes
       use_superseded:
         - module.run
 
+- The default for the ``fingerprint_hash_type`` option used in the ``present``
+  function in the :mod:`ssh <salt.states.ssh_know_hosts>` state changed from
+  ``md5`` to ``sha256``.
+
 
 Execution Module Changes
 ========================
@@ -132,6 +136,9 @@ Execution Module Changes
   :py:func:`Arch Linux <salt.modules.pacman.list_repo_pkgs>`-based distros.
 - The :mod:`system <salt.modules.system>` module changed its return format
   from "HH:MM AM/PM" to "HH:MM:SS AM/PM" for `get_system_time`.
+- The default for the ``fingerprint_hash_type`` option used in the
+  :mod:`ssh <salt.modules.ssh>` execution module changed from ``md5`` to
+  ``sha256``.
 
 
 Proxy Module Changes
