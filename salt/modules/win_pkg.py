@@ -1428,7 +1428,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 )
 
             #Compute msiexec string
-            use_msiexec, msiexec = _get_msiexec(pkginfo[version_num].get('msiexec', False))
+            use_msiexec, msiexec = _get_msiexec(pkginfo[target].get('msiexec', False))
 
             # Uninstall the software
             # Check Use Scheduler Option
