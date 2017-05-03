@@ -258,7 +258,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
         else:
             try:
-                self.config['batch'] = self.config.batch
+                self.config['batch'] = self.options.batch
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth, parser=self.options)
             except salt.exceptions.SaltClientError as exc:
                 # We will print errors to the console further down the stack
