@@ -415,6 +415,15 @@ Using the new ``roster_order`` configuration syntax it's now possible to compose
 of grains, pillar and mine data and even Salt SDB URLs.
 The new release is also fully IPv4 and IPv6 enabled and even has support for CIDR ranges.
 
+New Modules
+===========
+
+Outputters
+----------
+
+- :mod:`salt.output.table <salt.output.table_out>`
+- :mod:`salt.output.profile <salt.output.profile>`
+
 Deprecations
 ============
 
