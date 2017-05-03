@@ -1230,12 +1230,15 @@ def volumes_tagged(name, tag_maps, authoritative=False, region=None, key=None,
         args['dry_run'] = True
         r = __salt__['boto_ec2.set_volumes_tags'](**args)
         if r.get('changes'):
-            ret['comment'] = 'The following changes would be applied: {0}'.format(r)
+            ret['comment'] = 'Tags would be updated.'
+            ret['changes'] = r['changes']
+        ret['result'] = None if r['success'] else False
         return ret
     r = __salt__['boto_ec2.set_volumes_tags'](**args)
     if r['success'] is True:
-        ret['comment'] = 'Tags applied.'
-        ret['changes'] = r['changes']
+        if r.get('changes'):
+            ret['comment'] = 'Tags applied.'
+            ret['changes'] = r['changes']
     else:
         ret['comment'] = 'Error updating requested volume tags.'
         ret['result'] = False
