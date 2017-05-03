@@ -25,7 +25,7 @@ def __virtual__():
     return 'smtp' if 'smtp.send_msg' in __salt__ else False
 
 
-def send_msg(name, recipient, subject, sender, profile, use_ssl='True'):
+def send_msg(name, recipient, subject, sender=None, profile=None, use_ssl='True'):
     '''
     Send a message via SMTP
 
@@ -47,6 +47,12 @@ def send_msg(name, recipient, subject, sender, profile, use_ssl='True'):
            'changes': {},
            'result': None,
            'comment': ''}
+
+    if profile is None and sender is None:
+        ret['result'] = False
+        ret['comment'] = 'Missing parameter sender or profile for state smtp.send_msg'
+        return ret
+
     if __opts__['test']:
         ret['comment'] = 'Need to send message to {0}: {1}'.format(
             recipient,

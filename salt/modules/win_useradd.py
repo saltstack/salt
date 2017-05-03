@@ -96,7 +96,7 @@ def _to_unicode(instr):
 
 def add(name,
         password=None,
-        fullname=False,
+        fullname=None,
         description=None,
         groups=None,
         home=None,
