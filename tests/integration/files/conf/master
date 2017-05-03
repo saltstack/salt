@@ -7,7 +7,7 @@ ret_port: 64506
 worker_threads: 3
 pidfile: master.pid
 sock_dir: master_sock
-timeout: 3
+timeout: 12
 open_mode: True
 fileserver_list_cache_time: 0
 file_buffer_size: 8192
