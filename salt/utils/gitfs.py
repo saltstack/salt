@@ -424,7 +424,7 @@ class GitProvider(object):
                 try:
                     all_saltenvs_ref = self.all_saltenvs
                     per_saltenv_ref = _get_per_saltenv(tgt_env)
-                    if all_saltenvs_ref != per_saltenv_ref:
+                    if per_saltenv_ref and all_saltenvs_ref != per_saltenv_ref:
                         log.debug(
                             'The per-saltenv configuration has mapped the '
                             '\'%s\' branch/tag to saltenv \'%s\' for %s '
