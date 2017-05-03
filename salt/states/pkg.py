@@ -2678,6 +2678,18 @@ def mod_aggregate(low, chunks, running):
                     elif 'name' in chunk:
                         version = chunk.pop('version', None)
                         if version is not None:
+                            if version == 'latest':
+                                try:
+                                    version = __salt__['pkg.latest_version'](chunk['name'],
+                                                                             fromrepo=chunk.get('fromrepo'),
+                                                                             refresh=chunk.get('refresh'))
+                                except CommandExecutionError as exc:
+                                    return {'name': name,
+                                            'changes': {},
+                                            'result': False,
+                                            'comment': 'An error was encountered while checking the '
+                                                       'newest available version of package(s): {0}'
+                                                       .format(exc)}
                             pkgs.append({chunk['name']: version})
                         else:
                             pkgs.append(chunk['name'])
