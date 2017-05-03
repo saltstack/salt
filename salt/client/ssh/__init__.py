@@ -922,8 +922,8 @@ class Single(object):
                     opts_pkg['grains'][grain] = self.target['grains'][grain]
 
             popts = {}
-            popts.update(opts_pkg['__master_opts__'])
             popts.update(opts_pkg)
+            popts.update(opts_pkg['__master_opts__'])
             pillar = salt.pillar.Pillar(
                     popts,
                     opts_pkg['grains'],
