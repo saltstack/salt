@@ -79,7 +79,7 @@ def start(docker_url='unix://var/run/docker.sock',
     try:
         events = client.events()
         for event in events:
-            data = json.loads(event)
+            data = json.loads(event.decode(__salt_system_encoding__, errors='replace'))
             # https://github.com/docker/cli/blob/master/cli/command/system/events.go#L109
             # https://github.com/docker/engine-api/blob/master/types/events/events.go
             # Each output includes the event type, actor id, name and action.
