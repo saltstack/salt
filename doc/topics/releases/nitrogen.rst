@@ -247,7 +247,7 @@ have been improved, enhanced and widenened in scope:
 
 New modules:
 
-- :mod:`Netconfig state <salt.states.netconfig>` - Manage the configuration
+- :mod:`Netconfig state module <salt.states.netconfig>` - Manage the configuration
   of network devices using arbitrary templates and the Salt-specific
   advanced templating methodologies.
 - :mod:`Network ACL execution module <salt.modules.napalm_acl>` - Generate and
@@ -256,8 +256,10 @@ New modules:
   configuration. It only requires writing the pillar structure correctly!
 - :mod:`NAPALM YANG execution module <salt.modules.napalm_yang_mod>` - Parse,
   generate and load native device configuration in a standard way,
-  using the OpenConfig/IETF models. This module cotains also helpers for
+  using the OpenConfig/IETF models. This module contains also helpers for
   the states.
+- :mod:`NAPALM YANG state module <salt.states.netyang>` - Manage the
+  network device configuration according to the YANG models (OpenConfig or IETF).
 - :mod:`NET finder <salt.runners.net>` - Runner to find details easily and
   fast. It's smart enough to know what you are looking for. It will search
   in the details of the network interfaces, IP addresses, MAC address tables,
@@ -267,6 +269,11 @@ New modules:
   from the napalm-logs library into the Salt event bus. The events are based
   on the syslog messages from the network devices and structured following
   the OpenConfig/IETF YANG models.
+- :mod:`NAPALM Helpers <salt.modules.napalm>` - Generic helpers for
+  NAPALM-related operations. For example, the
+  :mod:`Compliance report <salt.modules.napalm.compliance_report>` function
+  can be used inside the state modules to compare the expected and the
+  existing configuration.
 
 New functions:
 
@@ -407,6 +414,15 @@ so it is now possible to target minions identically through `salt` and `salt-ssh
 Using the new ``roster_order`` configuration syntax it's now possible to compose a roster out of any combination
 of grains, pillar and mine data and even Salt SDB URLs.
 The new release is also fully IPv4 and IPv6 enabled and even has support for CIDR ranges.
+
+New Modules
+===========
+
+Outputters
+----------
+
+- :mod:`table <salt.output.table_out>`
+- :mod:`profile <salt.output.profile>`
 
 Deprecations
 ============
