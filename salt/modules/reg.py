@@ -40,9 +40,9 @@ from salt.ext import six
 # Import third party libs
 try:
     from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
-    from win32gui import SendMessageTimeout
-    from win32con import HWND_BROADCAST, WM_SETTINGCHANGE, SMTO_ABORTIFHUNG
-    from win32api import RegCreateKeyEx, RegSetValueEx, RegFlushKey, RegCloseKey, error as win32apiError
+    from win32con import HWND_BROADCAST, WM_SETTINGCHANGE
+    from win32api import RegCreateKeyEx, RegSetValueEx, RegFlushKey, \
+        RegCloseKey, error as win32apiError, SendMessage
     HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False
@@ -222,9 +222,7 @@ def broadcast_change():
         salt '*' reg.broadcast_change
     '''
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms644952(v=vs.85).aspx
-    _, res = SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 0,
-                                SMTO_ABORTIFHUNG, 5000)
-    return not bool(res)
+    return bool(SendMessage(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 0))
 
 
 def list_keys(hive, key=None, use_32bit_registry=False):
