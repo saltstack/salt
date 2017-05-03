@@ -260,6 +260,12 @@ class GitTestBase(ModuleCase):
     def is_el7(self, grains):
         return grains['os_family'] == 'RedHat' and grains['osmajorrelease'] == 7
 
+    # Cent OS 6 has too old a version of git to handle the make_repo code, as
+    # it lacks the -c option for git itself.
+    @requires_system_grains
+    def is_pre_el7(self, grains):
+        return grains['os_family'] == 'RedHat' and grains['osmajorrelease'] < 7
+
     @classmethod
     def setUpClass(cls):
         cls.prep_server()
@@ -270,6 +276,9 @@ class GitTestBase(ModuleCase):
         # needing to spend the extra time creating an ssh server and user and
         # then tear them down separately for each test.
         self.update_class(self)
+        if self.is_pre_el7():  # pylint: disable=E1120
+            self.skipTest(
+                'RHEL < 7 has too old a version of git to run these tests')
 
     @classmethod
     def update_class(cls, case):
