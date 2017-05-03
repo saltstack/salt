@@ -1914,6 +1914,20 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                   'before freeing the slot in the batch for the next one.')
         )
         self.add_option(
+            '--batch-safe-limit',
+            default=0,
+            dest='batch_safe_limit',
+            type=int,
+            help=('Execute the salt job in batch mode if the job would have '
+                  'executed on more than this many minions.')
+        )
+        self.add_option(
+            '--batch-safe-size',
+            default=8,
+            dest='batch_safe_size',
+            help=('Batch size to use for batch jobs created by batch-safe-limit.')
+        )
+        self.add_option(
             '--return',
             default='',
             metavar='RETURNER',

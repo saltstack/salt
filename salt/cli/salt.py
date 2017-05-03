@@ -39,8 +39,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
         try:
             # We don't need to bail on config file permission errors
-            # if the CLI
-            # process is run with the -a flag
+            # if the CLI process is run with the -a flag
             skip_perm_errors = self.options.eauth != ''
 
             self.local_client = salt.client.get_local_client(
@@ -61,6 +60,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
         if self.options.preview_target:
             self._preview_target()
+            self._output_ret(minion_list, self.config.get('output', 'nested'))
             return
 
         if self.options.timeout <= 0:
@@ -87,6 +87,13 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             kwargs['tgt_type'] = self.selected_target_option
         else:
             kwargs['tgt_type'] = 'glob'
+
+        # If batch_safe_limit is set, check minions matching target and
+        # potentially switch to batch execution
+        if self.options.batch_safe_limit > 1:
+            if len(self._preview_target()) >= int(self.options.batch_safe_limit):
+                self._run_batch(self.options.batch_safe_size)
+                return
 
         if getattr(self.options, 'return'):
             kwargs['ret'] = getattr(self.options, 'return')
@@ -202,10 +209,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         Return a list of minions from a given target
         '''
-        minion_list = self.local_client.gather_minions(self.config['tgt'], self.selected_target_option or 'glob')
-        self._output_ret(minion_list, self.config.get('output', 'nested'))
+        return self.local_client.gather_minions(self.config['tgt'], self.selected_target_option or 'glob')
 
-    def _run_batch(self):
+    def _run_batch(self, safe_batch=False):
         import salt.cli.batch
         eauth = {}
         if 'token' in self.config:
@@ -254,9 +260,12 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             except salt.exceptions.SaltClientError as exc:
                 # We will print errors to the console further down the stack
                 sys.exit(1)
+            if safe_batch:
+                # Batch was triggered by safe limit check, use safe_batch size
+                batch.opts['batch'] = safe_batch
             # Printing the output is already taken care of in run() itself
             retcode = 0
-            for res in batch.run():
+            for res in batch.run(safe_batch):
                 for ret in six.itervalues(res):
                     job_retcode = salt.utils.job.get_retcode(ret)
                     if job_retcode > retcode:
