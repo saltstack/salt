@@ -354,6 +354,8 @@ tremendous amount of customization. Here's some example usage:
         - user: joe
         - password: mysupersecretpassword
         - insecure_auth: True
+      - http://foo.com/quux.git:
+        - all_saltenvs: master
 
 .. important::
 
@@ -365,8 +367,10 @@ tremendous amount of customization. Here's some example usage:
 
     2. Per-remote configuration parameters are named like the global versions,
        with the ``gitfs_`` removed from the beginning. The exception being the
-       ``name`` and ``saltenv`` parameters, which are only available to
-       per-remote configurations.
+       ``name``, ``saltenv``, and ``all_saltenvs`` parameters, which are only
+       available to per-remote configurations.
+
+    The ``all_saltenvs`` parameter is new in the Oxygen release.
 
 In the example configuration above, the following is true:
 
@@ -392,6 +396,14 @@ In the example configuration above, the following is true:
 5. The fourth remote overrides the default behavior of :ref:`not authenticating
    to insecure (non-HTTPS) remotes <gitfs-insecure-auth>`.
 
+6. Because ``all_saltenvs`` is configured for the fifth remote, files from the
+   branch/tag ``master`` will appear in every fileserver environment.
+
+   .. note::
+       The use of ``http://`` (instead of ``https://``) is permitted here
+       *only* because authentication is not being used. Otherwise, the
+       ``insecure_auth`` parameter must be used (as in the fourth remote) to
+       force Salt to authenticate to an ``http://`` remote.
 
 .. _gitfs-per-saltenv-config:
 
@@ -500,6 +512,34 @@ would only fetch branches and tags (the default).
           - '+refs/pull/*/head:refs/remotes/origin/pr/*'
           - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
 
+
+.. _gitfs-global-remotes:
+
+Global Remotes
+==============
+
+.. versionadded:: Oxygen
+
+The ``all_saltenvs`` per-remote configuration parameter overrides the logic
+Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This
+allows a single branch/tag to appear in *all* saltenvs.
+
+This is very useful in particular when working with :ref:`salt formulas
+<conventions-formula>`. Prior to the addition of this feature, it was necessary
+to push a branch/tag to the remote repo for each saltenv in which that formula
+was to be used. If the formula needed to be updated, this update would need to
+be reflected in all of the other branches/tags. This is both inconvenient and
+not scalable.
+
+With ``all_saltenvs``, it is now possible to define your formula once, in a
+single branch.
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://foo.com/quux.git:
+        - all_saltenvs: anything
+
 Configuration Order of Precedence
 =================================
 
@@ -540,6 +580,17 @@ overrides all levels below it):
 
        gitfs_mountpoint: salt://bar
 
+.. note::
+    The one exception to the above is when :ref:`all_saltenvs
+    <gitfs-global-remotes>` is used. This value overrides all logic for mapping
+    branches/tags to fileserver environments. So, even if
+    :conf_master:`gitfs_saltenv` is used to globally override the mapping for a
+    given saltenv, :ref:`all_saltenvs <gitfs-global-remotes>` would take
+    precedence for any remote which uses it.
+
+    It's important to note however that any ``root`` and ``mountpoint`` values
+    configured in :conf_master:`gitfs_saltenv` (or :ref:`per-saltenv
+    configuration <gitfs-per-saltenv-config>`) would be unaffected by this.
 
 .. _gitfs-walkthrough-root:
 
