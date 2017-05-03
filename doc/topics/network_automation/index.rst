@@ -398,6 +398,9 @@ multi-vendor network:
 
     $ sudo salt 'router*' state.sls router.ntp
 
+Besides CLI, the state can be scheduled or executed when triggered by a certain
+event.
+
 .. toctree::
     :maxdepth: 2
     :glob:
