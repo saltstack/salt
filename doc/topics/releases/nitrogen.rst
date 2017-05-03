@@ -421,8 +421,8 @@ New Modules
 Outputters
 ----------
 
-- :mod:`salt.output.table <salt.output.table_out>`
-- :mod:`salt.output.profile <salt.output.profile>`
+- :mod:`table <salt.output.table_out>`
+- :mod:`profile <salt.output.profile>`
 
 Deprecations
 ============
