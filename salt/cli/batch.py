@@ -103,7 +103,7 @@ class Batch(object):
         if i:
             del wait[:i]
 
-    def run(self, safe_batch=False):
+    def run(self):
         '''
         Execute the batch run
         '''
@@ -113,8 +113,6 @@ class Batch(object):
                 self.opts['timeout'],
                 'list',
                 ]
-        if safe_batch:
-            self.opts['batch'] = str(safe_batch)
         bnum = self.get_bnum()
         # No targets to run
         if not self.minions:
