@@ -210,14 +210,27 @@ class WebserverMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
                                  'uwsgi_port': self.uwsgi_port,
                                  'auth_enabled': auth_enabled}}
 
-        if grains['os_family'] in ('Debian', 'Arch'):
-            # Different libexec dir for git backend on Debian-based systems
-            pillar['git_pillar']['libexec_dir'] = '/usr/lib'
+        # Different libexec dir for git backend on Debian-based systems
+        git_core = '/usr/libexec/git-core' \
+            if grains['os_family'] in ('RedHat') \
+            else '/usr/lib/git-core'
+
+        pillar['git_pillar']['git-http-backend'] = os.path.join(
+            git_core,
+            'git-http-backend')
 
         ret = self.run_function(
             'state.apply',
             mods='git_pillar.http',
             pillar=pillar)
+
+        if not os.path.exists(pillar['git_pillar']['git-http-backend']):
+            self.fail(
+                '{0} not found. Either git is not installed, or the test '
+                'class needs to be updated.'.format(
+                    pillar['git_pillar']['git-http-backend']
+                )
+            )
 
         try:
             self.nginx_proc = self.wait_proc(name='nginx',
