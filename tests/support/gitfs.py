@@ -210,14 +210,27 @@ class WebserverMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
                                  'uwsgi_port': self.uwsgi_port,
                                  'auth_enabled': auth_enabled}}
 
-        if grains['os_family'] in ('Debian',):
-            # Different libexec dir for git backend on Debian-based systems
-            pillar['git_pillar']['libexec_dir'] = '/usr/lib'
+        # Different libexec dir for git backend on Debian-based systems
+        git_core = '/usr/libexec/git-core' \
+            if grains['os_family'] in ('RedHat') \
+            else '/usr/lib/git-core'
+
+        pillar['git_pillar']['git-http-backend'] = os.path.join(
+            git_core,
+            'git-http-backend')
 
         ret = self.run_function(
             'state.apply',
             mods='git_pillar.http',
             pillar=pillar)
+
+        if not os.path.exists(pillar['git_pillar']['git-http-backend']):
+            self.fail(
+                '{0} not found. Either git is not installed, or the test '
+                'class needs to be updated.'.format(
+                    pillar['git_pillar']['git-http-backend']
+                )
+            )
 
         try:
             self.nginx_proc = self.wait_proc(name='nginx',
@@ -247,6 +260,12 @@ class GitTestBase(ModuleCase):
     def is_el7(self, grains):
         return grains['os_family'] == 'RedHat' and grains['osmajorrelease'] == 7
 
+    # Cent OS 6 has too old a version of git to handle the make_repo code, as
+    # it lacks the -c option for git itself.
+    @requires_system_grains
+    def is_pre_el7(self, grains):
+        return grains['os_family'] == 'RedHat' and grains['osmajorrelease'] < 7
+
     @classmethod
     def setUpClass(cls):
         cls.prep_server()
@@ -257,6 +276,9 @@ class GitTestBase(ModuleCase):
         # needing to spend the extra time creating an ssh server and user and
         # then tear them down separately for each test.
         self.update_class(self)
+        if self.is_pre_el7():  # pylint: disable=E1120
+            self.skipTest(
+                'RHEL < 7 has too old a version of git to run these tests')
 
     @classmethod
     def update_class(cls, case):
@@ -307,7 +329,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         Run git_pillar with the specified configuration
         '''
         cachedir = tempfile.mkdtemp(dir=TMP)
-        #self.addCleanup(shutil.rmtree, cachedir, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, cachedir, ignore_errors=True)
         ext_pillar_opts = yaml.safe_load(
             ext_pillar_conf.format(
                 cachedir=cachedir,
