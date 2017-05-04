@@ -349,14 +349,14 @@ def parse(models, **kwargs):
         profiles = [__grains__.get('os')]
     root = _get_root_object(models)
     parser_kwargs = {
-        'device': napalm_device,  # pylint: disable=undefined-variable
+        'device': napalm_device.get('DRIVER'),  # pylint: disable=undefined-variable
         'profile': profiles
     }
     if config:
         root.parse_config(**parser_kwargs)
     if state:
         root.parse_state(**parser_kwargs)
-    return root
+    return root.to_dict(filter=True)
 
 
 @proxy_napalm_wrap

@@ -23,6 +23,7 @@ Please check Installation_ for complete details.
 '''
 from __future__ import absolute_import
 
+import json
 import logging
 log = logging.getLogger(__file__)
 
@@ -144,8 +145,9 @@ def managed(name,
     log.debug('Creating temp file: {0}'.format(temp_file))
     if 'to_dict' not in data:
         data = {'to_dict': data}
+    data = [data]
     with fopen(temp_file, 'w') as file_handle:
-        yaml.dump(data, file_handle)
+        yaml.safe_dump(json.loads(json.dumps(data)), file_handle, encoding='utf-8', allow_unicode=True)
     device_config = __salt__['napalm_yang.parse'](models,
                                                   config=True,
                                                   profiles=profiles)
@@ -164,7 +166,8 @@ def managed(name,
         })
         log.debug('All good here.')
         return ret
-    data = data['to_dict']
+    log.debug('Does not comply, trying to generate and load config')
+    data = data[0]['to_dict']
     if '_kwargs' in data:
         data.pop('_kwargs')
     loaded_changes = __salt__['napalm_yang.load_config'](data,
