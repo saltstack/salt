@@ -7,7 +7,6 @@ import logging
 
 # Import Salt Libs
 import salt.config
-import salt.utils.dictupdate
 
 # Import 3rd-Party Libs
 try:
@@ -73,7 +72,7 @@ def get_conn():
     vm_ = get_configured_provider()
     profile = vm_.pop('profile', None)
     if profile is not None:
-        vm_ = salt.utils.dictupdate.update(os_client_config.vendors.get_profile(profile), vm_)
+        vm_ = __utils__['dictupdate.update'](os_client_config.vendors.get_profile(profile), vm_)
     conn = shade.openstackcloud.OpenStackCloud(cloud_config=None, **vm_)
     if __active_provider_name__ is not None:
         __context__[__active_provider_name__] = conn
@@ -98,7 +97,7 @@ def list_nodes_min(conn=None, call=None):  # pylint: disable=unused-argument
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The list_nodes function must be called with -f or --function.'
+            'The list_nodes_min function must be called with -f or --function.'
         )
 
     return get_conn().list_servers(bare=True)
@@ -110,10 +109,19 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The list_nodes function must be called with -f or --function.'
+            'The list_nodes_full function must be called with -f or --function.'
         )
 
     return get_conn().list_servers(detailed=True)
+
+
+def list_nodes_select(conn=None, call=None):  # pylint: disable=unused-argument
+    '''
+    Return a list of the VMs that are on the provider, with select fields
+    '''
+    return __utils__['cloud.list_nodes_select'](
+        list_nodes(conn, 'function'), __opts__['query.selection'], call,
+    )
 
 
 def show_instance(name, call=None):
@@ -122,7 +130,45 @@ def show_instance(name, call=None):
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The list_nodes function must be called with -f or --function.'
+            'The show_instance function must be called with -f or --function.'
         )
 
     return get_conn().get_server(name, bare=True)
+
+
+def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
+    '''
+    List available images for Openstack
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
+    return get_conn().list_images()
+
+
+def avail_sizes(conn=None, call=None):  # pylint: disable=unused-argument
+    '''
+    List available sizes for Openstack
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
+    return get_conn().list_flavors()
+
+
+def list_networks(call=None, kwargs=None):  # pylint: disable=unused-argument
+    '''
+    List virtual networks
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_networks function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+    return get_conn().list_networks()
