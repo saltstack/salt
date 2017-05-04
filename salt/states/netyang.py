@@ -75,7 +75,7 @@ def __virtual__():
 
 def managed(name,
             data,
-            *models,
+            models,
             **kwargs):
     '''
     Manage the device configuration given the input data strucuted
@@ -131,7 +131,8 @@ def managed(name,
                 config:
                   mtu: 9000
               Et2:
-                description: "description example"
+                config:
+                  description: "description example"
     '''
     ret = salt.utils.napalm.default_ret(name)
     test = kwargs.get('test', False) or __opts__.get('test', False)
@@ -145,13 +146,13 @@ def managed(name,
         data = {'to_dict': data}
     with fopen(temp_file, 'w') as file_handle:
         yaml.dump(data, file_handle)
-    device_config = __salt__['napalm_yang.parse'](*models,
+    device_config = __salt__['napalm_yang.parse'](models,
                                                   config=True,
                                                   profiles=profiles)
     log.debug('Parsed the config from the device:')
     log.debug(device_config)
     compliance_report = __salt__['napalm_yang.compliance_report'](device_config,
-                                                                  *models,
+                                                                  models,
                                                                   filepath=temp_file)
     log.debug('Compliance report:')
     log.debug(compliance_report)
@@ -167,7 +168,7 @@ def managed(name,
     if '_kwargs' in data:
         data.pop('_kwargs')
     loaded_changes = __salt__['napalm_yang.load_config'](data,
-                                                         *models,
+                                                         models,
                                                          profiles=profiles,
                                                          test=test,
                                                          debug=debug,
@@ -181,7 +182,7 @@ def managed(name,
 
 def configured(name,
                data,
-               *models,
+               models,
                **kwargs):
     '''
     Configure the network device, given the input data strucuted
@@ -248,7 +249,8 @@ def configured(name,
                 config:
                   mtu: 9000
               Et2:
-                description: "description example"
+                config:
+                  description: "description example"
     '''
     ret = salt.utils.napalm.default_ret(name)
     test = kwargs.get('test', False) or __opts__.get('test', False)
@@ -259,7 +261,7 @@ def configured(name,
     if '_kwargs' in data:
         data.pop('_kwargs')
     loaded_changes = __salt__['napalm_yang.load_config'](data,
-                                                         *models,
+                                                         models,
                                                          profiles=profiles,
                                                          test=test,
                                                          debug=debug,
