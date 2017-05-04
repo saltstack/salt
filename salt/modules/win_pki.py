@@ -168,7 +168,8 @@ def get_cert_file(name, cert_format=_DEFAULT_FORMAT, password=''):
     :param str cert_format: The certificate format. Specify 'cer' for X.509, or
         'pfx' for PKCS #12.
     :param str password: The password of the certificate. Only applicable to pfx
-        format.
+        format. Note that if used interactively, the password will be seen by all minions.
+        To protect the password, use a state and get the password from pillar.
 
     :return: A dictionary of the certificate thumbprints and properties.
     :rtype: dict
@@ -244,7 +245,8 @@ def import_cert(name,
     :param bool exportable: Mark the certificate as exportable. Only applicable
         to pfx format.
     :param str password: The password of the certificate. Only applicable to pfx
-        format.
+        format. Note that if used interactively, the password will be seen by all minions.
+        To protect the password, use a state and get the password from pillar.
     :param str saltenv: The environment the file resides in.
 
     :return: A boolean representing whether all changes succeeded.
@@ -335,7 +337,8 @@ def export_cert(name,
     :param str context: The name of the certificate store location context.
     :param str store: The name of the certificate store.
     :param str password: The password of the certificate. Only applicable to pfx
-        format.
+        format. Note that if used interactively, the password will be seen by all minions.
+        To protect the password, use a state and get the password from pillar.
 
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
