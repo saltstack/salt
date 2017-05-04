@@ -13,6 +13,7 @@ from tests.support.helpers import (
 from tests.support.unit import skipIf
 import salt.utils
 
+
 class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the pkg module
