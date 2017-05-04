@@ -105,7 +105,7 @@ Salt's Pillar system is ideally suited for configuring proxy-minions
 can either be designated via a pillar file in :conf_master:`pillar_roots`,
 or through an external pillar.
 External pillars afford the opportunity for interfacing with
-a configuration management system, database, or other knowledgeable system that
+a configuration management system, database, or other knowledgeable system
 that may already contain all the details of proxy targets. To use static files
 in :conf_master:`pillar_roots`, pattern your files after the following examples:
 
