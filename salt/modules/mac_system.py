@@ -37,7 +37,6 @@ def __virtual__():
     if getpass.getuser() != 'root':
         return False, 'The mac_system module is not useful for non-root users.'
 
-
     if not _atrun_enabled():
         if not _enable_atrun():
             return False, 'atrun could not be enabled on this system'
