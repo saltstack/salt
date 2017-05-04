@@ -6,8 +6,10 @@ NAPALM syslog engine
 .. versionadded:: Nitrogen
 
 An engine that takes syslog messages structured in
-[OpenConfig](http://www.openconfig.net/) or IETF format
+OpenConfig_ or IETF format
 and fires Salt events.
+
+.. _OpenConfig: http://www.openconfig.net/
 
 As there can be many messages pushed into the event bus,
 the user is able to filter based on the object structure.
@@ -15,7 +17,9 @@ the user is able to filter based on the object structure.
 Requirements
 ------------
 
-- [napalm-logs](https://github.com/napalm-automation/napalm-logs)
+- `napalm-logs`_
+
+.. _`napalm-logs`: https://github.com/napalm-automation/napalm-logs
 
 This engine transfers objects from the napalm-logs library
 into the event bus. The top dictionary has the following keys:
@@ -25,7 +29,7 @@ into the event bus. The top dictionary has the following keys:
 - ``timestamp``
 - ``os``: the network OS identified
 - ``model_name``: the OpenConfig or IETF model name
-- ``error`: the error name (consult the documentation)
+- ``error``: the error name (consult the documentation)
 - ``message_details``: details extracted from the syslog message
 - ``open_config``: the OpenConfig model
 
@@ -106,7 +110,6 @@ Output object example:
 from __future__ import absolute_import
 
 # Import python stdlib
-import json
 import logging
 
 # Import third party libraries
@@ -119,6 +122,7 @@ except ImportError:
 try:
     # pylint: disable=W0611
     import napalm_logs
+    import napalm_logs.utils
     # pylint: enable=W0611
     HAS_NAPALM_LOGS = True
 except ImportError:
@@ -156,6 +160,7 @@ def _zmq(address, port):
         addr=address,
         port=port)
     )
+    socket.setsockopt(zmq.SUBSCRIBE, '')
     return socket.recv
 
 
@@ -180,7 +185,11 @@ TRANSPORT_FUN_MAP = {
 
 def start(transport='zmq',
           address='0.0.0.0',
-          port=49017):
+          port=49017,
+          auth_address='0.0.0.0',
+          auth_port=49018,
+          disable_security=False,
+          certificate=None):
     '''
     Listen to napalm-logs and publish events into the Salt event bus.
 
@@ -195,7 +204,25 @@ def start(transport='zmq',
 
     port: ``49017``
         The port of the publisher.
+
+    auth_address: ``0.0.0.0``
+        The address used for authentication
+        when security is not disabled.
+
+    auth_port: ``49018``
+        Port used for authentication.
+
+    disable_security: ``False``
+        Trust unencrypted messages.
+        Strongly discouraged in production.
+
+    certificate
+        Absolute path to the SSL certificate.
     '''
+    if not disable_security:
+        priv_key, verify_key = napalm_logs.utils.authenticate(certificate,
+                                                              address=auth_address,
+                                                              port=auth_port)
     transport_recv_fun = _get_transport_recv(name=transport,
                                              address=address,
                                              port=port)
@@ -206,23 +233,23 @@ def start(transport='zmq',
     if __opts__['__role'] == 'master':
         master = True
     while True:
+        log.debug('Waiting for napalm-logs to send anything...')
         raw_object = transport_recv_fun()
         log.debug('Received from napalm-logs:')
         log.debug(raw_object)
+        if not disable_security:
+            dict_object = napalm_logs.utils.decrypt(raw_object, verify_key, priv_key)
+        else:
+            dict_object = napalm_logs.utils.unserialize(raw_object)
         try:
-            dict_object = json.loads(raw_object)
-        except ValueError:
-            log.error('Unable to deserialise JSON object: {0}'.format(raw_object), exc_info=True)
-            continue  # and go the the next item
-        if not isinstance(dict_object, dict):
-            log.error('Invalid object read from napalm-logs:')
-            log.error(dict_object)
-            continue  # ignore
-        tag = 'napalm/syslog/{os}/{error}/{device}'.format(
-            os=dict_object['os'],
-            error=dict_object['error'],
-            device=dict_object.get('host', dict_object.get('ip'))
-        )
+            tag = 'napalm/syslog/{os}/{error}/{host}'.format(
+                os=dict_object['os'],
+                error=dict_object['error'],
+                host=(dict_object.get('host') or dict_object.get('ip'))
+            )
+        except KeyError as kerr:
+            log.warning('Missing keys from the napalm-logs object:', exc_info=True)
+            log.warning(dict_object)
         log.debug('Sending event {0}'.format(tag))
         log.debug(raw_object)
         if master:
