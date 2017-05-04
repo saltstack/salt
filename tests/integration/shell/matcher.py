@@ -305,6 +305,11 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         Test to see if we're supporting --doc
         '''
+        os_family = self.run_call('--local grains.get os_family')[1].strip()
+        if os_family == 'Arch':
+            self.skipTest('This test is failing in Arch due to a bug in salt-testing. '
+                          'Skipping until salt-testing can be upgraded. For more information, '
+                          'see https://github.com/saltstack/salt-jenkins/issues/324.')
         data = self.run_salt('-d "*" user')
         self.assertIn('user.add:', data)
 
