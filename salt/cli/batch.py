@@ -21,6 +21,9 @@ from salt.utils import print_cli
 import salt.ext.six as six
 from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class Batch(object):
@@ -245,8 +248,12 @@ class Batch(object):
                     if bwait:
                         wait.append(datetime.now() + timedelta(seconds=bwait))
                 # Munge retcode into return data
+                failhard = False
                 if 'retcode' in data and isinstance(data['ret'], dict) and 'retcode' not in data['ret']:
                     data['ret']['retcode'] = data['retcode']
+                    if self.opts.get('failhard') and data['ret']['retcode'] > 0:
+                        failhard = True
+
                 if self.opts.get('raw'):
                     ret[minion] = data
                     yield data
@@ -264,6 +271,9 @@ class Batch(object):
                             data,
                             out,
                             self.opts)
+                if failhard:
+                    log.error('ERROR: Minion {} returned with non-zero exit code. Batch run stopped due to failhard'.format(minion))
+                    raise StopIteration
 
             # remove inactive iterators from the iters list
             for queue in minion_tracker:
