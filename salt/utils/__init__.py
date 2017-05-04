@@ -1675,7 +1675,8 @@ def is_proxy():
     # then this will fail.
     is_proxy = False
     try:
-        if 'salt-proxy' in main.__file__:
+        # cli_salt_proxy is the __file__name when running under the testsuite
+        if 'salt-proxy' in main.__file__ or 'cli_salt_proxy' in main.__file__:
             is_proxy = True
     except AttributeError:
         pass
