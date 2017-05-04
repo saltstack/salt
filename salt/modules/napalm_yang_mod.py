@@ -550,7 +550,7 @@ def load_config(data, models, **kwargs):
     debug = kwargs.pop('debug', False)
     commit = kwargs.pop('commit', True)
     replace = kwargs.pop('replace', False)
-    return __salt__['net.load_config'](config=config,
+    return __salt__['net.load_config'](text=config,
                                        test=test,
                                        debug=debug,
                                        commit=commit,
