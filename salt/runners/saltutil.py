@@ -57,7 +57,7 @@ def sync_all(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     ret['sdb'] = sync_sdb(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['cache'] = sync_cache(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['fileserver'] = sync_fileserver(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
-    ret['tops'] = sync_tops(saltenv=saltenv)
+    ret['tops'] = sync_tops(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     return ret
 
 
@@ -401,7 +401,7 @@ def sync_sdb(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
                                    extmod_blacklist=extmod_blacklist)[0]
 
 
-def sync_tops(saltenv='base'):
+def sync_tops(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2016.3.7,2016.11.4,Nitrogen
 
@@ -417,7 +417,8 @@ def sync_tops(saltenv='base'):
 
         salt-run saltutil.sync_tops
     '''
-    return salt.utils.extmods.sync(__opts__, 'tops', saltenv=saltenv)[0]
+    return salt.utils.extmods.sync(__opts__, 'tops', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
+                                   extmod_blacklist=extmod_blacklist)[0]
 
 
 def sync_cache(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
