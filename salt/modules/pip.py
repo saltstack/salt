@@ -81,6 +81,7 @@ import os
 import re
 import shutil
 import logging
+import sys
 
 # Import salt libs
 import salt.utils
@@ -118,7 +119,10 @@ def _get_pip_bin(bin_env):
     executable itself, or from searching conventional filesystem locations
     '''
     if not bin_env:
-        which_result = __salt__['cmd.which_bin'](['pip', 'pip2', 'pip3', 'pip-python'])
+        which_result = __salt__['cmd.which_bin'](
+            ['pip{0}.{1}'.format(*sys.version_info[:2]),
+             'pip', 'pip2', 'pip3', 'pip-python']
+        )
         if salt.utils.is_windows() and six.PY2:
             which_result.encode('string-escape')
         if which_result is None:
