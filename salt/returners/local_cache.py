@@ -116,6 +116,12 @@ def prep_jid(nocache=False, passed_jid=None):
         jid = passed_jid
 
     jid_dir = _prep_jid_dir(jid)
+    # Check for eventual jid conflict
+    if os.path.exists(jid_dir):
+        new_jid = salt.utils.jid.gen_jid()
+        log.warning('Conflicting jids, {0} already exists, switching to {1}.'.format(jid, new_jid))
+        jid = new_jid
+        jid_dir = _prep_jid_dir(jid)
 
     # Try to write in jid path
     try:
@@ -130,7 +136,7 @@ def prep_jid(nocache=False, passed_jid=None):
 
     # If write failed
     except IOError:
-        log.warning('Could not write out jid file for job {0} (nocache={1}). Retrying.'.format(jid, nocache))
+        log.warning('Could not write out jid file for job {0} (nocache={1}).'.format(jid, nocache))
         raise
 
     return jid
