@@ -2684,7 +2684,7 @@ def mod_aggregate(low, chunks, running):
                                                                              fromrepo=chunk.get('fromrepo'),
                                                                              refresh=chunk.get('refresh'))
                                 except CommandExecutionError as exc:
-                                    return {'name': name,
+                                    return {'name': chunk['name'],
                                             'changes': {},
                                             'result': False,
                                             'comment': 'An error was encountered while checking the '
