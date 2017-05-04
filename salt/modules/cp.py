@@ -8,6 +8,9 @@ from __future__ import absolute_import
 import os
 import logging
 import fnmatch
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 # Import salt libs
 import salt.minion
