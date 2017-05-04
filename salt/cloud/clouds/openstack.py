@@ -7,6 +7,9 @@ import logging
 
 # Import Salt Libs
 import salt.config
+from salt.exceptions import (
+    SaltCloudSystemExit,
+)
 
 # Import 3rd-Party Libs
 try:
@@ -87,8 +90,12 @@ def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
         raise SaltCloudSystemExit(
             'The list_nodes function must be called with -f or --function.'
         )
+    ret = {}
+    for node, info in list_nodes_full().items():
+        for key in ('id', 'name', 'size', 'state', 'private_ips', 'public_ips', 'floating_ips', 'fixed_ips', 'image'):
+            ret.setdefault(node, {}).setdefault(key, info.get(key))
 
-    return get_conn().list_servers()
+    return ret
 
 
 def list_nodes_min(conn=None, call=None):  # pylint: disable=unused-argument
@@ -100,8 +107,22 @@ def list_nodes_min(conn=None, call=None):  # pylint: disable=unused-argument
             'The list_nodes_min function must be called with -f or --function.'
         )
 
-    return get_conn().list_servers(bare=True)
+    ret = {}
+    for node in get_conn().list_servers(bare=True):
+        ret[node.name] = {'id': node.id, 'state': node.status}
+    return ret
 
+def _get_ips(node, addr_type='public'):
+    ret = []
+    for _, interface in node.addresses.items():
+        for addr in interface:
+            if addr_type in ('floating', 'fixed') and addr_type == addr['OS-EXT-IPS:type']:
+                ret.append(addr['addr'])
+            elif addr_type == 'public' and __utils__['cloud.is_public_ip'](addr['addr']):
+                ret.append(addr['addr'])
+            elif addr_type == 'private' and not __utils__['cloud.is_public_ip'](addr['addr']):
+                ret.append(addr['addr'])
+    return ret
 
 def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
     '''
@@ -111,8 +132,19 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
         raise SaltCloudSystemExit(
             'The list_nodes_full function must be called with -f or --function.'
         )
-
-    return get_conn().list_servers(detailed=True)
+    ret = {}
+    for node in get_conn().list_servers(detailed=True):
+        ret[node.name] = dict(node)
+        ret[node.name]['id'] = node.id
+        ret[node.name]['name'] = node.name
+        ret[node.name]['size'] = node.flavor.name
+        ret[node.name]['state'] = node.status
+        ret[node.name]['private_ips'] = _get_ips(node, 'private')
+        ret[node.name]['public_ips'] = _get_ips(node, 'public')
+        ret[node.name]['floating_ips'] = _get_ips(node, 'floating')
+        ret[node.name]['fixed_ips'] = _get_ips(node, 'fixed')
+        ret[node.name]['image'] = node.image.name
+    return ret
 
 
 def list_nodes_select(conn=None, call=None):  # pylint: disable=unused-argument
@@ -128,9 +160,9 @@ def show_instance(name, call=None):
     '''
     Get VM on this Openstack account
     '''
-    if call == 'action':
+    if call != 'action':
         raise SaltCloudSystemExit(
-            'The show_instance function must be called with -f or --function.'
+            'The show_instance action must be called with -a or --action.'
         )
 
     return get_conn().get_server(name, bare=True)
@@ -156,19 +188,42 @@ def avail_sizes(conn=None, call=None):  # pylint: disable=unused-argument
     if call == 'action':
         raise SaltCloudSystemExit(
             'The avail_sizes function must be called with '
-            '-f or --function, or with the --list-images option'
+            '-f or --function, or with the --list-sizes option'
         )
 
     return get_conn().list_flavors()
 
 
-def list_networks(call=None, kwargs=None):  # pylint: disable=unused-argument
+def list_networks(conn=None, call=None):  # pylint: disable=unused-argument
     '''
     List virtual networks
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
             'The list_networks function must be called with '
-            '-f or --function, or with the --list-sizes option'
+            '-f or --function'
         )
     return get_conn().list_networks()
+
+
+def list_subnets(conn=None, call=None, kwargs=None):  # pylint: disable=unused-argument
+    '''
+    List subnets in a virtual network
+
+    network
+    	network to list subnets of
+
+    .. code-block::
+
+    	salt-cloud -f list_subnets network=salt-net
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_subnets function must be called with '
+            '-f or --function.'
+        )
+    if kwargs is None or (isinstance(kwargs, dict) and 'network' not in kwargs):
+        raise SaltCloudSystemExit(
+            'A `network` must be specified'
+        )
+    return get_conn().list_subnets(filters={'network': kwargs['network']})
