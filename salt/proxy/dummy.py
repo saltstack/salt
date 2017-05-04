@@ -16,8 +16,8 @@ __proxyenabled__ = ['dummy']
 GRAINS_CACHE = {}
 DETAILS = {}
 
-DETAILS['services'] = {'apache':'running', 'ntp':'running', 'samba':'stopped'}
-DETAILS['packages'] = {'coreutils':'1.0', 'apache':'2.4', 'tinc':'1.4', 'redbull':'999.99'}
+DETAILS['services'] = {'apache': 'running', 'ntp': 'running', 'samba': 'stopped'}
+DETAILS['packages'] = {'coreutils': '1.0', 'apache': '2.4', 'tinc': '1.4', 'redbull': '999.99'}
 
 FILENAME = os.tmpnam()
 
