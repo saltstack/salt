@@ -2028,14 +2028,32 @@ def _hw_data(osdata):
         return {}
 
     grains = {}
-    # On SmartOS (possibly SunOS also) smbios only works in the global zone
-    # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
-    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not (
+    if osdata['kernel'] == 'Linux' and os.path.exists('/sys/class/dmi/id'):
+        # On many Linux distributions basic firmware information is available via sysfs
+        # requires CONFIG_DMIID to be enabled in the Linux kernel configuration
+        sysfs_firmware_info = {
+            'biosversion': 'bios_version',
+            'productname': 'product_name',
+            'manufacturer': 'sys_vendor',
+            'biosreleasedate': 'bios_date',
+            'uuid': 'product_uuid',
+            'serialnumber': 'product_serial'
+        }
+        for key, fw_file in sysfs_firmware_info.items():
+            contents_file = os.path.join('/sys/class/dmi/id', fw_file)
+            if os.path.exists(contents_file):
+                with salt.utils.fopen(contents_file, 'r') as ifile:
+                    grains[key] = ifile.read()
+                    if key == 'uuid':
+                        grains['uuid'] = grains['uuid'].lower()
+    elif salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not (
             salt.utils.is_smartos() or
             (  # SunOS on SPARC - 'smbios: failed to load SMBIOS: System does not export an SMBIOS table'
                 osdata['kernel'] == 'SunOS' and
                 osdata['cpuarch'].startswith('sparc')
             )):
+        # On SmartOS (possibly SunOS also) smbios only works in the global zone
+        # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
         grains = {
             'biosversion': __salt__['smbios.get']('bios-version'),
             'productname': __salt__['smbios.get']('system-product-name'),
