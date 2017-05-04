@@ -326,6 +326,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined,
                                        **env_args)
 
+    jinja_env.filters['skip'] = salt.utils.jinja.skip_filter
     jinja_env.filters['strftime'] = salt.utils.date_format
     jinja_env.filters['sequence'] = salt.utils.jinja.ensure_sequence_filter
     jinja_env.filters['http_query'] = salt.utils.http.query

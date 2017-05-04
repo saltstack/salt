@@ -179,6 +179,22 @@ class PrintableDict(OrderedDict):
         return '{' + ', '.join(output) + '}'
 
 
+def skip_filter(data):
+    '''
+    Suppress data output
+
+    .. code-balock:: yaml
+
+        {% my_string = "foo" %}
+
+        {{ my_string|skip }}
+
+    will be rendered as empty string,
+
+    '''
+    return ''
+
+
 def ensure_sequence_filter(data):
     '''
     Ensure sequenced data.
