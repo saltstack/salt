@@ -1080,7 +1080,7 @@ ARGS = {10}\n'''.format(self.minion_config,
         with tempfile.NamedTemporaryFile(mode='w+b',
                                          prefix='shim_',
                                          delete=False) as shim_tmp_file:
-            shim_tmp_file.write(cmd_str)
+            shim_tmp_file.write(salt.utils.to_bytes(cmd_str))
 
         # Copy shim to target system, under $HOME/.<randomized name>
         target_shim_file = '.{0}.{1}'.format(binascii.hexlify(os.urandom(6)), extension)
