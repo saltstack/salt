@@ -14,9 +14,16 @@ __proxyenabled__ = ['dummy']
 # Variables are scoped to this module so we can have persistent data
 # across calls to fns in here.
 GRAINS_CACHE = {}
-DETAILS = {'services': {'apache':'running',
-                        'ntp':'running',
-                        'samba':'stopped'}}
+DETAILS = {}
+
+DETAILS['services'] = {'apache':'running',
+                       'ntp':'running',
+                       'samba':'stopped'}
+DETAILS['packages'] = {'coreutils':'1.0',
+                       'apache':'2.4',
+                       'tinc':'1.4',
+                       'redbull':'999.99'}
+FILENAME = os.tmpnam()
 
 # Want logging!
 log = logging.getLogger(__file__)
@@ -30,6 +37,21 @@ def __virtual__():
     '''
     log.debug('dummy proxy __virtual__() called...')
     return True
+
+
+def _save_state(details):
+    global FILENAME
+    pck = open(FILENAME, 'wb')
+    pickle.dump(details, pck)
+    pck.close()
+
+
+def _load_state():
+    global FILENAME
+    pck = open(FILENAME, 'r')
+    DETAILS = pickle.load(pck)
+    pck.close()
+    return DETAILS
 
 
 # Every proxy module needs an 'init', though you can
@@ -109,7 +131,9 @@ def service_status(name):
     Check if a service is running on the REST server
     '''
     if DETAILS['services'][name] == 'running':
-        return True
+        return {'comment': 'running'}
+    else:
+        return {'comment': 'stopped'}
 
 
 def package_list():
@@ -179,7 +203,10 @@ def shutdown(opts):
     '''
     For this proxy shutdown is a no-op
     '''
-    log.debug('rest_sample proxy shutdown() called...')
+    log.debug('dummy proxy shutdown() called...')
+    DETAILS = _load_state()
+    if 'filename' in DETAILS:
+        os.unlink(DETAILS['filename'])
 
 
 def test_from_state():
