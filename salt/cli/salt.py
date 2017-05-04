@@ -262,14 +262,6 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     if job_retcode > retcode:
                         # Exit with the highest retcode we find
                         retcode = job_retcode
-                    if self.options.failhard:
-                        if retcode != 0:
-                            sys.stderr.write(
-                                '{0}\nERROR: Minions returned with non-zero exit code.\n'.format(
-                                    res
-                                )
-                            )
-                            sys.exit(retcode)
             sys.exit(retcode)
 
     def _print_errors_summary(self, errors):
