@@ -52,7 +52,7 @@ def __virtual__():
 # -----------------------------------------------------------------------------
 
 
-def _get_root_object(*models):
+def _get_root_object(models):
     '''
     Read list of models and returns a Root object with the proper models added.
     '''
@@ -69,7 +69,7 @@ def _get_root_object(*models):
 # -----------------------------------------------------------------------------
 
 
-def diff(candidate, running, *models):
+def diff(candidate, running, models):
     '''
     Returns the difference between two configuration entities structured
     according to the YANG model.
@@ -119,15 +119,15 @@ def diff(candidate, running, *models):
             }
         }
     '''
-    first = _get_root_object(*models)
+    first = _get_root_object(models)
     first.load_dict(candidate)
-    second = _get_root_object(*models)
+    second = _get_root_object(models)
     second.load_dict(running)
     return napalm_yang.utils.diff(first, second)
 
 
 @proxy_napalm_wrap
-def parse(*models, **kwargs):
+def parse(models, **kwargs):
     '''
     Parse configuration from the device.
 
@@ -345,20 +345,22 @@ def parse(*models, **kwargs):
     profiles = kwargs.pop('profiles', [])
     if not profiles and hasattr(napalm_device, 'profile'):  # pylint: disable=undefined-variable
         profiles = napalm_device.profile  # pylint: disable=undefined-variable
-    root = _get_root_object(*models)
+    if not profiles:
+        profiles = [__grains__.get('os')]
+    root = _get_root_object(models)
     parser_kwargs = {
-        'device': napalm_device,  # pylint: disable=undefined-variable
+        'device': napalm_device.get('DRIVER'),  # pylint: disable=undefined-variable
         'profile': profiles
     }
     if config:
         root.parse_config(**parser_kwargs)
     if state:
         root.parse_state(**parser_kwargs)
-    return root
+    return root.to_dict(filter=True)
 
 
 @proxy_napalm_wrap
-def get_config(data, *models, **kwargs):
+def get_config(data, models, **kwargs):
     '''
     Return the native config.
 
@@ -394,16 +396,21 @@ def get_config(data, *models, **kwargs):
     profiles = kwargs.pop('profiles', [])
     if not profiles and hasattr(napalm_device, 'profile'):  # pylint: disable=undefined-variable
         profiles = napalm_device.profile  # pylint: disable=undefined-variable
+    if not profiles:
+        profiles = [__grains__.get('os')]
     parser_kwargs = {
         'profile': profiles
     }
-    root = _get_root_object(*models)
+    root = _get_root_object(models)
     root.load_dict(data)
-    return root.translate_config(**parser_kwargs)
+    native_config = root.translate_config(**parser_kwargs)
+    log.debug('Generated config')
+    log.debug(native_config)
+    return native_config
 
 
 @proxy_napalm_wrap
-def load_config(data, *models, **kwargs):
+def load_config(data, models, **kwargs):
     '''
     Generate and load the config on the device using the OpenConfig or IETF
     models and device profiles.
@@ -538,12 +545,12 @@ def load_config(data, *models, **kwargs):
             result:
                 True
     '''
-    config = get_config(data, *models, **kwargs)
+    config = get_config(data, models, **kwargs)
     test = kwargs.pop('test', False)
     debug = kwargs.pop('debug', False)
     commit = kwargs.pop('commit', True)
     replace = kwargs.pop('replace', False)
-    return __salt__['net.load_config'](config=config,
+    return __salt__['net.load_config'](text=config,
                                        test=test,
                                        debug=debug,
                                        commit=commit,
@@ -552,7 +559,7 @@ def load_config(data, *models, **kwargs):
 
 
 @proxy_napalm_wrap
-def compliance_report(data, *models, **kwargs):
+def compliance_report(data, models, **kwargs):
     '''
     Return the compliance report using YANG objects.
 
@@ -592,6 +599,6 @@ def compliance_report(data, *models, **kwargs):
         }
     '''
     filepath = kwargs.pop('filepath', '')
-    root = _get_root_object(*models)
+    root = _get_root_object(models)
     root.load_dict(data)
     return root.compliance_report(filepath)

@@ -1039,6 +1039,9 @@ VALID_OPTS = {
     # Number of times to try to auth with the master on a reconnect with the
     # tcp transport
     'tcp_authentication_retries': int,
+
+    # Permit or deny allowing minions to request revoke of its own key
+    'allow_minion_key_revoke': bool,
 }
 
 # default configurations
@@ -1594,6 +1597,7 @@ DEFAULT_MASTER_OPTS = {
     'clean_dynamic_modules': True,
     'django_auth_path': '',
     'django_auth_settings': '',
+    'allow_minion_key_revoke': True,
 }
 
 

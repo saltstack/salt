@@ -3269,3 +3269,62 @@ class ProxyMinion(Minion):
         self.functions['saltutil.sync_grains'](saltenv='base')
         self.grains_cache = self.opts['grains']
         self.ready = True
+
+    @classmethod
+    def _target(cls, minion_instance, opts, data, connected):
+        if not minion_instance:
+            minion_instance = cls(opts)
+            minion_instance.connected = connected
+            if not hasattr(minion_instance, 'functions'):
+                # Need to load the modules so they get all the dunder variables
+                functions, returners, function_errors, executors = (
+                    minion_instance._load_modules(grains=opts['grains'])
+                    )
+                minion_instance.functions = functions
+                minion_instance.returners = returners
+                minion_instance.function_errors = function_errors
+                minion_instance.executors = executors
+
+                # Pull in the utils
+                minion_instance.utils = salt.loader.utils(minion_instance.opts)
+
+                # Then load the proxy module
+                minion_instance.proxy = salt.loader.proxy(minion_instance.opts, utils=minion_instance.utils)
+
+                # And re-load the modules so the __proxy__ variable gets injected
+                functions, returners, function_errors, executors = (
+                    minion_instance._load_modules(grains=opts['grains'])
+                    )
+                minion_instance.functions = functions
+                minion_instance.returners = returners
+                minion_instance.function_errors = function_errors
+                minion_instance.executors = executors
+
+                minion_instance.functions.pack['__proxy__'] = minion_instance.proxy
+                minion_instance.proxy.pack['__salt__'] = minion_instance.functions
+                minion_instance.proxy.pack['__ret__'] = minion_instance.returners
+                minion_instance.proxy.pack['__pillar__'] = minion_instance.opts['pillar']
+
+                # Reload utils as well (chicken and egg, __utils__ needs __proxy__ and __proxy__ needs __utils__
+                minion_instance.utils = salt.loader.utils(minion_instance.opts, proxy=minion_instance.proxy)
+                minion_instance.proxy.pack['__utils__'] = minion_instance.utils
+
+                # Reload all modules so all dunder variables are injected
+                minion_instance.proxy.reload_modules()
+
+                fq_proxyname = opts['proxy']['proxytype']
+                proxy_init_fn = minion_instance.proxy[fq_proxyname+'.init']
+                proxy_init_fn(opts)
+            if not hasattr(minion_instance, 'serial'):
+                minion_instance.serial = salt.payload.Serial(opts)
+            if not hasattr(minion_instance, 'proc_dir'):
+                uid = salt.utils.get_uid(user=opts.get('user', None))
+                minion_instance.proc_dir = (
+                    get_proc_dir(opts['cachedir'], uid=uid)
+                    )
+
+        with tornado.stack_context.StackContext(minion_instance.ctx):
+            if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
+                Minion._thread_multi_return(minion_instance, opts, data)
+            else:
+                Minion._thread_return(minion_instance, opts, data)
