@@ -208,7 +208,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
         if isinstance(Permissions, six.string_types):
             Permissions = json.loads(Permissions)
         required_keys = set(('Action', 'Principal'))
-        optional_keys = set(('SourceArn', 'SourceAccount'))
+        optional_keys = set(('SourceArn', 'SourceAccount', 'Qualifier'))
         for sid, permission in six.iteritems(Permissions):
             keyset = set(permission.keys())
             if not keyset.issuperset(required_keys):
