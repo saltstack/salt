@@ -10,18 +10,22 @@
 from __future__ import absolute_import
 import re
 
-# Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+try:
+    # Import Salt Testing Libs
+    from tests.support.mixins import LoaderModuleMockMixin
+    from tests.support.unit import TestCase, skipIf
+    from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
-# Import Salt Libs
-from tests.unit.modules.test_kernelpkg import KernelPkgTestCase
-import salt.modules.kernelpkg_linux_apt as kernelpkg
-import salt.modules.aptpkg as pkg
+    # Import Salt Libs
+    from tests.unit.modules.test_kernelpkg import KernelPkgTestCase
+    import salt.modules.kernelpkg_linux_apt as kernelpkg
+    HAS_MODULES = True
+except ImportError:
+    HAS_MODULES = False
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_MODULES, 'Salt modules could not be loaded')
 class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
 
     _kernelpkg = kernelpkg
