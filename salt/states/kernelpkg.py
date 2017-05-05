@@ -131,7 +131,7 @@ def latest_active(name, at_time=None, **kwargs):  # pylint: disable=unused-argum
     at_time
         The wait time in minutes before the system will be rebooted.
     '''
-    current = __salt__['kernelpkg.current']()
+    active = __salt__['kernelpkg.active']()
     latest = __salt__['kernelpkg.latest_installed']()
     ret = {'name': name}
 
@@ -144,7 +144,7 @@ def latest_active(name, at_time=None, **kwargs):  # pylint: disable=unused-argum
             ret['result'] = None
             ret['changes'] = {}
             ret['pchanges'] = {'kernel': {
-                'old': current,
+                'old': active,
                 'new': latest
             }}
 
@@ -152,14 +152,14 @@ def latest_active(name, at_time=None, **kwargs):  # pylint: disable=unused-argum
             __salt__['system.reboot'](at_time=at_time)
             ret['result'] = True
             ret['changes'] = {'kernel': {
-                'old': current,
+                'old': active,
                 'new': latest
             }}
 
     else:
         ret['result'] = True
         ret['comment'] = ('The latest installed kernel package '
-                          'is active: {0}').format(current)
+                          'is active: {0}').format(active)
         ret['changes'] = {}
 
     return ret
