@@ -38,6 +38,7 @@ import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
+import salt.utils.pkg
 import salt.utils.pkg.deb
 import salt.utils.systemd
 from salt.exceptions import (
@@ -368,6 +369,7 @@ def refresh_db(cache_valid_time=0):
 
         salt '*' pkg.refresh_db
     '''
+    salt.utils.pkg.clear_rtag(__opts__)
     APT_LISTS_PATH = "/var/lib/apt/lists"
     ret = {}
     if cache_valid_time:

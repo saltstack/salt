@@ -45,6 +45,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
 
@@ -251,6 +252,7 @@ def refresh_db(jail=None, chroot=None, root=None, force=False):
 
             salt '*' pkg.refresh_db force=True
     '''
+    salt.utils.pkg.clear_rtag(__opts__)
     cmd = _pkg(jail, chroot, root)
     cmd.append('update')
     if force:

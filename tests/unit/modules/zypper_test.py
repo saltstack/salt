@@ -25,6 +25,7 @@ ensure_in_syspath('../../')
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import configparser
 import salt.ext.six as six
+import salt.utils.pkg
 
 
 class ZyppCallMock(object):
@@ -52,6 +53,7 @@ from salt.modules import zypper
 zypper.__salt__ = dict()
 zypper.__grains__ = dict()
 zypper.__context__ = dict()
+zypper.__opts__ = dict()
 zypper.rpm = None
 
 
@@ -249,10 +251,11 @@ class ZypperTestCase(TestCase):
         }
 
         with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=run_out)}):
-            result = zypper.refresh_db()
-            self.assertEqual(result.get("openSUSE-Leap-42.1-LATEST"), False)
-            self.assertEqual(result.get("openSUSE-Leap-42.1-Update"), False)
-            self.assertEqual(result.get("openSUSE-Leap-42.1-Update-Non-Oss"), True)
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                result = zypper.refresh_db()
+                self.assertEqual(result.get("openSUSE-Leap-42.1-LATEST"), False)
+                self.assertEqual(result.get("openSUSE-Leap-42.1-Update"), False)
+                self.assertEqual(result.get("openSUSE-Leap-42.1-Update-Non-Oss"), True)
 
     def test_info_installed(self):
         '''
