@@ -73,7 +73,7 @@ def list_installed():
         return []
 
     prefix_len = len(_package_prefix()) + 1
-    return [pkg[prefix_len:] for pkg in result]
+    return sorted([pkg[prefix_len:] for pkg in result], cmp=_cmp_version)
 
 
 def latest_available():
@@ -114,12 +114,11 @@ def latest_installed():
         The :py:func:`~salt.modules.kernelpkg.needs_reboot` function
         exists to detect this condition.
     '''
-    result = _LooseVersion(active())
-    for pkg in list_installed():
-        pkgver = _LooseVersion(pkg)
-        if pkgver > result:
-            result = pkgver
-    return str(result)
+    pkgs = list_installed()
+    if pkgs:
+        return pkgs[-1]
+
+    return None
 
 
 def needs_reboot():
@@ -192,3 +191,17 @@ def _kernel_type():
     Parse the kernel name and return its type
     '''
     return re.match(r'^[\d.-]+-(.+)$', active()).group(1)
+
+
+def _cmp_version(item1, item2):
+    '''
+    Compare function for package version sorting
+    '''
+    v1 = _LooseVersion(item1)
+    v2 = _LooseVersion(item2)
+
+    if v1 < v2:
+        return -1
+    if v1 > v2:
+        return 1
+    return 0
