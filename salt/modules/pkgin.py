@@ -18,6 +18,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, MinionError
 
@@ -221,7 +222,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-
+    salt.utils.pkg.clear_rtag(__opts__)
     pkgin = _check_pkgin()
 
     if pkgin:

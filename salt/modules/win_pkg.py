@@ -57,6 +57,7 @@ from salt.exceptions import (CommandExecutionError,
                              SaltInvocationError,
                              SaltRenderError)
 import salt.utils
+import salt.utils.pkg
 import salt.syspaths
 from salt.exceptions import MinionError
 
@@ -510,6 +511,7 @@ def refresh_db(**kwargs):
         salt '*' pkg.refresh_db
         salt '*' pkg.refresh_db saltenv=base
     '''
+    salt.utils.pkg.clear_rtag(__opts__)
     saltenv = kwargs.pop('saltenv', 'base')
     verbose = salt.utils.is_true(kwargs.pop('verbose', False))
     failhard = salt.utils.is_true(kwargs.pop('failhard', True))
