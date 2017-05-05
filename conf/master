@@ -282,6 +282,15 @@
 # a value for you. Default is disabled.
 # ipc_write_buffer: 'dynamic'
 
+# These two batch settings, batch_safe_limit and batch_safe_size, are used to
+# automatically switch to a batch mode execution. If a command would have been
+# sent to more than <batch_safe_limit> minions, then run the command in
+# batches of <batch_safe_size>. If no batch_safe_size is specified, a default
+# of 8 will be used. If no batch_safe_limit is specified, then no automatic
+# batching will occur.
+#batch_safe_limit: 100
+#batch_safe_size: 8
+
 
 #####        Security settings       #####
 ##########################################
