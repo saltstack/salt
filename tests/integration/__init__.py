@@ -814,14 +814,15 @@ class TestDaemon(object):
         self.syndic_process.display_name = 'salt-syndic'
 
         processes_to_start = [self.master_process, self.minion_process, self.sub_minion_process,
-                        self.smaster_process, self.syndic_process]
+                              self.smaster_process, self.syndic_process]
 
-        if self.parser.options.proxy or (getattr(self.parser.options, 'name', False)
-                                         and any(['proxy' in item
-                                             for item in self.parser.options.name])):
-            self.proxy_process = SaltProxy(self.proxy_opts, TMP_CONF_DIR, SCRIPT_DIR)
-            self.proxy_process.display_name = 'salt-proxy'
-            processes_to_start.append(self.proxy_process)
+        if hasattr(self.parser.options, 'proxy'):
+            if self.parser.options.proxy or (getattr(self.parser.options, 'name', False)
+                                            and any(['proxy' in item
+                                                for item in self.parser.options.name])):
+                self.proxy_process = SaltProxy(self.proxy_opts, TMP_CONF_DIR, SCRIPT_DIR)
+                self.proxy_process.display_name = 'salt-proxy'
+                processes_to_start.append(self.proxy_process)
         for process in processes_to_start:
             sys.stdout.write(
                 ' * {LIGHT_YELLOW}Starting {0} ... {ENDC}'.format(
