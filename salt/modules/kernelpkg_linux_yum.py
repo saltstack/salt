@@ -35,7 +35,7 @@ def __virtual__():
     return (False, "Module kernelpkg_linux_yum: no YUM based system detected")
 
 
-def current():
+def active():
     '''
     Return the version of the running kernel.
 
@@ -43,7 +43,7 @@ def current():
 
     .. code-block:: bash
 
-        salt '*' kernelpkg.current
+        salt '*' kernelpkg.active
     '''
     if 'pkg.normalize_name' in __salt__:
         return __salt__['pkg.normalize_name'](__grains__['kernelrelease'])
@@ -80,7 +80,7 @@ def latest_available():
     '''
     result = __salt__['pkg.latest_version'](_package_name())
     if result == '':
-        result = current()
+        result = active()
     return result
 
 
@@ -97,12 +97,12 @@ def latest_installed():
     .. note::
 
         This function may not return the same value as
-        :py:func:`~salt.modules.kernelpkg.current` if a new kernel
+        :py:func:`~salt.modules.kernelpkg.active` if a new kernel
         has been installed and the system has not yet been rebooted.
         The :py:func:`~salt.modules.kernelpkg.needs_reboot` function
         exists to detect this condition.
     '''
-    result = _LooseVersion(current())
+    result = _LooseVersion(active())
     for pkg in list_installed():
         pkgver = _LooseVersion(pkg)
         if pkgver > result:
@@ -121,7 +121,7 @@ def needs_reboot():
 
         salt '*' kernelpkg.needs_reboot
     '''
-    return _LooseVersion(current()) < _LooseVersion(latest_installed())
+    return _LooseVersion(active()) < _LooseVersion(latest_installed())
 
 
 def upgrade(reboot=False, at_time=None):
@@ -154,7 +154,7 @@ def upgrade(reboot=False, at_time=None):
 
     ret = {
         'upgrades': result,
-        'current': current(),
+        'active': active(),
         'latest_installed': latest_installed(),
         'reboot_requested': reboot,
         'reboot_required': _needs_reboot
