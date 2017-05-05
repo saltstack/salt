@@ -111,17 +111,9 @@ class AzureTest(ShellCase):
 
         # check if ssh_username, ssh_password, and media_link are present
         # in the azure configuration file
-        profile_config = cloud_providers_config(
-            os.path.join(
-                FILES,
-                'conf',
-                'cloud.profiles.d',
-                PROVIDER_NAME + '.conf'
-            )
-        )
-        ssh_user = profile_config[PROFILE_NAME][provider_str]['ssh_username']
-        ssh_pass = profile_config[PROFILE_NAME][provider_str]['ssh_password']
-        media_link = profile_config[PROFILE_NAME][provider_str]['media_link']
+        ssh_user = provider_config[provider_str][PROVIDER_NAME]['ssh_username']
+        ssh_pass = provider_config[provider_str][PROVIDER_NAME]['ssh_password']
+        media_link = provider_config[provider_str][PROVIDER_NAME]['media_link']
 
         if ssh_user == '' or ssh_pass == '' or media_link == '':
             self.skipTest(
