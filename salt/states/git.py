@@ -715,7 +715,7 @@ def latest(name,
         else:
             default_branch = None
     else:
-        head_ref = None
+        head_rev = None
         default_branch = None
 
     desired_upstream = False
