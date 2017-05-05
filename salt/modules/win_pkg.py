@@ -647,7 +647,7 @@ def _get_repo_details(saltenv):
         # Since the above checks anything in C:\Windows, there are some
         # directories we may want to make exceptions for
         allow_paths = (
-            re.escape('\\'.join([system_root, 'TEMP']))  # C:\Windows\TEMP
+            re.escape('\\'.join([system_root, 'TEMP'])),  # C:\Windows\TEMP
         )
 
         # Check the local_dest to make sure it's not one of the bad paths
