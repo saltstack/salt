@@ -26,11 +26,16 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
 
     _kernelpkg = kernelpkg
     KERNEL_LIST = ['4.4.0-70-generic', '4.4.0-71-generic', '4.5.1-14-generic']
+    PACKAGE_DICT = {}
 
     @classmethod
     def setUpClass(cls):
         version = re.match(r'^(\d+\.\d+\.\d+)-(\d+)', cls.KERNEL_LIST[-1])
         cls.LATEST = '{0}.{1}'.format(version.group(1), version.group(2))
+
+        for kernel in cls.KERNEL_LIST:
+            pkg = '{0}-{1}'.format(kernelpkg._package_prefix(), kernel)
+            cls.PACKAGE_DICT[pkg] = pkg
 
     def setup_loader_modules(self):
         return {
@@ -41,6 +46,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
                 '__salt__': {
                     'pkg.install': MagicMock(return_value={}),
                     'pkg.latest_version': MagicMock(return_value=self.LATEST),
+                    'pkg.list_pkgs': MagicMock(return_value=self.PACKAGE_DICT),
                     'system.reboot': MagicMock(return_value=None)
                 }
             }

@@ -27,7 +27,7 @@ class KernelPkgTestCase(object):
         mock = MagicMock(return_value='')
         with patch.dict(self._kernelpkg.__salt__, {'pkg.latest_version': mock}):
             with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[0]):
-                self.assertEqual(self._kernelpkg.latest_available(), self.KERNEL_LIST[0])
+                self.assertEqual(self._kernelpkg.latest_available(), self.KERNEL_LIST[-1])
 
     def test_latest_available_at_latest(self):
         '''

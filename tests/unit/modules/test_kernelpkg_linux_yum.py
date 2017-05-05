@@ -37,6 +37,7 @@ class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
                 '__salt__': {
                     'pkg.normalize_name': pkg.normalize_name,
                     'pkg.upgrade': MagicMock(return_value={}),
+                    'pkg.version': MagicMock(return_value=self.KERNEL_LIST),
                     'system.reboot': MagicMock(return_value=None)
                 }
             },

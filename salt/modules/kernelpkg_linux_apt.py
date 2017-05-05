@@ -89,7 +89,7 @@ def latest_available():
     result = __salt__['pkg.latest_version'](
         '{0}-{1}'.format(_package_prefix(), _kernel_type()))
     if result == '':
-        return active()
+        return latest_installed()
 
     version = re.match(r'^(\d+\.\d+\.\d+)\.(\d+)', result)
     return '{0}-{1}-{2}'.format(
