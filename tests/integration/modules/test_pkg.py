@@ -10,12 +10,18 @@ from tests.support.helpers import (
     requires_network,
     requires_salt_modules,
 )
+from tests.support.unit import skipIf
+import salt.utils
 
 
 class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the pkg module
     '''
+    def setUp(self):
+        if salt.utils.is_windows():
+            self.run_function('pkg.refresh_db')
+
     def test_list(self):
         '''
         verify that packages are installed
@@ -23,6 +29,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('pkg.list_pkgs')
         self.assertNotEqual(len(ret.keys()), 0)
 
+    @requires_salt_modules('pkg.version_cmp')
     def test_version_cmp(self):
         '''
         test package version comparison on supported platforms
@@ -48,6 +55,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         else:
             self.skipTest('{0} is unavailable on {1}'.format(func, os_family))
 
+    @requires_salt_modules('pkg.mod_repo', 'pkg.del_repo')
     @requires_network()
     @destructiveTest
     def test_mod_del_repo(self):
@@ -99,6 +107,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if repo is not None:
                 self.run_function('pkg.del_repo', [repo])
 
+    @requires_salt_modules('pkg.owner')
     def test_owner(self):
         '''
         test finding the package owning a file
@@ -119,10 +128,14 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         successfully install and uninstall a package
         '''
-        pkg = 'htop'
-        version = self.run_function('pkg.version', [pkg])
         os_grain = self.run_function('grains.item', ['os'])['os']
         os_release = self.run_function('grains.item', ['osrelease'])['osrelease']
+
+        pkg = 'htop'
+        if os_grain == 'Windows':
+            pkg = 'putty'
+
+        version = self.run_function('pkg.version', [pkg])
 
         if os_grain == 'Ubuntu':
             if os_release.startswith('12.'):
@@ -137,6 +150,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             remove_ret = self.run_function('pkg.remove', [pkg])
             self.assertIn(pkg, remove_ret)
 
+        if isinstance(version, dict):
+            version = version[pkg]
+
         if version:
             test_remove()
             test_install()
@@ -144,7 +160,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             test_install()
             test_remove()
 
-    @requires_salt_modules('pkg.hold')
+    @requires_salt_modules('pkg.hold', 'pkg.unhold')
     @requires_network()
     @destructiveTest
     def test_hold_unhold(self):
@@ -239,6 +255,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_network()
     @destructiveTest
+    @skipIf(salt.utils.is_windows(), 'pkg.upgrade not available on Windows')
     def test_pkg_upgrade_has_pending_upgrades(self):
         '''
         Test running a system upgrade when there are packages that need upgrading

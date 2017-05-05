@@ -584,8 +584,14 @@ def _client_wrapper(attr, *args, **kwargs):
     '''
     catch_api_errors = kwargs.pop('catch_api_errors', True)
     func = getattr(__context__['docker.client'], attr, None)
-    if func is None:
+    if func is None or not hasattr(func, '__call__'):
         raise SaltInvocationError('Invalid client action \'{0}\''.format(attr))
+    if attr in ('push', 'pull'):
+        try:
+            # Refresh auth config from config.json
+            __context__['docker.client'].reload_config()
+        except AttributeError:
+            pass
     err = ''
     try:
         log.debug(

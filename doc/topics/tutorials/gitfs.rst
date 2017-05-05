@@ -321,6 +321,7 @@ configured gitfs remotes):
 
 * :conf_master:`gitfs_base`
 * :conf_master:`gitfs_root`
+* :conf_master:`gitfs_ssl_verify`
 * :conf_master:`gitfs_mountpoint` (new in 2014.7.0)
 * :conf_master:`gitfs_user` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_password` (**pygit2 only**, new in 2014.7.0)
@@ -344,6 +345,7 @@ tremendous amount of customization. Here's some example usage:
         - root: salt
         - mountpoint: salt://bar
         - base: salt-base
+        - ssl_verify: False
       - https://foo.com/bar.git:
         - name: second_bar_repo
         - root: other/salt
