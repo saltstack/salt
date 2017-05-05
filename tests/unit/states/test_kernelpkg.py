@@ -43,7 +43,7 @@ class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
                             }
                         }
                     }),
-                    'kernelpkg.current': MagicMock(return_value=0),
+                    'kernelpkg.active': MagicMock(return_value=0),
                     'kernelpkg.latest_installed': MagicMock(return_value=0)
                 }
             }
