@@ -9,22 +9,28 @@
 # Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    MagicMock,
-    patch)
+try:
+    # Import Salt Testing Libs
+    from tests.support.mixins import LoaderModuleMockMixin
+    from tests.support.unit import skipIf, TestCase
+    from tests.support.mock import (
+        NO_MOCK,
+        NO_MOCK_REASON,
+        MagicMock,
+        patch)
 
-# Import Salt Libs
-import salt.states.kernelpkg as kernelpkg
+    # Import Salt Libs
+    import salt.states.kernelpkg as kernelpkg
+    HAS_MODULES = True
+except ImportError:
+    HAS_MODULES = False
 
 KERNEL_LIST = ['4.4.0-70-generic', '4.4.0-71-generic', '4.5.1-14-generic']
 STATE_NAME = 'kernelpkg-test'
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_MODULES, 'Salt modules could not be loaded')
 class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.aptpkg

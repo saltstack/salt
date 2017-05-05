@@ -5,8 +5,13 @@
     :maturity: develop
     versionadded:: oxygen
 '''
+from __future__ import absolute_import
 
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+# Salt testing libs
+try:
+    from tests.support.mock import MagicMock, patch
+except ImportError:
+    pass
 
 
 class KernelPkgTestCase(object):
