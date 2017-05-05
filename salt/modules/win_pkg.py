@@ -890,15 +890,17 @@ def _get_msiexec(use_msiexec):
     Return if msiexec.exe will be used and the command to invoke it.
     '''
     if use_msiexec is False:
-        return (False, '')
-    if os.path.isfile(use_msiexec):
-        return (True, use_msiexec)
-    else:
-        log.warning(("msiexec path '{0}' not found. Using system registered"
-                     " msiexec instead").format(use_msiexec))
+        return False, ''
+    if isinstance(use_msiexec, six.string_types):
+        if os.path.isfile(use_msiexec):
+            return True, use_msiexec
+        else:
+            log.warning(
+                ("msiexec path '{0}' not found. Using system registered "
+                 "msiexec instead").format(use_msiexec))
         use_msiexec = True
     if use_msiexec is True:
-        return (True, 'msiexec')
+        return True, 'msiexec'
 
 
 def install(name=None, refresh=False, pkgs=None, **kwargs):
@@ -1501,7 +1503,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                     uninstall_flags, kwargs.get('extra_uninstall_flags', ''))
 
             #Compute msiexec string
-            use_msiexec, msiexec = _get_msiexec(pkginfo[version_num].get('msiexec', False))
+            use_msiexec, msiexec = _get_msiexec(pkginfo[target].get('msiexec', False))
 
             # Uninstall the software
             # Check Use Scheduler Option
