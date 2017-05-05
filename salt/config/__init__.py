@@ -1482,19 +1482,249 @@ DEFAULT_MASTER_OPTS = {
 
 
 # ----- Salt Proxy Minion Configuration Defaults ----------------------------------->
-# Note DEFAULT_MINION_OPTS
-# is loaded first, then if we are setting up a proxy, the config is overwritten with
-# these settings.
 DEFAULT_PROXY_MINION_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
-    'sign_pub_messages': False,
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': False,
     'append_minionid_config_dirs': ['cachedir', 'pidfile'],
     'default_include': 'proxy.d/*.conf',
+    'interface': '0.0.0.0',
+    'master': 'salt',
+    'master_type': 'str',
+    'master_uri_format': 'default',
+    'master_port': 4506,
+    'master_finger': '',
+    'master_shuffle': False,
+    'master_alive_interval': 0,
+    'master_failback': False,
+    'master_failback_interval': 0,
+    'verify_master_pubkey_sign': False,
+    'sign_pub_messages': False,
+    'always_verify_signature': False,
+    'master_sign_key_name': 'master_sign',
+    'syndic_finger': '',
+    'user': salt.utils.get_user(),
+    'root_dir': salt.syspaths.ROOT_DIR,
+    'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'proxy'),
+    'id': '',
+    'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'proxy'),
+    'cache_jobs': False,
+    'grains_cache': False,
+    'grains_cache_expiration': 300,
+    'grains_deep_merge': False,
+    'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'proxy'),
+    'backup_mode': '',
+    'renderer': 'yaml_jinja',
+    'renderer_whitelist': [],
+    'renderer_blacklist': [],
+    'random_startup_delay': 0,
+    'failhard': False,
+    'autoload_dynamic_modules': True,
+    'environment': None,
+    'pillarenv': None,
+    'pillar_opts': False,
+    # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
+    # are not used on the minion but are unavoidably in the code path
+    'pillar_cache': False,
+    'pillar_cache_ttl': 3600,
+    'pillar_cache_backend': 'disk',
+    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'proxy', 'extmods'),
+    'state_top': 'top.sls',
+    'state_top_saltenv': None,
+    'startup_states': '',
+    'sls_list': [],
+    'top_file': '',
+    'thorium_interval': 0.5,
+    'thorium_roots': {
+        'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
+        },
+    'file_client': 'remote',
+    'use_master_when_local': False,
+    'file_roots': {
+        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
+                 salt.syspaths.SPM_FORMULA_PATH]
+    },
+    'top_file_merging_strategy': 'merge',
+    'env_order': [],
+    'default_top': 'base',
+    'fileserver_limit_traversal': False,
+    'file_recv': False,
+    'file_recv_max_size': 100,
+    'file_ignore_regex': [],
+    'file_ignore_glob': [],
+    'fileserver_backend': ['roots'],
+    'fileserver_followsymlinks': True,
+    'fileserver_ignoresymlinks': False,
+    'pillar_roots': {
+        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
+                 salt.syspaths.SPM_PILLAR_PATH]
+    },
+    'on_demand_ext_pillar': ['libvirt', 'virtkey'],
+    'git_pillar_base': 'master',
+    'git_pillar_branch': 'master',
+    'git_pillar_env': '',
+    'git_pillar_root': '',
+    'git_pillar_ssl_verify': True,
+    'git_pillar_global_lock': True,
+    'git_pillar_user': '',
+    'git_pillar_password': '',
+    'git_pillar_insecure_auth': False,
+    'git_pillar_privkey': '',
+    'git_pillar_pubkey': '',
+    'git_pillar_passphrase': '',
+    'gitfs_remotes': [],
+    'gitfs_mountpoint': '',
+    'gitfs_root': '',
+    'gitfs_base': 'master',
+    'gitfs_user': '',
+    'gitfs_password': '',
+    'gitfs_insecure_auth': False,
+    'gitfs_privkey': '',
+    'gitfs_pubkey': '',
+    'gitfs_passphrase': '',
+    'gitfs_env_whitelist': [],
+    'gitfs_env_blacklist': [],
+    'gitfs_global_lock': True,
+    'gitfs_ssl_verify': True,
+    'gitfs_saltenv': [],
+    'hash_type': 'sha256',
+    'disable_modules': [],
+    'disable_returners': [],
+    'whitelist_modules': [],
+    'module_dirs': [],
+    'returner_dirs': [],
+    'grains_dirs': [],
+    'states_dirs': [],
+    'render_dirs': [],
+    'outputter_dirs': [],
+    'utils_dirs': [],
+    'providers': {},
+    'clean_dynamic_modules': True,
+    'open_mode': False,
+    'auto_accept': True,
+    'autosign_timeout': 120,
+    'multiprocessing': True,
+    'mine_enabled': True,
+    'mine_return_job': False,
+    'mine_interval': 60,
+    'ipc_mode': _DFLT_IPC_MODE,
+    'ipc_write_buffer': _DFLT_IPC_WBUFFER,
+    'ipv6': None,
+    'file_buffer_size': 262144,
+    'tcp_pub_port': 4510,
+    'tcp_pull_port': 4511,
+    'tcp_authentication_retries': 5,
+    'log_level': 'warning',
+    'log_level_logfile': None,
+    'log_datefmt': _DFLT_LOG_DATEFMT,
+    'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
+    'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
+    'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
+    'log_granular_levels': {},
+    'max_event_size': 1048576,
+    'test': False,
+    'ext_job_cache': '',
+    'cython_enable': False,
+    'enable_zip_modules': False,
+    'state_verbose': True,
+    'state_output': 'full',
+    'state_output_diff': False,
+    'state_auto_order': True,
+    'state_events': False,
+    'state_aggregate': False,
+    'snapper_states': False,
+    'snapper_states_config': 'root',
+    'acceptance_wait_time': 10,
+    'acceptance_wait_time_max': 0,
+    'rejected_retry': False,
+    'loop_interval': 1,
+    'verify_env': True,
+    'grains': {},
+    'permissive_pki_access': False,
+    'update_url': False,
+    'update_restart_services': [],
+    'retry_dns': 30,
+    'recon_max': 10000,
+    'recon_default': 1000,
+    'recon_randomize': True,
+    'return_retry_timer': 5,
+    'return_retry_timer_max': 10,
+    'random_reauth_delay': 10,
+    'winrepo_source_dir': 'salt://win/repo-ng/',
+    'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
+    'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
+    'winrepo_cachefile': 'winrepo.p',
+    'winrepo_cache_expire_max': 21600,
+    'winrepo_cache_expire_min': 0,
+    'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
+    'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
+    'winrepo_branch': 'master',
+    'winrepo_ssl_verify': True,
+    'winrepo_user': '',
+    'winrepo_password': '',
+    'winrepo_insecure_auth': False,
+    'winrepo_privkey': '',
+    'winrepo_pubkey': '',
+    'winrepo_passphrase': '',
+    'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-proxy.pid'),
+    'range_server': 'range:80',
+    'reactor_refresh_interval': 60,
+    'reactor_worker_threads': 10,
+    'reactor_worker_hwm': 10000,
+    'engines': [],
+    'tcp_keepalive': True,
+    'tcp_keepalive_idle': 300,
+    'tcp_keepalive_cnt': -1,
+    'tcp_keepalive_intvl': -1,
+    'modules_max_memory': -1,
+    'grains_refresh_every': 0,
+    'minion_id_caching': True,
+    'keysize': 2048,
+    'transport': 'zeromq',
+    'auth_timeout': 5,
+    'auth_tries': 7,
+    'master_tries': _MASTER_TRIES,
+    'auth_safemode': False,
+    'random_master': False,
+    'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
+    'caller_floscript': os.path.join(FLO_DIR, 'caller.flo'),
+    'ioflo_verbose': 0,
+    'ioflo_period': 0.1,
+    'ioflo_realtime': True,
+    'ioflo_console_logdir': '',
+    'raet_port': 4510,
+    'raet_alt_port': 4511,
+    'raet_mutable': False,
+    'raet_main': False,
+    'raet_clear_remotes': True,
+    'raet_clear_remote_masters': True,
+    'raet_road_bufcnt': 2,
+    'raet_lane_bufcnt': 100,
+    'cluster_mode': False,
+    'cluster_masters': [],
+    'restart_on_error': False,
+    'ping_interval': 0,
+    'username': None,
+    'password': None,
+    'zmq_filtering': False,
+    'zmq_monitor': False,
+    'cache_sreqs': True,
+    'cmd_safe': True,
+    'sudo_user': '',
+    'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
+    'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
+    'event_match_type': 'startswith',
+    'minion_restart_command': [],
+    'pub_ret': True,
+    'proxy_host': '',
+    'proxy_username': '',
+    'proxy_password': '',
+    'proxy_port': 0,
+    'minion_jid_queue_hwm': 100,
+    'ssl': None,
+    'cache': 'localfs',
 }
-
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
 DEFAULT_CLOUD_OPTS = {
     'verify_env': True,
@@ -1981,6 +2211,56 @@ def minion_config(path,
                 os.environ[env_var] = env_config_file_path
 
     overrides = load_config(path, env_var, DEFAULT_MINION_OPTS['conf_file'])
+    default_include = overrides.get('default_include',
+                                    defaults['default_include'])
+    include = overrides.get('include', [])
+
+    overrides.update(include_config(default_include, path, verbose=False,
+                                    exit_on_config_errors=not ignore_config_errors))
+    overrides.update(include_config(include, path, verbose=True,
+                                    exit_on_config_errors=not ignore_config_errors))
+
+    opts = apply_minion_config(overrides, defaults,
+                               cache_minion_id=cache_minion_id,
+                               minion_id=minion_id)
+    apply_sdb(opts)
+    _validate_opts(opts)
+    return opts
+
+
+def proxy_config(path,
+                 env_var='SALT_PROXY_CONFIG',
+                 defaults=None,
+                 cache_minion_id=False,
+                 ignore_config_errors=True,
+                 minion_id=None):
+    '''
+    Reads in the proxy minion configuration file and sets up special options
+
+    This is useful for Minion-side operations, such as the
+    :py:class:`~salt.client.Caller` class, and manually running the loader
+    interface.
+
+    .. code-block:: python
+
+        import salt.config
+        proxy_opts = salt.config.proxy_config('/etc/salt/proxy')
+    '''
+    if path is not None and path.endswith('proxy'):
+        defaults = DEFAULT_PROXY_MINION_OPTS.copy()
+
+    if not os.environ.get(env_var, None):
+        # No valid setting was given using the configuration variable.
+        # Lets see is SALT_CONFIG_DIR is of any use
+        salt_config_dir = os.environ.get('SALT_CONFIG_DIR', None)
+        if salt_config_dir:
+            env_config_file_path = os.path.join(salt_config_dir, 'proxy')
+            if salt_config_dir and os.path.isfile(env_config_file_path):
+                # We can get a configuration file using SALT_CONFIG_DIR, let's
+                # update the environment with this information
+                os.environ[env_var] = env_config_file_path
+
+    overrides = load_config(path, env_var, DEFAULT_PROXY_MINION_OPTS['conf_file'])
     default_include = overrides.get('default_include',
                                     defaults['default_include'])
     include = overrides.get('include', [])
