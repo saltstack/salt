@@ -80,7 +80,7 @@ def latest_available():
     '''
     result = __salt__['pkg.latest_version'](_package_name())
     if result == '':
-        result = active()
+        result = latest_installed()
     return result
 
 
