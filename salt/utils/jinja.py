@@ -29,6 +29,7 @@ import salt
 import salt.utils
 import salt.utils.url
 import salt.fileclient
+from salt.utils.decorators import jinja_filter
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -179,6 +180,7 @@ class PrintableDict(OrderedDict):
         return '{' + ', '.join(output) + '}'
 
 
+@jinja_filter('skip')
 def skip_filter(data):
     '''
     Suppress data output
@@ -195,6 +197,7 @@ def skip_filter(data):
     return ''
 
 
+@jinja_filter('sequence')
 def ensure_sequence_filter(data):
     '''
     Ensure sequenced data.
@@ -227,6 +230,7 @@ def ensure_sequence_filter(data):
     return data
 
 
+@jinja_filter('to_bool')
 def to_bool(val):
     '''
     Returns the logical value.
@@ -254,6 +258,7 @@ def to_bool(val):
     return False
 
 
+@jinja_filter('quote')
 def quote(txt):
     '''
     Wraps a text around quotes.
@@ -272,6 +277,12 @@ def quote(txt):
     return pipes.quote(txt)
 
 
+@jinja_filter()
+def regex_escape(value):
+    return re.escape(value)
+
+
+@jinja_filter('regex_search')
 def regex_search(txt, rgx, ignorecase=False, multiline=False):
     '''
     Searches for a pattern in the text.
@@ -298,6 +309,7 @@ def regex_search(txt, rgx, ignorecase=False, multiline=False):
     return obj.groups()
 
 
+@jinja_filter('regex_match')
 def regex_match(txt, rgx, ignorecase=False, multiline=False):
     '''
     Searches for a pattern in the text.
@@ -324,6 +336,7 @@ def regex_match(txt, rgx, ignorecase=False, multiline=False):
     return obj.groups()
 
 
+@jinja_filter('regex_replace')
 def regex_replace(txt, rgx, val, ignorecase=False, multiline=False):
     r'''
     Searches for a pattern and replaces with a sequence of characters.
@@ -348,6 +361,7 @@ def regex_replace(txt, rgx, val, ignorecase=False, multiline=False):
     return compiled_rgx.sub(val, txt)
 
 
+@jinja_filter('uuid')
 def uuid_(val):
     '''
     Returns a UUID corresponding to the value passed as argument.
@@ -368,7 +382,8 @@ def uuid_(val):
 ### List-related filters
 
 
-def unique(lst):
+@jinja_filter()
+def unique(values):
     '''
     Removes duplicates from a list.
 
@@ -383,11 +398,18 @@ def unique(lst):
 
         ['a', 'b', 'c']
     '''
-    if not isinstance(lst, collections.Hashable):
-        return list(set(lst))
-    return lst
+    ret = None
+    if isinstance(values, collections.Hashable):
+        ret = set(values)
+    else:
+        ret = []
+        for value in values:
+            if value not in ret:
+                ret.append(value)
+    return ret
 
 
+@jinja_filter('min')
 def lst_min(obj):
     '''
     Returns the min value.
@@ -406,6 +428,7 @@ def lst_min(obj):
     return min(obj)
 
 
+@jinja_filter('max')
 def lst_max(obj):
     '''
     Returns the max value.
@@ -424,6 +447,7 @@ def lst_max(obj):
     return max(obj)
 
 
+@jinja_filter('avg')
 def lst_avg(lst):
     '''
     Returns the average value of a list.
@@ -444,6 +468,7 @@ def lst_avg(lst):
     return float(lst)
 
 
+@jinja_filter('union')
 def union(lst1, lst2):
     '''
     Returns the union of two lists.
@@ -464,6 +489,7 @@ def union(lst1, lst2):
     return unique(lst1 + lst2)
 
 
+@jinja_filter('intersect')
 def intersect(lst1, lst2):
     '''
     Returns the intersection of two lists.
@@ -484,6 +510,7 @@ def intersect(lst1, lst2):
     return unique([ele for ele in lst1 if ele in lst2])
 
 
+@jinja_filter('difference')
 def difference(lst1, lst2):
     '''
     Returns the difference of two lists.
@@ -504,6 +531,7 @@ def difference(lst1, lst2):
     return unique([ele for ele in lst1 if ele not in lst2])
 
 
+@jinja_filter('symmetric_difference')
 def symmetric_difference(lst1, lst2):
     '''
     Returns the symmetric difference of two lists.
@@ -690,7 +718,7 @@ class SerializerExtension(Extension, object):
     '''
 
     tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
-                'load_text', 'import_text', 'regex_escape', 'unique'])
+                'load_text', 'import_text'])
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -701,8 +729,6 @@ class SerializerExtension(Extension, object):
             'load_yaml': self.load_yaml,
             'load_json': self.load_json,
             'load_text': self.load_text,
-            'regex_escape': self.regex_escape,
-            'unique': self.unique,
         })
 
         if self.environment.finalize is None:
@@ -883,17 +909,3 @@ class SerializerExtension(Extension, object):
             ).set_lineno(lineno)
         ]
     # pylint: enable=E1120,E1121
-
-    def regex_escape(self, value):
-        return re.escape(value)
-
-    def unique(self, values):
-        ret = None
-        if isinstance(values, collections.Hashable):
-            ret = set(values)
-        else:
-            ret = []
-            for value in values:
-                if value not in ret:
-                    ret.append(value)
-        return ret
