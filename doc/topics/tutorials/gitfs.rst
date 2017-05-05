@@ -786,8 +786,42 @@ Finally, the SSH host key must be :ref:`added to the known_hosts file
 GitPython
 ---------
 
-With GitPython_, only passphrase-less SSH public key authentication is
-supported. **The auth parameters (pubkey, privkey, etc.) shown in the pygit2
+HTTPS
+~~~~~
+
+For HTTPS repositories which require authentication, the username and password
+can be configured in one of two ways. The first way is to include them in the
+URL using the format ``https://<user>:<password>@<url>``, like so:
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - https://git:mypassword@domain.tld/myrepo.git
+
+The other way would be to configure the authentication in ``~/.netrc``:
+
+.. code-block:: text
+
+    machine domain.tld
+    login git
+    password mypassword
+
+
+If the repository is served over HTTP instead of HTTPS, then Salt will by
+default refuse to authenticate to it. This behavior can be overridden by adding
+an ``insecure_auth`` parameter:
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://git:mypassword@domain.tld/insecure_repo.git:
+        - insecure_auth: True
+
+SSH
+~~~
+
+Only passphrase-less SSH public key authentication is supported using
+GitPython. **The auth parameters (pubkey, privkey, etc.) shown in the pygit2
 authentication examples above do not work with GitPython.**
 
 .. code-block:: yaml
