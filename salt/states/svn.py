@@ -115,7 +115,7 @@ def latest(name,
     else:
         new_rev = 'HEAD'
 
-    opts += ('-r', current_rev + ':' + str(new_rev))
+    opts += ('-r', current_rev + ':' + new_rev)
 
     if trust:
         opts += ('--trust-server-cert',)
