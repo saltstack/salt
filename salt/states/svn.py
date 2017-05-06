@@ -95,26 +95,35 @@ def latest(name,
                      'The path "{0}" exists and is not '
                      'a directory.'.format(target)
                      )
-    if __opts__['test']:
-        if not os.path.exists(target):
-            return _neutral_test(
-                    ret,
-                    ('{0} doesn\'t exist and is set to be checked out.').format(target))
-        svn_cmd = 'svn.diff'
-        opts += ('-r', 'HEAD')
-
-        if trust:
-            opts += ('--trust-server-cert',)
-
-        out = __salt__[svn_cmd](cwd, target, user, username, password, *opts)
-        return _neutral_test(
-                ret,
-                ('{0}').format(out))
     try:
         current_info = __salt__['svn.info'](cwd, target, user=user, username=username, password=password, fmt='dict')
         svn_cmd = 'svn.update'
     except exceptions.CommandExecutionError:
         pass
+    
+    if __opts__['test']:
+    if not os.path.exists(target):
+        return _neutral_test(
+                ret,
+                ('{0} doesn\'t exist and is set to be checked out.').format(target))
+    svn_cmd = 'svn.diff'
+    
+    current_rev = current_info[0]['Revision']
+
+    if rev:
+        new_rev = str(rev)
+    else:
+        new_rev = 'HEAD'
+
+    opts += ('-r', current_rev + ':' + str(new_rev))
+
+    if trust:
+        opts += ('--trust-server-cert',)
+
+    out = __salt__[svn_cmd](cwd, target, user, username, password, *opts)
+    return _neutral_test(
+            ret,
+            ('{0}').format(out))
 
     if rev:
         opts += ('-r', str(rev))
