@@ -35,14 +35,12 @@ def __virtual__():
 
 
 def _save_state(details):
-    global FILENAME
     pck = open(FILENAME, 'wb')
     pickle.dump(details, pck)
     pck.close()
 
 
 def _load_state():
-    global FILENAME
     try:
         pck = open(FILENAME, 'r')
         DETAILS = pickle.load(pck)
