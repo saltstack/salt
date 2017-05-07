@@ -729,16 +729,16 @@ Environment Whitelist/Blacklist
 
 .. versionadded:: 2014.7.0
 
-The :conf_master:`gitfs_env_whitelist` and :conf_master:`gitfs_env_blacklist`
-parameters allow for greater control over which branches/tags are exposed as
-fileserver environments. Exact matches, globs, and regular expressions are
-supported, and are evaluated in that order. If using a regular expression,
-``^`` and ``$`` must be omitted, and the expression must match the entire
-branch/tag.
+The :conf_master:`gitfs_saltenv_whitelist` and
+:conf_master:`gitfs_saltenv_blacklist` parameters allow for greater control
+over which branches/tags are exposed as fileserver environments. Exact matches,
+globs, and regular expressions are supported, and are evaluated in that order.
+If using a regular expression, ``^`` and ``$`` must be omitted, and the
+expression must match the entire branch/tag.
 
 .. code-block:: yaml
 
-    gitfs_env_whitelist:
+    gitfs_saltenv_whitelist:
       - base
       - v1.*
       - 'mybranch\d+'
@@ -752,11 +752,12 @@ branch/tag.
 The behavior of the blacklist/whitelist will differ depending on which
 combination of the two options is used:
 
-* If only :conf_master:`gitfs_env_whitelist` is used, then **only** branches/tags
-  which match the whitelist will be available as environments
+* If only :conf_master:`gitfs_saltenv_whitelist` is used, then **only**
+  branches/tags which match the whitelist will be available as environments
 
-* If only :conf_master:`gitfs_env_blacklist` is used, then the branches/tags
-  which match the blacklist will **not** be available as environments
+* If only :conf_master:`gitfs_saltenv_blacklist` is used, then the
+  branches/tags which match the blacklist will **not** be available as
+  environments
 
 * If both are used, then the branches/tags which match the whitelist, but do
   **not** match the blacklist, will be available as environments.
