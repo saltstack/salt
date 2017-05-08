@@ -1355,8 +1355,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             if version_num not in pkginfo and 'latest' in pkginfo:
                 version_num = 'latest'
         elif 'latest' in pkginfo:
-            if 'latest' in pkginfo:
-                version_num = 'latest'
+            version_num = 'latest'
 
         # Check to see if package is installed on the system
         removal_targets = []
