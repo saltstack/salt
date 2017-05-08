@@ -1351,10 +1351,12 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             ret[pkgname] = msg
             continue
 
-        if version_num is not None \
-                and version_num not in pkginfo \
-                and 'latest' in pkginfo:
-            version_num = 'latest'
+        if version_num is not None:
+            if version_num not in pkginfo and 'latest' in pkginfo:
+                version_num = 'latest'
+        elif 'latest' in pkginfo:
+            if 'latest' in pkginfo:
+                version_num = 'latest'
 
         # Check to see if package is installed on the system
         removal_targets = []
@@ -1366,7 +1368,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             if version_num is None:
                 removal_targets.extend(old[pkgname])
             elif version_num not in old[pkgname] \
-                    and 'Not Found' not in old['pkgname'] \
+                    and 'Not Found' not in old[pkgname] \
                     and version_num != 'latest':
                 log.error('%s %s not installed', pkgname, version)
                 ret[pkgname] = {
