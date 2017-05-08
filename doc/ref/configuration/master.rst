@@ -283,6 +283,8 @@ Valid options:
   - utils
   - sdb
   - cache
+  - clouds
+  - tops
 
 .. conf_master:: module_dirs
 
