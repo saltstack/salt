@@ -394,6 +394,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret['comment'] = 'Started Service {0}'.format(name)
     else:
         ret['comment'] = 'Service {0} failed to start'.format(name)
+        ret['result'] = False
 
     if enable is True:
         ret.update(_enable(name, after_toggle_status, result=after_toggle_status, **kwargs))
