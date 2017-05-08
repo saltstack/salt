@@ -163,10 +163,10 @@ def create(zone, name, ttl, rdtype, data, *args, **kwargs):
         rdtype="A" "keyname=my-tsig-key" keyfile="/etc/salt/tsig.keyring" nameserver="10.0.0.2"
 
     '''
-    kwargs.update(dict(zip(
+    kwargs.update(dict(list(zip(
         ('keyname', 'keyfile', 'nameserver', 'timeout', 'port', 'keyalgorithm'),
         args
-    )))
+    ))))
     zone = kwargs.get('zone', zone)
     name = kwargs.get('name', name)
     ttl = kwargs.get('ttl', ttl)
@@ -262,15 +262,16 @@ def update(zone, name, ttl, rdtype, data, *args, **kwargs):
         rdtype="A" keyname="my-tsig-key" keyfile="/etc/salt/tsig.keyring" nameserver="10.0.0.2"
 
     '''
-    kwargs.update(dict(zip(
+    kwargs.update(dict(list(zip(
         ('keyname', 'keyfile', 'nameserver', 'timeout', 'replace', 'port', 'keyalgorithm'),
         args
-    )))
+    ))))
     zone = kwargs.get('zone', zone)
     name = kwargs.get('name', name)
     ttl = kwargs.get('ttl', ttl)
     rdtype = kwargs.get('rdtype', rdtype)
     data = kwargs.get('data', data)
+    replace = kwargs.get('replace', False)
 
     config = _get_ddns_config(*args, **kwargs)
 
@@ -356,10 +357,10 @@ def delete(zone, name, *args, **kwargs):
         keyfile="/etc/salt/tsig.keyring" nameserver="10.0.0.2"
 
     '''
-    kwargs.update(dict(zip(
+    kwargs.update(dict(list(zip(
         ('keyname', 'keyfile', 'nameserver', 'timeout', 'rdtype', 'data', 'port', 'keyalgorithm'),
         args
-    )))
+    ))))
     zone = kwargs.get('zone', zone)
     name = kwargs.get('name', name)
     rdtype = kwargs.get('rdtype', None)
@@ -446,10 +447,10 @@ def add_host(zone, name, ttl, ip, *args, **kwargs):
         keyname="my-tsig-key" keyfile="/etc/salt/tsig.keyring" nameserver="10.0.0.2"
 
     '''
-    kwargs.update(dict(zip(
+    kwargs.update(dict(list(zip(
         ('keyname', 'keyfile', 'nameserver', 'timeout', 'port', 'keyalgorithm'),
         args
-    )))
+    ))))
     zone = kwargs.get('zone', zone)
     name = kwargs.get('name', name)
     ttl = kwargs.get('ttl', ttl)
@@ -487,7 +488,7 @@ def add_host(zone, name, ttl, ip, *args, **kwargs):
     return {fqdn: res}
 
 
-def delete_host(zone, name, *args, **kwargs): 
+def delete_host(zone, name, *args, **kwargs):
     '''
     Delete both forward (A) and reverse (PTR) records for a host only if the
     forward (A) record exists.
@@ -529,10 +530,10 @@ def delete_host(zone, name, *args, **kwargs):
         keyfile="/etc/salt/tsig.keyring" nameserver="10.0.0.2"
 
     '''
-    kwargs.update(dict(zip(
+    kwargs.update(dict(list(zip(
         ('keyname', 'keyfile', 'nameserver', 'timeout', 'port', 'keyalgorithm'),
         args
-    )))
+    ))))
     zone = kwargs.get('zone', zone)
     name = kwargs.get('name', name)
 
