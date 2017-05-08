@@ -122,7 +122,7 @@ class WinDnsClientTestCase(TestCase):
         self.assertDictEqual(win_dns_client.primary_suffix('salt', updates='a'
                                                            ), ret)
 
-        mock = MagicMock(side_effect=['a', False, 'b', False])
+        mock = MagicMock(side_effect=[{'vdata': 'a'}, {'vdata': False}, {'vdata': 'b'}, {'vdata': False}])
         with patch.dict(win_dns_client.__salt__, {'reg.read_value': mock}):
             ret.update({'comment': 'No changes needed', 'result': True})
             self.assertDictEqual(win_dns_client.primary_suffix('salt', 'a'),
