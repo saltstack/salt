@@ -22,8 +22,13 @@ class KeyWheelModuleTest(integration.TestCase, integration.AdaptedConfigurationT
 
         self.assertIn('pub', ret)
         self.assertIn('priv', ret)
-        self.assertTrue(
-            ret.get('pub', '').startswith('-----BEGIN PUBLIC KEY-----'))
+        try:
+            self.assertTrue(
+                ret.get('pub', '').startswith('-----BEGIN PUBLIC KEY-----'))
+        except AssertionError:
+            self.assertTrue(
+                ret.get('pub', '').startswith('-----BEGIN RSA PUBLIC KEY-----'))
+
         self.assertTrue(
             ret.get('priv', '').startswith('-----BEGIN RSA PRIVATE KEY-----'))
 

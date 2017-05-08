@@ -230,7 +230,7 @@ def state(
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
 
-    cmd_kw['kwarg']['saltenv'] = __env__
+    cmd_kw['kwarg']['saltenv'] = saltenv
     cmd_kw['kwarg']['queue'] = queue
 
     if isinstance(concurrent, bool):
@@ -300,7 +300,7 @@ def state(
             except KeyError:
                 m_state = False
             if m_state:
-                m_state = salt.utils.check_state_result(m_ret)
+                m_state = salt.utils.check_state_result(m_ret, recurse=True)
 
         if not m_state:
             if minion not in fail_minions:
@@ -309,9 +309,10 @@ def state(
             continue
         try:
             for state_item in six.itervalues(m_ret):
-                if 'changes' in state_item and state_item['changes']:
-                    changes[minion] = m_ret
-                    break
+                if isinstance(state_item, dict):
+                    if 'changes' in state_item and state_item['changes']:
+                        changes[minion] = m_ret
+                        break
             else:
                 no_change.add(minion)
         except AttributeError:

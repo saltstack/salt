@@ -93,7 +93,6 @@ def _query(function,
         ret['data'] = 'Key not found.'
         ret['res'] = False
     else:
-        result = result.json()
         if result:
             ret['data'] = result
             ret['res'] = True
@@ -558,7 +557,7 @@ def agent_maintenance(consul_url=None, **kwargs):
     function = 'agent/maintenance'
     res = _query(consul_url=consul_url,
                  function=function,
-                 method='GET',
+                 method='PUT',
                  query_params=query_params)
     if res['res']:
         ret['res'] = True

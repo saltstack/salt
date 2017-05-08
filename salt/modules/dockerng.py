@@ -93,14 +93,14 @@ in the ``docker-registries`` Pillar key, as well as any key ending in
         username: foo
         password: s3cr3t
 
-To login to the configured registries, use the :py:func:`docker.login
-<salt.modules.dockermod.login>` function. This only needs to be done once for a
+To login to the configured registries, use the :py:func:`dockerng.login
+<salt.modules.dockerng.login>` function. This only needs to be done once for a
 given registry, and it will store/update the credentials in
 ``~/.docker/config.json``.
 
 .. note::
-    For Salt releases before 2016.3.7 and 2016.11.4, :py:func:`docker.login
-    <salt.modules.dockermod.login>` is not available. Instead, Salt will try to
+    For Salt releases before 2016.3.7 and 2016.11.4, :py:func:`dockerng.login
+    <salt.modules.dockerng.login>` is not available. Instead, Salt will try to
     authenticate using each of your configured registries for each push/pull,
     behavior which is not correct and has been resolved in newer releases.
 
@@ -842,8 +842,14 @@ def _client_wrapper(attr, *args, **kwargs):
     '''
     catch_api_errors = kwargs.pop('catch_api_errors', True)
     func = getattr(__context__['docker.client'], attr, None)
-    if func is None:
+    if func is None or not hasattr(func, '__call__'):
         raise SaltInvocationError('Invalid client action \'{0}\''.format(attr))
+    if attr in ('push', 'pull'):
+        try:
+            # Refresh auth config from config.json
+            __context__['docker.client'].reload_config()
+        except AttributeError:
+            pass
     err = ''
     try:
         log.debug(
@@ -1842,9 +1848,9 @@ def login(*registries):
 
     .. code-block:: bash
 
-        salt myminion docker.login
-        salt myminion docker.login hub
-        salt myminion docker.login hub https://mydomain.tld/registry/
+        salt myminion dockerng.login
+        salt myminion dockerng.login hub
+        salt myminion dockerng.login hub https://mydomain.tld/registry/
     '''
     # NOTE: This function uses the "docker login" CLI command so that login
     # information is added to the config.json, since docker-py isn't designed
