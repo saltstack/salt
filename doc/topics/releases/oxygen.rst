@@ -25,6 +25,30 @@ by any master tops matches that are not matched via a top file.
 To make master tops matches execute first, followed by top file matches, set
 the new :conf_minion:`master_tops_first` minion config option to ``True``.
 
+New GitFS Features
+------------------
+
+Two new features which affect how GitFS maps branches/tags to fileserver
+environments (i.e. ``saltenvs``) have been added:
+
+1. It is now possible to completely turn off Salt's default mapping logic
+   (aside from the mapping of the ``base`` saltenv). This can be triggered
+   using the new :conf_master:`gitfs_disable_saltenv_mapping` config option.
+
+   .. note::
+       When this is disabled, only the ``base`` saltenv and any configured
+       using :ref:`per-saltenv configuration parameters
+       <gitfs-per-saltenv-config>` will be available.
+
+2. The types of refs which Salt will use as saltenvs can now be controlled. In
+   previous releases, branches and tags were both mapped as environments, and
+   individual commit SHAs could be specified as saltenvs in states (and when
+   caching files using :py:func:`cp.cache_file <salt.modules.cp.cache_file>`).
+   Using the new :conf_master:`gitfs_ref_types` config option, the types of
+   refs which are used as saltenvs can be restricted. This makes it possible to
+   ignore all tags and use branches only, and also to keep SHAs from being made
+   available as saltenvs.
+
 Configuration Option Deprecations
 ---------------------------------
 
