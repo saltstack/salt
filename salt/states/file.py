@@ -4192,10 +4192,11 @@ def blockreplace(
     if changes:
         ret['pchanges'] = {'diff': changes}
         if __opts__['test']:
+            ret['changes']['diff'] = ret['pchanges']['diff']
             ret['result'] = None
             ret['comment'] = 'Changes would be made'
         else:
-            ret['changes'] = {'diff': changes}
+            ret['changes']['diff'] = ret['pchanges']['diff']
             ret['result'] = True
             ret['comment'] = 'Changes were made'
     else:

@@ -5,6 +5,10 @@ Module for gathering and managing network information
 from __future__ import absolute_import
 
 # Import python libs
+import re
+
+# Import salt libs
+import salt.utils
 import hashlib
 import datetime
 import socket
@@ -13,10 +17,6 @@ import socket
 import salt.utils
 import salt.utils.network
 import salt.utils.validate.net
-from salt.modules.network import (wol, get_hostname, interface, interface_ip,
-                                  subnets6, ip_in_subnet, convert_cidr,
-                                  calc_net, get_fqdn, ifacestartswith,
-                                  iphexval)
 from salt.utils import namespaced_function as _namespaced_function
 
 try:
@@ -26,7 +26,6 @@ except ImportError:
     HAS_DEPENDENCIES = False
 
 # Import 3rd party libraries
-import salt.ext.six as six  # pylint: disable=W0611
 try:
     import wmi  # pylint: disable=W0611
 except ImportError:
@@ -221,6 +220,35 @@ def nslookup(host):
             ret.append({comps[0].strip(): comps[1].strip()})
     if addresses:
         ret.append({'Addresses': addresses})
+    return ret
+
+
+def get_route(ip):
+    '''
+    Return routing information for given destination ip
+
+    .. versionadded:: 2016.11.6
+
+    CLI Example::
+
+        salt '*' network.get_route 10.10.10.10
+    '''
+    cmd = 'Find-NetRoute -RemoteIPAddress {0}'.format(ip)
+    out = __salt__['cmd.run'](cmd, shell='powershell', python_shell=True)
+    regexp = re.compile(
+        r"^IPAddress\s+:\s(?P<source>[\d\.:]+)?.*"
+        r"^InterfaceAlias\s+:\s(?P<interface>[\w\.\:\-\ ]+)?.*"
+        r"^NextHop\s+:\s(?P<gateway>[\d\.:]+)",
+        flags=re.MULTILINE | re.DOTALL
+    )
+    m = regexp.search(out)
+    ret = {
+        'destination': ip,
+        'gateway': m.group('gateway'),
+        'interface': m.group('interface'),
+        'source': m.group('source')
+    }
+
     return ret
 
 
