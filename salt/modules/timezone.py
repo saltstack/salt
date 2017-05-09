@@ -198,7 +198,7 @@ def get_offset():
 
         salt '*' timezone.get_offset
     '''
-    if 'AIX' not in __grains__['os_family']:
+    if 'AIX' in __grains__['os_family']:
         return __salt__['cmd.run'](['date', '+%z'], python_shell=False)
 
     salt_path = '/opt/salt/bin/date'
