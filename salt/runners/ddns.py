@@ -32,8 +32,6 @@ in the master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/ddns
         timeout: 10
 
 '''
-from __future__ import absolute_import
-
 # Import python libs
 import os
 import logging
