@@ -4305,7 +4305,7 @@ def comment(name, regex, char='#', backup='.bak'):
         else:
             # Changes happened, add them
             ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(slines, nlines))
+                ''.join(difflib.unified_diff(str(slines), str(nlines)))
             )
 
     if ret['result']:
@@ -4417,7 +4417,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
         else:
             # Changes happened, add them
             ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(slines, nlines))
+                ''.join(difflib.unified_diff(str(slines), str(nlines)))
             )
 
     if ret['result']:
@@ -4660,7 +4660,7 @@ def append(name,
             else:
                 # Changes happened, add them
                 ret['changes']['diff'] = (
-                    '\n'.join(difflib.unified_diff(slines, nlines))
+                    '\n'.join(difflib.unified_diff(str(slines), str(nlines)))
                 )
         else:
             ret['comment'] = 'File {0} is in correct state'.format(name)
@@ -4685,7 +4685,7 @@ def append(name,
         else:
             # Changes happened, add them
             ret['changes']['diff'] = (
-                '\n'.join(difflib.unified_diff(slines, nlines)))
+                '\n'.join(difflib.unified_diff(str(slines), str(nlines))))
 
     ret['result'] = True
 
@@ -4853,7 +4853,7 @@ def prepend(name,
             else:
                 # Changes happened, add them
                 ret['changes']['diff'] = (
-                    ''.join(difflib.unified_diff(slines, nlines))
+                    ''.join(difflib.unified_diff(str(slines), str(nlines)))
                 )
             ret['result'] = None
         else:
@@ -4896,7 +4896,7 @@ def prepend(name,
         else:
             # Changes happened, add them
             ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(slines, nlines))
+                ''.join(difflib.unified_diff(str(slines), str(nlines)))
             )
 
     if count:
