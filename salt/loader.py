@@ -1543,6 +1543,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     self.refresh_file_mapping()
                     reloaded = True
                 continue
+            except SystemExit:
+                return
 
         return ret
 
