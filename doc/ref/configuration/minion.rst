@@ -1286,6 +1286,7 @@ whitelist an empty list.
 
 Valid options:
   - beacons
+  - clouds
   - sdb
   - modules
   - states
