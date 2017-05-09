@@ -169,24 +169,27 @@ def present(
         with volume_type, delete_on_termination, iops, size, encrypted,
         snapshot_id.
 
-    volume_type
-        Indicates what volume type to use. Valid values are standard, io1, gp2.
-        Default is standard.
+        volume_type
+            Indicates what volume type to use. Valid values are standard, io1, gp2.
+            Default is standard.
 
-    delete_on_termination
-        Indicates whether to delete the volume on instance termination (true) or
-        not (false).
+        delete_on_termination
+            Indicates whether to delete the volume on instance termination (true) or
+            not (false).
 
-    iops
-        For Provisioned IOPS (SSD) volumes only. The number of I/O operations per
-        second (IOPS) to provision for the volume.
+        iops
+            For Provisioned IOPS (SSD) volumes only. The number of I/O operations per
+            second (IOPS) to provision for the volume.
 
-    encrypted
-        Indicates whether the volume should be encrypted. Encrypted EBS volumes must
-        be attached to instances that support Amazon EBS encryption. Volumes that are
-        created from encrypted snapshots are automatically encrypted. There is no way
-        to create an encrypted volume from an unencrypted snapshot or an unencrypted
-        volume from an encrypted snapshot.
+        size
+            Desired volume size (in GiB).
+
+        encrypted
+            Indicates whether the volume should be encrypted. Encrypted EBS volumes must
+            be attached to instances that support Amazon EBS encryption. Volumes that are
+            created from encrypted snapshots are automatically encrypted. There is no way
+            to create an encrypted volume from an unencrypted snapshot or an unencrypted
+            volume from an encrypted snapshot.
 
     instance_monitoring
         Whether instances in group are launched with detailed monitoring.

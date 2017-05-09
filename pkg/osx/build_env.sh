@@ -2,11 +2,11 @@
 
 ############################################################################
 #
-# Title: Build Environment Script for OSX
+# Title: Build Environment Script for macOS
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
-# Description: This script sets up a build environment for salt on OSX.
+# Description: This script sets up a build environment for salt on macOS.
 #
 # Requirements:
 #     - XCode Command Line Tools (xcode-select --install)
@@ -15,7 +15,7 @@
 #     This script is not passed any parameters
 #
 #     Example:
-#         The following will set up a build environment for salt on OSX
+#         The following will set up a build environment for salt on macOS
 #
 #         ./dev_env.sh
 #

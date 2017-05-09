@@ -248,9 +248,9 @@ class SaltClientsMixIn(object):
             local_client = salt.client.get_local_client(mopts=self.application.opts)
             # TODO: refreshing clients using cachedict
             SaltClientsMixIn.__saltclients = {
-                'local': local_client.run_job,
+                'local': local_client.run_job_async,
                 # not the actual client we'll use.. but its what we'll use to get args
-                'local_async': local_client.run_job,
+                'local_async': local_client.run_job_async,
                 'runner': salt.runner.RunnerClient(opts=self.application.opts).cmd_async,
                 'runner_async': None,  # empty, since we use the same client as `runner`
                 }
@@ -393,14 +393,16 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         ('application/x-yaml', yaml.safe_dump),
     )
 
-    def _verify_client(self, client):
+    def _verify_client(self, low):
         '''
         Verify that the client is in fact one we have
         '''
-        if client not in self.saltclients:
+        if 'client' not in low or low.get('client') not in self.saltclients:
             self.set_status(400)
             self.write("400 Invalid Client: Client not found in salt clients")
             self.finish()
+            return False
+        return True
 
     def initialize(self):
         '''
@@ -536,12 +538,14 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         data = self.deserialize(self.request.body)
         self.raw_data = copy(data)
 
-        if self.request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
-            if 'arg' in data and not isinstance(data['arg'], list):
-                data['arg'] = [data['arg']]
+        if 'arg' in data and not isinstance(data['arg'], list):
+            data['arg'] = [data['arg']]
+
+        if not isinstance(data, list):
             lowstate = [data]
         else:
             lowstate = data
+
         return lowstate
 
     def set_default_headers(self):
@@ -869,8 +873,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
 
         # check clients before going, we want to throw 400 if one is bad
         for low in self.lowstate:
-            client = low.get('client')
-            self._verify_client(client)
+            if not self._verify_client(low):
+                return
 
             # Make sure we have 'token' or 'username'/'password' in each low chunk.
             # Salt will verify the credentials are correct.
@@ -903,10 +907,10 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         '''
         chunk_ret = {}
 
-        f_call = salt.utils.format_call(self.saltclients['local'], chunk)
+        f_call = self._format_call_run_job_async(chunk)
         # fire a job off
         try:
-            pub_data = self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            pub_data = yield self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
         except EauthAuthenticationError:
             raise tornado.gen.Return('Not authorized to run this job')
 
@@ -987,10 +991,10 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         if minions_remaining is None:
             minions_remaining = []
 
-        ping_pub_data = self.saltclients['local'](tgt,
-                                                  'saltutil.find_job',
-                                                  [jid],
-                                                  expr_form=tgt_type)
+        ping_pub_data = yield self.saltclients['local'](tgt,
+                                                        'saltutil.find_job',
+                                                        [jid],
+                                                        expr_form=tgt_type)
         ping_tag = tagify([ping_pub_data['jid'], 'ret'], 'job')
 
         minion_running = False
@@ -1004,10 +1008,10 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
                 if not minion_running:
                     raise tornado.gen.Return(True)
                 else:
-                    ping_pub_data = self.saltclients['local'](tgt,
-                                                              'saltutil.find_job',
-                                                              [jid],
-                                                              expr_form=tgt_type)
+                    ping_pub_data = yield self.saltclients['local'](tgt,
+                                                                    'saltutil.find_job',
+                                                                    [jid],
+                                                                    expr_form=tgt_type)
                     ping_tag = tagify([ping_pub_data['jid'], 'ret'], 'job')
                     minion_running = False
                     continue
@@ -1024,9 +1028,9 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         '''
         Disbatch local client_async commands
         '''
-        f_call = salt.utils.format_call(self.saltclients['local_async'], chunk)
+        f_call = self._format_call_run_job_async(chunk)
         # fire a job off
-        pub_data = self.saltclients['local_async'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        pub_data = yield self.saltclients['local_async'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
         raise tornado.gen.Return(pub_data)
 
@@ -1052,6 +1056,12 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         '''
         pub_data = self.saltclients['runner'](chunk)
         raise tornado.gen.Return(pub_data)
+
+    # salt.utils.format_call doesn't work for functions having the annotation tornado.gen.coroutine
+    def _format_call_run_job_async(self, chunk):
+        f_call = salt.utils.format_call(salt.client.LocalClient.run_job, chunk)
+        f_call.get('kwargs', {})['io_loop'] = tornado.ioloop.IOLoop.current()
+        return f_call
 
 
 class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223

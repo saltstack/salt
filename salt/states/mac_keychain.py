@@ -3,7 +3,7 @@
 Installing of certificates to the keychain
 ==========================================
 
-Install certificats to the OS X keychain
+Install certificats to the macOS keychain
 
 .. code-block:: yaml
 
@@ -35,7 +35,7 @@ def __virtual__():
 
 def installed(name, password, keychain="/Library/Keychains/System.keychain", **kwargs):
     '''
-    Install a p12 certificate file into the OS X keychain
+    Install a p12 certificate file into the macOS keychain
 
     name
         The certificate to install
@@ -100,7 +100,7 @@ def installed(name, password, keychain="/Library/Keychains/System.keychain", **k
 
 def uninstalled(name, password, keychain="/Library/Keychains/System.keychain", keychain_password=None):
     '''
-    Uninstall a p12 certificate file from the OS X keychain
+    Uninstall a p12 certificate file from the macOS keychain
 
     name
         The certificate to uninstall, this can be a path for a .p12 or the friendly

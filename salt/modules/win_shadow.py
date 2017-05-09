@@ -72,6 +72,12 @@ def set_expire(name, expire):
 
     :return: True if successful. False if unsuccessful.
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.set_expire <username> 2016/7/1
     '''
     return __salt__['user.update'](name, expiration_date=expire)
 
@@ -84,6 +90,12 @@ def require_password_change(name):
 
     :return: True if successful. False if unsuccessful.
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.require_password_change <username>
     '''
     return __salt__['user.update'](name, expired=True)
 
@@ -96,6 +108,12 @@ def unlock_account(name):
 
     :return: True if successful. False if unsuccessful.
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.unlock_account <username>
     '''
     return __salt__['user.update'](name, unlock_account=True)
 

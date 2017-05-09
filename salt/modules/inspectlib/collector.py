@@ -25,6 +25,9 @@ import logging
 from salt.modules.inspectlib.exceptions import (InspectorSnapshotException)
 from salt.modules.inspectlib import EnvLoader
 from salt.modules.inspectlib import kiwiproc
+from salt.modules.inspectlib.entities import (AllowedDir, IgnoredDir, Package,
+                                              PayloadFile, PackageCfgFile)
+
 import salt.utils
 from salt.utils import fsutils
 from salt.utils import reinit_crypto
@@ -51,11 +54,23 @@ class Inspector(EnvLoader):
     def __init__(self, cachedir=None, piddir=None, pidfilename=None):
         EnvLoader.__init__(self, cachedir=cachedir, piddir=piddir, pidfilename=pidfilename)
 
-        # TODO: This is nasty. Need to do something with this better. ASAP!
-        try:
-            self.db.open()
-        except Exception as ex:
-            log.error('Unable to [re]open db. Already opened?')
+    def create_snapshot(self):
+        '''
+        Open new snapshot.
+
+        :return:
+        '''
+        self.db.open(new=True)
+        return self
+
+    def reuse_snapshot(self):
+        '''
+        Open an existing, latest snapshot.
+
+        :return:
+        '''
+        self.db.open()
+        return self
 
     def _syscall(self, command, input=None, env=None, *params):
         '''
@@ -72,7 +87,7 @@ class Inspector(EnvLoader):
         '''
         if self.grains_core.os_data().get('os_family') == 'Debian':
             return self.__get_cfg_pkgs_dpkg()
-        elif self.grains_core.os_data().get('os_family') in ['Suse', 'redhat']:
+        elif self.grains_core.os_data().get('os_family') in ['SUSE', 'redhat']:
             return self.__get_cfg_pkgs_rpm()
         else:
             return dict()
@@ -148,7 +163,7 @@ class Inspector(EnvLoader):
             if self.grains_core.os_data().get('os_family') == 'Debian':
                 cfg_data = salt.utils.to_str(self._syscall("dpkg", None, None, '--verify',
                                                            pkg_name)[0]).split(os.linesep)
-            elif self.grains_core.os_data().get('os_family') in ['Suse', 'redhat']:
+            elif self.grains_core.os_data().get('os_family') in ['SUSE', 'redhat']:
                 cfg_data = salt.utils.to_str(self._syscall("rpm", None, None, '-V', '--nodeps', '--nodigest',
                                                            '--nosignature', '--nomtime', '--nolinkto',
                                                            pkg_name)[0]).split(os.linesep)
@@ -164,42 +179,60 @@ class Inspector(EnvLoader):
 
         return f_data
 
-    def _save_cfg_pkgs(self, data):
+    def _save_cfg_packages(self, data):
         '''
-        Save configuration packages.
-        '''
-        for table in ["inspector_pkg", "inspector_pkg_cfg_files"]:
-            self.db.flush(table)
+        Save configuration packages. (NG)
 
+        :param data:
+        :return:
+        '''
         pkg_id = 0
         pkg_cfg_id = 0
         for pkg_name, pkg_configs in data.items():
-            self.db.cursor.execute("INSERT INTO inspector_pkg (id, name) VALUES (?, ?)",
-                                   (pkg_id, pkg_name))
-            for pkg_config in pkg_configs:
-                self.db.cursor.execute("INSERT INTO inspector_pkg_cfg_files (id, pkgid, path) VALUES (?, ?, ?)",
-                                       (pkg_cfg_id, pkg_id, pkg_config))
-                pkg_cfg_id += 1
-            pkg_id += 1
+            pkg = Package()
+            pkg.id = pkg_id
+            pkg.name = pkg_name
+            self.db.store(pkg)
 
-        self.db.connection.commit()
+            for pkg_config in pkg_configs:
+                cfg = PackageCfgFile()
+                cfg.id = pkg_cfg_id
+                cfg.pkgid = pkg_id
+                cfg.path = pkg_config
+                self.db.store(cfg)
+                pkg_cfg_id += 1
+
+            pkg_id += 1
 
     def _save_payload(self, files, directories, links):
         '''
         Save payload (unmanaged files)
+
+        :param files:
+        :param directories:
+        :param links:
+        :return:
         '''
+
         idx = 0
         for p_type, p_list in (('f', files), ('d', directories), ('l', links,),):
             for p_obj in p_list:
                 stats = os.stat(p_obj)
-                self.db.cursor.execute("INSERT INTO inspector_payload "
-                                       "(id, path, p_type, mode, uid, gid, p_size, atime, mtime, ctime)"
-                                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                                       (idx, p_obj, p_type, stats.st_mode, stats.st_uid, stats.st_gid, stats.st_size,
-                                        stats.st_atime, stats.st_mtime, stats.st_ctime))
-                idx += 1
 
-        self.db.connection.commit()
+                payload = PayloadFile()
+                payload.id = idx
+                payload.path = p_obj
+                payload.p_type = p_type
+                payload.mode = stats.st_mode
+                payload.uid = stats.st_uid
+                payload.gid = stats.st_gid
+                payload.p_size = stats.st_size
+                payload.atime = stats.st_atime
+                payload.mtime = stats.st_mtime
+                payload.ctime = stats.st_ctime
+
+                idx += 1
+                self.db.store(payload)
 
     def _get_managed_files(self):
         '''
@@ -207,7 +240,7 @@ class Inspector(EnvLoader):
         '''
         if self.grains_core.os_data().get('os_family') == 'Debian':
             return self.__get_managed_files_dpkg()
-        elif self.grains_core.os_data().get('os_family') in ['Suse', 'redhat']:
+        elif self.grains_core.os_data().get('os_family') in ['SUSE', 'redhat']:
             return self.__get_managed_files_rpm()
 
         return list(), list(), list()
@@ -268,25 +301,26 @@ class Inspector(EnvLoader):
         dirs = list()
         links = list()
 
-        for obj in os.listdir(path):
-            obj = os.path.join(path, obj)
-            valid = True
-            for ex_obj in exclude:
-                if obj.startswith(str(ex_obj)):
-                    valid = False
+        if os.access(path, os.R_OK):
+            for obj in os.listdir(path):
+                obj = os.path.join(path, obj)
+                valid = True
+                for ex_obj in exclude:
+                    if obj.startswith(str(ex_obj)):
+                        valid = False
+                        continue
+                if not valid or not os.path.exists(obj) or not os.access(obj, os.R_OK):
                     continue
-            if not valid or not os.path.exists(obj):
-                continue
-            if os.path.islink(obj):
-                links.append(obj)
-            elif os.path.isdir(obj):
-                dirs.append(obj)
-                f_obj, d_obj, l_obj = self._get_all_files(obj, *exclude)
-                files.extend(f_obj)
-                dirs.extend(d_obj)
-                links.extend(l_obj)
-            elif os.path.isfile(obj):
-                files.append(obj)
+                if os.path.islink(obj):
+                    links.append(obj)
+                elif os.path.isdir(obj):
+                    dirs.append(obj)
+                    f_obj, d_obj, l_obj = self._get_all_files(obj, *exclude)
+                    files.extend(f_obj)
+                    dirs.extend(d_obj)
+                    links.extend(l_obj)
+                elif os.path.isfile(obj):
+                    files.append(obj)
 
         return sorted(files), sorted(dirs), sorted(links)
 
@@ -294,17 +328,12 @@ class Inspector(EnvLoader):
         '''
         Get the intersection between all files and managed files.
         '''
-        def intr(src, data):
-            out = set()
-            for d_el in data:
-                if d_el not in src:
-                    out.add(d_el)
-            return out
-
         m_files, m_dirs, m_links = managed
         s_files, s_dirs, s_links = system_all
 
-        return sorted(intr(m_files, s_files)), sorted(intr(m_dirs, s_dirs)), sorted(intr(m_links, s_links))
+        return (sorted(list(set(s_files).difference(m_files))),
+                sorted(list(set(s_dirs).difference(m_dirs))),
+                sorted(list(set(s_links).difference(m_links))))
 
     def _scan_payload(self):
         '''
@@ -312,16 +341,15 @@ class Inspector(EnvLoader):
         '''
         # Get ignored points
         allowed = list()
-        self.db.cursor.execute("SELECT path FROM inspector_allowed")
-        for alwd_path in self.db.cursor.fetchall():
-            if os.path.exists(alwd_path[0]):
-                allowed.append(alwd_path[0])
+        for allowed_dir in self.db.get(AllowedDir):
+            if os.path.exists(allowed_dir.path):
+                allowed.append(allowed_dir.path)
 
         ignored = list()
         if not allowed:
-            self.db.cursor.execute("SELECT path FROM inspector_ignored")
-            for ign_path in self.db.cursor.fetchall():
-                ignored.append(ign_path[0])
+            for ignored_dir in self.db.get(IgnoredDir):
+                if os.path.exists(ignored_dir.path):
+                    ignored.append(ignored_dir.path)
 
         all_files = list()
         all_dirs = list()
@@ -342,9 +370,7 @@ class Inspector(EnvLoader):
         '''
         Prepare full system scan by setting up the database etc.
         '''
-        # TODO: Backup the SQLite database. Backup should be restored automatically if current db failed while queried.
-        self.db.purge()
-
+        self.db.open(new=True)
         # Add ignored filesystems
         ignored_fs = set()
         ignored_fs |= set(self.IGNORE_PATHS)
@@ -370,14 +396,16 @@ class Inspector(EnvLoader):
                 ignored_all.append(entry)
         # Save to the database for further scan
         for ignored_dir in ignored_all:
-            self.db.cursor.execute("INSERT INTO inspector_ignored VALUES (?)", (ignored_dir,))
+            dir_obj = IgnoredDir()
+            dir_obj.path = ignored_dir
+            self.db.store(dir_obj)
 
         # Add allowed filesystems (overrides all above at full scan)
         allowed = [elm for elm in kwargs.get("filter", "").split(",") if elm]
         for allowed_dir in allowed:
-            self.db.cursor.execute("INSERT INTO inspector_allowed VALUES (?)", (allowed_dir,))
-
-        self.db.connection.commit()
+            dir_obj = AllowedDir()
+            dir_obj.path = allowed_dir
+            self.db.store(dir_obj)
 
         return ignored_all
 
@@ -396,7 +424,7 @@ class Inspector(EnvLoader):
         '''
         self._init_env()
 
-        self._save_cfg_pkgs(self._get_changed_cfg_pkgs(self._get_cfg_pkgs()))
+        self._save_cfg_packages(self._get_changed_cfg_pkgs(self._get_cfg_pkgs()))
         self._save_payload(*self._scan_payload())
 
     def request_snapshot(self, mode, priority=19, **kwargs):
@@ -405,6 +433,9 @@ class Inspector(EnvLoader):
         '''
         if mode not in self.MODE:
             raise InspectorSnapshotException("Unknown mode: '{0}'".format(mode))
+
+        if is_alive(self.pidfile):
+            raise CommandExecutionError('Inspection already in progress.')
 
         self._prepare_full_scan(**kwargs)
 
@@ -443,20 +474,21 @@ def is_alive(pidfile):
     '''
     Check if PID is still alive.
     '''
-    # Just silencing os.kill exception if no such PID, therefore try/pass.
     try:
         with salt.utils.fopen(pidfile) as fp_:
             os.kill(int(fp_.read().strip()), 0)
-        sys.exit(1)
+        return True
     except Exception as ex:
-        pass
+        if os.access(pidfile, os.W_OK) and os.path.isfile(pidfile):
+            os.unlink(pidfile)
+        return False
 
 
 def main(dbfile, pidfile, mode):
     '''
     Main analyzer routine.
     '''
-    Inspector(dbfile, pidfile).snapshot(mode)
+    Inspector(dbfile, pidfile).reuse_snapshot().snapshot(mode)
 
 
 if __name__ == '__main__':
@@ -465,7 +497,8 @@ if __name__ == '__main__':
         sys.exit(1)
 
     pidfile, dbfile, mode = sys.argv[1:]
-    is_alive(pidfile)
+    if is_alive(pidfile):
+        sys.exit(1)
 
     # Double-fork stuff
     try:

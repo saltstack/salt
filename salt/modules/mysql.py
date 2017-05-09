@@ -1008,7 +1008,7 @@ def db_create(name, character_set=None, collate=None, **connection_args):
     cur = dbc.cursor()
     s_name = quote_identifier(name)
     # identifiers cannot be used as values
-    qry = 'CREATE DATABASE {0}'.format(s_name)
+    qry = 'CREATE DATABASE IF NOT EXISTS {0}'.format(s_name)
     args = {}
     if character_set is not None:
         qry += ' CHARACTER SET %(character_set)s'
@@ -1722,7 +1722,7 @@ def grant_exists(grant,
             if grant_tokens['user'] == target_tokens['user'] and \
                     grant_tokens['database'] == target_tokens['database'] and \
                     grant_tokens['host'] == target_tokens['host'] and \
-                    set(grant_tokens['grant']) == set(target_tokens['grant']):
+                    set(grant_tokens['grant']) >= set(target_tokens['grant']):
                 return True
             else:
                 log.debug('grants mismatch \'{0}\'<>\'{1}\''.format(

@@ -10,6 +10,7 @@ state modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    acme
     alias
     alternatives
     apache
@@ -25,14 +26,18 @@ state modules
     beacon
     bigip
     blockdev
+    boto_apigateway
     boto_asg
     boto_cfn
     boto_cloudtrail
     boto_cloudwatch_alarm
+    boto_cloudwatch_event
+    boto_cognitoidentity
     boto_datapipeline
     boto_dynamodb
     boto_ec2
     boto_elasticache
+    boto_elasticsearch_domain
     boto_elb
     boto_iam
     boto_iam_role
@@ -49,13 +54,16 @@ state modules
     boto_vpc
     bower
     cabal
+    ceph
     chef
     chocolatey
     chronos_job
+    cisconso
     cloud
     cmd
     composer
     cron
+    csf
     cyg
     ddns
     debconfmod
@@ -69,6 +77,7 @@ state modules
     environ
     eselect
     etcd_mod
+    ethtool
     esxi
     event
     file
@@ -93,6 +102,8 @@ state modules
     http
     ifttt
     incron
+    influxdb08_database
+    influxdb08_user
     influxdb_database
     influxdb_user
     infoblox
@@ -102,12 +113,15 @@ state modules
     iptables
     jboss7
     jenkins
+    junos
     k8s
+    kapacitor
     keyboard
     keystone
     kmod
     layman
     ldap
+    libcloud_dns
     linux_acl
     locale
     lvm
@@ -117,6 +131,7 @@ state modules
     mac_assistive
     mac_defaults
     mac_keychain
+    mac_package
     mac_xattr
     makeconf
     marathon_app
@@ -133,10 +148,14 @@ state modules
     mysql_grants
     mysql_query
     mysql_user
+    netntp
+    netsnmp
+    netusers
     network
     nftables
     npm
     ntp
+    nxos
     openstack_config
     openvswitch_bridge
     openvswitch_port
@@ -145,6 +164,7 @@ state modules
     pagerduty_schedule
     pagerduty_service
     pagerduty_user
+    pcs
     pecl
     pip_state
     pkg
@@ -164,7 +184,9 @@ state modules
     postgres_tablespace
     postgres_user
     powerpath
+    probes
     process
+    proxy
     pushover
     pyenv
     pyrax_queues
@@ -189,6 +211,7 @@ state modules
     slack
     smartos
     smtp
+    snapper
     splunk
     splunk_search
     sqlite3
@@ -204,6 +227,7 @@ state modules
     sysrc
     telemetry_alert
     test
+    testinframod
     timezone
     tls
     tomcat
@@ -221,11 +245,15 @@ state modules
     win_dns_client
     win_firewall
     win_iis
+    win_lgpo
     win_license
     win_network
     win_path
+    win_pki
     win_powercfg
     win_servermanager
+    win_smtp_server
+    win_snmp
     win_system
     win_update
     winrepo

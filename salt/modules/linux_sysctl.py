@@ -42,7 +42,8 @@ def _check_systemd_salt_config():
         if not os.path.exists(sysctl_dir):
             os.makedirs(sysctl_dir)
         try:
-            salt.utils.fopen(conf, 'w').close()
+            with salt.utils.fopen(conf, 'w'):
+                pass
         except (IOError, OSError):
             msg = 'Could not create file: {0}'
             raise CommandExecutionError(msg.format(conf))

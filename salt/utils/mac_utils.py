@@ -15,6 +15,7 @@ import time
 import salt.utils
 import salt.utils.timed_subprocess
 import salt.grains.extra
+from salt.ext import six
 from salt.exceptions import CommandExecutionError, SaltInvocationError,\
     TimedProcTimeoutError
 
@@ -51,6 +52,10 @@ def _run_all(cmd):
     '''
     if not isinstance(cmd, list):
         cmd = salt.utils.shlex_split(cmd, posix=False)
+
+    for idx, item in enumerate(cmd):
+        if not isinstance(cmd[idx], six.string_types):
+            cmd[idx] = str(cmd[idx])
 
     cmd = ' '.join(cmd)
 
@@ -199,7 +204,7 @@ def validate_enabled(enabled):
 
 def confirm_updated(value, check_fun, normalize_ret=False, wait=5):
     '''
-    Wait upto ``wait`` seconds for a system parameter to be changed before
+    Wait up to ``wait`` seconds for a system parameter to be changed before
     deciding it hasn't changed.
 
     :param str value: The value indicating a successful change

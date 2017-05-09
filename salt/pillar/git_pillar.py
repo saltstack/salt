@@ -56,6 +56,10 @@ the repo's URL. Configuration details can be found below.
 Configuring git_pillar for Salt releases before 2015.8.0
 ========================================================
 
+.. note::
+    This legacy configuration for git_pillar will no longer be supported as of
+    the **Oxygen** release of Salt.
+
 For Salt releases earlier than :ref:`2015.8.0 <release-2015-8-0>`,
 GitPython is the only supported provider for git_pillar. Individual
 repositories can be configured under the :conf_master:`ext_pillar`
@@ -122,7 +126,7 @@ The corresponding Pillar top file would look like this:
 
 .. code-block:: yaml
 
-    {{env}}:
+    {{saltenv}}:
       '*':
         - bar
 
@@ -138,6 +142,10 @@ The corresponding Pillar top file would look like this:
     ``environment`` config option (instead of the minion's) before falling back
     to :conf_master:`gitfs_base`. This has been fixed in the 2016.3.5 and
     2016.11.1 releases (2016.11.0 contains the incorrect behavior).
+
+    Additionally, in releases before 2016.11.0, both ``{{env}}`` and
+    ``{{saltenv}}`` could be used as a placeholder for the environment.
+    Starting in 2016.11.0, ``{{env}}`` is no longer supported.
 
 .. _git-pillar-2015-8-0-and-later:
 
@@ -218,8 +226,23 @@ per-remote parameter:
         - production https://gitserver/git-pillar.git:
           - env: prod
 
-If ``__env__`` is specified as the branch name, then git_pillar will use the
-branch specified by :conf_master:`git_pillar_base`:
+If ``__env__`` is specified as the branch name, then git_pillar will decide
+which branch to use based on the following criteria:
+
+- If the minion has a :conf_minion:`pillarenv` configured, it will use that
+  pillar environment. (2016.11.2 and later)
+- Otherwise, if the minion has an ``environment`` configured, it will use that
+  environment.
+- Otherwise, the master's :conf_master:`git_pillar_base` will be used.
+
+.. note::
+    The use of :conf_minion:`environment` to choose the pillar environment
+    dates from a time before the :conf_minion:`pillarenv` parameter was added.
+    In a future release, it will be ignored and either the minion's
+    :conf_minion:`pillarenv` or the master's :conf_master:`git_pillar_base`
+    will be used.
+
+Here's an example of using ``__env__`` as the git_pillar environment:
 
 .. code-block:: yaml
 
@@ -232,7 +255,7 @@ The corresponding Pillar top file would look like this:
 
 .. code-block:: yaml
 
-    {{env}}:
+    {{saltenv}}:
       '*':
         - bar
 
@@ -257,6 +280,10 @@ The corresponding Pillar top file would look like this:
     2016.3.4 incorrectly checks the *master's* ``environment`` config option
     (instead of the minion's) before falling back to the master's
     :conf_master:`git_pillar_base`.
+
+    Additionally, in releases before 2016.11.0, both ``{{env}}`` and
+    ``{{saltenv}}`` could be used as a placeholder for the environment.
+    Starting in 2016.11.0, ``{{env}}`` is no longer supported.
 
 With the addition of pygit2_ support, git_pillar can now interact with
 authenticated remotes. Authentication works just like in gitfs (as outlined in
@@ -283,6 +310,7 @@ import hashlib
 import os
 
 # Import salt libs
+import salt.utils
 import salt.utils.gitfs
 import salt.utils.dictupdate
 from salt.exceptions import FileserverConfigError
@@ -379,6 +407,10 @@ def ext_pillar(minion_id, repo, pillar_dirs):
             # the pillar top.sls is sourced from the correct location.
             pillar_roots = [pillar_dir]
             pillar_roots.extend([x for x in all_dirs if x != pillar_dir])
+            if env == '__env__':
+                env = opts.get('pillarenv') \
+                    or opts.get('environment') \
+                    or opts.get('git_pillar_base')
             opts['pillar_roots'] = {env: pillar_roots}
 
             local_pillar = Pillar(opts, __grains__, minion_id, env)
@@ -408,9 +440,9 @@ class _LegacyGitPillar(object):
         self.working_dir = ''
         self.repo = None
 
-        hash_type = getattr(hashlib, opts.get('hash_type', 'md5'))
+        hash_type = getattr(hashlib, opts['hash_type'])
         hash_str = '{0} {1}'.format(self.branch, self.rp_location)
-        repo_hash = hash_type(hash_str).hexdigest()
+        repo_hash = hash_type(salt.utils.to_bytes(hash_str)).hexdigest()
         rp_ = os.path.join(self.opts['cachedir'], 'pillar_gitfs', repo_hash)
 
         if not os.path.isdir(rp_):
@@ -466,7 +498,7 @@ class _LegacyGitPillar(object):
         Return boolean whether it worked
         '''
         try:
-            log.debug('Updating fileserver for git_pillar module')
+            log.debug('Legacy git_pillar: Updating \'%s\'', self.rp_location)
             self.repo.git.fetch()
         except git.exc.GitCommandError as exc:
             log.error('Unable to fetch the latest changes from remote '
@@ -474,10 +506,15 @@ class _LegacyGitPillar(object):
             return False
 
         try:
-            self.repo.git.checkout('origin/{0}'.format(self.branch))
+            checkout_ref = 'origin/{0}'.format(self.branch)
+            log.debug('Legacy git_pillar: Checking out %s for \'%s\'',
+                      checkout_ref, self.rp_location)
+            self.repo.git.checkout(checkout_ref)
         except git.exc.GitCommandError as exc:
-            log.error('Unable to checkout branch '
-                      '{0}: {1}'.format(self.branch, exc))
+            log.error(
+                'Legacy git_pillar: Failed to checkout %s for \'%s\': %s',
+                checkout_ref, self.rp_location, exc
+            )
             return False
 
         return True
@@ -506,6 +543,14 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
     '''
     Support pre-Beryllium config schema
     '''
+    salt.utils.warn_until(
+        'Oxygen',
+        'The git ext_pillar configuration is deprecated. Please refer to the '
+        'documentation at '
+        'https://docs.saltstack.com/en/latest/ref/pillar/all/salt.pillar.git_pillar.html '
+        'for more information. This configuration will no longer be supported '
+        'as of the Oxygen release of Salt.'
+    )
     if pillar_dirs is None:
         return
     # split the branch, repo name and optional extra (key=val) parameters.
@@ -518,13 +563,20 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
         # Support multiple key=val attributes as custom parameters.
         DELIM = '='
         if DELIM not in extraopt:
-            log.error('Incorrectly formatted extra parameter. '
-                      'Missing \'{0}\': {1}'.format(DELIM, extraopt))
+            log.error(
+                'Legacy git_pillar: Incorrectly formatted extra parameter '
+                '\'%s\' within \'%s\' missing \'%s\')',
+                extraopt, repo_string, DELIM
+            )
         key, val = _extract_key_val(extraopt, DELIM)
         if key == 'root':
             root = val
         else:
-            log.warning('Unrecognized extra parameter: {0}'.format(key))
+            log.error(
+                'Legacy git_pillar: Unrecognized extra parameter \'%s\' '
+                'in \'%s\'',
+                key, repo_string
+            )
 
     # environment is "different" from the branch
     cfg_branch, _, environment = branch_env.partition(':')
@@ -540,12 +592,24 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
 
     # normpath is needed to remove appended '/' if root is empty string.
     pillar_dir = os.path.normpath(os.path.join(gitpil.working_dir, root))
+    log.debug(
+        'Legacy git_pillar: pillar_dir for \'%s\' is \'%s\'',
+        repo_string, pillar_dir
+    )
+    log.debug(
+        'Legacy git_pillar: branch for \'%s\' is \'%s\'',
+        repo_string, branch
+    )
 
     pillar_dirs.setdefault(pillar_dir, {})
 
     if cfg_branch == '__env__' and branch not in ['master', 'base']:
         gitpil.update()
     elif pillar_dirs[pillar_dir].get(branch, False):
+        log.debug(
+            'Already processed pillar_dir \'%s\' for \'%s\'',
+            pillar_dir, repo_string
+        )
         return {}  # we've already seen this combo
 
     pillar_dirs[pillar_dir].setdefault(branch, True)

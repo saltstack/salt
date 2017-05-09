@@ -22,8 +22,8 @@ class ManageTest(integration.ShellCase):
         manage.up
         '''
         ret = self.run_run_plus('manage.up')
-        self.assertIn('minion', ret['fun'])
-        self.assertIn('sub_minion', ret['fun'])
+        self.assertIn('minion', ret['return'])
+        self.assertIn('sub_minion', ret['return'])
         self.assertIn('- minion', ret['out'])
         self.assertIn('- sub_minion', ret['out'])
 
@@ -32,8 +32,8 @@ class ManageTest(integration.ShellCase):
         manage.down
         '''
         ret = self.run_run_plus('manage.down')
-        self.assertNotIn('minion', ret['fun'])
-        self.assertNotIn('sub_minion', ret['fun'])
+        self.assertNotIn('minion', ret['return'])
+        self.assertNotIn('sub_minion', ret['return'])
         self.assertNotIn('minion', ret['out'])
         self.assertNotIn('sub_minion', ret['out'])
 

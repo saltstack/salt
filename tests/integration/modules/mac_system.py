@@ -9,6 +9,7 @@ import random
 import string
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, destructiveTest
 from salt.ext.six.moves import range
 ensure_in_syspath('../../')
@@ -16,12 +17,6 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
-
-
-def disabled(f):
-    def _decorator(f):
-        print('{0} has been disabled'.format(f.__name__))
-    return _decorator(f)
 
 
 def __random_string(size=6):
@@ -38,6 +33,9 @@ SET_COMPUTER_NAME = __random_string()
 SET_SUBNET_NAME = __random_string()
 
 
+@skipIf(not salt.utils.is_darwin()
+        or not salt.utils.which('systemsetup')
+        or salt.utils.get_uid(salt.utils.get_user()) != 0, 'Test requirements not met')
 class MacSystemModuleTest(integration.ModuleCase):
     '''
     Validate the mac_system module
@@ -53,15 +51,6 @@ class MacSystemModuleTest(integration.ModuleCase):
         '''
         Get current settings
         '''
-        if not salt.utils.is_darwin():
-            self.skipTest('Test only available on Mac OS X')
-
-        if not salt.utils.which('systemsetup'):
-            self.skipTest('Test requires systemsetup binary')
-
-        if salt.utils.get_uid(salt.utils.get_user()) != 0:
-            self.skipTest('Test requires root')
-
         self.ATRUN_ENABLED = self.run_function('service.enabled', ['com.apple.atrun'])
         self.REMOTE_LOGIN_ENABLED = self.run_function('system.get_remote_login')
         self.REMOTE_EVENTS_ENABLED = self.run_function('system.get_remote_events')
@@ -179,7 +168,7 @@ class MacSystemModuleTest(integration.ModuleCase):
             'Invalid value passed for path.',
             self.run_function('system.set_startup_disk', ['spongebob']))
 
-    @disabled
+    @skipIf(True, 'Skip this test until mac fixes it.')
     def test_get_set_restart_delay(self):
         '''
         Test system.get_restart_delay
@@ -196,7 +185,7 @@ class MacSystemModuleTest(integration.ModuleCase):
         # Pass set bad value for seconds
         self.assertIn(
             'Invalid value passed for seconds.',
-            self.run_funcdtion('system.set_restart_delay', [70]))
+            self.run_function('system.set_restart_delay', [70]))
 
     def test_get_set_disable_keyboard_on_lock(self):
         '''
@@ -238,7 +227,7 @@ class MacSystemModuleTest(integration.ModuleCase):
             self.run_function('system.set_disable_keyboard_on_lock',
                               ['spongebob']))
 
-    @disabled
+    @skipIf(True, 'Skip this test until mac fixes it.')
     def test_get_set_boot_arch(self):
         '''
         Test system.get_boot_arch

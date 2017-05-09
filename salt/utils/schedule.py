@@ -273,6 +273,50 @@ will not run until the specified time has passed. Time should be specified
 in a format supported by the ``dateutil`` library.
 This requires the Python ``dateutil`` library to be installed.
 
+The scheduler also supports ensuring that there are no more than N copies of
+a particular routine running.  Use this for jobs that may be long-running
+and could step on each other or pile up in case of infrastructure outage.
+
+The default for maxrunning is 1.
+
+.. code-block:: yaml
+
+    schedule:
+      long_running_job:
+          function: big_file_transfer
+          jid_include: True
+          maxrunning: 1
+
+By default, data about jobs runs from the Salt scheduler is returned to the
+master.  Setting the ``return_job`` parameter to False will prevent the data
+from being sent back to the Salt master.
+
+.. versionadded:: 2015.5.0
+
+    schedule:
+      job1:
+          function: scheduled_job_function
+          return_job: False
+
+Setting the ``return_job`` parameter to 'nocache' prevents the salt master
+from storing the job in the master cache. Still, an event is fired on the
+master event bus in the form 'salt/job/nocache/ret/myminion'.
+
+It can be useful to include specific data to differentiate a job from other
+jobs.  Using the metadata parameter special values can be associated with
+a scheduled job.  These values are not used in the execution of the job,
+but can be used to search for specific jobs later if combined with the
+return_job parameter.  The metadata parameter must be specified as a
+dictionary, othewise it will be ignored.
+
+.. versionadded:: 2015.5.0
+
+    schedule:
+      job1:
+          function: scheduled_job_function
+          metadata:
+            foo: bar
+
 '''
 
 # Import python libs
@@ -305,6 +349,7 @@ import salt.log.setup as log_setup
 import salt.defaults.exitcodes
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running, default_signals, SignalHandlingMultiprocessingProcess
+from salt.utils.yamldumper import SafeOrderedDumper
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -332,8 +377,31 @@ class Schedule(object):
     '''
     Create a Schedule object, pass in the opts and the functions dict to use
     '''
-    def __init__(self, opts, functions, returners=None, intervals=None):
+    instance = None
+
+    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None):
+        '''
+        Only create one instance of Schedule
+        '''
+        if cls.instance is None:
+            log.debug('Initializing new Schedule')
+            # we need to make a local variable for this, as we are going to store
+            # it in a WeakValueDictionary-- which will remove the item if no one
+            # references it-- this forces a reference while we return to the caller
+            cls.instance = object.__new__(cls)
+            cls.instance.__singleton_init__(opts, functions, returners, intervals, cleanup, proxy)
+        else:
+            log.debug('Re-using Schedule')
+        return cls.instance
+
+    # has to remain empty for singletons, since __init__ will *always* be called
+    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None):
+        pass
+
+    # an init for the singleton instance to call
+    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None):
         self.opts = opts
+        self.proxy = proxy
         self.functions = functions
         if isinstance(intervals, dict):
             self.intervals = intervals
@@ -348,18 +416,43 @@ class Schedule(object):
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = six.MAXSIZE
         clean_proc_dir(opts)
+        if cleanup:
+            for prefix in cleanup:
+                self.delete_job_prefix(prefix)
+
+    def __getnewargs__(self):
+        return self.opts, self.functions, self.returners, self.intervals, None
 
     def option(self, opt):
         '''
-        Return the schedule data structure
+        Return options merged from config and pillar
         '''
         if 'config.merge' in self.functions:
             return self.functions['config.merge'](opt, {}, omit_master=True)
         return self.opts.get(opt, {})
 
+    def _get_schedule(self,
+                      include_opts=True,
+                      include_pillar=True):
+        '''
+        Return the schedule data structure
+        '''
+        schedule = {}
+        if include_pillar:
+            pillar_schedule = self.opts.get('pillar', {}).get('schedule', {})
+            if not isinstance(pillar_schedule, dict):
+                raise ValueError('Schedule must be of type dict.')
+            schedule.update(pillar_schedule)
+        if include_opts:
+            opts_schedule = self.opts.get('schedule', {})
+            if not isinstance(opts_schedule, dict):
+                raise ValueError('Schedule must be of type dict.')
+            schedule.update(opts_schedule)
+        return schedule
+
     def persist(self):
         '''
-        Persist the modified schedule into <<configdir>>/minion.d/_schedule.conf
+        Persist the modified schedule into <<configdir>>/<<default_include>>/_schedule.conf
         '''
         config_dir = self.opts.get('conf_dir', None)
         if config_dir is None and 'conf_file' in self.opts:
@@ -371,6 +464,9 @@ class Schedule(object):
             config_dir,
             os.path.dirname(self.opts.get('default_include',
                                           salt.config.DEFAULT_MINION_OPTS['default_include'])))
+        if salt.utils.is_proxy():
+            # each proxy will have a separate _schedule.conf file
+            minion_d_dir = os.path.join(minion_d_dir, self.opts['proxyid'])
 
         if not os.path.isdir(minion_d_dir):
             os.makedirs(minion_d_dir)
@@ -379,36 +475,63 @@ class Schedule(object):
         log.debug('Persisting schedule')
         try:
             with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
-                fp_.write(yaml.dump({'schedule': self.opts['schedule']}))
+                fp_.write(
+                    salt.utils.to_bytes(
+                        yaml.dump(
+                            {'schedule': self._get_schedule(include_pillar=False)},
+                            Dumper=SafeOrderedDumper
+                        )
+                    )
+                )
         except (IOError, OSError):
             log.error('Failed to persist the updated schedule',
                       exc_info_on_loglevel=logging.DEBUG)
 
-    def delete_job(self, name, persist=True, where=None):
+    def delete_job(self, name, persist=True):
         '''
-        Deletes a job from the scheduler.
+        Deletes a job from the scheduler. Ignore jobs from pillar
         '''
-        if where is None or where != 'pillar':
-            # ensure job exists, then delete it
-            if name in self.opts['schedule']:
-                del self.opts['schedule'][name]
-            schedule = self.opts['schedule']
-        else:
-            # If job is in pillar, delete it there too
-            if 'schedule' in self.opts['pillar']:
-                if name in self.opts['pillar']['schedule']:
-                    del self.opts['pillar']['schedule'][name]
-            schedule = self.opts['pillar']['schedule']
-            log.warn('Pillar schedule deleted. Pillar refresh recommended. Run saltutil.refresh_pillar.')
+        # ensure job exists, then delete it
+        if name in self.opts['schedule']:
+            del self.opts['schedule'][name]
+        elif name in self._get_schedule(include_opts=False):
+            log.warning('Cannot delete job {0}, '
+                        'it`s in the pillar!'.format(name))
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': schedule},
+        evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
                        tag='/salt/minion/minion_schedule_delete_complete')
 
         # remove from self.intervals
         if name in self.intervals:
             del self.intervals[name]
+
+        if persist:
+            self.persist()
+
+    def delete_job_prefix(self, name, persist=True):
+        '''
+        Deletes a job from the scheduler. Ignores jobs from pillar
+        '''
+        # ensure job exists, then delete it
+        for job in list(self.opts['schedule'].keys()):
+            if job.startswith(name):
+                del self.opts['schedule'][job]
+        for job in self._get_schedule(include_opts=False).keys():
+            if job.startswith(name):
+                log.warning('Cannot delete job {0}, '
+                            'it`s in the pillar!'.format(job))
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+        evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
+                       tag='/salt/minion/minion_schedule_delete_complete')
+
+        # remove from self.intervals
+        for job in list(self.intervals.keys()):
+            if job.startswith(name):
+                del self.intervals[job]
 
         if persist:
             self.persist()
@@ -435,76 +558,80 @@ class Schedule(object):
 
         new_job = next(six.iterkeys(data))
 
-        if new_job in self.opts['schedule']:
+        if new_job in self._get_schedule(include_opts=False):
+            log.warning('Cannot update job {0}, '
+                        'it`s in the pillar!'.format(new_job))
+
+        elif new_job in self.opts['schedule']:
             log.info('Updating job settings for scheduled '
                      'job: {0}'.format(new_job))
+            self.opts['schedule'].update(data)
+
         else:
             log.info('Added new job {0} to scheduler'.format(new_job))
-
-        self.opts['schedule'].update(data)
+            self.opts['schedule'].update(data)
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
+        evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
                        tag='/salt/minion/minion_schedule_add_complete')
 
         if persist:
             self.persist()
 
-    def enable_job(self, name, persist=True, where=None):
+    def enable_job(self, name, persist=True):
         '''
-        Enable a job in the scheduler.
+        Enable a job in the scheduler. Ignores jobs from pillar
         '''
-        if where == 'pillar':
-            self.opts['pillar']['schedule'][name]['enabled'] = True
-            schedule = self.opts['pillar']['schedule']
-        else:
+        # ensure job exists, then enable it
+        if name in self.opts['schedule']:
             self.opts['schedule'][name]['enabled'] = True
-            schedule = self.opts['schedule']
+            log.info('Enabling job {0} in scheduler'.format(name))
+        elif name in self._get_schedule(include_opts=False):
+            log.warning('Cannot modify job {0}, '
+                        'it`s in the pillar!'.format(name))
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': schedule},
+        evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
                        tag='/salt/minion/minion_schedule_enabled_job_complete')
 
-        log.info('Enabling job {0} in scheduler'.format(name))
-
         if persist:
             self.persist()
 
-    def disable_job(self, name, persist=True, where=None):
+    def disable_job(self, name, persist=True):
         '''
-        Disable a job in the scheduler.
+        Disable a job in the scheduler. Ignores jobs from pillar
         '''
-        if where == 'pillar':
-            self.opts['pillar']['schedule'][name]['enabled'] = False
-            schedule = self.opts['pillar']['schedule']
-        else:
+        # ensure job exists, then disable it
+        if name in self.opts['schedule']:
             self.opts['schedule'][name]['enabled'] = False
-            schedule = self.opts['schedule']
+            log.info('Disabling job {0} in scheduler'.format(name))
+        elif name in self._get_schedule(include_opts=False):
+            log.warning('Cannot modify job {0}, '
+                        'it`s in the pillar!'.format(name))
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': schedule},
+        evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
                        tag='/salt/minion/minion_schedule_disabled_job_complete')
-
-        log.info('Disabling job {0} in scheduler'.format(name))
 
         if persist:
             self.persist()
 
-    def modify_job(self, name, schedule, persist=True, where=None):
+    def modify_job(self, name, schedule, persist=True):
         '''
-        Modify a job in the scheduler.
+        Modify a job in the scheduler. Ignores jobs from pillar
         '''
-        if where == 'pillar':
-            if name in self.opts['pillar']['schedule']:
-                self.delete_job(name, persist, where=where)
-            self.opts['pillar']['schedule'][name] = schedule
-        else:
-            if name in self.opts['schedule']:
-                self.delete_job(name, persist, where=where)
-            self.opts['schedule'][name] = schedule
+        # ensure job exists, then replace it
+        if name in self.opts['schedule']:
+            self.delete_job(name, persist)
+        elif name in self._get_schedule(include_opts=False):
+            log.warning('Cannot modify job {0}, '
+                        'it`s in the pillar!'.format(name))
+            return
+
+        self.opts['schedule'][name] = schedule
 
         if persist:
             self.persist()
@@ -513,10 +640,7 @@ class Schedule(object):
         '''
         Run a schedule job now
         '''
-        schedule = self.opts['schedule']
-        if 'schedule' in self.opts['pillar']:
-            schedule.update(self.opts['pillar']['schedule'])
-        data = schedule[name]
+        data = self._get_schedule().get(name, {})
 
         if 'function' in data:
             func = data['function']
@@ -545,16 +669,16 @@ class Schedule(object):
         else:
             thread_cls = threading.Thread
 
-        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
         if multiprocessing_enabled:
             with default_signals(signal.SIGINT, signal.SIGTERM):
+                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
                 # Reset current signals before starting the process in
                 # order not to inherit the current signal handlers
                 proc.start()
-        else:
-            proc.start()
-        if multiprocessing_enabled:
             proc.join()
+        else:
+            proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+            proc.start()
 
     def enable_schedule(self):
         '''
@@ -564,7 +688,7 @@ class Schedule(object):
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
+        evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
                        tag='/salt/minion/minion_schedule_enabled_complete')
 
     def disable_schedule(self):
@@ -575,39 +699,30 @@ class Schedule(object):
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-        evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
+        evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
                        tag='/salt/minion/minion_schedule_disabled_complete')
 
     def reload(self, schedule):
         '''
         Reload the schedule from saved schedule file.
         '''
-
         # Remove all jobs from self.intervals
         self.intervals = {}
 
-        if 'schedule' in self.opts:
-            if 'schedule' in schedule:
-                self.opts['schedule'].update(schedule['schedule'])
-            else:
-                self.opts['schedule'].update(schedule)
-        else:
-            self.opts['schedule'] = schedule
+        if 'schedule' in schedule:
+            schedule = schedule['schedule']
+        self.opts.setdefault('schedule', {}).update(schedule)
 
     def list(self, where):
         '''
         List the current schedule items
         '''
-        schedule = {}
         if where == 'pillar':
-            if 'schedule' in self.opts['pillar']:
-                schedule.update(self.opts['pillar']['schedule'])
+            schedule = self._get_schedule(include_opts=False)
         elif where == 'opts':
-            schedule.update(self.opts['schedule'])
+            schedule = self._get_schedule(include_pillar=False)
         else:
-            schedule.update(self.opts['schedule'])
-            if 'schedule' in self.opts['pillar']:
-                schedule.update(self.opts['pillar']['schedule'])
+            schedule = self._get_schedule()
 
         # Fire the complete event back along with the list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -639,8 +754,8 @@ class Schedule(object):
             if self.opts['__role'] == 'master':
                 self.functions = salt.loader.runner(self.opts)
             else:
-                self.functions = salt.loader.minion_mods(self.opts)
-            self.returners = salt.loader.returners(self.opts, self.functions)
+                self.functions = salt.loader.minion_mods(self.opts, proxy=self.proxy)
+            self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'fun_args': [],
@@ -782,6 +897,9 @@ class Schedule(object):
                         # Send back to master so the job is included in the job list
                         mret = ret.copy()
                         mret['jid'] = 'req'
+                        if data.get('return_job') == 'nocache':
+                            # overwrite 'req' to signal to master that this job shouldn't be stored
+                            mret['jid'] = 'nocache'
                         event = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
                         load = {'cmd': '_return', 'id': self.opts['id']}
                         for key, value in six.iteritems(mret):
@@ -809,9 +927,7 @@ class Schedule(object):
         '''
         Evaluate and execute the schedule
         '''
-        schedule = self.option('schedule')
-        if not isinstance(schedule, dict):
-            raise ValueError('Schedule must be of type dict.')
+        schedule = self._get_schedule()
         if 'enabled' in schedule and not schedule['enabled']:
             return
         for job, data in six.iteritems(schedule):

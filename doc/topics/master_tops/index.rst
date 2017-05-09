@@ -30,6 +30,13 @@ for :mod:`Cobbler <salt.tops.cobbler>` or:
 
 for :mod:`Reclass <salt.tops.reclass_adapter>`.
 
+.. code-block:: yaml
+
+    master_tops:
+      varstack: /path/to/the/config/file/varstack.yaml
+
+for :mod:`Varstack <salt.tops.varstack>`.
+
 It's also possible to create custom master_tops modules. Simply place them into
 ``salt://_tops`` in the Salt fileserver and use the
 :py:func:`saltutil.sync_tops <salt.runners.saltutil.sync_tops>` runner to sync

@@ -8,7 +8,7 @@ Salt's Test Suite: An Introduction
 
     This tutorial makes a couple of assumptions. The first assumption is that
     you have a basic knowledge of Salt. To get up to speed, check out the
-    :ref:`Salt Walkthrough </topics/tutorials/walkthrough>`.
+    :ref:`Salt Walkthrough <tutorial-salt-walk-through>`.
 
     The second assumption is that your Salt development environment is already
     configured and that you have a basic understanding of contributing to the
@@ -451,6 +451,26 @@ in the following docs:
     where you have mocked so much of the original function that the test
     results in only asserting against the data you have provided. This results
     in a poor and fragile unit test.
+
+
+Checking for Log Messages
+=========================
+
+To test to see if a given log message has been emitted, the following pattern
+can be used
+
+.. code-block:: python
+
+    # Import logging handler
+    from salttesting.helpers import TestsLoggingHandler
+
+    # .. inside test
+    with TestsLoggingHandler() as handler:
+        for message in handler.messages:
+            if message.startswith('ERROR: This is the error message we seek'):
+                break
+            else:
+                raise AssertionError('Did not find error message')
 
 
 Automated Test Runs

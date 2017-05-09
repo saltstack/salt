@@ -354,6 +354,35 @@ functionality was added to Salt in the 2015.5.0 release.
       # Pass userdata to the instance to be created
       userdata_file: /etc/salt/my-userdata-file
 
+.. note::
+    From versions 2016.11.0 and 2016.11.3, this file was passed through the
+    master's :conf_master:`renderer` to template it. However, this caused
+    issues with non-YAML data, so templating is no longer performed by default.
+    To template the userdata_file, add a ``userdata_template`` option to the
+    cloud profile:
+
+    .. code-block:: yaml
+
+        my-ec2-config:
+          # Pass userdata to the instance to be created
+          userdata_file: /etc/salt/my-userdata-file
+          userdata_template: jinja
+
+    If no ``userdata_template`` is set in the cloud profile, then the master
+    configuration will be checked for a :conf_master:`userdata_template` value.
+    If this is not set, then no templating will be performed on the
+    userdata_file.
+
+    To disable templating in a cloud profile when a
+    :conf_master:`userdata_template` has been set in the master configuration
+    file, simply set ``userdata_template`` to ``False`` in the cloud profile:
+
+    .. code-block:: yaml
+
+        my-ec2-config:
+          # Pass userdata to the instance to be created
+          userdata_file: /etc/salt/my-userdata-file
+          userdata_template: False
 
 EC2 allows a location to be set for servers to be deployed in. Availability
 zones exist inside regions, and may be added to increase specificity.
@@ -598,7 +627,7 @@ Rename on Destroy
 =================
 When instances on EC2 are destroyed, there will be a lag between the time that
 the action is sent, and the time that Amazon cleans up the instance. During
-this time, the instance still retails a Name tag, which will cause a collision
+this time, the instance still retains a Name tag, which will cause a collision
 if the creation of an instance with the same name is attempted before the
 cleanup occurs. In order to avoid such collisions, Salt Cloud can be configured
 to rename instances when they are destroyed. The new name will look something
@@ -970,8 +999,9 @@ Launching instances into a VPC
 Simple launching into a VPC
 ---------------------------
 
-In the amazon web interface, identify the id of the subnet into which your
-image should be created. Then, edit your cloud.profiles file like so:-
+In the amazon web interface, identify the id or the name of the subnet into
+which your image should be created. Then, edit your cloud.profiles file like
+so:-
 
 .. code-block:: yaml
 
@@ -983,6 +1013,13 @@ image should be created. Then, edit your cloud.profiles file like so:-
       ssh_username: ubuntu
       securitygroupid:
         - sg-XXXXXXXX
+      securitygroupname:
+        - AnotherSecurityGroup
+        - AndThirdSecurityGroup
+
+Note that 'subnetid' takes precedence over 'subnetname', but 'securitygroupid'
+and 'securitygroupname' are merged toghether to generate a single list for
+SecurityGroups of instances.
 
 Specifying interface properties
 -------------------------------
@@ -1000,8 +1037,9 @@ the network interfaces of your virtual machines, for example:-
       size: m1.medium
       ssh_username: ubuntu
 
-      # Do not include either 'subnetid' or 'securitygroupid' here if you are
-      # going to manually specify interface configuration
+      # Do not include either 'subnetid', 'subnetname', 'securitygroupid' or
+      # 'securitygroupname' here if you are going to manually specify
+      # interface configuration
       #
       network_interfaces:
         - DeviceIndex: 0
@@ -1039,6 +1077,7 @@ the network interfaces of your virtual machines, for example:-
           # to accept IP packets with destinations other than itself.
           # SourceDestCheck: False
 
-Note that it is an error to assign a 'subnetid' or 'securitygroupid' to a
-profile where the interfaces are manually configured like this. These are both
-really properties of each network interface, not of the machine itself.
+Note that it is an error to assign a 'subnetid', 'subnetname', 'securitygroupid'
+or 'securitygroupname' to a profile where the interfaces are manually configured
+like this. These are both really properties of each network interface, not of
+the machine itself.

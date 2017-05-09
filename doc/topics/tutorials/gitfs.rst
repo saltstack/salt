@@ -67,7 +67,8 @@ be used to install it:
 
 
 If pygit2_ is not packaged for the platform on which the Master is running, the
-pygit2_ website has installation instructions here__. Keep in mind however that
+pygit2_ website has installation instructions
+`here <pygit2-install-instructions>`_. Keep in mind however that
 following these instructions will install libgit2_ and pygit2_ without system
 packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
 <pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
@@ -80,17 +81,17 @@ advisable as several other applications depend on it, so on older LTS linux
 releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
 
 .. warning::
-    pygit2_ is actively developed and :ref:`frequently makes
-    non-backwards-compatible API changes <pygit2-version-policy>`, even in
+    pygit2_ is actively developed and `frequently makes
+    non-backwards-compatible API changes <pygit2-version-policy>`_, even in
     minor releases. It is not uncommon for pygit2_ upgrades to result in errors
     in Salt. Please take care when upgrading pygit2_, and pay close attention
     to the changelog_, keeping an eye out for API changes. Errors can be
-    reported on the :ref:`SaltStack issue tracker <saltstack-issue-tracker>`.
+    reported on the `SaltStack issue tracker <saltstack-issue-tracker>`_.
 
 .. _pygit2-version-policy: http://www.pygit2.org/install.html#version-numbers
 .. _changelog: https://github.com/libgit2/pygit2#changelog
 .. _saltstack-issue-tracker: https://github.com/saltstack/salt/issues
-.. __: http://www.pygit2.org/install.html
+.. _pygit2-install-instructions: http://www.pygit2.org/install.html
 .. _libgit2: https://libgit2.github.com/
 .. _libssh2: http://www.libssh2.org/
 .. _python-cffi: https://pypi.python.org/pypi/cffi
@@ -372,6 +373,7 @@ configured gitfs remotes):
 
 * :conf_master:`gitfs_base`
 * :conf_master:`gitfs_root`
+* :conf_master:`gitfs_ssl_verify`
 * :conf_master:`gitfs_mountpoint` (new in 2014.7.0)
 * :conf_master:`gitfs_user` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_password` (**pygit2 only**, new in 2014.7.0)
@@ -394,6 +396,7 @@ tremendous amount of customization. Here's some example usage:
         - root: salt
         - mountpoint: salt://bar
         - base: salt-base
+        - ssl_verify: False
       - https://foo.com/bar.git:
         - name: second_bar_repo
         - root: other/salt
@@ -441,6 +444,105 @@ In the example configuration above, the following is true:
 5. The fourth remote overrides the default behavior of :ref:`not authenticating
    to insecure (non-HTTPS) remotes <gitfs-insecure-auth>`.
 
+
+.. _gitfs-per-saltenv-config:
+
+Per-Saltenv Configuration Parameters
+====================================
+
+.. versionadded:: 2016.11.0
+
+For more granular control, Salt allows the following three things to be
+overridden for individual saltenvs within a given repo:
+
+- The :ref:`mountpoint <gitfs-walkthrough-mountpoint>`
+- The :ref:`root <gitfs-walkthrough-root>`
+- The branch/tag to be used for a given saltenv
+
+Here is an example:
+
+.. code-block:: yaml
+
+    gitfs_root: salt
+
+    gitfs_saltenv:
+      - dev:
+        - mountpoint: salt://gitfs-dev
+        - ref: develop
+
+    gitfs_remotes:
+      - https://foo.com/bar.git:
+        - saltenv:
+          - staging:
+            - ref: qa
+            - mountpoint: salt://bar-staging
+          - dev:
+            - ref: development
+      - https://foo.com/baz.git:
+        - saltenv:
+          - staging:
+            - mountpoint: salt://baz-staging
+
+Given the above configuration, the following is true:
+
+1. For all gitfs remotes, files for the ``dev`` saltenv will be located under
+   ``salt://gitfs-dev``.
+
+2. For the ``dev`` saltenv, files from the first remote will be sourced from
+   the ``development`` branch, while files from the second remote will be
+   sourced from the ``develop`` branch.
+
+3. For the ``staging`` saltenv, files from the first remote will be located
+   under ``salt://bar-staging``, while files from the second remote will be
+   located under ``salt://baz-staging``.
+
+4. For all gitfs remotes, and in all saltenvs, files will be served from the
+   ``salt`` directory (and its subdirectories).
+
+
+Configuration Order of Precedence
+=================================
+
+The order of precedence for gitfs configuration is as follows (each level
+overrides all levels below it):
+
+1. Per-saltenv configuration (defined under a per-remote ``saltenv``
+   param)
+
+   .. code-block:: yaml
+
+       gitfs_remotes:
+         - https://foo.com/bar.git:
+           - saltenv:
+             - dev:
+               - mountpoint: salt://bar
+
+2. Global per-saltenv configuration (defined in :conf_master:`gitfs_saltenv`)
+
+   .. code-block:: yaml
+
+       gitfs_saltenv:
+         - saltenv:
+           - dev:
+             - mountpoint: salt://bar
+
+3. Per-remote configuration parameter
+
+   .. code-block:: yaml
+
+       gitfs_remotes:
+         - https://foo.com/bar.git:
+           - mountpoint: salt://bar
+
+4. Global configuration parameter
+
+   .. code-block:: yaml
+
+       gitfs_mountpoint: salt://bar
+
+
+.. _gitfs-walkthrough-root:
+
 Serving from a Subdirectory
 ===========================
 
@@ -478,6 +580,8 @@ the other files in the repository:
 The root can also be configured on a :ref:`per-remote basis
 <gitfs-per-remote-config>`.
 
+
+.. _gitfs-walkthrough-mountpoint:
 
 Mountpoints
 ===========
@@ -889,7 +993,7 @@ match the user under which the minion is running.
 
 .. _`post-receive hook`: http://www.git-scm.com/book/en/Customizing-Git-Git-Hooks#Server-Side-Hooks
 
-.. _git-as-ext_pillar
+.. _git-as-ext_pillar:
 
 Using Git as an External Pillar Source
 ======================================

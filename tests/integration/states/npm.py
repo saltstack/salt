@@ -50,6 +50,14 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state('npm.installed', name=None, pkgs=['pm2', 'grunt'])
         self.assertSaltTrueReturn(ret)
 
+    @destructiveTest
+    def test_npm_cache_clean(self):
+        '''
+        Basic test to determine if NPM successfully cleans it's cached packages.
+        '''
+        ret = self.run_state('npm.cache_cleaned', name=None)
+        self.assertSaltTrueReturn(ret)
+
 
 if __name__ == '__main__':
     from integration import run_tests

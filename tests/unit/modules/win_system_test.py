@@ -34,7 +34,7 @@ except ImportError:
 win_system.__salt__ = {}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(NO_MOCK or not HAS_WIN32NET_MODS, NO_MOCK_REASON)
 class WinSystemTestCase(TestCase):
     '''
         Test cases for salt.modules.win_system

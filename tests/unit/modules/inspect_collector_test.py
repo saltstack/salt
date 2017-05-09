@@ -1,4 +1,18 @@
 # -*- coding: utf-8 -*-
+#
+# Copyright 2016 SUSE LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 '''
     :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
 '''
@@ -26,6 +40,7 @@ class InspectorCollectorTestCase(TestCase):
     '''
     Test inspectlib:collector:Inspector
     '''
+    @patch("os.mkdir", MagicMock())
     def test_env_loader(self):
         '''
         Get packages on the different distros.
@@ -36,6 +51,7 @@ class InspectorCollectorTestCase(TestCase):
         self.assertEqual(inspector.dbfile, '/foo/cache/_minion_collector.db')
         self.assertEqual(inspector.pidfile, '/foo/pid/bar.pid')
 
+    @patch("os.mkdir", MagicMock())
     def test_file_tree(self):
         '''
         Test file tree.
@@ -58,6 +74,7 @@ class InspectorCollectorTestCase(TestCase):
         tree_result = tuple(tree_result)
         self.assertEqual(expected_tree, tree_result)
 
+    @patch("os.mkdir", MagicMock())
     def test_get_unmanaged_files(self):
         '''
         Test get_unmanaged_files.
@@ -78,6 +95,7 @@ class InspectorCollectorTestCase(TestCase):
         self.assertEqual(inspector._get_unmanaged_files(managed=managed, system_all=system_all),
                          ([], ['E'], ['G', 'H']))
 
+    @patch("os.mkdir", MagicMock())
     def test_pkg_get(self):
         '''
         Test if grains switching the pkg get method.
@@ -109,7 +127,7 @@ gcc-6-base:i386
                 inspector.grains_core.os_data = MagicMock()
                 inspector.grains_core.os_data().get = MagicMock(return_value='Debian')
                 self.assertEqual(inspector._get_cfg_pkgs(), 'dpkg')
-                inspector.grains_core.os_data().get = MagicMock(return_value='Suse')
+                inspector.grains_core.os_data().get = MagicMock(return_value='SUSE')
                 self.assertEqual(inspector._get_cfg_pkgs(), 'rpm')
                 inspector.grains_core.os_data().get = MagicMock(return_value='redhat')
                 self.assertEqual(inspector._get_cfg_pkgs(), 'rpm')

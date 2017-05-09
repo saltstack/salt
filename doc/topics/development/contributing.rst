@@ -18,10 +18,10 @@ Salt Coding Style
 -----------------
 
 SaltStack has its own coding style guide that informs contributors on various coding
-approaches. Please review the :ref:`Salt Coding Style<coding-style>` documentation
+approaches. Please review the :ref:`Salt Coding Style <coding-style>` documentation
 for information about Salt's particular coding patterns.
 
-Within the :ref:`Salt Coding Style<coding-style>` documentation, there is a section
+Within the :ref:`Salt Coding Style <coding-style>` documentation, there is a section
 about running Salt's ``.pylintrc`` file. SaltStack recommends running the ``.pylintrc``
 file on any files you are changing with your code contribution before submitting a
 pull request to Salt's repository. Please see the :ref:`Linting<pylint-instructions>`
@@ -418,6 +418,7 @@ and bug resolution. See the :ref:`Labels and Milestones
 .. _'Git resources`: https://help.github.com/articles/good-resources-for-learning-git-and-github/
 .. _`Closing issues via commit message`: https://help.github.com/articles/closing-issues-via-commit-messages
 .. _`git format-patch`: https://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
+.. _salt-users: https://groups.google.com/forum/#!forum/salt-users
 
 Mentionbot
 ==========

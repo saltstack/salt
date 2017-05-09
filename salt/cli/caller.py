@@ -75,7 +75,7 @@ class Caller(object):
             ttype = opts['pillar']['master']['transport']
 
         # switch on available ttypes
-        if ttype in ('zeromq', 'tcp'):
+        if ttype in ('zeromq', 'tcp', 'detect'):
             return ZeroMQCaller(opts, **kwargs)
         elif ttype == 'raet':
             return RAETCaller(opts, **kwargs)
@@ -230,7 +230,8 @@ class BaseCaller(object):
             if isinstance(oput, six.string_types):
                 ret['out'] = oput
         is_local = self.opts['local'] or self.opts.get(
-            'file_client', False) == 'local'
+            'file_client', False) == 'local' or self.opts.get(
+            'master_type') == 'disable'
         returners = self.opts.get('return', '').split(',')
         if (not is_local) or returners:
             ret['id'] = self.opts['id']
@@ -247,7 +248,6 @@ class BaseCaller(object):
                 pass
 
         # return the job infos back up to the respective minion's master
-
         if not is_local:
             try:
                 mret = ret.copy()

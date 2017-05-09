@@ -54,7 +54,9 @@ def managed(name,
             env_vars=None,
             no_use_wheel=False,
             pip_upgrade=False,
-            pip_pkgs=None):
+            pip_pkgs=None,
+            pip_no_cache_dir=False,
+            pip_cache_dir=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -139,7 +141,7 @@ def managed(name,
                 requirements, __env__
             )
         # Check if the master version has changed.
-        if __salt__['cp.hash_file'](requirements, __env__) != \
+        if cached_requirements and __salt__['cp.hash_file'](requirements, __env__) != \
                 __salt__['cp.hash_file'](cached_requirements, __env__):
             cached_requirements = __salt__['cp.cache_file'](
                 requirements, __env__
@@ -147,7 +149,7 @@ def managed(name,
         if not cached_requirements:
             ret.update({
                 'result': False,
-                'comment': 'pip requirements file {0!r} not found'.format(
+                'comment': 'pip requirements file \'{0}\' not found'.format(
                     requirements
                 )
             })
@@ -278,7 +280,9 @@ def managed(name,
             no_deps=no_deps,
             proxy=proxy,
             use_vt=use_vt,
-            env_vars=env_vars
+            env_vars=env_vars,
+            no_cache_dir=pip_no_cache_dir,
+            cache_dir=pip_cache_dir
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:

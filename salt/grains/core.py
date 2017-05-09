@@ -12,7 +12,6 @@ as those returned here
 
 # Import python libs
 from __future__ import absolute_import
-import itertools
 import os
 import json
 import socket
@@ -30,12 +29,14 @@ __FQDN__ = None
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
-                     'slamd64', 'ovs', 'system', 'mint', 'oracle')
+                     'slamd64', 'ovs', 'system', 'mint', 'oracle', 'void')
 
 # Import salt libs
 import salt.log
 import salt.utils
 import salt.utils.network
+import salt.utils.dns
+
 if salt.utils.is_windows():
     import salt.utils.win_osinfo
 
@@ -64,7 +65,9 @@ if salt.utils.is_windows():
         import wmi  # pylint: disable=import-error
         import salt.utils.winapi
         import win32api
+        import salt.modules.reg
         HAS_WMI = True
+        __salt__['reg.read_value'] = salt.modules.reg.read_value
     except ImportError:
         log.exception(
             'Unable to import Python wmi module, some core grains '
@@ -89,7 +92,10 @@ def _windows_cpudata():
             grains['num_cpus'] = int(os.environ['NUMBER_OF_PROCESSORS'])
         except ValueError:
             grains['num_cpus'] = 1
-    grains['cpu_model'] = platform.processor()
+    grains['cpu_model'] = __salt__['reg.read_value'](
+                       "HKEY_LOCAL_MACHINE",
+                       "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+                       "ProcessorNameString").get('vdata')
     return grains
 
 
@@ -196,7 +202,7 @@ def _linux_gpu_data():
                 log.debug('Unexpected lspci output: \'{0}\''.format(line))
 
         if error:
-            log.warn(
+            log.warning(
                 'Error loading grains, unexpected linux_gpu_data output, '
                 'check that you have a valid shell configured and '
                 'permissions to run lspci command'
@@ -394,7 +400,8 @@ def _memdata(osdata):
                     if not len(comps) > 1:
                         continue
                     if comps[0].strip() == 'MemTotal':
-                        grains['mem_total'] = int(comps[1].split()[0]) / 1024
+                        # Use floor division to force output to be an integer
+                        grains['mem_total'] = int(comps[1].split()[0]) // 1024
     elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Darwin'):
         sysctl = salt.utils.which('sysctl')
         if sysctl:
@@ -569,7 +576,7 @@ def _virtual(osdata):
                 grains['virtual'] = output
                 break
             elif 'vmware' in output:
-                grains['virtual'] = 'VMWare'
+                grains['virtual'] = 'VMware'
                 break
             elif 'microsoft' in output:
                 grains['virtual'] = 'VirtualPC'
@@ -585,7 +592,7 @@ def _virtual(osdata):
                 grains['virtual'] = output
                 break
             elif 'vmware' in output:
-                grains['virtual'] = 'VMWare'
+                grains['virtual'] = 'VMware'
                 break
             elif 'parallels' in output:
                 grains['virtual'] = 'Parallels'
@@ -666,8 +673,8 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
     else:
         if osdata['kernel'] in skip_cmds:
-            log.warn(
-                'The tools \'dmidecode\' and \'lspci\' failed to '
+            log.warning(
+                "The tools 'dmidecode' and 'lspci' failed to "
                 'execute because they do not exist on the system of the user '
                 'running this instance or the user does not have the '
                 'necessary permissions to execute them. Grains output might '
@@ -830,8 +837,8 @@ def _virtual(osdata):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
     for command in failed_commands:
-        log.warn(
-            'Although \'{0}\' was found in path, the current user '
+        log.warning(
+            "Although '{0}' was found in path, the current user "
             'cannot execute it. Grains output might not be '
             'accurate.'.format(command)
         )
@@ -858,6 +865,8 @@ def _ps(osdata):
         )
     elif osdata['os_family'] == 'Debian':
         grains['ps'] = 'ps -efHww'
+    elif osdata['os_family'] == 'AIX':
+        grains['ps'] = '/usr/bin/ps auxww'
     else:
         grains['ps'] = 'ps -efH'
     return grains
@@ -980,7 +989,7 @@ def _windows_platform_data():
 
 def _osx_platform_data():
     '''
-    Additional data for Mac OS X systems
+    Additional data for macOS systems
     Returns: A dictionary containing values for the following:
         - model_name
         - boot_rom_version
@@ -1025,6 +1034,8 @@ _OS_NAME_MAP = {
     'debian': 'Debian',
     'raspbian': 'Raspbian',
     'fedoraremi': 'Fedora',
+    'chapeau': 'Chapeau',
+    'korora': 'Korora',
     'amazonami': 'Amazon',
     'alt': 'ALT',
     'enterprise': 'OEL',
@@ -1039,6 +1050,7 @@ _OS_NAME_MAP = {
     'antergos': 'Antergos',
     'sles': 'SUSE',
     'slesexpand': 'RES',
+    'void': 'Void',
     'linuxmint': 'Mint',
 }
 
@@ -1049,6 +1061,9 @@ _OS_NAME_MAP = {
 _OS_FAMILY_MAP = {
     'Ubuntu': 'Debian',
     'Fedora': 'RedHat',
+    'Chapeau': 'RedHat',
+    'Korora': 'RedHat',
+    'FedBerry': 'RedHat',
     'CentOS': 'RedHat',
     'GoOSe': 'RedHat',
     'Scientific': 'RedHat',
@@ -1060,9 +1075,9 @@ _OS_FAMILY_MAP = {
     'XenServer': 'RedHat',
     'RES': 'RedHat',
     'Mandrake': 'Mandriva',
-    'ESXi': 'VMWare',
+    'ESXi': 'VMware',
     'Mint': 'Debian',
-    'VMWareESX': 'VMWare',
+    'VMwareESX': 'VMware',
     'Bluewhite64': 'Bluewhite',
     'Slamd64': 'Slackware',
     'SLES': 'Suse',
@@ -1095,6 +1110,7 @@ _OS_FAMILY_MAP = {
     'Devuan': 'Debian',
     'antiX': 'Debian',
     'NILinuxRT': 'NILinuxRT',
+    'Void': 'Void',
 }
 
 
@@ -1190,6 +1206,25 @@ def os_data():
         grains.update(_windows_cpudata())
         grains.update(_windows_virtual(grains))
         grains.update(_ps(grains))
+
+        if 'Server' in grains['osrelease']:
+            osrelease_info = grains['osrelease'].split('Server', 1)
+            osrelease_info[1] = osrelease_info[1].lstrip('R')
+        else:
+            osrelease_info = grains['osrelease'].split('.')
+
+        for idx, value in enumerate(osrelease_info):
+            if not value.isdigit():
+                continue
+            osrelease_info[idx] = int(value)
+        grains['osrelease_info'] = tuple(osrelease_info)
+
+        grains['osfinger'] = '{os}-{ver}'.format(
+            os=grains['os'],
+            ver=grains['osrelease'])
+
+        grains['init'] = 'Windows'
+
         return grains
     elif salt.utils.is_linux():
         # Add SELinux grain, if you have it
@@ -1253,6 +1288,8 @@ def os_data():
                             )
                     elif salt.utils.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
+                    elif init_cmdline == ['runit']:
+                        grains['init'] = 'runit'
                     else:
                         log.info(
                             'Could not determine init system from command line: ({0})'
@@ -1494,6 +1531,7 @@ def os_data():
         grains['osfullname'] = "{0} {1}".format(osname, osrelease)
         grains['osrelease'] = osrelease
         grains['osbuild'] = osbuild
+        grains['init'] = 'launchd'
         grains.update(_bsd_cpudata(grains))
         grains.update(_osx_gpudata())
         grains.update(_osx_platform_data())
@@ -1640,10 +1678,14 @@ def ip_fqdn():
 
     ret = {}
     ret['ipv4'] = salt.utils.network.ip_addrs(include_loopback=True)
-    ret['ipv6'] = salt.utils.network.ip_addrs6(include_loopback=True)
-
     _fqdn = hostname()['fqdn']
-    for socket_type, ipv_num in ((socket.AF_INET, '4'), (socket.AF_INET6, '6')):
+    sockets = [(socket.AF_INET, '4')]
+
+    if __opts__.get('ipv6', True):
+        ret['ipv6'] = salt.utils.network.ip_addrs6(include_loopback=True)
+        sockets.append((socket.AF_INET6, '6'))
+
+    for socket_type, ipv_num in sockets:
         key = 'fqdn_ip' + ipv_num
         if not ret['ipv' + ipv_num]:
             ret[key] = []
@@ -1652,6 +1694,9 @@ def ip_fqdn():
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list(set(item[4][0] for item in info))
             except socket.error:
+                if __opts__['__role'] == 'master':
+                    log.warning('Unable to find IPv{0} record for "{1}" causing a 10 second timeout when rendering grains. '
+                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn))
                 ret[key] = []
 
     return ret
@@ -1718,7 +1763,7 @@ def ip6_interfaces():
     # Provides:
     #   ip_interfaces
 
-    if salt.utils.is_proxy():
+    if salt.utils.is_proxy() or not __opts__.get('ipv6', True):
         return {}
 
     ret = {}
@@ -1756,49 +1801,20 @@ def dns():
 
      .. versionadded:: 2016.3.0
     '''
-
+    # Provides:
+    #   dns
     if salt.utils.is_windows() or 'proxyminion' in __opts__:
         return {}
 
-    ns4 = []
-    ns6 = []
-    search = []
-    domain = ''
+    resolv = salt.utils.dns.parse_resolv()
+    keys = ['nameservers', 'ip4_nameservers', 'sortlist']
+    if __opts__.get('ipv6', True):
+        keys.append('ip6_nameservers')
+    for key in keys:
+        if key in resolv:
+            resolv[key] = [str(i) for i in resolv[key]]
 
-    try:
-        with salt.utils.fopen('/etc/resolv.conf') as f:
-            for line in f:
-                line = line.strip().split()
-
-                try:
-                    (directive, arg) = (line[0].lower(), line[1:])
-                    if directive == 'nameserver':
-                        ip_addr = arg[0]
-                        if (salt.utils.network.is_ipv4(ip_addr) and
-                                ip_addr not in ns4):
-                            ns4.append(ip_addr)
-                        elif (salt.utils.network.is_ipv6(ip_addr) and
-                                ip_addr not in ns6):
-                            ns6.append(ip_addr)
-                    elif directive == 'domain':
-                        domain = arg[0]
-                    elif directive == 'search':
-                        search = list(itertools.takewhile(
-                            lambda x: x[0] not in ('#', ';'), arg))
-                except (IndexError, RuntimeError):
-                    continue
-
-        ret = {
-            'nameservers': ns4 + ns6,
-            'ip4_nameservers': ns4,
-            'ip6_nameservers': ns6,
-            'domain': domain,
-            'search': search
-        }
-
-        return {'dns': ret}
-    except IOError:
-        return {}
+    return {'dns': resolv} if resolv else {}
 
 
 def get_machine_id():

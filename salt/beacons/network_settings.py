@@ -8,7 +8,7 @@ Beacon to monitor network adapter setting changes on Linux
 from __future__ import absolute_import
 # Import third party libs
 try:
-    from pyroute2.ipdb import IPDB
+    from pyroute2 import IPDB
     IP = IPDB()
     HAS_PYROUTE2 = True
 except ImportError:
@@ -45,27 +45,25 @@ def __virtual__():
     return False
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''
     if not isinstance(config, dict):
-        log.info('Configuration for network_settings beacon must be a dictionary.')
-        return False
+        return False, ('Configuration for network_settings '
+                       'beacon must be a dictionary.')
     else:
         for item in config:
             if item == 'coalesce':
                 continue
             if not isinstance(config[item], dict):
-                log.info('Configuration for network_settings beacon must be a '
-                         'dictionary of dictionaries.')
-                return False
+                return False, ('Configuration for network_settings beacon must be a '
+                               'dictionary of dictionaries.')
             else:
                 if not all(j in ATTRS for j in config[item]):
-                    log.info('Invalid configuration item in Beacon '
-                             'configuration.')
-                    return False
-    return True
+                    return False, ('Invalid configuration item in Beacon '
+                                   'configuration.')
+    return True, 'Valid beacon configuration'
 
 
 def _copy_interfaces_info(interfaces):

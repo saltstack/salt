@@ -63,7 +63,7 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
     if grep_ret['retcode'] != 0 or force:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = ('User {0!r} is set to be added to htpasswd '
+            ret['comment'] = ('User \'{0}\' is set to be added to htpasswd '
                               'file').format(name)
             ret['changes'] = {name: True}
             return ret

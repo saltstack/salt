@@ -12,7 +12,7 @@ On Ubuntu, install Salt Cloud by using following command:
     sudo apt-get update
     sudo apt-get install salt-cloud
 
-If using Salt Cloud on OS X, ``curl-ca-bundle`` must be installed. Presently,
+If using Salt Cloud on macOS, ``curl-ca-bundle`` must be installed. Presently,
 this package is not available via ``brew``, but it is available using MacPorts:
 
 .. code-block:: bash

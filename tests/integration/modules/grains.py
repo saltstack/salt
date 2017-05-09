@@ -74,8 +74,11 @@ class TestModulesGrains(integration.ModuleCase):
             'virtual',
         )
         lsgrains = self.run_function('grains.ls')
-        for grain_name in check_for:
-            self.assertTrue(grain_name in lsgrains)
+        os = self.run_function('grains.get', ['os'])
+        for grain in check_for:
+            if os == 'Windows' and grain in ['cpu_flags', 'gid', 'groupname', 'uid']:
+                continue
+            self.assertTrue(grain in lsgrains)
 
     @skipIf(os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None,
             'Travis environment can\'t keep up with salt refresh')
@@ -118,6 +121,10 @@ class TestModulesGrains(integration.ModuleCase):
             if os == 'Arch' and grain in ['osmajorrelease', 'osrelease']:
                 self.assertEqual(get_grain, '')
                 continue
+            if os == 'Windows' and grain in ['osmajorrelease']:
+                self.assertEqual(get_grain, '')
+                continue
+
             self.assertTrue(get_grain)
 
     def test_get_grains_int(self):
@@ -126,11 +133,14 @@ class TestModulesGrains(integration.ModuleCase):
         are returned as integers
         '''
         grains = ['num_cpus', 'mem_total', 'num_gpus', 'uid']
+        os = self.run_function('grains.get', ['os'])
         for grain in grains:
             get_grain = self.run_function('grains.get', [grain])
-
-            self.assertIsInstance(get_grain, int,
-                                  msg='grain: {0} is not an int or empty'.format(grain))
+            if os == 'Windows' and grain in ['uid']:
+                self.assertEqual(get_grain, '')
+                continue
+            self.assertIsInstance(
+                get_grain, int, msg='grain: {0} is not an int or empty'.format(grain))
 
 
 @destructiveTest

@@ -97,6 +97,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Libs
+import salt.ext.six as six
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
@@ -913,7 +914,7 @@ def syslog_configured(name,
         if not __opts__['test']:
             reset = __salt__[esxi_cmd]('reset_syslog_config',
                                        syslog_config=reset_configs).get(host)
-            for key, val in reset.iteritems():
+            for key, val in six.iteritems(reset):
                 if isinstance(val, bool):
                     continue
                 if not val.get('success'):
@@ -952,7 +953,7 @@ def syslog_configured(name,
                                'new': firewall}})
 
     current_syslog_config = __salt__[esxi_cmd]('get_syslog_config').get(host)
-    for key, val in syslog_configs.iteritems():
+    for key, val in six.iteritems(syslog_configs):
         # The output of get_syslog_config has different keys than the keys
         # Used to set syslog_config values. We need to look them up first.
         try:

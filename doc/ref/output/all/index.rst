@@ -12,7 +12,6 @@ Follow one of the below links for further information and examples
     :toctree:
     :template: autosummary.rst.tmpl
 
-    compact
     highstate
     json_out
     key
@@ -21,6 +20,7 @@ Follow one of the below links for further information and examples
     no_out
     no_return
     overstatestage
+    pony
     pprint_out
     progress
     raw

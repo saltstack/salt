@@ -179,13 +179,13 @@ class PyWinUpdater(object):
             for update in self.search_results.Updates:
                 # this skipps an update if UI updates are not desired.
                 if update.InstallationBehavior.CanRequestUserInput:
-                    log.debug('Skipped update {0} - requests user input'.format(str(update)))
+                    log.debug(U'Skipped update {0} - requests user input'.format(update.title))
                     continue
 
                 # if this update is already downloaded, it doesn't need to be in
                 # the download_collection. so skipping it unless the user mandates re-download.
                 if self.skipDownloaded and update.IsDownloaded:
-                    log.debug('Skipped update {0} - already downloaded'.format(str(update)))
+                    log.debug(u'Skipped update {0} - already downloaded'.format(update.title))
                     continue
 
                 # check this update's categories against the ones desired.
@@ -196,7 +196,7 @@ class PyWinUpdater(object):
                     if self.categories is None or category.Name in self.categories:
                         # adds it to the list to be downloaded.
                         self.download_collection.Add(update)
-                        log.debug('added update {0}'.format(str(update)))
+                        log.debug(u'added update {0}'.format(update.title))
                         # ever update has 2 categories. this prevents the
                         # from being added twice.
                         break
@@ -280,6 +280,16 @@ class PyWinUpdater(object):
             log.info('Preparing install list failed: {0}'.format(exc))
             return exc
 
+        # accept eula if not accepted
+        try:
+            for update in self.search_results.Updates:
+                if not update.EulaAccepted:
+                    log.debug(u'Accepting EULA: {0}'.format(update.Title))
+                    update.AcceptEula()
+        except Exception as exc:
+            log.info('Accepting Eula failed: {0}'.format(exc))
+            return exc
+
         # if the blugger is empty. no point it starting the install process.
         if self.install_collection.Count != 0:
             log.debug('Install list created, about to install')
@@ -351,7 +361,7 @@ class PyWinUpdater(object):
 
         for update in self.download_collection:
             if update.InstallationBehavior.CanRequestUserInput:
-                log.debug('Skipped update {0}'.format(str(update)))
+                log.debug(u'Skipped update {0}'.format(update.title))
                 continue
             # More fields can be added from https://msdn.microsoft.com/en-us/library/windows/desktop/aa386099(v=vs.85).aspx
             update_com_fields = ['Categories', 'Deadline', 'Description',
@@ -381,7 +391,7 @@ class PyWinUpdater(object):
                              'UpdateID': v.UpdateID}
                 update_dict[f] = v
             updates.append(update_dict)
-            log.debug('added update {0}'.format(str(update)))
+            log.debug(u'added update {0}'.format(update.title))
         return updates
 
     def GetSearchResults(self, fields=None):
@@ -650,8 +660,8 @@ def download_updates(skips=None, retries=5, categories=None):
     try:
         comment = quidditch.GetDownloadResults()
     except Exception as exc:
-        comment = 'could not get results, but updates were installed. {0}'.format(exc)
-    return 'Windows is up to date. \n{0}'.format(comment)
+        comment = u'could not get results, but updates were installed. {0}'.format(exc)
+    return u'Windows is up to date. \n{0}'.format(comment)
 
 
 def install_updates(skips=None, retries=5, categories=None):

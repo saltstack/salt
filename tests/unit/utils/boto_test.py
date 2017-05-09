@@ -13,6 +13,7 @@ ensure_in_syspath('../../')
 # Import Salt libs
 from salt.exceptions import SaltInvocationError
 import salt.utils.boto
+import salt.utils.boto3
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -24,6 +25,13 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+try:
+    import boto3
+
+    HAS_BOTO3 = True
+except ImportError:
+    HAS_BOTO3 = False
 
 try:
     from moto import mock_ec2
@@ -47,6 +55,7 @@ except ImportError:
 
 
 required_boto_version = '2.0.0'
+required_boto3_version = '1.2.1'
 region = 'us-east-1'
 access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
@@ -85,6 +94,19 @@ def _has_required_boto():
     if not HAS_BOTO:
         return False
     elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+        return False
+    else:
+        return True
+
+
+def _has_required_boto3():
+    '''
+    Returns True/False boolean depending on if Boto is installed and correct
+    version.
+    '''
+    if not HAS_BOTO3:
+        return False
+    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
         return False
     else:
         return True
@@ -206,6 +228,45 @@ class BotoUtilsGetErrorTestCase(BotoUtilsTestCaseBase):
         expected = {'aws': {'reason': 'Mocked error', 'status': '400'},
                             'message': 'Mocked error'}
         self.assertEqual(r, expected)
+
+
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+@skipIf(HAS_BOTO3 is False, 'The boto3 module must be installed.')
+@skipIf(_has_required_boto3() is False, 'The boto3 module must be greater than'
+                                        ' or equal to version {0}'
+        .format(required_boto3_version))
+class BotoBoto3CacheContextCollisionTest(BotoUtilsTestCaseBase):
+
+    def setUp(self):
+        salt.utils.boto.__context__ = {}
+        salt.utils.boto.__opts__ = {}
+        salt.utils.boto.__pillar__ = {}
+        salt.utils.boto.__salt__ = {'config.option': MagicMock(return_value='dummy_opt')}
+
+        salt.utils.boto3.__context__ = salt.utils.boto.__context__
+        salt.utils.boto3.__opts__ = salt.utils.boto.__opts__
+        salt.utils.boto3.__pillar__ = salt.utils.boto.__pillar__
+        salt.utils.boto3.__salt__ = salt.utils.boto.__salt__
+
+    def test_context_conflict_between_boto_and_boto3_utils(self):
+        salt.utils.boto.assign_funcs(__name__, 'ec2')
+        salt.utils.boto3.assign_funcs(__name__, 'ec2', get_conn_funcname="_get_conn3")
+
+        boto_ec2_conn = salt.utils.boto.get_connection('ec2',
+                                                       region=region,
+                                                       key=secret_key,
+                                                       keyid=access_key)
+        boto3_ec2_conn = salt.utils.boto3.get_connection('ec2',
+                                                         region=region,
+                                                         key=secret_key,
+                                                         keyid=access_key)
+
+        # These should *not* be the same object!
+        self.assertNotEqual(id(boto_ec2_conn), id(boto3_ec2_conn))
+
 
 if __name__ == '__main__':
     from integration import run_tests

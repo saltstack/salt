@@ -156,10 +156,12 @@ def _get_conn(ret):
             mdb.saltReturns.create_index('minion')
             mdb.saltReturns.create_index('jid')
             mdb.jobs.create_index('jid')
+            mdb.events.create_index('tag')
         else:
             mdb.saltReturns.ensure_index('minion')
             mdb.saltReturns.ensure_index('jid')
             mdb.jobs.ensure_index('jid')
+            mdb.events.ensure_index('tag')
 
     return conn, mdb
 
@@ -283,3 +285,21 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     Do any work necessary to prepare a JID, including sending a custom id
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+
+
+def event_return(events):
+    '''
+    Return events to Mongodb server
+    '''
+    conn, mdb = _get_conn(ret=None)
+
+    if isinstance(events, list):
+        events = events[0]
+
+    if isinstance(events, dict):
+        log.debug(events)
+
+        if float(version) > 2.3:
+            mdb.events.insert_one(events.copy())
+        else:
+            mdb.events.insert(events.copy())

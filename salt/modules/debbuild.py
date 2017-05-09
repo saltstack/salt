@@ -57,7 +57,7 @@ def __virtual__():
         else:
             return False, 'The debbuild module could not be loaded: requires python-gnupg, gpg, debuild, pbuilder and reprepro utilities to be installed'
     else:
-        return False
+        return (False, 'The debbuild module could not be loaded: unsupported OS family')
 
 
 def _check_repo_sign_utils_support():
@@ -557,6 +557,10 @@ def make_repo(repodir,
         salt '*' pkgbuild.make_repo /var/www/html
 
     '''
+    res = {'retcode': 1,
+            'stdout': '',
+            'stderr': 'initialization value'}
+
     SIGN_PROMPT_RE = re.compile(r'Enter passphrase: ', re.M)
     REPREPRO_SIGN_PROMPT_RE = re.compile(r'Passphrase: ', re.M)
 
@@ -585,6 +589,9 @@ def make_repo(repodir,
 
     # test if using older than gnupg 2.1, env file exists
     older_gnupg = __salt__['file.file_exists'](gpg_info_file)
+
+    # interval of 0.125 is really too fast on some systems
+    interval = 0.5
 
     if keyid is not None:
         with salt.utils.fopen(repoconfdist, 'a') as fow:
@@ -650,8 +657,6 @@ def make_repo(repodir,
                 break
 
             ## sign_it_here
-            # interval of 0.125 is really too fast on some systems
-            interval = 0.5
             for file in os.listdir(repodir):
                 if file.endswith('.dsc'):
                     abs_file = os.path.join(repodir, file)
@@ -691,6 +696,9 @@ def make_repo(repodir,
                     except salt.utils.vt.TerminalException as err:
                         trace = traceback.format_exc()
                         log.error(error_msg, err, trace)
+                        res = {'retcode': 1,
+                                'stdout': '',
+                                'stderr': trace}
                     finally:
                         proc.close(terminate=True, kill=True)
 
@@ -715,7 +723,7 @@ def make_repo(repodir,
                 cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(codename, abs_file)
                 __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
             else:
-                number_retries = 5
+                number_retries = timeout / interval
                 times_looped = 0
                 error_msg = 'Failed to reprepro includedsc file {0}'.format(abs_file)
                 cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(codename, abs_file)
@@ -739,10 +747,10 @@ def make_repo(repodir,
 
                         if times_looped > number_retries:
                             raise SaltInvocationError(
-                                    'Attemping to reprepro includedsc for file {0} failed, timed out after {1} loops'.format(abs_file, times_looped)
+                                'Attemping to reprepro includedsc for file {0} failed, timed out after {1} loops'
+                                .format(abs_file, int(times_looped * interval))
                              )
-                        # 0.125 is really too fast on some systems
-                        time.sleep(0.5)
+                        time.sleep(interval)
 
                     proc_exitstatus = proc.exitstatus
                     if proc_exitstatus != 0:
@@ -752,13 +760,18 @@ def make_repo(repodir,
                 except salt.utils.vt.TerminalException as err:
                     trace = traceback.format_exc()
                     log.error(error_msg, err, trace)
+                    res = {'retcode': 1,
+                            'stdout': '',
+                            'stderr': trace}
                 finally:
                     proc.close(terminate=True, kill=True)
 
         if debfile.endswith('.deb'):
             cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedeb {0} {1}'.format(codename, abs_file)
-            __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
+            res = __salt__['cmd.run_all'](cmd, cwd=repodir, use_vt=True)
 
     if use_passphrase and local_keyid is not None:
         cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --forget {0}'.format(local_fingerprint)
-        __salt__['cmd.run'](cmd, runas=runas)
+        res = __salt__['cmd.run_all'](cmd, runas=runas)
+
+    return res

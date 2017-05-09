@@ -35,7 +35,12 @@ def targets(tgt, tgt_type='glob', **kwargs):
     template = get_roster_file(__opts__)
 
     rend = salt.loader.render(__opts__, {})
-    raw = compile_template(template, rend, __opts__['renderer'], **kwargs)
+    raw = compile_template(template,
+                           rend,
+                           __opts__['renderer'],
+                           __opts__['renderer_blacklist'],
+                           __opts__['renderer_whitelist'],
+                           **kwargs)
     conditioned_raw = {}
     for minion in raw:
         conditioned_raw[str(minion)] = raw[minion]

@@ -20,15 +20,13 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import win_firewall
+import salt.utils
 
 # Globals
 win_firewall.__salt__ = {}
 
-# Make sure this module runs on Windows system
-IS_WIN = win_firewall.__virtual__()
 
-
-@skipIf(not IS_WIN, "This test case runs only on Windows system")
+@skipIf(not salt.utils.is_windows(), 'This test case runs only on Windows system')
 class WinFirewallTestCase(TestCase):
     '''
     Test cases for salt.modules.win_firewall
@@ -96,8 +94,12 @@ class WinFirewallTestCase(TestCase):
         mock_cmd = MagicMock(return_value='Ok.')
         with patch.dict(win_firewall.__salt__, {'cmd.run': mock_cmd}):
             self.assertTrue(win_firewall.add_rule("test", "8080"))
-            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'add', 'rule', 'name=test',
-                                              'protocol=tcp', 'dir=in', 'action=allow', 'localport=8080'],
+            mock_cmd.assert_called_once_with(['netsh', 'advfirewall',
+                                              'firewall', 'add', 'rule',
+                                              'name=test', 'protocol=tcp',
+                                              'dir=in', 'action=allow',
+                                              'remoteip=any',
+                                              'localport=8080'],
                                              python_shell=False)
 
     def test_add_rule_icmp4(self):
@@ -107,8 +109,12 @@ class WinFirewallTestCase(TestCase):
         mock_cmd = MagicMock(return_value='Ok.')
         with patch.dict(win_firewall.__salt__, {'cmd.run': mock_cmd}):
             self.assertTrue(win_firewall.add_rule("test", "1", protocol='icmpv4'))
-            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'add', 'rule', 'name=test',
-                                              'protocol=icmpv4', 'dir=in', 'action=allow'],
+            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'add', 'rule',
+                                              'name=test',
+                                              'protocol=icmpv4',
+                                              'dir=in',
+                                              'action=allow',
+                                              'remoteip=any'],
                                              python_shell=False)
 
     def test_add_rule_icmp6(self):
@@ -118,8 +124,12 @@ class WinFirewallTestCase(TestCase):
         mock_cmd = MagicMock(return_value='Ok.')
         with patch.dict(win_firewall.__salt__, {'cmd.run': mock_cmd}):
             self.assertTrue(win_firewall.add_rule("test", "1", protocol='icmpv6'))
-            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'add', 'rule', 'name=test',
-                                              'protocol=icmpv6', 'dir=in', 'action=allow'],
+            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'add', 'rule',
+                                              'name=test',
+                                              'protocol=icmpv6',
+                                              'dir=in',
+                                              'action=allow',
+                                              'remoteip=any'],
                                              python_shell=False)
 
     def test_add_rule_icmp4_any(self):
@@ -129,8 +139,12 @@ class WinFirewallTestCase(TestCase):
         mock_cmd = MagicMock(return_value='Ok.')
         with patch.dict(win_firewall.__salt__, {'cmd.run': mock_cmd}):
             self.assertTrue(win_firewall.add_rule("test", "1", protocol='icmpv4:any,any'))
-            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'add', 'rule', 'name=test',
-                                              'protocol=icmpv4:any,any', 'dir=in', 'action=allow'],
+            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'add', 'rule',
+                                              'name=test',
+                                              'protocol=icmpv4:any,any',
+                                              'dir=in',
+                                              'action=allow',
+                                              'remoteip=any'],
                                              python_shell=False)
 
     # 'delete_rule' function tests: 1
@@ -143,8 +157,13 @@ class WinFirewallTestCase(TestCase):
         with patch.dict(win_firewall.__salt__, {'cmd.run': mock_cmd}):
             self.assertTrue(win_firewall.delete_rule("test", "8080", "tcp",
                                                      "in"))
-            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'delete', 'rule', 'name=test',
-                                              'protocol=tcp', 'dir=in', 'localport=8080'], python_shell=False)
+            mock_cmd.assert_called_once_with(['netsh', 'advfirewall',
+                                              'firewall', 'delete', 'rule',
+                                              'name=test', 'protocol=tcp',
+                                              'dir=in',
+                                              'remoteip=any',
+                                              'localport=8080'],
+                                             python_shell=False)
 
     def test_delete_rule_icmp4(self):
         '''
@@ -153,8 +172,11 @@ class WinFirewallTestCase(TestCase):
         mock_cmd = MagicMock(return_value='Ok.')
         with patch.dict(win_firewall.__salt__, {'cmd.run': mock_cmd}):
             self.assertTrue(win_firewall.delete_rule("test", "1", protocol='icmpv4'))
-            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'delete', 'rule', 'name=test',
-                                              'protocol=icmpv4', 'dir=in'],
+            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'delete', 'rule',
+                                              'name=test',
+                                              'protocol=icmpv4',
+                                              'dir=in',
+                                              'remoteip=any'],
                                              python_shell=False)
 
     def test_delete_rule_icmp6(self):
@@ -164,8 +186,11 @@ class WinFirewallTestCase(TestCase):
         mock_cmd = MagicMock(return_value='Ok.')
         with patch.dict(win_firewall.__salt__, {'cmd.run': mock_cmd}):
             self.assertTrue(win_firewall.delete_rule("test", "1", protocol='icmpv6'))
-            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'delete', 'rule', 'name=test',
-                                              'protocol=icmpv6', 'dir=in'],
+            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'delete', 'rule',
+                                              'name=test',
+                                              'protocol=icmpv6',
+                                              'dir=in',
+                                              'remoteip=any'],
                                              python_shell=False)
 
     def test_delete_rule_icmp4_any(self):
@@ -175,8 +200,11 @@ class WinFirewallTestCase(TestCase):
         mock_cmd = MagicMock(return_value='Ok.')
         with patch.dict(win_firewall.__salt__, {'cmd.run': mock_cmd}):
             self.assertTrue(win_firewall.delete_rule("test", "1", protocol='icmpv4:any,any'))
-            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'delete', 'rule', 'name=test',
-                                              'protocol=icmpv4:any,any', 'dir=in'],
+            mock_cmd.assert_called_once_with(['netsh', 'advfirewall', 'firewall', 'delete', 'rule',
+                                              'name=test',
+                                              'protocol=icmpv4:any,any',
+                                              'dir=in',
+                                              'remoteip=any'],
                                              python_shell=False)
 
 

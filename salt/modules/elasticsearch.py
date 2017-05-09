@@ -7,7 +7,7 @@ Module to provide Elasticsearch compatibility to Salt
 
 .. versionadded:: 2015.8.0
 
-:depends:       `elasticsearch-py <http://elasticsearch-py.readthedocs.org/en/latest/>`_
+:depends:       `elasticsearch-py <https://elasticsearch-py.readthedocs.io/en/latest/>`_
 
 :configuration: This module accepts connection configuration details either as
     parameters or as configuration settings in /etc/salt/minion on the relevant

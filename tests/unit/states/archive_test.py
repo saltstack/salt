@@ -25,7 +25,8 @@ from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-bui
 
 # Globals
 archive.__salt__ = {}
-archive.__opts__ = {"cachedir": "/tmp", "test": False}
+archive.__grains__ = {'os': 'FooOS!'}
+archive.__opts__ = {'cachedir': '/tmp', 'test': False, 'hash_type': 'sha256'}
 archive.__env__ = 'test'
 
 
@@ -42,6 +43,7 @@ def _isfile_side_effect(path):
         '/tmp/foo.tar.gz': True,
         '/tmp/out': False,
         '/usr/bin/tar': True,
+        '/bin/tar': True,
         '/tmp/test_extracted_tar': False,
     }[path]
 
@@ -79,29 +81,39 @@ class ArchiveTestCase(TestCase):
 
         mock_true = MagicMock(return_value=True)
         mock_false = MagicMock(return_value=False)
-        ret = {'stdout': ['saltines', 'cheese'], 'stderr': 'biscuits', 'retcode': '31337', 'pid': '1337'}
+        ret = {'stdout': ['cheese', 'ham', 'saltines'], 'stderr': 'biscuits', 'retcode': '31337', 'pid': '1337'}
         mock_run = MagicMock(return_value=ret)
         mock_source_list = MagicMock(return_value=(source, None))
+        state_single_mock = MagicMock(return_value={'local': {'result': True}})
+        list_mock = MagicMock(return_value={
+            'dirs': [],
+            'files': ['cheese', 'saltines'],
+            'links': ['ham'],
+            'top_level_dirs': [],
+            'top_level_files': ['cheese', 'saltines'],
+            'top_level_links': ['ham'],
+        })
         isfile_mock = MagicMock(side_effect=_isfile_side_effect)
 
-        with patch('os.path.exists', mock_true):
-            with patch.dict(archive.__opts__, {'test': False,
-                                               'cachedir': tmp_dir}):
-                with patch.dict(archive.__salt__, {'file.directory_exists': mock_false,
-                                                   'file.file_exists': mock_false,
-                                                   'file.makedirs': mock_true,
-                                                   'cmd.run_all': mock_run,
-                                                   'file.source_list': mock_source_list}):
-                    with patch.object(os.path, 'isfile', isfile_mock):
-                        for test_opts, ret_opts in zip(test_tar_opts, ret_tar_opts):
-                            ret = archive.extracted(tmp_dir,
-                                                    source,
-                                                    archive_format='tar',
-                                                    tar_options=test_opts)
-                            ret_opts.append(source)
-                            mock_run.assert_called_with(ret_opts,
-                                                        cwd=tmp_dir + os.sep,
-                                                        python_shell=False)
+        with patch.dict(archive.__opts__, {'test': False,
+                                           'cachedir': tmp_dir}):
+            with patch.dict(archive.__salt__, {'file.directory_exists': mock_false,
+                                               'file.file_exists': mock_false,
+                                               'state.single': state_single_mock,
+                                               'file.makedirs': mock_true,
+                                               'cmd.run_all': mock_run,
+                                               'archive.list': list_mock,
+                                               'file.source_list': mock_source_list}):
+                with patch.object(os.path, 'isfile', isfile_mock):
+                    for test_opts, ret_opts in zip(test_tar_opts, ret_tar_opts):
+                        ret = archive.extracted(tmp_dir,
+                                                source,
+                                                options=test_opts,
+                                                enforce_toplevel=False)
+                        ret_opts.append(source)
+                        mock_run.assert_called_with(ret_opts,
+                                                    cwd=tmp_dir + os.sep,
+                                                    python_shell=False)
 
     def test_tar_gnutar(self):
         '''
@@ -111,22 +123,32 @@ class ArchiveTestCase(TestCase):
         source = '/tmp/foo.tar.gz'
         mock_false = MagicMock(return_value=False)
         mock_true = MagicMock(return_value=True)
+        state_single_mock = MagicMock(return_value={'local': {'result': True}})
         run_all = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout', 'stderr': 'stderr'})
         mock_source_list = MagicMock(return_value=(source, None))
+        list_mock = MagicMock(return_value={
+            'dirs': [],
+            'files': ['stdout'],
+            'links': [],
+            'top_level_dirs': [],
+            'top_level_files': ['stdout'],
+            'top_level_links': [],
+        })
         isfile_mock = MagicMock(side_effect=_isfile_side_effect)
 
         with patch.dict(archive.__salt__, {'cmd.run': gnutar,
                                            'file.directory_exists': mock_false,
                                            'file.file_exists': mock_false,
-                                           'state.single': mock_true,
+                                           'state.single': state_single_mock,
                                            'file.makedirs': mock_true,
                                            'cmd.run_all': run_all,
+                                           'archive.list': list_mock,
                                            'file.source_list': mock_source_list}):
             with patch.object(os.path, 'isfile', isfile_mock):
                 ret = archive.extracted('/tmp/out',
-                                        '/tmp/foo.tar.gz',
-                                        archive_format='tar',
-                                        tar_options='xvzf',
+                                        source,
+                                        options='xvzf',
+                                        enforce_toplevel=False,
                                         keep=True)
                 self.assertEqual(ret['changes']['extracted_files'], 'stdout')
 
@@ -138,22 +160,32 @@ class ArchiveTestCase(TestCase):
         source = '/tmp/foo.tar.gz'
         mock_false = MagicMock(return_value=False)
         mock_true = MagicMock(return_value=True)
+        state_single_mock = MagicMock(return_value={'local': {'result': True}})
         run_all = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout', 'stderr': 'stderr'})
         mock_source_list = MagicMock(return_value=(source, None))
+        list_mock = MagicMock(return_value={
+            'dirs': [],
+            'files': ['stderr'],
+            'links': [],
+            'top_level_dirs': [],
+            'top_level_files': ['stderr'],
+            'top_level_links': [],
+        })
         isfile_mock = MagicMock(side_effect=_isfile_side_effect)
 
         with patch.dict(archive.__salt__, {'cmd.run': bsdtar,
                                            'file.directory_exists': mock_false,
                                            'file.file_exists': mock_false,
-                                           'state.single': mock_true,
+                                           'state.single': state_single_mock,
                                            'file.makedirs': mock_true,
                                            'cmd.run_all': run_all,
+                                           'archive.list': list_mock,
                                            'file.source_list': mock_source_list}):
             with patch.object(os.path, 'isfile', isfile_mock):
                 ret = archive.extracted('/tmp/out',
-                                        '/tmp/foo.tar.gz',
-                                        archive_format='tar',
-                                        tar_options='xvzf',
+                                        source,
+                                        options='xvzf',
+                                        enforce_toplevel=False,
                                         keep=True)
                 self.assertEqual(ret['changes']['extracted_files'], 'stderr')
 

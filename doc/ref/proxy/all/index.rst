@@ -11,10 +11,13 @@ proxy modules
     :template: autosummary.rst.tmpl
 
     chronos
+    cisconso
     esxi
     fx2
     junos
     marathon
+    napalm
+    nxos
     philips_hue
     rest_sample
     ssh_sample

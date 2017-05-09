@@ -45,6 +45,7 @@ except ImportError:
 
 # Import Salt Libs
 import salt.config
+import salt.ext.six as six
 import salt.loader
 from salt.modules import boto_elb
 
@@ -75,6 +76,7 @@ boto_elb.__virtual__()
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(six.PY3, 'Running tests with Python 3. These tests need to be rewritten to support Py3.')
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 class BotoElbTestCase(TestCase):

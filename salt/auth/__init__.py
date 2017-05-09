@@ -18,6 +18,7 @@ from __future__ import absolute_import
 # Import python libs
 from __future__ import print_function
 import os
+import collections
 import hashlib
 import time
 import logging
@@ -137,12 +138,31 @@ class LoadAuth(object):
         except Exception:
             return None
 
+    def _allow_custom_expire(self, load):
+        '''
+        Return bool if requesting user is allowed to set custom expire
+        '''
+        expire_override = self.opts.get('token_expire_user_override', False)
+
+        if expire_override is True:
+            return True
+
+        if isinstance(expire_override, collections.Mapping):
+            expire_whitelist = expire_override.get(load['eauth'], [])
+            if isinstance(expire_whitelist, collections.Iterable):
+                if load.get('username') in expire_whitelist:
+                    return True
+
+        return False
+
     def mk_token(self, load):
         '''
         Run time_auth and create a token. Return False or the token
         '''
-        ret = self.time_auth(load)
-        if ret is False:
+        auth_ret = self.time_auth(load)
+        if not isinstance(auth_ret, list) and not isinstance(auth_ret, bool):
+            auth_ret = False
+        if auth_ret is False:
             return {}
         fstr = '{0}.auth'.format(load['eauth'])
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
@@ -154,11 +174,21 @@ class LoadAuth(object):
         fcall = salt.utils.format_call(self.auth[fstr],
                                        load,
                                        expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+
+        if self._allow_custom_expire(load):
+            token_expire = load.pop('token_expire', self.opts['token_expire'])
+        else:
+            _ = load.pop('token_expire', None)
+            token_expire = self.opts['token_expire']
+
         tdata = {'start': time.time(),
-                 'expire': time.time() + self.opts['token_expire'],
+                 'expire': time.time() + token_expire,
                  'name': fcall['args'][0],
                  'eauth': load['eauth'],
                  'token': tok}
+
+        if auth_ret is not True:
+            tdata['auth_list'] = auth_ret
 
         if 'groups' in load:
             tdata['groups'] = load['groups']

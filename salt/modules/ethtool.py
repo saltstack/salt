@@ -70,15 +70,19 @@ ethtool_ring_remap = {}
 for k, v in ethtool_ring_map.items():
     ethtool_ring_remap[v] = k
 
+# Define the module's virtual name
+__virtualname__ = 'ethtool'
+
 
 def __virtual__():
     '''
     Only load this module if python-ethtool is installed
     '''
     if HAS_ETHTOOL:
-        return 'ethtool'
+        return __virtualname__
     else:
-        return False
+        return (False, 'The ethtool module could not be loaded: ethtool '
+                'python libraries not found.')
 
 
 def show_ring(devname):
@@ -184,7 +188,7 @@ def set_ring(devname, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' ethtool.set_ring <devname> [ring=N] [rx_mini=N] [rx_jumbo=N] [tx=N]
+        salt '*' ethtool.set_ring <devname> [rx=N] [rx_mini=N] [rx_jumbo=N] [tx=N]
     '''
 
     try:
@@ -315,7 +319,7 @@ def set_offload(devname, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' ethtool.show_offload <devname>
+        salt '*' ethtool.set_offload <devname> tcp_segmentation_offload=on
     '''
 
     for param, value in kwargs.items():

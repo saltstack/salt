@@ -48,12 +48,16 @@ config:
       - parameter_values:
           myDDBTableName: my-dynamo-table
 '''
-from __future__ import absolute_import
 
+# Import Python libs
+from __future__ import absolute_import
 import copy
 import datetime
 import difflib
 import json
+
+# Import Salt lobs
+import salt.ext.six as six
 from salt.ext.six.moves import zip
 
 
@@ -416,7 +420,7 @@ def _standardize(structure):
                 mutating_helper(each)
         elif isinstance(structure, dict):
             structure = dict(structure)
-            for k, v in structure.iteritems():
+            for k, v in six.iteritems(structure):
                 mutating_helper(k)
                 mutating_helper(v)
 
@@ -484,7 +488,7 @@ def _dict_to_list_ids(objects):
     while still satisfying the boto api.
     '''
     list_with_ids = []
-    for key, value in objects.iteritems():
+    for key, value in six.iteritems(objects):
         element = {'id': key}
         element.update(value)
         list_with_ids.append(element)
@@ -518,7 +522,7 @@ def _properties_from_dict(d, key_name='key'):
         ]
     '''
     fields = []
-    for key, value in d.iteritems():
+    for key, value in six.iteritems(d):
         if isinstance(value, dict):
             fields.append({
                 key_name: key,

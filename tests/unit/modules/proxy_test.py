@@ -29,10 +29,10 @@ class ProxyTestCase(TestCase):
     Test cases for salt.modules.proxy
     '''
 
-    def test_get_http_proxy_osx(self):
+    def test_get_http_proxy_macos(self):
         '''
             Test to make sure that we correctly get the current proxy info
-            on OSX
+            on macOS
         '''
         proxy.__grains__['os'] = 'Darwin'
         mock = MagicMock(return_value='Enabled: Yes\nServer: 192.168.0.1\nPort: 3128\nAuthenticated Proxy Enabled: 0')
@@ -47,10 +47,10 @@ class ProxyTestCase(TestCase):
             mock.assert_called_once_with('networksetup -getwebproxy Ethernet')
             self.assertEqual(expected, out)
 
-    def test_get_https_proxy_osx(self):
+    def test_get_https_proxy_macos(self):
         '''
             Test to make sure that we correctly get the current proxy info
-            on OSX
+            on macOS
         '''
         proxy.__grains__['os'] = 'Darwin'
         mock = MagicMock(return_value='Enabled: Yes\nServer: 192.168.0.1\nPort: 3128\nAuthenticated Proxy Enabled: 0')
@@ -65,10 +65,10 @@ class ProxyTestCase(TestCase):
             mock.assert_called_once_with('networksetup -getsecurewebproxy Ethernet')
             self.assertEqual(expected, out)
 
-    def test_get_ftp_proxy_osx(self):
+    def test_get_ftp_proxy_macos(self):
         '''
             Test to make sure that we correctly get the current proxy info
-            on OSX
+            on macOS
         '''
         proxy.__grains__['os'] = 'Darwin'
         mock = MagicMock(return_value='Enabled: Yes\nServer: 192.168.0.1\nPort: 3128\nAuthenticated Proxy Enabled: 0')
@@ -83,7 +83,7 @@ class ProxyTestCase(TestCase):
             mock.assert_called_once_with('networksetup -getftpproxy Ethernet')
             self.assertEqual(expected, out)
 
-    def test_get_http_proxy_osx_none(self):
+    def test_get_http_proxy_macos_none(self):
         '''
             Test to make sure that we correctly return when theres no proxy set
         '''
@@ -95,10 +95,10 @@ class ProxyTestCase(TestCase):
             mock.assert_called_once_with('networksetup -getwebproxy Ethernet')
             self.assertEqual({}, out)
 
-    def test_set_http_proxy_osx(self):
+    def test_set_http_proxy_macos(self):
         '''
             Test to make sure that we correctly set the proxy info
-            on OSX
+            on macOS
         '''
         proxy.__grains__['os'] = 'Darwin'
         mock = MagicMock()
@@ -108,10 +108,10 @@ class ProxyTestCase(TestCase):
             mock.assert_called_once_with('networksetup -setwebproxy Ethernet 192.168.0.1 3128 On frank badpassw0rd')
             self.assertTrue(out)
 
-    def test_set_https_proxy_osx(self):
+    def test_set_https_proxy_macos(self):
         '''
             Test to make sure that we correctly set the proxy info
-            on OSX
+            on macOS
         '''
         proxy.__grains__['os'] = 'Darwin'
         mock = MagicMock()
@@ -121,10 +121,10 @@ class ProxyTestCase(TestCase):
             mock.assert_called_once_with('networksetup -setsecurewebproxy Ethernet 192.168.0.1 3128 On frank passw0rd')
             self.assertTrue(out)
 
-    def test_set_ftp_proxy_osx(self):
+    def test_set_ftp_proxy_macos(self):
         '''
             Test to make sure that we correctly set the proxy info
-            on OSX
+            on macOS
         '''
         proxy.__grains__['os'] = 'Darwin'
         mock = MagicMock()
@@ -197,7 +197,7 @@ class ProxyTestCase(TestCase):
                                          'ProxyServer')
             self.assertEqual(expected, out)
 
-    def test_get_all_proxies_osx_fails(self):
+    def test_get_all_proxies_macos_fails(self):
         proxy.__grains__['os'] = 'Darwin'
         mock = MagicMock()
         with patch.dict(proxy.__salt__, {'reg.read_value': mock}):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Module for editing date/time settings on Mac OS X
+Module for editing date/time settings on macOS
 
  .. versionadded:: 2016.3.0
 '''
@@ -19,11 +19,11 @@ __virtualname__ = 'timezone'
 
 def __virtual__():
     '''
-    Only for Mac OS X
+    Only for macOS
     '''
     if not salt.utils.is_darwin():
         return (False, 'The mac_timezone module could not be loaded: '
-                       'module only works on Mac OS X systems.')
+                       'module only works on macOS systems.')
 
     return __virtualname__
 
@@ -333,7 +333,7 @@ def set_time_server(time_server='time.apple.com'):
     network time server.
 
     :param time_server: IP or DNS name of the network time server. If nothing is
-    passed the time server will be set to the OS X default of 'time.apple.com'
+    passed the time server will be set to the macOS default of 'time.apple.com'
     :type: str
 
     :return: True if successful, False if not

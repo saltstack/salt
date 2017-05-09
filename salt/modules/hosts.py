@@ -21,10 +21,6 @@ def __get_hosts_filename():
     '''
     Return the path to the appropriate hosts file
     '''
-    # TODO: Investigate using  "%SystemRoot%\system32" for this
-    if salt.utils.is_windows():
-        return 'C:\\Windows\\System32\\drivers\\etc\\hosts'
-
     return __salt__['config.option']('hosts.file')
 
 
@@ -57,7 +53,7 @@ def _list_hosts():
             if not line:
                 continue
             if line.startswith('#'):
-                ret.setdefault('comment-{0}'.format(count), []).extend(line)
+                ret.setdefault('comment-{0}'.format(count), []).append(line)
                 count += 1
                 continue
             if '#' in line:

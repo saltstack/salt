@@ -16,26 +16,33 @@ import integration
 from salttesting import skipIf
 from salttesting.helpers import destructiveTest, ensure_in_syspath
 
+
 ensure_in_syspath('../../')
 
 beacons.__opts__ = {}
 
-BEACON_CONF_DIR = os.path.join(integration.TMP, 'minion.d')
-if not os.path.exists(BEACON_CONF_DIR):
-    os.makedirs(BEACON_CONF_DIR)
 
-
-@skipIf(os.geteuid() != 0, 'You must be root to run these tests')
-@destructiveTest
 class BeaconsAddDeleteTest(integration.ModuleCase):
     '''
     Tests the add and delete functions
     '''
+    def setUp(self):
+        self.minion_conf_d_dir = os.path.join(
+                self.minion_opts['config_dir'],
+                os.path.dirname(self.minion_opts['default_include']))
+        if not os.path.isdir(self.minion_conf_d_dir):
+            os.makedirs(self.minion_conf_d_dir)
+        self.beacons_config_file_path = os.path.join(self.minion_conf_d_dir, 'beacons.conf')
+
+    def tearDown(self):
+        if os.path.isfile(self.beacons_config_file_path):
+            os.unlink(self.beacons_config_file_path)
+
     def test_add_and_delete(self):
         '''
         Test adding and deleting a beacon
         '''
-        _add = self.run_function('beacons.add', ['ps', {'apache2': 'stopped'}])
+        _add = self.run_function('beacons.add', ['ps', [{'apache2': 'stopped'}]])
         self.assertTrue(_add['result'])
 
         # save added beacon
@@ -50,16 +57,29 @@ class BeaconsAddDeleteTest(integration.ModuleCase):
         self.run_function('beacons.save')
 
 
-@skipIf(os.geteuid() != 0, 'You must be root to run these tests')
 @destructiveTest
 class BeaconsTest(integration.ModuleCase):
     '''
     Tests the beacons execution module
     '''
+    beacons_config_file_path = minion_conf_d_dir = None
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.isfile(cls.beacons_config_file_path):
+            os.unlink(cls.beacons_config_file_path)
+
     def setUp(self):
+        if self.minion_conf_d_dir is None:
+            self.minion_conf_d_dir = os.path.join(
+                    self.minion_opts['config_dir'],
+                    os.path.dirname(self.minion_opts['default_include']))
+            if not os.path.isdir(self.minion_conf_d_dir):
+                os.makedirs(self.minion_conf_d_dir)
+        self.__class__.beacons_config_file_path = os.path.join(self.minion_conf_d_dir, 'beacons.conf')
         try:
             # Add beacon to disable
-            self.run_function('beacons.add', ['ps', {'apache2': 'stopped'}])
+            self.run_function('beacons.add', ['ps', [{'apache2': 'stopped'}]])
             self.run_function('beacons.save')
         except CommandExecutionError:
             self.skipTest('Unable to add beacon')
@@ -90,7 +110,10 @@ class BeaconsTest(integration.ModuleCase):
 
         # assert beacon ps is disabled
         _list = self.run_function('beacons.list', return_yaml=False)
-        self.assertFalse(_list['ps']['enabled'])
+        for bdict in _list['ps']:
+            if 'enabled' in bdict:
+                self.assertFalse(bdict['enabled'])
+                break
 
     def test_enable(self):
         '''
@@ -128,7 +151,7 @@ class BeaconsTest(integration.ModuleCase):
         # list beacons
         ret = self.run_function('beacons.list', return_yaml=False)
         if 'enabled' in ret:
-            self.assertEqual(ret, {'ps': {'apache2': 'stopped'}, 'enabled': True})
+            self.assertEqual(ret, {'ps': [{'apache2': 'stopped'}], 'enabled': True})
         else:
             self.assertEqual(ret, {'ps': {'apache': 'stopped'}})
 

@@ -3,10 +3,7 @@
 Management of InfluxDB users
 ============================
 
-(compatible with InfluxDB version 0.5+)
-
-.. versionadded:: 2014.7.0
-
+(compatible with InfluxDB version 0.9+)
 '''
 
 
@@ -19,117 +16,111 @@ def __virtual__():
     return False
 
 
-def present(name, passwd, database=None, user=None, password=None, host=None,
-            port=None):
+def _changes(name, admin, **client_args):
     '''
-    Ensure that the cluster admin or database user is present.
+    Get necessary changes to given user account
+    '''
+
+    existing_user = __salt__['influxdb.user_info'](name, **client_args)
+    changes = {}
+
+    if existing_user['admin'] != admin:
+        changes['admin'] = admin
+
+    return changes
+
+
+def present(name,
+            password,
+            admin=False,
+            **client_args):
+    '''
+    Ensure that given user is present.
 
     name
-        The name of the user to manage
-
-    passwd
-        The password of the user
-
-    database
-        The database to create the user in
-
-    user
-        The user to connect as (must be able to create the user)
+        Name of the user to manage
 
     password
-        The password of the user
+        Password of the user
 
-    host
-        The host to connect to
-
-    port
-        The port to connect to
-
+    admin : False
+        Whether the user should have cluster administration
+        privileges or not.
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': ''}
+           'comment': 'User {0} is present and up to date'.format(name)}
 
-    # check if db does not exist
-    if database and not __salt__['influxdb.db_exists'](
-            database, user, password, host, port):
-        ret['result'] = False
-        ret['comment'] = 'Database {0} does not exist'.format(database)
-        return ret
-
-    # check if user exists
-    if not __salt__['influxdb.user_exists'](
-            name, database, user, password, host, port):
+    if not __salt__['influxdb.user_exists'](name, **client_args):
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'User {0} is not present and needs to be created'\
-                .format(name)
-            return ret
-        # The user is not present, make it!
-        if __salt__['influxdb.user_create'](
-                name, passwd, database, user, password, host, port):
-            ret['comment'] = 'User {0} has been created'.format(name)
-            ret['changes'][name] = 'Present'
+            ret['comment'] = 'User {0} will be created'.format(name)
             return ret
         else:
-            ret['comment'] = 'Failed to create user {0}'.format(name)
-            ret['result'] = False
-            return ret
+            if __salt__['influxdb.create_user'](
+                    name, password, admin=admin, **client_args):
+                ret['comment'] = 'Created user {0}'.format(name)
+                ret['changes'][name] = 'created'
+                return ret
+            else:
+                ret['comment'] = 'Failed to create user {0}'.format(name)
+                ret['result'] = False
+                return ret
+    else:
+        changes = _changes(name, admin, **client_args)
+        if changes:
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = ('The following user attributes are set to '
+                                  'be changed:\n')
+                for k, v in changes.items():
+                    ret['comment'] += u'{0}: {1}\n'.format(k, v)
+                return ret
+            else:
+                pre = __salt__['influxdb.user_info'](name, **client_args)
+                for k, v in changes.items():
+                    if k == 'admin':
+                        if v:
+                            __salt__['influxdb.grant_admin_privileges'](name, **client_args)
+                            continue
+                        else:
+                            __salt__['influxdb.revoke_admin_privileges'](name, **client_args)
+                            continue
 
-    # fallback
-    ret['comment'] = 'User {0} is already present'.format(name)
+                post = __salt__['influxdb.user_info'](name, **client_args)
+                for k in post:
+                    if post[k] != pre[k]:
+                        ret['changes'][k] = post[k]
+                if ret['changes']:
+                    ret['comment'] = 'Updated user {0}'.format(name)
     return ret
 
 
-def absent(name, database=None, user=None, password=None, host=None,
-           port=None):
+def absent(name, **client_args):
     '''
-    Ensure that the named cluster admin or database user is absent.
+    Ensure that given user is absent.
 
     name
-        The name of the user to remove
-
-    database
-        The database to remove the user from
-
-    user
-        The user to connect as (must be able to remove the user)
-
-    password
-        The password of the user
-
-    host
-        The host to connect to
-
-    port
-        The port to connect to
-
+        The name of the user to manage
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': ''}
+           'comment': 'User {0} is not present'.format(name)}
 
-    #check if user exists and remove it
-    if __salt__['influxdb.user_exists'](
-            name, database, user, password, host, port):
+    if __salt__['influxdb.user_exists'](name, **client_args):
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'User {0} is present and needs to be removed'\
-                .format(name)
-            return ret
-        if __salt__['influxdb.user_remove'](
-                name, database, user, password, host, port):
-            ret['comment'] = 'User {0} has been removed'.format(name)
-            ret['changes'][name] = 'Absent'
+            ret['comment'] = 'User {0} will be removed'.format(name)
             return ret
         else:
-            ret['comment'] = 'Failed to remove user {0}'.format(name)
-            ret['result'] = False
-            return ret
-
-    # fallback
-    ret['comment'] = 'User {0} is not present, so it cannot be removed'\
-        .format(name)
+            if __salt__['influxdb.remove_user'](name, **client_args):
+                ret['comment'] = 'Removed user {0}'.format(name)
+                ret['changes'][name] = 'removed'
+                return ret
+            else:
+                ret['comment'] = 'Failed to remove user {0}'.format(name)
+                ret['result'] = False
+                return ret
     return ret

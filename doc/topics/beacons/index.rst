@@ -48,7 +48,7 @@ minion pillar, grains, or local config file.
 
 .. note::
     The `inotify` beacon only works on OSes that have `inotify` kernel support.
-    Currently this excludes FreeBSD, Mac OS X, and Windows.
+    Currently this excludes FreeBSD, macOS, and Windows.
 
 Beacon Monitoring Interval
 --------------------------
@@ -209,7 +209,8 @@ Add the following to ``/srv/reactor/revert.sls``:
     revert-file:
       local.state.apply:
         - tgt: {{ data['data']['id'] }}
-        - mods: maintain_important_file
+        - arg:
+          - maintain_important_file
 
 .. note::
 
@@ -295,6 +296,11 @@ the beacon is configured to run, this function will be executed repeatedly by
 the minion. The ``beacon`` function therefore cannot block and should be as
 lightweight as possible. The ``beacon`` also must return a list of dicts, each
 dict in the list will be translated into an event on the master.
+
+Beacons may also choose to implement a ``__validate__`` function which
+takes the beacon configuration as an argument and ensures that it
+is valid prior to continuing. This function is called automatically
+by the Salt loader when a beacon is loaded.
 
 Please see the :py:mod:`~salt.beacons.inotify` beacon as an example.
 

@@ -25,13 +25,23 @@ no disk space:
         - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
 Only run if the file specified by ``creates`` does not exist, in this case
-touch /tmp/foo if it does not exist.
+touch /tmp/foo if it does not exist:
 
 .. code-block:: yaml
 
     touch /tmp/foo:
       cmd.run:
         - creates: /tmp/foo
+
+``creates`` also accepts a list of files:
+
+.. code-block:: yaml
+
+    echo 'foo' | tee /tmp/bar > /tmp/baz:
+      cmd.run:
+        - creates:
+          - /tmp/bar
+          - /tmp/baz
 
 .. note::
 
@@ -200,17 +210,14 @@ works on ``cmd.run`` as well as on any other state. The example would then look 
 How do I create an environment from a pillar map?
 -------------------------------------------------
 
-The map that comes from a pillar cannot be directly consumed by the env option.
-To use it one must convert it to a list. Example:
+The map that comes from a pillar can be directly consumed by the env option!
+To use it, one may pass it like this. Example:
 
 .. code-block:: yaml
 
     printenv:
       cmd.run:
-        - env:
-          {% for key, value in pillar['keys'].iteritems() %}
-          - '{{ key }}': '{{ value }}'
-          {% endfor %}
+        - env: {{ salt['pillar.get']('example:key', {}) }}
 
 '''
 
@@ -330,11 +337,11 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
         elif isinstance(onlyif, list):
             for entry in onlyif:
                 cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs)
-                log.debug('Last command return code: {0}'.format(cmd))
+                log.debug('Last command \'{0}\' return code: {1}'.format(entry, cmd))
                 if cmd != 0:
-                    return {'comment': 'onlyif execution failed',
-                        'skip_watch': True,
-                        'result': True}
+                    return {'comment': 'onlyif execution failed: {0}'.format(entry),
+                            'skip_watch': True,
+                            'result': True}
         elif not isinstance(onlyif, string_types):
             if not onlyif:
                 log.debug('Command not run: onlyif did not evaluate to string_type')
@@ -469,7 +476,7 @@ def wait(name,
         a state. For more information, see the :ref:`stateful-argument` section.
 
     creates
-        Only run if the file specified by ``creates`` does not exist.
+        Only run if the file or files specified by ``creates`` do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -572,7 +579,7 @@ def wait_script(name,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies.>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -741,7 +748,7 @@ def run(name,
         .. versionadded:: 2015.8.0
 
     creates
-        Only run if the file specified by ``creates`` does not exist.
+        Only run if the file or files specified by ``creates`` do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -979,7 +986,7 @@ def script(name,
         'arg two' arg3"
 
     creates
-        Only run if the file specified by ``creates`` does not exist.
+        Only run if the file or files specified by ``creates`` do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -1085,7 +1092,7 @@ def script(name,
 
     if __opts__['test'] and not test_name:
         ret['result'] = None
-        ret['comment'] = 'Command {0!r} would have been ' \
+        ret['comment'] = 'Command \'{0}\' would have been ' \
                          'executed'.format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
@@ -1110,9 +1117,9 @@ def script(name,
         ret['result'] = not bool(cmd_all['retcode'])
     if ret.get('changes', {}).get('cache_error'):
         ret['comment'] = 'Unable to cache script {0} from saltenv ' \
-                         '{1!r}'.format(source, __env__)
+                         '\'{1}\''.format(source, __env__)
     else:
-        ret['comment'] = 'Command {0!r} run'.format(name)
+        ret['comment'] = 'Command \'{0}\' run'.format(name)
     if stateful:
         ret = _reinterpreted_state(ret)
     if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:

@@ -30,6 +30,18 @@ action in response to or in preparation for other states.
         - name: rm -r /var/cache/app
         - onfail:
           - disk: storage_threshold
+
+To use kilobytes (KB) for ``minimum`` and ``maximum`` rather than percents,
+specify the ``absolute`` flag:
+
+.. code-block:: sls
+
+    used_space:
+      disk.status:
+        - name: /dev/xda1
+        - minimum: 1024 KB
+        - maximum: 1048576 KB
+        - absolute: True
 '''
 from __future__ import absolute_import
 
@@ -41,37 +53,45 @@ __monitor__ = [
         ]
 
 
-def _validate_percent(name, value):
+def _validate_int(name, value, limits=(), strip='%'):
     '''
-    Validate ``name`` as an integer in the range [0, 100]
+    Validate the named integer within the supplied limits inclusive and
+    strip supplied unit characters
     '''
     comment = ''
     # Must be integral
     try:
         if isinstance(value, string_types):
-            value = value.strip('%')
+            value = value.strip(' ' + strip)
         value = int(value)
     except (TypeError, ValueError):
         comment += '{0} must be an integer '.format(name)
-    # Must be in percent range
+    # Must be in range
     else:
-        if value < 0 or value > 100:
-            comment += '{0} must be in the range [0, 100] '.format(name)
+        if len(limits) == 2:
+            if value < limits[0] or value > limits[1]:
+                comment += '{0} must be in the range [{1[0]}, {1[1]}] '.format(name, limits)
     return value, comment
 
 
-def status(name, maximum=None, minimum=None):
+def status(name, maximum=None, minimum=None, absolute=False):
     '''
     Return the current disk usage stats for the named mount point
 
     name
-        Filesystem with which to check used space
-
-    minimum
-        The required minimum amount of used space in percent
+        Disk mount with which to check used space
 
     maximum
-        The required maximum amount of used space in percent
+        The maximum disk utilization
+
+    minimum
+        The minimum disk utilization
+
+    absolute
+        By default, the utilization is measured in percentage. Set
+        the `absolute` flag to use kilobytes.
+
+        .. versionadded:: 2016.11.0
     '''
     # Monitoring state, no changes will be made so no test interface needed
     ret = {'name': name,
@@ -88,30 +108,48 @@ def status(name, maximum=None, minimum=None):
         ret['comment'] += 'Named disk mount not present '
         return ret
     # Validate extrema
-    if maximum:
-        maximum, comment = _validate_percent('maximum', maximum)
+    if maximum is not None:
+        if not absolute:
+            maximum, comment = _validate_int('maximum', maximum, [0, 100])
+        else:
+            maximum, comment = _validate_int('maximum', maximum, strip='KB')
         ret['comment'] += comment
-    if minimum:
-        minimum, comment = _validate_percent('minimum', minimum)
+    if minimum is not None:
+        if not absolute:
+            minimum, comment = _validate_int('minimum', minimum, [0, 100])
+        else:
+            minimum, comment = _validate_int('minimum', minimum, strip='KB')
         ret['comment'] += comment
     if minimum is not None and maximum is not None:
         if minimum >= maximum:
-            ret['comment'] += 'Min must be less than max '
+            ret['comment'] += 'minimum must be less than maximum '
     if ret['comment']:
         return ret
 
-    capacity = int(data[name]['capacity'].strip('%'))
+    # Get used space
+    if absolute:
+        used = int(data[name]['used'])
+    else:
+        # POSIX-compliant df output reports percent used as 'capacity'
+        used = int(data[name]['capacity'].strip('%'))
+
+    # Collect return information
     ret['data'] = data[name]
+    unit = 'KB' if absolute else '%'
     if minimum is not None:
-        if capacity < minimum:
-            ret['comment'] = 'Disk used space is below minimum of {0}% at {1}%'.format(
-                    minimum, capacity)
+        if used < minimum:
+            ret['comment'] = ('Disk used space is below minimum'
+                              ' of {0} {2} at {1} {2}'
+                              ''.format(minimum, used, unit)
+                             )
             return ret
     if maximum is not None:
-        if capacity > maximum:
-            ret['comment'] = 'Disk used space is above maximum of {0}% at {1}%'.format(
-                    maximum, capacity)
+        if used > maximum:
+            ret['comment'] = ('Disk used space is above maximum'
+                              ' of {0} {2} at {1} {2}'
+                              ''.format(maximum, used, unit)
+                             )
             return ret
-    ret['comment'] = 'Disk in acceptable range'
+    ret['comment'] = 'Disk used space in acceptable range'
     ret['result'] = True
     return ret

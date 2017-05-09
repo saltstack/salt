@@ -14,6 +14,7 @@ except ImportError:
     from pipes import quote as _quote_args
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.utils
 import salt.utils.decorators as decorators
 from salt.utils.odict import OrderedDict
@@ -783,7 +784,7 @@ def create(from_file=None, **kwargs):
     # prepare vmcfg
     vmcfg = {}
     kwargs = salt.utils.clean_kwargs(**kwargs)
-    for k, v in kwargs.iteritems():
+    for k, v in six.iteritems(kwargs):
         vmcfg[k] = v
 
     if from_file:
@@ -818,7 +819,7 @@ def update(vm, from_file=None, key='uuid', **kwargs):
     # prepare vmcfg
     vmcfg = {}
     kwargs = salt.utils.clean_kwargs(**kwargs)
-    for k, v in kwargs.iteritems():
+    for k, v in six.iteritems(kwargs):
         vmcfg[k] = v
 
     if key not in ['uuid', 'alias', 'hostname']:

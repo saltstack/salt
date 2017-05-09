@@ -13,8 +13,8 @@ index d581916..dab0817 100644
 --- a/salt/modules/service.py
 +++ b/salt/modules/service.py
 @@ -49,7 +49,12 @@ def __virtual__():
-     # Suse >=12.0 uses systemd
-     if __grains__.get('os_family', '') == 'Suse':
+     # SUSE >=12.0 uses systemd
+     if __grains__.get('os_family', '') == 'SUSE':
          try:
 -            if int(__grains__.get('osrelease', '').split('.')[0]) >= 12:
 +            # osrelease might be in decimal format (e.g. "12.1"), or for

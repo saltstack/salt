@@ -1,4 +1,4 @@
-.. _all-salt_modules:
+.. _all-salt.modules:
 
 =================
 execution modules
@@ -8,7 +8,9 @@ execution modules
 
     .. toctree::
 
+        salt.modules.group
         salt.modules.pkg
+        salt.modules.user
 
 .. currentmodule:: salt.modules
 
@@ -16,9 +18,12 @@ execution modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    acme
     aliases
     alternatives
     apache
+    apcups
+    apf
     aptpkg
     archive
     artifactory
@@ -31,14 +36,18 @@ execution modules
     bigip
     blockdev
     bluez
+    boto_apigateway
     boto_asg
     boto_cfn
     boto_cloudtrail
     boto_cloudwatch
+    boto_cloudwatch_event
+    boto_cognitoidentity
     boto_datapipeline
     boto_dynamodb
     boto_ec2
     boto_elasticache
+    boto_elasticsearch_domain
     boto_elb
     boto_iam
     boto_iot
@@ -46,6 +55,7 @@ execution modules
     boto_lambda
     boto_rds
     boto_route53
+    boto_s3_bucket
     boto_secgroup
     boto_sns
     boto_sqs
@@ -57,10 +67,13 @@ execution modules
     cabal
     cassandra
     cassandra_cql
+    celery
+    ceph
     chassis
     chef
     chocolatey
     chronos
+    cisconso
     cloud
     cmdmod
     composer
@@ -70,6 +83,7 @@ execution modules
     cp
     cpan
     cron
+    csf
     cyg
     cytest
     daemontools
@@ -124,7 +138,6 @@ execution modules
     gnomedesktop
     gpg
     grains
-    group
     groupadd
     grub_legacy
     guestfs
@@ -141,13 +154,18 @@ execution modules
     img
     incron
     influx
+    influx08
     infoblox
     ini_manage
     inspectlib
     inspectlib.collector
     inspectlib.dbhandle
+    inspectlib.entities
     inspectlib.exceptions
+    inspectlib.fsdb
+    inspectlib.kiwiproc
     inspectlib.query
+    inspector
     introspect
     ipmi
     ipset
@@ -157,6 +175,8 @@ execution modules
     jboss7_cli
     jenkins
     junos
+    k8s
+    kapacitor
     kerberos
     key
     keyboard
@@ -182,13 +202,13 @@ execution modules
     mac_desktop
     mac_group
     mac_keychain
+    mac_package
     mac_pkgutil
     mac_ports
     mac_power
     mac_service
     mac_shadow
     mac_softwareupdate
-    mac_user
     mac_sysctl
     mac_system
     mac_timezone
@@ -214,6 +234,13 @@ execution modules
     nacl
     nagios
     nagios_rpc
+    napalm_bgp
+    napalm_network
+    napalm_ntp
+    napalm_probes
+    napalm_route
+    napalm_snmp
+    napalm_users
     netaddress
     netbsd_sysctl
     netbsdservice
@@ -223,16 +250,17 @@ execution modules
     nfs3
     nftables
     nginx
-    node
     nova
     npm
     nspawn
+    nxos
     omapi
     openbsd_sysctl
     openbsdpkg
     openbsdrcctl
     openbsdservice
     openstack_config
+    openstack_mng
     openvswitch
     opkg
     oracle
@@ -241,7 +269,9 @@ execution modules
     pagerduty
     pagerduty_util
     pam
+    parallels
     parted
+    pcs
     pecl
     philips_hue
     pillar
@@ -276,6 +306,7 @@ execution modules
     redismod
     reg
     rest_package
+    rest_sample_utils
     rest_service
     restartcheck
     ret
@@ -300,10 +331,12 @@ execution modules
     sensors
     serverdensity_device
     service
+    servicenow
     shadow
     slack_notify
     slsutil
     smartos_imgadm
+    smartos_nictagadm
     smartos_virt
     smartos_vmadm
     smbios
@@ -323,6 +356,7 @@ execution modules
     ssh
     ssh_package
     ssh_service
+    snapper
     state
     status
     stormpath
@@ -340,6 +374,7 @@ execution modules
     telemetry
     temp
     test
+    testinframod
     test_virtual
     timezone
     tls
@@ -350,7 +385,6 @@ execution modules
     udev
     upstart
     uptime
-    user
     useradd
     uwsgi
     varnish
@@ -372,16 +406,21 @@ execution modules
     win_groupadd
     win_iis
     win_ip
+    win_lgpo
     win_license
     win_network
     win_ntp
     win_path
     win_pkg
+    win_pki
     win_powercfg
+    win_psget
     win_repo
     win_servermanager
     win_service
     win_shadow
+    win_smtp_server
+    win_snmp
     win_status
     win_system
     win_task
@@ -391,6 +430,7 @@ execution modules
     win_wua
     x509
     xapi
+    xbpspkg
     xfs
     xmpp
     yumpkg

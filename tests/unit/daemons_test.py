@@ -37,7 +37,7 @@ class LoggerMock(object):
 
         :return:
         '''
-        self.last_message = self.last_type = None
+        self.messages = list()
 
     def info(self, data):
         '''
@@ -46,8 +46,7 @@ class LoggerMock(object):
         :param data:
         :return:
         '''
-        self.last_message = data
-        self.last_type = 'info'
+        self.messages.append({'message': data, 'type': 'info'})
 
     def warning(self, data):
         '''
@@ -56,8 +55,20 @@ class LoggerMock(object):
         :param data:
         :return:
         '''
-        self.last_message = data
-        self.last_type = 'warning'
+        self.messages.append({'message': data, 'type': 'warning'})
+
+    def has_message(self, msg, log_type=None):
+        '''
+        Check if log has message.
+
+        :param data:
+        :return:
+        '''
+        for data in self.messages:
+            if (data['type'] == log_type or not log_type) and data['message'].find(msg) > -1:
+                return True
+
+        return False
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -98,16 +109,16 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
                 with patch('salt.cli.daemons.log', _logger):
                     for alg in ['md5', 'sha1']:
                         _create_master().start()
-                        ret = ret and _logger.last_type == 'warning' \
-                                and _logger.last_message \
-                                and _logger.last_message.find('Do not use {alg}'.format(alg=alg)) > -1
+                        ret = ret and _logger.messages \
+                                and _logger.has_message('Do not use {alg}'.format(alg=alg),
+                                                        log_type='warning')
 
                     _logger.reset()
 
                     for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
                         _create_master().start()
-                        ret = ret and _logger.last_type is None \
-                                and not _logger.last_message
+                        ret = ret and _logger.messages \
+                              and not _logger.has_message('Do not use ')
                     child_pipe.send(ret)
                     child_pipe.close()
         self._multiproc_exec_test(exec_test)
@@ -118,6 +129,7 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
 
         :return:
         '''
+
         def exec_test(child_pipe):
             def _create_minion():
                 '''
@@ -138,15 +150,15 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
                 with patch('salt.cli.daemons.log', _logger):
                     for alg in ['md5', 'sha1']:
                         _create_minion().start()
-                        ret = ret and _logger.last_type == 'warning' \
-                                and _logger.last_message \
-                                and _logger.last_message.find('Do not use {alg}'.format(alg=alg)) > -1
+                        ret = ret and _logger.messages \
+                                and _logger.has_message('Do not use {alg}'.format(alg=alg),
+                                                        log_type='warning')
                     _logger.reset()
 
                     for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
                         _create_minion().start()
-                        ret = ret and _logger.last_type is None \
-                                and not _logger.last_message
+                        ret = ret and _logger.messages \
+                                and not _logger.has_message('Do not use ')
 
                 child_pipe.send(ret)
                 child_pipe.close()
@@ -159,6 +171,7 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
 
         :return:
         '''
+
         def exec_test(child_pipe):
             def _create_proxy_minion():
                 '''
@@ -167,9 +180,10 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
                 '''
                 obj = daemons.ProxyMinion()
                 obj.config = {'user': 'dummy', 'hash_type': alg}
-                for attr in ['minion', 'start_log_info', 'prepare', 'shutdown']:
+                for attr in ['minion', 'start_log_info', 'prepare', 'shutdown', 'tune_in']:
                     setattr(obj, attr, MagicMock())
 
+                obj.minion.restart = False
                 return obj
 
             ret = True
@@ -178,16 +192,16 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
                 with patch('salt.cli.daemons.log', _logger):
                     for alg in ['md5', 'sha1']:
                         _create_proxy_minion().start()
-                        ret = ret and _logger.last_type == 'warning' \
-                                and _logger.last_message \
-                                and _logger.last_message.find('Do not use {alg}'.format(alg=alg)) > -1
+                        ret = ret and _logger.messages \
+                                and _logger.has_message('Do not use {alg}'.format(alg=alg),
+                                                        log_type='warning')
 
                     _logger.reset()
 
                     for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
                         _create_proxy_minion().start()
-                        ret = ret and _logger.last_type is None \
-                                and not _logger.last_message
+                        ret = ret and _logger.messages \
+                                and not _logger.has_message('Do not use ')
             child_pipe.send(ret)
             child_pipe.close()
 
@@ -199,6 +213,7 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
 
         :return:
         '''
+
         def exec_test(child_pipe):
             def _create_syndic():
                 '''
@@ -218,16 +233,16 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
                 with patch('salt.cli.daemons.log', _logger):
                     for alg in ['md5', 'sha1']:
                         _create_syndic().start()
-                        ret = ret and _logger.last_type == 'warning' \
-                                and _logger.last_message \
-                                and _logger.last_message.find('Do not use {alg}'.format(alg=alg)) > -1
+                        ret = ret and _logger.messages \
+                                and _logger.has_message('Do not use {alg}'.format(alg=alg),
+                                                        log_type='warning')
 
                     _logger.reset()
 
                     for alg in ['sha224', 'sha256', 'sha384', 'sha512']:
                         _create_syndic().start()
-                        ret = ret and _logger.last_type is None \
-                                and not _logger.last_message
+                        ret = ret and _logger.messages \
+                                and not _logger.has_message('Do not use ')
 
             child_pipe.send(ret)
             child_pipe.close()

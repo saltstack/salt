@@ -24,8 +24,8 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
-import salt.utils
 from salt.exceptions import CommandNotFoundError
+import salt.utils
 
 # Define the state's virtual name
 __virtualname__ = 'ssh_known_hosts'
@@ -49,9 +49,9 @@ def present(
         port=None,
         enc=None,
         config=None,
-        hash_hostname=True,
         hash_known_hosts=True,
-        timeout=5):
+        timeout=5,
+        fingerprint_hash_type=None):
     '''
     Verifies that the specified host is known by the specified user
 
@@ -87,13 +87,6 @@ def present(
         defaults to "/etc/ssh/ssh_known_hosts". If present, must be an
         absolute path when a user is not specified.
 
-    hash_hostname : True
-        Hash all hostnames and addresses in the known hosts file.
-
-        .. deprecated:: Carbon
-
-            Please use hash_known_hosts instead.
-
     hash_known_hosts : True
         Hash all hostnames and addresses in the known hosts file.
 
@@ -104,6 +97,18 @@ def present(
         and the host in question considered unavailable.  Default is 5 seconds.
 
         .. versionadded:: 2016.3.0
+
+    fingerprint_hash_type
+        The public key fingerprint hash type that the public key fingerprint
+        was originally hashed with. This defaults to ``md5`` if not specified.
+
+        .. versionadded:: 2016.11.4
+
+        .. note::
+
+            The default value of the ``fingerprint_hash_type`` will change to
+            ``sha256`` in Salt Nitrogen.
+
     '''
     ret = {'name': name,
            'changes': {},
@@ -120,14 +125,6 @@ def present(
         ret['result'] = False
         return dict(ret, comment=comment)
 
-    if not hash_hostname:
-        salt.utils.warn_until(
-            'Carbon',
-            'The hash_hostname parameter is misleading as ssh-keygen can only '
-            'hash the whole known hosts file, not entries for individual '
-            'hosts. Please use hash_known_hosts=False instead.')
-        hash_known_hosts = hash_hostname
-
     if __opts__['test']:
         if key and fingerprint:
             comment = 'Specify either "key" or "fingerprint", not both.'
@@ -143,7 +140,8 @@ def present(
                                                       key=key,
                                                       fingerprint=fingerprint,
                                                       config=config,
-                                                      port=port)
+                                                      port=port,
+                                                      fingerprint_hash_type=fingerprint_hash_type)
         except CommandNotFoundError as err:
             ret['result'] = False
             ret['comment'] = 'ssh.check_known_host error: {0}'.format(err)
@@ -162,14 +160,17 @@ def present(
                                                                      config)
             return dict(ret, comment=comment)
 
-    result = __salt__['ssh.set_known_host'](user=user, hostname=name,
-                fingerprint=fingerprint,
-                key=key,
-                port=port,
-                enc=enc,
-                config=config,
-                hash_known_hosts=hash_known_hosts,
-                timeout=timeout)
+    result = __salt__['ssh.set_known_host'](
+        user=user,
+        hostname=name,
+        fingerprint=fingerprint,
+        key=key,
+        port=port,
+        enc=enc,
+        config=config,
+        hash_known_hosts=hash_known_hosts,
+        timeout=timeout,
+        fingerprint_hash_type=fingerprint_hash_type)
     if result['status'] == 'exists':
         return dict(ret,
                     comment='{0} already exists in {1}'.format(name, config))

@@ -70,7 +70,6 @@ import tornado.iostream
 # Import salt libs
 import salt.config
 import salt.payload
-import salt.loader
 import salt.utils
 import salt.utils.async
 import salt.utils.cache
@@ -151,13 +150,34 @@ def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=Fal
     Return an event object suitable for the named transport
     '''
     # TODO: AIO core is separate from transport
-    if opts['transport'] in ('zeromq', 'tcp'):
+    if opts['transport'] in ('zeromq', 'tcp', 'detect'):
         return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors)
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.MasterEvent(
             opts=opts, sock_dir=sock_dir, listen=listen
         )
+
+
+def fire_args(opts, jid, tag_data, prefix=''):
+    '''
+    Fire an event containing the arguments passed to an orchestration job
+    '''
+    try:
+        tag_suffix = [jid, 'args']
+    except NameError:
+        pass
+    else:
+        try:
+            _event = get_master_event(opts, opts['sock_dir'], listen=False)
+            tag = tagify(tag_suffix, prefix)
+            _event.fire_event(tag_data, tag=tag)
+        except Exception as exc:
+            # Don't let a problem here hold up the rest of the orchestration
+            log.warning(
+                'Failed to fire args event %s with data %s: %s',
+                tag, tag_data, exc
+            )
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -407,9 +427,13 @@ class SaltEvent(object):
         if serial is None:
             serial = salt.payload.Serial({'serial': 'msgpack'})
 
-        mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
-
-        data = serial.loads(mdata)
+        if six.PY2:
+            mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+            data = serial.loads(mdata)
+        else:
+            mtag, sep, mdata = raw.partition(salt.utils.to_bytes(TAGEND))  # split tag from data
+            mtag = salt.utils.to_str(mtag)
+            data = serial.loads(mdata, encoding='utf-8')
         return mtag, data
 
     def _get_match_func(self, match_type=None):
@@ -698,13 +722,29 @@ class SaltEvent(object):
         data['_stamp'] = datetime.datetime.utcnow().isoformat()
 
         tagend = TAGEND
+        if six.PY2:
+            dump_data = self.serial.dumps(data)
+        else:
+            # Since the pack / unpack logic here is for local events only,
+            # it is safe to change the wire protocol. The mechanism
+            # that sends events from minion to master is outside this
+            # file.
+            dump_data = self.serial.dumps(data, use_bin_type=True)
+
         serialized_data = salt.utils.dicttrim.trim_dict(
-            self.serial.dumps(data),
+            dump_data,
             self.opts['max_event_size'],
             is_msgpacked=True,
+            use_bin_type=six.PY3
         )
         log.debug('Sending event: tag = {0}; data = {1}'.format(tag, data))
-        event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
+        if six.PY2:
+            event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
+        else:
+            event = b''.join([
+                salt.utils.to_bytes(tag),
+                salt.utils.to_bytes(tagend),
+                serialized_data])
         msg = salt.utils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
             with salt.utils.async.current_ioloop(self.io_loop):
@@ -740,39 +780,65 @@ class SaltEvent(object):
         if self._run_io_loop_sync and not self.keep_loop:
             self.io_loop.close()
 
+    def _fire_ret_load_specific_fun(self, load, fun):
+        '''
+        Helper function for fire_ret_load
+        '''
+        if isinstance(load['fun'], list):
+            # Multi-function job
+            ret = load.get('return', {})
+            ret = ret.get(fun, {})
+            # This was already validated to exist and be non-zero in the
+            # caller.
+            retcode = load['retcode'][fun]
+        else:
+            # Single-function job
+            ret = load.get('return', {})
+            retcode = load['retcode']
+
+        try:
+            for tag, data in six.iteritems(ret):
+                data['retcode'] = retcode
+                tags = tag.split('_|-')
+                if data.get('result') is False:
+                    self.fire_event(
+                        data,
+                        '{0}.{1}'.format(tags[0], tags[-1])
+                    )  # old dup event
+                    data['jid'] = load['jid']
+                    data['id'] = load['id']
+                    data['success'] = False
+                    data['return'] = 'Error: {0}.{1}'.format(
+                        tags[0], tags[-1])
+                    data['fun'] = fun
+                    data['user'] = load['user']
+                    self.fire_event(
+                        data,
+                        tagify([load['jid'],
+                                'sub',
+                                load['id'],
+                                'error',
+                                fun],
+                               'job'))
+        except Exception:
+            pass
+
     def fire_ret_load(self, load):
         '''
         Fire events based on information in the return load
         '''
         if load.get('retcode') and load.get('fun'):
-            # Minion fired a bad retcode, fire an event
-            if load['fun'] in SUB_EVENT:
-                try:
-                    for tag, data in six.iteritems(load.get('return', {})):
-                        data['retcode'] = load['retcode']
-                        tags = tag.split('_|-')
-                        if data.get('result') is False:
-                            self.fire_event(
-                                data,
-                                '{0}.{1}'.format(tags[0], tags[-1])
-                            )  # old dup event
-                            data['jid'] = load['jid']
-                            data['id'] = load['id']
-                            data['success'] = False
-                            data['return'] = 'Error: {0}.{1}'.format(
-                                tags[0], tags[-1])
-                            data['fun'] = load['fun']
-                            data['user'] = load['user']
-                            self.fire_event(
-                                data,
-                                tagify([load['jid'],
-                                        'sub',
-                                        load['id'],
-                                        'error',
-                                        load['fun']],
-                                       'job'))
-                except Exception:
-                    pass
+            if isinstance(load['fun'], list):
+                # Multi-function job
+                for fun in load['fun']:
+                    if load['retcode'].get(fun, 0) and fun in SUB_EVENT:
+                        # Minion fired a bad retcode, fire an event
+                        self._fire_ret_load_specific_fun(load, fun)
+            else:
+                # Single-function job
+                if load['fun'] in SUB_EVENT:
+                    # Minion fired a bad retcode, fire an event
+                    self._fire_ret_load_specific_fun(load, load['fun'])
 
     def set_event_handler(self, event_handler):
         '''
@@ -837,9 +903,9 @@ class NamespacedEvent(object):
         self.print_func = print_func
 
     def fire_event(self, data, tag):
+        self.event.fire_event(data, tagify(tag, base=self.base))
         if self.print_func is not None:
             self.print_func(tag, data)
-        self.event.fire_event(data, tagify(tag, base=self.base))
 
 
 class MinionEvent(SaltEvent):
@@ -861,12 +927,10 @@ class AsyncEventPublisher(object):
 
     TODO: remove references to "minion_event" whenever we need to use this for other things
     '''
-    def __init__(self, opts, publish_handler, io_loop=None):
+    def __init__(self, opts, io_loop=None):
         self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         default_minion_sock_dir = self.opts['sock_dir']
         self.opts.update(opts)
-
-        self.publish_handler = publish_handler
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
         self._closing = False
@@ -954,7 +1018,6 @@ class AsyncEventPublisher(object):
         '''
         try:
             self.publisher.publish(package)
-            self.io_loop.spawn_callback(self.publish_handler, package)
             return package
         # Add an extra fallback in case a forked process leeks through
         except Exception:
@@ -1081,6 +1144,10 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         if hasattr(self, 'io_loop'):
             self.io_loop.close()
 
+    def _handle_signals(self, signum, sigframe):
+        self.close()
+        super(EventPublisher, self)._handle_signals(signum, sigframe)
+
     def __del__(self):
         self.close()
 
@@ -1125,24 +1192,37 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         super(EventReturn, self)._handle_signals(signum, sigframe)
 
     def flush_events(self):
-        event_return = '{0}.event_return'.format(
-            self.opts['event_return']
-        )
+        if isinstance(self.opts['event_return'], list):
+            # Multiple event returners
+            for r in self.opts['event_return']:
+                log.debug('Calling event returner {0}, one of many.'.format(r))
+                event_return = '{0}.event_return'.format(r)
+                self._flush_event_single(event_return)
+        else:
+            # Only a single event returner
+            log.debug('Calling event returner {0}, only one '
+                      'configured.'.format(self.opts['event_return']))
+            event_return = '{0}.event_return'.format(
+                self.opts['event_return']
+                )
+            self._flush_event_single(event_return)
+        del self.event_queue[:]
+
+    def _flush_event_single(self, event_return):
         if event_return in self.minion.returners:
             try:
                 self.minion.returners[event_return](self.event_queue)
             except Exception as exc:
                 log.error('Could not store events - returner \'{0}\' raised '
-                    'exception: {1}'.format(self.opts['event_return'], exc))
+                          'exception: {1}'.format(event_return, exc))
                 # don't waste processing power unnecessarily on converting a
                 # potentially huge dataset to a string
                 if log.level <= logging.DEBUG:
                     log.debug('Event data that caused an exception: {0}'.format(
                         self.event_queue))
-            del self.event_queue[:]
         else:
             log.error('Could not store return for event(s) - returner '
-                      '\'%s\' not found.', self.opts['event_return'])
+                      '\'%s\' not found.', event_return)
 
     def run(self):
         '''
@@ -1173,14 +1253,19 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         Returns True if event should be stored, else False
         '''
         tag = event['tag']
-        if tag in self.opts['event_return_whitelist']:
-            if tag not in self.opts['event_return_blacklist']:
-                return True
-            else:
-                return False  # Event was whitelisted and blacklisted
-        elif tag in self.opts['event_return_blacklist']:
-            return False
-        return True
+        if self.opts['event_return_whitelist']:
+            ret = False
+        else:
+            ret = True
+        for whitelist_match in self.opts['event_return_whitelist']:
+            if fnmatch.fnmatch(tag, whitelist_match):
+                ret = True
+                break
+        for blacklist_match in self.opts['event_return_blacklist']:
+            if fnmatch.fnmatch(tag, blacklist_match):
+                ret = False
+                break
+        return ret
 
 
 class StateFire(object):

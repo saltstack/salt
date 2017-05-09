@@ -122,7 +122,7 @@ def get_node(conn, name):
     nodes = conn.list_nodes()
     for node in nodes:
         if node.name == name:
-            __utils__['cloud.cache_node'](salt.utils.cloud.simple_types_filter(node.__dict__), __active_provider_name__, __opts__)
+            __utils__['cloud.cache_node'](salt.utils.simple_types_filter(node.__dict__), __active_provider_name__, __opts__)
             return node
 
 
@@ -143,7 +143,7 @@ def avail_locations(conn=None, call=None):
     locations = conn.list_locations()
     ret = {}
     for img in locations:
-        if isinstance(img.name, string_types):
+        if isinstance(img.name, string_types) and not six.PY3:
             img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
             img_name = str(img.name)
@@ -154,7 +154,7 @@ def avail_locations(conn=None, call=None):
                 continue
 
             attr_value = getattr(img, attr)
-            if isinstance(attr_value, string_types):
+            if isinstance(attr_value, string_types) and not six.PY3:
                 attr_value = attr_value.encode(
                     'ascii', 'salt-cloud-force-ascii'
                 )
@@ -180,7 +180,7 @@ def avail_images(conn=None, call=None):
     images = conn.list_images()
     ret = {}
     for img in images:
-        if isinstance(img.name, string_types):
+        if isinstance(img.name, string_types) and not six.PY3:
             img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
             img_name = str(img.name)
@@ -190,7 +190,7 @@ def avail_images(conn=None, call=None):
             if attr.startswith('_'):
                 continue
             attr_value = getattr(img, attr)
-            if isinstance(attr_value, string_types):
+            if isinstance(attr_value, string_types) and not six.PY3:
                 attr_value = attr_value.encode(
                     'ascii', 'salt-cloud-force-ascii'
                 )
@@ -215,7 +215,7 @@ def avail_sizes(conn=None, call=None):
     sizes = conn.list_sizes()
     ret = {}
     for size in sizes:
-        if isinstance(size.name, string_types):
+        if isinstance(size.name, string_types) and not six.PY3:
             size_name = size.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
             size_name = str(size.name)
@@ -230,7 +230,7 @@ def avail_sizes(conn=None, call=None):
             except Exception:
                 pass
 
-            if isinstance(attr_value, string_types):
+            if isinstance(attr_value, string_types) and not six.PY3:
                 attr_value = attr_value.encode(
                     'ascii', 'salt-cloud-force-ascii'
                 )
@@ -243,17 +243,19 @@ def get_location(conn, vm_):
     Return the location object to use
     '''
     locations = conn.list_locations()
-    vm_location = config.get_cloud_config_value('location', vm_, __opts__).encode(
-        'ascii', 'salt-cloud-force-ascii'
-    )
+    vm_location = config.get_cloud_config_value('location', vm_, __opts__)
+    if not six.PY3:
+        vm_location = vm_location.encode(
+            'ascii', 'salt-cloud-force-ascii'
+        )
 
     for img in locations:
-        if isinstance(img.id, string_types):
+        if isinstance(img.id, string_types) and not six.PY3:
             img_id = img.id.encode('ascii', 'salt-cloud-force-ascii')
         else:
             img_id = str(img.id)
 
-        if isinstance(img.name, string_types):
+        if isinstance(img.name, string_types) and not six.PY3:
             img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
             img_name = str(img.name)
@@ -273,18 +275,18 @@ def get_image(conn, vm_):
     Return the image object to use
     '''
     images = conn.list_images()
+    vm_image = config.get_cloud_config_value('image', vm_, __opts__)
 
-    vm_image = config.get_cloud_config_value('image', vm_, __opts__).encode(
-        'ascii', 'salt-cloud-force-ascii'
-    )
+    if not six.PY3:
+        vm_image = vm_image.encode('ascii', 'salt-cloud-force-ascii')
 
     for img in images:
-        if isinstance(img.id, string_types):
+        if isinstance(img.id, string_types) and not six.PY3:
             img_id = img.id.encode('ascii', 'salt-cloud-force-ascii')
         else:
             img_id = str(img.id)
 
-        if isinstance(img.name, string_types):
+        if isinstance(img.name, string_types) and not six.PY3:
             img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
             img_name = str(img.name)
@@ -344,7 +346,8 @@ def destroy(name, conn=None, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -384,7 +387,8 @@ def destroy(name, conn=None, call=None):
             'event',
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
-            {'name': name},
+            args={'name': name},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
         if __opts__['delete_sshkeys'] is True:
@@ -424,7 +428,8 @@ def reboot(name, conn=None):
             'event',
             '{0} has been rebooted'.format(name), 'salt-cloud'
             'salt/cloud/{0}/rebooting'.format(name),
-            {'name': name},
+            args={'name': name},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
         return True

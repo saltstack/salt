@@ -188,10 +188,6 @@ assign_private_ip
 
 Assigns a private IP address to a Linode when set to True. Default is False.
 
-private_ip
-----------
-Deprecated in favor of `assign_private_ip`_ in Salt 2016.3.0.
-
 ssh_interface
 -------------
 .. versionadded:: 2016.3.0

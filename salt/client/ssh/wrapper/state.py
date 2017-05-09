@@ -43,21 +43,12 @@ def _merge_extra_filerefs(*args):
     return ','.join(ret)
 
 
-def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
+def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
     '''
     Create the seed file for a state.sls run
     '''
     st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     __pillar__.update(kwargs.get('pillar', {}))
     st_ = salt.client.ssh.state.SSHHighState(
             __opts__,
@@ -96,11 +87,12 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
             )
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__['thin_dir'],
@@ -168,11 +160,12 @@ def low(data, **kwargs):
             )
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
             __opts__['thin_dir'],
@@ -235,11 +228,12 @@ def high(data, **kwargs):
             )
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
             __opts__['thin_dir'],
@@ -331,11 +325,12 @@ def highstate(test=None, **kwargs):
             return chunks
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__['thin_dir'],
@@ -405,11 +400,12 @@ def top(topfn, test=None, **kwargs):
             )
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__['thin_dir'],
@@ -482,7 +478,7 @@ def show_lowstate():
     return st_.compile_low_chunks()
 
 
-def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
+def show_sls(mods, saltenv='base', test=None, **kwargs):
     '''
     Display the state data from a specific sls or list of sls files on the
     master
@@ -495,15 +491,6 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
     '''
     __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     opts = copy.copy(__opts__)
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
@@ -531,10 +518,12 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
     return high_data
 
 
-def show_low_sls(mods, saltenv='base', test=None, env=None, **kwargs):
+def show_low_sls(mods, saltenv='base', test=None, **kwargs):
     '''
     Display the low state data from a specific sls or list of sls files on the
-    master
+    master.
+
+    .. versionadded:: 2016.3.2
 
     CLI Example:
 
@@ -544,14 +533,6 @@ def show_low_sls(mods, saltenv='base', test=None, env=None, **kwargs):
     '''
     __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
 
     opts = copy.copy(__opts__)
     if salt.utils.test_mode(test=test, **kwargs):
@@ -675,11 +656,12 @@ def single(fun, name, test=None, **kwargs):
 
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'])
 
     # Create a hash so we can verify the tar on the target system
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])

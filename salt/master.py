@@ -17,11 +17,14 @@ import signal
 import stat
 import logging
 import multiprocessing
-import tempfile
 import traceback
 
 # Import third party libs
-from Crypto.PublicKey import RSA
+try:
+    from Cryptodome.PublicKey import RSA
+except ImportError:
+    # Fall back to pycrypto
+    from Crypto.PublicKey import RSA
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
@@ -66,7 +69,6 @@ import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.job
-import salt.utils.reactor
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
@@ -144,8 +146,7 @@ class SMaster(object):
 
 class Maintenance(SignalHandlingMultiprocessingProcess):
     '''
-    A generalized maintenance process which performances maintenance
-    routines.
+    A generalized maintenance process which performs maintenance routines.
     '''
     def __init__(self, opts, log_queue=None):
         '''
@@ -159,6 +160,8 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         self.loop_interval = int(self.opts['loop_interval'])
         # Track key rotation intervals
         self.rotate = int(time.time())
+        # A serializer for general maint operations
+        self.serial = salt.payload.Serial(self.opts)
 
     # __setstate__ and __getstate__ are only used on Windows.
     # We do this so that __init__ will be invoked on Windows in the child
@@ -239,6 +242,7 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             self.handle_search(now, last)
             self.handle_git_pillar()
             self.handle_schedule()
+            self.handle_key_cache()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
             salt.daemons.masterapi.fileserver_update(self.fileserver)
@@ -253,6 +257,27 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         if self.opts.get('search'):
             if now - last >= self.opts['search_index_interval']:
                 self.search.index()
+
+    def handle_key_cache(self):
+        '''
+        Evaluate accepted keys and create a msgpack file
+        which contains a list
+        '''
+        if self.opts['key_cache'] == 'sched':
+            keys = []
+            #TODO DRY from CKMinions
+            if self.opts['transport'] in ('zeromq', 'tcp'):
+                acc = 'minions'
+            else:
+                acc = 'accepted'
+
+            for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], acc)):
+                if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], acc, fn_)):
+                    keys.append(fn_)
+            log.debug('Writing master key cache')
+            # Write a temporary file securely
+            with salt.utils.atomicfile.atomic_open(os.path.join(self.opts['pki_dir'], acc, '.key_cache')) as cache_file:
+                self.serial.dump(keys, cache_file)
 
     def handle_key_rotate(self, now):
         '''
@@ -379,7 +404,7 @@ class Master(SMaster):
         # Let's check to see how our max open files(ulimit -n) setting is
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
         if mof_h == resource.RLIM_INFINITY:
-            # Unclear what to do with infinity... OSX reports RLIM_INFINITY as
+            # Unclear what to do with infinity... macOS reports RLIM_INFINITY as
             # hard limit,but raising to anything above soft limit fails...
             mof_h = mof_s
         log.info(
@@ -412,7 +437,7 @@ class Master(SMaster):
                 )
             except ValueError:
                 # https://github.com/saltstack/salt/issues/1991#issuecomment-13025595
-                # A user under OSX reported that our 100000 default value is
+                # A user under macOS reported that our 100000 default value is
                 # still too high.
                 log.critical(
                     'Failed to raise max open files setting to {0}. If this '
@@ -490,21 +515,6 @@ class Master(SMaster):
             log.critical('Master failed pre flight checks, exiting\n')
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
-    # run_reqserver cannot be defined within a class method in order for it
-    # to be picklable.
-    def run_reqserver(self, **kwargs):
-        secrets = kwargs.pop('secrets', None)
-        if secrets is not None:
-            SMaster.secrets = secrets
-
-        with default_signals(signal.SIGINT, signal.SIGTERM):
-            reqserv = ReqServer(
-                self.opts,
-                self.key,
-                self.master_key,
-                **kwargs)
-            reqserv.run()
-
     def start(self):
         '''
         Turn on the master server components
@@ -529,7 +539,7 @@ class Master(SMaster):
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets['aes'] = {'secret': multiprocessing.Array(ctypes.c_char,
-                                                salt.crypt.Crypticle.generate_key_string()),
+                                                salt.crypt.Crypticle.generate_key_string().encode('ascii')),
                                       'reload': salt.crypt.Crypticle.generate_key_string
                                      }
             log.info('Creating master process manager')
@@ -544,15 +554,26 @@ class Master(SMaster):
 
             log.info('Creating master event publisher process')
             self.process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
+
+            if self.opts.get('reactor'):
+                if isinstance(self.opts['engines'], list):
+                    rine = False
+                    for item in self.opts['engines']:
+                        if 'reactor' in item:
+                            rine = True
+                            break
+                    if not rine:
+                        self.opts['engines'].append({'reactor': {}})
+                else:
+                    if 'reactor' not in self.opts['engines']:
+                        log.info('Enabling the reactor engine')
+                        self.opts['engines']['reactor'] = {}
+
             salt.engines.start_engines(self.opts, self.process_manager)
 
             # must be after channels
             log.info('Creating master maintenance process')
             self.process_manager.add_process(Maintenance, args=(self.opts,))
-
-            if 'reactor' in self.opts:
-                log.info('Creating master reactor process')
-                self.process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
 
             if self.opts.get('event_return'):
                 log.info('Creating master event return process')
@@ -583,15 +604,17 @@ class Master(SMaster):
                 log.debug('Sleeping for two seconds to let concache rest')
                 time.sleep(2)
 
-        log.info('Creating master request server process')
-        kwargs = {}
-        if salt.utils.is_windows():
-            kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
-            kwargs['secrets'] = SMaster.secrets
+            log.info('Creating master request server process')
+            kwargs = {}
+            if salt.utils.is_windows():
+                kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
+                kwargs['secrets'] = SMaster.secrets
 
-        # No need to call this one under default_signals because that's invoked when
-        # actually starting the ReqServer
-        self.process_manager.add_process(self.run_reqserver, kwargs=kwargs, name='ReqServer')
+            self.process_manager.add_process(
+                ReqServer,
+                args=(self.opts, self.key, self.master_key),
+                kwargs=kwargs,
+                name='ReqServer')
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -600,7 +623,7 @@ class Master(SMaster):
 
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
-            signal.signal(signal.SIGINT, self._handle_signals)
+            signal.signal(signal.SIGTERM, self._handle_signals)
 
         self.process_manager.run()
 
@@ -610,6 +633,8 @@ class Master(SMaster):
         self.process_manager.send_signal_to_processes(signum)
         # kill any remaining processes
         self.process_manager.kill_children()
+        time.sleep(1)
+        sys.exit(0)
 
 
 class Halite(SignalHandlingMultiprocessingProcess):
@@ -649,7 +674,7 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts, key, mkey, log_queue=None):
+    def __init__(self, opts, key, mkey, log_queue=None, secrets=None):
         '''
         Create a request server
 
@@ -665,6 +690,22 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         self.master_key = mkey
         # Prepare the AES key
         self.key = key
+        self.secrets = secrets
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self._is_child = True
+        self.__init__(state['opts'], state['key'], state['mkey'],
+                      log_queue=state['log_queue'], secrets=state['secrets'])
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'key': self.key,
+                'mkey': self.master_key,
+                'log_queue': self.log_queue,
+                'secrets': self.secrets}
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self.destroy(signum)
@@ -677,6 +718,8 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         if self.log_queue is not None:
             salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+        if self.secrets is not None:
+            SMaster.secrets = self.secrets
 
         dfn = os.path.join(self.opts['cachedir'], '.dfn')
         if os.path.isfile(dfn):
@@ -704,23 +747,28 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         kwargs = {}
         if salt.utils.is_windows():
             kwargs['log_queue'] = self.log_queue
-            # Use one worker thread if the only TCP transport is set up on Windows. See #27188.
-            if tcp_only:
-                log.warning("TCP transport is currently supporting the only 1 worker on Windows.")
+            # Use one worker thread if only the TCP transport is set up on
+            # Windows and we are using Python 2. There is load balancer
+            # support on Windows for the TCP transport when using Python 3.
+            if tcp_only and six.PY2 and int(self.opts['worker_threads']) != 1:
+                log.warning('TCP transport supports only 1 worker on Windows '
+                            'when using Python 2.')
                 self.opts['worker_threads'] = 1
 
-        for ind in range(int(self.opts['worker_threads'])):
-            name = 'MWorker-{0}'.format(ind)
-            self.process_manager.add_process(MWorker,
-                                            args=(self.opts,
-                                                self.master_key,
-                                                self.key,
-                                                req_channels,
-                                                name
-                                                ),
-                                            kwargs=kwargs,
-                                            name=name
-                                            )
+        # Reset signals to default ones before adding processes to the process
+        # manager. We don't want the processes being started to inherit those
+        # signal handlers
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            for ind in range(int(self.opts['worker_threads'])):
+                name = 'MWorker-{0}'.format(ind)
+                self.process_manager.add_process(MWorker,
+                                                 args=(self.opts,
+                                                       self.master_key,
+                                                       self.key,
+                                                       req_channels,
+                                                       name),
+                                                 kwargs=kwargs,
+                                                 name=name)
         self.process_manager.run()
 
     def run(self):
@@ -730,17 +778,6 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         self.__bind()
 
     def destroy(self, signum=signal.SIGTERM):
-        if hasattr(self, 'clients') and self.clients.closed is False:
-            if HAS_ZMQ:
-                self.clients.setsockopt(zmq.LINGER, 1)
-            self.clients.close()
-        if hasattr(self, 'workers') and self.workers.closed is False:
-            if HAS_ZMQ:
-                self.workers.setsockopt(zmq.LINGER, 1)
-            self.workers.close()
-        if hasattr(self, 'context') and self.context.closed is False:
-            self.context.term()
-        # Also stop the workers
         if hasattr(self, 'process_manager'):
             self.process_manager.stop_restarting()
             self.process_manager.send_signal_to_processes(signum)
@@ -818,9 +855,14 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         if HAS_ZMQ:
             zmq.eventloop.ioloop.install()
         self.io_loop = LOOP_CLASS()
+        self.io_loop.make_current()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
-        self.io_loop.start()
+        try:
+            self.io_loop.start()
+        except (KeyboardInterrupt, SystemExit):
+            # Tornado knows what to do
+            pass
 
     @tornado.gen.coroutine
     def _handle_payload(self, payload):
@@ -931,6 +973,7 @@ class AESFuncs(object):
         '''
         self.fs_ = salt.fileserver.Fileserver(self.opts)
         self._serve_file = self.fs_.serve_file
+        self._file_find = self.fs_._find_file
         self._file_hash = self.fs_.file_hash
         self._file_list = self.fs_.file_list
         self._file_list_emptydirs = self.fs_.file_list_emptydirs
@@ -952,33 +995,26 @@ class AESFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
+
         try:
             with salt.utils.fopen(pub_path, 'r') as fp_:
                 minion_pub = fp_.read()
+                pub = RSA.importKey(minion_pub)
         except (IOError, OSError):
             log.warning('Salt minion claiming to be {0} attempted to communicate '
                     'with master but key could not be read and verification was '
                     'denied.'.format(id_))
             return False
-        tmp_pub = salt.utils.mkstemp()
-        with salt.utils.fopen(tmp_pub, 'w+') as fp_:
-            fp_.write(minion_pub)
-
-        pub = None
-        try:
-            with salt.utils.fopen(tmp_pub) as fp_:
-                pub = RSA.importKey(fp_.read())
         except (ValueError, IndexError, TypeError) as err:
-            log.error('Unable to load temporary public key "{0}": {1}'
-                      .format(tmp_pub, err))
+            log.error('Unable to load public key "{0}": {1}'
+                      .format(pub_path, err))
         try:
-            os.remove(tmp_pub)
-            if salt.crypt.public_decrypt(pub, token) == 'salt':
+            if salt.crypt.public_decrypt(pub, token) == b'salt':
                 return True
         except ValueError as err:
             log.error('Unable to decrypt token: {0}'.format(err))
 
-        log.error('Salt minion claiming to be {0} has attempted to'
+        log.error('Salt minion claiming to be {0} has attempted to '
                   'communicate with the master and could not be verified'
                   .format(id_))
         return False
@@ -1019,7 +1055,7 @@ class AESFuncs(object):
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            log.warn(
+            log.warning(
                 (
                     'Minion id {0} is not who it says it is and is attempting '
                     'to issue a peer command'
@@ -1077,7 +1113,7 @@ class AESFuncs(object):
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            log.warn(
+            log.warning(
                 'Minion id {0} is not who it says it is!'.format(
                     load['id']
                 )
@@ -1229,7 +1265,7 @@ class AESFuncs(object):
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            log.warn(
+            log.warning(
                 'Minion id {0} is not who it says it is!'.format(
                     load['id']
                 )
@@ -1237,9 +1273,12 @@ class AESFuncs(object):
             return {}
         load.pop('tok')
 
+        # Join path
+        sep_path = os.sep.join(load['path'])
+
         # Path normalization should have been done by the sending
         # minion but we can't guarantee it. Re-do it here.
-        normpath = os.path.normpath(os.path.join(*load['path']))
+        normpath = os.path.normpath(sep_path)
 
         # Ensure that this safety check is done after the path
         # have been normalized.
@@ -1302,20 +1341,10 @@ class AESFuncs(object):
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         self.fs_.update_opts()
         if self.opts.get('minion_data_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
-            if not os.path.isdir(cdir):
-                os.makedirs(cdir)
-            datap = os.path.join(cdir, 'data.p')
-            tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
-            os.close(tmpfh)
-            with salt.utils.fopen(tmpfname, 'w+b') as fp_:
-                fp_.write(
-                    self.serial.dumps(
-                        {'grains': load['grains'],
-                         'pillar': data})
-                    )
-            # On Windows, os.rename will fail if the destination file exists.
-            salt.utils.atomicfile.atomic_rename(tmpfname, datap)
+            self.masterapi.cache.store('minions/{0}'.format(load['id']),
+                                       'data',
+                                       {'grains': load['grains'],
+                                        'pillar': data})
         return data
 
     def _minion_event(self, load):
@@ -1698,14 +1727,7 @@ class ClearFuncs(object):
                                    message=msg))
 
         name = self.loadauth.load_name(clear_load)
-        if not ((name in self.opts['external_auth'][clear_load['eauth']]) |
-                ('*' in self.opts['external_auth'][clear_load['eauth']])):
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return dict(error=dict(name='EauthAuthenticationError',
-                                   message=msg))
-        if not self.loadauth.time_auth(clear_load):
+        if self.loadauth.time_auth(clear_load) is False:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
@@ -1745,44 +1767,58 @@ class ClearFuncs(object):
                 return auth_error
             else:
                 token = self.loadauth.get_tok(clear_load.pop('token'))
+                username = token['name']
+        elif 'eauth' in clear_load:
             try:
-                fun = clear_load.pop('fun')
-                runner_client = salt.runner.RunnerClient(self.opts)
-                return runner_client.async(
-                    fun,
-                    clear_load.get('kwarg', {}),
-                    token['name'])
+                eauth_error = self.process_eauth(clear_load, 'runner')
+                if eauth_error:
+                    return eauth_error
+                # No error occurred, consume the password from the clear_load if
+                # passed
+                username = clear_load.pop('username', 'UNKNOWN')
+                clear_load.pop('password', None)
+
             except Exception as exc:
-                log.error('Exception occurred while '
-                          'introspecting {0}: {1}'.format(fun, exc))
+                log.error(
+                    'Exception occurred in the runner system: {0}'.format(exc)
+                )
                 return dict(error=dict(name=exc.__class__.__name__,
                                        args=exc.args,
                                        message=str(exc)))
+        else:
+            if 'key' not in clear_load:
+                msg = 'Authentication failure of type "user" occurred'
+                log.warning(msg)
+                return dict(error=dict(name='UserAuthenticationError',
+                                       message=msg))
+            key = clear_load.pop('key')
 
+            if 'user' in clear_load:
+                username = clear_load['user']
+                auth_user = salt.auth.AuthUser(username)
+                if auth_user.is_sudo:
+                    username = self.opts.get('user', 'root')
+            else:
+                username = salt.utils.get_user()
+
+            if username not in self.key and \
+                    key != self.key[username] and \
+                    key != self.key['root']:
+                msg = 'Authentication failure of type "user" occurred for user {0}'.format(username)
+                log.warning(msg)
+                return dict(error=dict(name='UserAuthenticationError',
+                                       message=msg))
+
+        # Authorized. Do the job!
         try:
-            eauth_error = self.process_eauth(clear_load, 'runner')
-            if eauth_error:
-                return eauth_error
-            # No error occurred, consume the password from the clear_load if
-            # passed
-            clear_load.pop('password', None)
-            try:
-                fun = clear_load.pop('fun')
-                runner_client = salt.runner.RunnerClient(self.opts)
-                return runner_client.async(fun,
-                                           clear_load.get('kwarg', {}),
-                                           clear_load.pop('username', 'UNKNOWN'))
-            except Exception as exc:
-                log.error('Exception occurred while '
-                          'introspecting {0}: {1}'.format(fun, exc))
-                return dict(error=dict(name=exc.__class__.__name__,
-                                       args=exc.args,
-                                       message=str(exc)))
-
+            fun = clear_load.pop('fun')
+            runner_client = salt.runner.RunnerClient(self.opts)
+            return runner_client.async(fun,
+                                       clear_load.get('kwarg', {}),
+                                       username)
         except Exception as exc:
-            log.error(
-                'Exception occurred in the runner system: {0}'.format(exc)
-            )
+            log.error('Exception occurred while '
+                      'introspecting {0}: {1}'.format(fun, exc))
             return dict(error=dict(name=exc.__class__.__name__,
                                    args=exc.args,
                                    message=str(exc)))
@@ -1792,6 +1828,7 @@ class ClearFuncs(object):
         Send a master control function back to the wheel system
         '''
         # All wheel ops pass through eauth
+        username = None
         if 'token' in clear_load:
             auth_error = self.process_token(clear_load['token'],
                                             clear_load['fun'],
@@ -1800,77 +1837,77 @@ class ClearFuncs(object):
                 return auth_error
             else:
                 token = self.loadauth.get_tok(clear_load.pop('token'))
-
-            jid = salt.utils.jid.gen_jid()
-            fun = clear_load.pop('fun')
-            tag = tagify(jid, prefix='wheel')
-            data = {'fun': "wheel.{0}".format(fun),
-                    'jid': jid,
-                    'tag': tag,
-                    'user': token['name']}
+            username = token['name']
+        elif 'eauth' in clear_load:
             try:
-                self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, full_return=True, **clear_load)
-                data['return'] = ret['return']
-                data['success'] = ret['success']
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
-            except Exception as exc:
-                log.error(exc)
-                log.error('Exception occurred while '
-                          'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
-                    fun,
-                    exc.__class__.__name__,
-                    exc,
-                    )
-                data['success'] = False
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
-        try:
-            eauth_error = self.process_eauth(clear_load, 'wheel')
-            if eauth_error:
-                return eauth_error
+                eauth_error = self.process_eauth(clear_load, 'wheel')
+                if eauth_error:
+                    return eauth_error
 
-            # No error occurred, consume the password from the clear_load if
-            # passed
-            clear_load.pop('password', None)
-            jid = salt.utils.jid.gen_jid()
-            fun = clear_load.pop('fun')
-            tag = tagify(jid, prefix='wheel')
-            data = {'fun': "wheel.{0}".format(fun),
-                    'jid': jid,
-                    'tag': tag,
-                    'user': clear_load.pop('username', 'UNKNOWN')}
-            try:
-                self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
-                ret = self.wheel_.call_func(fun, **clear_load)
-                data['return'] = ret
-                data['success'] = True
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
+                # No error occurred, consume the password from the clear_load if
+                # passed
+                clear_load.pop('password', None)
+                username = clear_load.pop('username', 'UNKNOWN')
             except Exception as exc:
-                log.error('Exception occurred while '
-                          'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
-                                 fun,
-                                 exc.__class__.__name__,
-                                 exc,
+                log.error(
+                    'Exception occurred in the wheel system: {0}'.format(exc)
                 )
-                self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
-                return {'tag': tag,
-                        'data': data}
+                return dict(error=dict(name=exc.__class__.__name__,
+                                       args=exc.args,
+                                       message=str(exc)))
+        else:
+            if 'key' not in clear_load:
+                msg = 'Authentication failure of type "user" occurred'
+                log.warning(msg)
+                return dict(error=dict(name='UserAuthenticationError',
+                                       message=msg))
+            key = clear_load.pop('key')
 
+            if 'user' in clear_load:
+                username = clear_load['user']
+                auth_user = salt.auth.AuthUser(username)
+                if auth_user.is_sudo:
+                    username = self.opts.get('user', 'root')
+            else:
+                username = salt.utils.get_user()
+
+            if username not in self.key and \
+                    key != self.key[username] and \
+                    key != self.key['root']:
+                msg = 'Authentication failure of type "user" occurred for user {0}'.format(username)
+                log.warning(msg)
+                return dict(error=dict(name='UserAuthenticationError',
+                                       message=msg))
+
+        # Authorized. Do the job!
+        try:
+            jid = salt.utils.jid.gen_jid()
+            fun = clear_load.pop('fun')
+            tag = tagify(jid, prefix='wheel')
+            data = {'fun': "wheel.{0}".format(fun),
+                    'jid': jid,
+                    'tag': tag,
+                    'user': username}
+
+            self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
+            ret = self.wheel_.call_func(fun, full_return=True, **clear_load)
+            data['return'] = ret['return']
+            data['success'] = ret['success']
+            self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+            return {'tag': tag,
+                    'data': data}
         except Exception as exc:
-            log.error(
-                'Exception occurred in the wheel system: {0}'.format(exc)
+            log.error('Exception occurred while '
+                      'introspecting {0}: {1}'.format(fun, exc))
+            data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
+                             fun,
+                             exc.__class__.__name__,
+                             exc,
             )
-            return dict(error=dict(name=exc.__class__.__name__,
-                                   args=exc.args,
-                                   message=str(exc)))
+            data['success'] = False
+            self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+            return {'tag': tag,
+                    'data': data}
 
     def mk_token(self, clear_load):
         '''
@@ -1889,7 +1926,7 @@ class ClearFuncs(object):
             name = self.loadauth.load_name(clear_load)
             groups = self.loadauth.get_groups(clear_load)
             eauth_config = self.opts['external_auth'][clear_load['eauth']]
-            if '*' not in eauth_config and name not in eauth_config:
+            if '^model' not in eauth_config and '*' not in eauth_config and name not in eauth_config:
                 found = False
                 for group in groups:
                     if "{0}%".format(group) in eauth_config:
@@ -1989,20 +2026,22 @@ class ClearFuncs(object):
                             break
             except KeyError:
                 pass
-            if '*' not in eauth_users and token['name'] not in eauth_users \
+            if '^model' not in eauth_users and '*' not in eauth_users and token['name'] not in eauth_users \
                 and not group_auth_match:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
 
             # Compile list of authorized actions for the user
-            auth_list = []
-            # Add permissions for '*' or user-specific to the auth list
-            for user_key in ('*', token['name']):
-                auth_list.extend(eauth_config.get(user_key, []))
-            # Add any add'l permissions allowed by group membership
-            if group_auth_match:
-                auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
-            auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
+            auth_list = token.get('auth_list')
+            if auth_list is None:
+                auth_list = []
+                # Add permissions for '*' or user-specific to the auth list
+                for user_key in ('*', token['name']):
+                    auth_list.extend(eauth_config.get(user_key, []))
+                # Add any add'l permissions allowed by group membership
+                if group_auth_match:
+                    auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
+                auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             log.trace("Compiled auth_list: {0}".format(auth_list))
 
             good = self.ckminions.auth_check(
@@ -2027,10 +2066,11 @@ class ClearFuncs(object):
                     'Authentication failure of type "eauth" occurred.'
                 )
                 return ''
+            auth_list = None
             try:
                 name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
                 groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
-                if groups is None:
+                if groups is None or groups is False:
                     groups = []
                 group_perm_keys = [item for item in self.opts['external_auth'][extra['eauth']] if item.endswith('%')]  # The configured auth groups
 
@@ -2068,7 +2108,10 @@ class ClearFuncs(object):
 
                 # Perform the actual authentication. If we fail here, do not
                 # continue.
-                if not self.loadauth.time_auth(extra):
+                auth_ret = self.loadauth.time_auth(extra)
+                if isinstance(auth_ret, list):
+                    auth_list = auth_ret
+                elif not auth_ret:
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
                     )
@@ -2083,23 +2126,21 @@ class ClearFuncs(object):
                     type_, value_, traceback_))
                 return ''
 
-#            auth_list = self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*']
-
             # We now have an authenticated session and it is time to determine
             # what the user has access to.
-
-            auth_list = []
-            if '*' in self.opts['external_auth'][extra['eauth']]:
-                auth_list.extend(self.opts['external_auth'][extra['eauth']]['*'])
-            if name in self.opts['external_auth'][extra['eauth']]:
-                auth_list = self.opts['external_auth'][extra['eauth']][name]
-            if group_auth_match:
-                auth_list = self.ckminions.fill_auth_list_from_groups(
-                        self.opts['external_auth'][extra['eauth']],
-                        groups,
-                        auth_list)
-            if extra['eauth'] == 'ldap':
-                auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
+            if auth_list is None:
+                auth_list = []
+                if '*' in self.opts['external_auth'][extra['eauth']]:
+                    auth_list.extend(self.opts['external_auth'][extra['eauth']]['*'])
+                if name in self.opts['external_auth'][extra['eauth']]:
+                    auth_list = self.opts['external_auth'][extra['eauth']][name]
+                if group_auth_match:
+                    auth_list = self.ckminions.fill_auth_list_from_groups(
+                            self.opts['external_auth'][extra['eauth']],
+                            groups,
+                            auth_list)
+                if extra['eauth'] == 'ldap':
+                    auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             good = self.ckminions.auth_check(
                 auth_list,
                 clear_load['fun'],
@@ -2129,8 +2170,11 @@ class ClearFuncs(object):
                     return ''
                 publisher_acl = self.opts['publisher_acl'] or self.opts['client_acl']
                 if self.opts['sudo_acl'] and publisher_acl:
+                    publisher_acl = salt.utils.get_values_of_matching_keys(
+                            publisher_acl,
+                            clear_load['user'].split('_', 1)[-1])
                     good = self.ckminions.auth_check(
-                                publisher_acl.get(clear_load['user'].split('_', 1)[-1]),
+                                publisher_acl,
                                 clear_load['fun'],
                                 clear_load['arg'],
                                 clear_load['tgt'],
@@ -2165,14 +2209,17 @@ class ClearFuncs(object):
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
-                    acl = self.opts['publisher_acl'] or self.opts['client_acl']
-                    if clear_load['user'] not in acl:
+                    # Build ACL matching the user name
+                    acl = salt.utils.get_values_of_matching_keys(
+                            self.opts['publisher_acl'] or self.opts['client_acl'],
+                            clear_load['user'])
+                    if not acl:
                         log.warning(
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
                     good = self.ckminions.auth_check(
-                        acl[clear_load['user']],
+                        acl,
                         clear_load['fun'],
                         clear_load['arg'],
                         clear_load['tgt'],
@@ -2213,12 +2260,17 @@ class ClearFuncs(object):
                     'enc': 'clear',
                     'load': {
                         'jid': None,
-                        'minions': minions
+                        'minions': minions,
+                        'error': 'Master could not resolve minions for target {0}'.format(clear_load['tgt'])
                     }
                 }
         jid = self._prep_jid(clear_load, extra)
         if jid is None:
-            return {}
+            return {'enc': 'clear',
+                    'load': {
+                        'error': 'Master failed to assign jid',
+                        }
+                    }
         payload = self._prep_pub(minions, jid, clear_load, extra)
 
         # Send it!

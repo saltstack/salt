@@ -680,7 +680,7 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
         parser = self.parser()
         mock_err = ErrorMock()
 
-        with patch('optparse.OptionParser.error', mock_err.error):
+        with patch('salt.utils.parsers.OptionParser.error', mock_err.error):
             parser.parse_args(args)
 
         # Check error msg
@@ -700,14 +700,17 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
         log_level = 'info'
         args = self.args
 
-        # Set log level in config
-        opts = {self.loglevel_config_setting_name: log_level}
+        # Set log level in config and set additional mocked opts keys
+        opts = {self.loglevel_config_setting_name: log_level,
+                self.logfile_config_setting_name: 'key_logfile',
+                'log_fmt_logfile': None,
+                'log_datefmt_logfile': None}
 
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):
             parser.parse_args(args)
-        with patch('salt.utils.parsers.is_writeable', MagicMock(return_value=True)):
-            parser.setup_logfile_logger()
+            with patch('salt.utils.parsers.is_writeable', MagicMock(return_value=True)):
+                parser.setup_logfile_logger()
 
         # Check config name absence in options
         self.assertNotIn(self.loglevel_config_setting_name, parser.options.__dict__)
@@ -842,8 +845,12 @@ class SaltCloudParserTestCase(LogSettingsParserTests):
         # Set mandatory CLI options
         self.args = ['-p', 'foo', 'bar']
 
-        # Set defaults
-        self.default_config = salt.config.DEFAULT_CLOUD_OPTS
+        # Set default configs
+        # Cloud configs are merged with master configs in
+        # config/__init__.py, so we'll do that here as well
+        # As we need the 'user' key later on.
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
+        self.default_config.update(salt.config.DEFAULT_CLOUD_OPTS)
 
         # Log file
         self.log_file = '/tmp/salt_cloud_parser_test'

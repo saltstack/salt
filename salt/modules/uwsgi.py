@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-uWSGI stats server http://uwsgi-docs.readthedocs.org/en/latest/StatsServer.html
+uWSGI stats server https://uwsgi-docs.readthedocs.io/en/latest/StatsServer.html
 
 :maintainer: Peter Baumgartner <pete@lincolnloop.com>
 :maturity:   new

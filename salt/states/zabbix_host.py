@@ -3,7 +3,12 @@
 Management of Zabbix hosts.
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
+
+
 '''
+from __future__ import absolute_import
+from json import loads, dumps
+from copy import deepcopy
 
 
 def __virtual__():
@@ -16,63 +21,212 @@ def __virtual__():
 def present(host, groups, interfaces, **kwargs):
     '''
     Ensures that the host exists, eventually creates new host.
+    NOTE: please use argument visible_name instead of name to not mess with name from salt sls. This function accepts
+    all standard host properties: keyword argument names differ depending on your zabbix version, see:
+    https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host
 
-    NOTE: please use argument visible_name instead of name to not mess with name from salt sls
+    .. versionadded:: 2016.3.0
 
-    Args:
-        host: technical name of the host
-        groups: groupids of host groups to add the host to
-        interfaces: interfaces to be created for the host
+    :param host: technical name of the host
+    :param groups: groupids of host groups to add the host to
+    :param interfaces: interfaces to be created for the host
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+    :param visible_name: Optional - string with visible name of the host, use 'visible_name' instead of 'name' \
+    parameter to not mess with value supplied from Salt sls file.
 
-        optional kwargs:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    .. code-block:: yaml
 
-                visible_name: string with visible name of the host, use 'visible_name' instead of 'name' parameter
-                              to not mess with value supplied from Salt sls file.
+        create_test_host:
+            zabbix_host.present:
+                - host: TestHostWithInterfaces
+                - groups:
+                    - 5
+                    - 6
+                    - 7
+                - interfaces:
+                    - test1.example.com:
+                        - ip: '192.168.1.8'
+                        - type: 'Agent'
+                        - port: 92
+                    - testing2_create:
+                        - ip: '192.168.1.9'
+                        - dns: 'test2.example.com'
+                        - type: 'agent'
+                        - main: false
+                    - testovaci1_ipmi:
+                        - ip: '192.168.100.111'
+                        - type: 'ipmi'
 
-                all standard host properties: keyword argument names differ depending on your zabbix version, see:
-
-                https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host
 
     '''
     ret = {'name': host, 'changes': {}, 'result': False, 'comment': ''}
 
     # Comment and change messages
     comment_host_created = 'Host {0} created.'.format(host)
-    comment_host_notcreated = 'Unable to create host: {0}.'.format(host)
+    comment_host_updated = 'Host {0} updated.'.format(host)
+    comment_host_notcreated = 'Unable to create host: {0}. '.format(host)
     comment_host_exists = 'Host {0} already exists.'.format(host)
     changes_host_created = {host: {'old': 'Host {0} does not exist.'.format(host),
                                    'new': 'Host {0} created.'.format(host),
                                    }
                             }
 
+    def _interface_format(interfaces_data):
+        '''
+        Formats interfaces from SLS file into valid JSON usable for zabbix API.
+        Completes JSON with default values.
+
+        :param interfaces_data: list of interfaces data from SLS file
+
+        '''
+
+        if not interfaces_data:
+            return list()
+
+        interface_attrs = ('ip', 'dns', 'main', 'type', 'useip', 'port')
+        interfaces_json = loads(dumps(interfaces_data))
+        interfaces_dict = dict()
+
+        for interface in interfaces_json:
+            for intf in interface:
+                intf_name = intf
+                interfaces_dict[intf_name] = dict()
+                for intf_val in interface[intf]:
+                    for key, value in intf_val.items():
+                        if key in interface_attrs:
+                            interfaces_dict[intf_name][key] = value
+
+        interfaces_list = list()
+        interface_ports = {'agent': ['1', '10050'], 'snmp': ['2', '161'], 'ipmi': ['3', '623'],
+                           'jmx': ['4', '12345']}
+
+        for key, value in interfaces_dict.items():
+            # Load interface values or default values
+            interface_type = interface_ports[value['type'].lower()][0]
+            main = '1' if str(value.get('main', 'true')).lower() == 'true' else '0'
+            useip = '1' if str(value.get('useip', 'true')).lower() == 'true' else '0'
+            interface_ip = value.get('ip')
+            dns = value.get('dns', key)
+            port = str(value.get('port', interface_ports[value['type'].lower()][1]))
+
+            interfaces_list.append({'type': interface_type,
+                                    'main': main,
+                                    'useip': useip,
+                                    'ip': interface_ip,
+                                    'dns': dns,
+                                    'port': port})
+
+        interfaces_list = interfaces_list
+        interfaces_list_sorted = sorted(interfaces_list, key=lambda k: k['main'], reverse=True)
+
+        return interfaces_list_sorted
+
+    interfaces_formated = _interface_format(interfaces)
+
     host_exists = __salt__['zabbix.host_exists'](host)
+
+    if host_exists:
+        host = __salt__['zabbix.host_get'](name=host)[0]
+        hostid = host['hostid']
+
+        update_hostgroups = False
+        update_interfaces = False
+
+        hostgroups = __salt__['zabbix.hostgroup_get'](hostids=hostid)
+        cur_hostgroups = list()
+
+        for hostgroup in hostgroups:
+            cur_hostgroups.append(int(hostgroup['groupid']))
+
+        if set(groups) != set(cur_hostgroups):
+            update_hostgroups = True
+
+        hostinterfaces = __salt__['zabbix.hostinterface_get'](hostids=hostid)
+
+        if hostinterfaces:
+            hostinterfaces = sorted(hostinterfaces, key=lambda k: k['main'])
+            hostinterfaces_copy = deepcopy(hostinterfaces)
+            for hostintf in hostinterfaces_copy:
+                hostintf.pop('interfaceid')
+                hostintf.pop('bulk')
+                hostintf.pop('hostid')
+            interface_diff = [x for x in interfaces_formated if x not in hostinterfaces_copy] + \
+                             [y for y in hostinterfaces_copy if y not in interfaces_formated]
+            if interface_diff:
+                update_interfaces = True
+
+        elif not hostinterfaces and interfaces:
+            update_interfaces = True
 
     # Dry run, test=true mode
     if __opts__['test']:
         if host_exists:
-            ret['result'] = True
-            ret['comment'] = comment_host_exists
+            if update_hostgroups or update_interfaces:
+                ret['result'] = None
+                ret['comment'] = comment_host_updated
+            else:
+                ret['result'] = True
+                ret['comment'] = comment_host_exists
         else:
             ret['result'] = None
             ret['comment'] = comment_host_created
             ret['changes'] = changes_host_created
+        return ret
+
+    error = []
 
     if host_exists:
         ret['result'] = True
-        ret['comment'] = comment_host_exists
-    else:
-        host_create = __salt__['zabbix.host_create'](host, groups, interfaces, **kwargs)
+        if update_hostgroups or update_interfaces:
 
-        if host_create:
+            if update_hostgroups:
+                hostupdate = __salt__['zabbix.host_update'](hostid, groups=groups)
+                ret['changes']['groups'] = str(groups)
+                if 'error' in hostupdate:
+                    error.append(hostupdate['error'])
+            if update_interfaces:
+                if hostinterfaces:
+                    for interface in hostinterfaces:
+                        __salt__['zabbix.hostinterface_delete'](interfaceids=interface['interfaceid'])
+
+                hostid = __salt__['zabbix.host_get'](name=host)[0]['hostid']
+
+                for interface in interfaces_formated:
+                    updatedint = __salt__['zabbix.hostinterface_create'](hostid=hostid,
+                                                                         ip=interface['ip'],
+                                                                         dns=interface['dns'],
+                                                                         main=interface['main'],
+                                                                         type=interface['type'],
+                                                                         useip=interface['useip'],
+                                                                         port=interface['port'])
+
+                    if 'error' in updatedint:
+                        error.append(updatedint['error'])
+
+                ret['changes']['interfaces'] = str(interfaces_formated)
+
+            ret['comment'] = comment_host_updated
+
+        else:
+            ret['comment'] = comment_host_exists
+    else:
+        host_create = __salt__['zabbix.host_create'](host, groups, interfaces_formated, **kwargs)
+
+        if 'error' not in host_create:
             ret['result'] = True
             ret['comment'] = comment_host_created
             ret['changes'] = changes_host_created
         else:
             ret['result'] = False
-            ret['comment'] = comment_host_notcreated
+            ret['comment'] = comment_host_notcreated + str(host_create['error'])
+
+    # error detected
+    if error:
+        ret['changes'] = {}
+        ret['result'] = False
+        ret['comment'] = str(error)
 
     return ret
 
@@ -81,15 +235,24 @@ def absent(name):
     """
     Ensures that the host does not exists, eventually deletes host.
 
-    Args:
-        name: technical name of the host
+    .. versionadded:: 2016.3.0
+
+    :param: name: technical name of the host
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    .. code-block:: yaml
+
+        TestHostWithInterfaces:
+            zabbix_host.absent
 
     """
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     # Comment and change messages
     comment_host_deleted = 'Host {0} deleted.'.format(name)
-    comment_host_notdeleted = 'Unable to delete host: {0}.'.format(name)
+    comment_host_notdeleted = 'Unable to delete host: {0}. '.format(name)
     comment_host_notexists = 'Host {0} does not exist.'.format(name)
     changes_host_deleted = {name: {'old': 'Host {0} exists.'.format(name),
                                    'new': 'Host {0} deleted.'.format(name),
@@ -106,7 +269,7 @@ def absent(name):
         else:
             ret['result'] = None
             ret['comment'] = comment_host_deleted
-            ret['changes'] = changes_host_deleted
+        return ret
 
     host_get = __salt__['zabbix.host_get'](name)
 
@@ -120,12 +283,12 @@ def absent(name):
         except KeyError:
             host_delete = False
 
-        if host_delete:
+        if host_delete and 'error' not in host_delete:
             ret['result'] = True
             ret['comment'] = comment_host_deleted
             ret['changes'] = changes_host_deleted
         else:
             ret['result'] = False
-            ret['comment'] = comment_host_notdeleted
+            ret['comment'] = comment_host_notdeleted + str(host_delete['error'])
 
     return ret

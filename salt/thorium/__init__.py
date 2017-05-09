@@ -17,7 +17,9 @@ import logging
 import traceback
 
 # Import Salt libs
+import salt.cache
 import salt.state
+import salt.loader
 import salt.payload
 from salt.exceptions import SaltRenderError
 
@@ -42,8 +44,20 @@ class ThorState(salt.state.HighState):
         opts['file_roots'] = opts['thorium_roots']
         opts['file_client'] = 'local'
         self.opts = opts
+        if opts.get('minion_data_cache'):
+            self.cache = salt.cache.factory(opts)
         salt.state.HighState.__init__(self, self.opts, loader='thorium')
-        self.state.inject_globals = {'__reg__': {}}
+
+        self.returners = salt.loader.returners(self.opts, {})
+        self.reg_ret = self.opts.get('register_returner', None)
+        regdata = {}
+        if self.reg_ret is not None:
+            try:
+                regdata = self.returners['{0}.load_reg'.format(self.reg_ret)]()
+            except Exception as exc:
+                log.error(exc)
+
+        self.state.inject_globals = {'__reg__': regdata}
         self.event = salt.utils.event.get_master_event(
                 self.opts,
                 self.opts['sock_dir'])
@@ -55,39 +69,31 @@ class ThorState(salt.state.HighState):
         cache = {'grains': {}, 'pillar': {}}
         if self.grains or self.pillar:
             if self.opts.get('minion_data_cache'):
-                serial = salt.payload.Serial(self.opts)
-                cdir = os.path.join(self.opts['cachedir'], 'minions')
-                if not os.path.isdir(cdir):
-                    minions = []
-                else:
-                    minions = os.listdir(cdir)
+                minions = self.cache.ls('minions')
                 if not minions:
                     return cache
                 for minion in minions:
-                    cache['pillar'][minion] = {}
-                    cache['grains'][minion] = {}
-                    datap = os.path.join(cdir, minion, 'data.p')
-                    try:
-                        with salt.utils.fopen(datap, 'rb') as fp_:
-                            total = serial.load(fp_)
-                            if 'pillar' in total:
-                                if self.pillar_keys:
-                                    for key in self.pillar_keys:
-                                        if key in total['pillar']:
-                                            cache['pillar'][minion][key] = total['pillar'][key]
-                                else:
-                                    cache['pillar'][minion] = total['pillar']
-                            if 'grains' in total:
-                                if self.grain_keys:
-                                    for key in self.grain_keys:
-                                        if key in total['grains']:
-                                            cache['grains'][minion][key] = total['grains'][key]
-                                else:
-                                    cache['grains'][minion] = total['grains']
-                            else:
-                                continue
-                    except (IOError, OSError):
-                        continue
+                    total = self.cache.fetch('minions/{0}'.format(minion), 'data')
+
+                    if 'pillar' in total:
+                        if self.pillar_keys:
+                            for key in self.pillar_keys:
+                                if key in total['pillar']:
+                                    cache['pillar'][minion][key] = total['pillar'][key]
+                        else:
+                            cache['pillar'][minion] = total['pillar']
+                    else:
+                        cache['pillar'][minion] = {}
+
+                    if 'grains' in total:
+                        if self.grain_keys:
+                            for key in self.grain_keys:
+                                if key in total['grains']:
+                                    cache['grains'][minion][key] = total['grains'][key]
+                        else:
+                            cache['grains'][minion] = total['grains']
+                    else:
+                        cache['grains'][minion] = {}
         return cache
 
     def start_runtime(self):
@@ -174,4 +180,6 @@ class ThorState(salt.state.HighState):
             if (start - r_start) > recompile:
                 cache = self.gather_cache()
                 chunks = self.get_chunks()
+                if self.reg_ret is not None:
+                    self.returners['{0}.save_reg'.format(self.reg_ret)](chunks)
                 r_start = time.time()

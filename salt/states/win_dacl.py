@@ -6,7 +6,7 @@ Ensure an ACL is present
     parameters:
         name - the path of the object
         objectType - Registry/File/Directory
-        user - user account for the ace
+        user - user account or SID for the ace
         permission - permission for the ace (see module win_acl for available permissions for each objectType)
         acetype -  Allow/Deny
         propagation - how the ACL should apply to child objects (see module win_acl for available propagation types)
@@ -26,7 +26,7 @@ Ensure an ACL does not exist
     parameters:
         name - the path of the object
         objectType - Registry/File/Directory
-        user - user account for the ace
+        user - user account or SID for the ace
         permission - permission for the ace (see module win_acl for available permissions for each objectType)
         acetype -  Allow/Deny
         propagation - how the ACL should apply to child objects (see module win_acl for available propagation types)

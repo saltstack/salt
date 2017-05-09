@@ -47,7 +47,7 @@ Writing a Returner
 
 A returner is a Python module containing at minimum a ``returner`` function.
 Other optional functions can be included to add support for
-:ref:`master_job_cache`, :ref:`external_job_cache`, and `Event Returners`_.
+:conf_master:`master_job_cache`, :ref:`external-job-cache`, and `Event Returners`_.
 
 ``returner``
     The ``returner`` function must accept a single argument. The argument
@@ -85,8 +85,8 @@ serializes the data as JSON and sets it in redis.
 Master Job Cache Support
 ------------------------
 
-:ref:`master_job_cache`, :ref:`external_job_cache`, and `Event Returners`_.
-Salt's :ref:`master_job_cache` allows returners to be used as a pluggable
+:conf_master:`master_job_cache`, :ref:`external-job-cache`, and `Event Returners`_.
+Salt's :conf_master:`master_job_cache` allows returners to be used as a pluggable
 replacement for the :ref:`default_job_cache`. In order to do so, a returner
 must implement the following functions:
 
@@ -176,7 +176,7 @@ must implement the following functions:
 External Job Cache Support
 --------------------------
 
-Salt's :ref:`external_job_cache` extends the :ref:`master_job_cache`. External
+Salt's :ref:`external-job-cache` extends the :conf_master:`master_job_cache`. External
 Job Cache support requires the following functions in addition to what is
 required for Master Job Cache support:
 
@@ -328,7 +328,7 @@ Testing the Returner
 
 The ``returner``, ``prep_jid``, ``save_load``, ``get_load``, and
 ``event_return`` functions can be tested by configuring the
-:ref:`master_job_cache` and `Event Returners`_ in the master config
+:conf_master:`master_job_cache` and `Event Returners`_ in the master config
 file and submitting a job to ``test.ping`` each minion from the master.
 
 Once you have successfully exercised the Master Job Cache functions, test the
@@ -345,11 +345,12 @@ Event Returners
 ===============
 
 For maximum visibility into the history of events across a Salt
-infrastructure, all events seen by a salt master may be logged to a returner.
+infrastructure, all events seen by a salt master may be logged to one or
+more returners.
 
 To enable event logging, set the ``event_return`` configuration option in the
-master config to returner which should be designated as the handler for event
-returns.
+master config to the returner(s) which should be designated as the handler 
+for event returns.
 
 .. note::
     Not all returners support event returns. Verify a returner has an

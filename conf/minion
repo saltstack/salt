@@ -38,6 +38,8 @@
 # value to "str".  Failover masters can be requested by setting
 # to "failover".  MAKE SURE TO SET master_alive_interval if you are
 # using failover.
+# Setting master_type to 'disable' let's you have a running minion (with engines and
+# beacons) without a master connection
 # master_type: str
 
 # Poll interval in seconds for checking if the master is still there.  Only
@@ -191,6 +193,15 @@
 # The wait-time will be a random number of seconds between 0 and the defined value.
 #random_reauth_delay: 60
 
+
+# To avoid overloading a master when many minions startup at once, a randomized
+# delay may be set to tell the minions to wait before connecting to the master.
+# This value is the number of seconds to choose from for a random number. For
+# example, setting this value to 60 will choose a random number of seconds to delay
+# on startup between zero seconds and sixty seconds. Setting to '0' will disable
+# this feature.
+#random_startup_delay: 0
+
 # When waiting for a master to accept the minion's public key, salt will
 # continuously attempt to reconnect until successful. This is the timeout value,
 # in seconds, for each individual attempt. After this timeout expires, the minion
@@ -294,10 +305,17 @@
 #
 #
 # The loop_interval sets how long in seconds the minion will wait between
-# evaluating the scheduler and running cleanup tasks. This defaults to a
-# sane 60 seconds, but if the minion scheduler needs to be evaluated more
-# often lower this value
-#loop_interval: 60
+# evaluating the scheduler and running cleanup tasks.  This defaults to 1
+# second on the minion scheduler.
+#loop_interval: 1
+
+# Some installations choose to start all job returns in a cache or a returner
+# and forgo sending the results back to a master. In this workflow, jobs
+# are most often executed with --async from the Salt CLI and then results
+# are evaluated by examining job caches on the minions or any configured returners.
+# WARNING: Setting this to False will **disable** returns back to the master.
+#pub_ret: True
+
 
 # The grains can be merged, instead of overridden, using this option.
 # This allows custom grains to defined different subvalues of a dictionary
@@ -394,8 +412,11 @@
 #####   Minion module management     #####
 ##########################################
 # Disable specific modules. This allows the admin to limit the level of
-# access the master has to the minion.
-#disable_modules: [cmd,test]
+# access the master has to the minion.  The default here is the empty list,
+# below is an example of how this needs to be formatted in the config file
+#disable_modules:
+#  - cmdmod
+#  - test
 #disable_returners: []
 
 # This is the reverse of disable_modules.  The default, like disable_modules, is the empty list,
@@ -471,6 +492,11 @@
 # Isolates the pillar environment on the minion side. This functions the same
 # as the environment setting, but for pillar instead of states.
 #pillarenv: None
+#
+# Set this option to 'True' to force a 'KeyError' to be raised whenever an
+# attempt to retrieve a named value from pillar fails. When this option is set
+# to 'False', the failed attempt returns an empty string. Default is 'False'.
+#pillar_raise_on_missing: False
 #
 # If using the local file directory, then the state top file name needs to be
 # defined, by default this is top.sls.
@@ -551,10 +577,14 @@
 # is False.
 #fileserver_limit_traversal: False
 
-# The hash_type is the hash to use when discovering the hash of a file in
-# the local fileserver. The default is sha256, sha224, sha384 and sha512 are also supported.
+# The hash_type is the hash to use when discovering the hash of a file on
+# the local fileserver. The default is md5, but sha1, sha224, sha256, sha384
+# and sha512 are also supported.
 #
 # WARNING: While md5 and sha1 are also supported, do not use it due to the high chance
+# of possible collisions and thus security breach.
+#
+# WARNING: While md5 is also supported, do not use it due to the high chance
 # of possible collisions and thus security breach.
 #
 # Warning: Prior to changing this value, the minion should be stopped and all
@@ -609,14 +639,27 @@
 
 # Fingerprint of the master public key to validate the identity of your Salt master
 # before the initial key exchange. The master fingerprint can be found by running
-# "salt-key -F master" on the Salt master.
+# "salt-key -f master.pub" on the Salt master.
 #master_finger: ''
+
+# Use TLS/SSL encrypted connection between master and minion.
+# Can be set to a dictionary containing keyword arguments corresponding to Python's
+# 'ssl.wrap_socket' method.
+# Default is None.
+#ssl:
+#    keyfile: <path_to_keyfile>
+#    certfile: <path_to_certfile>
+#    ssl_version: PROTOCOL_TLSv1_2
 
 
 ######         Thread settings        #####
 ###########################################
 # Disable multiprocessing support, by default when a minion receives a
 # publication a new process is spawned and the command is executed therein.
+#
+# WARNING: Disabling multiprocessing may result in substantial slowdowns
+# when processing large pillars. See https://github.com/saltstack/salt/issues/38758
+# for a full explanation.
 #multiprocessing: True
 
 
@@ -671,7 +714,7 @@
 #log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #
-#log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+#log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This
 # example sets the main salt library at the 'warning' level, but sets
@@ -700,6 +743,10 @@
 # ZeroMQ is installed.
 #
 #zmq_monitor: False
+
+# Number of times to try to authenticate with the salt master when reconnecting
+# to the master
+#tcp_authentication_retries: 5
 
 ######      Module configuration      #####
 ###########################################

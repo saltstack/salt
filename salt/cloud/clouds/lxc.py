@@ -396,7 +396,8 @@ def destroy(vm_, call=None):
             'event',
             'destroying instance',
             'salt/cloud/{0}/destroying'.format(vm_),
-            {'name': vm_, 'instance_id': vm_},
+            args={'name': vm_, 'instance_id': vm_},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
         cret = _salt('lxc.destroy', vm_, stop=True, path=path)
@@ -407,7 +408,8 @@ def destroy(vm_, call=None):
                 'event',
                 'destroyed instance',
                 'salt/cloud/{0}/destroyed'.format(vm_),
-                {'name': vm_, 'instance_id': vm_},
+                args={'name': vm_, 'instance_id': vm_},
+                sock_dir=__opts__['sock_dir'],
                 transport=__opts__['transport']
             )
             if __opts__.get('update_cachedir', False) is True:
@@ -438,10 +440,15 @@ def create(vm_, call=None):
         vm_['driver'] = vm_.pop('provider')
 
     __utils__['cloud.fire_event'](
-        'event', 'starting create',
+        'event',
+        'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {'name': vm_['name'], 'profile': profile,
-         'provider': vm_['driver'], },
+        args={
+            'name': vm_['name'],
+            'profile': profile,
+            'provider': vm_['driver'],
+        },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport'])
     ret = {'name': vm_['name'], 'changes': {}, 'result': True, 'comment': ''}
     if 'pub_key' not in vm_ and 'priv_key' not in vm_:
@@ -476,11 +483,12 @@ def create(vm_, call=None):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 

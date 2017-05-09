@@ -8,12 +8,16 @@ from __future__ import absolute_import
 import base64
 import hashlib
 import hmac
-import StringIO
 
 # Import Salt libs
 import salt.exceptions
 import salt.ext.six as six
 import salt.utils
+
+if six.PY2:
+    import StringIO
+elif six.PY3:
+    from io import StringIO
 
 
 def digest(instr, checksum='md5'):

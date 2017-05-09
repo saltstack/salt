@@ -117,7 +117,14 @@ try:
 except ImportError:
     HAS_DOCKERCOMPOSE = False
 
+try:
+    from compose.project import OneOffFilter
+    USE_FILTERCLASS = True
+except ImportError:
+    USE_FILTERCLASS = False
+
 MIN_DOCKERCOMPOSE = (1, 5, 0)
+MAX_DOCKERCOMPOSE = (1, 9, 0)
 VERSION_RE = r'([\d.]+)'
 
 log = logging.getLogger(__name__)
@@ -132,10 +139,8 @@ def __virtual__():
         match = re.match(VERSION_RE, str(compose.__version__))
         if match:
             version = tuple([int(x) for x in match.group(1).split('.')])
-            if MIN_DOCKERCOMPOSE >= version:
+            if version >= MIN_DOCKERCOMPOSE and version <= MAX_DOCKERCOMPOSE:
                 return __virtualname__
-        else:
-            log.critical('Minimum version of docker-compose>=1.5.0')
     return (False, 'The dockercompose execution module not loaded: '
             'compose python library not available.')
 
@@ -234,7 +239,7 @@ def __load_project(path):
 
 def __handle_except(inst):
     '''
-    Handle exception and return a standart result
+    Handle exception and return a standard result
 
     :param inst:
     :return:
@@ -656,10 +661,16 @@ def ps(path):
     if isinstance(project, dict):
         return project
     else:
-        containers = sorted(
-            project.containers(None, stopped=True) +
-            project.containers(None, one_off=True),
-            key=attrgetter('name'))
+        if USE_FILTERCLASS:
+            containers = sorted(
+                project.containers(None, stopped=True) +
+                project.containers(None, OneOffFilter.only),
+                key=attrgetter('name'))
+        else:
+            containers = sorted(
+                project.containers(None, stopped=True) +
+                project.containers(None, one_off=True),
+                key=attrgetter('name'))
         for container in containers:
             command = container.human_readable_command
             if len(command) > 30:

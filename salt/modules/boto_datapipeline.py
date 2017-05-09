@@ -29,7 +29,8 @@ def __virtual__():
     Only load if boto3 libraries exists.
     '''
     if not HAS_BOTO3:
-        return False
+        return (False, 'The boto_datapipeline module could not be loaded: '
+                'boto libraries not found')
     return True
 
 

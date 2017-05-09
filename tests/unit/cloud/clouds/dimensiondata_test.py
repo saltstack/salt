@@ -8,15 +8,14 @@
 
 # Import Python libs
 from __future__ import absolute_import
+from distutils.version import LooseVersion
+import mock
 
 try:
     import libcloud.security
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
-
-import platform
-import os
 
 # Import Salt Libs
 from salt.cloud.clouds import dimensiondata
@@ -26,6 +25,7 @@ from salt.exceptions import SaltCloudSystemExit
 from salttesting import TestCase, skipIf
 from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
 from salttesting.helpers import ensure_in_syspath
+from tests.unit.cloud.clouds import _preferred_ip
 
 ensure_in_syspath('../../../')
 
@@ -45,22 +45,12 @@ dimensiondata.__opts__ = {
 }
 VM_NAME = 'winterfell'
 
-HAS_CERTS = True
-ON_SUSE = True if 'SuSE' in platform.dist() else False
-ON_MAC = True if 'Darwin' in platform.system() else False
-
-if not os.path.exists('/etc/ssl/certs/YaST-CA.pem') and ON_SUSE:
-    if os.path.isfile('/etc/ssl/ca-bundle.pem') and HAS_LIBCLOUD:
-        libcloud.security.CA_CERTS_PATH.append('/etc/ssl/ca-bundle.pem')
-    else:
-        HAS_CERTS = False
-elif ON_MAC:
-    if os.path.isfile('/opt/local/share/curl/curl-ca-bundle.crt'):
-        pass  # libcloud will already find this file
-    elif os.path.isfile('/usr/local/etc/openssl/cert.pem'):
-        pass  # libcloud will already find this file
-    else:
-        HAS_CERTS = False
+# Use certifi if installed
+try:
+    import certifi
+    libcloud.security.CA_CERTS_PATH.append(certifi.where())
+except (ImportError, NameError):
+    pass
 
 
 class ExtendedTestCase(TestCase):
@@ -77,7 +67,6 @@ class ExtendedTestCase(TestCase):
             self.assertEqual(exc.message, exc_msg)
 
 
-@skipIf(not HAS_CERTS, 'Cannot find CA cert bundle')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.cloud.clouds.dimensiondata.__virtual__', MagicMock(return_value='dimensiondata'))
 class DimensionDataTestCase(ExtendedTestCase):
@@ -141,6 +130,7 @@ class DimensionDataTestCase(ExtendedTestCase):
             call='function'
         )
 
+    @skipIf(HAS_LIBCLOUD is False, "Install 'libcloud' to be able to run this unit test.")
     def test_avail_sizes(self):
         '''
         Tests that avail_sizes returns an empty dictionary.
@@ -155,21 +145,45 @@ class DimensionDataTestCase(ExtendedTestCase):
             'default'
         )
 
-    @patch('libcloud.compute.drivers.dimensiondata.DimensionDataNodeDriver.list_nodes', MagicMock(return_value=[]))
-    def test_list_nodes(self):
-        nodes = dimensiondata.list_nodes()
-        self.assertEqual(
-            nodes,
-            {}
-        )
+    def test_import(self):
+        """
+        Test that the module picks up installed deps
+        """
+        with patch('salt.config.check_driver_dependencies', return_value=True) as p:
+            get_deps = dimensiondata.get_dependencies()
+            self.assertEqual(get_deps, True)
+            if LooseVersion(mock.__version__) >= LooseVersion('2.0.0'):
+                p.assert_called_once()
 
-    @patch('libcloud.compute.drivers.dimensiondata.DimensionDataNodeDriver.list_locations', MagicMock(return_value=[]))
-    def test_list_locations(self):
-        locations = dimensiondata.avail_locations()
-        self.assertEqual(
-            locations,
-            {}
-        )
+    def test_provider_matches(self):
+        """
+        Test that the first configured instance of a dimensiondata driver is matched
+        """
+        p = dimensiondata.get_configured_provider()
+        self.assertNotEqual(p, None)
+
+    PRIVATE_IPS = ['0.0.0.0', '1.1.1.1', '2.2.2.2']
+
+    @patch('salt.cloud.clouds.dimensiondata.show_instance',
+           MagicMock(return_value={'state': True,
+                                   'name': 'foo',
+                                   'public_ips': [],
+                                   'private_ips': PRIVATE_IPS}))
+    @patch('salt.cloud.clouds.dimensiondata.preferred_ip', _preferred_ip(PRIVATE_IPS, ['0.0.0.0']))
+    @patch('salt.cloud.clouds.dimensiondata.ssh_interface', MagicMock(return_value='private_ips'))
+    def test_query_node_data_filter_preferred_ip_addresses(self):
+        '''
+        Test if query node data is filtering out unpreferred IP addresses.
+        '''
+        dimensiondata.NodeState = MagicMock()
+        dimensiondata.NodeState.RUNNING = True
+        dimensiondata.__opts__ = {}
+
+        vm = {'name': None}
+        data = MagicMock()
+        data.public_ips = []
+
+        assert dimensiondata._query_node_data(vm, data).public_ips == ['0.0.0.0']
 
 
 if __name__ == '__main__':

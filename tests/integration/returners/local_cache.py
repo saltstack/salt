@@ -20,9 +20,9 @@ from salt.returners import local_cache
 log = logging.getLogger(__name__)
 
 # JOBS DIR and FILES
-TMP_CACHE_DIR = os.path.join(TMP, 'master-minion-root', 'cache')
+TMP_CACHE_DIR = os.path.join(TMP, 'rootdir', 'cache')
 JOBS_DIR = os.path.join(TMP_CACHE_DIR, 'jobs')
-JID_DIR = os.path.join(JOBS_DIR, 'b1', '4dac7bc743c928d7fac908823af1ab')
+JID_DIR = os.path.join(JOBS_DIR, '31', 'c56eed380a4e899ae12bc42563cfdfc53066fb4a6b53e2378a08ac49064539')
 JID_FILE = os.path.join(JID_DIR, 'jid')
 JID_MINION_DIR = os.path.join(JID_DIR, 'minion', 'return.p')
 JOB_CACHE_DIR_FILES = [JID_FILE, JID_MINION_DIR]

@@ -78,7 +78,7 @@ class MasterACLTestCase(integration.ModuleCase):
     @patch('salt.minion.MasterMinion', MagicMock())
     @patch('salt.utils.verify.check_path_traversal', MagicMock())
     def setUp(self):
-        opts = self.get_config('minion', from_scratch=True)
+        opts = self.get_config('master', from_scratch=True)
         opts['client_acl'] = {}
         opts['publisher_acl'] = {}
         opts['client_acl_blacklist'] = {}
@@ -495,6 +495,64 @@ class MasterACLTestCase(integration.ModuleCase):
                                          '__kwarg__': True}]
         self.clear.publish(self.valid_clear_load)
         self.assertEqual(fire_event_mock.mock_calls, [])
+
+
+class AuthACLTestCase(integration.ModuleCase):
+    '''
+    A class to check various aspects of the publisher ACL system
+    '''
+    @patch('salt.minion.MasterMinion', MagicMock())
+    @patch('salt.utils.verify.check_path_traversal', MagicMock())
+    def setUp(self):
+        opts = self.get_config('master', from_scratch=True)
+        opts['client_acl'] = {}
+        opts['publisher_acl'] = {}
+        opts['client_acl_blacklist'] = {}
+        opts['publisher_acl_blacklist'] = {}
+        opts['master_job_cache'] = ''
+        opts['sign_pub_messages'] = False
+        opts['con_cache'] = ''
+        opts['external_auth'] = {}
+        opts['external_auth']['pam'] = {'test_user': [{'alpha_minion': ['test.ping']}]}
+
+        self.clear = salt.master.ClearFuncs(opts, MagicMock())
+
+        # overwrite the _send_pub method so we don't have to serialize MagicMock
+        self.clear._send_pub = lambda payload: True
+
+        # make sure to return a JID, instead of a mock
+        self.clear.mminion.returners = {'.prep_jid': lambda x: 1}
+
+        self.valid_clear_load = {'tgt_type': 'glob',
+                                 'jid': '',
+                                 'cmd': 'publish',
+                                 'tgt': 'test_minion',
+                                 'kwargs':
+                                     {'username': 'test_user',
+                                      'password': 'test_password',
+                                      'show_timeout': False,
+                                      'eauth': 'pam',
+                                      'show_jid': False},
+                                 'ret': '',
+                                 'user': 'test_user',
+                                 'key': '',
+                                 'arg': '',
+                                 'fun': 'test.ping',
+                                 }
+
+    @patch('salt.auth.LoadAuth.time_auth', MagicMock(return_value=True))
+    @patch('salt.utils.minions.CkMinions.auth_check', return_value=True)
+    def test_acl_simple_allow(self, auth_check_mock):
+        self.clear.publish(self.valid_clear_load)
+        self.assertEqual(auth_check_mock.call_args[0][0],
+                         [{'alpha_minion': ['test.ping']}])
+
+    @patch('salt.auth.LoadAuth.time_auth', MagicMock(return_value=[{'beta_minion': ['test.ping']}]))
+    @patch('salt.utils.minions.CkMinions.auth_check', return_value=True)
+    def test_acl_simple_deny(self, auth_check_mock):
+        self.clear.publish(self.valid_clear_load)
+        self.assertEqual(auth_check_mock.call_args[0][0],
+                         [{'beta_minion': ['test.ping']}])
 
 if __name__ == '__main__':
     from integration import run_tests

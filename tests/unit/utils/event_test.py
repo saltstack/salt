@@ -30,7 +30,7 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 from salt.utils.process import clean_proc
-from salt.utils import event
+from salt.utils import event, to_bytes
 
 # Import 3rd-+arty libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -116,7 +116,7 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event(self):
         opts = dict(id='foo', sock_dir=SOCK_DIR)
-        id_hash = hashlib.md5(opts['id']).hexdigest()[:10]
+        id_hash = hashlib.sha256(to_bytes(opts['id'])).hexdigest()[:10]
         me = event.MinionEvent(opts, listen=False)
         self.assertEqual(
             me.puburi,
@@ -143,7 +143,7 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event_no_id(self):
         me = event.MinionEvent(dict(sock_dir=SOCK_DIR), listen=False)
-        id_hash = hashlib.md5('').hexdigest()[:10]
+        id_hash = hashlib.sha256(to_bytes('')).hexdigest()[:10]
         self.assertEqual(
             me.puburi,
             '{0}'.format(
@@ -346,11 +346,14 @@ class TestAsyncEventPublisher(AsyncTestCase):
 
     def setUp(self):
         super(TestAsyncEventPublisher, self).setUp()
+        self.opts = {'sock_dir': SOCK_DIR}
         self.publisher = event.AsyncEventPublisher(
-            {'sock_dir': SOCK_DIR},
-            self._handle_publish,
+            self.opts,
             self.io_loop,
         )
+        self.event = event.get_event('minion', opts=self.opts, io_loop=self.io_loop)
+        self.event.subscribe('')
+        self.event.set_event_handler(self._handle_publish)
 
     def _handle_publish(self, raw):
         self.tag, self.data = event.SaltEvent.unpack(raw)
@@ -358,7 +361,7 @@ class TestAsyncEventPublisher(AsyncTestCase):
 
     def test_event_subscription(self):
         '''Test a single event is received'''
-        me = event.MinionEvent({'sock_dir': SOCK_DIR}, listen=True)
+        me = event.MinionEvent(self.opts, listen=True)
         me.fire_event({'data': 'foo1'}, 'evt1')
         self.wait()
         evt1 = me.get_event(tag='evt1')

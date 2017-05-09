@@ -45,6 +45,13 @@
 # Directory used to store public key data:
 #pki_dir: /etc/salt/pki/master
 
+# Key cache. Increases master speed for large numbers of accepted
+# keys. Available options: 'sched'. (Updates on a fixed schedule.)
+# Note that enabling this feature means that minions will not be
+# available to target for up to the length of the maintanence loop
+# which by default is 60s.
+#key_cache: ''
+
 # Directory to store job and cache data:
 # This directory may contain sensitive data and should be protected accordingly.
 #
@@ -120,8 +127,20 @@
 # the jobs system and is not generally recommended.
 #job_cache: True
 
-# Cache minion grains and pillar data in the cachedir.
+# Cache minion grains, pillar and mine data via the cache subsystem in the
+# cachedir or a database.
 #minion_data_cache: True
+
+# Cache subsystem module to use for minion data cache.
+#cache: localfs
+# Enables a fast in-memory cache booster and sets the expiration time.
+#memcache_expire_seconds: 0
+# Set a memcache limit in items (bank + key) per cache storage (driver + driver_opts).
+#memcache_max_items: 1024
+# Each time a cache storage got full cleanup all the expired items not just the oldest one.
+#memcache_full_cleanup: False
+# Enable collecting the memcache stats and log it on `debug` log level.
+#memcache_debug: False
 
 # Store all returns in the given returner.
 # Setting this option requires that any returner-specific configuration also
@@ -136,15 +155,15 @@
 # By default, events are not queued.
 #event_return_queue: 0
 
-# Only return events matching tags in a whitelist,
-# event_return_whitelist:
-#   - salt/master/a_tag
-#   - salt/master/another_tag
+# Only return events matching tags in a whitelist, supports glob matches.
+#event_return_whitelist:
+#  - salt/master/a_tag
+#  - salt/run/*/ret
 
-# Store all event returns _except_ the tags in a blacklist.
-# event_return_blacklist:
-#   - salt/master/not_this_tag
-#   - salt/master/or_this_one
+# Store all event returns **except** the tags in a blacklist, supports globs.
+#event_return_blacklist:
+#  - salt/master/not_this_tag
+#  - salt/wheel/*/ret
 
 # Passing very large events can cause the minion to consume large amounts of
 # memory. This value tunes the maximum size of a message allowed onto the
@@ -230,6 +249,9 @@
 # Set the ZeroMQ high water marks
 # http://api.zeromq.org/3-2:zmq-setsockopt
 
+# The listen queue size / backlog
+#zmq_backlog: 1000
+
 # The publisher interface ZeroMQPubServerChannel
 #pub_hwm: 1000
 
@@ -273,7 +295,7 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
-# Time in minutes that a incoming public key with a matching name found in
+# Time in minutes that an incoming public key with a matching name found in
 # pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
 # are removed when the master checks the minion_autosign directory.
 # 0 equals no timeout
@@ -301,7 +323,7 @@
 # This setting should be treated with care since it opens up execution
 # capabilities to non root users. By default this capability is completely
 # disabled.
-#pulisher_acl:
+#publisher_acl:
 #  larry:
 #    - test.ping
 #    - network.*
@@ -342,6 +364,18 @@
 #
 # Time (in seconds) for a newly generated token to live. Default: 12 hours
 #token_expire: 43200
+#
+# Allow eauth users to specify the expiry time of the tokens they generate.
+# A boolean applies to all users or a dictionary of whitelisted eauth backends
+# and usernames may be given.
+# token_expire_user_override:
+#   pam:
+#     - fred
+#     - tom
+#   ldap:
+#     - gary
+#
+#token_expire_user_override: False
 
 # Allow minions to push files to the master. This is disabled by default, for
 # security purposes.
@@ -366,13 +400,22 @@
 # will cause minion to throw an exception and drop the message.
 # sign_pub_messages: False
 
+# Use TLS/SSL encrypted connection between master and minion.
+# Can be set to a dictionary containing keyword arguments corresponding to Python's
+# 'ssl.wrap_socket' method.
+# Default is None.
+#ssl:
+#    keyfile: <path_to_keyfile>
+#    certfile: <path_to_certfile>
+#    ssl_version: PROTOCOL_TLSv1_2
+
 #####     Salt-SSH Configuration     #####
 ##########################################
 
 # Pass in an alternative location for the salt-ssh roster file
 #roster_file: /etc/salt/roster
 
-# Define a location for roster files so they can be chosen when using Salt API.
+# Define locations for roster files so they can be chosen when using Salt API.
 # An administrator can place roster files into these locations. Then when
 # calling Salt API, parameter 'roster_file' should contain a relative path to
 # these locations. That is, "roster_file=/foo/roster" will be resolved as
@@ -391,6 +434,10 @@
 # overridden on a per-minion basis in the roster (`minion_opts`)
 #ssh_minion_opts:
 #  gpg_keydir: /root/gpg
+
+# Set this to True to default to using ~/.ssh/id_rsa for salt-ssh
+# authentication with minions
+#ssh_use_home_key: False
 
 #####    Master Module Management    #####
 ##########################################
@@ -520,12 +567,12 @@
 # the master server. The default is md5 but sha1, sha224, sha256, sha384
 # and sha512 are also supported.
 #
-# WARNING: While md5 is supported, do not use it due to the high chance
+# WARNING: While md5 is also supported, do not use it due to the high chance
 # of possible collisions and thus security breach.
 #
 # Prior to changing this value, the master should be stopped and all Salt
 # caches should be cleared.
-#hash_type: md5
+#hash_type: sha256
 
 # The buffer size in the file server can be adjusted here:
 #file_buffer_size: 1048576
@@ -704,6 +751,11 @@
 # Recursively merge lists by aggregating them instead of replacing them.
 #pillar_merge_lists: False
 
+# Set this option to 'True' to force a 'KeyError' to be raised whenever an
+# attempt to retrieve a named value from pillar fails. When this option is set
+# to 'False', the failed attempt returns an empty string. Default is 'False'.
+#pillar_raise_on_missing: False
+
 # Git External Pillar (git_pillar) Configuration Options
 #
 # Specify the provider to be used for git_pillar. Must be either pygit2 or
@@ -781,13 +833,13 @@
 # pillar is recompiled and stored.
 #pillar_cache_ttl: 3600
 
-# If an only if a master has set ``pillar_cache: True``, one of several storage providers
-# can be utilized:
+# If and only if a master has set `pillar_cache: True`, one of several storage providers
+# can be utililzed.
 #
-#   disk: The default storage backend. This caches rendered pillars to the master cache.
-#         Rendered pillars are serialized and deserialized as ``msgpack`` structures for
-#         speed. Note that pillars are stored UNENCRYPTED. Ensure that the master cache
-#         has permissions set appropriately (sane defaults are provided).
+# `disk`: The default storage backend. This caches rendered pillars to the master cache.
+#         Rendered pillars are serialized and deserialized as msgpack structures for speed.
+#         Note that pillars are stored UNENCRYPTED. Ensure that the master cache
+#         has permissions set appropriately. (Same defaults are provided.)
 #
 # memory: [EXPERIMENTAL] An optional backend for pillar caches which uses a pure-Python
 #         in-memory data structure for maximal performance. There are several caveats,
@@ -949,7 +1001,7 @@
 #log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #
-#log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+#log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This
 # example sets the main salt library at the 'warning' level, but sets
@@ -1020,6 +1072,9 @@
 ############################################
 # Default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
 #event_match_type: startswith
+
+# Save runner returns to the job cache
+#runner_returns: True
 
 # Permanently include any available Python 3rd party modules into Salt Thin
 # when they are generated for Salt-SSH or other purposes.

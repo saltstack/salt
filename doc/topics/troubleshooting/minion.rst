@@ -60,11 +60,14 @@ The `Nmap`_ utility can also be used to check if these ports are open:
 
 If you've opened the correct TCP ports and still aren't seeing connections,
 check that no additional access control system such as `SELinux`_ or
-`AppArmor`_ is blocking Salt.
+`AppArmor`_ is blocking Salt. Tools like `tcptraceroute`_ can also be used
+to determine if an intermediate device or firewall is blocking the needed
+TCP ports.
 
 .. _`Nmap`: http://nmap.org/
 .. _`SELinux`: https://en.wikipedia.org/wiki/Security-Enhanced_Linux
 .. _`AppArmor`: http://wiki.apparmor.net/index.php/Main_Page
+.. _`tcptraceroute`: http://linux.die.net/man/1/tcptraceroute
 
 .. _troubleshooting-minion-salt-call:
 

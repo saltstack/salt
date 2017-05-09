@@ -115,39 +115,39 @@ Install using curl
 
 Using ``curl`` to install latest development version from GitHub:
 
-.. code:: console
+.. code-block:: bash
 
-    curl -o bootstrap_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh bootstrap_salt.sh git develop
+    curl -o bootstrap-salt.sh -L https://bootstrap.saltstack.com
+    sudo sh bootstrap-salt.sh git develop
 
 If you want to install a specific release version (based on the Git tags):
 
-.. code:: console
+.. code-block:: bash
 
-    curl -o bootstrap_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh bootstrap_salt.sh git v2015.8.8
+    curl -o bootstrap-salt.sh -L https://bootstrap.saltstack.com
+    sudo sh bootstrap-salt.sh git v2015.8.8
 
 To install a specific branch from a Git fork:
 
-.. code:: console
+.. code-block:: bash
 
-    curl -o bootstrap_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh bootstrap_salt.sh -g https://github.com/myuser/salt.git git mybranch
+    curl -o bootstrap-salt.sh -L https://bootstrap.saltstack.com
+    sudo sh bootstrap-salt.sh -g https://github.com/myuser/salt.git git mybranch
 
 If all you want is to install a ``salt-master`` using latest Git:
 
-.. code:: console
+.. code-block:: bash
 
-    curl -o bootstrap_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh bootstrap_salt.sh -M -N git develop
+    curl -o bootstrap-salt.sh -L https://bootstrap.saltstack.com
+    sudo sh bootstrap-salt.sh -M -N git develop
 
 If your host has Internet access only via HTTP proxy:
 
-.. code:: console
+.. code-block:: bash
 
     PROXY='http://user:password@myproxy.example.com:3128'
-    curl -o bootstrap_salt.sh -L -x "$PROXY" https://bootstrap.saltstack.com
-    sudo sh bootstrap_salt.sh -G -H "$PROXY" git
+    curl -o bootstrap-salt.sh -L -x "$PROXY" https://bootstrap.saltstack.com
+    sudo sh bootstrap-salt.sh -G -H "$PROXY" git
 
 
 Install using wget
@@ -155,24 +155,24 @@ Install using wget
 
 Using ``wget`` to install your distribution's stable packages:
 
-.. code:: console
+.. code-block:: bash
 
-    wget -O bootstrap_salt.sh https://bootstrap.saltstack.com
-    sudo sh bootstrap_salt.sh
+    wget -O bootstrap-salt.sh https://bootstrap.saltstack.com
+    sudo sh bootstrap-salt.sh
 
 Downloading the script from develop branch:
 
 .. code-block:: bash
 
-    wget -O bootstrap_salt.sh https://bootstrap.saltstack.com/develop
-    sudo sh bootstrap_salt.sh
+    wget -O bootstrap-salt.sh https://bootstrap.saltstack.com/develop
+    sudo sh bootstrap-salt.sh
 
 Installing a specific version from git using ``wget``:
 
-.. code:: console
+.. code-block:: bash
 
-    wget -O bootstrap_salt.sh https://bootstrap.saltstack.com
-    sudo sh bootstrap_salt.sh -P git v2015.8.8
+    wget -O bootstrap-salt.sh https://bootstrap.saltstack.com
+    sudo sh bootstrap-salt.sh -P git v2015.8.8
 
 .. note::
 
@@ -185,17 +185,17 @@ Install using Python
 
 If you already have Python installed, ``python 2.6``, then it's as easy as:
 
-.. code:: console
+.. code-block:: bash
 
-    python -m urllib "https://bootstrap.saltstack.com" > bootstrap_salt.sh
-    sudo sh bootstrap_salt.sh git develop
+    python -m urllib "https://bootstrap.saltstack.com" > bootstrap-salt.sh
+    sudo sh bootstrap-salt.sh git develop
 
 All Python versions should support the following in-line code:
 
-.. code:: console
+.. code-block:: bash
 
-    python -c 'import urllib; print urllib.urlopen("https://bootstrap.saltstack.com").read()' > bootstrap_salt.sh
-    sudo sh bootstrap_salt.sh git develop
+    python -c 'import urllib; print urllib.urlopen("https://bootstrap.saltstack.com").read()' > bootstrap-salt.sh
+    sudo sh bootstrap-salt.sh git develop
 
 
 Install using fetch
@@ -204,26 +204,26 @@ Install using fetch
 On a FreeBSD base system you usually don't have either of the above binaries available. You **do**
 have ``fetch`` available though:
 
-.. code:: console
+.. code-block:: bash
 
-  fetch -o bootstrap_salt.sh https://bootstrap.saltstack.com
-  sudo sh bootstrap_salt.sh
+  fetch -o bootstrap-salt.sh https://bootstrap.saltstack.com
+  sudo sh bootstrap-salt.sh
 
 If you have any SSL issues install ``ca_root_nssp``:
 
-.. code:: console
+.. code-block:: bash
 
    pkg install ca_root_nssp
 
 And either copy the certificates to the place where fetch can find them:
 
-.. code:: console
+.. code-block:: bash
 
    cp /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem
 
 Or link them to the right place:
 
-.. code:: console
+.. code-block:: bash
 
    ln -s /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem
 

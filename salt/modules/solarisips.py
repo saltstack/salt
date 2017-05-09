@@ -187,9 +187,16 @@ def upgrade(refresh=False, **kwargs):
     In non-global zones upgrade is limited by dependency constrains linked to
     the version of pkg://solaris/entire.
 
-    Returns also the raw output of the ``pkg update`` command (because if
-    update creates a new boot environment, no immediate changes are visible in
-    ``pkg list``).
+    Returns a dictionary containing the changes:
+
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
+    When there is a failure, an explanation is also included in the error
+    message, based on the return code of the ``pkg update`` command.
+
 
     CLI Example:
 
@@ -197,11 +204,6 @@ def upgrade(refresh=False, **kwargs):
 
         salt '*' pkg.upgrade
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-           }
-
     if salt.utils.is_true(refresh):
         refresh_db()
 
@@ -212,22 +214,19 @@ def upgrade(refresh=False, **kwargs):
     # Install or upgrade the package
     # If package is already installed
     cmd = ['pkg', 'update', '-v', '--accept']
-    out = __salt__['cmd.run_all'](cmd,
-                                  output_loglevel='trace',
-                                  python_shell=False)
-
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
 
-    if out['retcode'] != 0:
+    if result['retcode'] != 0:
         raise CommandExecutionError(
-            'Error occurred updating package(s)',
-            info={
-                'changes': ret,
-                'retcode': ips_pkg_return_values[out['retcode']],
-                'errors': [out['stderr']]
-            }
+            'Problem encountered upgrading packages',
+            info={'changes': ret,
+                  'retcode': ips_pkg_return_values[result['retcode']],
+                  'result': result}
         )
 
     return ret

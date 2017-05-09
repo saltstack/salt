@@ -49,9 +49,14 @@ class CmdTestCase(TestCase):
                        'skip_watch': True}
                 self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, '', '', creates), ret)
 
-                self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, [''], '', creates), ret)
-
                 self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, {}, '', creates), ret)
+
+        mock = MagicMock(return_value=1)
+        with patch.dict(cmd.__salt__, {'cmd.retcode': mock}):
+            with patch.dict(cmd.__opts__, {'test': True}):
+                ret = {'comment': 'onlyif execution failed: ', 'result': True,
+                       'skip_watch': True}
+                self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, [''], '', creates), ret)
 
         mock = MagicMock(return_value=0)
         with patch.dict(cmd.__salt__, {'cmd.retcode': mock}):

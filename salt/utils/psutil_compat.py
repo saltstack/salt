@@ -10,7 +10,11 @@ Should be removed once support for psutil <2.0 is dropped. (eg RHEL 6)
 Built off of http://grodola.blogspot.com/2014/01/psutil-20-porting.html
 '''
 
+# Import Python libs
 from __future__ import absolute_import
+
+# Import Salt libs
+import salt.ext.six as six
 
 # No exception handling, as we want ImportError if psutil doesn't exist
 import psutil
@@ -103,7 +107,7 @@ else:
 
     }
 
-    for new, old in _PROCESS_FUNCTION_MAP.iteritems():
+    for new, old in six.iteritems(_PROCESS_FUNCTION_MAP):
         try:
             setattr(Process, new, psutil.Process.__dict__[old])
         except KeyError:

@@ -28,11 +28,10 @@ from datetime import datetime
 
 # Import salt libs
 import salt.config
-import salt.minion
+import salt.cache
 import salt.payload
 import salt.transport
 import salt.loader
-import salt.minion
 import salt.utils
 import salt.utils.args
 import salt.utils.event
@@ -118,6 +117,14 @@ class LocalClient(object):
     running as. (Unless :conf_master:`external_auth` is configured and
     authentication credentials are included in the execution).
 
+    .. note::
+        The LocalClient uses a Tornado IOLoop, this can create issues when
+        using the LocalClient inside an existing IOLoop. If creating the
+        LocalClient in partnership with another IOLoop either create the
+        IOLoop before creating the LocalClient, or when creating the IOLoop
+        use ioloop.current() which will return the ioloop created by
+        LocalClient.
+
     .. code-block:: python
 
         import salt.client
@@ -174,6 +181,10 @@ class LocalClient(object):
                 key_user = self.opts.get('user', 'root')
         if key_user.startswith('sudo_'):
             key_user = self.opts.get('user', 'root')
+        if salt.utils.is_windows():
+            # The username may contain '\' if it is in Windows
+            # 'DOMAIN\username' format. Fix this for the keyfile path.
+            key_user = key_user.replace('\\', '_')
         keyfile = os.path.join(self.opts['cachedir'],
                                '.{0}_key'.format(key_user))
         # Make sure all key parent directories are accessible
@@ -239,7 +250,7 @@ class LocalClient(object):
         '''
         Common checks on the pub_data data structure returned from running pub
         '''
-        if not pub_data:
+        if pub_data == '':
             # Failed to authenticate, this could be a bunch of things
             raise EauthAuthenticationError(
                 'Failed to authenticate! This is most likely because this '
@@ -249,7 +260,11 @@ class LocalClient(object):
             )
 
         # Failed to connect to the master and send the pub
-        if 'jid' not in pub_data:
+        if 'error' in pub_data:
+            print(pub_data['error'])
+            log.debug('_check_pub_data() error: {0}'.format(pub_data['error']))
+            return {}
+        elif 'jid' not in pub_data:
             return {}
         if pub_data['jid'] == '0':
             print('Failed to connect to the Master, '
@@ -320,6 +335,59 @@ class LocalClient(object):
             raise SaltClientError(general_exception)
 
         return self._check_pub_data(pub_data)
+
+    @tornado.gen.coroutine
+    def run_job_async(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            expr_form='glob',
+            ret='',
+            timeout=None,
+            jid='',
+            kwarg=None,
+            listen=True,
+            io_loop=None,
+            **kwargs):
+        '''
+        Asynchronously send a command to connected minions
+
+        Prep the job directory and publish a command to any targeted minions.
+
+        :return: A dictionary of (validated) ``pub_data`` or an empty
+            dictionary on failure. The ``pub_data`` contains the job ID and a
+            list of all minions that are expected to return data.
+
+        .. code-block:: python
+
+            >>> local.run_job_async('*', 'test.sleep', [300])
+            {'jid': '20131219215650131543', 'minions': ['jerry']}
+        '''
+        arg = salt.utils.args.condition_input(arg, kwarg)
+
+        try:
+            pub_data = yield self.pub_async(
+                  tgt,
+                  fun,
+                  arg,
+                  expr_form,
+                  ret,
+                  jid=jid,
+                  timeout=self._get_timeout(timeout),
+                  io_loop=io_loop,
+                  listen=listen,
+                  **kwargs)
+        except SaltClientError:
+            # Re-raise error with specific message
+            raise SaltClientError(
+                'The salt master could not be contacted. Is master running?'
+            )
+        except Exception as general_exception:
+            # Convert to generic client error and pass along message
+            raise SaltClientError(general_exception)
+
+        raise tornado.gen.Return(self._check_pub_data(pub_data))
 
     def cmd_async(
             self,
@@ -448,10 +516,20 @@ class LocalClient(object):
         if 'gather_job_timeout' in kwargs:
             opts['gather_job_timeout'] = kwargs['gather_job_timeout']
 
+        eauth = {}
+        if 'eauth' in kwargs:
+            eauth['eauth'] = kwargs.pop('eauth')
+        if 'username' in kwargs:
+            eauth['username'] = kwargs.pop('username')
+        if 'password' in kwargs:
+            eauth['password'] = kwargs.pop('password')
+        if 'token' in kwargs:
+            eauth['token'] = kwargs.pop('token')
+
         for key, val in six.iteritems(self.opts):
             if key not in opts:
                 opts[key] = val
-        batch = salt.cli.batch.Batch(opts, quiet=True)
+        batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret in batch.run():
             yield ret
 
@@ -986,6 +1064,8 @@ class LocalClient(object):
                         ret[raw['data']['id']]['out'] = raw['data']['out']
                     if 'retcode' in raw['data']:
                         ret[raw['data']['id']]['retcode'] = raw['data']['retcode']
+                    if 'jid' in raw['data']:
+                        ret[raw['data']['id']]['jid'] = raw['data']['jid']
                     if kwargs.get('_cmd_meta', False):
                         ret[raw['data']['id']].update(raw['data'])
                     log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
@@ -1018,7 +1098,7 @@ class LocalClient(object):
             # re-do the ping
             if time.time() > timeout_at and minions_running:
                 # since this is a new ping, no one has responded yet
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
+                jinfo = self.gather_job_info(jid, list(minions - found), 'list', **kwargs)
                 minions_running = False
                 # if we weren't assigned any jid that means the master thinks
                 # we have nothing to send
@@ -1371,9 +1451,8 @@ class LocalClient(object):
                 if min_ret.get('failed') is True:
                     if connected_minions is None:
                         connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
-                    minion_cache = os.path.join(self.opts['cachedir'], 'minions', id_, 'data.p')
                     if self.opts['minion_data_cache'] \
-                            and os.path.exists(minion_cache) \
+                            and salt.cache.factory(self.opts).contains('minions/{0}'.format(id_), 'data') \
                             and connected_minions \
                             and id_ not in connected_minions:
 
@@ -1784,6 +1863,8 @@ class Caller(object):
     '''
     def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'minion'),
             mopts=None):
+        # Late-import of the minion module to keep the CLI as light as possible
+        import salt.minion
         if mopts:
             self.opts = mopts
         else:

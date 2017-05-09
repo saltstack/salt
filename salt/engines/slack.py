@@ -12,7 +12,7 @@ prefaced with a ``!``.
     .. code-block:: yaml
 
         engines:
-            - slack:
+            slack:
                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
                control: True
                valid_users:
@@ -85,6 +85,7 @@ def start(token,
           valid_users=None,
           valid_commands=None,
           control=False,
+          trigger="!",
           tag='salt/engines/slack'):
     '''
     Listen to Slack events and forward them to Salt
@@ -133,7 +134,7 @@ def start(token,
                         _text = yaml.safe_load(_text)
 
                         if _text:
-                            if _text.startswith('!') and control:
+                            if _text.startswith(trigger) and control:
 
                                 # Ensure the user is allowed to run commands
                                 if valid_users:
@@ -144,7 +145,7 @@ def start(token,
 
                                 # Trim the ! from the front
                                 # cmdline = _text[1:].split(' ', 1)
-                                cmdline = salt.utils.shlex_split(_text[1:])
+                                cmdline = salt.utils.shlex_split(_text[len(trigger):])
 
                                 # Remove slack url parsing
                                 #  Translate target=<http://host.domain.net|host.domain.net>
@@ -223,5 +224,6 @@ def start(token,
                     else:
                         # Fire event to event bus
                         fire('{0}/{1}'.format(tag, _m['type']), _m)
+            time.sleep(1)
     else:
         raise UserWarning("Could not connect to slack")

@@ -237,7 +237,7 @@ def wait_rm(name, recurse=False, profile=None):
         The etcd key name to remove, for example ``/foo/bar/baz``.
     recurse
         Optional, defaults to ``False``. If ``True`` performs a recursive
-        delete, see: https://python-etcd.readthedocs.org/en/latest/#delete-a-key.
+        delete, see: https://python-etcd.readthedocs.io/en/latest/#delete-a-key.
     profile
         Optional, defaults to ``None``. Sets the etcd profile to use which has
         been defined in the Salt Master config.

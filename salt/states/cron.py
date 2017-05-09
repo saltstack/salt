@@ -141,7 +141,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils
@@ -426,7 +425,6 @@ def file(name,
          context=None,
          replace=True,
          defaults=None,
-         env=None,
          backup='',
          **kwargs):
     '''
@@ -511,7 +509,7 @@ def file(name,
         Overrides the default backup mode for the user's crontab.
     '''
     # Initial set up
-    mode = __salt__['config.manage_mode']('0600')
+    mode = '0600'
     owner, group, crontab_dir = _get_cron_info()
 
     cron_path = salt.utils.mkstemp()
@@ -529,17 +527,6 @@ def file(name,
     # Avoid variable naming confusion in below module calls, since ID
     # declaration for this state will be a source URI.
     source = name
-
-    if isinstance(env, string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Carbon and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Carbon', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
 
     if not replace and os.stat(cron_path).st_size > 0:
         ret['comment'] = 'User {0} already has a crontab. No changes ' \
@@ -621,7 +608,6 @@ def file(name,
     cron_ret = None
     if ret['changes']:
         cron_ret = __salt__['cron.write_cron_file_verbose'](user, cron_path)
-        ret['changes'] = {'diff': ret['changes']['diff']}
         ret['comment'] = 'Crontab for user {0} was updated'.format(user)
     elif ret['result']:
         ret['comment'] = 'Crontab for user {0} is in the correct ' \

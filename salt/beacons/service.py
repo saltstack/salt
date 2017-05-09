@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 LAST_STATUS = {}
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''

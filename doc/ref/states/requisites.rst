@@ -173,11 +173,11 @@ dependency logic defined above.
 require
 ~~~~~~~
 
-The use of ``require`` demands that the dependent state executes before the
-depending state. The state containing the ``require`` requisite is defined as the
-depending state. The state specified in the ``require`` statement is defined as the
-dependent state. If the dependent state's execution succeeds, the depending state
-will then execute. If the dependent state's execution fails, the depending state
+The use of ``require`` demands that the required state executes before the
+dependent state. The state containing the ``require`` requisite is defined as the
+dependent state. The state specified in the ``require`` statement is defined as the
+required state. If the required state's execution succeeds, the dependent state
+will then execute. If the required state's execution fails, the dependent state
 will not execute. In the first example above, the file ``/etc/vimrc`` will only
 execute after the vim package is installed successfully.
 
@@ -370,6 +370,14 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
         - fstype: nfs
         - onfail:
           - mount: primary_mount
+
+.. note::
+
+    Beginning in the ``2016.11.0`` release of Salt, ``onfail`` uses OR logic for
+    multiple listed ``onfail`` requisites. Prior to the ``2016.11.0`` release,
+    ``onfail`` used AND logic. See `Issue #22370`_ for more information.
+
+.. _Issue #22370: https://github.com/saltstack/salt/issues/22370
 
 .. _requisites-onchanges:
 

@@ -72,7 +72,7 @@ def _changes(name,
              maxdays=999999,
              inactdays=0,
              warndays=7,
-             expire=-1,
+             expire=None,
              win_homedrive=None,
              win_profile=None,
              win_logonscript=None,
@@ -142,7 +142,7 @@ def _changes(name,
             change['inactdays'] = inactdays
         if warndays and warndays is not 7 and lshad['warn'] != warndays:
             change['warndays'] = warndays
-        if expire and expire is not -1 and lshad['expire'] != expire:
+        if expire and lshad['expire'] != expire:
             change['expire'] = expire
     elif 'shadow.info' in __salt__ and salt.utils.is_windows():
         if expire and expire is not -1 and salt.utils.date_format(lshad['expire']) != salt.utils.date_format(expire):
@@ -201,6 +201,7 @@ def present(name,
             home=None,
             createhome=True,
             password=None,
+            hash_password=False,
             enforce_password=True,
             empty_password=False,
             shell=None,
@@ -283,6 +284,10 @@ def present(name,
     .. versionchanged:: 0.16.0
        BSD support added.
 
+    hash_password
+        Set to True to hash the clear text password. Default is ``False``.
+
+
     enforce_password
         Set to False to keep the password from being changed if it has already
         been set and the password hash differs from what is specified in the
@@ -324,6 +329,7 @@ def present(name,
 
     homephone
         The user's home phone number (not supported in MacOS)
+        If GECOS field contains more than 3 commas, this field will have the rest of 'em
 
     .. versionchanged:: 2014.7.0
        Shadow attribute support added.
@@ -380,6 +386,14 @@ def present(name,
 
         .. versionchanged:: 2015.8.0
     '''
+
+    # First check if a password is set. If password is set, check if
+    # hash_password is True, then hash it.
+
+    if password and hash_password:
+        log.debug('Hashing a clear text password')
+        password = __salt__['shadow.gen_password'](password)
+
     if fullname is not None:
         fullname = sdecode(fullname)
     if roomnumber is not None:
@@ -396,7 +410,7 @@ def present(name,
 
     # the comma is used to separate field in GECOS, thus resulting into
     # salt adding the end of fullname each time this function is called
-    for gecos_field in ['fullname', 'roomnumber', 'workphone', 'homephone']:
+    for gecos_field in ['fullname', 'roomnumber', 'workphone']:
         if isinstance(gecos_field, string_types) and ',' in gecos_field:
             ret['comment'] = "Unsupported char ',' in {0}".format(gecos_field)
             ret['result'] = False
@@ -488,16 +502,16 @@ def present(name,
                 continue
             # run chhome once to avoid any possible bad side-effect
             if key == 'home' and 'homeDoesNotExist' not in changes:
-                if __grains__['kernel'] == 'Darwin':
+                if __grains__['kernel'] in ('Darwin', 'Windows'):
                     __salt__['user.chhome'](name, val)
                 else:
-                    __salt__['user.chhome'](name, val, False)
+                    __salt__['user.chhome'](name, val, persist=False)
                 continue
             if key == 'homeDoesNotExist':
-                if __grains__['kernel'] == 'Darwin':
+                if __grains__['kernel'] in ('Darwin', 'Windows'):
                     __salt__['user.chhome'](name, val)
                 else:
-                    __salt__['user.chhome'](name, val, True)
+                    __salt__['user.chhome'](name, val, persist=True)
                 if not os.path.isdir(val):
                     __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0o755)
                 continue

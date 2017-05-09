@@ -54,7 +54,7 @@ Turning on the Salt Master is easy -- just turn it on! The default configuration
 is suitable for the vast majority of installations. The Salt Master can be
 controlled by the local Linux/Unix service manager:
 
-On Systemd based platforms (newer Debian, OpenSuse, Fedora):
+On Systemd based platforms (newer Debian, openSUSE, Fedora):
 
 .. code-block:: bash
 
@@ -140,8 +140,8 @@ In the foreground in debug mode:
 .. _minion-id-generation:
 
 When the minion is started, it will generate an ``id`` value, unless it has
-been generated on a previous run and cached in the configuration directory, which
-is ``/etc/salt`` by default. This is the name by which the minion will attempt
+been generated on a previous run and cached (in ``/etc/salt/minion_id`` by
+default). This is the name by which the minion will attempt
 to authenticate to the master. The following steps are attempted, in order to
 try to find a value that is not ``localhost``:
 
@@ -294,7 +294,7 @@ This will display a very large list of available functions and documentation on
 them.
 
 .. note::
-    Module documentation is also available :ref:`on the web <all-salt_modules>`.
+    Module documentation is also available :ref:`on the web <all-salt.modules>`.
 
 These functions cover everything from shelling out to package management to
 manipulating database servers. They comprise a powerful system management API
@@ -304,7 +304,7 @@ of Salt.
 .. note::
 
     Salt comes with many plugin systems. The functions that are available via
-    the ``salt`` command are called :ref:`Execution Modules <all-salt_modules>`.
+    the ``salt`` command are called :ref:`Execution Modules <all-salt.modules>`.
 
 
 Helpful Functions to Know

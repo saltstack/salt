@@ -611,7 +611,8 @@ class KeystoneTestCase(TestCase):
         Test if it return a list of available roles (keystone role-list)
         '''
         self.assertDictEqual(keystone.role_list(),
-                             {'nova': {'id': '113', 'name': 'nova'}})
+                             {'nova': {'id': '113', 'name': 'nova', 'tenant_id':
+                              'a1a1', 'user_id': '446'}})
 
     # 'service_create' function tests: 1
 
@@ -740,9 +741,12 @@ class KeystoneTestCase(TestCase):
         Test if it return a list of available users (keystone user-list)
         '''
         self.assertDictEqual(keystone.user_list(),
-                             {'nova': {'email': 'salt@saltstack.com',
-                                       'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                             {'nova': {'name': 'nova',
+                                       'tenant_id': 'a1a1',
+                                       'enabled': 'True',
+                                       'id': '446',
+                                       'password': 'salt',
+                                       'email': 'salt@saltstack.com'}})
 
     # 'user_get' function tests: 1
 
@@ -754,9 +758,10 @@ class KeystoneTestCase(TestCase):
                              {'Error': 'Unable to resolve user id'})
 
         self.assertDictEqual(keystone.user_get(user_id='446'),
-                             {'nova': {'email': 'salt@saltstack.com',
-                                       'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                             {'nova': {'name': 'nova', 'tenant_id': 'a1a1',
+                                       'enabled': 'True', 'id': '446',
+                                       'password': 'salt',
+                                       'email': 'salt@saltstack.com'}})
     # 'user_create' function tests: 1
 
     def test_user_create(self, mock):
@@ -766,9 +771,10 @@ class KeystoneTestCase(TestCase):
         self.assertDictEqual(keystone.user_create(name='nova', password='salt',
                                                   email='salt@saltstack.com',
                                                   tenant_id='a1a1'),
-                             {'nova': {'email': 'salt@saltstack.com',
-                                       'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                             {'nova': {'name': 'nova', 'tenant_id': 'a1a1',
+                                       'enabled': 'True', 'id': '446',
+                                       'password': 'salt',
+                                       'email': 'salt@saltstack.com'}})
 
     # 'user_delete' function tests: 1
 
@@ -832,7 +838,7 @@ class KeystoneTestCase(TestCase):
         '''
         self.assertEqual(keystone.user_role_add(user='nova', tenant='nova',
                                                 role='nova'),
-                         '"nova" role added for user "nova" for "nova" tenant')
+                         '"nova" role added for user "nova" for "nova" tenant/project')
 
         MockRoles.flag = 1
         self.assertDictEqual(keystone.user_role_add(user='nova', tenant='nova',
@@ -841,7 +847,7 @@ class KeystoneTestCase(TestCase):
 
         MockTenants.flag = 1
         self.assertDictEqual(keystone.user_role_add(user='nova', tenant='nova'),
-                             {'Error': 'Unable to resolve tenant id'})
+                             {'Error': 'Unable to resolve tenant/project id'})
 
         MockUsers.flag = 1
         self.assertDictEqual(keystone.user_role_add(user='nova'),
@@ -861,7 +867,7 @@ class KeystoneTestCase(TestCase):
         MockTenants.flag = 1
         self.assertDictEqual(keystone.user_role_remove(user='nova',
                                                        tenant='nova'),
-                             {'Error': 'Unable to resolve tenant id'})
+                             {'Error': 'Unable to resolve tenant/project id'})
 
         MockTenants.flag = 0
         MockRoles.flag = 1
@@ -883,7 +889,7 @@ class KeystoneTestCase(TestCase):
         (keystone user-roles-list)
         '''
         self.assertDictEqual(keystone.user_role_list(user='nova'),
-                             {'Error': 'Unable to resolve user or tenant id'})
+                             {'Error': 'Unable to resolve user or tenant/project id'})
 
         self.assertDictEqual(keystone.user_role_list(user_name='nova',
                                                      tenant_name='nova'),

@@ -116,20 +116,20 @@ def update():
         log.info('Sync local cache from S3 completed.')
 
 
-def find_file(path, saltenv='base', env=None, **kwargs):
+def find_file(path, saltenv='base', **kwargs):
     '''
     Look through the buckets cache file for a match.
     If the field is found, it is retrieved from S3 only if its cached version
     is missing, or if the MD5 does not match.
     '''
-    if env is not None:
+    if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
 
     fnd = {'bucket': None,
            'path': None}
@@ -166,11 +166,12 @@ def file_hash(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     ret = {}
 
@@ -198,11 +199,12 @@ def serve_file(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     ret = {'data': '',
            'dest': ''}
@@ -239,11 +241,12 @@ def file_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     ret = []
 
@@ -279,11 +282,12 @@ def dir_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     ret = []
 
@@ -399,15 +403,23 @@ def _refresh_buckets_cache_file(cache_file):
 
     # helper s3 query function
     def __get_s3_meta(bucket, key=key, keyid=keyid):
-        return __utils__['s3.query'](
-                key=key,
-                keyid=keyid,
-                kms_keyid=keyid,
-                bucket=bucket,
-                service_url=service_url,
-                verify_ssl=verify_ssl,
-                location=location,
-                return_bin=False)
+        ret, marker = [], ''
+        while True:
+            tmp = __utils__['s3.query'](key=key, keyid=keyid, kms_keyid=keyid,
+                                        bucket=bucket, service_url=service_url,
+                                        verify_ssl=verify_ssl,
+                                        location=location, return_bin=False,
+                                        params={'marker': marker})
+            headers = []
+            for header in tmp:
+                if 'Key' in header:
+                    break
+                headers.append(header)
+            ret.extend(tmp)
+            if all([header.get('IsTruncated', 'false') == 'false' for header in headers]):
+                break
+            marker = tmp[-1]['Key']
+        return ret
 
     if _is_env_per_bucket():
         # Single environment per bucket
@@ -444,8 +456,8 @@ def _refresh_buckets_cache_file(cache_file):
                             continue
                         else:
                             log.warning(
-                                ('S3 Error! Do you have any files '
-                                 'in your S3 bucket?'))
+                                 'S3 Error! Do you have any files '
+                                 'in your S3 bucket?')
                             return {}
 
             metadata[saltenv] = bucket_files
@@ -483,8 +495,8 @@ def _refresh_buckets_cache_file(cache_file):
                         continue
                     else:
                         log.warning(
-                            ('S3 Error! Do you have any files '
-                             'in your S3 bucket?'))
+                             'S3 Error! Do you have any files '
+                             'in your S3 bucket?')
                         return {}
 
             environments = [(os.path.dirname(k['Key']).split('/', 1))[0] for k in files]

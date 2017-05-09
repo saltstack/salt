@@ -15,7 +15,13 @@ from salt.exceptions import SaltInvocationError
 LOGGER = logging.getLogger(__name__)
 
 
-def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
+def orchestrate(mods,
+                saltenv='base',
+                test=None,
+                exclude=None,
+                pillar=None,
+                pillarenv=None,
+                orchestration_jid=None):
     '''
     .. versionadded:: 0.17.0
 
@@ -33,6 +39,7 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
 
         salt-run state.orchestrate webserver
         salt-run state.orchestrate webserver saltenv=dev test=True
+        salt-run state.orchestrate webserver saltenv=dev pillarenv=aws
 
     .. versionchanged:: 2014.1.1
 
@@ -53,7 +60,9 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
             saltenv,
             test,
             exclude,
-            pillar=pillar)
+            pillar=pillar,
+            pillarenv=pillarenv,
+            orchestration_jid=orchestration_jid)
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
     res = salt.utils.check_state_result(ret['data'])
     if res:
@@ -177,7 +186,7 @@ def event(tagmatch='*',
         # Watch the event bus forever in a shell while-loop.
         salt-run state.event | while read -r tag data; do
             echo $tag
-            echo $data | jq -colour-output .
+            echo $data | jq --color-output .
         done
 
     .. seealso::

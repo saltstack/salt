@@ -31,23 +31,18 @@ import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 
-def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, env=None, funcs=None,
+def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
                pillar=None, pillarenv=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
+    file_client = opts['file_client']
+    if opts.get('master_type') == 'disable' and file_client == 'remote':
+        file_client = 'local'
     ptype = {
         'remote': RemotePillar,
         'local': Pillar
-    }.get(opts['file_client'], Pillar)
+    }.get(file_client, Pillar)
     # If local pillar and we're caching, run through the cache system first
     log.debug('Determining pillar cache')
     if opts['pillar_cache']:
@@ -60,23 +55,18 @@ def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, env=None, funcs=
 
 
 # TODO: migrate everyone to this one!
-def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, env=None, funcs=None,
+def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
                pillar=None, pillarenv=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
+    file_client = opts['file_client']
+    if opts.get('master_type') == 'disable' and file_client == 'remote':
+        file_client = 'local'
     ptype = {
         'remote': AsyncRemotePillar,
         'local': AsyncPillar,
-    }.get(opts['file_client'], AsyncPillar)
+    }.get(file_client, AsyncPillar)
     return ptype(opts, grains, minion_id, saltenv, ext, functions=funcs,
                  pillar=pillar, pillarenv=pillarenv)
 
@@ -93,7 +83,8 @@ class AsyncRemotePillar(object):
         self.grains = grains
         self.minion_id = minion_id
         self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
-        self.opts['pillarenv'] = pillarenv
+        if pillarenv is not None or 'pillarenv' not in self.opts:
+            self.opts['pillarenv'] = pillarenv
         self.pillar_override = {}
         if pillar is not None:
             if isinstance(pillar, dict):
@@ -145,7 +136,8 @@ class RemotePillar(object):
         self.grains = grains
         self.minion_id = minion_id
         self.channel = salt.transport.Channel.factory(opts)
-        self.opts['pillarenv'] = pillarenv
+        if pillarenv is not None or 'pillarenv' not in self.opts:
+            self.opts['pillarenv'] = pillarenv
         self.pillar_override = {}
         if pillar is not None:
             if isinstance(pillar, dict):
@@ -352,19 +344,10 @@ class Pillar(object):
             return False
         return True
 
-    def __gen_opts(self, opts_in, grains, saltenv=None, env=None, pillarenv=None):
+    def __gen_opts(self, opts_in, grains, saltenv=None, ext=None, pillarenv=None):
         '''
         The options need to be altered to conform to the file client
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
         opts = copy.deepcopy(opts_in)
         opts['file_roots'] = opts['pillar_roots']
         opts['file_client'] = 'local'
@@ -413,18 +396,21 @@ class Pillar(object):
         # Gather initial top files
         try:
             if self.opts['pillarenv']:
-                tops[self.opts['pillarenv']] = [
-                        compile_template(
-                            self.client.cache_file(
-                                self.opts['state_top'],
-                                self.opts['pillarenv']
-                                ),
-                            self.rend,
-                            self.opts['renderer'],
-                            self.opts['pillarenv'],
-                            _pillar_rend=True
-                            )
-                        ]
+                top = self.client.cache_file(
+                    self.opts['state_top'], self.opts['pillarenv'])
+
+                if top:
+                    tops[self.opts['pillarenv']] = [
+                            compile_template(
+                                top,
+                                self.rend,
+                                self.opts['renderer'],
+                                self.opts['renderer_blacklist'],
+                                self.opts['renderer_whitelist'],
+                                self.opts['pillarenv'],
+                                _pillar_rend=True,
+                                )
+                            ]
             else:
                 for saltenv in self._get_envs():
                     if self.opts.get('pillar_source_merging_strategy', None) == "none":
@@ -442,8 +428,10 @@ class Pillar(object):
                                     top,
                                     self.rend,
                                     self.opts['renderer'],
+                                    self.opts['renderer_blacklist'],
+                                    self.opts['renderer_whitelist'],
                                     saltenv=saltenv,
-                                    _pillar_rend=True
+                                    _pillar_rend=True,
                                     )
                                 )
         except Exception as exc:
@@ -480,8 +468,10 @@ class Pillar(object):
                                         ).get('dest', False),
                                     self.rend,
                                     self.opts['renderer'],
+                                    self.opts['renderer_blacklist'],
+                                    self.opts['renderer_whitelist'],
                                     saltenv=saltenv,
-                                    _pillar_rend=True
+                                    _pillar_rend=True,
                                     )
                                 )
                     except Exception as exc:
@@ -634,6 +624,8 @@ class Pillar(object):
             state = compile_template(fn_,
                                      self.rend,
                                      self.opts['renderer'],
+                                     self.opts['renderer_blacklist'],
+                                     self.opts['renderer_whitelist'],
                                      saltenv,
                                      sls,
                                      _pillar_rend=True,
@@ -804,7 +796,7 @@ class Pillar(object):
                 errors.append('The "ext_pillar" option is malformed')
                 log.critical(errors[-1])
                 return {}, errors
-            if run.keys()[0] in self.opts.get('exclude_ext_pillar', []):
+            if next(six.iterkeys(run)) in self.opts.get('exclude_ext_pillar', []):
                 continue
             for key, val in six.iteritems(run):
                 if key not in self.ext_pillars:
@@ -838,7 +830,9 @@ class Pillar(object):
         top, top_errors = self.get_top()
         if ext:
             if self.opts.get('ext_pillar_first', False):
-                self.opts['pillar'], errors = self.ext_pillar({}, pillar_dirs)
+                self.opts['pillar'], errors = self.ext_pillar(
+                    self.pillar_override,
+                    pillar_dirs)
                 self.rend = salt.loader.render(self.opts, self.functions)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches, errors=errors)

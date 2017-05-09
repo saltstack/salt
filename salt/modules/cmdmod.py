@@ -18,18 +18,22 @@ import subprocess
 import sys
 import time
 import traceback
+import fnmatch
+import base64
+import re
 import tempfile
-from salt.utils import vt
 
 # Import salt libs
 import salt.utils
+import salt.utils.powershell
 import salt.utils.timed_subprocess
 import salt.grains.extra
 import salt.ext.six as six
+from salt.utils import vt
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
     SaltInvocationError
 from salt.log import LOG_LEVELS
-from salt.ext.six.moves import range
+from salt.ext.six.moves import range, zip
 from salt.ext.six.moves import shlex_quote as _cmd_quote
 
 # Only available on POSIX systems, nonfatal on windows
@@ -169,7 +173,7 @@ def _check_loglevel(level='info', quiet=False):
             .format(
                 level,
                 ', '.join(
-                    sorted(LOG_LEVELS, key=LOG_LEVELS.get, reverse=True)
+                    sorted(LOG_LEVELS, reverse=True)
                 )
             )
         )
@@ -216,6 +220,34 @@ def _gather_pillar(pillarenv, pillar_override):
     return ret
 
 
+def _check_avail(cmd):
+    '''
+    Check to see if the given command can be run
+    '''
+    if isinstance(cmd, list):
+        cmd = ' '.join([str(x) if not isinstance(x, six.string_types) else x
+                        for x in cmd])
+    bret = True
+    wret = False
+    if __salt__['config.get']('cmd_blacklist_glob'):
+        blist = __salt__['config.get']('cmd_blacklist_glob', [])
+        for comp in blist:
+            if fnmatch.fnmatch(cmd, comp):
+                # BAD! you are blacklisted
+                bret = False
+    if __salt__['config.get']('cmd_whitelist_glob', []):
+        blist = __salt__['config.get']('cmd_whitelist_glob', [])
+        for comp in blist:
+            if fnmatch.fnmatch(cmd, comp):
+                # GOOD! You are whitelisted
+                wret = True
+                break
+    else:
+        # If no whitelist set then alls good!
+        wret = True
+    return bret and wret
+
+
 def _run(cmd,
          cwd=None,
          stdin=None,
@@ -241,10 +273,13 @@ def _run(cmd,
          use_vt=False,
          password=None,
          bg=False,
+         encoded_cmd=False,
          **kwargs):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
+    if 'pillar' in kwargs and not pillar_override:
+        pillar_override = kwargs['pillar']
     if _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
@@ -294,6 +329,8 @@ def _run(cmd,
         # The third item[2] in each tuple is the name of that method.
         if stack[-2][2] == 'script':
             cmd = 'Powershell -NonInteractive -NoProfile -ExecutionPolicy Bypass -File ' + cmd
+        elif encoded_cmd:
+            cmd = 'Powershell -NonInteractive -EncodedCommand {0}'.format(cmd)
         else:
             cmd = 'Powershell -NonInteractive -NoProfile "{0}"'.format(cmd.replace('"', '\\"'))
 
@@ -301,6 +338,13 @@ def _run(cmd,
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
 
     ret = {}
+
+    # If the pub jid is here then this is a remote ex or salt call command and needs to be
+    # checked if blacklisted
+    if '__pub_jid' in kwargs:
+        if not _check_avail(cmd):
+            msg = 'This shell command is not permitted: "{0}"'.format(cmd)
+            raise CommandExecutionError(msg)
 
     env = _parse_env(env)
 
@@ -372,9 +416,14 @@ def _run(cmd,
                 env_cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
-            ).communicate(py_code)[0]
-            import itertools
-            env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
+            ).communicate(py_code.encode(__salt_system_encoding__))[0]
+            if six.PY2:
+                import itertools
+                env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
+            elif six.PY3:
+                if isinstance(env_encoded, str):
+                    env_encoded = env_encoded.encode(__salt_system_encoding__)
+                env_runas = dict(list(zip(*[iter(env_encoded.split(b'\0'))]*2)))
             env_runas.update(env)
             env = env_runas
             # Encode unicode kwargs to filesystem encoding to avoid a
@@ -688,6 +737,7 @@ def run(cmd,
         use_vt=False,
         bg=False,
         password=None,
+        encoded_cmd=False,
         **kwargs):
     r'''
     Execute the passed command and return the output as a string
@@ -755,7 +805,7 @@ def run(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -786,6 +836,9 @@ def run(cmd,
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
       more interactively to the console and the logs. This is experimental.
+
+    :param bool encoded_cmd: Specify if the supplied command is encoded.
+      Only applies to shell 'powershell'.
 
     .. warning::
         This function does not process commands through a shell
@@ -856,11 +909,11 @@ def run(cmd,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
-               pillarenv=kwargs.get('pillarenv'),
-               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
+               bg=bg,
                password=password,
-               bg=bg)
+               encoded_cmd=encoded_cmd,
+               **kwargs)
 
     log_callback = _check_cb(log_callback)
 
@@ -960,7 +1013,7 @@ def shell(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -1145,7 +1198,7 @@ def run_stdout(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -1222,8 +1275,6 @@ def run_stdout(cmd,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
-               pillarenv=kwargs.get('pillarenv'),
-               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
                password=password,
                **kwargs)
@@ -1328,7 +1379,7 @@ def run_stderr(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -1406,9 +1457,8 @@ def run_stderr(cmd,
                ignore_retcode=ignore_retcode,
                use_vt=use_vt,
                saltenv=saltenv,
-               pillarenv=kwargs.get('pillarenv'),
-               pillar_override=kwargs.get('pillar'),
-               password=password)
+               password=password,
+               **kwargs)
 
     log_callback = _check_cb(log_callback)
 
@@ -1511,7 +1561,7 @@ def run_all(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -1607,7 +1657,6 @@ def run_all(cmd,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
-               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
                password=password,
                **kwargs)
@@ -1711,7 +1760,7 @@ def retcode(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -1790,10 +1839,9 @@ def retcode(cmd,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
-               pillarenv=kwargs.get('pillarenv'),
-               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
-               password=password)
+               password=password,
+               **kwargs)
 
     log_callback = _check_cb(log_callback)
 
@@ -1872,7 +1920,6 @@ def script(source,
            quiet=False,
            timeout=None,
            reset_system_locale=True,
-           __env__=None,
            saltenv='base',
            use_vt=False,
            bg=False,
@@ -1949,7 +1996,7 @@ def script(source,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -2007,14 +2054,14 @@ def script(source,
                 )
             )
 
-    if isinstance(__env__, six.string_types):
+    if '__env__' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'__env__\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = __env__
+            'Oxygen',
+            'Parameter \'__env__\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('__env__')
 
     if salt.utils.is_windows() and runas and cwd is None:
         cwd = tempfile.mkdtemp(dir=__opts__['cachedir'])
@@ -2072,11 +2119,10 @@ def script(source,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                saltenv=saltenv,
-               pillarenv=kwargs.get('pillarenv'),
-               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
                bg=bg,
-               password=password)
+               password=password,
+               **kwargs)
     if salt.utils.is_windows() and runas:
         _cleanup_tempfile(cwd)
     else:
@@ -2096,7 +2142,6 @@ def script_retcode(source,
                    umask=None,
                    timeout=None,
                    reset_system_locale=True,
-                   __env__=None,
                    saltenv='base',
                    output_loglevel='debug',
                    log_callback=None,
@@ -2176,7 +2221,7 @@ def script_retcode(source,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -2224,6 +2269,15 @@ def script_retcode(source,
 
         salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    if '__env__' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'__env__\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('__env__')
+
     return script(source=source,
                   args=args,
                   cwd=cwd,
@@ -2236,7 +2290,6 @@ def script_retcode(source,
                   umask=umask,
                   timeout=timeout,
                   reset_system_locale=reset_system_locale,
-                  __env__=__env__,
                   saltenv=saltenv,
                   output_loglevel=output_loglevel,
                   log_callback=log_callback,
@@ -2444,7 +2497,7 @@ def run_chroot(root,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -2609,6 +2662,184 @@ def shells():
     return ret
 
 
+def shell_info(shell, list_modules=False):
+    '''
+    .. versionadded:: 2016.11.0
+
+    Provides information about a shell or script languages which often use
+    ``#!``. The values returned are dependant on the shell or scripting
+    languages all return the ``installed``, ``path``, ``version``,
+    ``version_raw``
+
+    Args:
+        shell (str): Name of the shell. Support shells/script languages include
+        bash, cmd, perl, php, powershell, python, ruby and zsh
+
+        list_modules (bool): True to list modules available to the shell.
+        Currently only lists powershell modules.
+
+    Returns:
+        dict: A dictionary of information about the shell
+
+    .. code-block:: python
+
+        {'version': '<2 or 3 numeric components dot-separated>',
+         'version_raw': '<full version string>',
+         'path': '<full path to binary>',
+         'installed': <True, False or None>,
+         '<attribute>': '<attribute value>'}
+
+    .. note::
+        - ``installed`` is always returned, if ``None`` or ``False`` also
+          returns error and may also return ``stdout`` for diagnostics.
+        - ``version`` is for use in determine if a shell/script language has a
+          particular feature set, not for package management.
+        - The shell must be within the executable search path.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.shell_info bash
+        salt '*' cmd.shell_info powershell
+
+    :codeauthor: Damon Atkins <https://github.com/damon-atkins>
+    '''
+    regex_shells = {
+        'bash': [r'version (\d\S*)', 'bash', '--version'],
+        'bash-test-error': [r'versioZ ([-\w.]+)', 'bash', '--version'],  # used to test a error result
+        'bash-test-env': [r'(HOME=.*)', 'bash', '-c', 'declare'],  # used to test a error result
+        'zsh': [r'^zsh (\d\S*)', 'zsh', '--version'],
+        'tcsh': [r'^tcsh (\d\S*)', 'tcsh', '--version'],
+        'cmd': [r'Version ([\d.]+)', 'cmd.exe', '/C', 'ver'],
+        'powershell': [r'PSVersion\s+(\d\S*)', 'powershell', '-NonInteractive', '$PSVersionTable'],
+        'perl': [r'^(\d\S*)', 'perl', '-e', 'printf "%vd\n", $^V;'],
+        'python': [r'^Python (\d\S*)', 'python', '-V'],
+        'ruby': [r'^ruby (\d\S*)', 'ruby', '-v'],
+        'php': [r'^PHP (\d\S*)', 'php', '-v']
+    }
+    # Ensure ret['installed'] always as a value of True, False or None (not sure)
+    ret = {'installed': False}
+    if salt.utils.is_windows() and shell == 'powershell':
+        pw_keys = __salt__['reg.list_keys'](
+            'HKEY_LOCAL_MACHINE',
+            'Software\\Microsoft\\PowerShell')
+        pw_keys.sort(key=int)
+        if len(pw_keys) == 0:
+            return {
+                'error': 'Unable to locate \'powershell\' Reason: Cannot be '
+                         'found in registry.',
+                'installed': False,
+            }
+        for reg_ver in pw_keys:
+            install_data = __salt__['reg.read_value'](
+                'HKEY_LOCAL_MACHINE',
+                'Software\\Microsoft\\PowerShell\\{0}'.format(reg_ver),
+                'Install')
+            if 'vtype' in install_data and \
+                    install_data['vtype'] == 'REG_DWORD' and \
+                    install_data['vdata'] == 1:
+                details = __salt__['reg.list_values'](
+                    'HKEY_LOCAL_MACHINE',
+                    'Software\\Microsoft\\PowerShell\\{0}\\'
+                    'PowerShellEngine'.format(reg_ver))
+
+                # reset data, want the newest version details only as powershell
+                # is backwards compatible
+                ret = {}
+
+                # if all goes well this will become True
+                ret['installed'] = None
+                ret['path'] = which('powershell.exe')
+                for attribute in details:
+                    if attribute['vname'].lower() == '(default)':
+                        continue
+                    elif attribute['vname'].lower() == 'powershellversion':
+                        ret['psversion'] = attribute['vdata']
+                        ret['version_raw'] = attribute['vdata']
+                    elif attribute['vname'].lower() == 'runtimeversion':
+                        ret['crlversion'] = attribute['vdata']
+                        if ret['crlversion'][0].lower() == 'v':
+                            ret['crlversion'] = ret['crlversion'][1::]
+                    elif attribute['vname'].lower() == 'pscompatibleversion':
+                        # reg attribute does not end in s, the powershell
+                        # attribute does
+                        ret['pscompatibleversions'] = \
+                            attribute['vdata'].replace(' ', '').split(',')
+                    else:
+                        # keys are lower case as python is case sensitive the
+                        # registry is not
+                        ret[attribute['vname'].lower()] = attribute['vdata']
+    else:
+        if shell not in regex_shells:
+            return {
+                'error': 'Salt does not know how to get the version number for '
+                         '{0}'.format(shell),
+                'installed': None
+            }
+        shell_data = regex_shells[shell]
+        pattern = shell_data.pop(0)
+        # We need to make sure HOME set, so shells work correctly
+        # salt-call will general have home set, the salt-minion service may not
+        # We need to assume ports of unix shells to windows will look after
+        # themselves in setting HOME as they do it in many different ways
+        newenv = os.environ
+        if ('HOME' not in newenv) and (not salt.utils.is_windows()):
+            newenv['HOME'] = os.path.expanduser('~')
+            log.debug('HOME environment set to {0}'.format(newenv['HOME']))
+        try:
+            proc = salt.utils.timed_subprocess.TimedProc(
+                shell_data,
+                stdin=None,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=10,
+                env=newenv
+                )
+        except (OSError, IOError) as exc:
+            return {
+                'error': 'Unable to run command \'{0}\' Reason: {1}'.format(' '.join(shell_data), exc),
+                'installed': False,
+            }
+        try:
+            proc.run()
+        except TimedProcTimeoutError as exc:
+            return {
+                'error': 'Unable to run command \'{0}\' Reason: Timed out.'.format(' '.join(shell_data)),
+                'installed': False,
+            }
+
+        ret['path'] = which(shell_data[0])
+        pattern_result = re.search(pattern, proc.stdout, flags=re.IGNORECASE)
+        # only set version if we find it, so code later on can deal with it
+        if pattern_result:
+            ret['version_raw'] = pattern_result.group(1)
+
+    if 'version_raw' in ret:
+        version_results = re.match(r'(\d[\d.]*)', ret['version_raw'])
+        if version_results:
+            ret['installed'] = True
+            ver_list = version_results.group(1).split('.')[:3]
+            if len(ver_list) == 1:
+                ver_list.append('0')
+            ret['version'] = '.'.join(ver_list[:3])
+    else:
+        ret['installed'] = None  # Have an unexpected result
+
+    # Get a list of the PowerShell modules which are potentially available
+    # to be imported
+    if shell == 'powershell' and ret['installed'] and list_modules:
+        ret['modules'] = salt.utils.powershell.get_modules()
+
+    if 'version' not in ret:
+        ret['error'] = 'The version regex pattern for shell {0}, could not ' \
+                       'find the version string'.format(shell)
+        ret['stdout'] = proc.stdout  # include stdout so they can see the issue
+        log.error(ret['error'])
+
+    return ret
+
+
 def powershell(cmd,
         cwd=None,
         stdin=None,
@@ -2628,6 +2859,7 @@ def powershell(cmd,
         use_vt=False,
         password=None,
         depth=None,
+        encode_cmd=False,
         **kwargs):
     '''
     Execute the passed PowerShell command and return the output as a dictionary.
@@ -2720,7 +2952,7 @@ def powershell(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -2764,6 +2996,10 @@ def powershell(cmd,
 
         .. versionadded:: 2016.3.4
 
+    :param bool encode_cmd: Encode the command before executing. Use in cases
+      where characters may be dropped or incorrectly converted when executed.
+      Default is False.
+
     :returns:
         :dict: A dictionary of data returned by the powershell command.
 
@@ -2782,6 +3018,16 @@ def powershell(cmd,
     cmd += ' | ConvertTo-JSON'
     if depth is not None:
         cmd += ' -Depth {0}'.format(depth)
+
+    if encode_cmd:
+        # Convert the cmd to UTF-16LE without a BOM and base64 encode.
+        # Just base64 encoding UTF-8 or including a BOM is not valid.
+        log.debug('Encoding PowerShell command \'{0}\''.format(cmd))
+        cmd_utf16 = cmd.decode('utf-8').encode('utf-16le')
+        cmd = base64.standard_b64encode(cmd_utf16)
+        encoded_cmd = True
+    else:
+        encoded_cmd = False
 
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(cmd,
@@ -2803,6 +3049,7 @@ def powershell(cmd,
                    use_vt=use_vt,
                    python_shell=python_shell,
                    password=password,
+                   encoded_cmd=encoded_cmd,
                    **kwargs)
 
     try:
@@ -2891,7 +3138,7 @@ def run_bg(cmd,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -2980,9 +3227,9 @@ def run_bg(cmd,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
-               pillarenv=kwargs.get('pillarenv'),
-               pillar_override=kwargs.get('pillar'),
-               password=password)
+               password=password,
+               **kwargs
+               )
 
     return {
         'pid': res['pid']

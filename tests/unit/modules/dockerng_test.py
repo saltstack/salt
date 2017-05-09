@@ -16,21 +16,21 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     patch
 )
+from contextlib import nested
+from salt.ext.six.moves import range
 
 ensure_in_syspath('../../')
 
 # Import Salt Libs
-from salt.modules import dockerng as dockerng_mod
+import salt.modules.dockerng as dockerng_mod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 dockerng_mod.__salt__ = {}
-
-
-def _docker_py_version():
-    return dockerng_mod.docker.version_info if dockerng_mod.HAS_DOCKER_PY else None
+dockerng_mod.__opts__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(dockerng_mod.HAS_DOCKER_PY is False, 'docker-py must be installed to run these tests. Skipping.')
 class DockerngTestCase(TestCase):
     '''
     Validate dockerng module
@@ -40,6 +40,38 @@ class DockerngTestCase(TestCase):
         Ensure we aren't persisting context dunders between tests
         '''
         dockerng_mod.__context__ = {'docker.docker_version': ''}
+
+    try:
+        docker_version = dockerng_mod.docker.version_info
+    except AttributeError:
+        docker_version = 0,
+
+    client_args_mock = MagicMock(return_value={
+        'create_container': [
+            'image', 'command', 'hostname', 'user', 'detach', 'stdin_open',
+            'tty', 'ports', 'environment', 'volumes', 'network_disabled',
+            'name', 'entrypoint', 'working_dir', 'domainname', 'cpuset',
+            'host_config', 'mac_address', 'labels', 'volume_driver',
+            'stop_signal', 'networking_config', 'healthcheck',
+            'stop_timeout'],
+        'host_config': [
+            'binds', 'port_bindings', 'lxc_conf', 'publish_all_ports',
+            'links', 'privileged', 'dns', 'dns_search', 'volumes_from',
+            'network_mode', 'restart_policy', 'cap_add', 'cap_drop',
+            'devices', 'extra_hosts', 'read_only', 'pid_mode', 'ipc_mode',
+            'security_opt', 'ulimits', 'log_config', 'mem_limit',
+            'memswap_limit', 'mem_reservation', 'kernel_memory',
+            'mem_swappiness', 'cgroup_parent', 'group_add', 'cpu_quota',
+            'cpu_period', 'blkio_weight', 'blkio_weight_device',
+            'device_read_bps', 'device_write_bps', 'device_read_iops',
+            'device_write_iops', 'oom_kill_disable', 'shm_size', 'sysctls',
+            'tmpfs', 'oom_score_adj', 'dns_opt', 'cpu_shares',
+            'cpuset_cpus', 'userns_mode', 'pids_limit', 'isolation',
+            'auto_remove', 'storage_opt'],
+        'networking_config': [
+            'aliases', 'links', 'ipv4_address', 'ipv6_address',
+            'link_local_ips'],
+    })
 
     def test_ps_with_host_true(self):
         '''
@@ -72,7 +104,6 @@ class DockerngTestCase(TestCase):
                 all=True,
                 filters={'label': 'KEY'})
 
-    @skipIf(_docker_py_version() is None, 'docker-py needs to be installed for this test to run')
     @patch.object(dockerng_mod, '_get_exec_driver')
     def test_check_mine_cache_is_refreshed_on_container_change_event(self, _):
         '''
@@ -102,11 +133,12 @@ class DockerngTestCase(TestCase):
                              'container_resource.run': MagicMock(),
                              'cp.cache_file': MagicMock(return_value=False)}):
                 with patch.object(dockerng_mod, '_get_client', get_client_mock):
-                    command('container', *args)
+                    with patch.object(dockerng_mod, 'get_client_args', self.client_args_mock):
+                        command('container', *args)
             mine_send.assert_called_with('dockerng.ps', verbose=True, all=True,
                                          host=True)
 
-    @skipIf(_docker_py_version() < (1, 4, 0),
+    @skipIf(docker_version < (1, 4, 0),
             'docker module must be installed to run this test or is too old. >=1.4.0')
     @patch.object(dockerng_mod, 'images', MagicMock())
     @patch.object(dockerng_mod, 'inspect_image')
@@ -126,17 +158,17 @@ class DockerngTestCase(TestCase):
         client.create_container.return_value = {}
         get_client_mock = MagicMock(return_value=client)
 
-        with patch.dict(dockerng_mod.__dict__,
-                        {'__salt__': __salt__}):
+        with patch.dict(dockerng_mod.__dict__, {'__salt__': __salt__}):
             with patch.object(dockerng_mod, '_get_client', get_client_mock):
-                dockerng_mod.create('image', cmd='ls', name='ctn')
+                with patch.object(dockerng_mod, 'get_client_args', self.client_args_mock):
+                    dockerng_mod.create('image', cmd='ls', name='ctn')
         client.create_container.assert_called_once_with(
             command='ls',
             host_config=host_config,
             image='image',
             name='ctn')
 
-    @skipIf(_docker_py_version() < (1, 4, 0),
+    @skipIf(docker_version < (1, 4, 0),
             'docker module must be installed to run this test or is too old. >=1.4.0')
     @patch.object(dockerng_mod, 'images', MagicMock())
     @patch.object(dockerng_mod, 'inspect_image')
@@ -156,16 +188,16 @@ class DockerngTestCase(TestCase):
         client.create_container.return_value = {}
         get_client_mock = MagicMock(return_value=client)
 
-        with patch.dict(dockerng_mod.__dict__,
-                        {'__salt__': __salt__}):
+        with patch.dict(dockerng_mod.__dict__, {'__salt__': __salt__}):
             with patch.object(dockerng_mod, '_get_client', get_client_mock):
-                dockerng_mod.create('image', name='ctn', publish_all_ports=True)
+                with patch.object(dockerng_mod, 'get_client_args', self.client_args_mock):
+                    dockerng_mod.create('image', name='ctn', publish_all_ports=True)
         client.create_container.assert_called_once_with(
             host_config=host_config,
             image='image',
             name='ctn')
 
-    @skipIf(_docker_py_version() < (1, 4, 0),
+    @skipIf(docker_version < (1, 4, 0),
             'docker module must be installed to run this test or is too old. >=1.4.0')
     @patch.object(dockerng_mod, 'images', MagicMock())
     @patch.object(dockerng_mod, 'inspect_image')
@@ -177,6 +209,7 @@ class DockerngTestCase(TestCase):
         __salt__ = {
             'config.get': Mock(),
             'mine.send': Mock(),
+            'dockerng.version': MagicMock(return_value={}),
         }
         host_config = {}
         client = Mock()
@@ -185,15 +218,15 @@ class DockerngTestCase(TestCase):
         client.create_container.return_value = {}
         get_client_mock = MagicMock(return_value=client)
 
-        with patch.dict(dockerng_mod.__dict__,
-                        {'__salt__': __salt__}):
+        with patch.dict(dockerng_mod.__dict__, {'__salt__': __salt__}):
             with patch.object(dockerng_mod, '_get_client', get_client_mock):
-                dockerng_mod.create(
-                    'image',
-                    name='ctn',
-                    labels={'KEY': 'VALUE'},
-                    validate_input=True,
-                )
+                with patch.object(dockerng_mod, 'get_client_args', self.client_args_mock):
+                    dockerng_mod.create(
+                        'image',
+                        name='ctn',
+                        labels={'KEY': 'VALUE'},
+                        validate_input=True,
+                    )
         client.create_container.assert_called_once_with(
             labels={'KEY': 'VALUE'},
             host_config=host_config,
@@ -201,7 +234,7 @@ class DockerngTestCase(TestCase):
             name='ctn',
         )
 
-    @skipIf(_docker_py_version() < (1, 4, 0),
+    @skipIf(docker_version < (1, 4, 0),
             'docker module must be installed to run this test or is too old. >=1.4.0')
     @patch.object(dockerng_mod, 'images', MagicMock())
     @patch.object(dockerng_mod, 'inspect_image')
@@ -213,6 +246,7 @@ class DockerngTestCase(TestCase):
         __salt__ = {
             'config.get': Mock(),
             'mine.send': Mock(),
+            'dockerng.version': MagicMock(return_value={}),
         }
         host_config = {}
         client = Mock()
@@ -220,15 +254,15 @@ class DockerngTestCase(TestCase):
         client.create_host_config.return_value = host_config
         client.create_container.return_value = {}
         get_client_mock = MagicMock(return_value=client)
-        with patch.dict(dockerng_mod.__dict__,
-                        {'__salt__': __salt__}):
+        with patch.dict(dockerng_mod.__dict__, {'__salt__': __salt__}):
             with patch.object(dockerng_mod, '_get_client', get_client_mock):
-                dockerng_mod.create(
-                    'image',
-                    name='ctn',
-                    labels=['KEY1', 'KEY2'],
-                    validate_input=True,
-                )
+                with patch.object(dockerng_mod, 'get_client_args', self.client_args_mock):
+                    dockerng_mod.create(
+                        'image',
+                        name='ctn',
+                        labels=['KEY1', 'KEY2'],
+                        validate_input=True,
+                    )
         client.create_container.assert_called_once_with(
             labels=['KEY1', 'KEY2'],
             host_config=host_config,
@@ -236,7 +270,7 @@ class DockerngTestCase(TestCase):
             name='ctn',
         )
 
-    @skipIf(_docker_py_version() < (1, 4, 0),
+    @skipIf(docker_version < (1, 4, 0),
             'docker module must be installed to run this test or is too old. >=1.4.0')
     @patch.object(dockerng_mod, 'images', MagicMock())
     @patch.object(dockerng_mod, 'inspect_image')
@@ -248,6 +282,7 @@ class DockerngTestCase(TestCase):
         __salt__ = {
             'config.get': Mock(),
             'mine.send': Mock(),
+            'dockerng.version': MagicMock(return_value={}),
         }
         host_config = {}
         client = Mock()
@@ -259,15 +294,16 @@ class DockerngTestCase(TestCase):
         with patch.dict(dockerng_mod.__dict__,
                         {'__salt__': __salt__}):
             with patch.object(dockerng_mod, '_get_client', get_client_mock):
-                self.assertRaises(SaltInvocationError,
-                                  dockerng_mod.create,
-                                  'image',
-                                  name='ctn',
-                                  labels=22,
-                                  validate_input=True,
-                                  )
+                with patch.object(dockerng_mod, 'get_client_args', self.client_args_mock):
+                    self.assertRaises(SaltInvocationError,
+                                      dockerng_mod.create,
+                                      'image',
+                                      name='ctn',
+                                      labels=22,
+                                      validate_input=True,
+                                      )
 
-    @skipIf(_docker_py_version() < (1, 4, 0),
+    @skipIf(docker_version < (1, 4, 0),
             'docker module must be installed to run this test or is too old. >=1.4.0')
     @patch.object(dockerng_mod, 'images', MagicMock())
     @patch.object(dockerng_mod, 'inspect_image')
@@ -279,6 +315,7 @@ class DockerngTestCase(TestCase):
         __salt__ = {
             'config.get': Mock(),
             'mine.send': Mock(),
+            'dockerng.version': MagicMock(return_value={}),
         }
         host_config = {}
         client = Mock()
@@ -287,15 +324,15 @@ class DockerngTestCase(TestCase):
         client.create_container.return_value = {}
         get_client_mock = MagicMock(return_value=client)
 
-        with patch.dict(dockerng_mod.__dict__,
-                        {'__salt__': __salt__}):
+        with patch.dict(dockerng_mod.__dict__, {'__salt__': __salt__}):
             with patch.object(dockerng_mod, '_get_client', get_client_mock):
-                dockerng_mod.create(
-                    'image',
-                    name='ctn',
-                    labels=[{'KEY1': 'VALUE1'}, {'KEY2': 'VALUE2'}],
-                    validate_input=True,
-                )
+                with patch.object(dockerng_mod, 'get_client_args', self.client_args_mock):
+                    dockerng_mod.create(
+                        'image',
+                        name='ctn',
+                        labels=[{'KEY1': 'VALUE1'}, {'KEY2': 'VALUE2'}],
+                        validate_input=True,
+                    )
         client.create_container.assert_called_once_with(
             labels={'KEY1': 'VALUE1', 'KEY2': 'VALUE2'},
             host_config=host_config,
@@ -303,8 +340,10 @@ class DockerngTestCase(TestCase):
             name='ctn',
         )
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_list_networks(self, *args):
         '''
         test list networks.
@@ -330,8 +369,10 @@ class DockerngTestCase(TestCase):
                     ids=['01234'],
         )
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_create_network(self, *args):
         '''
         test create network.
@@ -351,8 +392,10 @@ class DockerngTestCase(TestCase):
                 dockerng_mod.create_network('foo', driver='bridge')
         client.create_network.assert_called_once_with('foo', driver='bridge')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_remove_network(self, *args):
         '''
         test remove network.
@@ -372,8 +415,10 @@ class DockerngTestCase(TestCase):
                 dockerng_mod.remove_network('foo')
         client.remove_network.assert_called_once_with('foo')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_inspect_network(self, *args):
         '''
         test inspect network.
@@ -393,8 +438,10 @@ class DockerngTestCase(TestCase):
                 dockerng_mod.inspect_network('foo')
         client.inspect_network.assert_called_once_with('foo')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_connect_container_to_network(self, *args):
         '''
         test inspect network.
@@ -415,8 +462,10 @@ class DockerngTestCase(TestCase):
         client.connect_container_to_network.assert_called_once_with(
             'container', 'foo')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_disconnect_container_from_network(self, *args):
         '''
         test inspect network.
@@ -437,8 +486,10 @@ class DockerngTestCase(TestCase):
         client.disconnect_container_from_network.assert_called_once_with(
             'container', 'foo')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_list_volumes(self, *args):
         '''
         test list volumes.
@@ -457,8 +508,10 @@ class DockerngTestCase(TestCase):
                 dockerng_mod.volumes(filters={'dangling': [True]})
         client.volumes.assert_called_once_with(filters={'dangling': [True]})
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_create_volume(self, *args):
         '''
         test create volume.
@@ -485,8 +538,10 @@ class DockerngTestCase(TestCase):
                     driver_opts={},
         )
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_remove_volume(self, *args):
         '''
         test remove volume.
@@ -505,8 +560,10 @@ class DockerngTestCase(TestCase):
                 dockerng_mod.remove_volume('foo')
         client.remove_volume.assert_called_once_with('foo')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
+    @patch('salt.modules.dockerng._get_docker_py_versioninfo',
+           MagicMock(return_value=docker_version))
     def test_inspect_volume(self, *args):
         '''
         test inspect volume.
@@ -640,6 +697,123 @@ class DockerngTestCase(TestCase):
                                   'exit_status': 1,
                                   'state': {'new': 'stopped',
                                             'old': 'stopped'}})
+
+    def test_sls_build(self, *args):
+        '''
+        test build sls image.
+        '''
+        docker_start_mock = MagicMock(
+            return_value={})
+        docker_create_mock = MagicMock(
+            return_value={'Id': 'ID', 'Name': 'NAME'})
+        docker_stop_mock = MagicMock(
+            return_value={'state': {'old': 'running', 'new': 'stopped'},
+                          'result': True})
+        docker_commit_mock = MagicMock(
+            return_value={'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42})
+
+        docker_sls_mock = MagicMock(
+            return_value={
+                "file_|-/etc/test.sh_|-/etc/test.sh_|-managed": {
+                    "comment": "File /etc/test.sh is in the correct state",
+                    "name": "/etc/test.sh",
+                    "start_time": "07:04:26.834792",
+                    "result": True,
+                    "duration": 13.492,
+                    "__run_num__": 0,
+                    "changes": {}
+                },
+                "test_|-always-passes_|-foo_|-succeed_without_changes": {
+                    "comment": "Success!",
+                    "name": "foo",
+                    "start_time": "07:04:26.848915",
+                    "result": True,
+                    "duration": 0.363,
+                    "__run_num__": 1,
+                    "changes": {}
+                }
+            })
+
+        ret = None
+        with patch.dict(dockerng_mod.__salt__, {
+                'dockerng.start': docker_start_mock,
+                'dockerng.create': docker_create_mock,
+                'dockerng.stop': docker_stop_mock,
+                'dockerng.commit': docker_commit_mock,
+                'dockerng.sls': docker_sls_mock}):
+            ret = dockerng_mod.sls_build(
+                'foo',
+                mods='foo',
+            )
+        docker_create_mock.assert_called_once_with(
+            cmd='sleep infinity',
+            image='opensuse/python', interactive=True, name='foo', tty=True)
+        docker_start_mock.assert_called_once_with('ID')
+        docker_sls_mock.assert_called_once_with('ID', 'foo', 'base')
+        docker_stop_mock.assert_called_once_with('ID')
+        docker_commit_mock.assert_called_once_with('ID', 'foo')
+        self.assertEqual(
+            {'Id': 'ID2', 'Image': 'foo', 'Time_Elapsed': 42}, ret)
+
+    def test_call_success(self):
+        '''
+        test module calling inside containers
+        '''
+        docker_run_all_mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '{"retcode": 0, "comment": "container cmd"}',
+                'stderr': 'err',
+            })
+        docker_copy_to_mock = MagicMock(
+            return_value={
+                'retcode': 0
+            })
+        client = Mock()
+        client.put_archive = Mock()
+
+        with nested(
+                patch.dict(
+                    dockerng_mod.__opts__, {'cachedir': '/tmp'}),
+                patch.dict(
+                    dockerng_mod.__salt__, {
+                        'dockerng.run_all': docker_run_all_mock,
+                        'dockerng.copy_to': docker_copy_to_mock,
+                    }),
+                patch.dict(
+                    dockerng_mod.__context__, {
+                        'docker.client': client
+                    }
+                )
+        ):
+            # call twice to verify tmp path later
+            for i in range(2):
+                ret = dockerng_mod.call(
+                    'ID',
+                    'test.arg',
+                    1, 2,
+                    arg1='val1')
+
+        # Check that the directory is different each time
+        # [ call(name, [args]), ...
+        self.assertIn('mkdir', docker_run_all_mock.mock_calls[0][1][1])
+        self.assertIn('mkdir', docker_run_all_mock.mock_calls[3][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[0][1][1],
+                            docker_run_all_mock.mock_calls[3][1][1])
+
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[1][1][1])
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[4][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
+                            docker_run_all_mock.mock_calls[4][1][1])
+
+        # check directory cleanup
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[2][1][1])
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[5][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[2][1][1],
+                            docker_run_all_mock.mock_calls[5][1][1])
+
+        self.assertEqual(
+            {"retcode": 0, "comment": "container cmd"}, ret)
 
     def test_images_with_empty_tags(self):
         """

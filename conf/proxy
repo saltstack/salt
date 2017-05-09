@@ -28,7 +28,7 @@
 # dictionary.  Otherwise it is assumed that the module calls the grains
 # function in a custom way and returns the data elsewhere
 #
-# Default to False for 2016.3 and Carbon.  Switch to True for Nitrogen.
+# Default to False for 2016.3 and 2016.11.  Switch to True for Nitrogen.
 # proxy_merge_grains_in_module: False
 
 # If multiple masters are specified in the 'master' setting, the default behavior
@@ -443,6 +443,9 @@
 # WARNING: While md5 and sha1 are also supported, do not use it due to the high chance
 # of possible collisions and thus security breach.
 #
+# WARNING: While md5 is also supported, do not use it due to the high chance
+# of possible collisions and thus security breach.
+#
 # Warning: Prior to changing this value, the minion should be stopped and all
 # Salt caches should be cleared.
 #hash_type: sha256
@@ -553,7 +556,7 @@
 #log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #
-#log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+#log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This
 # example sets the main salt library at the 'warning' level, but sets

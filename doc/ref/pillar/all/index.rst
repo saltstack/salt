@@ -14,7 +14,9 @@ pillar modules
     cmd_yaml
     cmd_yamlex
     cobbler
+    confidant
     consul_pillar
+    csvpillar
     django_orm
     ec2_pillar
     etcd_pillar
@@ -23,11 +25,14 @@ pillar modules
     git_pillar
     hg_pillar
     hiera
+    http_json
     http_yaml
     libvirt
+    makostack
     mongo
     mysql
     neutron
+    nodegroups
     pepa
     pillar_ldap
     puppet
@@ -40,4 +45,5 @@ pillar modules
     stack
     svn_pillar
     varstack_pillar
+    vault
     virtkey

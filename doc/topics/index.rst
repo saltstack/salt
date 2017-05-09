@@ -6,6 +6,7 @@ Introduction to Salt
 
 The 30 second summary
 =====================
+
 Salt is:
 
 * a configuration management system, capable of maintaining remote nodes
@@ -88,6 +89,8 @@ open and proprietary projects. Please submit your expansions back to
 the Salt project so that we can all benefit together as Salt grows.
 Please feel free to sprinkle Salt around your systems and let the
 deliciousness come forth.
+
+.. _salt-community:
 
 Salt Community
 ==============
@@ -184,3 +187,4 @@ documentation efforts, please review the :ref:`contributing documentation
 <contributing>`!
 
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
+

@@ -420,20 +420,6 @@ def install(name=None,
     return ret
 
 
-def upgrade():
-    '''
-    Upgrades are not supported with ``pkg_add(1)``. This function is included
-    for API compatibility only and always returns an empty dict.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' pkg.upgrade
-    '''
-    return {}
-
-
 def remove(name=None, pkgs=None, **kwargs):
     '''
     Remove packages using ``pkg_delete(1)``

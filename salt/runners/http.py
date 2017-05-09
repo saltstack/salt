@@ -32,7 +32,7 @@ def query(url, output=True, **kwargs):
             data='<xml>somecontent</xml>'
     '''
     if output is not True:
-        log.warn('Output option has been deprecated. Please use --quiet.')
+        log.warning('Output option has been deprecated. Please use --quiet.')
     if 'node' not in kwargs:
         kwargs['node'] = 'master'
 

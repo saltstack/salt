@@ -1,0 +1,12 @@
+[Unit]
+Description=salt-proxy service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/salt-proxy --proxyid=%I
+Type=simple
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

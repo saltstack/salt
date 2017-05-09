@@ -116,7 +116,7 @@ class GroupAddTestCase(TestCase):
             {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
              'cmd': ('gpasswd', '-a', 'root', 'test')},
 
-            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11, 2]},
+            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osmajorrelease': '11'},
              'cmd': ('usermod', '-A', 'test', 'root')},
 
             {'grains': {'kernel': 'Linux'},
@@ -143,7 +143,7 @@ class GroupAddTestCase(TestCase):
             {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
              'cmd': ('gpasswd', '-d', 'root', 'test')},
 
-            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11, 2]},
+            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osmajorrelease': '11'},
              'cmd': ('usermod', '-R', 'test', 'root')},
 
             {'grains': {'kernel': 'Linux'},
@@ -178,7 +178,7 @@ class GroupAddTestCase(TestCase):
             {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
              'cmd': ('gpasswd', '-M', 'foo', 'test')},
 
-            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11, 2]},
+            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osmajorrelease': '11'},
              'cmd': ('groupmod', '-A', 'foo', 'test')},
 
             {'grains': {'kernel': 'Linux'},

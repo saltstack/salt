@@ -269,6 +269,20 @@ logs. The following code snippet demonstrates writing log messages:
     log.error('It Is Busted')
 
 
+Strings and Unicode
+===================
+
+A state module author should always assume that strings fed to the module
+have already decoded from strings into Unicode. In Python 2, these will
+be of type 'Unicode' and in Python 3 they will be of type ``str``. Calling
+from a state to other Salt sub-systems, such as execution modules should
+pass Unicode (or bytes if passing binary data). In the rare event that a state needs to write directly
+to disk, Unicode should be encoded to a string immediately before writing
+to disk. An author may use ``__salt_system_encoding__`` to learn what the
+encoding type of the system is. For example,
+`'my_string'.encode(__salt_system_encoding__')`.
+
+
 Full State Module Example
 =========================
 

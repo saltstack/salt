@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Installer support for OS X.
+Installer support for macOS.
 
-Installer is the native .pkg/.mpkg package manager for OS X.
+Installer is the native .pkg/.mpkg package manager for macOS.
 '''
 
 # Import Python libs

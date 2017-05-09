@@ -81,7 +81,7 @@ def _read_proc_file(path, opts):
         except IOError:
             pass
         return None
-    if opts['multiprocessing']:
+    if opts.get('multiprocessing'):
         if data.get('pid') == pid:
             return None
     else:

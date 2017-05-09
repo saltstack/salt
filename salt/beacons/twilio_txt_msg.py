@@ -26,7 +26,7 @@ def __virtual__():
         return False
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''

@@ -186,8 +186,19 @@ class ArchiveTestCase(TestCase):
 
     @patch('salt.utils.which', lambda exe: exe)
     def test_cmd_unzip(self):
-        mock = MagicMock(return_value='salt')
-        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+        def _get_mock():
+            '''
+            Create a new MagicMock for each scenario in this test, so that
+            assert_called_once_with doesn't complain that the same mock object
+            is called more than once.
+            '''
+            return MagicMock(return_value={'stdout': 'salt',
+                                           'stderr': '',
+                                           'pid': 12345,
+                                           'retcode': 0})
+
+        mock = _get_mock()
+        with patch.dict(archive.__salt__, {'cmd.run_all': mock}):
             ret = archive.cmd_unzip(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
@@ -198,11 +209,15 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 ['unzip', '/tmp/salt.{{grains.id}}.zip', '-d', '/tmp/dest',
                  '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                runas=None, python_shell=False, template='jinja'
+                output_loglevel='debug',
+                python_shell=False,
+                redirect_stderr=True,
+                runas=None,
+                template='jinja'
             )
 
-        mock = MagicMock(return_value='salt')
-        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+        mock = _get_mock()
+        with patch.dict(archive.__salt__, {'cmd.run_all': mock}):
             ret = archive.cmd_unzip(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
@@ -213,11 +228,15 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 ['unzip', '/tmp/salt.{{grains.id}}.zip', '-d', '/tmp/dest',
                  '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                runas=None, python_shell=False, template='jinja'
+                output_loglevel='debug',
+                python_shell=False,
+                redirect_stderr=True,
+                runas=None,
+                template='jinja'
             )
 
-        mock = MagicMock(return_value='salt')
-        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+        mock = _get_mock()
+        with patch.dict(archive.__salt__, {'cmd.run_all': mock}):
             ret = archive.cmd_unzip(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
@@ -229,11 +248,15 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 ['unzip', '-fo', '/tmp/salt.{{grains.id}}.zip', '-d',
                  '/tmp/dest', '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                runas=None, python_shell=False, template='jinja'
+                output_loglevel='debug',
+                python_shell=False,
+                redirect_stderr=True,
+                runas=None,
+                template='jinja'
             )
 
-        mock = MagicMock(return_value='salt')
-        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+        mock = _get_mock()
+        with patch.dict(archive.__salt__, {'cmd.run_all': mock}):
             ret = archive.cmd_unzip(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
@@ -245,7 +268,32 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 ['unzip', '-fo', '/tmp/salt.{{grains.id}}.zip', '-d',
                  '/tmp/dest', '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                runas=None, python_shell=False, template='jinja'
+                output_loglevel='debug',
+                python_shell=False,
+                redirect_stderr=True,
+                runas=None,
+                template='jinja'
+            )
+
+        mock = _get_mock()
+        with patch.dict(archive.__salt__, {'cmd.run_all': mock}):
+            ret = archive.cmd_unzip(
+                '/tmp/salt.{{grains.id}}.zip',
+                '/tmp/dest',
+                excludes=['/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
+                template='jinja',
+                options='-fo',
+                password='asdf',
+            )
+            self.assertEqual(['salt'], ret)
+            mock.assert_called_once_with(
+                ['unzip', '-P', 'asdf', '-fo', '/tmp/salt.{{grains.id}}.zip',
+                 '-d', '/tmp/dest', '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
+                output_loglevel='quiet',
+                python_shell=False,
+                redirect_stderr=True,
+                runas=None,
+                template='jinja'
             )
 
     def test_unzip(self):
@@ -255,7 +303,8 @@ class ArchiveTestCase(TestCase):
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
                 excludes='/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
-                template='jinja'
+                template='jinja',
+                extract_perms=False
             )
             self.assertEqual(['salt'], ret)
 

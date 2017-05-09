@@ -65,8 +65,7 @@ def __virtual__():
         return __virtualname__
     if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
         return __virtualname__
-    if __grains__['os'] == 'FreeBSD' and \
-            float(__grains__['osmajorrelease']) == 9:
+    if __grains__['os'] == 'FreeBSD' and int(__grains__['osmajorrelease']) == 9:
         providers = {}
         if 'providers' in __opts__:
             providers = __opts__['providers']
@@ -80,7 +79,7 @@ def __virtual__():
             'on FreeBSD 10 or FreeBSD 9 with providers.pkg set to pkgng.')
 
 
-def _pkg(jail=None, chroot=None):
+def _pkg(jail=None, chroot=None, root=None):
     '''
     Returns the prefix for a pkg command, using -j if a jail is specified, or
     -c if chroot is specified.
@@ -90,14 +89,16 @@ def _pkg(jail=None, chroot=None):
         ret.extend(['-j', jail])
     elif chroot:
         ret.extend(['-c', chroot])
+    elif root:
+        ret.extend(['-r', root])
     return ret
 
 
-def _get_pkgng_version(jail=None, chroot=None):
+def _get_pkgng_version(jail=None, chroot=None, root=None):
     '''
     return the version of 'pkg'
     '''
-    cmd = _pkg(jail, chroot) + ['--version']
+    cmd = _pkg(jail, chroot, root) + ['--version']
     return __salt__['cmd.run'](cmd).strip()
 
 
@@ -118,7 +119,7 @@ def _get_version(name, results):
     return None
 
 
-def _contextkey(jail=None, chroot=None, prefix='pkg.list_pkgs'):
+def _contextkey(jail=None, chroot=None, root=None, prefix='pkg.list_pkgs'):
     '''
     As this module is designed to manipulate packages in jails and chroots, use
     the passed jail/chroot to ensure that a key in the __context__ dict that is
@@ -128,6 +129,8 @@ def _contextkey(jail=None, chroot=None, prefix='pkg.list_pkgs'):
         return str(prefix) + '.jail_{0}'.format(jail)
     elif chroot:
         return str(prefix) + '.chroot_{0}'.format(chroot)
+    elif root:
+        return str(prefix) + '.root_{0}'.format(root)
     return prefix
 
 
@@ -176,6 +179,10 @@ def version(*names, **kwargs):
         Get package version information for the specified chroot (ignored if
         ``jail`` is specified)
 
+    root
+        Get package version information for the specified root (ignored if
+        ``jail`` is specified)
+
     with_origin : False
         Return a nested dictionary containing both the origin name and version
         for each specified package.
@@ -208,7 +215,7 @@ def version(*names, **kwargs):
 info = salt.utils.alias_function(version, 'info')
 
 
-def refresh_db(jail=None, chroot=None, force=False):
+def refresh_db(jail=None, chroot=None, root=None, force=False):
     '''
     Refresh PACKAGESITE contents
 
@@ -230,6 +237,10 @@ def refresh_db(jail=None, chroot=None, force=False):
         Refresh the pkg database within the specified chroot (ignored if
         ``jail`` is specified)
 
+    root
+        Refresh the pkg database within the specified root (ignored if
+        ``jail`` is specified)
+
     force
         Force a full download of the repository catalog without regard to the
         respective ages of the local and remote copies of the catalog.
@@ -240,7 +251,7 @@ def refresh_db(jail=None, chroot=None, force=False):
 
             salt '*' pkg.refresh_db force=True
     '''
-    cmd = _pkg(jail, chroot)
+    cmd = _pkg(jail, chroot, root)
     cmd.append('update')
     if force:
         cmd.append('-f')
@@ -278,20 +289,21 @@ def latest_version(*names, **kwargs):
     jail = kwargs.get('jail')
     chroot = kwargs.get('chroot')
     refresh = kwargs.get('refresh')
-    pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot)
+    root = kwargs.get('root')
+    pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot, root=root)
 
-    if salt.utils.compare_versions(_get_pkgng_version(jail, chroot), '>=', '1.6.0'):
+    if salt.utils.compare_versions(_get_pkgng_version(jail, chroot, root), '>=', '1.6.0'):
         quiet = True
     else:
         quiet = False
 
-    cmd_prefix = _pkg(jail, chroot) + ['search']
+    cmd_prefix = _pkg(jail, chroot, root) + ['search']
     for name in names:
         # FreeBSD supports packages in format java/openjdk7
         if '/' in name:
-            cmd = _pkg(jail, chroot) + ['search']
+            cmd = _pkg(jail, chroot, root) + ['search']
         else:
-            cmd = _pkg(jail, chroot) + ['search', '-S', 'name', '-Q', 'version', '-e']
+            cmd = _pkg(jail, chroot, root) + ['search', '-S', 'name', '-Q', 'version', '-e']
         if quiet:
             cmd.append('-q')
         if not salt.utils.is_true(refresh):
@@ -332,6 +344,7 @@ available_version = salt.utils.alias_function(latest_version, 'available_version
 def list_pkgs(versions_as_list=False,
               jail=None,
               chroot=None,
+              root=None,
               with_origin=False,
               **kwargs):
     '''
@@ -344,6 +357,10 @@ def list_pkgs(versions_as_list=False,
 
     chroot
         List the packages in the specified chroot (ignored if ``jail`` is
+        specified)
+
+    root
+        List the packages in the specified root (ignored if ``jail`` is
         specified)
 
     with_origin : False
@@ -366,8 +383,8 @@ def list_pkgs(versions_as_list=False,
         return {}
 
     versions_as_list = salt.utils.is_true(versions_as_list)
-    contextkey_pkg = _contextkey(jail, chroot)
-    contextkey_origins = _contextkey(jail, chroot, prefix='pkg.origin')
+    contextkey_pkg = _contextkey(jail, chroot, root)
+    contextkey_origins = _contextkey(jail, chroot, root, prefix='pkg.origin')
 
     if contextkey_pkg in __context__:
         ret = copy.deepcopy(__context__[contextkey_pkg])
@@ -384,7 +401,7 @@ def list_pkgs(versions_as_list=False,
     ret = {}
     origins = {}
     out = __salt__['cmd.run_stdout'](
-        _pkg(jail, chroot) + ['info', '-ao'],
+        _pkg(jail, chroot, root) + ['info', '-ao'],
         output_loglevel='trace',
         python_shell=False)
     for line in salt.utils.itertools.split(out, '\n'):
@@ -432,7 +449,7 @@ def update_package_site(new_url):
     return True
 
 
-def stats(local=False, remote=False, jail=None, chroot=None):
+def stats(local=False, remote=False, jail=None, chroot=None, root=None):
     '''
     Return pkgng stats.
 
@@ -475,6 +492,10 @@ def stats(local=False, remote=False, jail=None, chroot=None):
         Retrieve stats from the specified chroot (ignored if ``jail`` is
         specified).
 
+    root
+        Retrieve stats from the specified root (ignored if ``jail`` is
+        specified).
+
         CLI Example:
 
         .. code-block:: bash
@@ -490,7 +511,7 @@ def stats(local=False, remote=False, jail=None, chroot=None):
     if remote:
         opts += 'r'
 
-    cmd = _pkg(jail, chroot)
+    cmd = _pkg(jail, chroot, root)
     cmd.append('stats')
     if opts:
         cmd.append('-' + opts)
@@ -498,7 +519,7 @@ def stats(local=False, remote=False, jail=None, chroot=None):
     return [x.strip('\t') for x in salt.utils.itertools.split(out, '\n')]
 
 
-def backup(file_name, jail=None, chroot=None):
+def backup(file_name, jail=None, chroot=None, root=None):
     '''
     Export installed packages into yaml+mtree file
 
@@ -525,6 +546,12 @@ def backup(file_name, jail=None, chroot=None):
         so the path to the backup file will be relative to the root of the
         chroot.
 
+    root
+        Backup packages from the specified root (ignored if ``jail`` is
+        specified). Note that this will run the command within the root, and
+        so the path to the backup file will be relative to the root of the
+        root.
+
         CLI Example:
 
         .. code-block:: bash
@@ -532,14 +559,14 @@ def backup(file_name, jail=None, chroot=None):
             salt '*' pkg.backup /tmp/pkg chroot=/path/to/chroot
     '''
     ret = __salt__['cmd.run'](
-        _pkg(jail, chroot) + ['backup', '-d', file_name],
+        _pkg(jail, chroot, root) + ['backup', '-d', file_name],
         output_loglevel='trace',
         python_shell=False
     )
     return ret.split('...')[1]
 
 
-def restore(file_name, jail=None, chroot=None):
+def restore(file_name, jail=None, chroot=None, root=None):
     '''
     Reads archive created by pkg backup -d and recreates the database.
 
@@ -566,6 +593,12 @@ def restore(file_name, jail=None, chroot=None):
         so the path to the file from which the pkg database will be restored is
         relative to the root of the chroot.
 
+    root
+        Restore database to the specified root (ignored if ``jail`` is
+        specified). Note that this will run the command within the root, and
+        so the path to the file from which the pkg database will be restored is
+        relative to the root of the root.
+
         CLI Example:
 
         .. code-block:: bash
@@ -573,13 +606,13 @@ def restore(file_name, jail=None, chroot=None):
             salt '*' pkg.restore /tmp/pkg chroot=/path/to/chroot
     '''
     return __salt__['cmd.run'](
-        _pkg(jail, chroot) + ['backup', '-r', file_name],
+        _pkg(jail, chroot, root) + ['backup', '-r', file_name],
         output_loglevel='trace',
         python_shell=False
     )
 
 
-def audit(jail=None, chroot=None):
+def audit(jail=None, chroot=None, root=None):
     '''
     Audits installed packages against known vulnerabilities
 
@@ -602,6 +635,10 @@ def audit(jail=None, chroot=None):
         Audit packages within the specified chroot (ignored if ``jail`` is
         specified)
 
+    root
+        Audit packages within the specified root (ignored if ``jail`` is
+        specified)
+
         CLI Example:
 
         .. code-block:: bash
@@ -609,7 +646,7 @@ def audit(jail=None, chroot=None):
             salt '*' pkg.audit chroot=/path/to/chroot
     '''
     return __salt__['cmd.run'](
-        _pkg(jail, chroot) + ['audit', '-F'],
+        _pkg(jail, chroot, root) + ['audit', '-F'],
         output_loglevel='trace',
         python_shell=False
     )
@@ -621,6 +658,7 @@ def install(name=None,
             sources=None,
             jail=None,
             chroot=None,
+            root=None,
             orphan=False,
             force=False,
             glob=False,
@@ -648,6 +686,10 @@ def install(name=None,
 
     chroot
         Install the package into the specified chroot (ignored if ``jail`` is
+        specified)
+
+    root
+        Install the package into the specified root (ignored if ``jail`` is
         specified)
 
     orphan
@@ -781,7 +823,7 @@ def install(name=None,
     if salt.utils.is_true(pcre):
         opts += 'X'
 
-    old = list_pkgs(jail=jail, chroot=chroot)
+    old = list_pkgs(jail=jail, chroot=chroot, root=root)
 
     if pkg_type == 'file':
         pkg_cmd = 'add'
@@ -801,7 +843,7 @@ def install(name=None,
             else:
                 targets.append('{0}-{1}'.format(param, version_num))
 
-    cmd = _pkg(jail, chroot)
+    cmd = _pkg(jail, chroot, root)
     cmd.append(pkg_cmd)
     if fromrepo:
         cmd.extend(['-r', fromrepo])
@@ -824,9 +866,9 @@ def install(name=None,
     else:
         errors = []
 
-    __context__.pop(_contextkey(jail, chroot), None)
-    __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
-    new = list_pkgs(jail=jail, chroot=chroot)
+    __context__.pop(_contextkey(jail, chroot, root), None)
+    __context__.pop(_contextkey(jail, chroot, root, prefix='pkg.origin'), None)
+    new = list_pkgs(jail=jail, chroot=chroot, root=root)
     ret = salt.utils.compare_dicts(old, new)
 
     if errors:
@@ -842,6 +884,7 @@ def remove(name=None,
            pkgs=None,
            jail=None,
            chroot=None,
+           root=None,
            all_installed=False,
            force=False,
            glob=False,
@@ -872,6 +915,10 @@ def remove(name=None,
 
     chroot
         Delete the package from the specified chroot (ignored if ``jail`` is
+        specified)
+
+    root
+        Delete the package from the specified root (ignored if ``jail`` is
         specified)
 
     all_installed
@@ -946,12 +993,12 @@ def remove(name=None,
         raise CommandExecutionError(exc)
 
     targets = []
-    old = list_pkgs(jail=jail, chroot=chroot, with_origin=True)
+    old = list_pkgs(jail=jail, chroot=chroot, root=root, with_origin=True)
     for pkg in pkg_params.items():
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
         if pkg[0].find("/") > 0:
             origin = pkg[0]
-            pkg = [k for k, v in old.iteritems() if v['origin'] == origin][0]
+            pkg = [k for k, v in six.iteritems(old) if v['origin'] == origin][0]
 
         if pkg[0] in old:
             targets.append(pkg[0])
@@ -977,7 +1024,7 @@ def remove(name=None,
     if salt.utils.is_true(pcre):
         opts += 'X'
 
-    cmd = _pkg(jail, chroot)
+    cmd = _pkg(jail, chroot, root)
     cmd.append('delete')
     if opts:
         cmd.append('-' + opts)
@@ -994,9 +1041,9 @@ def remove(name=None,
     else:
         errors = []
 
-    __context__.pop(_contextkey(jail, chroot), None)
-    __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
-    new = list_pkgs(jail=jail, chroot=chroot, with_origin=True)
+    __context__.pop(_contextkey(jail, chroot, root), None)
+    __context__.pop(_contextkey(jail, chroot, root, prefix='pkg.origin'), None)
+    new = list_pkgs(jail=jail, chroot=chroot, root=root, with_origin=True)
     ret = salt.utils.compare_dicts(old, new)
 
     if errors:
@@ -1018,6 +1065,14 @@ def upgrade(*names, **kwargs):
     Upgrade named or all packages (run a ``pkg upgrade``). If <package name> is
     omitted, the operation is executed on all packages.
 
+    Returns a dictionary containing the changes:
+
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
+
     CLI Example:
 
     .. code-block:: bash
@@ -1035,6 +1090,10 @@ def upgrade(*names, **kwargs):
 
     chroot
         Audit packages within the specified chroot (ignored if ``jail`` is
+        specified)
+
+    root
+        Audit packages within the specified root (ignored if ``jail`` is
         specified)
 
         CLI Example:
@@ -1077,13 +1136,9 @@ def upgrade(*names, **kwargs):
 
             salt '*' pkg.upgrade <package name> dryrun=True
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-           }
-
     jail = kwargs.pop('jail', None)
     chroot = kwargs.pop('chroot', None)
+    root = kwargs.pop('root', None)
     force = kwargs.pop('force', False)
     local = kwargs.pop('local', False)
     dryrun = kwargs.pop('dryrun', False)
@@ -1099,32 +1154,31 @@ def upgrade(*names, **kwargs):
     if opts:
         opts = '-' + opts
 
-    cmd = _pkg(jail, chroot)
+    cmd = _pkg(jail, chroot, root)
     cmd.append('upgrade')
     if opts:
         cmd.append('-' + opts)
     cmd.extend(names)
 
     old = list_pkgs()
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False,
-                                   redirect_stderr=True)
-
-    if call['retcode'] != 0:
-        ret['result'] = False
-        if call['stdout']:
-            ret['comment'] = call['stdout']
-
-    __context__.pop(_contextkey(jail, chroot), None)
-    __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
+    __context__.pop(_contextkey(jail, chroot, root), None)
+    __context__.pop(_contextkey(jail, chroot, root, prefix='pkg.origin'), None)
     new = list_pkgs()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
 
     return ret
 
 
-def clean(jail=None, chroot=None):
+def clean(jail=None, chroot=None, root=None):
     '''
     Cleans the local cache of fetched remote packages
 
@@ -1137,13 +1191,13 @@ def clean(jail=None, chroot=None):
         salt '*' pkg.clean chroot=/path/to/chroot
     '''
     return __salt__['cmd.run'](
-        _pkg(jail, chroot) + ['clean'],
+        _pkg(jail, chroot, root) + ['clean'],
         output_loglevel='trace',
         python_shell=False
     )
 
 
-def autoremove(jail=None, chroot=None, dryrun=False):
+def autoremove(jail=None, chroot=None, root=None, dryrun=False):
     '''
     Delete packages which were automatically installed as dependencies and are
     not required anymore.
@@ -1167,7 +1221,7 @@ def autoremove(jail=None, chroot=None, dryrun=False):
     else:
         opts += 'y'
 
-    cmd = _pkg(jail, chroot)
+    cmd = _pkg(jail, chroot, root)
     cmd.append('autoremove')
     if opts:
         cmd.append('-' + opts)
@@ -1180,6 +1234,7 @@ def autoremove(jail=None, chroot=None, dryrun=False):
 
 def check(jail=None,
           chroot=None,
+          root=None,
           depends=False,
           recompute=False,
           checksum=False):
@@ -1197,6 +1252,10 @@ def check(jail=None,
 
     chroot
         Perform the sanity check in the specified chroot (ignored if ``jail``
+        is specified)
+
+    root
+        Perform the sanity check in the specified root (ignored if ``jail``
         is specified)
 
         CLI Example:
@@ -1246,7 +1305,7 @@ def check(jail=None,
     if checksum:
         opts += 's'
 
-    cmd = _pkg(jail, chroot)
+    cmd = _pkg(jail, chroot, root)
     cmd.append('check')
     if opts:
         cmd.append('-' + opts)
@@ -1257,7 +1316,7 @@ def check(jail=None,
     )
 
 
-def which(path, jail=None, chroot=None, origin=False, quiet=False):
+def which(path, jail=None, chroot=None, root=None, origin=False, quiet=False):
     '''
     Displays which package installed a specific file
 
@@ -1278,6 +1337,10 @@ def which(path, jail=None, chroot=None, origin=False, quiet=False):
 
     chroot
         Perform the check in the specified chroot (ignored if ``jail`` is
+        specified)
+
+    root
+        Perform the check in the specified root (ignored if ``jail`` is
         specified)
 
         CLI Example:
@@ -1311,7 +1374,7 @@ def which(path, jail=None, chroot=None, origin=False, quiet=False):
     if origin:
         opts += 'o'
 
-    cmd = _pkg(jail, chroot)
+    cmd = _pkg(jail, chroot, root)
     cmd.append('which')
     if opts:
         cmd.append('-' + opts)
@@ -1326,6 +1389,7 @@ def which(path, jail=None, chroot=None, origin=False, quiet=False):
 def search(name,
            jail=None,
            chroot=None,
+           root=None,
            exact=False,
            glob=False,
            regex=False,
@@ -1358,6 +1422,10 @@ def search(name,
 
     chroot
         Perform the search using the ``pkg.conf(5)`` from the specified chroot
+        (ignored if ``jail`` is specified)
+
+    root
+        Perform the search using the ``pkg.conf(5)`` from the specified root
         (ignored if ``jail`` is specified)
 
         CLI Example:
@@ -1502,7 +1570,7 @@ def search(name,
     if prefix:
         opts += 'p'
 
-    cmd = _pkg(jail, chroot)
+    cmd = _pkg(jail, chroot, root)
     cmd.append('search')
     if opts:
         cmd.append('-' + opts)
@@ -1517,6 +1585,7 @@ def search(name,
 def fetch(name,
           jail=None,
           chroot=None,
+          root=None,
           fetch_all=False,
           quiet=False,
           fromrepo=None,
@@ -1545,6 +1614,10 @@ def fetch(name,
 
     chroot
         Fetch package in the specified chroot (ignored if ``jail`` is
+        specified)
+
+    root
+        Fetch package in the specified root (ignored if ``jail`` is
         specified)
 
         CLI Example:
@@ -1643,7 +1716,7 @@ def fetch(name,
     if depends:
         opts += 'd'
 
-    cmd = _pkg(jail, chroot)
+    cmd = _pkg(jail, chroot, root)
     cmd.extend(['fetch', '-y'])
     if fromrepo:
         cmd.extend(['-r', fromrepo])
@@ -1660,6 +1733,7 @@ def fetch(name,
 def updating(name,
              jail=None,
              chroot=None,
+             root=None,
              filedate=None,
              filename=None):
     ''''
@@ -1682,6 +1756,10 @@ def updating(name,
 
     chroot
         Perform the action in the specified chroot (ignored if ``jail`` is
+        specified)
+
+    root
+        Perform the action in the specified root (ignored if ``jail`` is
         specified)
 
         CLI Example:
@@ -1715,7 +1793,7 @@ def updating(name,
     if filename:
         opts += 'f {0}'.format(filename)
 
-    cmd = _pkg(jail, chroot)
+    cmd = _pkg(jail, chroot, root)
     cmd.append('updating')
     if opts:
         cmd.append('-' + opts)

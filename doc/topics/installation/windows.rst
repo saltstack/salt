@@ -4,10 +4,9 @@
 Windows
 =======
 
-Salt has full support for running the Salt Minion on Windows.
-
-You must connect Windows Salt minions to a Salt master on a supported operating
-system to control your Salt Minions.
+Salt has full support for running the Salt minion on Windows. You must connect
+Windows Salt minions to a Salt master on a supported operating system to
+control your Salt Minions.
 
 Many of the standard Salt modules have been ported to work on Windows and many
 of the Salt States currently work on Windows as well.
@@ -37,9 +36,15 @@ The 64bit installer has been tested on Windows 7 64bit and Windows Server
 Please file a bug report on our GitHub repo if issues for other platforms are
 found.
 
-The installer asks for 2 bits of information; the master hostname and the
-minion name. The installer will update the minion config with these options and
-then start the minion.
+The installer will detect previous installations of Salt and ask if you would
+like to remove them. Clicking OK will remove the Salt binaries and related
+files but leave any existing config, cache, and PKI information.
+
+The installer asks for two additional bits of information to configure the
+minion; the master hostname and the minion name. The installer will update the
+minion config with these options.
+
+The final page allows you to select which services to start.
 
 The ``salt-minion`` service will appear in the Windows Service Manager and can
 be started and stopped there or with the command line program ``sc`` like any
@@ -70,21 +75,27 @@ The installer can be run silently by providing the ``/S`` option at the command
 line. The installer also accepts the following options for configuring the Salt
 Minion silently:
 
-===================  ===========
-Option               Description
-===================  ===========
-``/minion-name=``    A string value to set the minion name. Default is 'hostname'
-``/master=``         A string value to set the IP address or host name of the
-                     master. Default value is ``salt``.
-``/start-service=``  Either a 1 or 0. '1' will start the service, '0' will not.
-                     Default is to start the service after installation.
-===================  ===========
+- `/master=` A string value to set the IP address or host name of the master. Default value is 'salt'
+- `/minion-name=` A string value to set the minion name. Default is 'hostname'
+- `/start-minion=` Either a 1 or 0. '1' will start the salt-minion service, '0' will not. Default is to start the service after installation.
 
-Here's an example of using the silent installer:
+.. note::
+    `/start-service` has been deprecated but will continue to function as expected for the time being.
+
+Here are some examples of using the silent installer:
 
 .. code-block:: bat
 
-    Salt-Minion-2016.3.3-Setup-amd64.exe /S /master=yoursaltmaster /minion-name=yourminionname /start-service=0
+    # Will install the minion and start the service
+
+    *-Setup-*.exe /S /master=yoursaltmaster /minion-name=yourminionname
+
+.. code-block:: bat
+
+    # Will install the minion but will NOT start the salt-minion service
+
+    *-Setup-*.exe /S /master=yoursaltmaster /minion-name=yourminionname /start-minion=0
+
 
 Running the Salt Minion on Windows as an Unprivileged User
 ==========================================================

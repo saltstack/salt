@@ -21,6 +21,7 @@ import copy
 import os
 import re
 import logging
+import time
 import json
 
 # Import third party libs
@@ -33,6 +34,8 @@ from salt.ext.six.moves.urllib.request import Request as _Request, urlopen as _u
 # pylint: enable=no-name-in-module,import-error,redefined-builtin
 
 # Import salt libs
+import salt.config
+import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
 import salt.utils.pkg.deb
@@ -88,6 +91,8 @@ def __virtual__():
     Confirm this module is on a Debian based system
     '''
     if __grains__.get('os_family') in ('Kali', 'Debian'):
+        return __virtualname__
+    elif __grains__.get('os_family', False) == 'Cumulus':
         return __virtualname__
     return (False, 'The pkg module could not be loaded: unsupported OS family')
 
@@ -219,6 +224,13 @@ def latest_version(*names, **kwargs):
 
     A specific repo can be requested using the ``fromrepo`` keyword argument.
 
+    cache_valid_time
+
+        .. versionadded:: 2016.11.0
+
+        Skip refreshing the package database if refresh has already occurred within
+        <value> seconds
+
     CLI Example:
 
     .. code-block:: bash
@@ -241,6 +253,7 @@ def latest_version(*names, **kwargs):
     fromrepo = _get_repo(**kwargs)
     kwargs.pop('fromrepo', None)
     kwargs.pop('repo', None)
+    cache_valid_time = kwargs.pop('cache_valid_time', 0)
 
     if len(names) == 0:
         return ''
@@ -254,7 +267,7 @@ def latest_version(*names, **kwargs):
 
     # Refresh before looking for the latest version available
     if refresh:
-        refresh_db()
+        refresh_db(cache_valid_time)
 
     try:
         virtpkgs = _get_virtual()
@@ -331,7 +344,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db():
+def refresh_db(cache_valid_time=0):
     '''
     Updates the APT database to latest packages based upon repositories
 
@@ -342,13 +355,33 @@ def refresh_db():
     - ``False``: Problem updating database
     - ``None``: Database already up-to-date
 
+    cache_valid_time
+
+        .. versionadded:: 2016.11.0
+
+        Skip refreshing the package database if refresh has already occurred within
+        <value> seconds
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
+    APT_LISTS_PATH = "/var/lib/apt/lists"
     ret = {}
+    if cache_valid_time:
+        try:
+            latest_update = os.stat(APT_LISTS_PATH).st_mtime
+            now = time.time()
+            log.debug("now: %s, last update time: %s, expire after: %s seconds", now, latest_update, cache_valid_time)
+            if latest_update + cache_valid_time > now:
+                return ret
+        except TypeError as exp:
+            log.warning("expected integer for cache_valid_time parameter, failed with: %s", exp)
+        except IOError as exp:
+            log.warning("could not stat cache directory due to: %s", exp)
+
     cmd = ['apt-get', '-q', 'update']
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
@@ -425,6 +458,13 @@ def install(name=None,
 
     refresh
         Whether or not to refresh the package database before installing.
+
+    cache_valid_time
+
+        .. versionadded:: 2016.11.0
+
+        Skip refreshing the package database if refresh has already occurred within
+        <value> seconds
 
     fromrepo
         Specify a package repository to install from
@@ -672,7 +712,9 @@ def install(name=None,
         log.info('Targeting repo \'{0}\''.format(fromrepo))
 
     cmds = []
+    all_pkgs = []
     if targets:
+        all_pkgs.extend(targets)
         cmd = copy.deepcopy(cmd_prefix)
         cmd.extend(targets)
         cmds.append(cmd)
@@ -686,6 +728,7 @@ def install(name=None,
         cmds.append(cmd)
 
     if to_reinstall:
+        all_pkgs.extend(to_reinstall)
         cmd = copy.deepcopy(cmd_prefix)
         if not sources:
             cmd.append('--reinstall')
@@ -695,11 +738,23 @@ def install(name=None,
     if not cmds:
         return {}
 
+    cache_valid_time = kwargs.pop('cache_valid_time', 0)
     if _refresh_db:
-        refresh_db()
+        refresh_db(cache_valid_time)
 
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
+
+    hold_pkgs = get_selections(state='hold').get('hold', [])
+    # all_pkgs contains the argument to be passed to apt-get install, which
+    # when a specific version is requested will be in the format name=version.
+    # Strip off the '=' if present so we can compare the held package names
+    # against the pacakges we are trying to install.
+    targeted_names = [x.split('=')[0] for x in all_pkgs]
+    to_unhold = [x for x in hold_pkgs if x in targeted_names]
+
+    if to_unhold:
+        unhold(pkgs=to_unhold)
 
     errors = []
     for cmd in cmds:
@@ -717,6 +772,9 @@ def install(name=None,
         if pkgname not in ret or pkgname in old:
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
+
+    if to_unhold:
+        hold(pkgs=to_unhold)
 
     if errors:
         raise CommandExecutionError(
@@ -950,7 +1008,9 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     Upgrades all packages via ``apt-get upgrade`` or ``apt-get dist-upgrade``
     if  ``dist_upgrade`` is ``True``.
 
-    Returns a dict containing the changes::
+    Returns a dictionary containing the changes:
+
+    .. code-block:: python
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
@@ -960,6 +1020,13 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         is to use upgrade.
 
         .. versionadded:: 2014.7.0
+
+    cache_valid_time
+
+        .. versionadded:: 2016.11.0
+
+        Skip refreshing the package database if refresh has already occurred within
+        <value> seconds
 
     force_conf_new
         Always install the new version of any configuration files.
@@ -972,13 +1039,9 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
 
         salt '*' pkg.upgrade
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-           }
-
+    cache_valid_time = kwargs.pop('cache_valid_time', 0)
     if salt.utils.is_true(refresh):
-        refresh_db()
+        refresh_db(cache_valid_time)
 
     old = list_pkgs()
     if 'force_conf_new' in kwargs and kwargs['force_conf_new']:
@@ -1001,19 +1064,19 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
 
     cmd.append('dist-upgrade' if dist_upgrade else 'upgrade')
 
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False,
-                                   redirect_stderr=True,
-                                   env=DPKG_ENV_VARS.copy())
-    if call['retcode'] != 0:
-        ret['result'] = False
-        if call['stdout']:
-            ret['comment'] = call['stdout']
-
+    result = __salt__['cmd.run_all'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False,
+                                     env=DPKG_ENV_VARS.copy())
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
 
     return ret
 
@@ -1359,6 +1422,13 @@ def list_upgrades(refresh=True, dist_upgrade=True, **kwargs):
         Whether to refresh the package database before listing upgrades.
         Default: True.
 
+    cache_valid_time
+
+        .. versionadded:: 2016.11.0
+
+        Skip refreshing the package database if refresh has already occurred within
+        <value> seconds
+
     dist_upgrade
         Whether to list the upgrades using dist-upgrade vs upgrade.  Default is
         to use dist-upgrade.
@@ -1369,8 +1439,9 @@ def list_upgrades(refresh=True, dist_upgrade=True, **kwargs):
 
         salt '*' pkg.list_upgrades
     '''
+    cache_valid_time = kwargs.pop('cache_valid_time', 0)
     if salt.utils.is_true(refresh):
-        refresh_db()
+        refresh_db(cache_valid_time)
     return _get_upgradable(dist_upgrade, **kwargs)
 
 
@@ -1954,8 +2025,13 @@ def mod_repo(repo, saltenv='base', **kwargs):
         imported = output.startswith('-----BEGIN PGP')
         if keyserver:
             if not imported:
-                cmd = ['apt-key', 'adv', '--keyserver', keyserver,
-                       '--logger-fd', '1', '--recv-keys', keyid]
+                http_proxy_url = _get_http_proxy_url()
+                if http_proxy_url:
+                    cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(http_proxy_url),
+                           '--keyserver', keyserver, '--logger-fd', '1', '--recv-keys', keyid]
+                else:
+                    cmd = ['apt-key', 'adv', '--keyserver', keyserver,
+                           '--logger-fd', '1', '--recv-keys', keyid]
                 ret = __salt__['cmd.run_all'](cmd,
                                               python_shell=False,
                                               **kwargs)
@@ -2395,7 +2471,7 @@ def owner(*paths):
     return ret
 
 
-def info_installed(*names):
+def info_installed(*names, **kwargs):
     '''
     Return the information of the named package(s) installed on the system.
 
@@ -2404,15 +2480,27 @@ def info_installed(*names):
     names
         The names of the packages for which to return information.
 
+    failhard
+        Whether to throw an exception if none of the packages are installed.
+        Defaults to True.
+
+        .. versionadded:: 2016.11.3
+
     CLI example:
 
     .. code-block:: bash
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
+        salt '*' pkg.info_installed <package1> failhard=false
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    failhard = kwargs.pop('failhard', True)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names).items():
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard).items():
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
@@ -2432,3 +2520,34 @@ def info_installed(*names):
         ret[pkg_name] = t_nfo
 
     return ret
+
+
+def _get_http_proxy_url():
+    '''
+    Returns the http_proxy_url if proxy_username, proxy_password, proxy_host, and proxy_port
+    config values are set.
+
+    Returns a string.
+    '''
+    http_proxy_url = ''
+    host = __salt__['config.option']('proxy_host')
+    port = __salt__['config.option']('proxy_port')
+    username = __salt__['config.option']('proxy_username')
+    password = __salt__['config.option']('proxy_password')
+
+    # Set http_proxy_url for use in various internet facing actions...eg apt-key adv
+    if host and port:
+        if username and password:
+            http_proxy_url = 'http://{0}:{1}@{2}:{3}'.format(
+                username,
+                password,
+                host,
+                port
+            )
+        else:
+            http_proxy_url = 'http://{0}:{1}'.format(
+                host,
+                port
+            )
+
+    return http_proxy_url

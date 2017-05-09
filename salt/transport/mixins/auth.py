@@ -14,13 +14,19 @@ import binascii
 import salt.crypt
 import salt.payload
 import salt.master
+import salt.transport.frame
 import salt.utils.event
+import salt.ext.six as six
 from salt.utils.cache import CacheCli
 
 # Import Third Party Libs
 import tornado.gen
-from Crypto.Cipher import PKCS1_OAEP
-from Crypto.PublicKey import RSA
+try:
+    from Cryptodome.Cipher import PKCS1_OAEP
+    from Cryptodome.PublicKey import RSA
+except ImportError:
+    from Crypto.Cipher import PKCS1_OAEP
+    from Crypto.PublicKey import RSA
 
 
 log = logging.getLogger(__name__)
@@ -115,7 +121,10 @@ class AESReqServerMixin(object):
 
         pret = {}
         cipher = PKCS1_OAEP.new(pub)
-        pret['key'] = cipher.encrypt(key)
+        if six.PY2:
+            pret['key'] = cipher.encrypt(key)
+        else:
+            pret['key'] = cipher.encrypt(salt.utils.to_bytes(key))
         pret[dictkey] = pcrypt.dumps(
             ret if ret is not False else {}
         )
@@ -369,11 +378,11 @@ class AESReqServerMixin(object):
                         return {'enc': 'clear',
                                 'load': {'ret': False}}
                     else:
-                        pass
+                        os.remove(pubfn_pend)
 
         else:
             # Something happened that I have not accounted for, FAIL!
-            log.warn('Unaccounted for authentication failure')
+            log.warning('Unaccounted for authentication failure')
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
@@ -418,8 +427,8 @@ class AESReqServerMixin(object):
                'pub_key': self.master_key.get_pub_str(),
                'publish_port': self.opts['publish_port']}
 
-        # sign the masters pubkey (if enabled) before it is
-        # send to the minion that was just authenticated
+        # sign the master's pubkey (if enabled) before it is
+        # sent to the minion that was just authenticated
         if self.opts['master_sign_pubkey']:
             # append the pre-computed signature to the auth-reply
             if self.master_key.pubkey_signature():

@@ -51,7 +51,7 @@ from __future__ import absolute_import
 import logging
 
 PER_REMOTE_OVERRIDES = ('base', 'mountpoint', 'root', 'ssl_verify')
-SYMLINK_RECURSE_DEPTH = 100
+PER_REMOTE_ONLY = ('name', 'saltenv')
 
 # Auth support (auth params can be global or per-remote, too)
 AUTH_PROVIDERS = ('pygit2',)
@@ -98,7 +98,8 @@ def clear_lock(remote=None, lock_type='update'):
     Clear update.lk
     '''
     gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'], PER_REMOTE_OVERRIDES)
+    gitfs.init_remotes(__opts__['gitfs_remotes'],
+                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
     return gitfs.clear_lock(remote=remote, lock_type=lock_type)
 
 
@@ -111,7 +112,8 @@ def lock(remote=None):
     matches the pattern will be locked.
     '''
     gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'], PER_REMOTE_OVERRIDES)
+    gitfs.init_remotes(__opts__['gitfs_remotes'],
+                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
     return gitfs.lock(remote=remote)
 
 
@@ -120,7 +122,8 @@ def update():
     Execute a git fetch on all of the repos
     '''
     gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'], PER_REMOTE_OVERRIDES)
+    gitfs.init_remotes(__opts__['gitfs_remotes'],
+                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
     gitfs.update()
 
 
@@ -129,7 +132,8 @@ def envs(ignore_cache=False):
     Return a list of refs that can be used as environments
     '''
     gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'], PER_REMOTE_OVERRIDES)
+    gitfs.init_remotes(__opts__['gitfs_remotes'],
+                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
     return gitfs.envs(ignore_cache=ignore_cache)
 
 
@@ -139,7 +143,8 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     and send the path to the newly cached file
     '''
     gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'], PER_REMOTE_OVERRIDES)
+    gitfs.init_remotes(__opts__['gitfs_remotes'],
+                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
     return gitfs.find_file(path, tgt_env=tgt_env, **kwargs)
 
 
@@ -149,7 +154,8 @@ def init():
     and is not invoked by GitFS.
     '''
     gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'], PER_REMOTE_OVERRIDES)
+    gitfs.init_remotes(__opts__['gitfs_remotes'],
+                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
 
 
 def serve_file(load, fnd):
@@ -157,7 +163,8 @@ def serve_file(load, fnd):
     Return a chunk from a file based on the data received
     '''
     gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'], PER_REMOTE_OVERRIDES)
+    gitfs.init_remotes(__opts__['gitfs_remotes'],
+                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
     return gitfs.serve_file(load, fnd)
 
 
@@ -166,7 +173,8 @@ def file_hash(load, fnd):
     Return a file hash, the hash type is set in the master config file
     '''
     gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'], PER_REMOTE_OVERRIDES)
+    gitfs.init_remotes(__opts__['gitfs_remotes'],
+                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
     return gitfs.file_hash(load, fnd)
 
 
@@ -176,7 +184,8 @@ def file_list(load):
     environment (specified as a key within the load dict).
     '''
     gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'], PER_REMOTE_OVERRIDES)
+    gitfs.init_remotes(__opts__['gitfs_remotes'],
+                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
     return gitfs.file_list(load)
 
 
@@ -193,7 +202,8 @@ def dir_list(load):
     Return a list of all directories on the master
     '''
     gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'], PER_REMOTE_OVERRIDES)
+    gitfs.init_remotes(__opts__['gitfs_remotes'],
+                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
     return gitfs.dir_list(load)
 
 
@@ -202,5 +212,6 @@ def symlink_list(load):
     Return a dict of all symlinks based on a given path in the repo
     '''
     gitfs = salt.utils.gitfs.GitFS(__opts__)
-    gitfs.init_remotes(__opts__['gitfs_remotes'], PER_REMOTE_OVERRIDES)
+    gitfs.init_remotes(__opts__['gitfs_remotes'],
+                       PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
     return gitfs.symlink_list(load)

@@ -34,8 +34,10 @@ def _load_libcrypto():
             'libcrypto.so*'))[0])
     else:
         lib = find_library('crypto')
-        if not lib and salt.utils.is_smartos():
-            # smartos does not have libraries in std location
+        if not lib and salt.utils.is_sunos():
+            # Solaris-like distribution that use pkgsrc have
+            # libraries in a non standard location.
+            # (SmartOS, OmniOS, OpenIndiana, ...)
             lib = glob.glob(os.path.join(
                 '/opt/local/lib',
                 'libcrypto.so*'))
@@ -132,6 +134,7 @@ class RSAX931Verifier(object):
         :param str pubdata: The RSA public key in PEM format
         '''
         pubdata = salt.utils.to_bytes(pubdata, 'ascii')
+        pubdata = pubdata.replace('RSA ', '')
         self._bio = libcrypto.BIO_new_mem_buf(pubdata, len(pubdata))
         self._rsa = c_void_p(libcrypto.RSA_new())
         if not libcrypto.PEM_read_bio_RSA_PUBKEY(self._bio, pointer(self._rsa), None, None):

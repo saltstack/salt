@@ -17,7 +17,7 @@ A REST API for Salt
       CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
 :optdepends:    - ws4py Python module for websockets support.
 :client_libraries:
-    - Java: https://github.com/SUSE/saltstack-netapi-client-java
+    - Java: https://github.com/SUSE/salt-netapi-client
     - Python: https://github.com/saltstack/pepper
 :setup:
     All steps below are performed on the machine running the Salt Master
@@ -72,10 +72,23 @@ A REST API for Salt
     debug : ``False``
         Starts the web server in development mode. It will reload itself when
         the underlying code is changed and will output more debugging info.
+    log_access_file
+        Path to a file to write HTTP access logs.
+
+        .. versionaddedd:: 2016.11.0
+
+    log_error_file
+        Path to a file to write HTTP error logs.
+
+        .. versionaddedd:: 2016.11.0
+
     ssl_crt
         The path to a SSL certificate. (See below)
     ssl_key
         The path to the private key for your SSL certificate. (See below)
+    ssl_chain
+        (Optional when using PyOpenSSL) the certificate chain to pass to
+        ``Context.load_verify_locations``.
     disable_ssl
         A flag to disable SSL. Warning: your Salt authentication credentials
         will be sent in the clear!
@@ -173,6 +186,30 @@ cookie. The latter is far more convenient for clients that support cookies.
             -d client=local \\
             -d tgt='*' \\
             -d fun=test.ping
+
+  Another example using the :program:`requests` library in Python:
+
+  .. code-block:: python
+
+      >>> import requests
+      >>> session = requests.Session()
+      >>> session.post('http://localhost:8000/login', json={
+          'username': 'saltdev',
+          'password': 'saltdev',
+          'eauth': 'auto',
+      })
+      <Response [200]>
+      >>> resp = session.post('http://localhost:8000', json=[{
+          'client': 'local',
+          'tgt': '*',
+          'fun': 'test.arg',
+          'arg': ['foo', 'bar'],
+          'kwarg': {'baz': 'Baz!'},
+      }])
+      >>> resp.json()
+      {u'return': [{
+          ...snip...
+      }]}
 
 .. seealso:: You can bypass the session handling via the :py:class:`Run` URL.
 
@@ -410,6 +447,7 @@ Here is an example of sending urlencoded data:
     :mailheader:`Accept` request header.
 
 .. |200| replace:: success
+.. |400| replace:: bad or malformed request
 .. |401| replace:: authentication required
 .. |406| replace:: requested Content-Type not available
 
@@ -425,7 +463,6 @@ import functools
 import logging
 import json
 import os
-import StringIO
 import signal
 import tarfile
 import time
@@ -597,11 +634,7 @@ def salt_ip_verify_tool():
                 logger.debug("Request from IP: {0}".format(rem_ip))
                 if rem_ip not in auth_ip_list:
                     logger.error("Blocked IP: {0}".format(rem_ip))
-                    cherrypy.response.status = 403
-                    return {
-                        'status': cherrypy.response.status,
-                        'return': "Bad IP",
-                    }
+                    raise cherrypy.HTTPError(403, 'Bad IP')
 
 
 def salt_auth_tool():
@@ -687,6 +720,8 @@ def hypermedia_handler(*args, **kwargs):
     except (salt.exceptions.EauthAuthenticationError,
             salt.exceptions.TokenAuthenticationError):
         raise cherrypy.HTTPError(401)
+    except salt.exceptions.SaltInvocationError:
+        raise cherrypy.HTTPError(400)
     except (salt.exceptions.SaltDaemonNotRunning,
             salt.exceptions.SaltReqTimeoutError) as exc:
         raise cherrypy.HTTPError(503, exc.strerror)
@@ -1000,14 +1035,9 @@ class LowDataAdapter(object):
         '''
         import inspect
 
-        # Grab all available client interfaces
-        clients = [name for name, _ in inspect.getmembers(salt.netapi.NetapiClient,
-            predicate=inspect.ismethod) if not name.startswith('__')]
-        clients.remove('run')  # run method calls client interfaces
-
         return {
             'return': "Welcome",
-            'clients': clients,
+            'clients': salt.netapi.CLIENTS,
         }
 
     @cherrypy.tools.salt_token()
@@ -1025,6 +1055,7 @@ class LowDataAdapter(object):
             :resheader Content-Type: |res_ct|
 
             :status 200: |200|
+            :status 400: |400|
             :status 401: |401|
             :status 406: |406|
 
@@ -1142,6 +1173,7 @@ class Minions(LowDataAdapter):
             :resheader Content-Type: |res_ct|
 
             :status 200: |200|
+            :status 400: |400|
             :status 401: |401|
             :status 406: |406|
 
@@ -1287,16 +1319,9 @@ class Jobs(LowDataAdapter):
         '''
         lowstate = [{
             'client': 'runner',
-            'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
+            'fun': 'jobs.list_job' if jid else 'jobs.list_jobs',
             'jid': jid,
         }]
-
-        if jid:
-            lowstate.append({
-                'client': 'runner',
-                'fun': 'jobs.list_job',
-                'jid': jid,
-            })
 
         cherrypy.request.lowstate = lowstate
         job_ret_info = list(self.exec_lowstate(
@@ -1304,12 +1329,18 @@ class Jobs(LowDataAdapter):
 
         ret = {}
         if jid:
-            job_ret, job_info = job_ret_info
-            ret['info'] = [job_info]
+            ret['info'] = [job_ret_info[0]]
+            minion_ret = {}
+            returns = job_ret_info[0].get('Result')
+            for minion in returns.keys():
+                if u'return' in returns[minion]:
+                    minion_ret[minion] = returns[minion].get(u'return')
+                else:
+                    minion_ret[minion] = returns[minion].get('return')
+            ret['return'] = [minion_ret]
         else:
-            job_ret = job_ret_info[0]
+            ret['return'] = [job_ret_info[0]]
 
-        ret['return'] = [job_ret]
         return ret
 
 
@@ -1490,10 +1521,10 @@ class Keys(LowDataAdapter):
         priv_key_file = tarfile.TarInfo('minion.pem')
         priv_key_file.size = len(priv_key)
 
-        fileobj = StringIO.StringIO()
+        fileobj = six.moves.StringIO()
         tarball = tarfile.open(fileobj=fileobj, mode='w')
-        tarball.addfile(pub_key_file, StringIO.StringIO(pub_key))
-        tarball.addfile(priv_key_file, StringIO.StringIO(priv_key))
+        tarball.addfile(pub_key_file, six.moves.StringIO(pub_key))
+        tarball.addfile(priv_key_file, six.moves.StringIO(priv_key))
         tarball.close()
 
         headers = cherrypy.response.headers
@@ -1655,16 +1686,19 @@ class Login(LowDataAdapter):
         try:
             eauth = self.opts.get('external_auth', {}).get(token['eauth'], {})
 
-            # Get sum of '*' perms, user-specific perms, and group-specific perms
-            perms = eauth.get(token['name'], [])
-            perms.extend(eauth.get('*', []))
+            if token['eauth'] == 'django' and '^model' in eauth:
+                perms = token['auth_list']
+            else:
+                # Get sum of '*' perms, user-specific perms, and group-specific perms
+                perms = eauth.get(token['name'], [])
+                perms.extend(eauth.get('*', []))
 
-            if 'groups' in token and token['groups']:
-                user_groups = set(token['groups'])
-                eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
+                if 'groups' in token and token['groups']:
+                    user_groups = set(token['groups'])
+                    eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
 
-                for group in user_groups & eauth_groups:
-                    perms.extend(eauth['{0}%'.format(group)])
+                    for group in user_groups & eauth_groups:
+                        perms.extend(eauth['{0}%'.format(group)])
 
             if not perms:
                 logger.debug("Eauth permission list not found.")
@@ -1728,6 +1762,7 @@ class Run(LowDataAdapter):
             request body.
 
             :status 200: |200|
+            :status 400: |400|
             :status 401: |401|
             :status 406: |406|
 
@@ -1866,9 +1901,9 @@ class Events(object):
 
         # First check if the given token is in our session table; if so it's a
         # salt-api token and we need to get the Salt token from there.
-        orig_sesion, _ = cherrypy.session.cache.get(auth_token, ({}, None))
+        orig_session, _ = cherrypy.session.cache.get(auth_token, ({}, None))
         # If it's not in the session table, assume it's a regular Salt token.
-        salt_token = orig_sesion.get('token', auth_token)
+        salt_token = orig_session.get('token', auth_token)
 
         # The eauth system does not currently support perms for the event
         # stream, so we're just checking if the token exists not if the token
@@ -2153,8 +2188,8 @@ class WebsocketEndpoint(object):
         # Pulling the session token from an URL param is a workaround for
         # browsers not supporting CORS in the EventSource API.
         if token:
-            orig_sesion, _ = cherrypy.session.cache.get(token, ({}, None))
-            salt_token = orig_sesion.get('token')
+            orig_session, _ = cherrypy.session.cache.get(token, ({}, None))
+            salt_token = orig_session.get('token')
         else:
             salt_token = cherrypy.session.get('token')
 
@@ -2351,7 +2386,7 @@ class Webhook(object):
 
         And finally deploy the new build:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set secret_key = data.get('headers', {}).get('X-My-Secret-Key') %}
             {% set build = data.get('post', {}) %}
@@ -2513,6 +2548,8 @@ class API(object):
                 'max_request_body_size': self.apiopts.get(
                     'max_request_body_size', 1048576),
                 'debug': self.apiopts.get('debug', False),
+                'log.access_file': self.apiopts.get('log_access_file', ''),
+                'log.error_file': self.apiopts.get('log_error_file', ''),
             },
             '/': {
                 'request.dispatch': cherrypy.dispatch.MethodDispatcher(),

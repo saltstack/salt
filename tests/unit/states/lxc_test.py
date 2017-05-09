@@ -219,66 +219,6 @@ class LxcTestCase(TestCase):
                             {'state': {'new': 'stop', 'old': 'frozen'}}})
                 self.assertDictEqual(lxc.stopped(name), ret)
 
-    # 'created' function tests: 1
-
-    def test_created(self):
-        '''
-        Test to execute create func.
-        '''
-        name = 'web01'
-
-        ret = {'name': name,
-               'result': False,
-               'comment': '',
-               'changes': {}}
-
-        mock = MagicMock(return_value=False)
-        with patch.dict(lxc.__salt__, {'lxc.exists': mock}):
-            with patch.object(salt.utils, 'warn_until', MagicMock()):
-                comt = ("Clone source 'True' does not exist")
-                ret.update({'comment': comt})
-                self.assertDictEqual(lxc.created(name, clone_from=True), ret)
-
-    # 'started' function tests: 1
-
-    def test_started(self):
-        '''
-        Test to execute started func.
-        '''
-        name = 'web01'
-
-        ret = {'name': name,
-               'result': False,
-               'comment': '',
-               'changes': {}}
-
-        mock = MagicMock(return_value=None)
-        with patch.dict(lxc.__salt__, {'lxc.state': mock}):
-            with patch.object(salt.utils, 'warn_until', MagicMock()):
-                comt = ("Container 'web01' does not exist")
-                ret.update({'comment': comt})
-                self.assertDictEqual(lxc.started(name), ret)
-
-    # 'cloned' function tests: 1
-
-    def test_cloned(self):
-        '''
-        Test to execute cloned func.
-        '''
-        name = 'web01'
-
-        ret = {'name': name,
-               'result': False,
-               'comment': '',
-               'changes': {}}
-
-        mock = MagicMock(return_value=False)
-        with patch.dict(lxc.__salt__, {'lxc.exists': mock}):
-            with patch.object(salt.utils, 'warn_until', MagicMock()):
-                comt = ("Clone source 'True' does not exist")
-                ret.update({'comment': comt})
-                self.assertDictEqual(lxc.cloned(name, True), ret)
-
     # 'set_pass' function tests: 1
 
     def test_set_pass(self):

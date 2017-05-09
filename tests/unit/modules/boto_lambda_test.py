@@ -21,10 +21,12 @@ ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
+import salt.ext.six as six
 import salt.loader
 from salt.modules import boto_lambda
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+import salt.utils
 
 # Import 3rd-party libs
 from tempfile import NamedTemporaryFile
@@ -71,7 +73,8 @@ function_ret = dict(FunctionName='testfunction',
                     CodeSha256='abcdef',
                     CodeSize=199,
                     FunctionArn='arn:lambda:us-east-1:1234:Something',
-                    LastModified='yes')
+                    LastModified='yes',
+                    VpcConfig=None)
 alias_ret = dict(AliasArn='arn:lambda:us-east-1:1234:Something',
                  Name='testalias',
                  FunctionVersion='3',
@@ -138,7 +141,10 @@ class BotoLambdaTestCaseBase(TestCase):
 class TempZipFile(object):
     def __enter__(self):
         with NamedTemporaryFile(suffix='.zip', prefix='salt_test_', delete=False) as tmp:
-            tmp.write('###\n')
+            to_write = '###\n'
+            if six.PY3:
+                to_write = salt.utils.to_bytes(to_write)
+            tmp.write(to_write)
             self.zipfile = tmp.name
         return self.zipfile
 

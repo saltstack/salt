@@ -83,7 +83,10 @@ def genrepo(opts=None, fire_event=True):
                     config = salt.template.compile_template(
                             os.path.join(root, name),
                             renderers,
-                            opts['renderer'])
+                            opts['renderer'],
+                            opts['renderer_blacklist'],
+                            opts['renderer_whitelist']
+                            )
                 except SaltRenderError as exc:
                     log.debug(
                         'Failed to render {0}.'.format(

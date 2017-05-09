@@ -12,9 +12,6 @@ from __future__ import absolute_import
 import logging
 import re
 
-# Import Salt libs
-import salt.utils
-
 # Import Third Party Libs
 try:
     import psutil
@@ -28,23 +25,21 @@ __virtualname__ = 'memusage'
 
 
 def __virtual__():
-    if salt.utils.is_windows():
-        return False
-    elif HAS_PSUTIL is False:
+    if HAS_PSUTIL is False:
         return False
     else:
         return __virtualname__
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''
     # Configuration for memusage beacon should be a list of dicts
     if not isinstance(config, dict):
-        log.info('Configuration for memusage beacon must be a dictionary.')
-        return False
-    return True
+        return False, ('Configuration for memusage '
+                       'beacon must be a dictionary.')
+    return True, 'Valid beacon configuration'
 
 
 def beacon(config):

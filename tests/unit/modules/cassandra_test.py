@@ -15,6 +15,7 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
+import salt.ext.six as six
 from salt.modules import cassandra
 
 
@@ -111,12 +112,18 @@ class CassandraTestCase(TestCase):
         mock_sys_mgr = MagicMock(return_value=MockSystemManager())
 
         with patch.object(cassandra, '_sys_mgr', mock_sys_mgr):
-            self.assertEqual(cassandra.column_families('A'),
-                             ['a', 'b'])
             self.assertEqual(cassandra.column_families('Z'),
                              None)
-            self.assertEqual(cassandra.column_families(),
-                             {'A': ['a', 'b'], 'B': ['c', 'd']})
+            if six.PY3:
+                self.assertCountEqual(cassandra.column_families('A'),
+                                      ['a', 'b'])
+                self.assertCountEqual(cassandra.column_families(),
+                                      {'A': ['a', 'b'], 'B': ['c', 'd']})
+            else:
+                self.assertEqual(cassandra.column_families('A'),
+                                 ['a', 'b'])
+                self.assertEqual(cassandra.column_families(),
+                                 {'A': ['a', 'b'], 'B': ['c', 'd']})
 
     def test_column_family_definition(self):
         '''

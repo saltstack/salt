@@ -57,7 +57,7 @@ def __virtual__():
     '''
     if __grains__.get('os_family', '') != 'Suse':
         return (False, "Module zypper: non SUSE OS not suppored by zypper package manager")
-    # Not all versions of Suse use zypper, check that it is available
+    # Not all versions of SUSE use zypper, check that it is available
     if not salt.utils.which('zypper'):
         return (False, "Module zypper: zypper package manager not found")
     return __virtualname__
@@ -165,11 +165,17 @@ class _Zypper(object):
         if self._is_error():
             self.__error_msg = msg and os.linesep.join(msg) or "Check Zypper's logs."
 
+    @property
     def stdout(self):
         return self.__call_result.get('stdout', '')
 
+    @property
     def stderr(self):
         return self.__call_result.get('stderr', '')
+
+    @property
+    def pid(self):
+        return self.__call_result.get('pid', '')
 
     def _is_error(self):
         '''
@@ -382,9 +388,12 @@ def info_installed(*names, **kwargs):
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
-            if type(value) == str:
+            if isinstance(value, six.string_types):
                 # Check, if string is encoded in a proper UTF-8
-                value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
+                if six.PY3:
+                    value_ = value.encode('UTF-8', 'ignore').decode('UTF-8', 'ignore')
+                else:
+                    value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
                 if value != value_:
                     value = kwargs.get('errors') and value_ or 'N/A (invalid UTF-8)'
                     log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
@@ -1013,7 +1022,7 @@ def install(name=None,
                     targets.append('{0}{1}{2}'.format(param, ((gt_lt or '') + (equal or '')) or '=', verstr))
                     log.debug(targets)
                 else:
-                    msg = ('Invalid version string {0!r} for package {1!r}'.format(version_num, name))
+                    msg = ('Invalid version string \'{0}\' for package \'{1}\''.format(version_num, name))
                     problems.append(msg)
         if problems:
             for problem in problems:
@@ -1115,10 +1124,12 @@ def upgrade(refresh=True,
     skip_verify
         Skip the GPG verification check (e.g., ``--no-gpg-checks``)
 
-    Return a dict containing the new package names and versions::
+    Returns a dictionary containing the changes:
 
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    .. code-block:: python
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
 
     CLI Example:
 
@@ -1128,11 +1139,6 @@ def upgrade(refresh=True,
         salt '*' pkg.upgrade dist-upgrade=True fromrepo='["MyRepoName"]' novendorchange=True
         salt '*' pkg.upgrade dist-upgrade=True dryrun=True
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-    }
-
     cmd_update = (['dist-upgrade'] if dist_upgrade else ['update']) + ['--auto-agree-with-licenses']
 
     if skip_verify:
@@ -1149,7 +1155,7 @@ def upgrade(refresh=True,
         if fromrepo:
             for repo in fromrepo:
                 cmd_update.extend(['--from', repo])
-            log.info('Targeting repos: {0!r}'.format(fromrepo))
+            log.info('Targeting repos: {0}'.format(fromrepo))
 
         if novendorchange:
             # TODO: Grains validation should be moved to Zypper class
@@ -1157,7 +1163,7 @@ def upgrade(refresh=True,
                 cmd_update.append('--no-allow-vendor-change')
                 log.info('Disabling vendor changes')
             else:
-                log.warn('Disabling vendor changes is not supported on this Zypper version')
+                log.warning('Disabling vendor changes is not supported on this Zypper version')
 
         if dryrun:
             # Creates a solver test case for debugging.
@@ -1167,15 +1173,24 @@ def upgrade(refresh=True,
     old = list_pkgs()
 
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
-    if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
-        ret['result'] = False
-    else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
 
-    if dryrun or not ret['result']:
-        ret['comment'] = (__zypper__.stdout() + os.linesep + __zypper__.stderr()).strip()
+    if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
+        result = {
+            'retcode': __zypper__.exit_code,
+            'stdout': __zypper__.stdout,
+            'stderr': __zypper__.stderr,
+            'pid': __zypper__.pid,
+        }
+        raise CommandExecutionError(
+            'Problem encountered upgrading packages',
+            info={'changes': ret, 'result': result}
+        )
+
+    if dryrun:
+        ret = (__zypper__.stdout + os.linesep + __zypper__.stderr).strip()
 
     return ret
 

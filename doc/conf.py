@@ -49,6 +49,13 @@ class Mock(object):
         else:
             data = Mock(mapping=self.__mapping)
         return data
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        raise StopIteration
+
 # pylint: enable=R0903
 
 MOCK_MODULES = [
@@ -68,6 +75,7 @@ MOCK_MODULES = [
     'yaml',
     'yaml.constructor',
     'yaml.nodes',
+    'yaml.parser',
     'yaml.scanner',
     'zmq',
     'zmq.eventloop',
@@ -137,8 +145,26 @@ MOCK_MODULES = [
     'salt.ext.six.moves.winreg',
     'win32security',
     'ntsecuritycon',
+    'napalm',
+    'dson',
+    'jnpr',
+    'json',
+    'lxml',
+    'lxml.etree',
+    'jnpr.junos',
+    'jnpr.junos.utils',
+    'jnpr.junos.utils.config',
+    'jnpr.junos.utils.sw',
+    'dns',
+    'dns.resolver',
+    'netaddr',
+    'netaddr.IPAddress',
+    'netaddr.core',
+    'netaddr.core.AddrFormatError',
     'pyroute2',
     'pyroute2.ipdb',
+    'avahi',
+    'dbus',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -226,8 +252,8 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'previous'  # latest, previous, develop, next
-release = previous_release  # version, latest_release, previous_release
+build_type = 'latest'  # latest, previous, develop, next
+release = latest_release  # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
@@ -258,6 +284,7 @@ exclude_patterns = ['_build', '_incl/*', 'ref/cli/_includes/*.rst']
 extensions = [
     'saltdomain', # Must come early
     'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
     'sphinx.ext.intersphinx',
@@ -417,10 +444,10 @@ linkcheck_ignore = [r'http://127.0.0.1',
                     r'http://logstash.net/docs/latest/inputs/udp',
                     r'http://logstash.net/docs/latest/inputs/zeromq',
                     r'http://www.youtube.com/saltstack',
-                    r'http://raven.readthedocs.org',
+                    r'https://raven.readthedocs.io',
                     r'https://getsentry.com',
-                    r'http://salt-cloud.readthedocs.org',
-                    r'http://salt.readthedocs.org',
+                    r'https://salt-cloud.readthedocs.io',
+                    r'https://salt.readthedocs.io',
                     r'http://www.pip-installer.org/',
                     r'http://www.windowsazure.com/',
                     r'https://github.com/watching',
