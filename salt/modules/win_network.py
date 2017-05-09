@@ -5,6 +5,10 @@ Module for gathering and managing network information
 from __future__ import absolute_import
 
 # Import python libs
+import re
+
+# Import salt libs
+import salt.utils
 import hashlib
 import datetime
 import socket
@@ -221,6 +225,35 @@ def nslookup(host):
             ret.append({comps[0].strip(): comps[1].strip()})
     if addresses:
         ret.append({'Addresses': addresses})
+    return ret
+
+
+def get_route(ip):
+    '''
+    Return routing information for given destination ip
+
+    .. versionadded:: 2016.11.6
+
+    CLI Example::
+
+        salt '*' network.get_route 10.10.10.10
+    '''
+    cmd = 'Find-NetRoute -RemoteIPAddress {0}'.format(ip)
+    out = __salt__['cmd.run'](cmd, shell='powershell', python_shell=True)
+    regexp = re.compile(
+        r"^IPAddress\s+:\s(?P<source>[\d\.:]+)?.*"
+        r"^InterfaceAlias\s+:\s(?P<interface>[\w\.\:\-\ ]+)?.*"
+        r"^NextHop\s+:\s(?P<gateway>[\d\.:]+)",
+        flags=re.MULTILINE | re.DOTALL
+    )
+    m = regexp.search(out)
+    ret = {
+        'destination': ip,
+        'gateway': m.group('gateway'),
+        'interface': m.group('interface'),
+        'source': m.group('source')
+    }
+
     return ret
 
 
