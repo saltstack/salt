@@ -60,7 +60,7 @@ class ServiceTestCase(TestCase):
                 'name': 'salt', 'result': True},
                {'changes': 'saltstack',
                 'comment': 'Service salt failed to start', 'name': 'salt',
-                'result': True}]
+                'result': False}]
 
         tmock = MagicMock(return_value=True)
         fmock = MagicMock(return_value=False)
