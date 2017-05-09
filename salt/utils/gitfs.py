@@ -16,6 +16,7 @@ import shutil
 import stat
 import subprocess
 import time
+import warnings
 from datetime import datetime
 
 # Import salt libs
@@ -106,6 +107,48 @@ except Exception as exc:
 GITPYTHON_MINVER = '0.3'
 PYGIT2_MINVER = '0.20.3'
 LIBGIT2_MINVER = '0.20.0'
+
+
+def enforce_types(key, val):
+    '''
+    Force params to be strings unless they should remain a different type
+    '''
+    non_string_params = {
+        'ssl_verify': bool,
+        'insecure_auth': bool,
+        'env_whitelist': 'stringlist',
+        'env_blacklist': 'stringlist',
+        'refspecs': 'stringlist',
+    }
+
+    def _find_global(key):
+        for item in non_string_params:
+            try:
+                if key.endswith('_' + item):
+                    ret = item
+                    break
+            except TypeError:
+                if key.endswith('_' + str(item)):
+                    ret = item
+                    break
+        else:
+            ret = None
+        return ret
+
+    if key not in non_string_params:
+        key = _find_global(key)
+        if key is None:
+            return six.text_type(val)
+
+    expected = non_string_params[key]
+    if expected is bool:
+        return val
+    elif expected == 'stringlist':
+        if not isinstance(val, (six.string_types, list)):
+            val = six.text_type(val)
+        if isinstance(val, six.string_types):
+            return [x.strip() for x in val.split(',')]
+        return [six.text_type(x) for x in val]
 
 
 def enforce_types(key, val):
@@ -818,6 +861,12 @@ class GitProvider(object):
         else:
             self.url = self.id
 
+    def setup_callbacks(self):
+        '''
+        Only needed in pygit2, included in the base class for simplicty of use
+        '''
+        pass
+
     def verify_auth(self):
         '''
         Override this function in a sub-class to implement auth checking.
@@ -1164,9 +1213,6 @@ class Pygit2(GitProvider):
     def __init__(self, opts, remote, per_remote_defaults, per_remote_only,
                  override_params, cache_root, role='gitfs'):
         self.provider = 'pygit2'
-        self.use_callback = \
-            _LooseVersion(pygit2.__version__) >= \
-            _LooseVersion('0.23.2')
         GitProvider.__init__(self, opts, remote, per_remote_defaults,
                              per_remote_only, override_params, cache_root, role)
 
@@ -1511,11 +1557,11 @@ class Pygit2(GitProvider):
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
         fetch_kwargs = {}
-        if self.credentials is not None:
-            if self.use_callback:
-                fetch_kwargs['callbacks'] = \
-                    pygit2.RemoteCallbacks(credentials=self.credentials)
-            else:
+        # pygit2 0.23.2 brought
+        if self.remotecallbacks is not None:
+            fetch_kwargs['callbacks'] = self.remotecallbacks
+        else:
+            if self.credentials is not None:
                 origin.credentials = self.credentials
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
@@ -1691,6 +1737,31 @@ class Pygit2(GitProvider):
         else:
             return commit.tree
         return None
+
+    def setup_callbacks(self):
+        '''
+        '''
+        # pygit2 radically changed fetching in 0.23.2
+        pygit2_version = pygit2.__version__
+        if distutils.version.LooseVersion(pygit2_version) >= \
+                distutils.version.LooseVersion('0.23.2'):
+            self.remotecallbacks = pygit2.RemoteCallbacks(
+                credentials=self.credentials)
+            if not self.ssl_verify:
+                # Override the certificate_check function with a lambda that
+                # just returns True, thus skipping the cert check.
+                self.remotecallbacks.certificate_check = \
+                    lambda *args, **kwargs: True
+        else:
+            self.remotecallbacks = None
+            if not self.ssl_verify:
+                warnings.warn(
+                    'pygit2 does not support disabling the SSL certificate '
+                    'check in versions prior to 0.23.2 (installed: {0}). '
+                    'Fetches for self-signed certificates will fail.'.format(
+                        pygit2_version
+                    )
+                )
 
     def verify_auth(self):
         '''
@@ -1906,6 +1977,7 @@ class GitBase(object):
             if hasattr(repo_obj, 'repo'):
                 # Sanity check and assign the credential parameter
                 repo_obj.verify_auth()
+                repo_obj.setup_callbacks()
                 if self.opts['__role'] == 'minion' and repo_obj.new:
                     # Perform initial fetch on masterless minion
                     repo_obj.fetch()
@@ -2109,10 +2181,17 @@ class GitBase(object):
         if self.fetch_remotes():
             data['changed'] = True
 
+        # A masterless minion will need a new env cache file even if no changes
+        # were fetched.
+        refresh_env_cache = self.opts['__role'] == 'minion'
+
         if data['changed'] is True or not os.path.isfile(self.env_cache):
             env_cachedir = os.path.dirname(self.env_cache)
             if not os.path.exists(env_cachedir):
                 os.makedirs(env_cachedir)
+            refresh_env_cache = True
+
+        if refresh_env_cache:
             new_envs = self.envs(ignore_cache=True)
             serial = salt.payload.Serial(self.opts)
             mode = 'wb+' if six.PY3 else 'w+'

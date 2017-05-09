@@ -17,6 +17,7 @@ import time
 import salt.loader
 import salt.utils
 import salt.utils.locales
+from salt.utils.args import get_function_argspec as _argspec
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -477,10 +478,14 @@ class Fileserver(object):
             ret = {}
         for fsb in back:
             fstr = '{0}.envs'.format(fsb)
+            kwargs = {'ignore_cache': True} \
+                if 'ignore_cache' in _argspec(self.servers[fstr]).args \
+                and self.opts['__role'] == 'minion' \
+                else {}
             if sources:
-                ret[fsb] = self.servers[fstr]()
+                ret[fsb] = self.servers[fstr](**kwargs)
             else:
-                ret.update(self.servers[fstr]())
+                ret.update(self.servers[fstr](**kwargs))
         if sources:
             return ret
         return list(ret)

@@ -1942,6 +1942,10 @@ be a better option.
 
     gitfs_ssl_verify: False
 
+.. note::
+    pygit2 only supports disabling SSL verification in versions 0.23.2 and
+    newer.
+
 .. versionchanged:: 2015.8.0
     This option can now be configured on individual repositories as well. See
     :ref:`here <gitfs-per-remote-config>` for more info.
@@ -3164,6 +3168,10 @@ In the 2016.11.0 release, the default config value changed from ``False`` to
 .. code-block:: yaml
 
     git_pillar_ssl_verify: True
+
+.. note::
+    pygit2 only supports disabling SSL verification in versions 0.23.2 and
+    newer.
 
 .. conf_master:: git_pillar_global_lock
 
