@@ -12,7 +12,6 @@ import yaml
 import tarfile
 import shutil
 import msgpack
-import datetime
 import hashlib
 import logging
 import pwd
@@ -30,9 +29,9 @@ import salt.syspaths as syspaths
 import salt.ext.six as six
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
-from salt.ext.six.moves import zip
 from salt.ext.six.moves import filter
 from salt.template import compile_template
+from salt.utils.yamldumper import SafeOrderedDumper
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -746,7 +745,14 @@ class SPMClient(object):
 
         metadata_filename = '{0}/SPM-METADATA'.format(repo_path)
         with salt.utils.fopen(metadata_filename, 'w') as mfh:
-            yaml.dump(repo_metadata, mfh, indent=4, canonical=False, default_flow_style=False)
+            yaml.dump(
+                repo_metadata,
+                mfh,
+                indent=4,
+                canonical=False,
+                default_flow_style=False,
+                Dumper=SafeOrderedDumper
+            )
 
         log.debug('Wrote {0}'.format(metadata_filename))
 

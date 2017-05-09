@@ -41,6 +41,7 @@ from salt.utils.verify import verify_files
 import salt.exceptions
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.utils.yamldumper import SafeOrderedDumper
 
 
 def _sorted(mixins_or_funcs):
@@ -1213,6 +1214,18 @@ class ProxyIdMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
 
+class CacheDirMixIn(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio = 40
+
+    def _mixin_setup(self):
+        self.add_option(
+            '--cachedir',
+            default='/var/cache/salt/',
+            dest='cachedir',
+            help=('Cache Directory')
+        )
+
+
 class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
 
     _mixin_prio_ = 40
@@ -1913,6 +1926,20 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                   'before freeing the slot in the batch for the next one.')
         )
         self.add_option(
+            '--batch-safe-limit',
+            default=0,
+            dest='batch_safe_limit',
+            type=int,
+            help=('Execute the salt job in batch mode if the job would have '
+                  'executed on more than this many minions.')
+        )
+        self.add_option(
+            '--batch-safe-size',
+            default=8,
+            dest='batch_safe_size',
+            help=('Batch size to use for batch jobs created by batch-safe-limit.')
+        )
+        self.add_option(
             '--return',
             default='',
             metavar='RETURNER',
@@ -2011,7 +2038,13 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
         # Dump the master configuration file, exit normally at the end.
         if self.options.config_dump:
             cfg = config.master_config(self.get_config_file_path())
-            sys.stdout.write(yaml.dump(cfg, default_flow_style=False))
+            sys.stdout.write(
+                yaml.dump(
+                    cfg,
+                    default_flow_style=False,
+                    Dumper=SafeOrderedDumper
+                )
+            )
             sys.exit(salt.defaults.exitcodes.EX_OK)
 
         if self.options.preview_target:
@@ -2446,7 +2479,8 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
                                               HardCrashMixin,
                                               SaltfileMixIn,
                                               ArgsStdinMixIn,
-                                              ProfilingPMixIn)):
+                                              ProfilingPMixIn,
+                                              CacheDirMixIn)):
 
     description = (
         'salt-call is used to execute module functions locally on a Salt Minion'

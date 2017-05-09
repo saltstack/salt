@@ -1758,20 +1758,18 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
     '''
     ret = {'success': True, 'comment': '', 'changes': {}}
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+    ### First creeate a dictionary mapping all changes for a given volume to it's volume ID...
+    tag_sets = {}
     for tm in tag_maps:
-        filters = tm.get('filters')
-        tags = tm.get('tags')
-        if not isinstance(filters, dict):
-            raise SaltInvocationError('Tag filters must be a dictionary: got {0}'.format(filters))
-        if not isinstance(tags, dict):
-            raise SaltInvocationError('Tags must be a dictionary: got {0}'.format(tags))
+        filters = dict(tm.get('filters', {}))
+        tags = dict(tm.get('tags', {}))
         args = {'return_objs': True, 'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
         new_filters = {}
         log.debug('got filters: {0}'.format(filters))
         instance_id = None
         in_states = tm.get('in_states', running_states)
         try:
-            for k, v in six.iteritems(filters):
+            for k, v in filters.items():
                 if k == 'volume_ids':
                     args['volume_ids'] = v
                 elif k == 'instance_name':
@@ -1789,39 +1787,45 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
         args['filters'] = new_filters
         volumes = get_all_volumes(**args)
         log.debug('got volume list: {0}'.format(volumes))
-        changes = {'old': {}, 'new': {}}
         for vol in volumes:
-            log.debug('current tags on vol.id {0}: {1}'.format(vol.id, dict(getattr(vol, 'tags', {}))))
-            curr = set(dict(getattr(vol, 'tags', {})).keys())
-            log.debug('requested tags on vol.id {0}: {1}'.format(vol.id, tags))
-            req = set(tags.keys())
-            add = list(req - curr)
-            update = [r for r in (req & curr) if vol.tags[r] != tags[r]]
-            remove = list(curr - req)
-            if add or update or (authoritative and remove):
-                changes['old'][vol.id] = dict(getattr(vol, 'tags', {}))
-                changes['new'][vol.id] = tags
-            else:
-                log.debug('No changes needed for vol.id {0}'.format(vol.id))
-            if len(add):
-                d = dict((k, tags[k]) for k in add)
-                log.debug('New tags for vol.id {0}: {1}'.format(vol.id, d))
-            if len(update):
-                d = dict((k, tags[k]) for k in update)
-                log.debug('Updated tags for vol.id {0}: {1}'.format(vol.id, d))
-            if not dry_run:
-                if not create_tags(vol.id, tags, region=region, key=key, keyid=keyid, profile=profile):
-                    ret['success'] = False
-                    ret['comment'] = "Failed to set tags on vol.id {0}: {1}".format(vol.id, tags)
-                    return ret
-                if authoritative:
-                    if len(remove):
-                        log.debug('Removed tags for vol.id {0}: {1}'.format(vol.id, remove))
-                        if not delete_tags(vol.id, remove, region=region, key=key, keyid=keyid, profile=profile):
-                            ret['success'] = False
-                            ret['comment'] = "Failed to remove tags on vol.id {0}: {1}".format(vol.id, remove)
-                            return ret
-        ret['changes'].update(changes) if changes['old'] or changes['new'] else None  # pylint: disable=W0106
+            tag_sets.setdefault(vol.id.replace('-', '_'), {'vol': vol, 'tags': tags.copy()})['tags'].update(tags.copy())
+    log.debug('tag_sets after munging: {0}'.format(tag_sets))
+
+    ### ...then loop through all those volume->tag pairs and apply them.
+    changes = {'old': {}, 'new': {}}
+    for volume in tag_sets.values():
+        vol, tags = volume['vol'], volume['tags']
+        log.debug('current tags on vol.id {0}: {1}'.format(vol.id, dict(getattr(vol, 'tags', {}))))
+        curr = set(dict(getattr(vol, 'tags', {})).keys())
+        log.debug('requested tags on vol.id {0}: {1}'.format(vol.id, tags))
+        req = set(tags.keys())
+        add = list(req - curr)
+        update = [r for r in (req & curr) if vol.tags[r] != tags[r]]
+        remove = list(curr - req)
+        if add or update or (authoritative and remove):
+            changes['old'][vol.id] = dict(getattr(vol, 'tags', {}))
+            changes['new'][vol.id] = tags
+        else:
+            log.debug('No changes needed for vol.id {0}'.format(vol.id))
+        if len(add):
+            d = dict((k, tags[k]) for k in add)
+            log.debug('New tags for vol.id {0}: {1}'.format(vol.id, d))
+        if len(update):
+            d = dict((k, tags[k]) for k in update)
+            log.debug('Updated tags for vol.id {0}: {1}'.format(vol.id, d))
+        if not dry_run:
+            if not create_tags(vol.id, tags, region=region, key=key, keyid=keyid, profile=profile):
+                ret['success'] = False
+                ret['comment'] = "Failed to set tags on vol.id {0}: {1}".format(vol.id, tags)
+                return ret
+            if authoritative:
+                if len(remove):
+                    log.debug('Removed tags for vol.id {0}: {1}'.format(vol.id, remove))
+                    if not delete_tags(vol.id, remove, region=region, key=key, keyid=keyid, profile=profile):
+                        ret['success'] = False
+                        ret['comment'] = "Failed to remove tags on vol.id {0}: {1}".format(vol.id, remove)
+                        return ret
+    ret['changes'].update(changes) if changes['old'] or changes['new'] else None  # pylint: disable=W0106
     return ret
 
 

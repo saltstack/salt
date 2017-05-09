@@ -28,12 +28,12 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {defaults: {}}
 
-    @patch('salt.modules.defaults.get',
-           MagicMock(return_value={'users': {'root': [0]}}))
     def test_get_mock(self):
         '''
         Test if it execute a defaults client run and return a dict
         '''
-        with patch.object(inspect, 'stack', MagicMock(return_value=[])):
+        with patch.object(inspect, 'stack', MagicMock(return_value=[])), \
+                patch('salt.modules.defaults.get',
+                      MagicMock(return_value={'users': {'root': [0]}})):
             self.assertEqual(defaults.get('core:users:root'),
                              {'users': {'root': [0]}})

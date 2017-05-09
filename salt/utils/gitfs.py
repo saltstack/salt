@@ -411,16 +411,39 @@ class GitProvider(object):
             # Get saltenv-specific configuration
             saltenv_conf = self.saltenv.get(tgt_env, {})
             if name == 'ref':
-                if tgt_env == 'base':
-                    return self.base
-                else:
+                def _get_per_saltenv(tgt_env):
                     if name in saltenv_conf:
                         return saltenv_conf[name]
                     elif tgt_env in self.global_saltenv \
                             and name in self.global_saltenv[tgt_env]:
                         return self.global_saltenv[tgt_env][name]
                     else:
-                        return tgt_env
+                        return None
+
+                # Return the all_saltenvs branch/tag if it is configured
+                try:
+                    all_saltenvs_ref = self.all_saltenvs
+                    per_saltenv_ref = _get_per_saltenv(tgt_env)
+                    if per_saltenv_ref and all_saltenvs_ref != per_saltenv_ref:
+                        log.debug(
+                            'The per-saltenv configuration has mapped the '
+                            '\'%s\' branch/tag to saltenv \'%s\' for %s '
+                            'remote \'%s\', but this remote has '
+                            'all_saltenvs set to \'%s\'. The per-saltenv '
+                            'mapping will be ignored in favor of \'%s\'.',
+                            per_saltenv_ref, tgt_env, self.role, self.id,
+                            all_saltenvs_ref, all_saltenvs_ref
+                        )
+                    return all_saltenvs_ref
+                except AttributeError:
+                    # all_saltenvs not configured for this remote
+                    pass
+
+                if tgt_env == 'base':
+                    return self.base
+                else:
+                    return _get_per_saltenv(tgt_env) or tgt_env
+
             if name in saltenv_conf:
                 return strip_sep(saltenv_conf[name])
             elif tgt_env in self.global_saltenv \
@@ -1403,7 +1426,7 @@ class Pygit2(GitProvider):
             try:
                 try:
                     self.repo = pygit2.Repository(self.cachedir)
-                except pygit2.GitError as exc:
+                except GitError as exc:
                     import pwd
                     # https://github.com/libgit2/pygit2/issues/339
                     # https://github.com/libgit2/libgit2/issues/2122

@@ -60,7 +60,7 @@ Function Get-Settings {
         # Filenames for 64 bit Windows
         $64bitPrograms = @{
             "PyCrypto2" = "pycrypto-2.6.1-cp27-none-win_amd64.whl"
-            "Python2"   = "python-2.7.12.amd64.msi"
+            "Python2"   = "python-2.7.13.amd64.msi"
             "PyYAML2"   = "PyYAML-3.11.win-amd64-py2.7.exe"
             "Python3"   = "python-3.5.3-amd64.exe"
             "PyWin323"  = "pywin32-220.1-cp35-cp35m-win_amd64.whl"
@@ -70,7 +70,7 @@ Function Get-Settings {
         # Filenames for 32 bit Windows
         $32bitPrograms = @{
             "PyCrypto2" = "pycrypto-2.6.1-cp27-none-win32.whl"
-            "Python2"   = "python-2.7.12.msi"
+            "Python2"   = "python-2.7.13.msi"
             "PyYAML2"   = "PyYAML-3.11.win32-py2.7.exe"
             "Python3"   = "python-3.5.3.exe"
             "PyWin323"  = "pywin32-220.1-cp35-cp35m-win32.whl"

@@ -129,6 +129,7 @@ class TestSuite(_TestSuite):
         if previousClass and getattr(previousClass, 'tearDownClass', None):
             prerun_class_attributes = getattr(previousClass, '_prerun_class_attributes', None)
             if prerun_class_attributes is not None:
+                previousClass._prerun_class_attributes = None
                 del previousClass._prerun_class_attributes
                 for attr in prerun_class_attributes:
                     if hasattr(previousClass, attr):
@@ -136,6 +137,7 @@ class TestSuite(_TestSuite):
                         if attr_value is None:
                             continue
                         if isinstance(attr_value, (bool,) + six.string_types + six.integer_types):
+                            setattr(previousClass, attr, None)
                             continue
                         log.warning('Deleting extra class attribute after test run: %s.%s(%s). '
                                     'Please consider using \'del self.%s\' on the test class '
@@ -186,12 +188,14 @@ class TestCase(_TestCase):
                 if attr_value is None:
                     continue
                 if isinstance(attr_value, (bool,) + six.string_types + six.integer_types):
+                    setattr(self, attr, None)
                     continue
                 log.warning('Deleting extra class attribute after test run: %s.%s(%s). '
                             'Please consider using \'del self.%s\' on the test case '
                             '\'tearDown()\' method', self.__class__.__name__, attr,
                             getattr(self, attr), attr)
                 delattr(self, attr)
+        self._prerun_instance_attributes = None
         del self._prerun_instance_attributes
         return outcome
 

@@ -1123,6 +1123,7 @@ _OS_NAME_MAP = {
     'slesexpand': 'RES',
     'void': 'Void',
     'linuxmint': 'Mint',
+    'neon': 'KDE neon',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1183,6 +1184,7 @@ _OS_FAMILY_MAP = {
     'antiX': 'Debian',
     'NILinuxRT': 'NILinuxRT',
     'NILinuxRT-XFCE': 'NILinuxRT',
+    'KDE neon': 'Debian',
     'Void': 'Void',
 }
 
@@ -1772,10 +1774,14 @@ def ip_fqdn():
 
     ret = {}
     ret['ipv4'] = salt.utils.network.ip_addrs(include_loopback=True)
-    ret['ipv6'] = salt.utils.network.ip_addrs6(include_loopback=True)
-
     _fqdn = hostname()['fqdn']
-    for socket_type, ipv_num in ((socket.AF_INET, '4'), (socket.AF_INET6, '6')):
+    sockets = [(socket.AF_INET, '4')]
+
+    if __opts__.get('ipv6', True):
+        ret['ipv6'] = salt.utils.network.ip_addrs6(include_loopback=True)
+        sockets.append((socket.AF_INET6, '6'))
+
+    for socket_type, ipv_num in sockets:
         key = 'fqdn_ip' + ipv_num
         if not ret['ipv' + ipv_num]:
             ret[key] = []
@@ -1784,8 +1790,9 @@ def ip_fqdn():
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list(set(item[4][0] for item in info))
             except socket.error:
-                log.warning('Unable to find IPv{0} record for "{1}" causing a 10 second timeout when rendering grains. '
-                            'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn))
+                if __opts__['__role'] == 'master':
+                    log.warning('Unable to find IPv{0} record for "{1}" causing a 10 second timeout when rendering grains. '
+                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn))
                 ret[key] = []
 
     return ret
@@ -1852,7 +1859,7 @@ def ip6_interfaces():
     # Provides:
     #   ip_interfaces
 
-    if salt.utils.is_proxy():
+    if salt.utils.is_proxy() or not __opts__.get('ipv6', True):
         return {}
 
     ret = {}
@@ -1896,8 +1903,10 @@ def dns():
         return {}
 
     resolv = salt.utils.dns.parse_resolv()
-    for key in ('nameservers', 'ip4_nameservers', 'ip6_nameservers',
-                'sortlist'):
+    keys = ['nameservers', 'ip4_nameservers', 'sortlist']
+    if __opts__.get('ipv6', True):
+        keys.append('ip6_nameservers')
+    for key in keys:
         if key in resolv:
             resolv[key] = [str(i) for i in resolv[key]]
 
@@ -2019,14 +2028,32 @@ def _hw_data(osdata):
         return {}
 
     grains = {}
-    # On SmartOS (possibly SunOS also) smbios only works in the global zone
-    # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
-    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not (
+    if osdata['kernel'] == 'Linux' and os.path.exists('/sys/class/dmi/id'):
+        # On many Linux distributions basic firmware information is available via sysfs
+        # requires CONFIG_DMIID to be enabled in the Linux kernel configuration
+        sysfs_firmware_info = {
+            'biosversion': 'bios_version',
+            'productname': 'product_name',
+            'manufacturer': 'sys_vendor',
+            'biosreleasedate': 'bios_date',
+            'uuid': 'product_uuid',
+            'serialnumber': 'product_serial'
+        }
+        for key, fw_file in sysfs_firmware_info.items():
+            contents_file = os.path.join('/sys/class/dmi/id', fw_file)
+            if os.path.exists(contents_file):
+                with salt.utils.fopen(contents_file, 'r') as ifile:
+                    grains[key] = ifile.read()
+                    if key == 'uuid':
+                        grains['uuid'] = grains['uuid'].lower()
+    elif salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not (
             salt.utils.is_smartos() or
             (  # SunOS on SPARC - 'smbios: failed to load SMBIOS: System does not export an SMBIOS table'
                 osdata['kernel'] == 'SunOS' and
                 osdata['cpuarch'].startswith('sparc')
             )):
+        # On SmartOS (possibly SunOS also) smbios only works in the global zone
+        # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
         grains = {
             'biosversion': __salt__['smbios.get']('bios-version'),
             'productname': __salt__['smbios.get']('system-product-name'),

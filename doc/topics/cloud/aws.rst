@@ -609,7 +609,7 @@ just instances:
 
     salt-cloud -f get_tags my_ec2 resource_id=af5467ba
     salt-cloud -f set_tags my_ec2 resource_id=af5467ba tag1=somestuff
-    salt-cloud -f del_tags my_ec2 resource_id=af5467ba tag1,tag2,tag3
+    salt-cloud -f del_tags my_ec2 resource_id=af5467ba tags=tag1,tag2,tag3
 
 
 Rename EC2 Instances

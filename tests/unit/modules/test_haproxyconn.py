@@ -9,11 +9,7 @@ from __future__ import absolute_import
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 import salt.modules.haproxyconn as haproxyconn
@@ -87,7 +83,7 @@ class MockHaConn(object):
     """
     Mock of HaConn
     """
-    def __init__(self):
+    def __init__(self, socket=None):
         self.ha_cmd = None
 
     def sendCmd(self, ha_cmd, objectify=False):
@@ -100,17 +96,16 @@ class MockHaConn(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.modules.haproxyconn._get_conn', return_value=MockHaConn())
 class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.haproxyconn
     '''
     def setup_loader_modules(self):
-        return {haproxyconn: {'haproxy': Mockhaproxy()}}
+        return {haproxyconn: {'haproxy': Mockhaproxy(), '_get_conn': MockHaConn}}
 
     # 'list_servers' function tests: 1
 
-    def test_list_servers(self, mock):
+    def test_list_servers(self):
         '''
         Test if it get a value from etcd, by direct path
         '''
@@ -118,7 +113,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enable_server' function tests: 1
 
-    def test_enable_server(self, mock):
+    def test_enable_server(self):
         '''
         Test if it get a value from etcd, by direct path
         '''
@@ -126,7 +121,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disable_server' function tests: 1
 
-    def test_disable_server(self, mock):
+    def test_disable_server(self):
         '''
         Test if it get a value from etcd, by direct path
         '''
@@ -134,7 +129,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_weight' function tests: 1
 
-    def test_get_weight(self, mock):
+    def test_get_weight(self):
         '''
         Test if it get a value from etcd, by direct path
         '''
@@ -142,7 +137,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_weight' function tests: 1
 
-    def test_set_weight(self, mock):
+    def test_set_weight(self):
         '''
         Test if it get a value from etcd, by direct path
         '''
@@ -151,7 +146,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_frontends' function tests: 1
 
-    def test_show_frontends(self, mock):
+    def test_show_frontends(self):
         '''
         Test if it get a value from etcd, by direct path
         '''
@@ -159,7 +154,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_backends' function tests: 1
 
-    def test_show_backends(self, mock):
+    def test_show_backends(self):
         '''
         Test if it get a value from etcd, by direct path
         '''

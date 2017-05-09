@@ -31,14 +31,14 @@ class WinAutorunsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_' function tests: 1
 
-    @patch('os.listdir', MagicMock(return_value=[]))
     def test_list(self):
         '''
         Test if it enables win_autoruns the service on the server
         '''
-        ret = {KEY[0]: ['SALT'], KEY[1]: ['SALT'], KEY[2]: ['SALT']}
-        mock = MagicMock(return_value='Windows 7')
-        with patch.dict(win_autoruns.__grains__, {'osfullname': mock}):
-            mock = MagicMock(return_value='SALT')
-            with patch.dict(win_autoruns.__salt__, {'cmd.run': mock}):
-                self.assertDictEqual(win_autoruns.list_(), ret)
+        with patch('os.listdir', MagicMock(return_value=[])):
+            ret = {KEY[0]: ['SALT'], KEY[1]: ['SALT'], KEY[2]: ['SALT']}
+            mock = MagicMock(return_value='Windows 7')
+            with patch.dict(win_autoruns.__grains__, {'osfullname': mock}):
+                mock = MagicMock(return_value='SALT')
+                with patch.dict(win_autoruns.__salt__, {'cmd.run': mock}):
+                    self.assertDictEqual(win_autoruns.list_(), ret)

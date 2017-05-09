@@ -83,14 +83,14 @@ in the ``docker-registries`` Pillar key, as well as any key ending in
         username: foo
         password: s3cr3t
 
-To login to the configured registries, use the :py:func:`docker.login
-<salt.modules.dockermod.login>` function. This only needs to be done once for a
+To login to the configured registries, use the :py:func:`dockerng.login
+<salt.modules.dockerng.login>` function. This only needs to be done once for a
 given registry, and it will store/update the credentials in
 ``~/.docker/config.json``.
 
 .. note::
-    For Salt releases before 2016.3.7 and 2016.11.4, :py:func:`docker.login
-    <salt.modules.dockermod.login>` is not available. Instead, Salt will try to
+    For Salt releases before 2016.3.7 and 2016.11.4, :py:func:`dockerng.login
+    <salt.modules.dockerng.login>` is not available. Instead, Salt will try to
     authenticate using each of your configured registries for each push/pull,
     behavior which is not correct and has been resolved in newer releases.
 
@@ -185,7 +185,6 @@ import copy
 import fnmatch
 import functools
 import gzip
-import io
 import json
 import logging
 import os
@@ -317,10 +316,10 @@ def _get_docker_py_versioninfo():
         pass
 
 
-def _get_client(**kwargs):
+def _get_client(timeout=NOTSET, **kwargs):
     client_kwargs = {}
-    if 'client_timeout' in kwargs:
-        client_kwargs['timeout'] = kwargs.pop('client_timeout')
+    if timeout is not NOTSET:
+        client_kwargs['timeout'] = timeout
     for key, val in (('base_url', 'docker.url'),
                      ('version', 'docker.version')):
         param = __salt__['config.get'](val, NOTSET)
@@ -389,9 +388,22 @@ def _docker_client(wrapped):
         '''
         Ensure that the client is present
         '''
-        if 'docker.client' not in __context__:
-            __context__['docker.client'] = _get_client(**kwargs)
-        return wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
+        kwargs = salt.utils.clean_kwargs(**kwargs)
+        timeout = kwargs.pop('client_timeout', NOTSET)
+        if 'docker.client' not in __context__ \
+                or not hasattr(__context__['docker.client'], 'timeout'):
+            __context__['docker.client'] = _get_client(timeout=timeout, **kwargs)
+        orig_timeout = None
+        if timeout is not NOTSET \
+                and hasattr(__context__['docker.client'], 'timeout') \
+                and __context__['docker.client'].timeout != timeout:
+            # Temporarily override timeout
+            orig_timeout = __context__['docker.client'].timeout
+            __context__['docker.client'].timeout = timeout
+        ret = wrapped(*args, **kwargs)
+        if orig_timeout is not None:
+            __context__['docker.client'].timeout = orig_timeout
+        return ret
     return wrapper
 
 
@@ -571,8 +583,14 @@ def _client_wrapper(attr, *args, **kwargs):
     '''
     catch_api_errors = kwargs.pop('catch_api_errors', True)
     func = getattr(__context__['docker.client'], attr, None)
-    if func is None:
+    if func is None or not hasattr(func, '__call__'):
         raise SaltInvocationError('Invalid client action \'{0}\''.format(attr))
+    if attr in ('push', 'pull'):
+        try:
+            # Refresh auth config from config.json
+            __context__['docker.client'].reload_config()
+        except AttributeError:
+            pass
     err = ''
     try:
         log.debug(
@@ -908,9 +926,9 @@ def login(*registries):
 
     .. code-block:: bash
 
-        salt myminion docker.login
-        salt myminion docker.login hub
-        salt myminion docker.login hub https://mydomain.tld/registry/
+        salt myminion dockerng.login
+        salt myminion dockerng.login hub
+        salt myminion dockerng.login hub https://mydomain.tld/registry/
     '''
     # NOTE: This function uses the "docker login" CLI command so that login
     # information is added to the config.json, since docker-py isn't designed
@@ -2656,6 +2674,8 @@ def copy_to(name,
 
         salt myminion docker.copy_to mycontainer /tmp/foo /root/foo
     '''
+    if exec_driver is None:
+        exec_driver = _get_exec_driver()
     return __salt__['container_resource.copy_to'](
         name,
         __salt__['container_resource.cache_file'](source),
@@ -5151,7 +5171,7 @@ def call(name, function, *args, **kwargs):
     thin_dest_path = _generate_tmp_path()
     mkdirp_thin_argv = ['mkdir', '-p', thin_dest_path]
 
-    # put_archive reqires the path to exist
+    # make thin_dest_path in the container
     ret = run_all(name, subprocess.list2cmdline(mkdirp_thin_argv))
     if ret['retcode'] != 0:
         return {'result': False, 'comment': ret['stderr']}
@@ -5163,14 +5183,25 @@ def call(name, function, *args, **kwargs):
     thin_path = salt.utils.thin.gen_thin(__opts__['cachedir'],
                                          extra_mods=__salt__['config.option']("thin_extra_mods", ''),
                                          so_mods=__salt__['config.option']("thin_so_mods", ''))
-    with io.open(thin_path, 'rb') as file:
-        _client_wrapper('put_archive', name, thin_dest_path, file)
+    ret = copy_to(name, thin_path, os.path.join(thin_dest_path, os.path.basename(thin_path)))
+
+    # untar archive
+    untar_cmd = ["python", "-c", (
+                     "import tarfile; "
+                     "tarfile.open(\"{0}/{1}\").extractall(path=\"{0}\")"
+                 ).format(thin_dest_path, os.path.basename(thin_path))]
+    ret = run_all(name, subprocess.list2cmdline(untar_cmd))
+    if ret['retcode'] != 0:
+        return {'result': False, 'comment': ret['stderr']}
+
     try:
         salt_argv = [
             'python',
             os.path.join(thin_dest_path, 'salt-call'),
             '--metadata',
             '--local',
+            '--log-file', os.path.join(thin_dest_path, 'log'),
+            '--cachedir', os.path.join(thin_dest_path, 'cache'),
             '--out', 'json',
             '-l', 'quiet',
             '--',

@@ -348,10 +348,11 @@ class ReactWrap(object):
         '''
         log.debug("in caller with fun {0} args {1} kwargs {2}".format(fun, args, kwargs))
         args = kwargs.get('args', [])
+        kwargs = kwargs.get('kwargs', {})
         if 'caller' not in self.client_cache:
             self.client_cache['caller'] = salt.client.Caller(self.opts['conf_file'])
         try:
-            self.client_cache['caller'].function(fun, *args)
+            self.client_cache['caller'].cmd(fun, *args, **kwargs)
         except SystemExit:
             log.warning('Attempt to exit reactor. Ignored.')
         except Exception as exc:

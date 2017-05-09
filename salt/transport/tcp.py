@@ -745,7 +745,14 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
         super(TCPClientKeepAlive, self).__init__(
             resolver=resolver, io_loop=io_loop)
 
-    def _create_stream(self, max_buffer_size, af, addr):
+    def _create_stream(self, max_buffer_size, af, addr, **kwargs):  # pylint: disable=unused-argument
+        '''
+        Override _create_stream() in TCPClient.
+
+        Tornado 4.5 added the kwargs 'source_ip' and 'source_port'.
+        Due to this, use **kwargs to swallow these and any future
+        kwargs to maintain compatibility.
+        '''
         # Always connect in plaintext; we'll convert to ssl if necessary
         # after one connection has completed.
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

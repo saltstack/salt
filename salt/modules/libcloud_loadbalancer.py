@@ -38,6 +38,7 @@ import logging
 # Import salt libs
 import salt.utils.compat
 import salt.ext.six as six
+from salt.utils import clean_kwargs
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -88,22 +89,27 @@ def _algorithm_maps():
 def _get_driver(profile):
     config = __salt__['config.option']('libcloud_loadbalancer')[profile]
     cls = get_driver(config['driver'])
-    args = config
+    args = config.copy()
     del args['driver']
     args['key'] = config.get('key')
     args['secret'] = config.get('secret', None)
+    if args['secret'] is None:
+        del args['secret']
     args['secure'] = config.get('secure', True)
     args['host'] = config.get('host', None)
     args['port'] = config.get('port', None)
     return cls(**args)
 
 
-def list_balancers(profile):
+def list_balancers(profile, **libcloud_kwargs):
     '''
     Return a list of load balancers.
 
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's list_balancers method
+    :type  libcloud_kwargs: ``dict``
 
     CLI Example:
 
@@ -112,19 +118,23 @@ def list_balancers(profile):
         salt myminion libcloud_storage.list_balancers profile1
     '''
     conn = _get_driver(profile=profile)
-    balancers = conn.list_balancers()
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    balancers = conn.list_balancers(**libcloud_kwargs)
     ret = []
     for balancer in balancers:
         ret.append(_simple_balancer(balancer))
     return ret
 
 
-def list_protocols(profile):
+def list_protocols(profile, **libcloud_kwargs):
     '''
     Return a list of supported protocols.
 
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's list_protocols method
+    :type  libcloud_kwargs: ``dict``
 
     :return: a list of supported protocols
     :rtype: ``list`` of ``str``
@@ -136,10 +146,11 @@ def list_protocols(profile):
         salt myminion libcloud_storage.list_protocols profile1
     '''
     conn = _get_driver(profile=profile)
-    return conn.list_protocols()
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    return conn.list_protocols(**libcloud_kwargs)
 
 
-def create_balancer(name, port, protocol, profile, algorithm=None, members=None):
+def create_balancer(name, port, protocol, profile, algorithm=None, members=None, **libcloud_kwargs):
     '''
     Create a new load balancer instance
 
@@ -159,6 +170,9 @@ def create_balancer(name, port, protocol, profile, algorithm=None, members=None)
     :param profile: The profile key
     :type  profile: ``str``
 
+    :param libcloud_kwargs: Extra arguments for the driver's create_balancer method
+    :type  libcloud_kwargs: ``dict``
+
     :return: The details of the new balancer
 
     CLI Example:
@@ -172,15 +186,21 @@ def create_balancer(name, port, protocol, profile, algorithm=None, members=None)
     else:
         if isinstance(algorithm, six.string_types):
             algorithm = _algorithm_maps()[algorithm]
-    if members is None:
-        members = []
+    starting_members = []
+    if members is not None:
+        if isinstance(members, list):
+            for m in members:
+                starting_members.append(Member(id=None, ip=m['ip'], port=m['port']))
+        else:
+            raise ValueError("members must be of type list")
 
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     conn = _get_driver(profile=profile)
-    balancer = conn.create_balancer(name, port, protocol, algorithm, members)
+    balancer = conn.create_balancer(name, port, protocol, algorithm, starting_members, **libcloud_kwargs)
     return _simple_balancer(balancer)
 
 
-def destroy_balancer(balancer_id, profile):
+def destroy_balancer(balancer_id, profile, **libcloud_kwargs):
     '''
     Destroy a load balancer
 
@@ -189,6 +209,9 @@ def destroy_balancer(balancer_id, profile):
 
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's destroy_balancer method
+    :type  libcloud_kwargs: ``dict``
 
     :return: ``True`` if the destroy was successful, otherwise ``False``.
     :rtype: ``bool``
@@ -200,11 +223,12 @@ def destroy_balancer(balancer_id, profile):
         salt myminion libcloud_storage.destroy_balancer balancer_1 profile1
     '''
     conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     balancer = conn.get_balancer(balancer_id)
-    return conn.destroy_balancer(balancer)
+    return conn.destroy_balancer(balancer, **libcloud_kwargs)
 
 
-def get_balancer_by_name(name, profile):
+def get_balancer_by_name(name, profile, **libcloud_kwargs):
     '''
     Get the details for a load balancer by name
 
@@ -213,6 +237,9 @@ def get_balancer_by_name(name, profile):
 
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's list_balancers method
+    :type  libcloud_kwargs: ``dict``
 
     :return: the load balancer details
 
@@ -223,7 +250,8 @@ def get_balancer_by_name(name, profile):
         salt myminion libcloud_storage.get_balancer_by_name my_balancer profile1
     '''
     conn = _get_driver(profile=profile)
-    balancers = conn.list_balancers()
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    balancers = conn.list_balancers(**libcloud_kwargs)
     match = [b for b in balancers if b.name == name]
     if len(match) == 1:
         return _simple_balancer(match[0])
@@ -233,7 +261,7 @@ def get_balancer_by_name(name, profile):
         raise ValueError("Bad argument, found no records")
 
 
-def get_balancer(balancer_id, profile):
+def get_balancer(balancer_id, profile, **libcloud_kwargs):
     '''
     Get the details for a load balancer by ID
 
@@ -242,6 +270,9 @@ def get_balancer(balancer_id, profile):
 
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's get_balancer method
+    :type  libcloud_kwargs: ``dict``
 
     :return: the load balancer details
 
@@ -252,16 +283,20 @@ def get_balancer(balancer_id, profile):
         salt myminion libcloud_storage.get_balancer balancer123 profile1
     '''
     conn = _get_driver(profile=profile)
-    balancer = conn.get_balancer(balancer_id)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    balancer = conn.get_balancer(balancer_id, **libcloud_kwargs)
     return _simple_balancer(balancer)
 
 
-def list_supported_algorithms(profile):
+def list_supported_algorithms(profile, **libcloud_kwargs):
     '''
     Get the supported algorithms for a profile
 
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's list_supported_algorithms method
+    :type  libcloud_kwargs: ``dict``
 
     :return: The supported algorithms
 
@@ -272,10 +307,11 @@ def list_supported_algorithms(profile):
         salt myminion libcloud_storage.list_supported_algorithms profile1
     '''
     conn = _get_driver(profile=profile)
-    return conn.list_supported_algorithms()
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    return conn.list_supported_algorithms(**libcloud_kwargs)
 
 
-def balancer_attach_member(balancer_id, ip, port, profile, extra=None):
+def balancer_attach_member(balancer_id, ip, port, profile, extra=None, **libcloud_kwargs):
     '''
     Add a new member to the load balancer
 
@@ -290,6 +326,9 @@ def balancer_attach_member(balancer_id, ip, port, profile, extra=None):
 
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's balancer_attach_member method
+    :type  libcloud_kwargs: ``dict``
 
     CLI Example:
 
@@ -298,13 +337,14 @@ def balancer_attach_member(balancer_id, ip, port, profile, extra=None):
         salt myminion libcloud_storage.balancer_attach_member balancer123 1.2.3.4 80 profile1
     '''
     conn = _get_driver(profile=profile)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     member = Member(id=None, ip=ip, port=port, balancer=None, extra=extra)
     balancer = conn.get_balancer(balancer_id)
-    member_saved = conn.balancer_attach_member(balancer, member)
+    member_saved = conn.balancer_attach_member(balancer, member, **libcloud_kwargs)
     return _simple_member(member_saved)
 
 
-def balancer_detach_member(balancer_id, member_id, profile):
+def balancer_detach_member(balancer_id, member_id, profile, **libcloud_kwargs):
     '''
     Add a new member to the load balancer
 
@@ -319,6 +359,9 @@ def balancer_detach_member(balancer_id, member_id, profile):
 
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's balancer_detach_member method
+    :type  libcloud_kwargs: ``dict``
 
     CLI Example:
 
@@ -336,10 +379,11 @@ def balancer_detach_member(balancer_id, member_id, profile):
         raise ValueError("Bad argument, found no records")
     else:
         member = match[0]
-    return conn.balancer_detach_member(balancer=balancer, member=member)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    return conn.balancer_detach_member(balancer=balancer, member=member, **libcloud_kwargs)
 
 
-def list_balancer_members(balancer_id, profile):
+def list_balancer_members(balancer_id, profile, **libcloud_kwargs):
     '''
     List the members of a load balancer
 
@@ -349,6 +393,9 @@ def list_balancer_members(balancer_id, profile):
     :param profile: The profile key
     :type  profile: ``str``
 
+    :param libcloud_kwargs: Extra arguments for the driver's list_balancer_members method
+    :type  libcloud_kwargs: ``dict``
+
     CLI Example:
 
     .. code-block:: bash
@@ -357,8 +404,34 @@ def list_balancer_members(balancer_id, profile):
     '''
     conn = _get_driver(profile=profile)
     balancer = conn.get_balancer(balancer_id)
-    members = conn.balancer_list_members(balancer=balancer)
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    members = conn.balancer_list_members(balancer=balancer, **libcloud_kwargs)
     return [_simple_member(member) for member in members]
+
+
+def extra(method, profile, **libcloud_kwargs):
+    '''
+    Call an extended method on the driver
+
+    :param method: Driver's method name
+    :type  method: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param libcloud_kwargs: Extra arguments for the driver's method
+    :type  libcloud_kwargs: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_loadbalancer.extra ex_get_permissions google container_name=my_container object_name=me.jpg --out=yaml
+    '''
+    libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
+    conn = _get_driver(profile=profile)
+    connection_method = getattr(conn, method)
+    return connection_method(**libcloud_kwargs)
 
 
 def _simple_balancer(balancer):
