@@ -247,12 +247,18 @@ def _get_key_dir():
     gpg_keydir = None
     if 'config.get' in __salt__:
         gpg_keydir = __salt__['config.get']('gpg_keydir')
+
     if not gpg_keydir:
-        gpg_keydir = __opts__.get('gpg_keydir')
-    if not gpg_keydir and 'config_dir' in __opts__:
-        gpg_keydir = os.path.join(__opts__['config_dir'], 'gpgkeys')
-    else:
-        gpg_keydir = os.path.join(os.path.split(__opts__['conf_file'])[0], 'gpgkeys')
+        gpg_keydir = __opts__.get(
+            'gpg_keydir',
+            os.path.join(
+                __opts__.get(
+                    'config_dir',
+                    os.path.dirname(__opts__['conf_file']),
+                ),
+                'gpgkeys'
+            ))
+
     return gpg_keydir
 
 
