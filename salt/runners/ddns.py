@@ -32,6 +32,8 @@ in the master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/ddns
         timeout: 10
 
 '''
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import logging
@@ -50,7 +52,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-import salt.exceptions
+from salt.exceptions import SaltRunnerError
 
 log = logging.getLogger(__name__)
 
@@ -87,7 +89,7 @@ def _get_ddns_config(*args, **kwargs):
         message = 'Missing \'nameserver\' or multiple nameserver configurations ' \
                   'found in the master configuration.'
         log.error(message)
-        raise salt.exceptions.SaltRunnerError(message)
+        raise SaltRunnerError(message)
 
     config = {
         'keyname': kwargs.get('keyname', ddns_config.get(nameserver, {}).get('keyname', None)),
@@ -103,7 +105,7 @@ def _get_ddns_config(*args, **kwargs):
     if not config['keyname'] or not config['keyfile']:
         message = 'Missing \'keyname\' and/or \'keyfile\' for the nameserver: {0}'.format(nameserver)
         log.error(message)
-        raise salt.exceptions.SaltRunnerError(message)
+        raise SaltRunnerError(message)
 
     return config
 
