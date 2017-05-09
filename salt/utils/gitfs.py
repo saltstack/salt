@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import copy
 import contextlib
+import distutils
 import errno
 import fnmatch
 import glob
@@ -16,7 +17,6 @@ import shutil
 import stat
 import subprocess
 import time
-import warnings
 from datetime import datetime
 
 # Import salt libs
@@ -107,48 +107,6 @@ except Exception as exc:
 GITPYTHON_MINVER = '0.3'
 PYGIT2_MINVER = '0.20.3'
 LIBGIT2_MINVER = '0.20.0'
-
-
-def enforce_types(key, val):
-    '''
-    Force params to be strings unless they should remain a different type
-    '''
-    non_string_params = {
-        'ssl_verify': bool,
-        'insecure_auth': bool,
-        'env_whitelist': 'stringlist',
-        'env_blacklist': 'stringlist',
-        'refspecs': 'stringlist',
-    }
-
-    def _find_global(key):
-        for item in non_string_params:
-            try:
-                if key.endswith('_' + item):
-                    ret = item
-                    break
-            except TypeError:
-                if key.endswith('_' + str(item)):
-                    ret = item
-                    break
-        else:
-            ret = None
-        return ret
-
-    if key not in non_string_params:
-        key = _find_global(key)
-        if key is None:
-            return six.text_type(val)
-
-    expected = non_string_params[key]
-    if expected is bool:
-        return val
-    elif expected == 'stringlist':
-        if not isinstance(val, (six.string_types, list)):
-            val = six.text_type(val)
-        if isinstance(val, six.string_types):
-            return [x.strip() for x in val.split(',')]
-        return [six.text_type(x) for x in val]
 
 
 def enforce_types(key, val):
