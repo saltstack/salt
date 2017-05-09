@@ -787,6 +787,18 @@ simply ``passphrase`` if being configured :ref:`per-remote
 Finally, the SSH host key must be :ref:`added to the known_hosts file
 <gitfs-ssh-fingerprint>`.
 
+.. note::
+    There is a known issue with public-key SSH authentication to Microsoft
+    Visual Studio (VSTS) with pygit2. This is due to a bug or lack of support
+    for VSTS in older libssh2 releases. Known working releases include libssh2
+    1.7.0 and later, and known incompatible releases include 1.5.0 and older.
+    At the time of this writing, 1.6.0 has not been tested.
+
+    Since upgrading libssh2 would require rebuilding many other packages (curl,
+    etc.), followed by a rebuild of libgit2 and a reinstall of pygit2, an
+    easier workaround for systems with older libssh2 is to use GitPython with a
+    passphraseless key for authentication.
+
 GitPython
 ---------
 
