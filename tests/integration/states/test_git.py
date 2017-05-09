@@ -20,6 +20,38 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
+from salt.utils.versions import LooseVersion as _LooseVersion
+
+
+def _check_git_version(git_version):
+    '''
+    Check to see if the version of git running on the test machine is new enough
+    for various tests and format the return message accordingly.
+
+    The base version of git to run any of these tests must be >= '1.6.5'.
+
+    Any test using the "git_opts" option must have a version of git >= '1.7.2'.
+
+    Returns a tuple containing a boolean (whether or not to skip the test) and
+    a string (the message to include if skipping the test).
+    '''
+    skip = True
+    msg = ''
+
+    # The minimum version of git required to load the git state tests is 1.6.5.
+    if git_version < _LooseVersion('1.6.5'):
+        msg = 'git version 1.6.5 or newer must be installed to run this test ' \
+              '(detected: {0}). Skipping.'.format(git_version)
+        return skip, msg
+
+    # The "git_opts" options needs a minimum version of 1.7.2.
+    if git_version < _LooseVersion('1.7.2'):
+        msg = 'The "git_opts" parameter is only supported for git versions >= 1.7.2 ' \
+              '(detected: {0}). Skipping.'.format(git_version)
+    else:
+        skip = False
+
+    return skip, msg
 
 
 @skip_if_binaries_missing('git')
@@ -29,7 +61,12 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
     '''
 
     def setUp(self):
-        super(GitTest, self).setUp()
+        # Make sure the git version is a new enough version to load the git state functions
+        git_version = self.run_function('git.version')
+        skip, msg = _check_git_version(git_version)
+        if skip:
+            self.skipTest(msg)
+
         self.__domain = 'github.com'
         try:
             if hasattr(socket, 'setdefaulttimeout'):
@@ -214,6 +251,11 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         Test running git.latest state a second time after changes have been
         made to the remote repo.
         '''
+        git_version = self.run_function('git.version')
+        skip, msg = _check_git_version(git_version)
+        if skip:
+            self.skipTest(msg)
+
         def _head(cwd):
             return self.run_function('git.rev_parse', [cwd, 'HEAD'])
 
@@ -274,6 +316,11 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         We're testing two almost identical cases, the only thing that differs
         is the rev used for the git.latest state.
         '''
+        git_version = self.run_function('git.version')
+        skip, msg = _check_git_version(git_version)
+        if skip:
+            self.skipTest(msg)
+
         name = os.path.join(TMP, 'salt_repo')
         try:
             # Clone repo
@@ -340,6 +387,11 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Ensure that we don't exit early when checking for a fast-forward
         '''
+        git_version = self.run_function('git.version')
+        skip, msg = _check_git_version(git_version)
+        if skip:
+            self.skipTest(msg)
+
         name = tempfile.mkdtemp(dir=TMP)
         target = os.path.join(TMP, 'test_latest_updated_remote_rev')
 
@@ -473,6 +525,11 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         Test the case where the remote branch has been removed
         https://github.com/saltstack/salt/issues/36242
         '''
+        git_version = self.run_function('git.version')
+        skip, msg = _check_git_version(git_version)
+        if skip:
+            self.skipTest(msg)
+
         repo = tempfile.mkdtemp(dir=TMP)
         admin = tempfile.mkdtemp(dir=TMP)
         name = tempfile.mkdtemp(dir=TMP)
@@ -499,7 +556,7 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             os.path.join(repo, 'refs', 'heads', 'develop')
         )
 
-        # Run git.latest state. This should successfuly clone and fail with a
+        # Run git.latest state. This should successfully clone and fail with a
         # specific error in the comment field.
         ret = self.run_state(
             'git.latest',
