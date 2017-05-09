@@ -91,6 +91,8 @@ def __define_global_system_encoding_variable__():
     del encoding
 
 
+
+
 __define_global_system_encoding_variable__()
 
 # This is now garbage collectable
