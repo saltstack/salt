@@ -100,6 +100,16 @@ def _get_options(ret=None):
     return _options
 
 
+CONN_POOL = None
+
+
+def _get_conn_pool():
+    global CONN_POOL
+    if CONN_POOL is None:
+        CONN_POOL = redis.ConnectionPool()
+    return CONN_POOL
+
+
 def _get_serv(ret=None):
     '''
     Return a redis server object
@@ -108,11 +118,13 @@ def _get_serv(ret=None):
     host = _options.get('host')
     port = _options.get('port')
     db = _options.get('db')
+    pool = _get_conn_pool()
 
     return redis.Redis(
             host=host,
             port=port,
-            db=db)
+            db=db,
+            connection_pool=pool)
 
 
 def _get_ttl():
