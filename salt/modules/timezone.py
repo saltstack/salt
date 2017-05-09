@@ -160,7 +160,7 @@ def get_zone():
         if __grains__['os'].lower() == 'centos':
             return _get_zone_etc_localtime()
         os_family = __grains__['os_family']
-        for family in ('RedHat', 'SUSE'):
+        for family in ('RedHat', 'Suse'):
             if family in os_family:
                 return _get_zone_sysconfig()
         for family in ('Debian', 'Gentoo'):
@@ -273,16 +273,13 @@ def set_zone(timezone):
     if 'RedHat' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
-    elif 'SUSE' in __grains__['os_family']:
+    elif 'Suse' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
-    elif 'Debian' in __grains__['os_family']:
+    elif 'Debian' in __grains__['os_family'] or 'Gentoo' in __grains__['os_family']:
         with salt.utils.fopen('/etc/timezone', 'w') as ofh:
             ofh.write(timezone.strip())
             ofh.write('\n')
-    elif 'Gentoo' in __grains__['os_family']:
-        with salt.utils.fopen('/etc/timezone', 'w') as ofh:
-            ofh.write(timezone)
 
     return True
 
@@ -373,7 +370,7 @@ def get_hwclock():
 
     else:
         os_family = __grains__['os_family']
-        for family in ('RedHat', 'SUSE'):
+        for family in ('RedHat', 'Suse'):
             if family in os_family:
                 cmd = ['tail', '-n', '1', '/etc/adjtime']
                 return __salt__['cmd.run'](cmd, python_shell=False)
@@ -505,7 +502,7 @@ def set_hwclock(clock):
     elif 'RedHat' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
-    elif 'SUSE' in __grains__['os_family']:
+    elif 'Suse' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family']:
