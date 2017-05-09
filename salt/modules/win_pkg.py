@@ -666,7 +666,8 @@ def _get_repo_details(saltenv):
 
         if not good_path:
             raise CommandExecutionError(
-                'Local cache dir {0} is not a good location'.format(local_dest)
+                'Attempting to delete files from a possibly unsafe location: '
+                '{0}'.format(local_dest)
             )
 
         __context__[contextkey] = (winrepo_source_dir, local_dest, winrepo_file)
