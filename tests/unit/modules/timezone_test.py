@@ -219,20 +219,20 @@ class TimezoneTestCase(TestCase):
         assert args == (['tail', '-n', '1', '/etc/adjtime'],)
         assert kwarg == {'python_shell': False}
 
-    def _test_get_hwclock_debian(self):  ## Disable this, because SaltStack cannot get their test environment right. :-(
+    def _test_get_hwclock_debian(self):  # TODO: Enable this when testing environment is working properly
         '''
         Test get hwclock on Debian
         :return:
         '''
-        with patch('salt.utils.which', MagicMock(return_value=False)), \
-              patch('os.path.exists', MagicMock(return_value=True)), \
-              patch('os.unlink', MagicMock()), \
-              patch('os.symlink', MagicMock()):
-            timezone.__grains__['os_family'] = ['Debian']
-            timezone.get_hwclock()
-            name, args, kwarg = timezone.__salt__['cmd.run'].mock_calls[0]
-            assert args == (['tail', '-n', '1', '/etc/adjtime'],)
-            assert kwarg == {'python_shell': False}
+        with patch('salt.utils.which', MagicMock(return_value=False)):
+            with patch('os.path.exists', MagicMock(return_value=True)):
+                with patch('os.unlink', MagicMock()):
+                    with patch('os.symlink', MagicMock()):
+                        timezone.__grains__['os_family'] = ['Debian']
+                        timezone.get_hwclock()
+                        name, args, kwarg = timezone.__salt__['cmd.run'].mock_calls[0]
+                        assert args == (['tail', '-n', '1', '/etc/adjtime'],)
+                        assert kwarg == {'python_shell': False}
 
     @patch('salt.utils.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
