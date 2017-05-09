@@ -398,6 +398,10 @@ def present(name,
     # First check if a password is set. If password is set, check if
     # hash_password is True, then hash it.
 
+    if __grains__['kernel'] in ('Darwin', 'Windows'):
+        # createhome not supported on Windows or Mac
+        createhome = False
+
     if password and hash_password:
         log.debug('Hashing a clear text password')
         password = __salt__['shadow.gen_password'](password)
