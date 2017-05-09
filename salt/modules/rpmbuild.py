@@ -430,6 +430,11 @@ def make_repo(repodir,
                 .format(keyid)
             )
 
+        # need to ensure ownership since gpg assigns to running process - root
+        for file in os.listdir(gnupghome):
+            if file.endswith('.gpg'):
+                __salt__['cmd.run']('chown {0}:{0} {1}'.format(runas, os.path.join(gnupghome, file)))
+
         # gpg keys should have been loaded as part of setup
         # retrieve specified key and preset passphrase
         local_keys = __salt__['gpg.list_keys'](user=runas, gnupghome=gnupghome)
