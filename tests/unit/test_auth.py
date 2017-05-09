@@ -76,6 +76,8 @@ class MasterACLTestCase(ModuleCase):
     def setUp(self):
         self.fire_event_mock = MagicMock(return_value='dummy_tag')
         self.addCleanup(delattr, self, 'fire_event_mock')
+        opts = self.get_temp_config('master')
+
         patches = (
             ('zmq.Context', MagicMock()),
             ('salt.payload.Serial.dumps', MagicMock()),
@@ -83,13 +85,14 @@ class MasterACLTestCase(ModuleCase):
             ('salt.utils.event.SaltEvent.fire_event', self.fire_event_mock),
             ('salt.auth.LoadAuth.time_auth', MagicMock(return_value=True)),
             ('salt.minion.MasterMinion', MagicMock()),
-            ('salt.utils.verify.check_path_traversal', MagicMock())
+            ('salt.utils.verify.check_path_traversal', MagicMock()),
+            ('salt.client.get_local_client', MagicMock(return_value=opts['conf_file'])),
         )
         for mod, mock in patches:
             patcher = patch(mod, mock)
             patcher.start()
             self.addCleanup(patcher.stop)
-        opts = self.get_temp_config('master')
+
         opts['publisher_acl'] = {}
         opts['publisher_acl_blacklist'] = {}
         opts['master_job_cache'] = ''
@@ -506,18 +509,21 @@ class AuthACLTestCase(ModuleCase):
     '''
     def setUp(self):
         self.auth_check_mock = MagicMock(return_value=True)
+        opts = self.get_temp_config('master')
+
         patches = (
             ('salt.minion.MasterMinion', MagicMock()),
             ('salt.utils.verify.check_path_traversal', MagicMock()),
             ('salt.utils.minions.CkMinions.auth_check', self.auth_check_mock),
             ('salt.auth.LoadAuth.time_auth', MagicMock(return_value=True)),
+            ('salt.client.get_local_client', MagicMock(return_value=opts['conf_file'])),
         )
         for mod, mock in patches:
             patcher = patch(mod, mock)
             patcher.start()
             self.addCleanup(patcher.stop)
         self.addCleanup(delattr, self, 'auth_check_mock')
-        opts = self.get_temp_config('master')
+
         opts['publisher_acl'] = {}
         opts['publisher_acl_blacklist'] = {}
         opts['master_job_cache'] = ''
