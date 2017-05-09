@@ -23,7 +23,7 @@ import salt.utils
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 
-def _check_git_version(git_version):
+def _check_git_version(git_version, git_opts=False):
     '''
     Check to see if the version of git running on the test machine is new enough
     for various tests and format the return message accordingly.
@@ -45,7 +45,7 @@ def _check_git_version(git_version):
         return skip, msg
 
     # The "git_opts" options needs a minimum version of 1.7.2.
-    if git_version < _LooseVersion('1.7.2'):
+    if git_opts and git_version < _LooseVersion('1.7.2'):
         msg = 'The "git_opts" parameter is only supported for git versions >= 1.7.2 ' \
               '(detected: {0}). Skipping.'.format(git_version)
     else:
@@ -252,7 +252,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         made to the remote repo.
         '''
         git_version = self.run_function('git.version')
-        skip, msg = _check_git_version(git_version)
+        skip, msg = _check_git_version(git_version, git_opts=True)
         if skip:
             self.skipTest(msg)
 
@@ -317,7 +317,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         is the rev used for the git.latest state.
         '''
         git_version = self.run_function('git.version')
-        skip, msg = _check_git_version(git_version)
+        skip, msg = _check_git_version(git_version, git_opts=True)
         if skip:
             self.skipTest(msg)
 
@@ -388,7 +388,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         Ensure that we don't exit early when checking for a fast-forward
         '''
         git_version = self.run_function('git.version')
-        skip, msg = _check_git_version(git_version)
+        skip, msg = _check_git_version(git_version, git_opts=True)
         if skip:
             self.skipTest(msg)
 
@@ -526,7 +526,7 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         https://github.com/saltstack/salt/issues/36242
         '''
         git_version = self.run_function('git.version')
-        skip, msg = _check_git_version(git_version)
+        skip, msg = _check_git_version(git_version, git_opts=True)
         if skip:
             self.skipTest(msg)
 
