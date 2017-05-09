@@ -334,12 +334,13 @@ def _run(cmd,
             msg = 'missing salt/utils/win_runas.py'
             raise CommandExecutionError(msg)
 
-        if not isinstance(cmd, list):
-            cmd = salt.utils.shlex_split(cmd, posix=False)
+        if isinstance(cmd, list):
+            # win_runas must take the command as a string
+            cmd = ' '.join(cmd)
+        elif not isinstance(cmd, six.string_types):
+            cmd = str(cmd)
 
-        cmd = ' '.join(cmd)
-
-        return win_runas(cmd, runas, password, cwd)
+        return win_runas(cmd.strip(), runas, password, cwd)
 
     if runas:
         # Save the original command before munging it
