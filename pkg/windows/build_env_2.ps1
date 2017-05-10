@@ -262,6 +262,17 @@ DownloadFileWithProgress $url $file
 Start_Process_and_test_exitcode  "$($ini['Settings']['Scripts2Dir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyCrypto"
 
 #==============================================================================
+# Download sitecustomize.py
+#==============================================================================
+Write-Output " ----------------------------------------------------------------"
+Write-Output "   - $script_name :: Download sitecustomize . . ."
+Write-Output " ----------------------------------------------------------------"
+$file = "sitecustomize.py"
+$url  = "$($ini['Settings']['SaltRepo'])/$file"
+$file = "$($ini['Settings']['SitePkgs2Dir'])\$file"
+DownloadFileWithProgress $url $file
+
+#==============================================================================
 # Copy DLLs to Python Directory
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
