@@ -208,13 +208,11 @@ def _format_host(host, data):
             rcounts[ret['result']] += 1
             rduration = ret.get('duration', 0)
             try:
-                float(rduration)
-                rdurations.append(rduration)
+                rdurations.append(float(rduration))
             except ValueError:
                 rduration, _, _ = rduration.partition(' ms')
                 try:
-                    float(rduration)
-                    rdurations.append(rduration)
+                    rdurations.append(float(rduration))
                 except ValueError:
                     log.error('Cannot parse a float from duration {0}'
                               .format(ret.get('duration', 0)))
