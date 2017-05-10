@@ -117,6 +117,8 @@ def enforce_types(key, val):
         'insecure_auth': bool,
         'env_whitelist': 'stringlist',
         'env_blacklist': 'stringlist',
+        'saltenv_whitelist': 'stringlist',
+        'saltenv_blacklist': 'stringlist',
         'refspecs': 'stringlist',
     }
 
@@ -314,6 +316,17 @@ class GitProvider(object):
             if key != 'ref':
                 setattr(self, '_' + key, self.conf[key])
             self.add_conf_overlay(key)
+
+        for item in ('env_whitelist', 'env_blacklist'):
+            val = getattr(self, item, None)
+            if val:
+                salt.utils.warn_until(
+                    'Neon',
+                    'The gitfs_{0} config option (and {0} per-remote config '
+                    'option) have been renamed to gitfs_salt{0} (and '
+                    'salt{0}). Please update your configuration.'.format(item)
+                )
+                setattr(self, 'salt{0}'.format(item), val)
 
         # Discard the conf dictionary since we have set all of the config
         # params as attributes
@@ -771,8 +784,8 @@ class GitProvider(object):
         '''
         return salt.utils.check_whitelist_blacklist(
             tgt_env,
-            whitelist=self.env_whitelist,
-            blacklist=self.env_blacklist
+            whitelist=self.saltenv_whitelist,
+            blacklist=self.saltenv_blacklist,
         )
 
     def _fetch(self):
