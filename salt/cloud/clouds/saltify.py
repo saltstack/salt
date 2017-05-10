@@ -18,6 +18,7 @@ import logging
 
 # Import salt libs
 import salt.config as config
+from salt.exceptions import SaltCloudException
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -184,4 +185,8 @@ def _verify(vm_):
         }
 
         log.debug('Testing SSH protocol for %s', vm_['name'])
-        return __utils__['cloud.wait_for_passwd'](**kwargs)
+        try:
+            return __utils__['cloud.wait_for_passwd'](**kwargs) is True
+        except SaltCloudException as exc:
+            log.error('Exception: %s', exc)
+            return False
