@@ -312,6 +312,61 @@ class _Zypper(object):
 __zypper__ = _Zypper()
 
 
+class Wildcard(object):
+    '''
+    .. versionadded:: Nitrogen
+
+    Converts string wildcard to a zypper query.
+    Example:
+       '1.2.3.4*' is '1.2.3.4.whatever.is.here' and is equal to:
+       '1.2.3.4 >= and < 1.2.3.5'
+
+    :param ptn: Pattern 
+    :return: Query range
+    '''
+
+    def __init__(self, zypper):
+        '''
+        :type zypper: a reference to an instance of a _Zypper class.
+        '''
+        self.name = None
+        self.version = None
+        self.zypper = zypper
+        self._attr_solvable_version = 'edition'
+
+    def __call__(self, pkg_name, pkg_version):
+        '''
+        Convert a string wildcard to a zypper query.
+
+        :param pkg_name: 
+        :param pkg_version: 
+        :return: 
+        '''
+        self.name = pkg_name
+        self.version = pkg_version
+        versions = self._get_available_versions()
+
+    def _get_available_versions(self):
+        '''
+        Get available versions of the package.
+        :return: 
+        '''
+        solvables = self.zypper.nolock.xml.call('se', '-xv', self.name).getElementsByTagName('solvable')
+        if not solvables:
+            raise CommandExecutionError('No packages found matching \'{0}\''.format(self.name))
+
+        return sorted(set([slv.getAttribute(self._attr_solvable_version)
+                           for slv in solvables if slv.getAttribute(self._attr_solvable_version)]))
+
+    def _get_scope_versions(self):
+        '''
+        Get available difference between next possible matches.
+
+        :return: 
+        '''
+        self.version
+
+
 def _systemd_scope():
     return salt.utils.systemd.has_scope(__context__) \
         and __salt__['config.get']('systemd.scope', True)
