@@ -14,7 +14,7 @@ Open up ``/etc/salt/master`` and add:
     venafi:
       api_key: None
 
-Then register your email address with Venagi using the following command:
+Then register your email address with Venafi using the following command:
 
 .. code-block:: bash
 
