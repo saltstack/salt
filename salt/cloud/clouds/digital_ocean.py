@@ -378,6 +378,19 @@ def create(vm_):
             raise SaltCloudConfigError("'ipv6' should be a boolean value.")
         kwargs['ipv6'] = ipv6
 
+    userdata_file = config.get_cloud_config_value(
+        'userdata_file', vm_, __opts__, search_global=False, default=None
+    )
+    if userdata_file is not None:
+        try:
+            with salt.utils.fopen(userdata_file, 'r') as fp_:
+                kwargs['user_data'] = salt.utils.cloud.userdata_template(
+                    __opts__, vm_, fp_.read()
+                )
+        except Exception as exc:
+            log.exception(
+                'Failed to read userdata from %s: %s', userdata_file, exc)
+
     create_dns_record = config.get_cloud_config_value(
         'create_dns_record', vm_, __opts__, search_global=False, default=None,
     )
