@@ -38,7 +38,6 @@ import json
 import salt.syspaths as syspaths
 import salt.cache
 import salt.utils
-import salt.utils.http
 import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
 
@@ -90,7 +89,7 @@ def gen_key(minion_id, dns_name=None, zone='default', password=None):
     # The /v1/zones/tag/{name} API call is a shortcut to get the zoneID
     # directly from the name
 
-    qdata = salt.utils.http.query(
+    qdata = __utils__['http.query'](
         '{0}/zones/tag/{1}'.format(_base_url(), zone),
         method='GET',
         decode=True,
@@ -106,7 +105,7 @@ def gen_key(minion_id, dns_name=None, zone='default', password=None):
     # the /v1/certificatepolicies?zoneId API call returns the default
     # certificate use and certificate identity policies
 
-    qdata = salt.utils.http.query(
+    qdata = __utils__['http.query'](
         '{0}/certificatepolicies?zoneId={1}'.format(_base_url(), zone_id),
         method='GET',
         decode=True,
@@ -303,7 +302,7 @@ def request(
         'certificateSigningRequest': csr,
     })
 
-    qdata = salt.utils.http.query(
+    qdata = __utils__['http.query'](
         '{0}/certificaterequests'.format(_base_url()),
         method='POST',
         data=pdata,
@@ -369,7 +368,7 @@ def register(email):
 
         salt-run venafi.register email@example.com
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/useraccounts'.format(_base_url()),
         method='POST',
         data=json.dumps({
@@ -401,7 +400,7 @@ def show_company(domain):
 
         salt-run venafi.show_company example.com
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/companies/domain/{1}'.format(_base_url(), domain),
         status=True,
         decode=True,
@@ -428,7 +427,7 @@ def show_csrs():
 
         salt-run venafi.show_csrs
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/certificaterequests'.format(_base_url()),
         status=True,
         decode=True,
@@ -455,7 +454,7 @@ def get_zone_id(zone_name):
 
         salt-run venafi.get_zone_id default
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/zones/tag/{1}'.format(_base_url(), zone_name),
         status=True,
         decode=True,
@@ -483,7 +482,7 @@ def show_policies():
 
         salt-run venafi.show_zones
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/certificatepolicies'.format(_base_url()),
         status=True,
         decode=True,
@@ -510,7 +509,7 @@ def show_zones():
 
         salt-run venafi.show_zones
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/zones'.format(_base_url()),
         status=True,
         decode=True,
@@ -537,7 +536,7 @@ def show_cert(id_):
 
         salt-run venafi.show_cert 01234567-89ab-cdef-0123-456789abcdef
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/certificaterequests/{1}/certificate'.format(_base_url(), id_),
         params={
             'format': 'PEM',
@@ -553,7 +552,7 @@ def show_cert(id_):
             'There was an API error: {0}'.format(data['error'])
         )
     data = data.get('body', '')
-    csr_data = salt.utils.http.query(
+    csr_data = __utils__['http.query'](
         '{0}/certificaterequests/{1}'.format(_base_url(), id_),
         status=True,
         decode=True,
