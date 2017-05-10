@@ -147,7 +147,7 @@ def filesystem_absent(name, force=False, recursive=False):
     recursive : boolean
         also destroy all the child datasets (zfs destroy -r)
 
-    ..warning:
+    .. warning::
 
         If a volume with ``name`` exists, this state will succeed without
         destroying the volume specified by ``name``. This module is dataset type sensitive.
@@ -167,7 +167,7 @@ def volume_absent(name, force=False, recursive=False):
     recursive : boolean
         also destroy all the child datasets (zfs destroy -r)
 
-    ..warning:
+    .. warning::
 
         If a filesystem with ``name`` exists, this state will succeed without
         destroying the filesystem specified by ``name``. This module is dataset type sensitive.
@@ -651,7 +651,7 @@ def promoted(name):
     name : string
         name of fileset or volume
 
-    ..warning::
+    .. warning::
 
         only one dataset can be the origin,
         if you promote a clone the original will now point to the promoted dataset
@@ -711,7 +711,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
         day, month, and year) by default all are set to 0 the value indicated the
         number of snapshots of that type to keep around.
 
-    ..warning::
+    .. warning::
 
         snapshots will only be created and pruned every time the state runs.
         a schedule must be setup to automatically run the state. this means that if

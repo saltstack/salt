@@ -917,10 +917,9 @@ def _get_msiexec(use_msiexec):
         if os.path.isfile(use_msiexec):
             return True, use_msiexec
         else:
-            log.warning(
-                ("msiexec path '{0}' not found. Using system registered "
-                 "msiexec instead").format(use_msiexec))
-        use_msiexec = True
+            log.warning(("msiexec path '{0}' not found. Using system registered"
+                         " msiexec instead").format(use_msiexec))
+            use_msiexec = True
     if use_msiexec is True:
         return True, 'msiexec'
 
@@ -1420,7 +1419,10 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             ret[pkgname] = msg
             continue
 
-        if version_num is None and 'latest' in pkginfo:
+        if version_num is not None:
+            if version_num not in pkginfo and 'latest' in pkginfo:
+                version_num = 'latest'
+        elif 'latest' in pkginfo:
             version_num = 'latest'
 
         # Check to see if package is installed on the system
