@@ -547,7 +547,7 @@ class TestCustomExtensions(TestCase):
             # up into several different assertions. We need to check that the various
             # string segments are present in the rendered value, as well as the
             # type of the rendered variable. This should cover all use cases but also
-            # allow the test to pass of CentOS 6 running Python 2.7.
+            # allow the test to pass on CentOS 6 running Python 2.7.
             self.assertIn('!!python/unicode', rendered)
             self.assertIn('str value', rendered)
             self.assertIsInstance(rendered, unicode)
