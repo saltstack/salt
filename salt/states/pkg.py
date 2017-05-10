@@ -2335,7 +2335,7 @@ def purged(name,
         return ret
 
 
-def uptodate(name, refresh=False, **kwargs):
+def uptodate(name, refresh=False, pkgs=None, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -2347,6 +2347,9 @@ def uptodate(name, refresh=False, **kwargs):
 
     refresh
         refresh the package database before checking for new upgrades
+
+    pkgs
+        list of packages to upgrade
 
     :param str cache_valid_time:
         This parameter sets the value in seconds after which cache marked as invalid,
@@ -2383,6 +2386,8 @@ def uptodate(name, refresh=False, **kwargs):
     if isinstance(refresh, bool):
         try:
             packages = __salt__['pkg.list_upgrades'](refresh=refresh, **kwargs)
+            if isinstance(pkgs, list):
+                packages = [pkg for pkg in packages if pkg in pkgs]
         except Exception as exc:
             ret['comment'] = str(exc)
             return ret
@@ -2400,7 +2405,7 @@ def uptodate(name, refresh=False, **kwargs):
         return ret
 
     try:
-        ret['changes'] = __salt__['pkg.upgrade'](refresh=refresh, **kwargs)
+        ret['changes'] = __salt__['pkg.upgrade'](refresh=refresh, pkgs=pkgs, **kwargs)
     except CommandExecutionError as exc:
         if exc.info:
             # Get information for state return from the exception.

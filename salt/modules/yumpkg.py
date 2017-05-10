@@ -197,10 +197,10 @@ def _get_repo_options(**kwargs):
     in the yum command, based on the kwargs.
     '''
     # Get repo options from the kwargs
-    fromrepo = kwargs.get('fromrepo', '')
-    repo = kwargs.get('repo', '')
-    disablerepo = kwargs.get('disablerepo', '')
-    enablerepo = kwargs.get('enablerepo', '')
+    fromrepo = kwargs.pop('fromrepo', '')
+    repo = kwargs.pop('repo', '')
+    disablerepo = kwargs.pop('disablerepo', '')
+    enablerepo = kwargs.pop('enablerepo', '')
 
     # Support old 'repo' argument
     if repo and not fromrepo:
@@ -233,7 +233,7 @@ def _get_excludes_option(**kwargs):
     Returns a list of '--disableexcludes' option to be used in the yum command,
     based on the kwargs.
     '''
-    disable_excludes = kwargs.get('disableexcludes', '')
+    disable_excludes = kwargs.pop('disableexcludes', '')
     ret = []
     if disable_excludes:
         log.info('Disabling excludes for \'%s\'', disable_excludes)
@@ -246,11 +246,24 @@ def _get_branch_option(**kwargs):
     Returns a list of '--branch' option to be used in the yum command,
     based on the kwargs. This feature requires 'branch' plugin for YUM.
     '''
-    branch = kwargs.get('branch', '')
+    branch = kwargs.pop('branch', '')
     ret = []
     if branch:
         log.info('Adding branch \'%s\'', branch)
         ret.append('--branch=\'{0}\''.format(branch))
+    return ret
+
+
+def _get_extra_options(**kwargs):
+    '''
+    Returns list of extra options for yum
+    '''
+    ret = []
+    for key, value in kwargs.items():
+        if isinstance(key, six.string_types):
+            ret.append('--{0}=\'{1}\''.format(key, value))
+        elif value is True:
+            ret.append('--{0}'.format(key))
     return ret
 
 
@@ -1491,10 +1504,21 @@ def upgrade(name=None,
 
         .. versionadded:: 2016.3.0
 
+
+    .. note::
+
+        To add extra arguments to the `yum upgrade` command, pass them as key
+        word arguments.  For arguments without assignments, pass `True`
+
+    .. code-block:: bash
+
+        salt '*' pkg.upgrade security=True exclude='kernel*'
+
     '''
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
     branch_arg = _get_branch_option(**kwargs)
+    extra_args = _get_extra_options(**kwargs)
 
     if salt.utils.is_true(refresh):
         refresh_db(**kwargs)
@@ -1523,7 +1547,7 @@ def upgrade(name=None,
             and __salt__['config.get']('systemd.scope', True):
         cmd.extend(['systemd-run', '--scope'])
     cmd.extend([_yum(), '--quiet', '-y'])
-    for args in (repo_arg, exclude_arg, branch_arg):
+    for args in (repo_arg, exclude_arg, branch_arg, extra_args):
         if args:
             cmd.extend(args)
     if skip_verify:
