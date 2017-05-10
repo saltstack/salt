@@ -4,7 +4,7 @@ Return salt data via slack
 
 ..  versionadded:: 2015.5.0
 
-The following fields can be set in the minion conf file::
+The following fields can be set in the minion conf file:
 
 .. code-block:: yaml
 
