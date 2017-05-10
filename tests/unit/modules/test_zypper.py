@@ -915,3 +915,25 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
                 '--gpg-auto-import-keys', 'mr', '--refresh', name
             )
+
+    def test_wildcard_to_query(self):
+        '''
+        Test wildcard to query
+        :return: 
+        '''
+        xmldoc = """<?xml version='1.0'?><stream>
+<message type="info">Loading repository data...</message>
+<message type="info">Reading installed packages...</message>
+<search-result version="0.0"><solvable-list>
+<solvable status="installed" name="libzypp" kind="package" edition="16.2.4-19.5" arch="x86_64" repository="SLE-12-SP2-x86_64-Pool"/>
+<solvable status="not-installed" name="libzypp" kind="srcpackage" edition="16.3.2-25.1" arch="noarch" repository="SLE-12-SP2-x86_64-Update"/>
+<solvable status="not-installed" name="libzypp" kind="srcpackage" edition="16.5.2-27.9.1" arch="noarch" repository="SLE-12-SP2-x86_64-Update"/>
+<solvable status="other-version" name="libzypp" kind="package" edition="16.3.2-25.1" arch="x86_64" repository="SLE-12-SP2-x86_64-Update"/>
+<solvable status="other-version" name="libzypp" kind="package" edition="16.5.2-27.9.1" arch="x86_64" repository="SLE-12-SP2-x86_64-Update"/>
+<solvable status="installed" name="libzypp" kind="package" edition="16.2.4-19.5" arch="x86_64" repository="(System Packages)"/>
+</solvable-list></search-result></stream>
+        """
+        solvables = minidom.parseString(xmldoc)
+        _zpr = MagicMock()
+        _zpr.nolock.xml.call = MagicMock(return_value=solvables)
+        wildcard = zypper.Wildcard(_zpr)
