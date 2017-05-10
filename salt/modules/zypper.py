@@ -1803,7 +1803,7 @@ def list_downloaded():
                 'path': package_path,
                 'size': os.path.getsize(package_path),
                 'creation_date_time_t': pkg_timestamp,
-                'creation_date_time': datetime.datetime.fromtimestamp(pkg_timestamp).isoformat(),
+                'creation_date_time': datetime.datetime.utcfromtimestamp(pkg_timestamp).isoformat(),
             }
     return ret
 
