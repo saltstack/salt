@@ -394,10 +394,8 @@ def present(name,
 
         .. versionchanged:: 2015.8.0
     '''
-
     # First check if a password is set. If password is set, check if
     # hash_password is True, then hash it.
-
     if password and hash_password:
         log.debug('Hashing a clear text password')
         password = __salt__['shadow.gen_password'](password)
@@ -410,6 +408,10 @@ def present(name,
         workphone = sdecode(workphone)
     if homephone is not None:
         homephone = sdecode(homephone)
+
+    # createhome not supported on Windows or Mac
+    if __grains__['kernel'] in ('Darwin', 'Windows'):
+        createhome = False
 
     ret = {'name': name,
            'changes': {},
