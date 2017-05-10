@@ -144,7 +144,6 @@ def add(name,
         password = _to_unicode(password)
         fullname = _to_unicode(fullname)
         description = _to_unicode(description)
-        groups = _to_unicode(groups)
         home = _to_unicode(home)
         homedrive = _to_unicode(homedrive)
         profile = _to_unicode(profile)
