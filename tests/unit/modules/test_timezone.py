@@ -85,28 +85,17 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TimezoneModuleTestCase(TestCase):
+class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Timezone test case
         '''
     TEST_TZ = 'UTC'
 
-    def setUp(self):
-        '''
-        Setup test
-        :return:
-        '''
-        timezone.__salt__ = {'file.sed': MagicMock(),
-                             'cmd.run': MagicMock(),
-                             'cmd.retcode': MagicMock(return_value=0)}
-        timezone.__grains__ = {'os': 'unknown'}
-
-    def tearDown(self):
-        '''
-        Teardown test
-        :return:
-        '''
-        timezone.__salt__ = timezone.__grains__ = None
+    def setup_loader_modules(self):
+        return {timezone: {'__grains__': {'os': ''},
+                           '__salt__': {'file.sed': MagicMock(),
+                                        'cmd.run': MagicMock(),
+                                        'cmd.retcode': MagicMock(return_value=0)}}}
 
     @patch('salt.utils.which', MagicMock(return_value=False))
     def test_get_zone_centos(self):
