@@ -6,6 +6,8 @@ Tests for the Git state
 # Import python libs
 from __future__ import absolute_import
 import errno
+import functools
+import inspect
 import os
 import shutil
 import socket
@@ -15,21 +17,72 @@ import tempfile
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.paths import TMP
-from tests.support.helpers import skip_if_binaries_missing
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 
-@skip_if_binaries_missing('git')
+def __check_git_version(caller, min_version, skip_msg):
+    '''
+    Common logic for version check
+    '''
+    if inspect.isclass(caller):
+        actual_setup = getattr(caller, 'setUp', None)
+
+        def setUp(self, *args, **kwargs):
+            if not salt.utils.which('git'):
+                self.skipTest('git is not installed')
+            git_version = self.run_function('git.version')
+            if _LooseVersion(git_version) < _LooseVersion(min_version):
+                self.skipTest(skip_msg.format(min_version, git_version))
+            if actual_setup is not None:
+                actual_setup(self, *args, **kwargs)
+        caller.setUp = setUp
+        return caller
+
+    @functools.wraps(caller)
+    def wrapper(self, *args, **kwargs):
+        if not salt.utils.which('git'):
+            self.skipTest('git is not installed')
+        git_version = self.run_function('git.version')
+        if _LooseVersion(git_version) < _LooseVersion(min_version):
+            self.skipTest(skip_msg.format(min_version, git_version))
+        return caller(self, *args, **kwargs)
+    return wrapper
+
+
+def ensure_min_git(caller):
+    '''
+    Skip test if minimum supported git version is not installed
+    '''
+    min_version = '1.6.5'
+    return __check_git_version(
+        caller,
+        min_version,
+        'git {0} or newer required to run this test (detected {1})'
+    )
+
+
+def uses_git_opts(caller):
+    '''
+    Skip test if git_opts is not supported
+    '''
+    min_version = '1.7.2'
+    return __check_git_version(
+        caller,
+        min_version,
+        'git_opts only supported in git {0} and newer (detected {1})'
+    )
+
+
+@ensure_min_git
 class GitTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the git state
     '''
-
     def setUp(self):
-        super(GitTest, self).setUp()
         self.__domain = 'github.com'
         try:
             if hasattr(socket, 'setdefaulttimeout'):
@@ -209,6 +262,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
+    @uses_git_opts
     def test_latest_fast_forward(self):
         '''
         Test running git.latest state a second time after changes have been
@@ -311,6 +365,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
+    @uses_git_opts
     def test_latest_changed_local_branch_rev_head(self):
         '''
         Test for presence of hint in failure message when the local branch has
@@ -325,6 +380,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             'branch (new_branch)'
         )
 
+    @uses_git_opts
     def test_latest_changed_local_branch_rev_develop(self):
         '''
         Test for presence of hint in failure message when the local branch has
@@ -336,6 +392,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             'branch (new_branch)'
         )
 
+    @uses_git_opts
     def test_latest_updated_remote_rev(self):
         '''
         Ensure that we don't exit early when checking for a fast-forward
@@ -365,7 +422,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
             # Add another commit
-            with salt.utils.fopen('foo.txt', 'w') as fp_:
+            with salt.utils.fopen(os.path.join(name, 'foo.txt'), 'w') as fp_:
                 fp_.write('Added a line\n')
             self.run_function(
                 'git.commit', [name, 'added a line'],
@@ -463,7 +520,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
 
-@skip_if_binaries_missing('git')
+@ensure_min_git
+@uses_git_opts
 class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Tests which do no require connectivity to github.com
@@ -499,7 +557,7 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
             os.path.join(repo, 'refs', 'heads', 'develop')
         )
 
-        # Run git.latest state. This should successfuly clone and fail with a
+        # Run git.latest state. This should successfully clone and fail with a
         # specific error in the comment field.
         ret = self.run_state(
             'git.latest',
