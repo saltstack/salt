@@ -30,6 +30,7 @@ def __check_git_version(caller, min_version, skip_msg):
     '''
     if inspect.isclass(caller):
         actual_setup = getattr(caller, 'setUp', None)
+
         def setUp(self, *args, **kwargs):
             if not salt.utils.which('git'):
                 self.skipTest('git is not installed')
