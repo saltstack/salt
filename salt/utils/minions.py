@@ -82,8 +82,8 @@ def get_minion_data(minion, opts):
         else:
             data = cache.fetch('minions/{0}'.format(minion), 'data')
         if data is not None:
-            grains = data['grains']
-            pillar = data['pillar']
+            grains = data.get('grains', None)
+            pillar = data.get('pillar', None)
     return minion if minion else None, grains, pillar
 
 
