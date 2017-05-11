@@ -63,9 +63,9 @@ This would explicitly set the roots to the default:
 
 .. code-block:: yaml
 
-thorium_roots:
-  base:
-    - /srv/thorium
+    thorium_roots:
+      base:
+        - /srv/thorium
 
 
 
