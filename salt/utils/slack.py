@@ -45,7 +45,6 @@ def query(function,
     :param data:        The data to be sent for POST method.
     :return:            The json response from the API call or False.
     '''
-    query_params = {}
 
     ret = {'message': '',
            'res': True}
@@ -82,6 +81,8 @@ def query(function,
 
     if not isinstance(args, dict):
         query_params = {}
+    else:
+        query_params = { key: val for key, val in args.items() }  # shallow copy
     query_params['token'] = api_key
 
     if header_dict is None:
@@ -90,6 +91,8 @@ def query(function,
     if method != 'POST':
         header_dict['Accept'] = 'application/json'
 
+
+    print("params are {}".format(query_params))
     result = salt.utils.http.query(
         url,
         method,
