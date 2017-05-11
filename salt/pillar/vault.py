@@ -76,7 +76,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
 
     if not comps[0].startswith('path='):
         salt.utils.warn_until(
-            'Oxygen',
+            'Fluorine',
             'The \'profile\' argument has been deprecated. Any parts up until '
             'and following the first "path=" are discarded'
         )
