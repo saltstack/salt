@@ -38,6 +38,7 @@ def ext_pillar(minion_id, pillar, conf):
 
     ret = {}
     dns_names = cache.fetch('digicert/minions', minion_id)
+
     for dns_name in dns_names:
         data = cache.fetch('digicert/domains', dns_name)
         ret[dns_name] = data
