@@ -201,7 +201,7 @@ class TestArgKwarg(cptc.BaseRestCherryPyTest):
                          {'ext_source': 'redis'})
 
 
-class TestJobs(BaseRestCherryPyTest):
+class TestJobs(cptc.BaseRestCherryPyTest):
     auth_creds = (
         ('username', 'saltdev_auto'),
         ('password', 'saltdev'),
