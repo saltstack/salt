@@ -167,7 +167,8 @@ def uninstalled(name, version=None, uninstall_args=None, override_args=False):
            'comment': ''}
 
     # Determine if package is installed
-    if name in __salt__['cmd.run']('choco list --local-only --limit-output'):
+    packages = __salt__['cmd.run']('choco list --local-only --limit-output')
+    if name.lower() in [package.split('|')[0].lower() for package in packages.splitlines()]:
         ret['changes'] = {'name': '{0} will be removed'.format(name)}
     else:
         ret['comment'] = 'The package {0} is not installed'.format(name)
