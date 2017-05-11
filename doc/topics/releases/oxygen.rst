@@ -16,6 +16,16 @@ Module Deprecations
 The ``blockdev`` execution module has been removed. Its functions were merged
 with the ``disk`` module. Please use the ``disk`` execution module instead.
 
+The ``boto_vpc`` module had the following changes:
+
+- The ``describe_route_table`` function was removed. Please use ``describe_route_tables``
+instead.
+
+The ``lxc`` module had the following changes:
+
+- The ``dnsservers`` option in the ``cloud_init_interface`` function no longer
+  defaults to ``8.8.8.8`` and ``4.4.4.4``. Please set ``dnsservers``.
+
 The ``win_psget`` module had the following changes:
 
 - The ``psversion`` function was removed. Please use ``cmd.shell_info`` instead.
