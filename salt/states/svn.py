@@ -102,28 +102,28 @@ def latest(name,
         pass
     
     if __opts__['test']:
-    if not os.path.exists(target):
+        if not os.path.exists(target):
+            return _neutral_test(
+                    ret,
+                    ('{0} doesn\'t exist and is set to be checked out.').format(target))
+        svn_cmd = 'svn.diff'
+
+        current_rev = current_info[0]['Revision']
+
+        if rev:
+            new_rev = str(rev)
+        else:
+            new_rev = 'HEAD'
+
+        opts += ('-r', current_rev + ':' + new_rev)
+
+        if trust:
+            opts += ('--trust-server-cert',)
+
+        out = __salt__[svn_cmd](cwd, target, user, username, password, *opts)
         return _neutral_test(
                 ret,
-                ('{0} doesn\'t exist and is set to be checked out.').format(target))
-    svn_cmd = 'svn.diff'
-    
-    current_rev = current_info[0]['Revision']
-
-    if rev:
-        new_rev = str(rev)
-    else:
-        new_rev = 'HEAD'
-
-    opts += ('-r', current_rev + ':' + new_rev)
-
-    if trust:
-        opts += ('--trust-server-cert',)
-
-    out = __salt__[svn_cmd](cwd, target, user, username, password, *opts)
-    return _neutral_test(
-            ret,
-            ('{0}').format(out))
+                ('{0}').format(out))
 
     if rev:
         opts += ('-r', str(rev))
