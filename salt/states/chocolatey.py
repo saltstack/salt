@@ -86,7 +86,8 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
            'comment': ''}
 
     # Determine if the package is installed
-    if name not in __salt__['cmd.run']('choco list --local-only --limit-output'):
+    packages = __salt__['cmd.run']('choco list --local-only --limit-output')
+    if name.lower() not in [package.split('|')[0].lower() for package in packages.splitlines()]:
         ret['changes'] = {'name': '{0} will be installed'.format(name)}
     elif force:
         ret['changes'] = {'name': '{0} is already installed but will reinstall'
