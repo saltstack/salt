@@ -9,16 +9,132 @@ Changes for v2016.11.4..v2016.11.5
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2017-05-04T18:15:25Z*
+*Generated at: 2017-05-09T21:00:57Z*
 
 Statistics:
 
-- Total Merges: **69**
-- Total Issue references: **28**
-- Total PR references: **82**
+- Total Merges: **83**
+- Total Issue references: **31**
+- Total PR references: **99**
 
 Changes:
 
+
+- **PR** `#41173`_: (*twangboy*) Add silent action to MsgBox for Path Actions
+  @ *2017-05-10T17:22:18Z*
+
+  - **ISSUE** `#41099`_: (*lomeroe*) Windows 2016.11.4 minion installer silent mode issue
+    | refs: `#41173`_
+  * 96918dc Add silent action to MsgBox for Path Actions
+
+- **PR** `#41134`_: (*twangboy*) Fix `pkg.install` on Windows on 2016.11
+  @ *2017-05-09T15:10:19Z*
+
+  * a10f014 Merge pull request `#41134`_ from twangboy/fix_get_msiexec
+  * d808a60 Remove redundant if statement
+
+  * b4d6d5a Fix for version_num of None and Latest
+
+  * 0f31822 Fix problem when use_msiexec is a bool
+
+- **PR** `#41102`_: (*gtmanfred*) don't pass jid to list_jobs
+  @ *2017-05-08T17:45:40Z*
+
+  - **ISSUE** `#41100`_: (*frogunder*) Exception occurred in runner jobs.list_jobs
+    | refs: `#41102`_
+  * 4ecab68 Merge pull request `#41102`_ from gtmanfred/2016.11
+  * 83057d0 don't pass jid to list_jobs
+
+* ffe4bc3 update unit test to reflect new behavior
+
+
+* 482a5e3 Merge branch 'L4rS6-fix-file-blockreplace-diff-in-test-mode' into 2016.11
+
+
+  * 505cb45 Merge branch 'fix-file-blockreplace-diff-in-test-mode' of https://github.com/L4rS6/salt into L4rS6-fix-file-blockreplace-diff-in-test-mode
+
+  * de9f66b show chanages in file.blockreplace function in testing mode. also used same programming style as in file.managed function:   (ret['changes']['diff'] = ret['pchanges']['diff'])
+
+- **PR** `#41103`_: (*lorengordon*) Adds a get_route() function to win_network.py
+  @ *2017-05-06T06:19:42Z*
+
+  * 2af89be Merge pull request `#41103`_ from lorengordon/win.get_route
+  * 93ce564 Adds test for win_network.get_route
+
+  * b9cbbc0 Adds a get_route() function to win_network.py
+
+- **PR** `#41098`_: (*rallytime*) Back-port `#41088`_ to 2016.11
+  @ *2017-05-05T19:04:03Z*
+
+  - **PR** `#41088`_: (*sjorge*) Fix docs for zfs state module
+    | refs: `#41098`_
+  * 2f9b5a4 Merge pull request `#41098`_ from rallytime/`bp-41088`_
+  * dc6cd2e Fix docs for zfs state module
+
+- **PR** `#41097`_: (*rallytime*) Back-port `#41079`_ to 2016.11
+  @ *2017-05-05T19:03:43Z*
+
+  - **PR** `#41079`_: (*brd*) Remove an extra colon that is causing rendering issues
+    | refs: `#41097`_
+  * 2123001 Merge pull request `#41097`_ from rallytime/`bp-41079`_
+  * 845b49c Remove and extra colon that is causing rendering issues
+
+- **PR** `#41093`_: (*rallytime*) [2016.11] Merge forward from 2016.3 to 2016.11
+  @ *2017-05-05T17:22:09Z*
+
+  - **PR** `#41083`_: (*rallytime*) Git state: head_ref should be head_rev in "latest" function
+  * ff6fa2b Merge pull request `#41093`_ from rallytime/merge-2016.11
+  * a670eaa Merge branch '2016.3' into '2016.11'
+
+  * 247400c Merge pull request `#41083`_ from rallytime/git-state-fix
+
+    * b85ee48 Git state: head_ref should be head_rev in "latest" function
+
+- **PR** `#41084`_: (*rallytime*) Skip the test_salt_documentation_arguments_not_assumed test for Arch
+  @ *2017-05-04T21:56:29Z*
+
+  - **PR** `#41074`_: (*rallytime*) Skip integration.shell.matcher.MatchTest.test_salt_documentation test for Arch
+    | refs: `#41084`_
+  * 4c2e636 Merge pull request `#41084`_ from rallytime/disable-matcher-test-arch
+  * da811fe Skip the correct test for the matcher tests in Arch
+
+  * b9d1ce9 Revert "Skip integration.shell.matcher.MatchTest.test_salt_documentation test for Arch"
+
+- **PR** `#41069`_: (*rallytime*) [2016.11] Merge forward from 2016.3 to 2016.11
+  @ *2017-05-04T20:34:58Z*
+
+  - **ISSUE** `#40835`_: (*willkil*) non-root: module.mac_system.__virtual__() is wrongly returning `None`
+    | refs: `#41048`_
+  - **PR** `#41070`_: (*rallytime*) Pylint: remove extra line in mac_system module
+  - **PR** `#41048`_: (*willkil*) mac_system: return False for non-root user
+    | refs: `#41070`_
+  * 1179720 Merge pull request `#41069`_ from rallytime/merge-2016.11
+  * 08c5891 Merge branch '2016.3' into '2016.11'
+
+    * 6941809 Merge pull request `#41070`_ from rallytime/lint-2016.3
+
+      * 486e2ba Pylint: remove extra line in mac_system module
+
+  * db70b2d Pylint: remove extra line in mac_system module
+
+  * 855d157 Merge branch '2016.3' into '2016.11'
+
+    * 3101694 Merge pull request `#41048`_ from willkil/mac_system_non_root
+
+      * b65b82a mac_system: return False for non-root user
+
+- **PR** `#41074`_: (*rallytime*) Skip integration.shell.matcher.MatchTest.test_salt_documentation test for Arch
+  | refs: `#41084`_
+  @ *2017-05-04T19:26:16Z*
+
+  * 9d638ab Merge pull request `#41074`_ from rallytime/disable-matcher-test-arch
+  * 9eb482d Skip integration.shell.matcher.MatchTest.test_salt_documentation test for Arch
+
+- **PR** `#41078`_: (*Ch3LL*) Add 2016.11.5 release notes and change log
+  @ *2017-05-04T19:00:58Z*
+
+  * 72c854d Merge pull request `#41078`_ from Ch3LL/add_2016.11.5_release
+  * 96ed815 Add 2016.11.5 release notes and change log
 
 - **PR** `#40879`_: (*peter-funktionIT*) Update win_pki.py
   @ *2017-05-04T16:12:00Z*
@@ -640,6 +756,7 @@ Changes:
 .. _`#40820`: https://github.com/saltstack/salt/pull/40820
 .. _`#40822`: https://github.com/saltstack/salt/pull/40822
 .. _`#40824`: https://github.com/saltstack/salt/pull/40824
+.. _`#40835`: https://github.com/saltstack/salt/issues/40835
 .. _`#40845`: https://github.com/saltstack/salt/issues/40845
 .. _`#40854`: https://github.com/saltstack/salt/pull/40854
 .. _`#40855`: https://github.com/saltstack/salt/pull/40855
@@ -691,8 +808,26 @@ Changes:
 .. _`#41039`: https://github.com/saltstack/salt/pull/41039
 .. _`#41045`: https://github.com/saltstack/salt/pull/41045
 .. _`#41046`: https://github.com/saltstack/salt/pull/41046
+.. _`#41048`: https://github.com/saltstack/salt/pull/41048
 .. _`#41049`: https://github.com/saltstack/salt/pull/41049
 .. _`#41054`: https://github.com/saltstack/salt/pull/41054
+.. _`#41069`: https://github.com/saltstack/salt/pull/41069
+.. _`#41070`: https://github.com/saltstack/salt/pull/41070
+.. _`#41074`: https://github.com/saltstack/salt/pull/41074
+.. _`#41078`: https://github.com/saltstack/salt/pull/41078
+.. _`#41079`: https://github.com/saltstack/salt/pull/41079
+.. _`#41083`: https://github.com/saltstack/salt/pull/41083
+.. _`#41084`: https://github.com/saltstack/salt/pull/41084
+.. _`#41088`: https://github.com/saltstack/salt/pull/41088
+.. _`#41093`: https://github.com/saltstack/salt/pull/41093
+.. _`#41097`: https://github.com/saltstack/salt/pull/41097
+.. _`#41098`: https://github.com/saltstack/salt/pull/41098
+.. _`#41099`: https://github.com/saltstack/salt/pull/41099
+.. _`#41100`: https://github.com/saltstack/salt/issues/41100
+.. _`#41102`: https://github.com/saltstack/salt/pull/41102
+.. _`#41103`: https://github.com/saltstack/salt/pull/41103
+.. _`#41134`: https://github.com/saltstack/salt/pull/41134
+.. _`#41173`: https://github.com/saltstack/salt/pull/41173
 .. _`#5`: https://github.com/saltstack/salt/issues/5
 .. _`bp-37696`: https://github.com/saltstack/salt/pull/37696
 .. _`bp-38115`: https://github.com/saltstack/salt/pull/38115
@@ -703,4 +838,6 @@ Changes:
 .. _`bp-40811`: https://github.com/saltstack/salt/pull/40811
 .. _`bp-40939`: https://github.com/saltstack/salt/pull/40939
 .. _`bp-40982`: https://github.com/saltstack/salt/pull/40982
+.. _`bp-41079`: https://github.com/saltstack/salt/pull/41079
+.. _`bp-41088`: https://github.com/saltstack/salt/pull/41088
 .. _`fix-39531`: https://github.com/saltstack/salt/issues/39531
