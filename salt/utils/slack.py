@@ -91,8 +91,6 @@ def query(function,
     if method != 'POST':
         header_dict['Accept'] = 'application/json'
 
-
-    print("params are {}".format(query_params))
     result = salt.utils.http.query(
         url,
         method,
