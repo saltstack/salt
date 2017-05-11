@@ -82,7 +82,7 @@ def query(function,
     if not isinstance(args, dict):
         query_params = {}
     else:
-        query_params = dict(args.items())  # shallow copy
+        query_params = args.copy()
     query_params['token'] = api_key
 
     if header_dict is None:
