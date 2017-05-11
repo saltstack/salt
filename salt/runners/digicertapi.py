@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Support for Digicert.  Heavily based on the Venafi runner by Joseph Hall (jphall@saltstack.com)
+Support for Digicert.  Heavily based on the Venafi runner by Joseph Hall (jphall@saltstack.com).
 
 Before using this module you need to register an account with Digicert's CertCentral.
 
@@ -31,14 +31,18 @@ You can also include default values of the following variables to help with crea
       api_key: ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABC
       shatype: sha256
 
+This API currently only supports RSA key types.  Support for other key types will be added
+if interest warrants.
 
 '''
 from __future__ import absolute_import
 import os
 import logging
 import tempfile
+import subprocess
 import collections
 import json
+import re
 import salt.syspaths as syspaths
 import salt.cache
 import salt.utils
@@ -244,6 +248,7 @@ def get_certificate(order_id=None, certificate_id=None, minion_id=None, cert_for
             return {'certificate': order_cert['dict']}
 
         certificate_id = order_cert['dict'].get('certificate').get('id', None)
+        common_name = order_cert['dict'].get('certificate').get('common_name')
 
     if not certificate_id:
         return {'certificate':
@@ -279,32 +284,53 @@ def get_certificate(order_id=None, certificate_id=None, minion_id=None, cert_for
                 'X-DC-DEVKEY': _api_key(),
             }
     )
-    if filename:
-        if 'errors' in ret_cert:
-            return {'certificate': ret_cert}
-        if 'body' not in ret_cert:
-            bank = 'digicert/domains'
-            cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
-            try:
-                data = cache.fetch(bank, dns_name)
-            except TypeError:
-                data = {'certificate': ret_cert}
-            cache.store(bank, dns_name, data)
-            return {'certificate': ret_cert}
-        if 'headers' in ret_cert:
-            ret = {'certificate': {'filename': filename,
-                                   'original_filename': ret_cert['headers'].get('Content-Disposition', 'Not provided'),
-                                   'Content-Type': ret_cert['headers'].get('Content-Type', 'Not provided')
-                                  }
-            }
-            return ret
+    if 'errors' in ret_cert:
+        return {'certificate': ret_cert}
+    
+    if 'body' not in ret_cert:
+        ret = {'certificate': ret_cert}
+        cert = ret_cert
+    if isinstance(ret_cert, dict):
+        ret = ret_cert['body']
+        cert = ret
     else:
-        if 'body' not in ret_cert:
-            return {'certificate': ret_cert}
-        if isinstance(ret_cert, dict):
-            return ret_cert['body']
-        else:
-            return ret_cert
+        ret = ret_cert
+        cert = ret
+
+    tmpfilename = None
+    if not filename:
+        fd, tmpfilename = tempfile.mkstemp()
+        filename = tmpfilename
+        os.write(fd, cert)
+        os.close(fd)
+
+    cmd = ['openssl', 'x509', '-noout', '-subject', '-nameopt', 'multiline', '-in', filename]
+    out = subprocess.check_output(cmd)
+    common_name = None
+    for l in out.splitlines():
+        common_name_match = re.search(' *commonName *= *(.*)', l)
+        if common_name_match:
+            common_name = common_name_match.group(1)
+            break
+    if tmpfilename:
+        os.unlink(tmpfilename)
+
+    if common_name:
+        bank = 'digicert/domains'
+        cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
+        try:
+            data = cache.fetch(bank, common_name)
+        except TypeError:
+            data = {'certificate': cert}
+        cache.store(bank, common_name, data)
+
+    if 'headers' in ret_cert:
+        return {'certificate': {'filename': filename,
+                                 'original_filename': ret_cert['headers'].get('Content-Disposition', 'Not provided'),
+                                 'Content-Type': ret_cert['headers'].get('Content-Type', 'Not provided')
+                                }}
+
+    return {'certificate': cert}
 
 
 def list_organizations(container_id=None, include_validation=True):
@@ -342,8 +368,7 @@ def order_certificate(minion_id, common_name, organization_id, validity_years,
                       custom_expiration_date=None, comments=None, disable_renewal_notifications=False,
                       product_type_hint=None, renewal_of_order_id=None):
     '''
-    Order a certificate.  Requires that a CSR already have been generated, and an Organization
-    has been created inside Digicert's CertCentral.
+    Order a certificate.  Requires that an Organization has been created inside Digicert's CertCentral.
 
     See here for API documentation:
     https://www.digicert.com/services/v2/documentation/order/order-ssl-determinator
@@ -352,11 +377,14 @@ def order_certificate(minion_id, common_name, organization_id, validity_years,
 
     .. code-block:: bash
 
-        salt-run digicert.order_certificate my.domain.com 10 /tmp/my.domain.csr \
-            3 sha256 \
+        salt-run digicert.order_certificate my_minionid my.domain.com 10 \
+            3 signature_hash=sha256 \
             dns_names=\['this.domain.com', 'that.domain.com'\] \
             organization_units='My Domain Org Unit' \
             comments='Comment goes here for the approver'
+
+    This runner can also be used to renew a certificate by passing `renewal_of_order_id`.
+    Previous order details can be retrieved with digicertapi.list_orders.
     '''
 
     if dns_names and isinstance(dns_names, six.string_types):
@@ -438,17 +466,13 @@ def order_certificate(minion_id, common_name, organization_id, validity_years,
             data = {}
         data.update({
             'minion_id': minion_id,
-            'order_id': qdata['dict']['requests'][0]['id']
+            'order_id': qdata['dict']['requests'][0]['id'],
             'csr': csr,
         })
-        cache.store(bank, dns_name, data)
-        _id_map(minion_id, dns_name)
+        cache.store(bank, common_name, data)
+        _id_map(minion_id, common_name)
 
     return {'order': qdata['dict']}
-
-
-# order_certificate and renew_certificate are the same
-renew_certificate = order_certificate
 
 
 def gen_key(minion_id, dns_name=None, password=None, key_len=2048):
