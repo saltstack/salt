@@ -107,10 +107,10 @@ def state(name,
 
     ret
         Optionally set a single or a list of returners to use
-        
+
     ret_config
         Use an alternative returner configuration
-        
+
     ret_kwargs
         Override individual returner configuration items
 
@@ -208,10 +208,10 @@ def state(name,
 
     if ret_config:
         cmd_kw['ret_config'] = ret_config
-        
+
     if ret_kwargs:
         cmd_kw['ret_kwargs'] = ret_kwargs
-    
+
     state_ret = {'name': name,
                  'changes': {},
                  'comment': '',
@@ -436,7 +436,7 @@ def function(
 
     ret_config
         Use an alternative returner configuration
-        
+
     ret_kwargs
         Override individual returner configuration items
 
@@ -496,13 +496,13 @@ def function(
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
     cmd_kw['_cmd_meta'] = True
-    
+
     if ret_config:
         cmd_kw['ret_config'] = ret_config
-        
+
     if ret_kwargs:
         cmd_kw['ret_kwargs'] = ret_kwargs
-    
+
     fun = name
     if __opts__['test'] is True:
         func_ret['comment'] = (
