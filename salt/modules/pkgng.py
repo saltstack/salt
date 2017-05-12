@@ -252,6 +252,7 @@ def refresh_db(jail=None, chroot=None, root=None, force=False):
 
             salt '*' pkg.refresh_db force=True
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     cmd = _pkg(jail, chroot, root)
     cmd.append('update')

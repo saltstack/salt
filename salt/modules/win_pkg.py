@@ -511,6 +511,7 @@ def refresh_db(**kwargs):
         salt '*' pkg.refresh_db
         salt '*' pkg.refresh_db saltenv=base
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     saltenv = kwargs.pop('saltenv', 'base')
     verbose = salt.utils.is_true(kwargs.pop('verbose', False))

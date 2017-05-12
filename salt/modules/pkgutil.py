@@ -43,6 +43,7 @@ def refresh_db():
 
         salt '*' pkgutil.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     return __salt__['cmd.retcode']('/opt/csw/bin/pkgutil -U') == 0
 

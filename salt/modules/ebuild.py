@@ -413,6 +413,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     if 'eix.sync' in __salt__:
         return __salt__['eix.sync']()

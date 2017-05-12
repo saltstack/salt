@@ -369,6 +369,7 @@ def refresh_db(cache_valid_time=0):
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     APT_LISTS_PATH = "/var/lib/apt/lists"
     ret = {}

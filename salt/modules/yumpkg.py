@@ -865,6 +865,7 @@ def refresh_db(**kwargs):
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     retcodes = {
         100: True,

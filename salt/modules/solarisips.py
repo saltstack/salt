@@ -119,6 +119,7 @@ def refresh_db(full=False):
         salt '*' pkg.refresh_db
         salt '*' pkg.refresh_db full=True
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     if full:
         return __salt__['cmd.retcode']('/bin/pkg refresh --full') == 0

@@ -390,6 +390,7 @@ def refresh_db():
         salt mac pkg.refresh_db
 
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     cmd = ['port', 'selfupdate']
     return salt.utils.mac_utils.execute_return_success(cmd)
