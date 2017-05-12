@@ -20,6 +20,10 @@ import re
 import os
 import time
 import datetime
+try:
+    from distutils.version import LooseVersion
+except ImportError:
+    LooseVersion = None
 
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
