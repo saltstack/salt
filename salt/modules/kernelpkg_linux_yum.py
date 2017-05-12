@@ -166,6 +166,20 @@ def upgrade(reboot=False, at_time=None):
     return ret
 
 
+def upgrade_available():
+    '''
+    Detect if a new kernel version is available in the repostories.
+    Returns True if a new kernal is avaliable, False otherwise.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' kernelpkg.upgrade_available
+    '''
+    return _LooseVersion(latest_available()) > _LooseVersion(latest_installed())
+
+
 def _package_name():
     '''
     Return static string for the package name
