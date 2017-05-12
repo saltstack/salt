@@ -48,10 +48,6 @@ Example:
 from __future__ import absolute_import
 
 # Import salt libs
-import salt.modules.libcloud_dns as libcloud_dns_module
-import salt.utils
-
-# Import salt libs
 import salt.utils
 import logging
 log = logging.getLogger(__name__)
