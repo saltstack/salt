@@ -42,6 +42,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.pkg
+import salt.ext.six as six
 import salt.utils.itertools
 import salt.utils.systemd
 import salt.utils.decorators as decorators
@@ -259,7 +260,8 @@ def _get_extra_options(**kwargs):
     Returns list of extra options for yum
     '''
     ret = []
-    for key, value in kwargs.items():
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    for key, value in six.iteritems(kwargs):
         if isinstance(key, six.string_types):
             ret.append('--{0}=\'{1}\''.format(key, value))
         elif value is True:
