@@ -1050,6 +1050,11 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
+    download_only
+        Only donwload the packages, don't unpack or install them
+
+        .. versionadded:: Nitrogen
+
     force_conf_new
         Always install the new version of any configuration files.
 
@@ -1083,6 +1088,8 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         cmd.append('--force-yes')
     if kwargs.get('skip_verify', False):
         cmd.append('--allow-unauthenticated')
+    if kwargs.get('download_only', False):
+        cmd.append('--download-only')
 
     cmd.append('dist-upgrade' if dist_upgrade else 'upgrade')
 
