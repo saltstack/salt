@@ -94,7 +94,7 @@ class KernelPkgTestCase(object):
 
     def test_upgrade_not_needed_with_reboot(self):
         '''
-        Test - Upgrade funciotn when no upgrade is available and reboot has been requested
+        Test - Upgrade function when no upgrade is available and reboot has been requested
         '''
         with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
             with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
@@ -108,7 +108,7 @@ class KernelPkgTestCase(object):
 
     def test_upgrade_not_needed_without_reboot(self):
         '''
-        Test - Upgrade funciotn when no upgrade is available and no reboot has been requested
+        Test - Upgrade function when no upgrade is available and no reboot has been requested
         '''
         with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
             with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
@@ -122,7 +122,7 @@ class KernelPkgTestCase(object):
 
     def test_upgrade_needed_with_reboot(self):
         '''
-        Test - Upgrade funciotn when an upgrade is available and reboot has been requested
+        Test - Upgrade function when an upgrade is available and reboot has been requested
         '''
         with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[0]):
             with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
@@ -136,7 +136,7 @@ class KernelPkgTestCase(object):
 
     def test_upgrade_needed_without_reboot(self):
         '''
-        Test - Upgrade funciotn when an upgrade is available and no reboot has been requested
+        Test - Upgrade function when an upgrade is available and no reboot has been requested
         '''
         with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[0]):
             with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
@@ -147,3 +147,27 @@ class KernelPkgTestCase(object):
                 self.assertEqual(result['reboot_requested'], False)
                 self.assertEqual(result['reboot_required'], True)
                 self._kernelpkg.__salt__['system.reboot'].assert_not_called()
+
+    def test_upgrade_available_true(self):
+        '''
+        Test - upgrade_available
+        '''
+        with patch.object(self._kernelpkg, 'latest_available', return_value=self.KERNEL_LIST[-1]):
+            with patch.object(self._kernelpkg, 'latest_installed', return_value=self.KERNEL_LIST[0]):
+                self.assertTrue(self._kernelpkg.upgrade_available())
+
+    def test_upgrade_available_false(self):
+        '''
+        Test - upgrade_available
+        '''
+        with patch.object(self._kernelpkg, 'latest_available', return_value=self.KERNEL_LIST[-1]):
+            with patch.object(self._kernelpkg, 'latest_installed', return_value=self.KERNEL_LIST[-1]):
+                self.assertFalse(self._kernelpkg.upgrade_available())
+
+    def test_upgrade_available_inverted(self):
+        '''
+        Test - upgrade_available
+        '''
+        with patch.object(self._kernelpkg, 'latest_available', return_value=self.KERNEL_LIST[0]):
+            with patch.object(self._kernelpkg, 'latest_installed', return_value=self.KERNEL_LIST[-1]):
+                self.assertFalse(self._kernelpkg.upgrade_available())
