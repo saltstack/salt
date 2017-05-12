@@ -13,7 +13,6 @@ import salt.crypt
 import salt.payload
 import salt.transport
 import salt.utils.args
-import salt.utils
 from salt.exceptions import SaltReqTimeoutError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -68,9 +67,6 @@ def _publish(
 
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
     '''
-    # Increase the timeout for Windows so that tests will pass
-    if salt.utils.is_windows():
-        timeout = timeout * 10
     if 'master_uri' not in __opts__:
         log.error('Cannot run publish commands without a connection to a salt master. No command sent.')
         return {}
