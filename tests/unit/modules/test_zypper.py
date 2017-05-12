@@ -829,7 +829,9 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 """
         _zpr = MagicMock()
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
-        assert zypper.Wildcard(_zpr)('libzypp', '*') == [u'16.2.4-19.5', u'16.3.2-25.1', u'16.5.2-27.9.1']
+        wcard = zypper.Wildcard(_zpr)
+        wcard.name, wcard.version = 'libzypp', '*'
+        assert wcard._get_scope_versions(wcard._get_available_versions()) == [u'16.2.4-19.5', u'16.3.2-25.1', u'16.5.2-27.9.1']
 
     def test_wildcard_to_query_multiple_asterisk(self):
         '''
@@ -846,7 +848,9 @@ Repository 'DUMMY' not found by its alias, number, or URI.
 
         _zpr = MagicMock()
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
-        assert zypper.Wildcard(_zpr)('libzypp', '16.2.*-2*') == [u'16.2.5-25.1', u'16.2.6-27.9.1']
+        wcard = zypper.Wildcard(_zpr)
+        wcard.name, wcard.version = 'libzypp', '16.2.*-2*'
+        assert wcard._get_scope_versions(wcard._get_available_versions()) == [u'16.2.5-25.1', u'16.2.6-27.9.1']
 
     def test_wildcard_to_query_exact_match_at_end(self):
         '''
@@ -863,7 +867,9 @@ Repository 'DUMMY' not found by its alias, number, or URI.
 
         _zpr = MagicMock()
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
-        assert zypper.Wildcard(_zpr)('libzypp', '16.2.5*') == [u'16.2.5-25.1']
+        wcard = zypper.Wildcard(_zpr)
+        wcard.name, wcard.version = 'libzypp', '16.2.5*'
+        assert wcard._get_scope_versions(wcard._get_available_versions()) == [u'16.2.5-25.1']
 
     def test_wildcard_to_query_exact_match_at_beginning(self):
         '''
@@ -880,4 +886,6 @@ Repository 'DUMMY' not found by its alias, number, or URI.
 
         _zpr = MagicMock()
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
-        assert zypper.Wildcard(_zpr)('libzypp', '*.1') == [u'16.2.5-25.1', u'17.2.6-27.9.1']
+        wcard = zypper.Wildcard(_zpr)
+        wcard.name, wcard.version = 'libzypp', '*.1'
+        assert wcard._get_scope_versions(wcard._get_available_versions()) == [u'16.2.5-25.1', u'17.2.6-27.9.1']
