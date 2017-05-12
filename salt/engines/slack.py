@@ -87,12 +87,6 @@ the saltmaster's minion pillar.
 
 '''
 
-# TODO: On startup look for events that we may have lost from a
-# shutdown/crash (within a reasonable time window), and re-build the
-# internal list.  Maybe fire events to the bus to indicate submission of
-# jobs, and completion of jobs so the salt event bus can be used to
-# record the state of the completion of each job?
-
 # Import python libraries
 from __future__ import absolute_import
 import json
@@ -175,11 +169,11 @@ def get_config_groups(groups_conf, groups_pillar_name):
     # Default to returning something that'll never match
     ret_groups = {
         "default": {
-            "users"          : set(),
-            "commands"       : set(),
-            "aliases"        : dict(),
-            "default_target" : dict(),
-            "targets"        : dict()
+            "users": set(),
+            "commands": set(),
+            "aliases": dict(),
+            "default_target": dict(),
+            "targets": dict()
         }
     }
 
@@ -247,7 +241,6 @@ def fire(tag, msg):
     else:
         fire_master = None
 
-    # XXX does this return anything?
     if fire_master:
         fire_master(msg, tag)
     else:
@@ -278,15 +271,15 @@ def can_user_run(user, command, groups):
 
     """
     log.info("{} wants to run {} with groups {}".format(user, command, groups))
-    for k, v in groups.items():
-        if user not in v['users']:
-            if '*' not in v['users']:
+    for key, val in groups.items():
+        if user not in val['users']:
+            if '*' not in val['users']:
                 continue  # this doesn't grant permissions, pass
-        if (command not in v['commands']) and (command not in v.get('aliases', {}).keys()):
-            if '*' not in v['commands']:
+        if (command not in val['commands']) and (command not in val.get('aliases', {}).keys()):
+            if '*' not in val['commands']:
                 continue  # again, pass
         log.info("Slack user {} permitted to run {}".format(user, command))
-        return (k, v,)  # matched this group, return the group
+        return (key, val,)  # matched this group, return the group
     log.info("Slack user {} denied trying to run {}".format(user, command))
     return ()
 
@@ -303,9 +296,9 @@ def commandline_to_list(cmdline_str, trigger_string):
     cmdlist = []
     for cmditem in cmdline:
         pattern = r'(?P<begin>.*)(<.*\|)(?P<url>.*)(>)(?P<remainder>.*)'
-        m = re.match(pattern, cmditem)
-        if m:
-            origtext = m.group('begin') + m.group('url') + m.group('remainder')
+        mtch = re.match(pattern, cmditem)
+        if mtch:
+            origtext = mtch.group('begin') + mtch.group('url') + mtch.group('remainder')
             cmdlist.append(origtext)
         else:
             cmdlist.append(cmditem)
@@ -361,7 +354,6 @@ def message_text(m_data):
         log.info("Message is {}".format(_text))  # this can violate the ascii codec
     except UnicodeEncodeError as uee:
         log.warn("Got a message that I couldn't log.  The reason is: {}".format(uee))
-        # continue # XXX Re-visit whether this is the right action here.
 
     # Convert UTF to string
     _text = json.dumps(_text)
@@ -411,7 +403,7 @@ def generate_triggered_messages(token, trigger_string, groups, groups_pillar_nam
             channel_name = all_slack_channels.get(channel_id)
         data = {
             "message_data": m_data,
-            "user_name" : all_slack_users.get(user_id),
+            "user_name": all_slack_users.get(user_id),
             "channel_name": channel_name
         }
         if not data["user_name"]:
@@ -425,14 +417,14 @@ def generate_triggered_messages(token, trigger_string, groups, groups_pillar_nam
         return data
 
     for sleeps in (5, 10, 30, 60):
-        if slack_connect:  # XXX  Add diagnosis and logging of slack connection failures
+        if slack_connect:
             break
         else:
             # see https://api.slack.com/docs/rate-limits
             log.warning("Slack connection is invalid.  Server: {}, sleeping {}".format(sc.server, sleeps))
             time.sleep(sleeps)  # respawning too fast makes the slack API unhappy about the next reconnection
     else:
-        raise UserWarning, "Connection to slack is still invalid, giving up: {}".format(slack_connect)  # Boom!
+        raise UserWarning("Connection to slack is still invalid, giving up: {}".format(slack_connect))  # Boom!
     while True:
         msg = sc.rtm_read()
         for m_data in msg:
@@ -608,7 +600,7 @@ def get_jobs_from_runner(outstanding_jids):
         if mm.returners['{}.get_jid'.format(source)](jid):
             jid_result = runner.cmd('jobs.list_job', [jid]).get('Result', {})
             # emulate lookup_jid's return, which is just minion:return
-            job_data = json.dumps({k:v['return'] for k,v in jid_result.items()})
+            job_data = json.dumps({key:val['return'] for key, val in jid_result.items()})
             results[jid] = yaml.load(job_data)
 
     return results
@@ -620,7 +612,7 @@ def run_commands_from_slack_async(message_generator, fire_all, tag, control, int
     the values of fire_all and command
     """
 
-    outstanding = dict() # set of job_id that we need to check for
+    outstanding = dict()  # set of job_id that we need to check for
 
     while True:
         log.debug("Sleeping for interval of {}".format(interval))
@@ -638,7 +630,7 @@ def run_commands_from_slack_async(message_generator, fire_all, tag, control, int
             if len(msg) == 0:
                 count += 1
                 log.warn("len(msg) is zero")
-                continue # This one is a dud, get the next message
+                continue  # This one is a dud, get the next message
             if msg.get("done"):
                 log.debug("msg is done")
                 break
@@ -648,11 +640,11 @@ def run_commands_from_slack_async(message_generator, fire_all, tag, control, int
             if control and (len(msg) > 1) and msg.get('cmdline'):
                 jid = run_command_async(msg)
                 log.debug("Submitted a job and got jid: {}".format(jid))
-                outstanding[jid] = msg # record so we can return messages to the caller
+                outstanding[jid] = msg  # record so we can return messages to the caller
                 msg['channel'].send_message("@{}'s job is submitted as salt jid {}".format(msg['user_name'], jid))
             count += 1
         start_time = time.time()
-        job_status = get_jobs_from_runner(outstanding.keys()) # dict of job_ids:results are returned
+        job_status = get_jobs_from_runner(outstanding.keys())  # dict of job_ids:results are returned
         log.debug("Getting {} jobs status took {} seconds".format(len(job_status), time.time() - start_time))
         for jid, result in job_status.items():
             if result:
@@ -693,8 +685,7 @@ def run_command_async(msg):
     log.debug("Going to run a command async")
     runner_functions = sorted(salt.runner.Runner(__opts__).functions)
     # Parse args and kwargs
-    cmd     = msg['cmdline'][0]
-    ret     = {}
+    cmd = msg['cmdline'][0]
 
     args, kwargs = parse_args_and_kwargs(msg['cmdline'])
     # Check for target. Otherwise assume None
@@ -706,7 +697,7 @@ def run_command_async(msg):
     if cmd in runner_functions:
         runner = salt.runner.RunnerClient(__opts__)
         log.debug("Command {} will run via runner_functions".format(cmd))
-        job_id_dict = runner.async(cmd, {"args": args, "kwargs":kwargs})
+        job_id_dict = runner.async(cmd, {"args":args, "kwargs":kwargs})
         job_id = job_id_dict['jid']
 
     # Default to trying to run as a client module.
@@ -718,6 +709,7 @@ def run_command_async(msg):
         job_id = local.cmd_async(str(target), cmd, arg=args, kwargs=kwargs, expr_form=str(tgt_type))
         log.info("ret from local.cmd_async is {}".format(job_id))
     return job_id
+
 
 def start(token,
           control=False,
@@ -731,12 +723,12 @@ def start(token,
     '''
 
     if (not token) or (not token.startswith('xoxb')):
-        time.sleep(2) # don't respawn too quickly
+        time.sleep(2)  # don't respawn too quickly
         log.error("Slack bot token not found, bailing...")
         raise UserWarning('Slack Engine bot token not configured')
 
     try:
         message_generator = generate_triggered_messages(token, trigger, groups, groups_pillar_name)
         run_commands_from_slack_async(message_generator, fire_all, tag, control)
-    except Exception as e:
+    except Exception:
         raise Exception("{}".format(traceback.format_exc()))
