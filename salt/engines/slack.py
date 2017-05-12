@@ -97,6 +97,8 @@ import re
 import traceback
 import yaml
 
+log = logging.getLogger(__name__)
+
 try:
     import slackclient
     HAS_SLACKCLIENT = True
@@ -117,9 +119,6 @@ from salt.utils.yamldumper import OrderedDumper
 
 def __virtual__():
     return HAS_SLACKCLIENT
-
-log = logging.getLogger(__name__)
-
 
 def get_slack_users(token):
     '''
