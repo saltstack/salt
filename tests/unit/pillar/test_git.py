@@ -72,7 +72,6 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
 
     def setUp(self):
         super(GitPillarTestCase, self).setUp()
-        git_pillar._update('master', 'file://{0}'.format(self.repo_path))
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir, onerror=self._rmtree_error)
@@ -108,8 +107,7 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
         'check direct call ``ext_pillar()`` interface'
         with patch.dict(git_pillar.__opts__, {'environment': None}):
             mypillar = git_pillar.ext_pillar('myminion',
-                                             self.conf_line,
-                                             {})
+                                             self.conf_line)
             self.assertEqual(PILLAR_CONTENT, mypillar)
 
     def test_from_upper(self):
@@ -126,7 +124,7 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
             pil = Pillar(git_pillar.__opts__,
                          git_pillar.__grains__,
                          'myminion', None)
-            self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
+            self.assertEqual(PILLAR_CONTENT, pil.compile_pillar())
 
     def test_no_loop(self):
         '''Check that the reinstantiation of a pillar object does recurse.
@@ -139,20 +137,6 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
         Otherwise, the fact that the :class:`MaximumRecursion` error is caught
         can go in the way on the testing.
 
-        On the current code base, this test fails if the two first lines of
-        :func:``git_pillar.ext_pillar`::
-
-            if pillar_dirs is None:
-                return
-
-        are replaced by::
-
-            if pillar_dirs is None:
-                pillar_dirs = {}
-
-        .. note:: the explicit anti-recursion protection does not prevent
-                  looping between two different Git pillars.
-
         This test will help subsequent refactors, and also as a base for other
         external pillars of the same kind.
         '''
@@ -161,7 +145,6 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
         subprocess.check_call(['git', 'clone', self.repo_path, repo2])
         with patch.dict(git_pillar.__opts__, {'ext_pillar': [dict(git=self.conf_line),
                                                              dict(git=conf_line2)]}):
-            git_pillar._update(*conf_line2.split(None, 1))
 
             pil = Pillar(git_pillar.__opts__,
                          git_pillar.__grains__,
@@ -170,13 +153,13 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
             orig_ext_pillar = pil.ext_pillars['git']
             orig_ext_pillar.count = 0
 
-            def ext_pillar_count_calls(minion_id, repo_string, pillar_dirs):
+            def ext_pillar_count_calls(minion_id, repo_string):
                 orig_ext_pillar.count += 1
                 if orig_ext_pillar.count > 6:
                     # going all the way to an infinite loop is harsh on the
                     # test machine
                     raise RuntimeError('Infinite loop detected')
-                return orig_ext_pillar(minion_id, repo_string, pillar_dirs)
+                return orig_ext_pillar(minion_id, repo_string)
 
             from salt.loader import LazyLoader
             orig_getitem = LazyLoader.__getitem__
@@ -187,5 +170,5 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
                 return orig_getitem(self, key)
 
             with patch.object(LazyLoader, '__getitem__', __getitem__):
-                self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
+                self.assertEqual(PILLAR_CONTENT, pil.compile_pillar())
                 self.assertTrue(orig_ext_pillar.count < 7)
