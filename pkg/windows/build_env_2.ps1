@@ -175,7 +175,7 @@ If (Test-Path "$($ini['Settings']['Python2Dir'])\python.exe") {
     DownloadFileWithProgress $url $file
 
     Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python2']) . . ."
-    $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['Python2Dir'])" -Wait -NoNewWindow -PassThru
+    $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,SharedCRT,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['Python2Dir'])" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
