@@ -48,6 +48,7 @@ import salt.cache
 import salt.utils
 import salt.utils.http
 import salt.ext.six as six
+from salt.ext.six.moves import range
 from salt.exceptions import (CommandExecutionError, SaltRunnerError)
 from Crypto.PublicKey import RSA
 
