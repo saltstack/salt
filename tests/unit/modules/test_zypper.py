@@ -952,3 +952,20 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         _zpr = MagicMock()
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
         assert zypper.Wildcard(_zpr)('libzypp', '16.2.*-2*') == [u'16.2.5-25.1', u'16.2.6-27.9.1']
+
+    def test_wildcard_to_query_exact_match_at_end(self):
+        '''
+        Test wildcard to query match exact pattern at the end
+        :return:
+        '''
+        xmldoc = """<?xml version='1.0'?><stream>
+        <search-result version="0.0"><solvable-list>
+        <solvable status="installed" name="libzypp" kind="package" edition="16.2.4-19.5" arch="x86_64" repository="foo"/>
+        <solvable status="other-version" name="libzypp" kind="package" edition="16.2.5-25.1" arch="x86_64" repository="foo"/>
+        <solvable status="other-version" name="libzypp" kind="package" edition="16.2.6-27.9.1" arch="x86_64" repository="foo"/>
+        </solvable-list></search-result></stream>
+        """
+
+        _zpr = MagicMock()
+        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        assert zypper.Wildcard(_zpr)('libzypp', '16.2.5*') == [u'16.2.5-25.1']
