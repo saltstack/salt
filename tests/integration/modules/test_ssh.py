@@ -22,7 +22,7 @@ from tornado.httpclient import HTTPClient
 SUBSALT_DIR = os.path.join(TMP, 'subsalt')
 AUTHORIZED_KEYS = os.path.join(SUBSALT_DIR, 'authorized_keys')
 KNOWN_HOSTS = os.path.join(SUBSALT_DIR, 'known_hosts')
-GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
+GITHUB_FINGERPRINT = '9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f'
 
 
 def check_status():
