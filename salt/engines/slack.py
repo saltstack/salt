@@ -117,8 +117,10 @@ import salt.utils.http
 import salt.utils.slack
 from salt.utils.yamldumper import OrderedDumper
 
+
 def __virtual__():
     return HAS_SLACKCLIENT
+
 
 def get_slack_users(token):
     '''
@@ -448,7 +450,7 @@ def generate_triggered_messages(token, trigger_string, groups, groups_pillar_nam
                     yield {"message_data": m_data}
                     continue
                 (target, cmdline) = control_message_target(
-                        data['user_name'], msg_text, loaded_groups, all_slack_users, trigger_string)
+                        data['user_name'], msg_text, loaded_groups, trigger_string)
                 log.debug("Got target: {}, cmdline: {}".format(target, cmdline))
                 if target and cmdline:
                     yield {
@@ -563,8 +565,8 @@ def parse_args_and_kwargs(cmdline):
     returns tuple of: args (list), kwargs (dict)
     """
     # Parse args and kwargs
-    args    = []
-    kwargs  = {}
+    args = []
+    kwargs = {}
 
     if len(cmdline) > 1:
         for item in cmdline[1:]:
@@ -617,7 +619,7 @@ def run_commands_from_slack_async(message_generator, fire_all, tag, control, int
         log.debug("Sleeping for interval of {}".format(interval))
         time.sleep(interval)
         # Drain the slack messages, up to 10 messages at a clip
-        count=0
+        count = 0
         for msg in message_generator:
             # The message_generator yields dicts.  Leave this loop
             # on a dict that looks like {"done": True} or when we've done it
