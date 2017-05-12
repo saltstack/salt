@@ -262,6 +262,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     cmd = 'xbps-install -Sy'
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
