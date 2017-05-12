@@ -285,6 +285,7 @@ Valid options:
   - cache
   - clouds
   - tops
+  - roster
 
 .. conf_master:: module_dirs
 
