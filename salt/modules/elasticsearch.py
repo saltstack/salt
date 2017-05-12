@@ -201,7 +201,7 @@ def document_delete(index, doc_type, id, hosts=None, profile=None):
     '''
     es = _get_instance(hosts, profile)
     try:
-        if not index_exists(index=index):
+        if not index_exists(index=index, hosts=hosts, profile=profile):
             return True
         else:
             result = es.delete(index=index, doc_type=doc_type, id=id)
@@ -263,7 +263,7 @@ def index_create(index, body=None, hosts=None, profile=None):
     '''
     es = _get_instance(hosts, profile)
     try:
-        if index_exists(index):
+        if index_exists(index, hosts=hosts, profile=profile):
             return True
         else:
             result = es.indices.create(index=index, body=body)  # TODO error handling
@@ -283,7 +283,7 @@ def index_delete(index, hosts=None, profile=None):
     '''
     es = _get_instance(hosts, profile)
     try:
-        if not index_exists(index=index):
+        if not index_exists(index=index, hosts=hosts, profile=profile):
             return True
         else:
             result = es.indices.delete(index=index)
@@ -330,7 +330,7 @@ def index_get(index, hosts=None, profile=None):
     es = _get_instance(hosts, profile)
 
     try:
-        if index_exists(index):
+        if index_exists(index, hosts=hosts, profile=profile):
             ret = es.indices.get(index=index)  # TODO error handling
             return ret
     except elasticsearch.exceptions.NotFoundError:
