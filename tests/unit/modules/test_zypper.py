@@ -916,7 +916,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 '--gpg-auto-import-keys', 'mr', '--refresh', name
             )
 
-    def test_wildcard_to_query(self):
+    def test_wildcard_to_query_match_all(self):
         '''
         Test wildcard to query
         :return: 
