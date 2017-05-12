@@ -1,10 +1,20 @@
 # -*- coding: utf-8 -*-
-'''An engine that reads messages from Slack. When the control parameter is set to ``True`` and using command
-prefaced with the ``trigger`` (which defaults to ``!``).
+'''
+An engine that reads messages from Slack and can act on them.
 
-In addition, when the parameter ``fire_all`` is set (defaults to False),
-all messages will be fired off to the salt event bus, with the tag prefixed
-by the string provided by the ``tag`` config option (defaults to ``salt/engines/slack``).
+It has two major uses.
+
+1. When the ``control`` parameter is set to ``True`` and a message is prefaced
+   with the ``trigger`` (which defaults to ``!``) then the engine will
+   validate that the user has permission, and if so will run the command
+
+2. In addition, when the parameter ``fire_all`` is set (defaults to False),
+   all other messages (the messages that aren't control messages) will be
+   fired off to the salt event bus with the tag prefixed by the string
+   provided by the ``tag`` config option (defaults to ``salt/engines/slack``).
+
+This allows for configuration to be gotten from either the engine config, or from
+the saltmaster's minion pillar.
 
 .. versionadded: 2016.3.0
 
@@ -133,6 +143,27 @@ def get_slack_users(token):
                     users[item['name']] = item['id']
                     users[item['id']] = item['name']
     return users
+
+
+def get_slack_channels(token):
+    '''
+    Get all channel names from Slack
+    '''
+
+    ret = salt.utils.slack.query(
+        function='rooms',
+        api_key=token,
+        # These won't be honored until https://github.com/saltstack/salt/pull/41187/files is merged
+        opts={
+            'exclude_archived': True,
+            'exclude_members': True
+        })
+    channels = {}
+    if 'message' in ret:
+        for item in ret['message']:
+            channels[item["id"]] = item["name"]
+    return channels
+
 
 def get_config_groups(groups_conf, groups_pillar_name):
     """
@@ -282,7 +313,7 @@ def commandline_to_list(cmdline_str, trigger_string):
 
 
 # m_data -> m_data, _text -> test, all_slack_users -> all_slack_users,
-def control_message_target(user_id, text, loaded_groups, all_slack_users, trigger_string):
+def control_message_target(slack_user_name, text, loaded_groups, trigger_string):
     """Returns a tuple of (target, cmdline,) for the response
 
     Raises IndexError if a user can't be looked up from all_slack_users
@@ -298,10 +329,6 @@ def control_message_target(user_id, text, loaded_groups, all_slack_users, trigge
 
     """
 
-    slack_user_name = all_slack_users.get(user_id, None)
-    if not slack_user_name:
-        raise IndexError("Couldn't find the user {} in the all_slack_users dictionary".format(user_id))
-    log.debug("slack_user_name is {}".format(slack_user_name))
     # Trim the trigger string from the front
     # cmdline = _text[1:].split(' ', 1)
     cmdline = commandline_to_list(text, trigger_string)
@@ -372,6 +399,31 @@ def generate_triggered_messages(token, trigger_string, groups, groups_pillar_nam
     sc = slackclient.SlackClient(token)
     slack_connect = sc.rtm_connect()
     all_slack_users = get_slack_users(token)  # re-checks this if we have an negative lookup result
+    all_slack_channels = get_slack_channels(token)  # re-checks this if we have an negative lookup result
+
+    def just_data(m_data):
+        """Always try to return the user and channel anyway"""
+        user_id = m_data.get('user')
+        channel_id = m_data.get('channel')
+        if channel_id.startswith('D'):  # private chate with bot user
+            channel_name = "private chat"
+        else:
+            channel_name = all_slack_channels.get(channel_id)
+        data = {
+            "message_data": m_data,
+            "user_name" : all_slack_users.get(user_id),
+            "channel_name": channel_name
+        }
+        if not data["user_name"]:
+            all_slack_users.clear()
+            all_slack_users.update(get_slack_users(token))
+            data["user_name"] = all_slack_users.get(user_id)
+        if not data["channel_name"]:
+            all_slack_channels.clear()
+            all_slack_channels.update(get_slack_channels(token))
+            data["channel_name"] = all_slack_channels.get(channel_id)
+        return data
+
     for sleeps in (5, 10, 30, 60):
         if slack_connect:  # XXX  Add diagnosis and logging of slack connection failures
             break
@@ -381,7 +433,6 @@ def generate_triggered_messages(token, trigger_string, groups, groups_pillar_nam
             time.sleep(sleeps)  # respawning too fast makes the slack API unhappy about the next reconnection
     else:
         raise UserWarning, "Connection to slack is still invalid, giving up: {}".format(slack_connect)  # Boom!
-
     while True:
         msg = sc.rtm_read()
         for m_data in msg:
@@ -394,24 +445,19 @@ def generate_triggered_messages(token, trigger_string, groups, groups_pillar_nam
 
             # Find the channel object from the channel name
             channel = sc.server.channels.find(m_data['channel'])
+            data = just_data(m_data)
             if msg_text.startswith(trigger_string):
                 loaded_groups = get_config_groups(groups, groups_pillar_name)
                 user_id = m_data.get('user')  # slack user ID, e.g. 'U11011'
-                try:
-                    (target, cmdline) = control_message_target(
-                        user_id, msg_text, loaded_groups, all_slack_users, trigger_string)
-                except IndexError:  # User couldn't be looked up, maybe added recently?
-                    all_slack_users = get_slack_users(token)
-                    try:  # try a second time to see if that fixes it
-                        (target, cmdline) = control_message_target(
-                            user_id, msg_text, loaded_groups, all_slack_users, trigger_string)
-                    except IndexError:
-                        log.error("The user {} can't be looked up via slack.  What has happened here?".format(
-                            m_data.get('user')))
-                        channel.send_message("The user {} can't be looked up via slack.  Not running {}".format(
-                            user_id, msg_text))
-                        yield {"message_data": m_data}
-                        continue
+                if not data.get('user_name'):
+                    log.error("The user {} can't be looked up via slack.  What has happened here?".format(
+                        m_data.get('user')))
+                    channel.send_message("The user {} can't be looked up via slack.  Not running {}".format(
+                        user_id, msg_text))
+                    yield {"message_data": m_data}
+                    continue
+                (target, cmdline) = control_message_target(
+                        data['user_name'], msg_text, loaded_groups, all_slack_users, trigger_string)
                 log.debug("Got target: {}, cmdline: {}".format(target, cmdline))
                 if target and cmdline:
                     yield {
@@ -427,10 +473,10 @@ def generate_triggered_messages(token, trigger_string, groups, groups_pillar_nam
                 else:
                     channel.send_message('{}, {} is not allowed to use command {}.'.format(
                         user_id, all_slack_users[user_id], cmdline))
-                    yield {"message_data": m_data}
+                    yield data
                     continue
             else:
-                yield {"message_data": m_data}
+                yield data
                 continue
         yield {"done": True}
 
@@ -491,24 +537,6 @@ def get_target(permitted_group, cmdline, alias_cmdline):
         if checked.get("target"):
             return checked
     return null_target
-
-def fire_msgs_to_event_bus(tag, message_generator, fire_all):
-    """
-    :type tag: str
-    :param tag: The prefix of the tag to be sent onto the event bus
-
-    :type message_generator: generator
-    :param message_generator: A generator that yields dictionaries that
-        contain messages that will be sent to the salt event bus
-        as returned by _generate_triggered_messages when control=False
-    """
-    for _sg in message_generator:
-        if fire_all:
-            fire('{0}/{1}'.format(tag, msg.get('type')), msg)
-            time.sleep(1)
-        else:
-            log.info("Not firing to the event bus, fire_all is not specified")
-
 
 
 # emulate the yaml_out output formatter.  It relies on a global __opts__ object which we can't
@@ -616,8 +644,8 @@ def run_commands_from_slack_async(message_generator, fire_all, tag, control, int
                 break
             if fire_all:
                 log.debug("Firing message to the bus with tag: {}".format(tag))
-                fire('{0}/{1}'.format(tag, msg.get('type')), msg.get('message_data', {"error": "Couldn't get message data"}))
-            if control and (len(msg) > 1):
+                fire('{0}/{1}'.format(tag, msg['message_data'].get('type')), msg)
+            if control and (len(msg) > 1) and msg.get('cmdline'):
                 jid = run_command_async(msg)
                 log.debug("Submitted a job and got jid: {}".format(jid))
                 outstanding[jid] = msg # record so we can return messages to the caller
