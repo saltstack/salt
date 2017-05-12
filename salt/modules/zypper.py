@@ -348,7 +348,9 @@ class Wildcard(object):
         '''
         self.name = pkg_name
         self.version = pkg_version
-        versions = self._get_available_versions()
+        versions = sorted([LooseVersion and LooseVersion(vrs) or vrs
+                           for vrs in self._get_scope_versions(self._get_available_versions())])
+        return versions and versions[-1] or None
 
     def _get_available_versions(self):
         '''
@@ -362,13 +364,17 @@ class Wildcard(object):
         return sorted(set([slv.getAttribute(self._attr_solvable_version)
                            for slv in solvables if slv.getAttribute(self._attr_solvable_version)]))
 
-    def _get_scope_versions(self):
+    def _get_scope_versions(self, pkg_versions):
         '''
         Get available difference between next possible matches.
 
         :return: 
         '''
-        self.version
+        get_in_versions = []
+        for p_version in pkg_versions:
+            if fnmatch.fnmatch(p_version, self.version):
+                get_in_versions.append(p_version)
+        return get_in_versions
 
 
 def _systemd_scope():
