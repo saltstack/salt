@@ -601,7 +601,7 @@ def get_jobs_from_runner(outstanding_jids):
         if mm.returners['{}.get_jid'.format(source)](jid):
             jid_result = runner.cmd('jobs.list_job', [jid]).get('Result', {})
             # emulate lookup_jid's return, which is just minion:return
-            job_data = json.dumps({key:val['return'] for key, val in jid_result.items()})
+            job_data = json.dumps({key:val['return'] for key, val in jid_result.items()})  # pylint: disable=E8231
             results[jid] = yaml.load(job_data)
 
     return results
