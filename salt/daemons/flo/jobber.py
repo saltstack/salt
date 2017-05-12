@@ -26,7 +26,6 @@ from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
-from salt.executors import FUNCTION_EXECUTORS
 from salt.utils import kinds, is_windows
 from salt.utils.event import tagify
 
