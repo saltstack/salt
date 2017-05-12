@@ -4136,11 +4136,14 @@ def create_keypair(kwargs=None, call=None):
 
     data = aws.query(params,
                      return_url=True,
+                     return_root=True,
                      location=get_location(),
                      provider=get_provider(),
                      opts=__opts__,
                      sigver='4')
-    return data
+    keys = [ x for x in data[0] if 'requestId' not in x ]
+    
+    return ( keys, data[1] )
 
 
 def import_keypair(kwargs=None, call=None):
