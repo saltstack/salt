@@ -813,7 +813,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
 
     def test_wildcard_to_query_match_all(self):
         '''
-        Test wildcard to query
+        Test wildcard to query match all pattern
         :return: 
         '''
         xmldoc = """<?xml version='1.0'?><stream>
