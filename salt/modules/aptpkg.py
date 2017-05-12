@@ -1053,7 +1053,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     download_only
         Only donwload the packages, don't unpack or install them
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: Oxygen
 
     force_conf_new
         Always install the new version of any configuration files.
