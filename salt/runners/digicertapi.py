@@ -104,7 +104,7 @@ def _paginate(url, topkey, *args, **kwargs):
     aggregate_ret = ret['dict'][topkey]
     url = args[0]
     for p in range(2, numpages):
-        param_url = url + '?offset={0}'.format(limit * (p - 1))
+        param_url = url + '?offset={0}'.format(lim * (p - 1))
         next_ret = salt.utils.http.query(param_url, kwargs)
         aggregate_ret[topkey].extend(next_ret['dict'][topkey])
 
@@ -182,7 +182,7 @@ def list_orders(status=None):
 
     .. code-block:: bash
 
-        salt-run digicert.list_orders 
+        salt-run digicert.list_orders
     '''
     url = '{0}/order/certificate'.format(_base_url())
 
@@ -286,7 +286,7 @@ def get_certificate(order_id=None, certificate_id=None, minion_id=None, cert_for
     )
     if 'errors' in ret_cert:
         return {'certificate': ret_cert}
-    
+
     if 'body' not in ret_cert:
         ret = {'certificate': ret_cert}
         cert = ret_cert
@@ -358,7 +358,7 @@ def list_organizations(container_id=None, include_validation=True):
                      }
     )
 
-    ret = { 'organizations': orgs }
+    ret = {'organizations': orgs}
     return ret
 
 
@@ -379,7 +379,7 @@ def order_certificate(minion_id, common_name, organization_id, validity_years,
 
         salt-run digicert.order_certificate my_minionid my.domain.com 10 \
             3 signature_hash=sha256 \
-            dns_names=\['this.domain.com', 'that.domain.com'\] \
+            dns_names=['this.domain.com', 'that.domain.com'] \
             organization_units='My Domain Org Unit' \
             comments='Comment goes here for the approver'
 
@@ -458,7 +458,7 @@ def order_certificate(minion_id, common_name, organization_id, validity_years,
         },
         raise_error=False
     )
-    if not 'errors' in qdata['dict']:
+    if 'errors' not in qdata['dict']:
         bank = 'digicert/domains'
         cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
         data = cache.fetch(bank, common_name)
@@ -676,34 +676,6 @@ def show_csrs():
     return data.get('dict', {})
 
 
-def get_organization_id(organization_name):
-    '''
-    Get the zone ID for the given zone name
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run digicert.get_organization_id default
-    '''
-    data = salt.utils.http.query(
-        '{0}/zones/tag/{1}'.format(_base_url(), zone_name),
-        status=True,
-        decode=True,
-        decode_type='json',
-        header_dict={
-            'tppl-api-key': _api_key(),
-        },
-    )
-
-    status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
-        raise CommandExecutionError(
-            'There was an API error: {0}'.format(data['error'])
-        )
-    return data['dict']['id']
-
-
 def show_rsa(minion_id, dns_name):
     '''
     Show a private RSA key
@@ -763,4 +735,3 @@ def del_cached_domain(domains):
         except CommandExecutionError:
             failed.append(domain)
     return {'Succeeded': success, 'Failed': failed}
-
