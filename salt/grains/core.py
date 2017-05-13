@@ -1336,7 +1336,10 @@ def os_data():
             if _file_readable('/proc/1/cmdline'):
                 with salt.utils.fopen('/proc/1/cmdline') as fhr:
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
-                    init_bin = salt.utils.which(init_cmdline[0])
+                    try:
+                        init_bin = salt.utils.which(init_cmdline[0])
+                    except IndexError as err:
+                        raise ValueError(init_cmdline, err)
                     if init_bin is not None and init_bin.endswith('bin/init'):
                         supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
                         edge_len = max(len(x) for x in supported_inits) - 1
