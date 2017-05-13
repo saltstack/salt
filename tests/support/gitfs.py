@@ -513,6 +513,7 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
                 enc='ssh-rsa',
                 fingerprint='fd:6f:7f:5d:06:6b:f2:06:0d:26:93:9e:5a:b5:19:46',
                 hash_known_hosts=False,
+                fingerprint_hash_type='md5',
             )
             if 'error' in known_hosts_ret:
                 raise Exception(
