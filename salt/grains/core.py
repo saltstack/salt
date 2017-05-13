@@ -10,6 +10,8 @@ module can be overwritten just by returning dict keys with the same value
 as those returned here
 '''
 
+# Rerun tests
+
 # Import python libs
 from __future__ import absolute_import
 import os
