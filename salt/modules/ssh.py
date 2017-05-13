@@ -339,7 +339,7 @@ def host_keys(keydir=None, private=True, certs=True):
 
             kname = m.group('type')
             if m.group('pub'):
-              kname += m.group('pub')
+                kname += m.group('pub')
             try:
                 with salt.utils.fopen(os.path.join(keydir, fn_), 'r') as _fh:
                     # As of RFC 4716 "a key file is a text file, containing a
