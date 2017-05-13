@@ -4,6 +4,10 @@
 	rotate 7
 	compress
 	notifempty
+	sharedscripts
+	postrotate
+		/sbin/service salt-master condrestart
+	endscript
 }
 
 /var/log/salt/minion {
@@ -12,6 +16,10 @@
 	rotate 7
 	compress
 	notifempty
+	sharedscripts
+	postrotate
+		/sbin/service salt-minion condrestart
+	endscript
 }
 
 /var/log/salt/key {
