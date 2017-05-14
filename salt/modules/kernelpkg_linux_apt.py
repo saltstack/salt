@@ -124,7 +124,7 @@ def latest_installed():
 def needs_reboot():
     '''
     Detect if a new kernel version has been installed but is not running.
-    Returns True if a new kernal is installed, False otherwise.
+    Returns True if a new kernel is installed, False otherwise.
 
     CLI Example:
 
@@ -181,8 +181,8 @@ def upgrade(reboot=False, at_time=None):
 
 def upgrade_available():
     '''
-    Detect if a new kernel version is available in the repostories.
-    Returns True if a new kernal is avaliable, False otherwise.
+    Detect if a new kernel version is available in the repositories.
+    Returns True if a new kernel is avaliable, False otherwise.
 
     CLI Example:
 
