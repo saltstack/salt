@@ -1341,7 +1341,11 @@ def os_data():
                     try:
                         init_bin = salt.utils.which(init_cmdline[0])
                     except IndexError as err:
-                        raise ValueError(init_cmdline, err)
+                        raise ValueError(
+                            init_cmdline,
+                            err,
+                            subprocess.check_output('ls -l /proc/1/cmdline;cat /proc/1/cmdline', shell=True),
+                        )
                     if init_bin is not None and init_bin.endswith('bin/init'):
                         supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
                         edge_len = max(len(x) for x in supported_inits) - 1
