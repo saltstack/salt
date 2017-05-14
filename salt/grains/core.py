@@ -11,6 +11,7 @@ as those returned here
 '''
 
 # Rerun tests #2
+import subprocess
 
 # Import python libs
 from __future__ import absolute_import
