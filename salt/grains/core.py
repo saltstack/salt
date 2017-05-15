@@ -1338,14 +1338,20 @@ def os_data():
         except (OSError, IOError):
             if _file_readable('/proc/1/cmdline'):
                 with salt.utils.fopen('/proc/1/cmdline') as fhr:
-                    init_cmdline = fhr.read().replace('\x00', ' ').split()
+                    #init_cmdline = fhr.read().replace('\x00', ' ').split()
+                    raw_init_cmdline = fhr.read()
+                    init_cmdline = raw_init_cmdline.replace('\x00', ' ').split()
                     try:
                         init_bin = salt.utils.which(init_cmdline[0])
                     except IndexError as err:
                         raise ValueError(
                             init_cmdline,
                             err,
-                            subprocess.check_output('ls -l /proc/1/cmdline;cat /proc/1/cmdline', shell=True),
+                            raw_init_cmdline,
+                            fhr,
+                            subprocess.check_output(
+                                'ls -l /proc/1/cmdline;cat /proc/1/cmdline',
+                                shell=True),
                         )
                     if init_bin is not None and init_bin.endswith('bin/init'):
                         supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
