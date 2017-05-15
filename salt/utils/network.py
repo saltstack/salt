@@ -95,7 +95,7 @@ def _generate_minion_id():
         Needs to work on Python 2.6, because of collections.OrderedDict only since 2.7 version.
         Override 'filter()' for custom filtering.
         '''
-        localhost_matchers = ['localhost.*', 'ip6-.*', '127.*', r'0\.0\.0\.0',
+        localhost_matchers = ['localhost.*', 'ip6-.*', '127\..*', r'0\.0\.0\.0',
                               '::1.*', 'ipv6-.*', 'fe00::.*', 'fe02::.*', '1.0.0.*.ip6.arpa']
 
         def append(self, p_object):
