@@ -650,9 +650,30 @@ class SaltMinion(SaltDaemonScriptBase):
             return set([self.config['id']])
 
 
+class SaltProxy(SaltDaemonScriptBase):
+    '''
+    Class which runs the salt-proxy daemon
+    '''
+
+    cli_script_name = 'salt-proxy'
+
+    def get_script_args(self):
+        script_args = ['-l', 'quiet', '--proxyid', 'testproxy']
+        if salt.utils.is_windows() is False:
+            script_args.append('--disable-keepalive')
+        return script_args
+
+    def get_check_ports(self):
+        if salt.utils.is_windows():
+            return set([self.config['tcp_pub_port'],
+                        self.config['tcp_pull_port']])
+        else:
+            return set([self.config['id']])
+
+
 class SaltMaster(SaltDaemonScriptBase):
     '''
-    Class which runs the salt-minion daemon
+    Class which runs the salt-master daemon
     '''
 
     cli_script_name = 'salt-master'
@@ -791,8 +812,18 @@ class TestDaemon(object):
         self.smaster_process.display_name = 'syndic salt-master'
         self.syndic_process = SaltSyndic(self.syndic_opts, TMP_SYNDIC_MINION_CONF_DIR, SCRIPT_DIR)
         self.syndic_process.display_name = 'salt-syndic'
-        for process in (self.master_process, self.minion_process, self.sub_minion_process,
-                        self.smaster_process, self.syndic_process):
+
+        processes_to_start = [self.master_process, self.minion_process, self.sub_minion_process,
+                              self.smaster_process, self.syndic_process]
+
+        if hasattr(self.parser.options, 'proxy'):
+            if self.parser.options.proxy or (getattr(self.parser.options, 'name', False)
+                                            and any(['proxy' in item
+                                                for item in self.parser.options.name])):
+                self.proxy_process = SaltProxy(self.proxy_opts, TMP_CONF_DIR, SCRIPT_DIR)
+                self.proxy_process.display_name = 'salt-proxy'
+                processes_to_start.append(self.proxy_process)
+        for process in processes_to_start:
             sys.stdout.write(
                 ' * {LIGHT_YELLOW}Starting {0} ... {ENDC}'.format(
                     process.display_name,
@@ -1295,6 +1326,8 @@ class TestDaemon(object):
         '''
         self.sub_minion_process.terminate()
         self.minion_process.terminate()
+        if hasattr(self, 'proxy_process'):
+            self.proxy_process.terminate()
         self.master_process.terminate()
         try:
             self.syndic_process.terminate()
