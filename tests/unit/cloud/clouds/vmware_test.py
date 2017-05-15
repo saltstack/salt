@@ -1252,7 +1252,7 @@ class CloneFromSnapshotTest(TestCase):
         obj_ref = MagicMock()
         obj_ref.snapshot = vim.vm.Snapshot(None, None)
         obj_ref.snapshot.currentSnapshot = vim.vm.Snapshot(None, None)
-        clone_spec = vmware.handle_snapshot(
+        clone_spec = vmware._handle_snapshot(
             vim.vm.ConfigSpec(),
             obj_ref,
             vim.vm.RelocateSpec(),
@@ -1265,7 +1265,7 @@ class CloneFromSnapshotTest(TestCase):
         obj_ref2.snapshot = vim.vm.Snapshot(None, None)
         obj_ref2.snapshot.currentSnapshot = vim.vm.Snapshot(None, None)
 
-        clone_spec2 = vmware.handle_snapshot(
+        clone_spec2 = vmware._handle_snapshot(
             vim.vm.ConfigSpec(),
             obj_ref2,
             vim.vm.RelocateSpec(),

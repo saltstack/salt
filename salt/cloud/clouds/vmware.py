@@ -2579,7 +2579,7 @@ def create(vm_):
             config_spec.extraConfig.append(option)
 
     if 'clonefrom' in vm_:
-        clone_spec = handle_snapshot(
+        clone_spec = _handle_snapshot(
             config_spec,
             object_ref,
             reloc_spec,
@@ -2587,7 +2587,7 @@ def create(vm_):
             vm_
         )
         if not clone_spec:
-            clone_spec = build_clonespec(config_spec,
+            clone_spec = _build_clonespec(config_spec,
                                          object_ref,
                                          reloc_spec,
                                          template)
@@ -2753,7 +2753,7 @@ def create(vm_):
     return data
 
 
-def handle_snapshot(config_spec, object_ref, reloc_spec, template, vm_):
+def _handle_snapshot(config_spec, object_ref, reloc_spec, template, vm_):
     '''
     Returns a clone spec for cloning from shapshots
     :rtype vim.vm.CloneSpec
@@ -2768,7 +2768,7 @@ def handle_snapshot(config_spec, object_ref, reloc_spec, template, vm_):
         QUICK_LINKED_CLONE,
     ]
 
-    clone_spec = get_clonespec_for_valid_snapshot(
+    clone_spec = _get_clonespec_for_valid_snapshot(
         config_spec,
         object_ref,
         reloc_spec,
@@ -2781,7 +2781,7 @@ def handle_snapshot(config_spec, object_ref, reloc_spec, template, vm_):
     return clone_spec
 
 
-def get_clonespec_for_valid_snapshot(config_spec, object_ref, reloc_spec, template, vm_):
+def _get_clonespec_for_valid_snapshot(config_spec, object_ref, reloc_spec, template, vm_):
     '''
     return clonespec only if values are valid
     '''
@@ -2798,12 +2798,12 @@ def get_clonespec_for_valid_snapshot(config_spec, object_ref, reloc_spec, templa
         moving = False
 
     if moving:
-        return build_clonespec(config_spec, object_ref, reloc_spec, template)
+        return _build_clonespec(config_spec, object_ref, reloc_spec, template)
     else:
         return None
 
 
-def build_clonespec(config_spec, object_ref, reloc_spec, template):
+def _build_clonespec(config_spec, object_ref, reloc_spec, template):
     '''
     Returns the clone spec
     '''
