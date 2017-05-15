@@ -2053,8 +2053,11 @@ def prepend_root_dir(opts, path_options):
     Prepends the options that represent filesystem paths with value of the
     'root_dir' option.
     '''
-    root_dir = opts['root_dir'].rstrip(os.sep)
     root_opt_val = opts['root_dir']
+    if root_opt_val != os.sep:
+        root_opt_val = root_opt_val.rstrip(os.sep)
+
+    root_dir = root_opt_val
     if not os.path.isabs(root_dir):
         # default root dir is always absolute and it needs to prefix the
         # relative root_dir which is relative
