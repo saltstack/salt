@@ -48,6 +48,7 @@ DEFAULT_OPTS = {
     'decrypt_pillar_renderers': ['gpg'],
 }
 ADDITIONAL_OPTS = (
+    'conf_file',
     'file_roots',
     'state_top',
     'renderer',
