@@ -12,7 +12,8 @@ from tests.support.mock import (
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
-    patch
+    patch,
+    mock_open
 )
 
 # Import Salt Libs
@@ -198,7 +199,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with patch.dict(timezone.__grains__, {'os_family': ['Gentoo']}):
-            _fopen = MagicMock(return_value=MagicMock(spec=file))
+            _fopen = mock_open()
             with patch('salt.utils.fopen', _fopen):
                 assert timezone.set_zone(self.TEST_TZ)
                 name, args, kwargs = _fopen.mock_calls[0]
@@ -216,7 +217,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with patch.dict(timezone.__grains__, {'os_family': ['Debian']}):
-            _fopen = MagicMock(return_value=MagicMock(spec=file))
+            _fopen = mock_open()
             with patch('salt.utils.fopen', _fopen):
                 assert timezone.set_zone(self.TEST_TZ)
                 name, args, kwargs = _fopen.mock_calls[0]
@@ -295,8 +296,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
         # Incomplete
         with patch.dict(timezone.__grains__, {'os_family': ['Solaris']}):
             assert timezone.get_hwclock() == 'UTC'
-            _fopen = MagicMock(return_value=MagicMock(spec=file))
-            with patch('salt.utils.fopen', _fopen):
+            with patch('salt.utils.fopen', mock_open()):
                 assert timezone.get_hwclock() == 'localtime'
 
     @patch('salt.utils.which', MagicMock(return_value=False))
