@@ -31,6 +31,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 import salt.utils.itertools
 from salt.utils.decorators import which as _which
 
@@ -140,6 +141,8 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     ret = {}
     cmd = ['opkg', 'update']
     call = __salt__['cmd.run_all'](cmd,
