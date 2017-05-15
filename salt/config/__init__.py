@@ -771,10 +771,6 @@ VALID_OPTS = {
     'serial': str,
     'search': str,
 
-    # The update interval, in seconds, for the master maintenance process to update the search
-    # index
-    'search_index_interval': int,
-
     # A compound target definition.
     # See: http://docs.saltstack.com/en/latest/topics/targeting/nodegroups.html
     'nodegroups': (dict, list),
@@ -1513,7 +1509,6 @@ DEFAULT_MASTER_OPTS = {
     'state_events': False,
     'state_aggregate': False,
     'search': '',
-    'search_index_interval': 3600,
     'loop_interval': 60,
     'nodegroups': {},
     'ssh_list_nodegroups': {},

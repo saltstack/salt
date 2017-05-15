@@ -55,7 +55,6 @@ import salt.runner
 import salt.auth
 import salt.wheel
 import salt.minion
-import salt.search
 import salt.key
 import salt.acl
 import salt.engines
@@ -198,8 +197,6 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
         # Init any values needed by the git ext pillar
         self.git_pillar = salt.daemons.masterapi.init_git_pillar(self.opts)
-        # Set up search object
-        self.search = salt.search.Search(self.opts)
 
         self.presence_events = False
         if self.opts.get('presence_events', False):
@@ -237,7 +234,6 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
-            self.handle_search(now, last)
             self.handle_git_pillar()
             self.handle_schedule()
             self.handle_key_cache()
@@ -247,14 +243,6 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
             time.sleep(self.loop_interval)
-
-    def handle_search(self, now, last):
-        '''
-        Update the search index
-        '''
-        if self.opts.get('search'):
-            if now - last >= self.opts['search_index_interval']:
-                self.search.index()
 
     def handle_key_cache(self):
         '''
