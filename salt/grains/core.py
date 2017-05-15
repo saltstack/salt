@@ -1678,14 +1678,10 @@ def ip_fqdn():
 
     ret = {}
     ret['ipv4'] = salt.utils.network.ip_addrs(include_loopback=True)
+    ret['ipv6'] = salt.utils.network.ip_addrs6(include_loopback=True)
+
     _fqdn = hostname()['fqdn']
-    sockets = [(socket.AF_INET, '4')]
-
-    if __opts__.get('ipv6', True):
-        ret['ipv6'] = salt.utils.network.ip_addrs6(include_loopback=True)
-        sockets.append((socket.AF_INET6, '6'))
-
-    for socket_type, ipv_num in sockets:
+    for socket_type, ipv_num in ((socket.AF_INET, '4'), (socket.AF_INET6, '6')):
         key = 'fqdn_ip' + ipv_num
         if not ret['ipv' + ipv_num]:
             ret[key] = []
@@ -1694,9 +1690,8 @@ def ip_fqdn():
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list(set(item[4][0] for item in info))
             except socket.error:
-                if __opts__['__role'] == 'master':
-                    log.warning('Unable to find IPv{0} record for "{1}" causing a 10 second timeout when rendering grains. '
-                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn))
+                log.warning('Unable to find IPv{0} record for "{1}" causing a 10 second timeout when rendering grains. '
+                            'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn))
                 ret[key] = []
 
     return ret
@@ -1763,7 +1758,7 @@ def ip6_interfaces():
     # Provides:
     #   ip_interfaces
 
-    if salt.utils.is_proxy() or not __opts__.get('ipv6', True):
+    if salt.utils.is_proxy():
         return {}
 
     ret = {}
@@ -1807,10 +1802,8 @@ def dns():
         return {}
 
     resolv = salt.utils.dns.parse_resolv()
-    keys = ['nameservers', 'ip4_nameservers', 'sortlist']
-    if __opts__.get('ipv6', True):
-        keys.append('ip6_nameservers')
-    for key in keys:
+    for key in ('nameservers', 'ip4_nameservers', 'ip6_nameservers',
+                'sortlist'):
         if key in resolv:
             resolv[key] = [str(i) for i in resolv[key]]
 
