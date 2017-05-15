@@ -1209,6 +1209,10 @@ def _linux_bin_exists(binary):
         return False
 
 
+def _file_readable(fpath):
+    return os.access(fpath, os.R_OK)
+
+
 def _get_interfaces():
     '''
     Provide a dict of the connected interfaces and their ip addresses
@@ -1329,10 +1333,17 @@ def os_data():
             os.stat('/run/systemd/system')
             grains['init'] = 'systemd'
         except (OSError, IOError):
-            if os.path.exists('/proc/1/cmdline'):
+            if _file_readable('/proc/1/cmdline'):
                 with salt.utils.fopen('/proc/1/cmdline') as fhr:
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
-                    init_bin = salt.utils.which(init_cmdline[0])
+                    try:
+                        init_bin = salt.utils.which(init_cmdline[0])
+                    except IndexError:
+                        # Emtpy init_cmdline
+                        init_bin = None
+                        log.warning(
+                            "Unable to fetch data from /proc/1/cmdline"
+                        )
                     if init_bin is not None and init_bin.endswith('bin/init'):
                         supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
                         edge_len = max(len(x) for x in supported_inits) - 1
@@ -1920,7 +1931,7 @@ def get_machine_id():
     # Provides:
     #   machine-id
     locations = ['/etc/machine-id', '/var/lib/dbus/machine-id']
-    existing_locations = [loc for loc in locations if os.path.exists(loc)]
+    existing_locations = [loc for loc in locations if _file_readable(loc)]
     if not existing_locations:
         return {}
     else:
@@ -2041,7 +2052,7 @@ def _hw_data(osdata):
         }
         for key, fw_file in sysfs_firmware_info.items():
             contents_file = os.path.join('/sys/class/dmi/id', fw_file)
-            if os.path.exists(contents_file):
+            if _file_readable(contents_file):
                 with salt.utils.fopen(contents_file, 'r') as ifile:
                     grains[key] = ifile.read()
                     if key == 'uuid':
