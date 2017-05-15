@@ -10,9 +10,6 @@ module can be overwritten just by returning dict keys with the same value
 as those returned here
 '''
 
-# Rerun tests #3
-import subprocess
-
 # Import python libs
 from __future__ import absolute_import
 import os
@@ -26,6 +23,9 @@ import locale
 import uuid
 import salt.exceptions
 from salt.ext.six.moves import range
+
+# Rerun tests #3
+import subprocess
 
 __proxyenabled__ = ['*']
 __FQDN__ = None
