@@ -270,7 +270,7 @@ def get(tgt,
 
         salt '*' mine.get '*' network.interfaces
         salt '*' mine.get 'os:Fedora' network.interfaces grain
-        salt '*' mine.get 'os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
+        salt '*' mine.get 'G@os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
 
     .. seealso:: Retrieving Mine data from Pillar and Orchestrate
 
