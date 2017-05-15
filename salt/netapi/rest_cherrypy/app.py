@@ -442,7 +442,7 @@ Here is an example of sending urlencoded data:
 Performance Expectations and Recommended Usage
 ==============================================
 
-This module provide a thin wrapper around :ref:`Salt's Python API
+This module provides a thin wrapper around :ref:`Salt's Python API
 <python-api>`. Executing a Salt command via rest_cherrypy is directly analogous
 to executing a Salt command via Salt's CLI (which also uses the Python API) --
 they share the same semantics, performance characteristics, and 98% of the same
@@ -460,8 +460,8 @@ around 30 to 50 concurrent connections.
 
 That number of long-running, synchronous Salt processes is also not ideal. Like
 at the CLI, each Salt command run will start a process that instantiates its
-own `LocalClient`, which instantiates its own listener to the Salt event bus,
-and sends out its own periodic `saltutil.find_job` queries to determine if a
+own ``LocalClient``, which instantiates its own listener to the Salt event bus,
+and sends out its own periodic ``saltutil.find_job`` queries to determine if a
 Minion is still running the command. Not exactly a lightweight operation.
 
 Timeouts
@@ -525,7 +525,7 @@ Performance Tuning
 The ``thread_pool`` and ``socket_queue_size`` settings can be used to increase
 the capacity of rest_cherrypy to handle incoming requests. Keep an eye on RAM
 usage as well as available file handles while testing changes to these
-settings. As salt-api is a thin wrapper around Salt's Python API, also keep on
+settings. As salt-api is a thin wrapper around Salt's Python API, also keep an
 eye on the performance of Salt when testing.
 
 Future Plans
