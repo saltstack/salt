@@ -180,6 +180,9 @@ def persist(name, value, config=None):
     edited = False
     # If the sysctl.conf is not present, add it
     if not os.path.isfile(config):
+        sysctl_dir = os.path.split(config)[0]
+        if not os.path.exists(sysctl_dir):
+            os.makedirs(sysctl_dir)
         try:
             with salt.utils.fopen(config, 'w+') as _fh:
                 _fh.write('#\n# Kernel sysctl configuration\n#\n')
