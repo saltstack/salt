@@ -24,9 +24,6 @@ import uuid
 import salt.exceptions
 from salt.ext.six.moves import range
 
-# Rerun tests #3
-import subprocess
-
 __proxyenabled__ = ['*']
 __FQDN__ = None
 
