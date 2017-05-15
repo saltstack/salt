@@ -465,7 +465,6 @@ import json
 import os
 import signal
 import tarfile
-import time
 from multiprocessing import Process, Pipe
 
 # Import third-party libs
@@ -2238,7 +2237,6 @@ class WebsocketEndpoint(object):
                         logger.error(
                                 "Error: Salt event has non UTF-8 data:\n{0}"
                                 .format(data))
-                time.sleep(0.1)
 
         parent_pipe, child_pipe = Pipe()
         handler.pipe = parent_pipe
