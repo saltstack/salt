@@ -2073,8 +2073,6 @@ def prepend_root_dir(opts, path_options):
                 path = path[len(root_opt_val):]
             # Prepending the root dir
             opts[path_option] = salt.utils.path_join(root_dir, path)
-    logging.getLogger(__name__).trace('log_file = {}'.format(opts.get(
-        'log_file')))
 
 
 def insert_system_path(opts, paths):
