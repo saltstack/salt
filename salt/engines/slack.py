@@ -552,10 +552,12 @@ def format_return_text(data, **kwargs):  # pylint: disable=unused-argument
                       indent=0)
     try:
         return yaml.dump(data, **params).replace("\n\n", "\n")
+    # pylint: disable=broad-except
     except Exception as exc:
         import pprint
         log.exception('Exception {0} encountered when trying to serialize {1}'.format(
             exc, pprint.pformat(data)))
+        return "Got an error trying to serialze/clean up the response"
 
 
 def parse_args_and_kwargs(cmdline):
@@ -601,6 +603,8 @@ def get_jobs_from_runner(outstanding_jids):
         if mm.returners['{}.get_jid'.format(source)](jid):
             jid_result = runner.cmd('jobs.list_job', [jid]).get('Result', {})
             # emulate lookup_jid's return, which is just minion:return
+            # pylint is tripping
+            # pylint: disable=missing-whitespace-after-comma
             job_data = json.dumps({key:val['return'] for key, val in jid_result.items()})
             results[jid] = yaml.load(job_data)
 
@@ -698,6 +702,8 @@ def run_command_async(msg):
     if cmd in runner_functions:
         runner = salt.runner.RunnerClient(__opts__)
         log.debug("Command {} will run via runner_functions".format(cmd))
+        # pylint is tripping
+        # pylint: disable=missing-whitespace-after-comma
         job_id_dict = runner.async(cmd, {"args":args, "kwargs":kwargs})
         job_id = job_id_dict['jid']
 
