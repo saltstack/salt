@@ -1341,6 +1341,9 @@ def os_data():
                     except IndexError:
                         # Emtpy init_cmdline
                         init_bin = None
+                        log.warning(
+                            "Unable to fetch data from /proc/1/cmdline"
+                        )
                     if init_bin is not None and init_bin.endswith('bin/init'):
                         supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
                         edge_len = max(len(x) for x in supported_inits) - 1
