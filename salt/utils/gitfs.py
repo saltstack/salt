@@ -373,39 +373,28 @@ class GitProvider(object):
     def _get_envs_from_ref_paths(self, refs):
         '''
         Return the names of remote refs (stripped of the remote name) and tags
-        which are exposed as environments. If a branch or tag matches
+        which are map to the branches and tags.
         '''
-        def _check_ref(env_set, base_ref, rname):
+        def _check_ref(env_set, rname):
             '''
-            Check the ref and resolve it as the base_ref if it matches. If the
-            resulting env is exposed via whitelist/blacklist, add it to the
-            env_set.
+            Add the appropriate saltenv(s) to the set
             '''
-            _envs = []
             if rname in self.saltenv_revmap:
-                _envs.extend(self.saltenv_revmap[rname])
-                if base_ref == rname:
-                    _envs.append('base')
+                env_set.update(self.saltenv_revmap[rname])
             else:
-                if base_ref == rname:
-                    _envs.append('base')
-                else:
-                    _envs.append(rname)
-            for env_name in _envs:
-                if self.env_is_exposed(env_name):
-                    env_set.add(env_name)
+                env_set.add('base' if rname == self.base else rname)
 
         ret = set()
-        base_ref = getattr(self, 'base', None)
         for ref in refs:
             ref = re.sub('^refs/', '', ref)
             rtype, rname = ref.split('/', 1)
             if rtype == 'remotes':
                 parted = rname.partition('/')
                 rname = parted[2] if parted[2] else parted[0]
-                _check_ref(ret, base_ref, rname)
+                _check_ref(ret, rname)
             elif rtype == 'tags':
-                _check_ref(ret, base_ref, rname)
+                _check_ref(ret, rname)
+
         return ret
 
     def _get_lock_file(self, lock_type='update'):
@@ -835,9 +824,31 @@ class GitProvider(object):
 
     def get_tree(self, tgt_env):
         '''
-        This function must be overridden in a sub-class
+        Return a tree object for the specified environment
         '''
-        raise NotImplementedError()
+        if not self.env_is_exposed(tgt_env):
+            return None
+
+        tgt_ref = self.ref(tgt_env)
+        if tgt_ref is None:
+            return None
+
+        for ref_type in ('branch', 'tag', 'sha'):
+            try:
+                func_name = 'get_tree_from_{0}'.format(ref_type)
+                func = getattr(self, func_name)
+            except AttributeError:
+                log.error(
+                    '%s class is missing function \'%s\'',
+                    self.__class__.__name__, func_name
+                )
+            else:
+                candidate = func(tgt_ref)
+                if candidate is not None:
+                    return candidate
+
+        # No matches found
+        return None
 
     def get_url(self):
         '''
@@ -1170,26 +1181,36 @@ class GitPython(GitProvider):
         refspecs = self.repo.git.config('--get-all', 'remote.origin.fetch')
         return [x.strip() for x in refspecs.splitlines()]
 
-    def get_tree(self, tgt_env):
+    def get_tree_from_branch(self, ref):
         '''
-        Return a git.Tree object if the branch/tag/SHA is found, otherwise None
+        Return a git.Tree object matching a head ref fetched into
+        refs/remotes/origin/
         '''
-        tgt_ref = self.ref(tgt_env)
-        for ref in self.repo.refs:
-            if isinstance(ref, (git.RemoteReference, git.TagReference)):
-                parted = ref.name.partition('/')
-                rspec = parted[2] if parted[2] else parted[0]
-                if rspec == tgt_ref:
-                    return ref.commit.tree
-
-        # Branch or tag not matched, check if 'tgt_env' is a commit
-        if not self.env_is_exposed(tgt_env):
+        try:
+            return git.RemoteReference(
+                self.repo,
+                'refs/remotes/origin/{0}'.format(ref)).commit.tree
+        except ValueError:
             return None
 
+    def get_tree_from_tag(self, ref):
+        '''
+        Return a git.Tree object matching a tag ref fetched into refs/tags/
+        '''
         try:
-            commit = self.repo.rev_parse(tgt_ref)
-            return commit.tree
-        except gitdb.exc.ODBError:
+            return git.TagReference(
+                self.repo,
+                'refs/tags/{0}'.format(ref)).commit.tree
+        except ValueError:
+            return None
+
+    def get_tree_from_sha(self, ref):
+        '''
+        Return a git.Tree object matching a SHA
+        '''
+        try:
+            return self.repo.rev_parse(ref).tree
+        except (gitdb.exc.ODBError, AttributeError):
             return None
 
     def write_file(self, blob, dest):
@@ -1706,31 +1727,35 @@ class Pygit2(GitProvider):
             raise GitRemoteError('\'origin\' remote not not present')
         return list(self.repo.config.get_multivar('remote.origin.fetch'))
 
-    def get_tree(self, tgt_env):
+    def get_tree_from_branch(self, ref):
         '''
-        Return a pygit2.Tree object if the branch/tag/SHA is found, otherwise
-        None
+        Return a pygit2.Tree object matching a head ref fetched into
+        refs/remotes/origin/
         '''
-        tgt_ref = self.ref(tgt_env)
-        for ref in self.repo.listall_references():
-            _, rtype, rspec = ref.split('/', 2)
-            if rtype in ('remotes', 'tags'):
-                parted = rspec.partition('/')
-                rspec = parted[2] if parted[2] else parted[0]
-                if rspec == tgt_ref and self.env_is_exposed(tgt_env):
-                    return self.repo.lookup_reference(ref).get_object().tree
-
-        # Branch or tag not matched, check if 'tgt_env' is a commit
-        if not self.env_is_exposed(tgt_env):
-            return None
         try:
-            commit = self.repo.revparse_single(tgt_ref)
-        except (KeyError, TypeError, ValueError):
-            # Not a valid commit, likely not a commit SHA
-            pass
-        else:
-            return commit.tree
-        return None
+            return self.repo.lookup_reference(
+                'refs/remotes/origin/{0}'.format(ref)).get_object().tree
+        except KeyError:
+            return None
+
+    def get_tree_from_tag(self, ref):
+        '''
+        Return a pygit2.Tree object matching a tag ref fetched into refs/tags/
+        '''
+        try:
+            return self.repo.lookup_reference(
+                'refs/tags/{0}'.format(ref)).get_object().tree
+        except KeyError:
+            return None
+
+    def get_tree_from_sha(self, ref):
+        '''
+        Return a pygit2.Tree object matching a SHA
+        '''
+        try:
+            return self.repo.revparse_single(ref).tree
+        except (KeyError, TypeError, ValueError, AttributeError):
+            return None
 
     def setup_callbacks(self):
         '''
@@ -2465,7 +2490,11 @@ class GitFS(GitBase):
                 return cache_match
         ret = set()
         for repo in self.remotes:
-            ret.update(repo.envs())
+            repo_envs = set()
+            repo_envs.update(repo.envs())
+            for env_list in six.itervalues(repo.saltenv_revmap):
+                repo_envs.update(env_list)
+            ret.update([x for x in repo_envs if repo.env_is_exposed(x)])
         return sorted(ret)
 
     def find_file(self, path, tgt_env='base', **kwargs):  # pylint: disable=W0613
