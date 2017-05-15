@@ -5,6 +5,7 @@ tests.unit.api_config_test
 
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
@@ -42,7 +43,7 @@ class APIConfigTestCase(TestCase):
             ret = salt.config.api_config('/some/fake/path')
             self.assertEqual(ret['log_file'],
                              '{0}/var/log/salt/api'.format(
-                                 salt.syspaths.ROOT_DIR))
+                                 salt.syspaths.ROOT_DIR.rstrip(os.sep)))
 
     def test_api_config_pidfile_values(self):
         '''
@@ -54,7 +55,7 @@ class APIConfigTestCase(TestCase):
             ret = salt.config.api_config('/some/fake/path')
             self.assertEqual(ret['pidfile'],
                              '{0}/var/run/salt-api.pid'
-                             ''.format(salt.syspaths.ROOT_DIR))
+                             ''.format(salt.syspaths.ROOT_DIR.rstrip(os.sep)))
 
     @destructiveTest
     def test_master_config_file_overrides_defaults(self):
