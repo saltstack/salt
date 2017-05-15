@@ -2042,10 +2042,14 @@ def _hw_data(osdata):
         for key, fw_file in sysfs_firmware_info.items():
             contents_file = os.path.join('/sys/class/dmi/id', fw_file)
             if os.path.exists(contents_file):
-                with salt.utils.fopen(contents_file, 'r') as ifile:
-                    grains[key] = ifile.read()
-                    if key == 'uuid':
-                        grains['uuid'] = grains['uuid'].lower()
+                try:
+                    with salt.utils.fopen(contents_file, 'r') as ifile:
+                        grains[key] = ifile.read()
+                        if key == 'uuid':
+                            grains['uuid'] = grains['uuid'].lower()
+                except PermissionError:
+                    # Skip the grain if non-root user has no access to the file.
+                    pass
     elif salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not (
             salt.utils.is_smartos() or
             (  # SunOS on SPARC - 'smbios: failed to load SMBIOS: System does not export an SMBIOS table'
