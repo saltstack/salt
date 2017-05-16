@@ -717,7 +717,7 @@ def modify(name,
     if service_type is not win32service.SERVICE_NO_CHANGE:
         flags = list()
         for bit in SERVICE_TYPE:
-            if service_type & bit:
+            if isinstance(bit, int) and service_type & bit:
                 flags.append(SERVICE_TYPE[bit])
 
         changes['ServiceType'] = flags if flags else service_type
