@@ -749,9 +749,9 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         return False
 
 
-def import_from_regfile(regfile):
+def regfile_import(source, use_32bit_registry=False):
     '''
-    Import registry settings from a Windows Windows ``reg`` file by invoking ``reg.exe``.
+    Import registry settings from a Windows Windows ``REG`` file by invoking ``REG.EXE``.
 
     .. versionadded:: Nitrogen
 
@@ -763,10 +763,14 @@ def import_from_regfile(regfile):
 
         salt machine1 reg.import_from_regfile salt://win/printer_config/110_Canon/postinstall_config.reg
 
-    :param str regfile: The full path of the ``reg`` file. This
+    :param str source: The full path of the ``REG`` file. This
         can be either a local file path or a URL type supported by salt
         (e.g. ``salt://salt_master_path``).
 
+    :param bool use_32bit_registry: If the value of this paramater is ``True``
+        then the ``REG`` file will be imported into the Windows 32 bit registry.
+        Otherwise the Windows 64 bit registry will be used.
+        
     :return: If the value of ``regfile`` is an invalid path or otherwise
        causes ``cp.cache_file`` to return ``False`` then
        the function will not return and
@@ -778,11 +782,15 @@ def import_from_regfile(regfile):
     :rtype: bool
 
     '''
-    cache_path = __salt__['cp.cache_file'](regfile)
+    cache_path = __salt__['cp.cache_file'](source)
     if not cache_path:
-        error_msg = "File/URL '{0}' probably invalid.".format(regfile)
+        error_msg = "File/URL '{0}' probably invalid.".format(source)
         raise ValueError(error_msg)
-    cmd = 'reg import "{0}"'.format(cache_path)
+    if use_32bit_registry:
+        word_sz_txt = "32"
+    else:
+        word_sz_txt = "64"
+    cmd = 'reg import "{0}" /reg:{1}'.format(cache_path, word_sz_txt)
     cmd_ret_dict = __salt__['cmd.run_all'](cmd, python_shell=True)
     retcode = cmd_ret_dict['retcode']
     if retcode != 0:
