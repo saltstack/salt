@@ -776,7 +776,8 @@ def regfile_import(source, use_32bit_registry=False):
        the function will not return and
        a ``ValueError`` exception will be raised.
        If ``reg.exe`` exits with a non-0 exit code, then
-       ``False`` will be returned. On success this function will return
+       a ``CommandExecutionError`` exception will be
+       raised. On success this function will return
        ``True``.
 
     :rtype: bool
