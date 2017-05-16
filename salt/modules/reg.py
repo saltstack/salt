@@ -761,7 +761,7 @@ def regfile_import(source, use_32bit_registry=False):
 
     .. code-block:: bash
 
-        salt machine1 reg.import_from_regfile salt://win/printer_config/110_Canon/postinstall_config.reg
+        salt machine1 reg.regfile_import salt://win/printer_config/110_Canon/postinstall_config.reg
 
     :param str source: The full path of the ``REG`` file. This
         can be either a local file path or a URL type supported by salt
@@ -771,7 +771,7 @@ def regfile_import(source, use_32bit_registry=False):
         then the ``REG`` file will be imported into the Windows 32 bit registry.
         Otherwise the Windows 64 bit registry will be used.
         
-    :return: If the value of ``regfile`` is an invalid path or otherwise
+    :return: If the value of ``source`` is an invalid path or otherwise
        causes ``cp.cache_file`` to return ``False`` then
        the function will not return and
        a ``ValueError`` exception will be raised.
