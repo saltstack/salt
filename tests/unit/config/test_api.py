@@ -5,6 +5,7 @@ tests.unit.api_config_test
 
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
@@ -40,7 +41,9 @@ class APIConfigTestCase(TestCase):
         '''
         with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
             ret = salt.config.api_config('/some/fake/path')
-            self.assertEqual(ret['log_file'], '/var/log/salt/api')
+            self.assertEqual(ret['log_file'],
+                             '{0}/var/log/salt/api'.format(
+                                 salt.syspaths.ROOT_DIR.rstrip(os.sep)))
 
     def test_api_config_pidfile_values(self):
         '''
@@ -50,7 +53,9 @@ class APIConfigTestCase(TestCase):
         '''
         with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
             ret = salt.config.api_config('/some/fake/path')
-            self.assertEqual(ret['pidfile'], '/var/run/salt-api.pid')
+            self.assertEqual(ret['pidfile'],
+                             '{0}/var/run/salt-api.pid'
+                             ''.format(salt.syspaths.ROOT_DIR.rstrip(os.sep)))
 
     @destructiveTest
     def test_master_config_file_overrides_defaults(self):
