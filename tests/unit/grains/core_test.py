@@ -28,6 +28,15 @@ from salt.grains import core
 
 # Globals
 core.__salt__ = {}
+core.__opts__ = {}
+IPv4Address = salt.ext.ipaddress.IPv4Address
+IPv6Address = salt.ext.ipaddress.IPv6Address
+IP4_LOCAL = '127.0.0.1'
+IP4_ADD1 = '10.0.0.1'
+IP4_ADD2 = '10.0.0.2'
+IP6_LOCAL = '::1'
+IP6_ADD1 = '2001:4860:4860::8844'
+IP6_ADD2 = '2001:4860:4860::8888'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -458,6 +467,70 @@ PATCHLEVEL = 3
         self.assertEqual(os_grains.get('osrelease'), os_release_map['osrelease'])
         self.assertListEqual(list(os_grains.get('osrelease_info')), os_release_map['osrelease_info'])
         self.assertEqual(os_grains.get('osmajorrelease'), os_release_map['osmajorrelease'])
+
+    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    def test_fqdn_return(self):
+        '''
+        test ip4 and ip6 return values
+        '''
+        hostname = 'test_minion'
+
+        net_ip4_mock = [IP4_LOCAL, IP4_ADD1, IP4_ADD2]
+        net_ip6_mock = [IP6_LOCAL, IP6_ADD1, IP6_ADD2]
+        fqdn_mock = {'domain': '', 'host': hostname, 'fqdn':
+                     hostname, 'localhost': hostname}
+
+        ip4_mock = [(2, 1, 6, '', (IP4_ADD1, 0)),
+                    (2, 3, 0, '', (IP4_ADD2, 0))]
+        ip6_mock = [(10, 1, 6, '', (IP6_ADD1, 0, 0, 0)),
+                    (10, 3, 0, '', (IP6_ADD2, 0, 0, 0))]
+
+        ret = {'fqdn_ip4': [IP4_ADD1, IP4_ADD2],
+               'fqdn_ip6': [IP6_ADD1, IP6_ADD2],
+               'ipv4': [IP4_LOCAL, IP4_ADD1, IP4_ADD2],
+               'ipv6': [IP6_LOCAL, IP6_ADD1, IP6_ADD2]}
+
+        self._run_fqdn_tests(net_ip4_mock, net_ip6_mock, fqdn_mock, ip4_mock, ip6_mock, ret)
+
+    def _run_fqdn_tests(self, net_ip4_mock, net_ip6_mock, fqdn_mock, ip4_mock, ip6_mock, ret):
+        with patch.object(salt.utils.network, 'ip_addrs',
+                         MagicMock(return_value=net_ip4_mock)):
+            with patch.object(salt.utils.network, 'ip_addrs6',
+                             MagicMock(return_value=net_ip6_mock)):
+                with patch.object(core, 'hostname', MagicMock(return_value=fqdn_mock)):
+                    with patch.object(core.socket, 'AF_INET', MagicMock(return_value=2)):
+                        with patch.object(core.socket, 'AF_INET6', MagicMock(return_value=10)):
+                            with patch.object(core.socket, 'getaddrinfo', side_effect=[ip4_mock, ip6_mock]):
+                                get_fqdn = core.ip_fqdn()
+                                self.assertEqual(get_fqdn, ret)
+
+    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    def test_dns_return(self):
+        '''
+        test the return for a dns grain. test for issue:
+        https://github.com/saltstack/salt/issues/41230
+        '''
+        resolv_mock = {'domain': '', 'sortlist': [], 'nameservers':
+                   [IPv4Address(IP4_ADD1),
+                    IPv6Address(IP6_ADD1)], 'ip4_nameservers':
+                   [IPv4Address(IP4_ADD1)],
+                   'search': ['test.saltstack.com'], 'ip6_nameservers':
+                   [IPv6Address(IP6_ADD1)], 'options': []}
+        ret = {'dns': {'domain': '', 'sortlist': [], 'nameservers':
+                       [IP4_ADD1, IP6_ADD1], 'ip4_nameservers':
+                       [IP4_ADD1], 'search': ['test.saltstack.com'],
+                       'ip6_nameservers': [IP6_ADD1], 'options':
+                       []}}
+        self._run_dns_test(resolv_mock, ret)
+
+    def _run_dns_test(self, resolv_mock, ret):
+        with patch.object(salt.utils, 'is_windows',
+                          MagicMock(return_value=False)):
+            with patch.dict(core.__opts__, {'ipv6': False}):
+                with patch.object(salt.utils.dns, 'parse_resolv',
+                                  MagicMock(return_value=resolv_mock)):
+                    get_dns = core.dns()
+                    self.assertEqual(get_dns, ret)
 
 
 if __name__ == '__main__':
