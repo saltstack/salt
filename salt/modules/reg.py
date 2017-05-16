@@ -783,7 +783,7 @@ def import_from_regfile(regfile):
         error_msg = "File/URL '{0}' probably invalid.".format(regfile)
         raise ValueError(error_msg)
     cmd = 'reg import "{0}"'.format(cache_path)
-    cmd_ret_dict = __salt__['cmd.run_all'](cmd,python_shell=True)
+    cmd_ret_dict = __salt__['cmd.run_all'](cmd, python_shell=True)
     retcode = cmd_ret_dict['retcode']
     if retcode != 0:
         error_txt = 'Windows command failed: "{0}"'.format(cmd)
