@@ -184,7 +184,7 @@ def create(endpoint='incidents',
 
     Example output:
 
-    .. code-block:: yaml
+    .. code-block:: bash
 
         minion:
             ----------
@@ -277,7 +277,7 @@ def retrieve(endpoint='incidents',
 
     Example output:
 
-    .. code-block:: yaml
+    .. code-block:: bash
 
         minion:
             ----------
@@ -417,7 +417,7 @@ def update(endpoint='incidents',
 
     Example output:
 
-    .. code-block:: yaml
+    .. code-block:: bash
 
         minion:
             ----------
@@ -518,7 +518,7 @@ def delete(endpoint='incidents',
 
     Example output:
 
-    .. code-block:: yaml
+    .. code-block:: bash
 
         minion:
             ----------
