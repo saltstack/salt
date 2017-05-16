@@ -770,7 +770,7 @@ def regfile_import(source, use_32bit_registry=False):
     :param bool use_32bit_registry: If the value of this paramater is ``True``
         then the ``REG`` file will be imported into the Windows 32 bit registry.
         Otherwise the Windows 64 bit registry will be used.
-        
+
     :return: If the value of ``source`` is an invalid path or otherwise
        causes ``cp.cache_file`` to return ``False`` then
        the function will not return and
