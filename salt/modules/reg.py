@@ -794,9 +794,8 @@ def regfile_import(source, use_32bit_registry=False):
     cmd_ret_dict = __salt__['cmd.run_all'](cmd, python_shell=True)
     retcode = cmd_ret_dict['retcode']
     if retcode != 0:
-        error_txt = 'Windows command failed: "{0}"'.format(cmd)
-        log.error(error_txt)
-        error_txt = 'Exit code: {0}'.format(str(retcode))
-        log.error(error_txt)
-        return False
+        raise CommandExecutionError(
+            'reg.exe import failed',
+            info=cmd_ret_dict
+        )
     return True
