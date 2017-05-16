@@ -493,16 +493,17 @@ PATCHLEVEL = 3
         self._run_fqdn_tests(net_ip4_mock, net_ip6_mock, fqdn_mock, ip4_mock, ip6_mock, ret)
 
     def _run_fqdn_tests(self, net_ip4_mock, net_ip6_mock, fqdn_mock, ip4_mock, ip6_mock, ret):
-        with patch.object(salt.utils.network, 'ip_addrs',
-                         MagicMock(return_value=net_ip4_mock)):
-            with patch.object(salt.utils.network, 'ip_addrs6',
-                             MagicMock(return_value=net_ip6_mock)):
-                with patch.object(core, 'hostname', MagicMock(return_value=fqdn_mock)):
-                    with patch.object(core.socket, 'AF_INET', MagicMock(return_value=2)):
-                        with patch.object(core.socket, 'AF_INET6', MagicMock(return_value=10)):
-                            with patch.object(core.socket, 'getaddrinfo', side_effect=[ip4_mock, ip6_mock]):
-                                get_fqdn = core.ip_fqdn()
-                                self.assertEqual(get_fqdn, ret)
+        with patch.dict(core.__opts__, {'ipv6': False}):
+            with patch.object(salt.utils.network, 'ip_addrs',
+                             MagicMock(return_value=net_ip4_mock)):
+                with patch.object(salt.utils.network, 'ip_addrs6',
+                                 MagicMock(return_value=net_ip6_mock)):
+                    with patch.object(core, 'hostname', MagicMock(return_value=fqdn_mock)):
+                        with patch.object(core.socket, 'AF_INET', MagicMock(return_value=2)):
+                            with patch.object(core.socket, 'AF_INET6', MagicMock(return_value=10)):
+                                with patch.object(core.socket, 'getaddrinfo', side_effect=[ip4_mock, ip6_mock]):
+                                    get_fqdn = core.ip_fqdn()
+                                    self.assertEqual(get_fqdn, ret)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_dns_return(self):
