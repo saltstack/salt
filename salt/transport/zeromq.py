@@ -375,6 +375,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             self._socket.close(0)
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
+        self.message_client.destory()
 
     def __del__(self):
         self.destroy()
@@ -930,9 +931,6 @@ class AsyncReqMessageClient(object):
         if self.context.closed is False:
             self.context.term()
 
-    def __del__(self):
-        self.destroy()
-
     def _init_socket(self):
         if hasattr(self, 'stream'):
             self.stream.close()  # pylint: disable=E0203
@@ -986,6 +984,7 @@ class AsyncReqMessageClient(object):
             del self.send_queue[0]
             self.send_future_map.pop(message, None)
             self.remove_message_timeout(message)
+            self.send_future_map.pop(message)
 
     def remove_message_timeout(self, message):
         if message not in self.send_timeout_map:
