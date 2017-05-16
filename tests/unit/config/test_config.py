@@ -138,6 +138,25 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
+    def test_default_root_dir_included_in_config_root_dir(self):
+        os.makedirs(os.path.join(TMP, 'tmp2'))
+        tempdir = tempfile.mkdtemp(dir=os.path.join(TMP, 'tmp2'))
+        try:
+            root_dir = os.path.join(tempdir, 'foo', 'bar')
+            os.makedirs(root_dir)
+            fpath = os.path.join(root_dir, 'config')
+            with salt.utils.fopen(fpath, 'w') as fp_:
+                fp_.write(
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(root_dir, fpath)
+                )
+            with patch('salt.syspaths.ROOT_DIR', TMP):
+                config = sconfig.master_config(fpath)
+            self.assertEqual(config['log_file'], fpath)
+        finally:
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
     def test_load_master_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
