@@ -228,6 +228,10 @@ iface_name
 Optional. The name to apply to the VM's network interface. If not supplied, the
 value will be set to ``<VM name>-iface0``.
 
+availability_set
+----------------
+Optional. If set, the VM will be added to the specified availability set.
+
 cleanup_disks
 -------------
 Optional. Default is ``False``. If set to ``True``, disks will be cleaned up
