@@ -250,7 +250,6 @@ class CkMinions(object):
         If not 'greedy' return the only minions have cache data and matched by the condition.
         '''
         cache_enabled = self.opts.get('minion_data_cache', False)
-        cdir = os.path.join(self.opts['cachedir'], 'minions')
 
         def list_cached_minions():
             return self.cache.list('minions')
