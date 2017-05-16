@@ -21,8 +21,7 @@ import platform
 import logging
 import locale
 import uuid
-import salt.exceptions
-from salt.ext.six.moves import range
+from errno import EACCES, EPERM
 
 __proxyenabled__ = ['*']
 __FQDN__ = None
@@ -40,10 +39,13 @@ except ImportError:
     from distro import linux_distribution
 
 # Import salt libs
+import salt.exceptions
 import salt.log
 import salt.utils
 import salt.utils.network
 import salt.utils.dns
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 if salt.utils.is_windows():
     import salt.utils.win_osinfo
@@ -52,9 +54,6 @@ if salt.utils.is_windows():
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
 import salt.modules.smbios
-
-# Import 3rd-party libs
-import salt.ext.six as six
 
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet,
@@ -2047,9 +2046,12 @@ def _hw_data(osdata):
                         grains[key] = ifile.read()
                         if key == 'uuid':
                             grains['uuid'] = grains['uuid'].lower()
-                except PermissionError:
-                    # Skip the grain if non-root user has no access to the file.
-                    pass
+                except (IOError, OSError) as err:
+                    # PermissionError is new to Python 3, but corresponds to the EACESS and
+                    # EPERM error numbers. Use those instead here for PY2 compatibility.
+                    if err.errno == EACCES or err.errno == EPERM:
+                        # Skip the grain if non-root user has no access to the file.
+                        pass
     elif salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not (
             salt.utils.is_smartos() or
             (  # SunOS on SPARC - 'smbios: failed to load SMBIOS: System does not export an SMBIOS table'
