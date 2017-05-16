@@ -394,11 +394,12 @@ class ZypperTestCase(TestCase):
         :return:
         '''
 
-        with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=(['kernel-default'], None))}):
-            with patch('salt.modules.zypper.__zypper__.noraise.call', MagicMock()):
-                with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"kernel-default": "3.12.49-11.1"}, {"kernel-default": "3.12.49-11.1,3.12.51-60.20.2"}])):
-                    ret = zypper.install('kernel-default', '--auto-agree-with-licenses')
-                    self.assertDictEqual(ret, {"kernel-default": {"old": "3.12.49-11.1", "new": "3.12.51-60.20.2"}})
+        with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=(['kernel-default'], None))}), \
+             patch('salt.modules.zypper.__zypper__.noraise.call', MagicMock()), \
+             patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[
+                 {"kernel-default": "3.12.49-11.1"}, {"kernel-default": "3.12.49-11.1,3.12.51-60.20.2"}])):
+            ret = zypper.install('kernel-default', '--auto-agree-with-licenses')
+            self.assertDictEqual(ret, {"kernel-default": {"old": "3.12.49-11.1", "new": "3.12.51-60.20.2"}})
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
     @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))
