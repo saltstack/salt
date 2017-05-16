@@ -747,3 +747,48 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         log.error('ValueName: {0}'.format(local_vname))
         log.error('32bit Reg: {0}'.format(use_32bit_registry))
         return False
+
+
+def import_from_regfile(regfile):
+    '''
+    Import registry settings from a Windows Windows ``reg`` file by invoking ``reg.exe``.
+
+    .. versionadded:: Nitrogen
+
+    Usage:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt machine1 reg.import_from_regfile salt://win/printer_config/110_Canon/postinstall_config.reg
+
+    :param str regfile: The full path of the ``reg`` file. This
+        can be either a local file path or a URL type supported by salt
+        (e.g. ``salt://salt_master_path``).
+
+    :return: If the value of ``regfile`` is an invalid path or otherwise
+       causes ``cp.cache_file`` to return ``False`` then
+       the function will not return and
+       a ``ValueError`` exception will be raised.
+       If ``reg.exe`` exits with a non-0 exit code, then
+       ``False`` will be returned. On success this function will return
+       ``True``.
+
+    :rtype: bool
+
+    '''
+    cache_path = __salt__['cp.cache_file'](regfile)
+    if not cache_path:
+        error_msg = "File/URL '{0}' probably invalid.".format(regfile)
+        raise ValueError(error_msg)
+    cmd = 'reg import "{0}"'.format(cache_path)
+    cmd_ret_dict = __salt__['cmd.run_all'](cmd,python_shell=True)
+    retcode = cmd_ret_dict['retcode']
+    if retcode != 0:
+        error_txt = 'Windows command failed: "{0}"'.format(cmd)
+        log.error(error_txt)
+        error_txt = 'Exit code: {0}'.format(str(retcode))
+        log.error(error_txt)
+        return False
+    return True
