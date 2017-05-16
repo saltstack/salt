@@ -650,28 +650,6 @@ def salt_auth_tool():
     cherrypy.response.headers['Cache-Control'] = 'private'
 
 
-def cors_handler(*args, **kwargs):
-    '''
-    Check a CORS preflight request and return a valid response
-    '''
-    req_head = cherrypy.request.headers
-    resp_head = cherrypy.response.headers
-
-    ac_method = req_head.get('Access-Control-Request-Method', None)
-
-    allowed_methods = ['GET', 'POST']
-    allowed_headers = ['X-Auth-Token', 'Content-Type']
-
-    if ac_method and ac_method in allowed_methods:
-        resp_head['Access-Control-Allow-Methods'] = ', '.join(allowed_methods)
-        resp_head['Access-Control-Allow-Headers'] = ', '.join(allowed_headers)
-
-        resp_head['Connection'] = 'keep-alive'
-        resp_head['Access-Control-Max-Age'] = '1400'
-
-    return {}
-
-
 def cors_tool():
     '''
     Handle both simple and complex CORS requests
@@ -688,9 +666,33 @@ def cors_tool():
     resp_head['Access-Control-Expose-Headers'] = 'GET, POST'
     resp_head['Access-Control-Allow-Credentials'] = 'true'
 
-    # If this is a non-simple CORS preflight request swap out the handler.
+    # Non-simple CORS preflight request; short-circuit the normal handler.
     if cherrypy.request.method == 'OPTIONS':
-        cherrypy.serving.request.handler = cors_handler
+        ac_method = req_head.get('Access-Control-Request-Method', None)
+
+        allowed_methods = ['GET', 'POST']
+        allowed_headers = [
+            'Content-Type',
+            'X-Auth-Token',
+            'X-Requested-With',
+        ]
+
+        if ac_method and ac_method in allowed_methods:
+            resp_head['Access-Control-Allow-Methods'] = ', '.join(allowed_methods)
+            resp_head['Access-Control-Allow-Headers'] = ', '.join(allowed_headers)
+
+            resp_head['Connection'] = 'keep-alive'
+            resp_head['Access-Control-Max-Age'] = '1400'
+
+        # CORS requests should short-circuit the other tools.
+        cherrypy.response.body = ''
+        cherrypy.response.status = 200
+        cherrypy.serving.request.handler = None
+
+        # Needed to avoid the auth_tool check.
+        if cherrypy.request.config.get('tools.sessions.on', False):
+            cherrypy.session['token'] = True
+        return True
 
 
 # Be conservative in what you send
@@ -771,7 +773,10 @@ def hypermedia_out():
     '''
     request = cherrypy.serving.request
     request._hypermedia_inner_handler = request.handler
-    request.handler = hypermedia_handler
+
+    # If handler has been explicitly set to None, don't override.
+    if not request.handler is None:
+        request.handler = hypermedia_handler
 
 
 def process_request_body(fn):
