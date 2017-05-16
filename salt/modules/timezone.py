@@ -389,7 +389,7 @@ def get_hwclock():
 
     else:
         os_family = __grains__['os_family']
-        for family in ('RedHat', 'Suse'):
+        for family in ('RedHat', 'Suse', 'NILinuxRT'):
             if family in os_family:
                 return _get_adjtime_timezone()
 
