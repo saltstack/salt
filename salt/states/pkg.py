@@ -1306,7 +1306,7 @@ def installed(
         package, the held package(s) will be skipped and the state will fail.
         By default, this parameter is set to ``False``.
 
-        This option is currently supported only for YUM/DNF.
+        Currently works with YUM/DNF & APT based systems.
 
         .. versionadded:: 2016.11.0
 
