@@ -253,9 +253,7 @@ class CkMinions(object):
         cdir = os.path.join(self.opts['cachedir'], 'minions')
 
         def list_cached_minions():
-            if not os.path.isdir(cdir):
-                return []
-            return os.listdir(cdir)
+            return self.cache.list('minions')
 
         if greedy:
             minions = []
