@@ -953,22 +953,28 @@ def lowdata_fmt():
         cherrypy.serving.request.lowstate = data
 
 
-cherrypy.tools.html_override = cherrypy.Tool('on_start_resource',
-        html_override_tool, priority=53)
-cherrypy.tools.salt_token = cherrypy.Tool('on_start_resource',
-        salt_token_tool, priority=55)
-cherrypy.tools.cors_tool = cherrypy.Tool('before_request_body',
-        cors_tool, priority=50)
-cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
-        salt_auth_tool, priority=60)
-cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
-        hypermedia_in)
-cherrypy.tools.lowdata_fmt = cherrypy.Tool('before_handler',
-        lowdata_fmt, priority=40)
-cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler',
-        hypermedia_out)
-cherrypy.tools.salt_ip_verify = cherrypy.Tool('before_handler',
-        salt_ip_verify_tool)
+tools_config = {
+    'on_start_resource': [
+        ('html_override', html_override_tool),
+        ('salt_token', salt_token_tool),
+    ],
+    'before_request_body': [
+        ('cors_tool', cors_tool),
+        ('salt_auth', salt_auth_tool),
+        ('hypermedia_in', hypermedia_in),
+    ],
+    'before_handler': [
+        ('lowdata_fmt', lowdata_fmt),
+        ('hypermedia_out', hypermedia_out),
+        ('salt_ip_verify', salt_ip_verify_tool),
+    ],
+}
+
+for hook, tool_list in tools_config.items():
+    for idx, tool_config in enumerate(tool_list):
+        tool_name, tool_fn = tool_config
+        setattr(cherrypy.tools, tool_name, cherrypy.Tool(
+            hook, tool_fn, priority=(50 + idx)))
 
 
 ###############################################################################
