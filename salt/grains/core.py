@@ -1331,7 +1331,14 @@ def os_data():
             if os.path.exists('/proc/1/cmdline'):
                 with salt.utils.fopen('/proc/1/cmdline') as fhr:
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
-                    init_bin = salt.utils.which(init_cmdline[0])
+                    try:
+                        init_bin = salt.utils.which(init_cmdline[0])
+                    except IndexError:
+                        # Emtpy init_cmdline
+                        init_bin = None
+                        log.warning(
+                            "Unable to fetch data from /proc/1/cmdline"
+                        )
                     if init_bin is not None and init_bin.endswith('bin/init'):
                         supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
                         edge_len = max(len(x) for x in supported_inits) - 1
