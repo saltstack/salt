@@ -46,12 +46,9 @@ Example:
 
 # Import Python Libs
 from __future__ import absolute_import
-import logging
 
 # Import salt libs
 import salt.utils
-
-log = logging.getLogger(__name__)
 
 
 def __virtual__():
