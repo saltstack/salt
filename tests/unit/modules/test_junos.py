@@ -38,7 +38,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                     'junos.conn': self.make_connect,
                     'junos.get_serialized_facts': self.get_facts
                 },
-                '__salt__': {'cp.get_template': self.mock_cp}
+                '__salt__': {'cp.get_template': self.mock_cp,
+                             'cp.get_file': self.mock_cp}
             }
         }
 
