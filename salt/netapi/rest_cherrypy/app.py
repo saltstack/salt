@@ -1054,6 +1054,7 @@ class LowDataAdapter(object):
             else:
                 yield ret
 
+    @cherrypy.config(**{'tools.sessions.on': False})
     def GET(self):
         '''
         An explanation of the API with links of where to go next
