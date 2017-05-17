@@ -105,6 +105,9 @@ class _crypttab_entry(object):
         return True
 
 def active():
+    '''
+    List existing device-mapper device details.
+    '''
     ret = {}
     # TODO: This command should be extended to collect more information, such as UUID.
     devices = __salt__['cmd.run_stdout']('dmsetup ls --target crypt')
@@ -217,9 +220,14 @@ def set_crypttab(
         salt '*' cryptdev.set_crypttab foo /dev/sdz1 mypassword swap,size=256
     '''
 
-    # Fix the options type if it is a list
-    if isinstance(options, list):
+    # Fix the options type if it is not a string
+    if isinstance(options, six.string_types):
+        pass
+    elif isinstance(options, list):
         options = ','.join(options)
+    else:
+        msg = 'options must be a string or list of strings'
+        raise CommandExecutionError(msg)
 
     # preserve arguments for updating
     entry_args = {
@@ -295,4 +303,21 @@ def set_crypttab(
                 msg = 'File not writable {0}'
                 raise CommandExecutionError(msg.format(config))
 
+    return ret
+
+def open(name, device, keyfile=None):
+    '''
+    Open a crypt device using ``cryptsetup``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cryptdev.open foo /dev/sdz1 /path/to/keyfile
+    '''
+    ret = {}
+
+    keyfile_option = ('--key-file %s' % keyfile) if keyfile else ''
+    devices = __salt__['cmd.run_stdout']('cryptsetup open %s %s %s' \
+                                         % (keyfile_option, device, name))
     return ret
