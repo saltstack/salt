@@ -3264,7 +3264,7 @@ def powershell_all(cmd,
                 The exit code of the invocation of Powershell.
                 If the command we specificy with the ``cmd`` paramater
                 fails this should be non-0.
-             
+
     :rtype: dict
 
     CLI Example:
