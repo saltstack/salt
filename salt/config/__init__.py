@@ -871,6 +871,9 @@ VALID_OPTS = {
 
     # Permit or deny allowing minions to request revoke of its own key
     'allow_minion_key_revoke': bool,
+
+    # File chunk size for salt-cp
+    'salt_cp_chunk_size': int,
 }
 
 # default configurations
@@ -1092,6 +1095,7 @@ DEFAULT_MINION_OPTS = {
     'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
     'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
     'event_match_type': 'startswith',
+    'salt_cp_chunk_size': 98304,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1350,6 +1354,7 @@ DEFAULT_MASTER_OPTS = {
     'python3_bin': 'python3',
     'thin_extra_mods': '',
     'allow_minion_key_revoke': True,
+    'salt_cp_chunk_size': 98304,
 }
 
 
