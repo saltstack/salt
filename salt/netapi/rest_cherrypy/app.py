@@ -117,6 +117,12 @@ A REST API for Salt
     static_path : ``/static``
         The URL prefix to use when serving static assets out of the directory
         specified in the ``static`` setting.
+    enable_sessions : ``True``
+        Enable or disable all endpoints that rely on session cookies. This can
+        be useful to enforce only header-based authentication.
+
+        .. versionadded:: Nitrogen
+
     app : ``index.html``
         A filesystem path to an HTML file that will be served as a static file.
         This is useful for bootstrapping a single-page JavaScript app.
@@ -1007,6 +1013,7 @@ class LowDataAdapter(object):
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
+        self.apiopts = cherrypy.config['apiopts']
         self.api = salt.netapi.NetapiClient(self.opts)
 
     def exec_lowstate(self, client=None, token=None):
@@ -2596,7 +2603,15 @@ class API(object):
 
         CherryPy uses class attributes to resolve URLs.
         '''
-        for url, cls in six.iteritems(self.url_map):
+        if self.apiopts.get('enable_sessions', True) is False:
+            url_blacklist = ['login', 'logout', 'minions', 'jobs']
+        else:
+            url_blacklist = []
+
+        urls = ((url, cls) for url, cls in six.iteritems(self.url_map)
+                if url not in url_blacklist)
+
+        for url, cls in urls:
             setattr(self, url, cls())
 
     def _update_url_map(self):
