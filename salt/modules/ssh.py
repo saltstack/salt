@@ -298,7 +298,7 @@ def _get_known_hosts_file(config=None, user=None):
     return full
 
 
-def host_keys(keydir=None, private=True):
+def host_keys(keydir=None, private=True, certs=True):
     '''
     Return the minion's host keys
 
@@ -309,6 +309,7 @@ def host_keys(keydir=None, private=True):
         salt '*' ssh.host_keys
         salt '*' ssh.host_keys keydir=/etc/ssh
         salt '*' ssh.host_keys keydir=/etc/ssh private=False
+        salt '*' ssh.host_keys keydir=/etc/ssh certs=False
     '''
     # TODO: support parsing sshd_config for the key directory
     if not keydir:
@@ -318,20 +319,27 @@ def host_keys(keydir=None, private=True):
             # If keydir is None, os.listdir() will blow up
             raise SaltInvocationError('ssh.host_keys: Please specify a keydir')
     keys = {}
+    fnre = re.compile(
+        r'ssh_host_(?P<type>.+)_key(?P<pub>(?P<cert>-cert)?\.pub)?')
     for fn_ in os.listdir(keydir):
-        if fn_.startswith('ssh_host_'):
-            if fn_.endswith('.pub') is False and private is False:
+        m = fnre.match(fn_)
+        if m:
+            if not m.group('pub') and private is False:
                 log.info(
                     'Skipping private key file {0} as private is set to False'
                     .format(fn_)
                 )
                 continue
+            if m.group('cert') and certs is False:
+                log.info(
+                    'Skipping key file {0} as certs is set to False'
+                    .format(fn_)
+                )
+                continue
 
-            top = fn_.split('.')
-            comps = top[0].split('_')
-            kname = comps[2]
-            if len(top) > 1:
-                kname += '.{0}'.format(top[1])
+            kname = m.group('type')
+            if m.group('pub'):
+                kname += m.group('pub')
             try:
                 with salt.utils.fopen(os.path.join(keydir, fn_), 'r') as _fh:
                     # As of RFC 4716 "a key file is a text file, containing a
