@@ -468,42 +468,95 @@ PATCHLEVEL = 3
         self.assertListEqual(list(os_grains.get('osrelease_info')), os_release_map['osrelease_info'])
         self.assertEqual(os_grains.get('osmajorrelease'), os_release_map['osmajorrelease'])
 
+    def _check_ipaddress(self, value, ip_v):
+        '''
+        check if ip address in a list is valid
+        '''
+        for val in value:
+            assert isinstance(val, six.string_types)
+            ip_method = 'is_ipv{0}'.format(ip_v)
+            self.assertTrue(getattr(salt.utils.network, ip_method)(val))
+
+    def _check_empty(self, key, value, empty):
+        '''
+        if empty is False and value does not exist assert error
+        if empty is True and value exists assert error
+        '''
+        if not empty and not value:
+            raise Exception("{0} is empty, expecting a value".format(key))
+        elif empty and value:
+            raise Exception("{0} is suppose to be empty. value: {1} \
+                            exists".format(key, value))
+
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_fqdn_return(self):
         '''
         test ip4 and ip6 return values
         '''
-        hostname = 'test_minion'
-
         net_ip4_mock = [IP4_LOCAL, IP4_ADD1, IP4_ADD2]
         net_ip6_mock = [IP6_LOCAL, IP6_ADD1, IP6_ADD2]
-        fqdn_mock = {'domain': '', 'host': hostname, 'fqdn':
-                     hostname, 'localhost': hostname}
 
-        ip4_mock = [(2, 1, 6, '', (IP4_ADD1, 0)),
-                    (2, 3, 0, '', (IP4_ADD2, 0))]
-        ip6_mock = [(10, 1, 6, '', (IP6_ADD1, 0, 0, 0)),
-                    (10, 3, 0, '', (IP6_ADD2, 0, 0, 0))]
+        self._run_fqdn_tests(net_ip4_mock, net_ip6_mock,
+                             ip4_empty=False, ip6_empty=False)
 
-        ret = {'fqdn_ip4': [IP4_ADD1, IP4_ADD2],
-               'fqdn_ip6': [IP6_ADD1, IP6_ADD2],
-               'ipv4': [IP4_LOCAL, IP4_ADD1, IP4_ADD2],
-               'ipv6': [IP6_LOCAL, IP6_ADD1, IP6_ADD2]}
+    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    def test_fqdn6_empty(self):
+        '''
+        test when ip6 is empty
+        '''
+        net_ip4_mock = [IP4_LOCAL, IP4_ADD1, IP4_ADD2]
+        net_ip6_mock = []
 
-        self._run_fqdn_tests(net_ip4_mock, net_ip6_mock, fqdn_mock, ip4_mock, ip6_mock, ret)
+        self._run_fqdn_tests(net_ip4_mock, net_ip6_mock,
+                             ip4_empty=False)
 
-    def _run_fqdn_tests(self, net_ip4_mock, net_ip6_mock, fqdn_mock, ip4_mock, ip6_mock, ret):
+    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    def test_fqdn4_empty(self):
+        '''
+        test when ip4 is empty
+        '''
+        net_ip4_mock = []
+        net_ip6_mock = [IP6_LOCAL, IP6_ADD1, IP6_ADD2]
+
+        self._run_fqdn_tests(net_ip4_mock, net_ip6_mock,
+                             ip6_empty=False)
+
+    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    def test_fqdn_all_empty(self):
+        '''
+        test when both ip4 and ip6 are empty
+        '''
+        net_ip4_mock = []
+        net_ip6_mock = []
+
+        self._run_fqdn_tests(net_ip4_mock, net_ip6_mock)
+
+    def _run_fqdn_tests(self, net_ip4_mock, net_ip6_mock,
+                        ip6_empty=True, ip4_empty=True):
+
+        def _check_type(key, value, ip4_empty, ip6_empty):
+            '''
+            check type and other checks
+            '''
+            assert isinstance(value, list)
+
+            if '4' in key:
+                self._check_empty(key, value, ip4_empty)
+                self._check_ipaddress(value, ip_v='4')
+            elif '6' in key:
+                self._check_empty(key, value, ip6_empty)
+                self._check_ipaddress(value, ip_v='6')
+
         with patch.dict(core.__opts__, {'ipv6': False}):
             with patch.object(salt.utils.network, 'ip_addrs',
                              MagicMock(return_value=net_ip4_mock)):
                 with patch.object(salt.utils.network, 'ip_addrs6',
                                  MagicMock(return_value=net_ip6_mock)):
-                    with patch.object(core, 'hostname', MagicMock(return_value=fqdn_mock)):
-                        with patch.object(core.socket, 'AF_INET', MagicMock(return_value=2)):
-                            with patch.object(core.socket, 'AF_INET6', MagicMock(return_value=10)):
-                                with patch.object(core.socket, 'getaddrinfo', side_effect=[ip4_mock, ip6_mock]):
-                                    get_fqdn = core.ip_fqdn()
-                                    self.assertEqual(get_fqdn, ret)
+                    get_fqdn = core.ip_fqdn()
+                    ret_keys = ['fqdn_ip4', 'fqdn_ip6', 'ipv4', 'ipv6']
+                    for key in ret_keys:
+                        value = get_fqdn[key]
+                        _check_type(key, value, ip4_empty, ip6_empty)
 
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_dns_return(self):
