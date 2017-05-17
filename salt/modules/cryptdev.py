@@ -11,6 +11,7 @@ import os
 
 # Import salt libraries
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 import salt.ext.six as six
