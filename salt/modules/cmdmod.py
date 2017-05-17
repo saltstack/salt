@@ -3247,7 +3247,7 @@ def powershell_all(cmd,
     :return: A dictionary with the following entries:
 
         .. glossary::
-             outdict
+             result
                 When the Powershell invocation exits with a non-0 exit code
                 or when the json output created by
                 Powershell cannot be loaded into a Python dictionary,
@@ -3307,14 +3307,14 @@ def powershell_all(cmd,
     retcode = response['retcode']
     if retcode:
         response.pop('stdout')
-        response['outdict'] = None
+        response['result'] = None
         return response
     stdoutput = response.pop('stdout')
     try:
-        response['outdict'] = json.loads(stdoutput)
+        response['result'] = json.loads(stdoutput)
     except Exception:
         log.error("Error converting PowerShell JSON return", exc_info=True)
-        response['outdict'] = None
+        response['result'] = None
     return response
 
 
