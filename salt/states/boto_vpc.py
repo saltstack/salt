@@ -948,6 +948,8 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
+        if ret['result'] is None and __opts__['test']:
+            return ret
     _ret = _routes_present(route_table_name=name, routes=routes, tags=tags,
                            region=region, key=key, keyid=keyid, profile=profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
