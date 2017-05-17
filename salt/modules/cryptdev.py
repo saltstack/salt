@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import json
 import logging
 import os
+import re
 
 # Import salt libraries
 import salt.utils
@@ -103,6 +104,22 @@ class _crypttab_entry(object):
                 return False
         return True
 
+def active():
+    ret = {}
+    # TODO: This command should be extended to collect more information, such as UUID.
+    devices = __salt__['cmd.run_stdout']('dmsetup ls --target crypt')
+    out_regex = re.compile(r'(?P<devname>\w+)\W+\((?P<major>\d+), (?P<minor>\d+)\)')
+
+    log.debug(devices)
+    for line in devices.split('\n'):
+        match = out_regex.match(line)
+        if match:
+            dev_info = match.groupdict()
+            ret[dev_info['devname']] = dev_info
+        else:
+            log.warn('dmsetup output does not match expected format')
+
+    return ret
 
 def crypttab(config='/etc/crypttab'):
     '''
