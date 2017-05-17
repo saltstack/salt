@@ -293,6 +293,7 @@ class NetworkTestCase(TestCase):
         '''
         self.assertEqual(network._generate_minion_id(),
                          ['127890.domainname.blank', '127890', '1.2.3.4', '5.6.7.8'])
+
     def test_generate_minion_id_duplicate(self):
         '''
         Test if IP addresses in the minion IDs are distinct in the pool
