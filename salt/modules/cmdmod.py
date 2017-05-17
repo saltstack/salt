@@ -1623,7 +1623,7 @@ def run_all(cmd,
     :param bool encoded_cmd: Specify if the supplied command is encoded.
       Only applies to shell 'powershell'.
         
-      .. versionadd:: Nitrogen
+      .. versionadded:: Nitrogen
 
     :param bool redirect_stderr: If set to ``True``, then stderr will be
       redirected to stdout. This is helpful for cases where obtaining both the
