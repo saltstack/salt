@@ -208,7 +208,7 @@ def _diff(old, new):
     for key in old_keys:
         if key == 'id' or key == 'orgId':
             del old[key]
-        elif not key in new.keys():
+        elif key not in new.keys():
             del old[key]
         elif old[key] == new[key]:
             del old[key]
