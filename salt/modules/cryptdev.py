@@ -136,7 +136,8 @@ def crypttab(config='/etc/crypttab'):
 
 def rm_crypttab(name, device, config='/etc/crypttab'):
     '''
-    Remove the device point from the crypttab
+    Remove the device point from the crypttab. If the described entry does not
+    exist, nothing is changed, but the command succeeds.
 
     CLI Example:
 
