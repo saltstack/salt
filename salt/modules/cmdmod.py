@@ -1524,6 +1524,7 @@ def run_all(cmd,
             use_vt=False,
             redirect_stderr=False,
             password=None,
+            encoded_cmd=False,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
@@ -1619,6 +1620,9 @@ def run_all(cmd,
       ``env`` represents the environment variables for the command, and
       should be formatted as a dict, or a YAML string which resolves to a dict.
 
+    :param bool encoded_cmd: Specify if the supplied command is encoded.
+      Only applies to shell 'powershell'.
+
     :param bool redirect_stderr: If set to ``True``, then stderr will be
       redirected to stdout. This is helpful for cases where obtaining both the
       retcode and output is desired, but it is not desired to have the output
@@ -1681,6 +1685,7 @@ def run_all(cmd,
                saltenv=saltenv,
                use_vt=use_vt,
                password=password,
+               encoded_cmd=encoded_cmd,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -3110,7 +3115,7 @@ def powershell_all(cmd,
         **kwargs):
     '''
     Execute the passed PowerShell command and return a dictionary with a sub-dictionary
-    representing the output of the command (if successful), as well as other fields
+    representing the output of the command, as well as other fields
     showing us what the PowerShell invocation wrote to ``stderr``, the process id,
     and the exit code of the invocation. A more detailed description of the return
     data is included below.
@@ -3244,18 +3249,19 @@ def powershell_all(cmd,
         Default is 2. Values greater than 4 seem to greatly increase the time
         it takes for the command to complete for some commands. eg: ``dir``
 
+    :param bool encode_cmd: Encode the command before executing. Use in cases
+      where characters may be dropped or incorrectly converted when executed.
+      Default is False.
+
     :return: A dictionary with the following entries:
 
         .. glossary::
              result
-                When the Powershell invocation exits with a non-0 exit code
-                or when the json output created by
+                When the output written to ``stdout`` by
                 Powershell cannot be loaded into a Python dictionary,
                 this field will have a value
-                of ``None``. Otherwise this will be a sub-dictionary created from
+                of ``False``. Otherwise this will be a sub-dictionary created from
                 the json data produced by Powershell.
-                In general terms, a value of ``None`` implies some kind of failure and
-                a value taking the form of a Python dictionary implies success.
              stderr
                 What the invocation of Powershell wrote to ``stderr``.
              pid
@@ -3263,7 +3269,10 @@ def powershell_all(cmd,
              retcode
                 The exit code of the invocation of Powershell.
                 If the command we specificy with the ``cmd`` paramater
-                fails this should be non-0.
+                reports a native Powershell failure, this should be non-0. 
+                Additionally if the command
+                invokes a Windows executable and the Windows executable exits
+                a non-0 exit code, then retcode will end up with this value.
 
     :rtype: dict
 
@@ -3283,6 +3292,16 @@ def powershell_all(cmd,
     if depth is not None:
         cmd += ' -Depth {0}'.format(depth)
 
+    if encode_cmd:
+        # Convert the cmd to UTF-16LE without a BOM and base64 encode.
+        # Just base64 encoding UTF-8 or including a BOM is not valid.
+        log.debug('Encoding PowerShell command \'{0}\''.format(cmd))
+        cmd_utf16 = cmd.decode('utf-8').encode('utf-16le')
+        cmd = base64.standard_b64encode(cmd_utf16)
+        encoded_cmd = True
+    else:
+        encoded_cmd = False
+        
     # Retrieve the response, while overriding shell with 'powershell'
     response = run_all(cmd,
                    cwd=cwd,
@@ -3303,18 +3322,14 @@ def powershell_all(cmd,
                    use_vt=use_vt,
                    python_shell=python_shell,
                    password=password,
+                   encoded_cmd=encoded_cmd,
                    **kwargs)
-    retcode = response['retcode']
-    if retcode:
-        response.pop('stdout')
-        response['result'] = None
-        return response
     stdoutput = response.pop('stdout')
     try:
         response['result'] = json.loads(stdoutput)
     except Exception:
         log.error("Error converting PowerShell JSON return", exc_info=True)
-        response['result'] = None
+        response['result'] = False
     return response
 
 
