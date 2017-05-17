@@ -8,7 +8,7 @@ Configuring the HTTP_JSON ext_pillar
 
 Set the following Salt config to setup Foreman as external pillar source:
 
-.. code-block:: json
+.. code-block:: yaml
 
   ext_pillar:
     - http_json:

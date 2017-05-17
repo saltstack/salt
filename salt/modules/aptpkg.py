@@ -40,6 +40,7 @@ import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
 import salt.utils.itertools
+import salt.utils.pkg
 import salt.utils.pkg.deb
 import salt.utils.systemd
 from salt.exceptions import (
@@ -379,6 +380,8 @@ def refresh_db(cache_valid_time=0, failhard=False):
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     failhard = salt.utils.is_true(failhard)
     ret = {}
     error_repos = list()

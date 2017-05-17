@@ -41,6 +41,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 import salt.utils.itertools
 import salt.utils.systemd
 import salt.utils.decorators as decorators
@@ -1001,6 +1002,8 @@ def refresh_db(**kwargs):
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     retcodes = {
         100: True,
         0: None,

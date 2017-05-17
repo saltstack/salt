@@ -210,6 +210,8 @@ def get_device_opts(opts, salt_obj=None):
     # get driver object form NAPALM
     if 'config_lock' not in network_device['OPTIONAL_ARGS']:
         network_device['OPTIONAL_ARGS']['config_lock'] = False
+    if network_device['ALWAYS_ALIVE'] and 'keepalive' not in network_device['OPTIONAL_ARGS']:
+        network_device['OPTIONAL_ARGS']['keepalive'] = 5  # 5 seconds keepalive
     return network_device
 
 

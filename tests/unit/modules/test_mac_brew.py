@@ -9,11 +9,12 @@ from __future__ import absolute_import
 # Import Salt Libs
 import salt.modules.mac_brew as mac_brew
 from salt.exceptions import CommandExecutionError
+import salt.utils.pkg
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import MagicMock, Mock, patch, NO_MOCK, NO_MOCK_REASON
 
 TAPS_STRING = 'homebrew/dupes\nhomebrew/science\nhomebrew/x11'
 TAPS_LIST = ['homebrew/dupes', 'homebrew/science', 'homebrew/x11']
@@ -149,7 +150,8 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                                             'cmd.run_all': mock_failure}), \
                 patch('salt.modules.mac_brew._homebrew_bin',
                       MagicMock(return_value=HOMEBREW_BIN)):
-            self.assertRaises(CommandExecutionError, mac_brew.refresh_db)
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                self.assertRaises(CommandExecutionError, mac_brew.refresh_db)
 
     def test_refresh_db(self):
         '''
@@ -161,7 +163,8 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                                         'cmd.run_all': mock_success}), \
                 patch('salt.modules.mac_brew._homebrew_bin',
                       MagicMock(return_value=HOMEBREW_BIN)):
-            self.assertTrue(mac_brew.refresh_db())
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                self.assertTrue(mac_brew.refresh_db())
 
     # 'install' function tests: 1
     # Only tested a few basics

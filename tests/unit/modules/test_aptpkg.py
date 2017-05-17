@@ -270,8 +270,9 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             'retcode': 0,
             'stdout': APT_Q_UPDATE
         })
-        with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(aptpkg.refresh_db(), refresh_db)
+        with patch('salt.utils.pkg.clear_rtag', MagicMock()):
+            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
+                self.assertEqual(aptpkg.refresh_db(), refresh_db)
 
     def test_refresh_db_failed(self):
         '''
@@ -282,8 +283,9 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             'retcode': 0,
             'stdout': APT_Q_UPDATE_ERROR
         })
-        with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(CommandExecutionError, aptpkg.refresh_db, **kwargs)
+        with patch('salt.utils.pkg.clear_rtag', MagicMock()):
+            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
+                self.assertRaises(CommandExecutionError, aptpkg.refresh_db, **kwargs)
 
     def test_autoremove(self):
         '''
@@ -323,17 +325,18 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test - Upgrades all packages.
         '''
-        with patch('salt.modules.aptpkg.list_pkgs',
-                   MagicMock(return_value=UNINSTALL)):
-            mock_cmd = MagicMock(return_value={
-                'retcode': 0,
-                'stdout': UPGRADE
-            })
-            patch_kwargs = {
-                '__salt__': {
-                    'config.get': MagicMock(return_value=True),
-                    'cmd.run_all': mock_cmd
+        with patch('salt.utils.pkg.clear_rtag', MagicMock()):
+            with patch('salt.modules.aptpkg.list_pkgs',
+                       MagicMock(return_value=UNINSTALL)):
+                mock_cmd = MagicMock(return_value={
+                    'retcode': 0,
+                    'stdout': UPGRADE
+                })
+                patch_kwargs = {
+                    '__salt__': {
+                        'config.get': MagicMock(return_value=True),
+                        'cmd.run_all': mock_cmd
+                    }
                 }
-            }
-            with patch.multiple(aptpkg, **patch_kwargs):
-                self.assertEqual(aptpkg.upgrade(), dict())
+                with patch.multiple(aptpkg, **patch_kwargs):
+                    self.assertEqual(aptpkg.upgrade(), dict())
