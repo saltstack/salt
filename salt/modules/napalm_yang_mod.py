@@ -448,7 +448,7 @@ def load_config(data, models, **kwargs):
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         device1:
             ----------
