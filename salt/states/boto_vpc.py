@@ -1499,7 +1499,7 @@ def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
         'comment': 'Boto VPC peering state'
     }
 
-    if not pending['exists']:
+    if not pending:
         ret['result'] = True
         ret['changes'].update({
             'old': 'No pending VPC peering connection found. '
