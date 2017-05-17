@@ -70,6 +70,7 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,
 )
+from salt.ext.six.moves import filter
 
 # Import 3rd-party libs
 HAS_LIBS = False
@@ -825,6 +826,17 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     if kwargs.get('iface_name') is None:
         kwargs['iface_name'] = '{0}-iface0'.format(vm_['name'])
 
+    backend_pools = None
+    if kwargs.get('load_balancer') and kwargs.get('backend_pool'):
+        load_balancer_obj = netconn.load_balancers.get(
+            resource_group_name=kwargs['network_resource_group'],
+            load_balancer_name=kwargs['load_balancer'],
+        )
+        backend_pools = list(filter(
+            lambda backend: backend.name == kwargs['backend_pool'],
+            load_balancer_obj.backend_address_pools,
+        ))
+
     subnet_obj = netconn.subnets.get(
         resource_group_name=kwargs['network_resource_group'],
         virtual_network_name=kwargs['network'],
@@ -865,6 +877,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                     ip_configurations = [
                         NetworkInterfaceIPConfiguration(
                             name='{0}-ip'.format(kwargs['iface_name']),
+                            load_balancer_backend_address_pools=backend_pools,
                             subnet=subnet_obj,
                             **ip_kwargs
                         )
@@ -881,6 +894,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         ip_configurations = [
             NetworkInterfaceIPConfiguration(
                 name='{0}-ip'.format(kwargs['iface_name']),
+                load_balancer_backend_address_pools=backend_pools,
                 subnet=subnet_obj,
                 **ip_kwargs
             )
