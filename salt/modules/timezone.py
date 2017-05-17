@@ -480,12 +480,14 @@ def set_hwclock(clock):
 
         salt '*' timezone.set_hwclock UTC
     '''
-    if 'AIX' in __grains__['os_family']:
-        if clock.lower() != 'utc':
-            raise SaltInvocationError(
-                'UTC is the only permitted value'
-            )
-        return True
+    os_family = __grains__['os_family']
+    for family in ('AIX', 'NILinuxRT'):
+        if family in os_family:
+            if clock.lower() != 'utc':
+                raise SaltInvocationError(
+                    'UTC is the only permitted value'
+                )
+            return True
 
     timezone = get_zone()
 
