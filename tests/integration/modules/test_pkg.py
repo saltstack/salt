@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -11,7 +13,10 @@ from tests.support.helpers import (
     requires_salt_modules,
 )
 from tests.support.unit import skipIf
+
+# Import salt libs
 import salt.utils
+import salt.utils.pkg
 
 
 class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
@@ -208,6 +213,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         func = 'pkg.refresh_db'
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
 
+        rtag = salt.utils.pkg.rtag(self.minion_opts)
+        salt.utils.pkg.write_rtag(self.minion_opts)
+        self.assertTrue(os.path.isfile(rtag))
+
         if os_family == 'RedHat':
             ret = self.run_function(func)
             self.assertIn(ret, (True, None))
@@ -228,6 +237,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         else:
             os_grain = self.run_function('grains.item', ['os'])['os']
             self.skipTest('{0} is unavailable on {1}'.format(func, os_grain))
+
+        self.assertFalse(os.path.isfile(rtag))
 
     @requires_salt_modules('pkg.info_installed')
     def test_pkg_info(self):

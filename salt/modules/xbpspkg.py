@@ -17,6 +17,7 @@ import glob
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, MinionError
 
@@ -261,6 +262,8 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     cmd = 'xbps-install -Sy'
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     if call['retcode'] != 0:
@@ -270,7 +273,7 @@ def refresh_db():
 
         raise CommandExecutionError('{0}'.format(comment))
 
-    return {}
+    return True
 
 
 def version(*names, **kwargs):

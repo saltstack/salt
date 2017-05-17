@@ -368,7 +368,7 @@ def load_term_config(filter_name,
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         edge01.bjm01:
             ----------
@@ -555,7 +555,7 @@ def load_filter_config(filter_name,
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         edge01.bjm01:
             ----------

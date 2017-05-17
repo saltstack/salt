@@ -75,7 +75,6 @@ state module
 
 # Import python libs
 from __future__ import absolute_import
-import errno
 import fnmatch
 import logging
 import os
@@ -83,6 +82,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
@@ -150,13 +150,6 @@ def __virtual__():
     assigned for this minion
     '''
     return 'pkg.install' in __salt__
-
-
-def __gen_rtag():
-    '''
-    Return the location of the refresh tag
-    '''
-    return os.path.join(__opts__['cachedir'], 'pkg_refresh')
 
 
 def _get_comparison_spec(pkgver):
@@ -477,11 +470,14 @@ def _find_install_targets(name=None,
                           normalize=True,
                           ignore_epoch=False,
                           reinstall=False,
+                          refresh=False,
                           **kwargs):
     '''
     Inspect the arguments to pkg.installed and discover what packages need to
     be installed. Return a dict of desired packages
     '''
+    was_refreshed = False
+
     if all((pkgs, sources)):
         return {'name': name,
                 'changes': {},
@@ -517,6 +513,11 @@ def _find_install_targets(name=None,
     if __grains__['os'] == 'FreeBSD':
         kwargs['with_origin'] = True
 
+    if salt.utils.is_windows():
+        # Windows requires a refresh to establish a pkg db if refresh=True, so
+        # add it to the kwargs.
+        kwargs['refresh'] = refresh
+
     try:
         cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     except CommandExecutionError as exc:
@@ -524,6 +525,11 @@ def _find_install_targets(name=None,
                 'changes': {},
                 'result': False,
                 'comment': exc.strerror}
+
+    if salt.utils.is_windows() and kwargs.pop('refresh', False):
+        # We already refreshed when we called pkg.list_pkgs
+        was_refreshed = True
+        refresh = False
 
     if any((pkgs, sources)):
         if pkgs:
@@ -635,6 +641,35 @@ def _find_install_targets(name=None,
                                 'changes': {},
                                 'result': False,
                                 'comment': '. '.join(comments).rstrip()}
+
+    # Resolve the latest package version for any packages with "latest" in the
+    # package version
+    wants_latest = [] \
+        if sources \
+        else [x for x, y in six.iteritems(desired) if y == 'latest']
+    if wants_latest:
+        resolved_latest = __salt__['pkg.latest_version'](*wants_latest,
+                                                         refresh=refresh,
+                                                         **kwargs)
+        if len(wants_latest) == 1:
+            resolved_latest = {wants_latest[0]: resolved_latest}
+        if refresh:
+            was_refreshed = True
+            refresh = False
+
+        # pkg.latest_version returns an empty string when the package is
+        # up-to-date. So check the currently-installed packages. If found, the
+        # resolved latest version will be the currently installed one from
+        # cur_pkgs. If not found, then the package doesn't exist and the
+        # resolved latest version will be None.
+        for key in resolved_latest:
+            if not resolved_latest[key]:
+                if key in cur_pkgs:
+                    resolved_latest[key] = cur_pkgs[key][-1]
+                else:
+                    resolved_latest[key] = None
+        # Update the desired versions with the ones we resolved
+        desired.update(resolved_latest)
 
     # Find out which packages will be targeted in the call to pkg.install
     targets = {}
@@ -754,7 +789,8 @@ def _find_install_targets(name=None,
                 'result': True,
                 'comment': msg}
 
-    return desired, targets, to_unpurge, to_reinstall, altered_files, warnings
+    return (desired, targets, to_unpurge, to_reinstall, altered_files,
+            warnings, was_refreshed)
 
 
 def _verify_install(desired, new_pkgs, ignore_epoch=False):
@@ -1403,11 +1439,7 @@ def installed(
                 'comment': 'No packages to install provided'}
 
     kwargs['saltenv'] = __env__
-    rtag = __gen_rtag()
-    refresh = bool(
-        salt.utils.is_true(refresh) or
-        (os.path.isfile(rtag) and refresh is not False)
-    )
+    refresh = salt.utils.pkg.check_refresh(__opts__, refresh)
     if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
     if (pkg_verify or isinstance(pkg_verify, list)) \
@@ -1420,42 +1452,7 @@ def installed(
     if not isinstance(version, six.string_types) and version is not None:
         version = str(version)
 
-    was_refreshed = False
-
-    if version is not None and version == 'latest':
-        try:
-            version = __salt__['pkg.latest_version'](name,
-                                                     fromrepo=fromrepo,
-                                                     refresh=refresh)
-        except CommandExecutionError as exc:
-            return {'name': name,
-                    'changes': {},
-                    'result': False,
-                    'comment': 'An error was encountered while checking the '
-                               'newest available version of package(s): {0}'
-                               .format(exc)}
-
-        was_refreshed = refresh
-        refresh = False
-
-        # If version is empty, it means the latest version is installed
-        # so we grab that version to avoid passing an empty string
-        if not version:
-            try:
-                version = __salt__['pkg.version'](name)
-            except CommandExecutionError as exc:
-                return {'name': name,
-                        'changes': {},
-                        'result': False,
-                        'comment': exc.strerror}
-
     kwargs['allow_updates'] = allow_updates
-
-    # if windows and a refresh
-    # is required, we will have to do a refresh when _find_install_targets
-    # calls pkg.list_pkgs
-    if salt.utils.is_windows():
-        kwargs['refresh'] = refresh
 
     result = _find_install_targets(name, version, pkgs, sources,
                                    fromrepo=fromrepo,
@@ -1464,25 +1461,14 @@ def installed(
                                    normalize=normalize,
                                    ignore_epoch=ignore_epoch,
                                    reinstall=reinstall,
+                                   refresh=refresh,
                                    **kwargs)
 
-    if salt.utils.is_windows():
-        was_refreshed = was_refreshed or refresh
-        if was_refreshed:
-            try:
-                os.remove(rtag)
-            except OSError as exc:
-                if exc.errno != errno.ENOENT:
-                    log.error(
-                        'Failed to remove refresh tag %s: %s',
-                        rtag, exc.__str__()
-                    )
-        kwargs.pop('refresh')
-        refresh = False
-
     try:
-        (desired, targets, to_unpurge,
-         to_reinstall, altered_files, warnings) = result
+        (desired, targets, to_unpurge, to_reinstall,
+         altered_files, warnings, was_refreshed) = result
+        if was_refreshed:
+            refresh = False
     except ValueError:
         # _find_install_targets() found no targets or encountered an error
 
@@ -1644,7 +1630,8 @@ def installed(
                 ret['comment'] += '\n\n' + '. '.join(warnings) + '.'
             return ret
 
-        was_refreshed = was_refreshed or refresh
+        if refresh:
+            refresh = False
 
         if isinstance(pkg_ret, dict):
             changes['installed'].update(pkg_ret)
@@ -1696,16 +1683,6 @@ def installed(
                                              and hold_ret[x]['result']]
                         failed_hold = [hold_ret[x] for x in hold_ret
                                        if not hold_ret[x]['result']]
-
-    if os.path.isfile(rtag) and was_refreshed:
-        try:
-            os.remove(rtag)
-        except OSError as exc:
-            if exc.errno != errno.ENOENT:
-                log.error(
-                    'Failed to remove refresh tag %s: %s',
-                    rtag, exc.__str__()
-                )
 
     if to_unpurge:
         changes['purge_desired'] = __salt__['lowpkg.unpurge'](*to_unpurge)
@@ -2285,11 +2262,7 @@ def latest(
                - report_reboot_exit_codes: False
 
     '''
-    rtag = __gen_rtag()
-    refresh = bool(
-        salt.utils.is_true(refresh) or
-        (os.path.isfile(rtag) and refresh is not False)
-    )
+    refresh = salt.utils.pkg.check_refresh(__opts__, refresh)
 
     if kwargs.get('sources'):
         return {'name': name,
@@ -2338,11 +2311,6 @@ def latest(
                 'changes': {},
                 'result': False,
                 'comment': exc.strerror}
-
-    # Remove the rtag if it exists, ensuring only one refresh per salt run
-    # (unless overridden with refresh=True)
-    if os.path.isfile(rtag) and refresh:
-        os.remove(rtag)
 
     # Repack the cur/avail data if only a single package is being checked
     if isinstance(cur, six.string_types):
@@ -3068,10 +3036,7 @@ def mod_init(low):
         ret = __salt__['pkg.ex_mod_init'](low)
 
     if low['fun'] == 'installed' or low['fun'] == 'latest':
-        rtag = __gen_rtag()
-        if not os.path.exists(rtag):
-            with salt.utils.fopen(rtag, 'w+'):
-                pass
+        salt.utils.pkg.write_rtag(__opts__)
         return ret
     return False
 
