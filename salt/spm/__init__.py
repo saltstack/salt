@@ -228,9 +228,8 @@ class SPMClient(object):
                             dl_path = dl_path.replace('file://', '')
                             shutil.copyfile(dl_path, out_file)
                         else:
-                            response = http.query(dl_path, text=True)
                             with salt.utils.fopen(out_file, 'w') as outf:
-                                outf.write(response.get("text"))
+                                outf.write(self._query_http(dl_path, repo_info['info']))
 
                         # Kick off the install
                         self._install_indv_pkg(package, out_file)
@@ -463,6 +462,45 @@ class SPMClient(object):
                         continue
                     callback(repo, repo_data[repo])
 
+    def _query_http(self, dl_path, repo_info):
+        '''
+        Download files via http
+        '''
+        query = None
+        response = None
+
+        try:
+            if 'username' in repo_info:
+                try:
+                    if 'password' in repo_info:
+                        query = http.query(
+                            dl_path, text=True,
+                            username=repo_info['username'],
+                            password=repo_info['password']
+                        )
+                    else:
+                        raise SPMException('Auth defined, but password is not set for username: \'{0}\''
+                                           .format(repo_info['username']))
+                except SPMException as exc:
+                    self.ui.error(str(exc))
+            else:
+                query = http.query(dl_path, text=True)
+        except SPMException as exc:
+            self.ui.error(str(exc))
+
+        try:
+            if query:
+                if 'SPM-METADATA' in dl_path:
+                    response = yaml.safe_load(query.get('text', '{}'))
+                else:
+                    response = query.get('text')
+            else:
+                raise SPMException('Response is empty, please check for Errors above.')
+        except SPMException as exc:
+            self.ui.error(str(exc))
+
+        return response
+
     def _download_repo_metadata(self, args):
         '''
         Connect to all repos and download metadata
@@ -474,8 +512,8 @@ class SPMClient(object):
                 with salt.utils.fopen(dl_path, 'r') as rpm:
                     metadata = yaml.safe_load(rpm)
             else:
-                response = http.query(dl_path, text=True)
-                metadata = yaml.safe_load(response.get('text', '{}'))
+                metadata = self._query_http(dl_path, repo_info)
+
             cache_path = '{0}/{1}.p'.format(
                 self.opts['spm_cache_dir'],
                 repo
