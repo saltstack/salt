@@ -93,6 +93,7 @@ try:
         OSDisk,
         OSProfile,
         StorageProfile,
+        SubResource,
         VirtualHardDisk,
         VirtualMachine,
         VirtualMachineSizeTypes,
@@ -939,6 +940,16 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
             'name', vm_, __opts__, search_global=True
         )
 
+    vm_['availability_set_id'] = None
+    if vm_.get('availability_set'):
+        availability_set = compconn.availability_sets.get(
+            resource_group_name=vm_['resource_group'],
+            availability_set_name=vm_['availability_set'],
+        )
+        vm_['availability_set_id'] = SubResource(
+            id=availability_set.id
+        )
+
     os_kwargs = {}
     userdata = None
     userdata_file = config.get_cloud_config_value(
@@ -1107,6 +1118,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 NetworkInterfaceReference(vm_['iface_id']),
             ],
         ),
+        availability_set=vm_['availability_set_id'],
     )
 
     __utils__['cloud.fire_event'](
