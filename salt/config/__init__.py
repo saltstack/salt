@@ -2082,7 +2082,7 @@ def prepend_root_dir(opts, path_options):
                 # Remove the default root dir prefix
                 tmp_path_def_root_dir = path[len(def_root_dir):]
             if root_dir and (path == root_dir or
-                             path.startswith(root_dir + os.sep)) :
+                             path.startswith(root_dir + os.sep)):
                 # Remove the root dir prefix
                 tmp_path_root_dir = path[len(root_dir):]
             if tmp_path_def_root_dir and not tmp_path_root_dir:
