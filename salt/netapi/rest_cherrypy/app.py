@@ -1795,6 +1795,70 @@ class Logout(LowDataAdapter):
         return {'return': "Your token has been cleared"}
 
 
+class Token(LowDataAdapter):
+    '''
+    Generate a Salt token from eauth credentials
+
+    Wraps functionality in the :py:mod:`auth Runner <salt.runners.auth>`.
+
+    .. versionadded:: Nitrogen
+    '''
+    @cherrypy.config(**{'tools.sessions.on': False})
+    def POST(self, **kwargs):
+        r'''
+        .. http:post:: /token
+
+            Generate a Salt eauth token
+
+            :status 200: |200|
+            :status 400: |400|
+            :status 401: |401|
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -sSk https://localhost:8000/token \
+                -H 'Content-type: application/json' \
+                -d '{
+                    "username": "saltdev",
+                    "password": "saltdev",
+                    "eauth": "auto"
+                }'
+
+        **Example response:**
+
+        .. code-block:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            [{
+                "start": 1494987445.528182,
+                "token": "e72ca1655d05...",
+                "expire": 1495030645.528183,
+                "name": "saltdev",
+                "eauth": "auto"
+            }]
+        '''
+        for creds in cherrypy.request.lowstate:
+            try:
+                creds.update({
+                    'client': 'runner',
+                    'fun': 'auth.mk_token',
+                    'kwarg': {
+                        'username': creds['username'],
+                        'password': creds['password'],
+                        'eauth': creds['eauth'],
+                    },
+                })
+            except KeyError:
+                raise cherrypy.HTTPError(400,
+                    'Require "username", "password", and "eauth" params')
+
+        return list(self.exec_lowstate())
+
+
 class Run(LowDataAdapter):
     '''
     Run commands bypassing the :ref:`normal session handling
@@ -2589,6 +2653,7 @@ class API(object):
         'index': LowDataAdapter,
         'login': Login,
         'logout': Logout,
+        'token': Token,
         'minions': Minions,
         'run': Run,
         'jobs': Jobs,
