@@ -1622,6 +1622,8 @@ def run_all(cmd,
 
     :param bool encoded_cmd: Specify if the supplied command is encoded.
       Only applies to shell 'powershell'.
+        
+      .. versionadd:: Nitrogen
 
     :param bool redirect_stderr: If set to ``True``, then stderr will be
       redirected to stdout. This is helpful for cases where obtaining both the
@@ -3269,9 +3271,9 @@ def powershell_all(cmd,
              retcode
                 The exit code of the invocation of Powershell.
                 If the command we specificy with the ``cmd`` paramater
-                reports a native Powershell failure, this should be non-0. 
+                reports a native Powershell failure, this should be non-0.
                 Additionally if the command
-                invokes a Windows executable and the Windows executable exits
+                invokes a Windows executable and the Windows executable exits with
                 a non-0 exit code, then retcode will end up with this value.
 
     :rtype: dict
@@ -3301,7 +3303,7 @@ def powershell_all(cmd,
         encoded_cmd = True
     else:
         encoded_cmd = False
-        
+
     # Retrieve the response, while overriding shell with 'powershell'
     response = run_all(cmd,
                    cwd=cwd,
