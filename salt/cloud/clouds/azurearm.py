@@ -70,6 +70,7 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,
 )
+from salt.ext.six.moves import filter
 
 # Import 3rd-party libs
 HAS_LIBS = False
@@ -830,10 +831,10 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
             resource_group_name=kwargs['network_resource_group'],
             load_balancer_name=kwargs['load_balancer'],
         )
-        backend_pools = filter(
+        backend_pools = list(filter(
             lambda backend: backend.name == kwargs['backend_pool'],
             load_balancer_obj.backend_address_pools,
-        )
+        ))
 
     subnet_obj = netconn.subnets.get(
         resource_group_name=kwargs['network_resource_group'],
