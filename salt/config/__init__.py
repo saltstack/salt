@@ -2067,7 +2067,9 @@ def prepend_root_dir(opts, path_options):
     'root_dir' option.
     '''
     root_dir = os.path.abspath(opts['root_dir'])
-    def_root_dir = salt.syspaths.ROOT_DIR.rstrip(os.sep)
+    def_root_dir = salt.syspaths.ROOT_DIR.rstrip(os.sep) \
+            if salt.syspaths.ROOT_DIR != os.sep else os.sep
+
     for path_option in path_options:
         if path_option in opts:
             path = opts[path_option]
@@ -2098,7 +2100,7 @@ def prepend_root_dir(opts, path_options):
                     path = tmp_path_root_dir
                 else:
                     path = tmp_path_def_root_dir
-            if os.path.isabs(path):
+            elif os.path.isabs(path):
                 # Absolute path (not default or overriden root_dir)
                 # No prepending required
                 continue
