@@ -749,7 +749,7 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         return False
 
 
-def regfile_import(source, use_32bit_registry=False):
+def import_file(source, use_32bit_registry=False):
     '''
     Import registry settings from a Windows Windows ``REG`` file by invoking ``REG.EXE``.
 
@@ -761,7 +761,7 @@ def regfile_import(source, use_32bit_registry=False):
 
     .. code-block:: bash
 
-        salt machine1 reg.regfile_import salt://win/printer_config/110_Canon/postinstall_config.reg
+        salt machine1 reg.import_file salt://win/printer_config/110_Canon/postinstall_config.reg
 
     :param str source: The full path of the ``REG`` file. This
         can be either a local file path or a URL type supported by salt
