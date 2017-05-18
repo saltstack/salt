@@ -10,20 +10,20 @@ Ensure that an encrypted device is mapped with the `mapped` function:
     mappedname:
       cryptdev.mapped:
         - device: /dev/sdb1
-        - password: /etc/keyfile.key
+        - keyfile: /etc/keyfile.key
         - opts:
           - size=256
 
     swap:
       crypted.mapped:
         - device: /dev/sdx4
-        - password: /dev/urandom
+        - keyfile: /dev/urandom
         - opts: swap,cipher=aes-cbc-essiv:sha256,size=256
 
     mappedbyuuid:
       crypted.mapped:
         - device: UUID=066e0200-2867-4ebe-b9e6-f30026ca2314
-        - password: /etc/keyfile.key
+        - keyfile: /etc/keyfile.key
         - config: /etc/alternate-crypttab
 '''
 from __future__ import absolute_import
@@ -40,7 +40,7 @@ log = logging.getLogger(__name__)
 
 def mapped(name,
            device,
-           password=None,
+           keyfile=None,
            opts=None,
            config='/etc/crypttab',
            persist=True,
@@ -56,10 +56,10 @@ def mapped(name,
         The device name, typically the device node, such as ``/dev/sdb1``
         or ``UUID=066e0200-2867-4ebe-b9e6-f30026ca2314``.
 
-    password
+    keyfile
         Either ``None`` if the password is to be entered manually on boot, or
-        an absolute path to a key file. If it must be entered manually, it
-        cannot be mapped immediately.
+        an absolute path to a keyfile. If the password is to be asked
+        interactively, the mapping cannot be performed with ``immediate=True``.
 
     opts
         A list object of options or a comma delimited list
@@ -72,9 +72,10 @@ def mapped(name,
         Set if the map should be saved in the crypttab, Default is ``True``
 
     immediate
-        Set if the device mapping should be executed immediately. Note that
-        options cannot be passed through on the initial mapping.
-        Default is ``False``.
+        Set if the device mapping should be executed immediately. Requires that
+        the keyfile not be ``None``, because the password cannot be asked
+        interactively. Note that options are not passed through on the initial
+        mapping.  Default is ``False``.
 
     match_on
         A name or list of crypttab properties on which this state should be applied.
@@ -86,8 +87,11 @@ def mapped(name,
            'changes': {},
            'result': True,
            'comment': ''}
+    if immediate and (keyfile is None or keyfile == 'none' or keyfile == '-'):
+        ret['result'] = False
+        ret['changes']['cryptsetup'] = 'Device cannot be mapped immediately without a keyfile'
 
-    if immediate:
+    elif immediate:
         # Get the active crypt mounts. If ours is listed already, no action is necessary.
         active = __salt__['cryptdev.active']()
         if name not in active.keys():
@@ -99,17 +103,18 @@ def mapped(name,
                 ret['result'] = None
                 ret['commment'] = 'Device would be mapped immediately'
             else:
-                cryptsetup_result = __salt__['cryptdev.open'](name, device, password)
+                cryptsetup_result = __salt__['cryptdev.open'](name, device, keyfile)
                 if cryptsetup_result:
                     ret['changes']['cryptsetup'] = 'Device mapped using cryptsetup'
                 else:
                     ret['changes']['cryptsetup'] = 'Device failed to map using cryptsetup'
                     ret['result'] = False
 
+
     if persist and not __opts__['test']:
         crypttab_result = __salt__['cryptdev.set_crypttab'](name,
                                                             device,
-                                                            password=password,
+                                                            password=keyfile,
                                                             options=opts,
                                                             config=config,
                                                             match_on=match_on)
