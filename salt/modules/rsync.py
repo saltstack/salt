@@ -68,7 +68,8 @@ def rsync(src,
           exclude=None,
           excludefrom=None,
           dryrun=False,
-          rsh=None):
+          rsh=None,
+          additional_opts=None):
     '''
     .. versionchanged:: 2016.3.0
         Return data now contains just the output of the rsync command, instead
@@ -107,7 +108,18 @@ def rsync(src,
     if not src or not dst:
         raise SaltInvocationError('src and dst cannot be empty')
 
-    option = _check(delete, force, update, passwordfile, exclude, excludefrom, dryrun, rsh)
+    option = _check(delete,
+                    force,
+                    update,
+                    passwordfile,
+                    exclude,
+                    excludefrom,
+                    dryrun,
+                    rsh)
+
+    if additional_opts and isinstance(additional_opts, list):
+        option = option + additional_opts
+
     cmd = ['rsync'] + option + [src, dst]
     log.debug('Running rsync command: {0}'.format(cmd))
     try:

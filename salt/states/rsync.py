@@ -81,7 +81,8 @@ def synchronized(name, source,
                  exclude=None,
                  excludefrom=None,
                  prepare=False,
-                 dryrun=False):
+                 dryrun=False,
+                 additional_opts=None):
     '''
     Guarantees that the source directory is always copied to the target.
 
@@ -117,6 +118,11 @@ def synchronized(name, source,
         doing test=True
 
         .. versionadded:: 2016.3.1
+
+    additional_opts
+        Pass additional options to rsync, should be included as a list.
+
+        .. versionadded:: Oxygen
     '''
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
@@ -131,9 +137,13 @@ def synchronized(name, source,
         if __opts__['test']:
             dryrun = True
 
-        result = __salt__['rsync.rsync'](source, name, delete=delete, force=force, update=update,
-                                         passwordfile=passwordfile, exclude=exclude, excludefrom=excludefrom,
-                                         dryrun=dryrun)
+        result = __salt__['rsync.rsync'](source, name, delete=delete,
+                                         force=force, update=update,
+                                         passwordfile=passwordfile,
+                                         exclude=exclude,
+                                         excludefrom=excludefrom,
+                                         dryrun=dryrun,
+                                         additional_opts=additional_opts)
 
         if __opts__['test'] or dryrun:
             ret['result'] = None
