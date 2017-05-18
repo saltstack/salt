@@ -20,6 +20,7 @@ try:
     import json
     from salt.ext import six
     from salt.exceptions import CommandExecutionError
+    import requests
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
@@ -74,7 +75,16 @@ def _do_element_present(name, elem_type, data, server=None):
     Generic function to create or update an element
     '''
     ret = {'changes': {}, 'update': False, 'create': False, 'error': None}
-    elements = __salt__['glassfish.enum_{0}'.format(elem_type)]()
+    try:
+        elements = __salt__['glassfish.enum_{0}'.format(elem_type)]()
+    except requests.ConnectionError as error:
+        if __opts__['test']:
+            ret['changes'] = {'Name': name, 'Params': data}
+            ret['create'] = True
+            return ret
+        else:
+            ret['error'] = "Can't connect to the server"
+            return ret
 
     if not elements or name not in elements:
         ret['changes'] = {'Name': name, 'Params': data}
@@ -104,7 +114,15 @@ def _do_element_absent(name, elem_type, data, server=None):
     Generic function to delete an element
     '''
     ret = {'delete': False, 'error': None}
-    elements = __salt__['glassfish.enum_{0}'.format(elem_type)]()
+    try:
+        elements = __salt__['glassfish.enum_{0}'.format(elem_type)]()
+    except requests.ConnectionError as error:
+        if __opts__['test']:
+            ret['create'] = True
+            return ret
+        else:
+            ret['error'] = "Can't connect to the server"
+            return ret
 
     if elements and name in elements:
         ret['delete'] = True
