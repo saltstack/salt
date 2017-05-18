@@ -21,7 +21,7 @@ Changes:
 
 Patched Packages
 ----------------
-Due to the critical nature of issue `#41230` we have decided to patch the 2016.11.5 packages with PR `#41244`. This issue affects all calls to a salt-minion if there is an ipv6 nameserver set on the minion's host. The patched packages on repo.saltstack.com will divert from the v2016.11.5 tag and pypi packages due to the additional PR applied to the packages.
+Due to the critical nature of issue `#41230`_ we have decided to patch the 2016.11.5 packages with PR `#41244`_. This issue affects all calls to a salt-minion if there is an ipv6 nameserver set on the minion's host. The patched packages on repo.saltstack.com will divert from the v2016.11.5 tag and pypi packages due to the additional PR applied to the packages.
 
 - **PR** `#41244`_: (*cachedout*) Fix ipv6 nameserver grains
   @ *2017-05-15T17:55:39Z*
@@ -799,6 +799,8 @@ Due to the critical nature of issue `#41230` we have decided to patch the 2016.1
 .. _`#40930`: https://github.com/saltstack/salt/pull/40930
 .. _`#40933`: https://github.com/saltstack/salt/pull/40933
 .. _`#40934`: https://github.com/saltstack/salt/pull/40934
+.. _`#41230`: https://github.com/saltstack/salt/issues/41230
+.. _`#41244`: https://github.com/saltstack/salt/pull/41244
 .. _`#40935`: https://github.com/saltstack/salt/pull/40935
 .. _`#40936`: https://github.com/saltstack/salt/pull/40936
 .. _`#40939`: https://github.com/saltstack/salt/pull/40939
