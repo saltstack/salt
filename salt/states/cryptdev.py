@@ -87,6 +87,13 @@ def mapped(name,
            'changes': {},
            'result': True,
            'comment': ''}
+
+    # If neither option is set, we've been asked to do nothing.
+    if not immediate and not persist:
+        ret['result'] = False
+        ret['comment'] = 'Either persist or immediate must be set, otherwise this state does nothing'
+        return ret
+
     if immediate and (keyfile is None or keyfile == 'none' or keyfile == '-'):
         ret['result'] = False
         ret['changes']['cryptsetup'] = 'Device cannot be mapped immediately without a keyfile'
