@@ -234,7 +234,7 @@ def set_crypttab(
     entry_args = {
         'name': name,
         'device': device,
-        'password': password,
+        'password': password if password is not None else 'none',
         'options': options,
     }
 
