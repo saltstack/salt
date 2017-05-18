@@ -222,7 +222,9 @@ def set_crypttab(
     '''
 
     # Fix the options type if it is not a string
-    if isinstance(options, six.string_types):
+    if options is None:
+        options = ''
+    elif isinstance(options, six.string_types):
         pass
     elif isinstance(options, list):
         options = ','.join(options)
