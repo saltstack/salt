@@ -28,15 +28,9 @@ Ensure that an encrypted device is mapped with the `mapped` function:
 '''
 from __future__ import absolute_import
 
-# Import python libs
-import os.path
-
-# Import salt libs
-from salt.ext.six import string_types
-
 import logging
-import salt.ext.six as six
 log = logging.getLogger(__name__)
+
 
 def mapped(name,
            device,
@@ -117,7 +111,6 @@ def mapped(name,
                     ret['changes']['cryptsetup'] = 'Device failed to map using cryptsetup'
                     ret['result'] = False
 
-
     if persist and not __opts__['test']:
         crypttab_result = __salt__['cryptdev.set_crypttab'](name,
                                                             device,
@@ -131,12 +124,13 @@ def mapped(name,
 
             if crypttab_result == 'change':
                 ret['changes']['crypttab'] = 'Existing entry in {0} changed'.format(config)
-        
+
         else:
             ret['changes']['crypttab'] = 'Unable to set entry in {0}'.format(config)
             ret['result'] = False
 
     return ret
+
 
 def unmapped(name,
              config='/etc/crypttab',
