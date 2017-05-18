@@ -709,16 +709,17 @@ def show_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     data['ip_configurations'] = {}
     for ip_ in iface.ip_configurations:
         data['ip_configurations'][ip_.name] = make_safe(ip_)
-        try:
-            pubip = netconn.public_ip_addresses.get(
-                kwargs['resource_group'],
-                ip_.name,
-            )
-            data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
-        except Exception as exc:
-            log.warning('There was a cloud error: {0}'.format(exc))
-            log.warning('{0}'.format(type(exc)))
-            continue
+        if ip_.public_ip_address is not None:
+            try:
+                pubip = netconn.public_ip_addresses.get(
+                    kwargs['resource_group'],
+                    ip_.name,
+                )
+                data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
+            except Exception as exc:
+                log.warning('There was a cloud error: {0}'.format(exc))
+                log.warning('{0}'.format(type(exc)))
+                continue
 
     return data
 
