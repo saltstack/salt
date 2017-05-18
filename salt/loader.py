@@ -474,9 +474,11 @@ def states(opts, functions, utils, serializers, whitelist=None, proxy=None):
         pack={'__salt__': functions, '__proxy__': proxy or {}},
         whitelist=whitelist,
     )
+    _proxy = proxy(opts, functions=functions)
     ret.pack['__states__'] = ret
     ret.pack['__utils__'] = utils
     ret.pack['__serializers__'] = serializers
+    ret.pack['__proxy__'] = _proxy
     return ret
 
 
