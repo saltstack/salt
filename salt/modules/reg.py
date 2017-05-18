@@ -751,7 +751,7 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
 
 def import_file(source, use_32bit_registry=False):
     '''
-    Import registry settings from a Windows Windows ``REG`` file by invoking ``REG.EXE``.
+    Import registry settings from a Windows ``REG`` file by invoking ``REG.EXE``.
 
     .. versionadded:: Nitrogen
 
