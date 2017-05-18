@@ -44,7 +44,7 @@ def mapped(name,
            opts=None,
            config='/etc/crypttab',
            persist=True,
-           delay_mapping=True,
+           immediate=False,
            match_on='name'):
     '''
     Verify that a device is mapped
@@ -71,9 +71,10 @@ def mapped(name,
     persist
         Set if the map should be saved in the crypttab, Default is ``True``
 
-    delay_mapping
-        Set if the device mapping should not be executed until the next boot.
-        Default is ``True``.
+    immediate
+        Set if the device mapping should be executed immediately. Note that
+        options cannot be passed through on the initial mapping.
+        Default is ``False``.
 
     match_on
         A name or list of crypttab properties on which this state should be applied.
@@ -86,7 +87,7 @@ def mapped(name,
            'result': True,
            'comment': ''}
 
-    if not delay_mapping:
+    if immediate:
         # Get the active crypt mounts. If ours is listed already, no action is necessary.
         active = __salt__['cryptdev.active']()
         if name not in active.keys():
