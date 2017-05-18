@@ -321,7 +321,7 @@ def open(name, device, keyfile=None):
     ret = {}
 
     keyfile_option = ('--key-file %s' % keyfile) if keyfile else ''
-    devices = __salt__['cmd.run_stdout']('cryptsetup open {0} {0} {0}'\
+    devices = __salt__['cmd.run_stdout']('cryptsetup open {0} {1} {2}'\
                                          .format(keyfile_option, device, name))
     return ret
 
