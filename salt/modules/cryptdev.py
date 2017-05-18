@@ -155,19 +155,20 @@ def crypttab(config='/etc/crypttab'):
     return ret
 
 
-def rm_crypttab(name, device, config='/etc/crypttab'):
+def rm_crypttab(name, config='/etc/crypttab'):
     '''
-    Remove the device point from the crypttab. If the described entry does not
-    exist, nothing is changed, but the command succeeds.
+    Remove the named mapping from the crypttab. If the described entry does not
+    exist, nothing is changed, but the command succeeds by returning
+    ``'absent'``. If a line is removed, it returns ``'change'``.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' cryptdev.rm_crypttab foo /dev/sdg
+        salt '*' cryptdev.rm_crypttab foo
     '''
     modified = False
-    criteria = _crypttab_entry(name=name, device=device)
+    criteria = _crypttab_entry(name=name)
 
     # For each line in the config that does not match the criteria, add it to
     # the list. At the end, re-create the config from just those lines.
@@ -197,7 +198,7 @@ def rm_crypttab(name, device, config='/etc/crypttab'):
             raise CommandExecutionError(msg.format(config, str(exc)))
 
     # If we reach this point, the changes were successful
-    return True
+    return 'change' if modified else 'absent'
 
 
 def set_crypttab(
