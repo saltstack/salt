@@ -320,14 +320,12 @@ def open(name, device, keyfile):
 
         salt '*' cryptdev.open foo /dev/sdz1 /path/to/keyfile
     '''
-    ret = {}
-
     if keyfile is None or keyfile == 'none' or keyfile == '-':
         raise CommandExecutionError('For immediate crypt device mapping, keyfile must not be none')
 
-    devices = __salt__['cmd.run_stdout']('cryptsetup open --key-file {0} {1} {2}'\
-                                         .format(keyfile, device, name))
-    return ret
+    code = __salt__['cmd.retcode']('cryptsetup open --key-file {0} {1} {2}'\
+                                       .format(keyfile, device, name))
+    return code == 0
 
 def close(name):
     '''
@@ -339,7 +337,5 @@ def close(name):
 
         salt '*' cryptdev.close foo
     '''
-    ret = {}
-
-    devices = __salt__['cmd.run_stdout']('cryptsetup close {0}'.format(name))
-    return ret
+    code = __salt__['cmd.retcode']('cryptsetup close {0}'.format(name))
+    return code == 0
