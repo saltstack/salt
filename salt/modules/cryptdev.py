@@ -310,7 +310,9 @@ def set_crypttab(
 
 def open(name, device, keyfile):
     '''
-    Open a crypt device using ``cryptsetup``.
+    Open a crypt device using ``cryptsetup``. The ``keyfile`` must not be
+    ``None`` or ``'none'``, because ``cryptsetup`` will otherwise ask for the
+    password interactively.
 
     CLI Example:
 
