@@ -308,7 +308,7 @@ def set_crypttab(
 
     return ret
 
-def open(name, device, keyfile=None):
+def open(name, device, keyfile):
     '''
     Open a crypt device using ``cryptsetup``.
 
@@ -320,9 +320,11 @@ def open(name, device, keyfile=None):
     '''
     ret = {}
 
-    keyfile_option = ('--key-file %s' % keyfile) if keyfile else ''
-    devices = __salt__['cmd.run_stdout']('cryptsetup open {0} {1} {2}'\
-                                         .format(keyfile_option, device, name))
+    if keyfile is None or keyfile == 'none' or keyfile == '-':
+        raise CommandExecutionError('For immediate crypt device mapping, keyfile must not be none')
+
+    devices = __salt__['cmd.run_stdout']('cryptsetup open --key-file {0} {1} {2}'\
+                                         .format(keyfile, device, name))
     return ret
 
 def close(name):
