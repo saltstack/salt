@@ -319,6 +319,21 @@ def open(name, device, keyfile=None):
     ret = {}
 
     keyfile_option = ('--key-file %s' % keyfile) if keyfile else ''
-    devices = __salt__['cmd.run_stdout']('cryptsetup open %s %s %s' \
-                                         % (keyfile_option, device, name))
+    devices = __salt__['cmd.run_stdout']('cryptsetup open {0} {0} {0}'\
+                                         .format(keyfile_option, device, name))
+    return ret
+
+def close(name):
+    '''
+    Close a crypt device using ``cryptsetup``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cryptdev.close foo
+    '''
+    ret = {}
+
+    devices = __salt__['cmd.run_stdout']('cryptsetup close {0}'.format(name))
     return ret
