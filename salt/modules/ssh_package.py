@@ -30,7 +30,7 @@ def __virtual__():
     return (False, 'The ssh_package execution module failed to load: only works on an ssh_sample proxy minion.')
 
 
-def list_pkgs(versions_as_list=False, **kwargs):
+def list_pkgs(versions_as_list=False, refresh=False, **kwargs):
     return __proxy__['ssh_sample.package_list']()
 
 

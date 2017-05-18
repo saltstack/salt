@@ -28,7 +28,7 @@ def __virtual__():
     return (False, 'The rest_package execution module failed to load: only works on a rest_sample proxy minion.')
 
 
-def list_pkgs(versions_as_list=False, **kwargs):
+def list_pkgs(versions_as_list=False, refresh=False, **kwargs):
     return __proxy__['rest_sample.package_list']()
 
 
