@@ -2130,6 +2130,9 @@ class ClearFuncs(object):
             if 'module_executors' in clear_load['kwargs']:
                 load['module_executors'] = clear_load['kwargs'].get('module_executors')
 
+            if 'executor_opts' in clear_load['kwargs']:
+                load['executor_opts'] = clear_load['kwargs'].get('executor_opts')
+
             if 'ret_kwargs' in clear_load['kwargs']:
                 load['ret_kwargs'] = clear_load['kwargs'].get('ret_kwargs')
 

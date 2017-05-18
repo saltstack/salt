@@ -26,7 +26,6 @@ from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
-from salt.executors import FUNCTION_EXECUTORS
 from salt.utils import kinds, is_windows
 from salt.utils.event import tagify
 
@@ -291,31 +290,22 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                     data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
 
-                executors = data.get('module_executors') or self.opts.get('module_executors', ['direct_call.get'])
+                executors = data.get('module_executors') or self.opts.get('module_executors', ['direct_call'])
                 if isinstance(executors, six.string_types):
                     executors = [executors]
                 elif not isinstance(executors, list) or not executors:
                     raise SaltInvocationError("Wrong executors specification: {0}. String or non-empty list expected".
                                               format(executors))
-                if self.opts.get('sudo_user', '') and executors[-1] != 'sudo.get':
-                    if executors[-1] in FUNCTION_EXECUTORS:
-                        executors[-1] = 'sudo.get'  # replace
-                    else:
-                        executors.append('sudo.get')  # append
+                if self.opts.get('sudo_user', '') and executors[-1] != 'sudo':
+                    executors[-1] = 'sudo.get'  # replace
                 log.trace("Executors list {0}".format(executors))
 
-                # Get executors
-                def get_executor(name):
-                    executor_class = self.module_executors.value.get(name)
-                    if executor_class is None:
+                for name in executors:
+                    if name not in self.module_executors.value:
                         raise SaltInvocationError("Executor '{0}' is not available".format(name))
-                    return executor_class
-                # Get the last one that is function executor
-                executor = get_executor(executors.pop())(self.opts, data, func, args, kwargs)
-                # Instantiate others from bottom to the top
-                for executor_name in reversed(executors):
-                    executor = get_executor(executor_name)(self.opts, data, executor)
-                return_data = executor.execute()
+                    return_data = self.module_executors.value[name].execute(self.opts, data, func, args, kwargs)
+                    if return_data is not None:
+                        break
 
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0

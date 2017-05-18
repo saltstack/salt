@@ -1972,6 +1972,14 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                   'set in minion config.')
         )
         self.add_option(
+            '--executor-opts',
+            dest='executor_opts',
+            default=None,
+            metavar='EXECUTOR_OPTS',
+            help=('Set alternate executor options if supported by executor. '
+                  'Options set by minion config are used by default.')
+        )
+        self.add_option(
             '-d', '--doc', '--documentation',
             dest='doc',
             default=False,
