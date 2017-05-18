@@ -5,7 +5,6 @@ Salt module to manage Unix cryptsetup jobs and the crypttab file
 
 # Import python libraries
 from __future__ import absolute_import
-import json
 import logging
 import os
 import re
@@ -31,8 +30,8 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return (False, 'The cryptdev module cannot be loaded: not a POSIX-like system')
-    else:
-        return True
+
+    return True
 
 
 class _crypttab_entry(object):
@@ -104,6 +103,7 @@ class _crypttab_entry(object):
                 return False
         return True
 
+
 def active():
     '''
     List existing device-mapper device details.
@@ -123,6 +123,7 @@ def active():
             log.warn('dmsetup output does not match expected format')
 
     return ret
+
 
 def crypttab(config='/etc/crypttab'):
     '''
@@ -308,6 +309,7 @@ def set_crypttab(
 
     return ret
 
+
 def open(name, device, keyfile):
     '''
     Open a crypt device using ``cryptsetup``. The ``keyfile`` must not be
@@ -323,9 +325,10 @@ def open(name, device, keyfile):
     if keyfile is None or keyfile == 'none' or keyfile == '-':
         raise CommandExecutionError('For immediate crypt device mapping, keyfile must not be none')
 
-    code = __salt__['cmd.retcode']('cryptsetup open --key-file {0} {1} {2}'\
-                                       .format(keyfile, device, name))
+    code = __salt__['cmd.retcode']('cryptsetup open --key-file {0} {1} {2}'
+                                   .format(keyfile, device, name))
     return code == 0
+
 
 def close(name):
     '''
