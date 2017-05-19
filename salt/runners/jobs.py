@@ -123,6 +123,7 @@ def lookup_jid(jid,
         data = list_job(
             jid,
             ext_source=ext_source,
+            missing=missing,
             display_progress=display_progress
         )
     except TypeError:
@@ -160,7 +161,10 @@ def lookup_jid(jid,
         return ret
 
 
-def list_job(jid, ext_source=None, display_progress=False):
+def list_job(jid,
+    ext_source=None,
+    display_progress=False,
+    missing=False):
     '''
     List a specific job given by its jid
 
@@ -194,7 +198,11 @@ def list_job(jid, ext_source=None, display_progress=False):
 
     job = mminion.returners['{0}.get_load'.format(returner)](jid)
     ret.update(_format_jid_instance(jid, job))
-    ret['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
+    returns = mminion.returners['{0}.get_jid'.format(returner)](jid)
+    ret['Result'] = returns
+    if missing:
+        for minion_id in (x for x in ret.get('Minions', []) if x not in returns):
+            ret[minion_id] = 'Minion did not return'
 
     fstr = '{0}.get_endtime'.format(__opts__['master_job_cache'])
     if (__opts__.get('job_cache_store_endtime')
