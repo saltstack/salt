@@ -3095,37 +3095,64 @@ def powershell(cmd,
 
 
 def powershell_all(cmd,
-        cwd=None,
-        stdin=None,
-        runas=None,
-        shell=DEFAULT_SHELL,
-        env=None,
-        clean_env=False,
-        template=None,
-        rstrip=True,
-        umask=None,
-        output_loglevel='debug',
-        quiet=False,
-        timeout=None,
-        reset_system_locale=True,
-        ignore_retcode=False,
-        saltenv='base',
-        use_vt=False,
-        password=None,
-        depth=None,
-        encode_cmd=False,
-        **kwargs):
+                   cwd=None,
+                   stdin=None,
+                   runas=None,
+                   shell=DEFAULT_SHELL,
+                   env=None,
+                   clean_env=False,
+                   template=None,
+                   rstrip=True,
+                   umask=None,
+                   output_loglevel='debug',
+                   quiet=False,
+                   timeout=None,
+                   reset_system_locale=True,
+                   ignore_retcode=False,
+                   saltenv='base',
+                   use_vt=False,
+                   password=None,
+                   depth=None,
+                   encode_cmd=False,
+                   **kwargs):
     '''
     Execute the passed PowerShell command and return a dictionary with a sub-dictionary
     representing the output of the command, as well as other fields
     showing us what the PowerShell invocation wrote to ``stderr``, the process id,
-    and the exit code of the invocation. A more detailed description of the return
-    data is included below.
+    and the exit code of the invocation.
 
     This function appends ``| ConvertTo-JSON`` to the command before actually invoking powershell.
-    If you want the equivalent function but with a raw
-    textual result instead of the ouput sub-dictionary,
+    Because we are intending to create a dictionary, it is expected that the Powerhshell
+    command will produce
+    a PowerShell dictionary capable of being converted to a JSON dictionary by the ConvertTo-JSON
+    commandlet, which can in turn be converted into a Python dictionary.
+
+    The return dictionary will always have a key called ``result``.
+
+    If the value of ``stdout`` is the empty string, then the value of ``result``
+    will be set to ``False``
+
+    If the value of ``stdout`` is not the empty string and
+    Python cannot parse its content,
+    then a ``CommandExecutionError`` exception
+    will be raised.
+
+    If Python can parse the Powershell output,
+    and the resulting Python type is other than ``dict``, then a ``CommandExecutionError`` exception
+    will once again be raised.
+
+      .. Note::
+         We could have, if we had wanted to, chosen to not throw an exception and
+         allow for any Python type representing a JSON
+         object, but we chose not to do so because a polymorphic
+         result type is contrary to the Salt design philosophy.
+
+    If you want a similar function but with a raw
+    textual result instead of a Python dictionary,
     you should use ``cmd.run_all`` in combination with ``shell=powershell``.
+
+    The remaining fields in the return dictionary are described in more detail
+    in the ``Returns`` section.
 
     Example:
 
@@ -3257,24 +3284,19 @@ def powershell_all(cmd,
 
     :return: A dictionary with the following entries:
 
-        .. glossary::
-             result
-                When the output written to ``stdout`` by
-                Powershell cannot be loaded into a Python dictionary,
-                this field will have a value
-                of ``False``. Otherwise this will be a sub-dictionary created from
-                the json data produced by Powershell.
-             stderr
-                What the invocation of Powershell wrote to ``stderr``.
-             pid
-                The process id of the invocation of Powershell
-             retcode
-                The exit code of the invocation of Powershell.
-                If the command we specificy with the ``cmd`` paramater
-                reports a native Powershell failure, this should be non-0.
-                Additionally if the command
-                invokes a Windows executable and the Windows executable exits with
-                a non-0 exit code, then retcode will end up with this value.
+        result
+            For a complete description of this field, please refer to this
+            function's preamble.
+        stderr
+            What the PowerShell invocation wrote to ``stderr``.
+        pid
+            The process id of the PowerShell invocation
+        retcode
+            This is the exit code of the invocation of PowerShell.
+            If the final execution status (in PowerShell) of our command
+            (with ``| ConvertTo-JSON`` appended) is ``False`` this should be non-0.
+            Likewise if PowerShell exited with ``$LASTEXITCODE`` set to some
+            non-0 value, then ``retcode`` will end up with this value.
 
     :rtype: dict
 
@@ -3326,12 +3348,43 @@ def powershell_all(cmd,
                    password=password,
                    encoded_cmd=encoded_cmd,
                    **kwargs)
-    stdoutput = response.pop('stdout')
-    try:
-        response['result'] = json.loads(stdoutput)
-    except Exception:
-        log.error("Error converting PowerShell JSON return", exc_info=True)
+    stdoutput = response['stdout']
+
+    # if stdoutput is the empty string we will return False
+    if not stdoutput:
         response['result'] = False
+        response.pop('stdout')
+        return response
+
+    # If we fail to parse stdoutput we will raise a CommandExecutionError
+    try:
+        result = json.loads(stdoutput)
+    except Exception:
+        err_msg = "cmd.powershell_all " + \
+                  "cannot parse the Powershell output."
+        response["cmd"] = cmd
+        raise CommandExecutionError(
+                                    message=err_msg,
+                                    info=response
+                                   )
+    response.pop("stdout")
+    
+    # We insist that the result type must be dict because
+    # polymorphic return types are contrary to the salt design philosophy.
+    if type(result) is not dict:
+        err_msg = "cmd.powershell_all is able to parse the Powershell " + \
+                  "output, but the resulting type is not 'dict'."
+        response["cmd"] = cmd
+        # present the result as "json-data" since it's not a valid result
+        response["json-data"] = result
+        response["json-data-python-type"] = str(type(result))
+        raise CommandExecutionError(
+                                    message=err_msg,
+                                    info=response
+                                   )
+
+    # If we got to this point result is a valid JSON dictionary
+    response['result'] = result
     return response
 
 
