@@ -506,7 +506,6 @@ def present(
             if __salt__['boto_elb.set_instances'](name, instance_ids, True, region,
                                                   key, keyid, profile):
                 ret['comment'] += ' ELB {0} instances would be updated.'.format(name)
-                ret['result'] = None
                 return ret
         _ret = __salt__['boto_elb.set_instances'](name, instance_ids, False, region,
                                                   key, keyid, profile)
@@ -565,7 +564,6 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
         else:
             if __opts__['test']:
                 ret['comment'] = 'ELB {0} is set to register : {1}.'.format(name, new)
-                ret['result'] = None
                 return ret
             state = __salt__['boto_elb.register_instances'](name,
                                                             instances,
@@ -677,7 +675,6 @@ def _elb_present(
     if not exists:
         if __opts__['test']:
             ret['comment'] = 'ELB {0} is set to be created.'.format(name)
-            ret['result'] = None
             return ret
         created = __salt__['boto_elb.create'](name=name,
                                               availability_zones=availability_zones,
@@ -744,7 +741,6 @@ def _listeners_present(
         ret['comment'] = msg
         if not __opts__['test']:
             ret['result'] = False
-        ret['result'] = None
         return ret
     if not listeners:
         listeners = []
@@ -781,7 +777,6 @@ def _listeners_present(
         else:
             msg.append('Listeners already set on ELB {0}.'.format(name))
         ret['comment'] = ' '.join(msg)
-        ret['result'] = None
         return ret
 
     if to_delete:
@@ -834,7 +829,6 @@ def _security_groups_present(
         ret['comment'] = msg
         if not __opts__['test']:
             ret['result'] = False
-        ret['result'] = None
         return ret
     if not security_groups:
         security_groups = []
@@ -845,7 +839,6 @@ def _security_groups_present(
         if __opts__['test']:
             msg = 'ELB {0} set to have security groups modified.'.format(name)
             ret['comment'] = msg
-            ret['result'] = None
             return ret
         changed = __salt__['boto_elb.apply_security_groups'](
             name, security_groups, region, key, keyid, profile
@@ -879,7 +872,6 @@ def _attributes_present(
             ret['result'] = False
         msg = 'Failed to retrieve attributes for ELB {0}.'.format(name)
         ret['comment'] = msg
-        ret['result'] = None
         return ret
     attrs_to_set = []
     if 'cross_zone_load_balancing' in attributes:
@@ -910,7 +902,6 @@ def _attributes_present(
     if attrs_to_set:
         if __opts__['test']:
             ret['comment'] = 'ELB {0} set to have attributes set.'.format(name)
-            ret['result'] = None
             return ret
         was_set = __salt__['boto_elb.set_attributes'](name, attributes,
                                                       region, key, keyid,
@@ -945,7 +936,6 @@ def _health_check_present(
             ret['result'] = False
         msg = 'Failed to retrieve health_check for ELB {0}.'.format(name)
         ret['comment'] = msg
-        ret['result'] = None
         return ret
     need_to_set = False
     for attr, val in six.iteritems(health_check):
@@ -989,7 +979,6 @@ def _zones_present(
             ret['result'] = False
         msg = 'Failed to retrieve ELB {0}.'.format(name)
         ret['comment'] = msg
-        ret['result'] = None
         return ret
     to_enable = []
     to_disable = []
@@ -1004,7 +993,6 @@ def _zones_present(
         if __opts__['test']:
             msg = 'ELB {0} to have availability zones set.'.format(name)
             ret['comment'] = msg
-            ret['result'] = None
             return ret
         if to_enable:
             enabled = __salt__['boto_elb.enable_availability_zones'](name,
@@ -1062,7 +1050,6 @@ def _subnets_present(
             ret['result'] = False
         msg = 'Failed to retrieve ELB {0}.'.format(name)
         ret['comment'] = msg
-        ret['result'] = None
         return ret
     to_enable = []
     to_disable = []
@@ -1077,7 +1064,6 @@ def _subnets_present(
         if __opts__['test']:
             msg = 'ELB {0} to have subnets set.'.format(name)
             ret['comment'] = msg
-            ret['result'] = None
             return ret
         if to_enable:
             attached = __salt__['boto_elb.attach_subnets'](name, to_enable,
@@ -1204,7 +1190,6 @@ def _policies_present(
         ret['comment'] = msg
         if not __opts__['test']:
             ret['result'] = False
-        ret['result'] = None
         return ret
 
     # Policies have two names:
@@ -1299,7 +1284,6 @@ def _policies_present(
         for backend in backends_to_update:
             msg.append('Backend {0} policies updated.'.format(backend))
         ret['comment'] = ' '.join(msg)
-        ret['result'] = None
         return ret
 
     if to_create:
@@ -1419,7 +1403,6 @@ def absent(
     if exists:
         if __opts__['test']:
             ret['comment'] = 'ELB {0} is set to be removed.'.format(name)
-            ret['result'] = None
             return ret
         deleted = __salt__['boto_elb.delete'](name, region, key, keyid,
                                               profile)
@@ -1464,7 +1447,6 @@ def _tags_present(name,
             if __opts__['test']:
                 msg = 'The following tag{0} set to be removed: {1}.'.format(
                         ('s are' if len(tags_to_remove) > 1 else ' is'), ', '.join(tags_to_remove))
-                ret['result'] = None
                 ret['comment'] = ' '.join([ret['comment'], msg])
             else:
                 _ret = __salt__['boto_elb.delete_tags'](
@@ -1489,7 +1471,6 @@ def _tags_present(name,
                     msg = 'The following tag{0} set to be added: {1}.'.format(
                             ('s are' if len(tags_to_add.keys()) > 1 else ' is'),
                             ', '.join(tags_to_add.keys()))
-                    ret['result'] = None
                     ret['comment'] = ' '. join([ret['comment'], msg])
                 if tags_to_update:
                     msg = 'The following tag {0} set to be updated: {1}.'.format(
