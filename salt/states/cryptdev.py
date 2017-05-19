@@ -25,6 +25,8 @@ Ensure that an encrypted device is mapped with the `mapped` function:
         - device: UUID=066e0200-2867-4ebe-b9e6-f30026ca2314
         - keyfile: /etc/keyfile.key
         - config: /etc/alternate-crypttab
+
+.. versionadded:: Oxygen
 '''
 from __future__ import absolute_import
 
