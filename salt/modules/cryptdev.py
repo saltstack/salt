@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Salt module to manage Unix cryptsetup jobs and the crypttab file
+
+.. versionadded:: Oxygen
 '''
 
 # Import python libraries
