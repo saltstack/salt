@@ -389,7 +389,7 @@ def get_hwclock():
 
     else:
         os_family = __grains__['os_family']
-        for family in ('RedHat', 'Suse'):
+        for family in ('RedHat', 'Suse', 'NILinuxRT'):
             if family in os_family:
                 return _get_adjtime_timezone()
 
@@ -480,7 +480,8 @@ def set_hwclock(clock):
 
         salt '*' timezone.set_hwclock UTC
     '''
-    if 'AIX' in __grains__['os_family']:
+    os_family = __grains__['os_family']
+    if os_family in ('AIX', 'NILinuxRT'):
         if clock.lower() != 'utc':
             raise SaltInvocationError(
                 'UTC is the only permitted value'
