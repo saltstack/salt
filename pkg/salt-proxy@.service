@@ -1,9 +1,9 @@
 [Unit]
-Description=salt-proxy service
+Description=salt-proxy service for %I
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/salt-proxy --proxyid=%I
+ExecStart=/usr/bin/salt-proxy --proxyid=%i
 Type=simple
 Restart=on-failure
 RestartSec=5s
