@@ -129,7 +129,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db():
+def refresh_db(failhard=False):
     '''
     Updates the opkg database to latest packages based upon repositories
 
@@ -138,6 +138,14 @@ def refresh_db():
 
     - ``True``: Database updated successfully
     - ``False``: Problem updating database
+
+    failhard
+        If False, return results of failed lines as ``False`` for the package
+        database that encountered the error.
+        If True, raise an error with a list of the package databases that
+        encountered errors.
+
+        .. versionadded:: Oxygen
 
     CLI Example:
 
@@ -148,30 +156,44 @@ def refresh_db():
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     ret = {}
+    error_repos = []
     cmd = ['opkg', 'update']
+    # opkg returns a non-zero retcode when there is a failure to refresh
+    # from one or more repos. Due to this, ignore the retcode.
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
-                                   python_shell=False)
-    if call['retcode'] != 0:
-        comment = ''
-        if call['stderr']:
-            comment += call['stderr']
-        else:
-            comment += call['stdout']
+                                   python_shell=False,
+                                   ignore_retcode=True,
+                                   redirect_stderr=True)
 
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
-    else:
-        out = call['stdout']
-
+    out = call['stdout']
+    prev_line = ''
     for line in salt.utils.itertools.split(out, '\n'):
         if 'Inflating' in line:
-            key = line.strip().split()[1].split('.')[0]
+            key = line.strip().split()[1][:-1]
+            ret[key] = True
+        elif 'Updated source' in line:
+            # Use the previous line.
+            key = prev_line.strip().split()[1][:-1]
             ret[key] = True
         elif 'Failed to download' in line:
             key = line.strip().split()[5].split(',')[0]
             ret[key] = False
+            error_repos.append(key)
+        prev_line = line
+
+    if failhard and error_repos:
+        raise CommandExecutionError(
+            'Error getting repos: {0}'.format(', '.join(error_repos))
+        )
+
+    # On a non-zero exit code where no failed repos were found, raise an
+    # exception because this appears to be a different kind of error.
+    if call['retcode'] != 0 and not error_repos:
+        raise CommandExecutionError(
+            '{0}'.format(out)
+        )
+
     return ret
 
 
