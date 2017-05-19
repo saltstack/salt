@@ -209,8 +209,7 @@ def set_crypttab(
         options='',
         config='/etc/crypttab',
         test=False,
-        match_on='name',
-        **kwargs):
+        match_on='name'):
     '''
     Verify that this device is represented in the crypttab, change the device to
     match the name passed, or add the name if it is not present.
@@ -298,7 +297,7 @@ def set_crypttab(
         ret = 'new'
 
     if ret != 'present':  # ret in ['new', 'change']:
-        if not salt.utils.test_mode(test=test, **kwargs):
+        if not test:
             try:
                 with salt.utils.fopen(config, 'w+') as ofile:
                     # The line was changed, commit it!
