@@ -1505,7 +1505,7 @@ def policy_absent(name,
                                     keyid=keyid, profile=profile)
     if versions:
         for version in versions:
-            if version.get('is_default_version', False):
+            if version.get('is_default_version', False) in ('true', True):
                 continue
             r = __salt__['boto_iam.delete_policy_version'](name,
                                     version_id=version.get('version_id'),
