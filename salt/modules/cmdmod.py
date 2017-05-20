@@ -3093,7 +3093,6 @@ def powershell(cmd,
         log.error("Error converting PowerShell JSON return", exc_info=True)
         return {}
 
-
 def powershell_all(cmd,
                    cwd=None,
                    stdin=None,
@@ -3114,6 +3113,7 @@ def powershell_all(cmd,
                    password=None,
                    depth=None,
                    encode_cmd=False,
+                   force_list=False,
                    **kwargs):
     '''
     Execute the passed PowerShell command and return a dictionary with a sub-dictionary
@@ -3122,27 +3122,41 @@ def powershell_all(cmd,
     and the exit code of the invocation.
 
     This function appends ``| ConvertTo-JSON`` to the command before actually invoking powershell.
-    Because we are intending to create a dictionary, it is expected that the Powerhshell
-    command will produce
-    a PowerShell dictionary capable of being converted to a JSON dictionary by the ConvertTo-JSON
-    commandlet, which can in turn be converted into a Python dictionary.
 
     The return dictionary will always have a key called ``result``.
 
-    If the value of ``stdout`` is an empty string or if
-    Python cannot parse its content,
-    then a ``CommandExecutionError`` exception
-    will be raised.
+    If Powershell's output is an empty string either of two things will happen:
+       * If the value of the ``force_list`` paramater
+         is ``True`` then we will return an empty list.
+       * If the value of the ``force_list`` paramater is ``False``, we will raise
+         a ``CommandExecutionError`` exception.
 
-    If Python can parse the Powershell output,
-    and the resulting Python type is other than ``dict``, then a ``CommandExecutionError`` exception
-    will once again be raised.
+    If Powershell's output is not an empty string and Python cannot parse its content,
+    then a ``CommandExecutionError`` exception will be raised.
 
-      .. Note::
-         We could have, if we had wanted to, chosen to not throw an exception and
-         allow for any Python type representing a JSON
-         object, but we chose not to do so because a polymorphic
-         result type is contrary to the Salt design philosophy.
+    If Powershell's output is not an empty string, Python is able to parse its content,
+    and the type of the resulting Python object is other than ``list`` then one of two things
+    will happen:
+        * If the value of the ``force_list`` paramater is ``True``, then a singleton list,
+          with the Python object as its sole member, will be returned
+        * If the value of the ``force_list`` paramater is ``False``, then the Python object
+          will be returned unmodified.
+
+    If Powershell's output is not an empty string, Python is able to parse its content,
+    and the type of the resulting Python object is ``list``, then the Python object will be returned
+    unmodified.
+
+    .. Note::
+         An example of why the ``force_list`` paramater is useful is as follows: The command
+         ``dir x | Convert-ToJson`` results in
+
+             * no output when x is an empty directory.
+             * a dictionary object when x contains just one item.
+             * a list of dictionary objects when x contains multiple items.
+
+         By setting ``force_list`` to ``True`` we will always end up with a list of dictionary items.
+         Conversely, if x is empty and ``force_list`` is ``False`` an exception will be raised
+         when we pass the command to ``cmd.powershell_all``.
 
     If you want a similar function but with a raw
     textual result instead of a Python dictionary,
@@ -3279,6 +3293,9 @@ def powershell_all(cmd,
       where characters may be dropped or incorrectly converted when executed.
       Default is False.
 
+    :param bool force_list: The purpose of this field is described in the preamble
+      of this function's documentation. Default value is False.
+
     :return: A dictionary with the following entries:
 
         result
@@ -3302,6 +3319,12 @@ def powershell_all(cmd,
     .. code-block:: bash
 
         salt '*' cmd.powershell_all "$PSVersionTable.CLRVersion"
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.powershell_all "dir mydirectory" force_list=True
     '''
     if 'python_shell' in kwargs:
         python_shell = kwargs.pop('python_shell')
@@ -3347,18 +3370,24 @@ def powershell_all(cmd,
                    **kwargs)
     stdoutput = response['stdout']
 
-    # if stdoutput is the empty string we will raise a CommandExecutionError
+    # if stdoutput is the empty string and force_list is True we return an empty list
+    # Otherwise we raise an exception
     if not stdoutput:
-        err_msg = "cmd.powershell_all failed because the output produced " + \
-                  "by Powershell is empty."
         response.pop('stdout')
-        response["cmd"] = cmd
-        raise CommandExecutionError(
-                                    message=err_msg,
-                                    info=response
-                                   )
+        if force_list:
+            response['result'] = []
+            return response
+        else:
+            err_msg = "cmd.powershell_all failed because the output produced " + \
+                      "by Powershell is empty and the value of the force_list " + \
+                      "paramater is False."
+            response["cmd"] = cmd
+            raise CommandExecutionError(
+                message=err_msg,
+                info=response
+            )    
 
-    # If we fail to parse stdoutput we will raise a CommandExecutionError
+    # If we fail to parse stdoutput we will raise an exception
     try:
         result = json.loads(stdoutput)
     except Exception:
@@ -3366,27 +3395,20 @@ def powershell_all(cmd,
                   "cannot parse the Powershell output."
         response["cmd"] = cmd
         raise CommandExecutionError(
-                                    message=err_msg,
-                                    info=response
-                                   )
+            message=err_msg,
+            info=response
+        )
+    
     response.pop("stdout")
 
-    # We insist that the result type must be dict because
-    # polymorphic return types are contrary to the salt design philosophy.
-    if type(result) is not dict:
-        err_msg = "cmd.powershell_all is able to parse the Powershell " + \
-                  "output, but the resulting type is not 'dict'."
-        response["cmd"] = cmd
-        # present the result as "json-data" since it's not a valid result
-        response["json-data"] = result
-        response["json-data-python-type"] = str(type(result))
-        raise CommandExecutionError(
-                                    message=err_msg,
-                                    info=response
-                                   )
-
-    # If we got to this point result is a valid JSON dictionary
-    response['result'] = result
+    if type(result) is not list:
+        if force_list:
+            response['result'] = [result]
+        else:
+            response['result'] = result
+    else:
+        # result type is list so the force_list param has no effect
+        response['result'] = result
     return response
 
 
