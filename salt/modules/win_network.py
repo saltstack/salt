@@ -232,7 +232,7 @@ def get_route(ip):
     '''
     Return routing information for given destination ip
 
-    .. versionadded:: 2016.11.6
+    .. versionadded:: 2016.11.5
 
     CLI Example::
 
