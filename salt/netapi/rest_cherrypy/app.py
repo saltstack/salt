@@ -791,7 +791,7 @@ def hypermedia_out():
     request._hypermedia_inner_handler = request.handler
 
     # If handler has been explicitly set to None, don't override.
-    if not request.handler is None:
+    if request.handler is not None:
         request.handler = hypermedia_handler
 
 
