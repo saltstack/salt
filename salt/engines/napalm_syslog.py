@@ -129,6 +129,7 @@ except ImportError:
     HAS_NAPALM_LOGS = False
 
 # Import salt libs
+import salt.utils.network
 from salt.utils import event
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -156,6 +157,8 @@ def __virtual__():
 def _zmq(address, port):
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
+    if salt.utils.network.is_ipv6(address):
+        socket.ipv6 = True
     socket.connect('tcp://{addr}:{port}'.format(
         addr=address,
         port=port)
