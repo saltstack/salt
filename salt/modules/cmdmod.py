@@ -3129,10 +3129,7 @@ def powershell_all(cmd,
 
     The return dictionary will always have a key called ``result``.
 
-    If the value of ``stdout`` is the empty string, then the value of ``result``
-    will be set to ``False``
-
-    If the value of ``stdout`` is not the empty string and
+    If the value of ``stdout`` is an empty string or if
     Python cannot parse its content,
     then a ``CommandExecutionError`` exception
     will be raised.
