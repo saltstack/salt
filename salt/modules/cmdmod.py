@@ -3350,11 +3350,16 @@ def powershell_all(cmd,
                    **kwargs)
     stdoutput = response['stdout']
 
-    # if stdoutput is the empty string we will return False
+    # if stdoutput is the empty string we will raise a CommandExecutionError
     if not stdoutput:
-        response['result'] = False
+        err_msg = "cmd.powershell_all failed because the output produced " + \
+                  "by Powershell is empty."
         response.pop('stdout')
-        return response
+        response["cmd"] = cmd
+        raise CommandExecutionError(
+                                    message=err_msg,
+                                    info=response
+                                   )
 
     # If we fail to parse stdoutput we will raise a CommandExecutionError
     try:
@@ -3368,7 +3373,7 @@ def powershell_all(cmd,
                                     info=response
                                    )
     response.pop("stdout")
-    
+
     # We insist that the result type must be dict because
     # polymorphic return types are contrary to the salt design philosophy.
     if type(result) is not dict:
