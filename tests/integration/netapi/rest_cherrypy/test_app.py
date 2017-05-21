@@ -253,6 +253,6 @@ class TestJobs(cptc.BaseRestCherryPyTest):
                 'X-Auth-Token': self._token(),
         })
 
-        resp = json.loads(response.body[0])
+        resp = json.loads(salt.utils.to_str(response.body[0]))
         self.assertIn('test.ping', str(resp['return']))
         self.assertEqual(response.status, '200 OK')
