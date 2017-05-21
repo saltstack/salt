@@ -355,7 +355,7 @@ class SPMClient(object):
                 shutil.copyfile(dl_url, out_file)
             else:
                 with salt.utils.fopen(out_file, 'w') as outf:
-                    outf.write(self._query_http(dl_path, repo_info['info']))
+                    outf.write(self._query_http(dl_url, repo_info['info']))
 
         # First we download everything, then we install
         for package in dl_list:
