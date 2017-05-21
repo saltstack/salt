@@ -3093,7 +3093,7 @@ def powershell(cmd,
         log.error("Error converting PowerShell JSON return", exc_info=True)
         return {}
 
-    
+
 def powershell_all(cmd,
                    cwd=None,
                    stdin=None,
@@ -3124,13 +3124,17 @@ def powershell_all(cmd,
 
     This function appends ``| ConvertTo-JSON`` to the command before actually invoking powershell.
 
-    The return dictionary will always have a key called ``result``.
-
-    If Powershell's output is an empty string either of two things will happen:
+    An unquoted empty string is not valid JSON, but it's very normal for the Powershell
+    output to be exactly that. Therefore, we do not attempt to 
+    parse empty Powershell output (which would
+    result in an exception). Instead we treat this as a special case and one of two things
+    will happen:
        * If the value of the ``force_list`` paramater
-         is ``True`` then we will return an empty list.
-       * If the value of the ``force_list`` paramater is ``False``, then we will return
-         ``None``.
+         is ``True`` then the ``result`` field of the return dictionary will be an empty list.
+       * If the value of the ``force_list`` paramater is ``False``, then the return dictionary
+         **will not have a result key added to it**. We aren't setting ``result`` to ``None`` in this
+         case, because ``None`` is the Python representation of "null" in JSON. (We likewise can't use
+         ``False`` for the equivalent reason.)
 
     If Powershell's output is not an empty string and Python cannot parse its content,
     then a ``CommandExecutionError`` exception will be raised.
@@ -3138,14 +3142,16 @@ def powershell_all(cmd,
     If Powershell's output is not an empty string, Python is able to parse its content,
     and the type of the resulting Python object is other than ``list`` then one of two things
     will happen:
-        * If the value of the ``force_list`` paramater is ``True``, then a singleton list,
-          with the Python object as its sole member, will be returned
-        * If the value of the ``force_list`` paramater is ``False``, then the Python object
-          will be returned unmodified.
+        * If the value of the ``force_list`` paramater is ``True``, then the ``result`` field
+          will be a singleton list
+          with the Python object as its sole member.
+        * If the value of the ``force_list`` paramater is ``False``, then the value of 
+          ``result`` will be
+          the unmodified Python object.
 
     If Powershell's output is not an empty string, Python is able to parse its content,
-    and the type of the resulting Python object is ``list``, then the Python object will be returned
-    unmodified. The ``force_list`` paramater has no effect in this case.
+    and the type of the resulting Python object is ``list``, then the value of ``result``
+    will be the unmodified Python object. The ``force_list`` paramater has no effect in this case.
 
     .. Note::
          An example of why the ``force_list`` paramater is useful is as follows: The 
@@ -3159,8 +3165,10 @@ def powershell_all(cmd,
          By setting ``force_list`` to ``True`` we will always end up with a list of dictionary items,
          representing files,
          no matter how many files x contains.
-         Conversely, if x ``force_list`` is ``False``, we will end up with ``None`` when x is an
-         empty directory and a dictionary object when x contains just one file.
+         Conversely, if ``force_list`` is ``False``, we will end up with no ``result`` key in our
+         return dictionary
+         when x is an
+         empty directory, and a dictionary object when x contains just one file.
 
     If you want a similar function but with a raw
     textual result instead of a Python dictionary,
@@ -3304,18 +3312,9 @@ def powershell_all(cmd,
 
         result
             For a complete description of this field, please refer to this
-            function's preamble.
-        result_none_reason
-            This field only exists when the ``result`` field has a value of ``None``.
-            This can only happen when the value of the ``force_list`` paramater is ``False``,
-            and assuming that this is so,
-            there are two possible reasons:
-              * No output from Powershell.
-              * The output from Powershell is exactly the string "null".
-            To distinguish between these two situations, when
-            PowerShell has returned no output, the value of ``result_none_reason``
-            will be set to "no_ps_output", and when Powershell has returned the string
-            "null", the value will be set to "null_ps_output"
+            function's preamble. **This key will not be added to the dictionary
+            when force_list is False and Powershell's output 
+            is the empty string.**
         stderr
             What the PowerShell invocation wrote to ``stderr``.
         pid
@@ -3386,14 +3385,11 @@ def powershell_all(cmd,
     stdoutput = response['stdout']
 
     # if stdoutput is the empty string and force_list is True we return an empty list
-    # Otherwise we raise an exception
+    # Otherwise we return response with no result key
     if not stdoutput:
         response.pop('stdout')
         if force_list:
             response['result'] = []
-        else:
-            response['result'] = None
-            response['result_none_reason'] = "no_ps_output"
         return response
 
     # If we fail to parse stdoutput we will raise an exception
@@ -3415,9 +3411,6 @@ def powershell_all(cmd,
             response['result'] = [result]
         else:
             response['result'] = result
-            if result is None:
-                # This can only have happened because stdout was "null"
-                response['result_none_reason'] = "null_ps_output"
     else:
         # result type is list so the force_list param has no effect
         response['result'] = result
