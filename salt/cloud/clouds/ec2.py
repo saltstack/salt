@@ -4205,7 +4205,7 @@ def show_keypair(kwargs=None, call=None):
         return False
 
     params = {'Action': 'DescribeKeyPairs',
-              'KeyName.1': kwargs['keyname']}
+              'KeyName': kwargs['keyname']}
 
     data = aws.query(params,
                      return_url=True,
@@ -4234,7 +4234,7 @@ def delete_keypair(kwargs=None, call=None):
         return False
 
     params = {'Action': 'DeleteKeyPair',
-              'KeyName.1': kwargs['keyname']}
+              'KeyName': kwargs['keyname']}
 
     data = aws.query(params,
                      return_url=True,
