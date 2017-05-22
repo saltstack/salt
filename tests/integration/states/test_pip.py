@@ -35,9 +35,24 @@ from salt.exceptions import CommandExecutionError
 import salt.ext.six as six
 
 
+class VirtualEnv(object):
+    def __init__(self, test, venv_dir):
+        self.venv_dir = venv_dir
+        self.test = test
+
+    def __enter__(self):
+        ret = self.test.run_function('virtualenv.create', [self.venv_dir])
+        self.test.assertEqual(ret['retcode'], 0)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if os.path.isdir(self.venv_dir):
+            shutil.rmtree(self.venv_dir)
+
+
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
+    @skip_if_not_root
     def test_pip_installed_removed(self):
         '''
         Tests installed and removed states
@@ -49,6 +64,17 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('pip.removed', name=name)
         self.assertSaltTrueReturn(ret)
+
+    def test_pip_installed_removed_venv(self):
+        venv_dir = os.path.join(
+            RUNTIME_VARS.TMP, 'pip_installed_removed'
+        )
+        with VirtualEnv(self, venv_dir):
+            name = 'pudb'
+            ret = self.run_state('pip.installed', name=name, bin_env=venv_dir)
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pip.removed', name=name, bin_env=venv_dir)
+            self.assertSaltTrueReturn(ret)
 
     def test_pip_installed_errors(self):
         venv_dir = os.path.join(
