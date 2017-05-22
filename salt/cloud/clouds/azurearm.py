@@ -372,7 +372,7 @@ def avail_sizes(call=None):  # pylint: disable=unused-argument
 
 def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
     '''
-    List VMs on this Azure account
+    List VMs on this Azure Active Provider
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -385,7 +385,17 @@ def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
         compconn = get_conn()
 
     nodes = list_nodes_full(compconn, call)
+
+    active_resource_group = None
+    try:
+        provider, driver = __active_provider_name__.split(':')
+        active_resource_group = __opts__['providers'][provider][driver]['resource_group']
+    except:
+        pass
+
     for node in nodes:
+        if not nodes[node]['resource_group'] == active_resource_group:
+            continue
         ret[node] = {'name': node}
         for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
             ret[node][prop] = nodes[node].get(prop)
