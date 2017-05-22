@@ -173,7 +173,7 @@ def list_(name,
 
         except tarfile.ReadError:
             if failhard:
-                if fileobj:
+                if isinstance(cached, subprocess.Popen):
                     stderr = cached.communicate()[1]
                     if cached.returncode != 0:
                         raise CommandExecutionError(
