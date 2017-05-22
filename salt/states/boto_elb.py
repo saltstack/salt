@@ -470,7 +470,7 @@ def present(name, listeners, availability_zones=None, subnets=None,
             if __salt__['boto_elb.set_instances'](
                     name, instance_ids, True, region, key, keyid, profile):
                 ret['comment'] += ' ELB {0} instances would be updated.'.format(name)
-                ret['result'] == None
+                ret['result'] = None
         else:
             success = __salt__['boto_elb.set_instances'](
                     name, instance_ids, False, region, key, keyid, profile)
