@@ -3091,9 +3091,14 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
                 if len(pol_entry) >= 5:
                     value = pol_entry[4]
                     if vtype == 'REG_DWORD' or vtype == 'REG_QWORD':
-                        value = value.replace(chr(0), '')
                         if value:
-                            value = ord(value)
+                            vlist = list(ord(v) for v in value)
+                            if vtype == 'REG_DWORD':
+                                for v in struct.unpack('I', struct.pack('2H', *vlist)):
+                                    value = v
+                            elif vtype == 'REG_QWORD':
+                                for v in struct.unpack('I', struct.pack('4H', *vlist)):
+                                    value = v
                         else:
                             value = 0
                     elif vtype == 'REG_MULTI_SZ':
@@ -4024,8 +4029,7 @@ def _write_regpol_data(data_to_write,
                         version_nums = (version_nums[0], version_nums[1] + 1)
                     elif gpt_extension.lower() == 'gPCUserExtensionNames'.lower():
                         version_nums = (version_nums[0] + 1, version_nums[1])
-                    version_num = int("{0}{1}".format(str(version_nums[0]).zfill(4),
-                                                      str(version_nums[1]).zfill(4)), 16)
+                    version_num = struct.unpack('>I', struct.pack('>2H', *version_nums))[0]
                     gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
                             gpt_ini_data[0:version_loc.start()],
                             'Version', version_num,
