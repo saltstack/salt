@@ -59,7 +59,7 @@ def _base_url():
     Return the base_url
     '''
     return __opts__.get('venafi', {}).get(
-        'base_url', 'https://api.venafi.io/v1'
+        'base_url', 'https://api.venafi.cloud/v1'
     )
 
 
