@@ -3125,7 +3125,7 @@ def powershell_all(cmd,
     This function appends ``| ConvertTo-JSON`` to the command before actually invoking powershell.
 
     An unquoted empty string is not valid JSON, but it's very normal for the Powershell
-    output to be exactly that. Therefore, we do not attempt to 
+    output to be exactly that. Therefore, we do not attempt to
     parse empty Powershell output (which would
     result in an exception). Instead we treat this as a special case and one of two things
     will happen:
@@ -3145,7 +3145,7 @@ def powershell_all(cmd,
         * If the value of the ``force_list`` paramater is ``True``, then the ``result`` field
           will be a singleton list
           with the Python object as its sole member.
-        * If the value of the ``force_list`` paramater is ``False``, then the value of 
+        * If the value of the ``force_list`` paramater is ``False``, then the value of
           ``result`` will be
           the unmodified Python object.
 
@@ -3154,7 +3154,7 @@ def powershell_all(cmd,
     will be the unmodified Python object. The ``force_list`` paramater has no effect in this case.
 
     .. Note::
-         An example of why the ``force_list`` paramater is useful is as follows: The 
+         An example of why the ``force_list`` paramater is useful is as follows: The
          Powershell command
          ``dir x | Convert-ToJson`` results in
 
@@ -3305,7 +3305,7 @@ def powershell_all(cmd,
       where characters may be dropped or incorrectly converted when executed.
       Default is False.
 
-    :param bool force_list: The purpose of this field is described in the preamble
+    :param bool force_list: The purpose of this paramater is described in the preamble
       of this function's documentation. Default value is False.
 
     :return: A dictionary with the following entries:
@@ -3313,7 +3313,7 @@ def powershell_all(cmd,
         result
             For a complete description of this field, please refer to this
             function's preamble. **This key will not be added to the dictionary
-            when force_list is False and Powershell's output 
+            when force_list is False and Powershell's output
             is the empty string.**
         stderr
             What the PowerShell invocation wrote to ``stderr``.
@@ -3403,7 +3403,7 @@ def powershell_all(cmd,
             message=err_msg,
             info=response
         )
-    
+
     response.pop("stdout")
 
     if type(result) is not list:
