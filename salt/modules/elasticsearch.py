@@ -84,13 +84,27 @@ def _get_instance(hosts=None, profile=None):
         hosts = _profile.get('host', None)
         if not hosts:
             hosts = _profile.get('hosts', None)
+        use_ssl = _profile.get('use_ssl', False)
+        ca_certs = _profile.get('ca_certs', False)
+        verify_certs = _profile.get('verify_certs', False)
+        username = _profile.get('username', None)
+        password = _profile.get('password', None)
 
     if not hosts:
         hosts = ['127.0.0.1:9200']
     if isinstance(hosts, string_types):
         hosts = [hosts]
     try:
-        es = elasticsearch.Elasticsearch(hosts)
+        if username and password:
+            es = elasticsearch.Elasticsearch(
+                    hosts,
+                    use_ssl=use_ssl,
+                    ca_certs=ca_certs,
+                    verify_certs=verify_certs,
+                    http_auth=(username, password)
+                )
+        else:
+            es = elasticsearch.Elasticsearch(hosts)
         if not es.ping():
             raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}, is it unhealthy?'.format(hosts))
     except elasticsearch.exceptions.ConnectionError:
