@@ -27,6 +27,7 @@ from salt.exceptions import CommandExecutionError
 # Import 3rd-party libs
 from salt.ext.six.moves import configparser
 import salt.ext.six as six
+import salt.utils.pkg
 
 
 class ZyppCallMock(object):
@@ -49,9 +50,6 @@ def get_test_data(filename):
                 os.path.join(
                     os.path.dirname(os.path.abspath(__file__)), 'zypp'), filename)) as rfh:
         return rfh.read()
-
-
-# Import Salt Libs
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -266,10 +264,11 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         }
 
         with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=run_out)}):
-            result = zypper.refresh_db()
-            self.assertEqual(result.get("openSUSE-Leap-42.1-LATEST"), False)
-            self.assertEqual(result.get("openSUSE-Leap-42.1-Update"), False)
-            self.assertEqual(result.get("openSUSE-Leap-42.1-Update-Non-Oss"), True)
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                result = zypper.refresh_db()
+                self.assertEqual(result.get("openSUSE-Leap-42.1-LATEST"), False)
+                self.assertEqual(result.get("openSUSE-Leap-42.1-Update"), False)
+                self.assertEqual(result.get("openSUSE-Leap-42.1-Update-Non-Oss"), True)
 
     def test_info_installed(self):
         '''

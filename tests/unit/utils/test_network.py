@@ -264,6 +264,36 @@ class NetworkTestCase(TestCase):
             self.assertEqual(network._generate_minion_id(),
                              ['hostname.domainname.blank', 'nodename', 'hostname', '1.2.3.4', '5.6.7.8'])
 
+    @patch('platform.node', MagicMock(return_value='127'))
+    @patch('socket.gethostname', MagicMock(return_value='127'))
+    @patch('socket.getfqdn', MagicMock(return_value='127.domainname.blank'))
+    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'attrname', ('127.0.1.1', 0))]))
+    @patch('salt.utils.fopen', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
+    def test_generate_minion_id_127_name(self):
+        '''
+        Test if minion IDs can be named 127.foo
+        :return:
+        '''
+        self.assertEqual(network._generate_minion_id(),
+                         ['127.domainname.blank', '127', '1.2.3.4', '5.6.7.8'])
+
+    @patch('platform.node', MagicMock(return_value='127890'))
+    @patch('socket.gethostname', MagicMock(return_value='127890'))
+    @patch('socket.getfqdn', MagicMock(return_value='127890.domainname.blank'))
+    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'attrname', ('127.0.1.1', 0))]))
+    @patch('salt.utils.fopen', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
+    def test_generate_minion_id_127_name_startswith(self):
+        '''
+        Test if minion IDs can be named starting from "127"
+        :return:
+        '''
+        self.assertEqual(network._generate_minion_id(),
+                         ['127890.domainname.blank', '127890', '1.2.3.4', '5.6.7.8'])
+
     def test_generate_minion_id_duplicate(self):
         '''
         Test if IP addresses in the minion IDs are distinct in the pool

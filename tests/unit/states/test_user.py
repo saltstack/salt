@@ -37,27 +37,29 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {},
                'result': False,
                'comment': ''}
-        mock = MagicMock(return_value=False)
-        mock2 = MagicMock(return_value=[])
-        with patch.dict(user.__salt__, {'group.info': mock,
-                                        'user.info': mock2,
-                                        "user.chkey": mock2,
-                                        'user.add': mock}):
-            ret.update({'comment': 'The following group(s) are'
-                        ' not present: salt'})
-            self.assertDictEqual(user.present('salt', groups=['salt']), ret)
+        mock_false = MagicMock(return_value=False)
+        mock_empty_list = MagicMock(return_value=[])
+        with patch.dict(user.__grains__, {"kernel": 'Linux'}):
+            with patch.dict(user.__salt__, {'group.info': mock_false,
+                                            'user.info': mock_empty_list,
+                                            "user.chkey": mock_empty_list,
+                                            'user.add': mock_false}):
+                ret.update({'comment': 'The following group(s) are'
+                            ' not present: salt'})
+                self.assertDictEqual(user.present('salt', groups=['salt']), ret)
 
-            mock = MagicMock(side_effect=[{'key': 'value'}, {'key': 'value'},
-                                          {'key': 'value'}, False, False])
-            with patch.object(user, '_changes', mock):
-                with patch.dict(user.__opts__, {"test": True}):
-                    ret.update({'comment': 'The following user attributes are'
-                                ' set to be changed:\nkey: value\n',
-                                'result': None})
-                    self.assertDictEqual(user.present('salt'), ret)
+                mock_false = MagicMock(side_effect=[{'key': 'value'}, {'key': 'value'},
+                                              {'key': 'value'}, False, False])
+                with patch.object(user, '_changes', mock_false):
+                    with patch.dict(user.__opts__, {"test": True}):
+                        ret.update(
+                            {'comment': 'The following user attributes are set '
+                                        'to be changed:\n'
+                                        'key: value\n',
+                             'result': None})
+                        self.assertDictEqual(user.present('salt'), ret)
 
-                with patch.dict(user.__opts__, {"test": False}):
-                    with patch.dict(user.__grains__, {"kernel": False}):
+                    with patch.dict(user.__opts__, {"test": False}):
                         ret.update({'comment': "These values could not be"
                                     " changed: {'key': 'value'}",
                                     'result': False})

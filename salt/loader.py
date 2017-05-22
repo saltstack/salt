@@ -497,25 +497,6 @@ def beacons(opts, functions, context=None, proxy=None):
     )
 
 
-def search(opts, returners, whitelist=None):
-    '''
-    Returns the search modules
-
-    :param dict opts: The Salt options dictionary
-    :param returners: Undocumented
-    :param whitelist: Undocumented
-    '''
-    # TODO Document returners arg
-    # TODO Document whitelist arg
-    return LazyLoader(
-        _module_dirs(opts, 'search', 'search'),
-        opts,
-        tag='search',
-        whitelist=whitelist,
-        pack={'__ret__': returners},
-    )
-
-
 def log_handlers(opts):
     '''
     Returns the custom logging handler modules

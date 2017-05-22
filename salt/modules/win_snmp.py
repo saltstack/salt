@@ -2,7 +2,6 @@
 '''
 Module for managing SNMP service settings on Windows servers.
 The Windows feature 'SNMP-Service' must be installed.
-
 '''
 
 # Import python libs
@@ -13,15 +12,25 @@ import logging
 from salt.exceptions import SaltInvocationError
 import salt.utils
 
+# Import 3rd party libs
+from salt.ext import six
+
 _HKEY = 'HKLM'
 _SNMP_KEY = r'SYSTEM\CurrentControlSet\Services\SNMP\Parameters'
 _AGENT_KEY = r'{0}\RFC1156Agent'.format(_SNMP_KEY)
 _COMMUNITIES_KEY = r'{0}\ValidCommunities'.format(_SNMP_KEY)
 
-_PERMISSION_TYPES = {'None': 1, 'Notify': 2, 'Read Only': 4, 'Read Write': 8,
+_PERMISSION_TYPES = {'None': 1,
+                     'Notify': 2,
+                     'Read Only': 4,
+                     'Read Write': 8,
                      'Read Create': 16}
-_SERVICE_TYPES = {'None': 0, 'Physical': 1, 'Datalink and subnetwork': 2, 'Internet': 4,
-                  'End-to-end': 8, 'Applications': 64}
+_SERVICE_TYPES = {'None': 0,
+                  'Physical': 1,
+                  'Datalink and subnetwork': 2,
+                  'Internet': 4,
+                  'End-to-end': 8,
+                  'Applications': 64}
 
 _LOG = logging.getLogger(__name__)
 
@@ -33,17 +42,33 @@ def __virtual__():
     '''
     Only works on Windows systems.
     '''
-    if salt.utils.is_windows():
-        return __virtualname__
-    return False
+    if not salt.utils.is_windows():
+        return False, 'Module win_snmp: Requires Windows'
+
+    if not __salt__['reg.read_value'](_HKEY, _SNMP_KEY)['success']:
+        return False, 'Module win_snmp: SNMP not installed'
+
+    return __virtualname__
+
+
+def _to_unicode(instr):
+    '''
+    Converts from current users character encoding to unicode.
+    When instr has a value of None, the return value of the function
+    will also be None.
+    '''
+    if instr is None or isinstance(instr, six.text_type):
+        return instr
+    else:
+        return six.text_type(instr, 'utf8')
 
 
 def get_agent_service_types():
     '''
     Get the sysServices types that can be configured.
 
-    :return: A list of the service types.
-    :rtype: list
+    Returns:
+        list: A list of service types.
 
     CLI Example:
 
@@ -58,8 +83,8 @@ def get_permission_types():
     '''
     Get the permission types that can be configured for communities.
 
-    :return: A list of the permission types.
-    :rtype: list
+    Returns:
+        list: A list of permission types.
 
     CLI Example:
 
@@ -72,10 +97,11 @@ def get_permission_types():
 
 def get_agent_settings():
     '''
-    Determine the value of the SNMP sysContact, sysLocation, and sysServices settings.
+    Determine the value of the SNMP sysContact, sysLocation, and sysServices
+    settings.
 
-    :return: A dictionary of the agent settings.
-    :rtype: dict
+    Returns:
+        dict: A dictionary of the agent settings.
 
     CLI Example:
 
@@ -87,16 +113,21 @@ def get_agent_settings():
     sorted_types = sorted(_SERVICE_TYPES.items(), key=lambda x: (-x[1], x[0]))
 
     ret['services'] = list()
-    ret['contact'] = (__salt__['reg.read_value'](_HKEY, _AGENT_KEY, 'sysContact'))['vdata']
-    ret['location'] = (__salt__['reg.read_value'](_HKEY, _AGENT_KEY, 'sysLocation'))['vdata']
-    current_bitmask = (__salt__['reg.read_value'](_HKEY, _AGENT_KEY, 'sysServices'))['vdata']
+    ret['contact'] = (__salt__['reg.read_value'](
+        _HKEY, _AGENT_KEY, 'sysContact'))['vdata']
+
+    ret['location'] = (__salt__['reg.read_value'](
+        _HKEY, _AGENT_KEY, 'sysLocation'))['vdata']
+
+    current_bitmask = (__salt__['reg.read_value'](
+        _HKEY, _AGENT_KEY, 'sysServices'))['vdata']
 
     if current_bitmask == 0:
         ret['services'].append(sorted_types[-1][0])
     else:
         # sorted_types is sorted from greatest to least bitmask.
         for service, bitmask in sorted_types:
-            if current_bitmask > 0:
+            if current_bitmask is not None and current_bitmask > 0:
                 remaining_bitmask = current_bitmask - bitmask
 
                 if remaining_bitmask >= 0:
@@ -109,17 +140,21 @@ def get_agent_settings():
     return ret
 
 
-def set_agent_settings(contact, location, services=None):
+def set_agent_settings(contact=None, location=None, services=None):
     '''
     Manage the SNMP sysContact, sysLocation, and sysServices settings.
 
-    :param str contact: The SNMP contact.
-    :param str location: The SNMP location.
-    :param str services: A list of selected services. The possible service names can be found
-    via win_snmp.get_agent_service_types.
+    Args:
+        contact (str, optional): The SNMP contact.
 
-    :return: A boolean representing whether the change succeeded.
-    :rtype: bool
+        location (str, optional): The SNMP location.
+
+        services (list, optional): A list of selected services. The possible
+            service names can be found via ``win_snmp.get_agent_service_types``.
+            To disable all services pass a list of None, ie: ['None']
+
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -127,11 +162,21 @@ def set_agent_settings(contact, location, services=None):
 
         salt '*' win_snmp.set_agent_settings contact='Contact Name' location='Place' services="['Physical']"
     '''
-    if not services:
-        services = ['None']
+    if services is not None:
+        # Filter services for unique items, and sort them for comparison
+        # purposes.
+        services = sorted(set(services))
 
-    # Filter services for unique items, and sort them for comparison purposes.
-    services = sorted(set(services))
+        # Validate the services.
+        for service in services:
+            if service not in _SERVICE_TYPES:
+                message = ("Invalid service '{0}' specified. Valid services:"
+                           ' {1}').format(service, get_agent_service_types())
+                raise SaltInvocationError(message)
+
+    if six.PY2:
+        contact = _to_unicode(contact)
+        location = _to_unicode(location)
 
     settings = {'contact': contact, 'location': location, 'services': services}
 
@@ -141,27 +186,26 @@ def set_agent_settings(contact, location, services=None):
         _LOG.debug('Agent settings already contain the provided values.')
         return True
 
-    # Validate the services.
-    for service in services:
-        if service not in _SERVICE_TYPES:
-            message = ("Invalid service '{0}' specified. Valid services:"
-                       ' {1}').format(service, get_agent_service_types())
-            raise SaltInvocationError(message)
+    if contact is not None:
+        if contact != current_settings['contact']:
+            __salt__['reg.set_value'](
+                _HKEY, _AGENT_KEY, 'sysContact', contact, 'REG_SZ')
 
-    if contact != current_settings['contact']:
-        __salt__['reg.set_value'](_HKEY, _AGENT_KEY, 'sysContact', contact, 'REG_SZ')
+    if location is not None:
+        if location != current_settings['location']:
+            __salt__['reg.set_value'](
+                _HKEY, _AGENT_KEY, 'sysLocation', location, 'REG_SZ')
 
-    if location != current_settings['location']:
-        __salt__['reg.set_value'](_HKEY, _AGENT_KEY, 'sysLocation', location, 'REG_SZ')
+    if services is not None:
+        if set(services) != set(current_settings['services']):
+            # Calculate the total value. Produces 0 if an empty list was provided,
+            # corresponding to the None _SERVICE_TYPES value.
+            vdata = sum(_SERVICE_TYPES[service] for service in services)
 
-    if set(services) != set(current_settings['services']):
-        # Calculate the total value. Produces 0 if an empty list was provided,
-        # corresponding to the None _SERVICE_TYPES value.
-        vdata = sum(_SERVICE_TYPES[service] for service in services)
+            _LOG.debug('Setting sysServices vdata to: %s', vdata)
 
-        _LOG.debug('Setting sysServices vdata to: %s', vdata)
-
-        __salt__['reg.set_value'](_HKEY, _AGENT_KEY, 'sysServices', vdata, 'REG_DWORD')
+            __salt__['reg.set_value'](
+                _HKEY, _AGENT_KEY, 'sysServices', vdata, 'REG_DWORD')
 
     # Get the fields post-change so that we can verify tht all values
     # were modified successfully. Track the ones that weren't.
@@ -169,12 +213,14 @@ def set_agent_settings(contact, location, services=None):
     failed_settings = dict()
 
     for setting in settings:
-        if settings[setting] != new_settings[setting]:
+        if settings[setting] is not None and \
+                    settings[setting] != new_settings[setting]:
             failed_settings[setting] = settings[setting]
 
     if failed_settings:
         _LOG.error('Unable to configure agent settings: %s', failed_settings)
         return False
+
     _LOG.debug('Agent settings configured successfully: %s', settings.keys())
     return True
 
@@ -183,8 +229,8 @@ def get_auth_traps_enabled():
     '''
     Determine whether the host is configured to send authentication traps.
 
-    :return: A boolean representing whether authentication traps are enabled.
-    :rtype: bool
+    Returns:
+        bool: True if traps are enabled, otherwise False
 
     CLI Example:
 
@@ -192,7 +238,8 @@ def get_auth_traps_enabled():
 
         salt '*' win_snmp.get_auth_traps_enabled
     '''
-    reg_ret = __salt__['reg.read_value'](_HKEY, _SNMP_KEY, 'EnableAuthenticationTraps')
+    reg_ret = __salt__['reg.read_value'](
+        _HKEY, _SNMP_KEY, 'EnableAuthenticationTraps')
 
     if reg_ret['vdata'] == '(value not set)':
         return False
@@ -203,10 +250,11 @@ def set_auth_traps_enabled(status=True):
     '''
     Manage the sending of authentication traps.
 
-    :param bool status: The enabled status.
+    Args:
+        status (bool): True to enable traps. False to disable.
 
-    :return: A boolean representing whether the change succeeded.
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -237,8 +285,8 @@ def get_community_names():
     '''
     Get the current accepted SNMP community names and their permissions.
 
-    :return: A dictionary of community names and permissions.
-    :rtype: dict
+    Returns:
+        dict: A dictionary of community names and permissions.
 
     CLI Example:
 
@@ -247,17 +295,20 @@ def get_community_names():
         salt '*' win_snmp.get_community_names
     '''
     ret = dict()
-    current_values = __salt__['reg.list_values'](_HKEY, _COMMUNITIES_KEY, include_default=False)
+    current_values = __salt__['reg.list_values'](
+        _HKEY, _COMMUNITIES_KEY, include_default=False)
 
-    # The communities are stored as the community name with a numeric permission value. Convert
-    # the numeric value to the text equivalent, as present in the Windows SNMP service GUI.
-    for current_value in current_values:
-        permissions = str()
-        for permission_name in _PERMISSION_TYPES:
-            if current_value['vdata'] == _PERMISSION_TYPES[permission_name]:
-                permissions = permission_name
-                break
-        ret[current_value['vname']] = permissions
+    # The communities are stored as the community name with a numeric permission
+    # value. Convert the numeric value to the text equivalent, as present in the
+    # Windows SNMP service GUI.
+    if isinstance(current_values, list):
+        for current_value in current_values:
+            permissions = str()
+            for permission_name in _PERMISSION_TYPES:
+                if current_value['vdata'] == _PERMISSION_TYPES[permission_name]:
+                    permissions = permission_name
+                    break
+            ret[current_value['vname']] = permissions
 
     if not ret:
         _LOG.debug('Unable to find existing communities.')
@@ -268,11 +319,13 @@ def set_community_names(communities):
     '''
     Manage the SNMP accepted community names and their permissions.
 
-    :param str communities: A dictionary of SNMP community names and permissions.
-    The possible permissions can be found via win_snmp.get_permission_types.
+    Args:
+        communities (dict): A dictionary of SNMP community names and
+            permissions. The possible permissions can be found via
+            ``win_snmp.get_permission_types``.
 
-    :return: A boolean representing whether the change succeeded.
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -294,8 +347,9 @@ def set_community_names(communities):
         try:
             vdata = _PERMISSION_TYPES[communities[vname]]
         except KeyError:
-            message = ("Invalid permission '{0}' specified. Valid permissions:"
-                       ' {1}').format(communities[vname], _PERMISSION_TYPES.keys())
+            message = (
+                "Invalid permission '{0}' specified. Valid permissions: "
+                "{1}").format(communities[vname], _PERMISSION_TYPES.keys())
             raise SaltInvocationError(message)
         values[vname] = vdata
 
@@ -304,15 +358,19 @@ def set_community_names(communities):
         if current_vname in values:
             # Modify existing communities that have a different permission value.
             if current_communities[current_vname] != values[current_vname]:
-                __salt__['reg.set_value'](_HKEY, _COMMUNITIES_KEY, current_vname, values[current_vname], 'REG_DWORD')
+                __salt__['reg.set_value'](
+                    _HKEY, _COMMUNITIES_KEY, current_vname,
+                    values[current_vname], 'REG_DWORD')
         else:
             # Remove current communities that weren't provided.
-            __salt__['reg.delete_value'](_HKEY, _COMMUNITIES_KEY, current_vname)
+            __salt__['reg.delete_value'](
+                _HKEY, _COMMUNITIES_KEY, current_vname)
 
     # Create any new communities.
     for vname in values:
         if vname not in current_communities:
-            __salt__['reg.set_value'](_HKEY, _COMMUNITIES_KEY, vname, values[vname], 'REG_DWORD')
+            __salt__['reg.set_value'](
+                _HKEY, _COMMUNITIES_KEY, vname, values[vname], 'REG_DWORD')
 
     # Get the fields post-change so that we can verify tht all values
     # were modified successfully. Track the ones that weren't.

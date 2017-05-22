@@ -607,6 +607,8 @@ VALID_OPTS = {
     'gitfs_passphrase': str,
     'gitfs_env_whitelist': list,
     'gitfs_env_blacklist': list,
+    'gitfs_saltenv_whitelist': list,
+    'gitfs_saltenv_blacklist': list,
     'gitfs_ssl_verify': bool,
     'gitfs_global_lock': bool,
     'gitfs_saltenv': list,
@@ -618,6 +620,8 @@ VALID_OPTS = {
     'hgfs_branch_method': str,
     'hgfs_env_whitelist': list,
     'hgfs_env_blacklist': list,
+    'hgfs_saltenv_whitelist': list,
+    'hgfs_saltenv_blacklist': list,
     'svnfs_remotes': list,
     'svnfs_mountpoint': str,
     'svnfs_root': str,
@@ -626,6 +630,8 @@ VALID_OPTS = {
     'svnfs_tags': str,
     'svnfs_env_whitelist': list,
     'svnfs_env_blacklist': list,
+    'svnfs_saltenv_whitelist': list,
+    'svnfs_saltenv_blacklist': list,
     'minionfs_env': str,
     'minionfs_mountpoint': str,
     'minionfs_whitelist': list,
@@ -764,10 +770,6 @@ VALID_OPTS = {
 
     'serial': str,
     'search': str,
-
-    # The update interval, in seconds, for the master maintenance process to update the search
-    # index
-    'search_index_interval': int,
 
     # A compound target definition.
     # See: http://docs.saltstack.com/en/latest/topics/targeting/nodegroups.html
@@ -1151,6 +1153,8 @@ DEFAULT_MINION_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
+    'gitfs_saltenv_whitelist': [],
+    'gitfs_saltenv_blacklist': [],
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'gitfs_saltenv': [],
@@ -1375,6 +1379,8 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
+    'gitfs_saltenv_whitelist': [],
+    'gitfs_saltenv_blacklist': [],
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'gitfs_saltenv': [],
@@ -1386,6 +1392,8 @@ DEFAULT_MASTER_OPTS = {
     'hgfs_branch_method': 'branches',
     'hgfs_env_whitelist': [],
     'hgfs_env_blacklist': [],
+    'hgfs_saltenv_whitelist': [],
+    'hgfs_saltenv_blacklist': [],
     'show_timeout': True,
     'show_jid': False,
     'svnfs_remotes': [],
@@ -1396,6 +1404,8 @@ DEFAULT_MASTER_OPTS = {
     'svnfs_tags': 'tags',
     'svnfs_env_whitelist': [],
     'svnfs_env_blacklist': [],
+    'svnfs_saltenv_whitelist': [],
+    'svnfs_saltenv_blacklist': [],
     'max_event_size': 1048576,
     'minionfs_env': 'base',
     'minionfs_mountpoint': '',
@@ -1499,7 +1509,6 @@ DEFAULT_MASTER_OPTS = {
     'state_events': False,
     'state_aggregate': False,
     'search': '',
-    'search_index_interval': 3600,
     'loop_interval': 60,
     'nodegroups': {},
     'ssh_list_nodegroups': {},
@@ -2058,19 +2067,36 @@ def prepend_root_dir(opts, path_options):
     'root_dir' option.
     '''
     root_dir = os.path.abspath(opts['root_dir'])
-    root_opt = opts['root_dir'].rstrip(os.sep)
     def_root_dir = salt.syspaths.ROOT_DIR.rstrip(os.sep)
     for path_option in path_options:
         if path_option in opts:
             path = opts[path_option]
+            tmp_path_def_root_dir = None
+            tmp_path_root_dir = None
             # When running testsuite, salt.syspaths.ROOT_DIR is often empty
-            if def_root_dir != '' and (path == def_root_dir or path.startswith(def_root_dir + os.sep)):
-                # Remove the default root dir so we can add the override
-                path = path[len(def_root_dir):]
-            elif path == root_opt or path.startswith(root_opt + os.sep):
-                # Remove relative root dir so we can add the absolute root dir
-                path = path[len(root_opt):]
-            elif os.path.isabs(path_option):
+            if path == def_root_dir or path.startswith(def_root_dir + os.sep):
+                # Remove the default root dir prefix
+                tmp_path_def_root_dir = path[len(def_root_dir):]
+            if root_dir and (path == root_dir or
+                             path.startswith(root_dir + os.sep)):
+                # Remove the root dir prefix
+                tmp_path_root_dir = path[len(root_dir):]
+            if tmp_path_def_root_dir and not tmp_path_root_dir:
+                # Just the default root dir matched
+                path = tmp_path_def_root_dir
+            elif tmp_path_root_dir and not tmp_path_def_root_dir:
+                # Just the root dir matched
+                path = tmp_path_root_dir
+            elif tmp_path_def_root_dir and tmp_path_root_dir:
+                # In this case both the default root dir and the override root
+                # dir matched; this means that either
+                # def_root_dir is a substring of root_dir or vice versa
+                # We must choose the most specific path
+                if def_root_dir in root_dir:
+                    path = tmp_path_root_dir
+                else:
+                    path = tmp_path_def_root_dir
+            elif os.path.isabs(path):
                 # Absolute path (not default or overriden root_dir)
                 # No prepending required
                 continue
@@ -3276,6 +3302,24 @@ def _update_ssl_config(opts):
         opts['ssl'][key] = getattr(ssl, val)
 
 
+def _adjust_log_file_override(overrides, default_log_file):
+    '''
+    Adjusts the log_file based on the log_dir override
+    '''
+    if overrides.get('log_dir'):
+        # Adjust log_file if a log_dir override is introduced
+        if overrides.get('log_file'):
+            if not os.path.abspath(overrides['log_file']):
+                # Prepend log_dir if log_file is relative
+                overrides['log_file'] = os.path.join(overrides['log_dir'],
+                                                     overrides['log_file'])
+        else:
+            # Create the log_file override
+            overrides['log_file'] = \
+                os.path.join(overrides['log_dir'],
+                             os.path.basename(default_log_file))
+
+
 def apply_minion_config(overrides=None,
                         defaults=None,
                         cache_minion_id=False,
@@ -3288,6 +3332,7 @@ def apply_minion_config(overrides=None,
 
     opts = defaults.copy()
     opts['__role'] = 'minion'
+    _adjust_log_file_override(overrides, defaults['log_file'])
     if overrides:
         opts.update(overrides)
 
@@ -3439,6 +3484,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     opts = defaults.copy()
     opts['__role'] = 'master'
+    _adjust_log_file_override(overrides, defaults['log_file'])
     if overrides:
         opts.update(overrides)
 
@@ -3682,6 +3728,7 @@ def apply_spm_config(overrides, defaults):
     .. versionadded:: 2015.8.1
     '''
     opts = defaults.copy()
+    _adjust_log_file_override(overrides, defaults['log_file'])
     if overrides:
         opts.update(overrides)
 

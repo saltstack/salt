@@ -331,6 +331,10 @@ configured gitfs remotes):
 * :conf_master:`gitfs_passphrase` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_refspecs` (new in Nitrogen)
 
+.. note::
+    pygit2 only supports disabling SSL verification in versions 0.23.2 and
+    newer.
+
 These parameters can now be overridden on a per-remote basis. This allows for a
 tremendous amount of customization. Here's some example usage:
 
@@ -729,16 +733,16 @@ Environment Whitelist/Blacklist
 
 .. versionadded:: 2014.7.0
 
-The :conf_master:`gitfs_env_whitelist` and :conf_master:`gitfs_env_blacklist`
-parameters allow for greater control over which branches/tags are exposed as
-fileserver environments. Exact matches, globs, and regular expressions are
-supported, and are evaluated in that order. If using a regular expression,
-``^`` and ``$`` must be omitted, and the expression must match the entire
-branch/tag.
+The :conf_master:`gitfs_saltenv_whitelist` and
+:conf_master:`gitfs_saltenv_blacklist` parameters allow for greater control
+over which branches/tags are exposed as fileserver environments. Exact matches,
+globs, and regular expressions are supported, and are evaluated in that order.
+If using a regular expression, ``^`` and ``$`` must be omitted, and the
+expression must match the entire branch/tag.
 
 .. code-block:: yaml
 
-    gitfs_env_whitelist:
+    gitfs_saltenv_whitelist:
       - base
       - v1.*
       - 'mybranch\d+'
@@ -752,11 +756,12 @@ branch/tag.
 The behavior of the blacklist/whitelist will differ depending on which
 combination of the two options is used:
 
-* If only :conf_master:`gitfs_env_whitelist` is used, then **only** branches/tags
-  which match the whitelist will be available as environments
+* If only :conf_master:`gitfs_saltenv_whitelist` is used, then **only**
+  branches/tags which match the whitelist will be available as environments
 
-* If only :conf_master:`gitfs_env_blacklist` is used, then the branches/tags
-  which match the blacklist will **not** be available as environments
+* If only :conf_master:`gitfs_saltenv_blacklist` is used, then the
+  branches/tags which match the blacklist will **not** be available as
+  environments
 
 * If both are used, then the branches/tags which match the whitelist, but do
   **not** match the blacklist, will be available as environments.
@@ -836,11 +841,57 @@ simply ``passphrase`` if being configured :ref:`per-remote
 Finally, the SSH host key must be :ref:`added to the known_hosts file
 <gitfs-ssh-fingerprint>`.
 
+.. note::
+    There is a known issue with public-key SSH authentication to Microsoft
+    Visual Studio (VSTS) with pygit2. This is due to a bug or lack of support
+    for VSTS in older libssh2 releases. Known working releases include libssh2
+    1.7.0 and later, and known incompatible releases include 1.5.0 and older.
+    At the time of this writing, 1.6.0 has not been tested.
+
+    Since upgrading libssh2 would require rebuilding many other packages (curl,
+    etc.), followed by a rebuild of libgit2 and a reinstall of pygit2, an
+    easier workaround for systems with older libssh2 is to use GitPython with a
+    passphraseless key for authentication.
+
 GitPython
 ---------
 
-With GitPython_, only passphrase-less SSH public key authentication is
-supported. **The auth parameters (pubkey, privkey, etc.) shown in the pygit2
+HTTPS
+~~~~~
+
+For HTTPS repositories which require authentication, the username and password
+can be configured in one of two ways. The first way is to include them in the
+URL using the format ``https://<user>:<password>@<url>``, like so:
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - https://git:mypassword@domain.tld/myrepo.git
+
+The other way would be to configure the authentication in ``~/.netrc``:
+
+.. code-block:: text
+
+    machine domain.tld
+    login git
+    password mypassword
+
+
+If the repository is served over HTTP instead of HTTPS, then Salt will by
+default refuse to authenticate to it. This behavior can be overridden by adding
+an ``insecure_auth`` parameter:
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://git:mypassword@domain.tld/insecure_repo.git:
+        - insecure_auth: True
+
+SSH
+~~~
+
+Only passphrase-less SSH public key authentication is supported using
+GitPython. **The auth parameters (pubkey, privkey, etc.) shown in the pygit2
 authentication examples above do not work with GitPython.**
 
 .. code-block:: yaml

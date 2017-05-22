@@ -36,6 +36,7 @@ from xml.parsers.expat import ExpatError
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 import salt.utils.systemd
 from salt.exceptions import (
     CommandExecutionError, MinionError)
@@ -870,6 +871,8 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     ret = {}
     out = __zypper__.refreshable.call('refresh', '--force')
 
@@ -1803,7 +1806,7 @@ def list_downloaded():
                 'path': package_path,
                 'size': os.path.getsize(package_path),
                 'creation_date_time_t': pkg_timestamp,
-                'creation_date_time': datetime.datetime.fromtimestamp(pkg_timestamp).isoformat(),
+                'creation_date_time': datetime.datetime.utcfromtimestamp(pkg_timestamp).isoformat(),
             }
     return ret
 

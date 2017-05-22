@@ -37,7 +37,6 @@ execution modules
     bcache
     beacons
     bigip
-    blockdev
     bluez
     boto3_elasticache
     boto3_route53

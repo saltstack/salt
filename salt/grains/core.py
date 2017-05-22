@@ -21,8 +21,7 @@ import platform
 import logging
 import locale
 import uuid
-import salt.exceptions
-from salt.ext.six.moves import range
+from errno import EACCES, EPERM
 
 __proxyenabled__ = ['*']
 __FQDN__ = None
@@ -40,10 +39,13 @@ except ImportError:
     from distro import linux_distribution
 
 # Import salt libs
+import salt.exceptions
 import salt.log
 import salt.utils
 import salt.utils.network
 import salt.utils.dns
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 if salt.utils.is_windows():
     import salt.utils.win_osinfo
@@ -52,9 +54,6 @@ if salt.utils.is_windows():
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
 import salt.modules.smbios
-
-# Import 3rd-party libs
-import salt.ext.six as six
 
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet,
@@ -1332,7 +1331,14 @@ def os_data():
             if os.path.exists('/proc/1/cmdline'):
                 with salt.utils.fopen('/proc/1/cmdline') as fhr:
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
-                    init_bin = salt.utils.which(init_cmdline[0])
+                    try:
+                        init_bin = salt.utils.which(init_cmdline[0])
+                    except IndexError:
+                        # Emtpy init_cmdline
+                        init_bin = None
+                        log.warning(
+                            "Unable to fetch data from /proc/1/cmdline"
+                        )
                     if init_bin is not None and init_bin.endswith('bin/init'):
                         supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
                         edge_len = max(len(x) for x in supported_inits) - 1
@@ -1774,14 +1780,10 @@ def ip_fqdn():
 
     ret = {}
     ret['ipv4'] = salt.utils.network.ip_addrs(include_loopback=True)
+    ret['ipv6'] = salt.utils.network.ip_addrs6(include_loopback=True)
+
     _fqdn = hostname()['fqdn']
-    sockets = [(socket.AF_INET, '4')]
-
-    if __opts__.get('ipv6', True):
-        ret['ipv6'] = salt.utils.network.ip_addrs6(include_loopback=True)
-        sockets.append((socket.AF_INET6, '6'))
-
-    for socket_type, ipv_num in sockets:
+    for socket_type, ipv_num in ((socket.AF_INET, '4'), (socket.AF_INET6, '6')):
         key = 'fqdn_ip' + ipv_num
         if not ret['ipv' + ipv_num]:
             ret[key] = []
@@ -1859,7 +1861,7 @@ def ip6_interfaces():
     # Provides:
     #   ip_interfaces
 
-    if salt.utils.is_proxy() or not __opts__.get('ipv6', True):
+    if salt.utils.is_proxy():
         return {}
 
     ret = {}
@@ -1903,10 +1905,8 @@ def dns():
         return {}
 
     resolv = salt.utils.dns.parse_resolv()
-    keys = ['nameservers', 'ip4_nameservers', 'sortlist']
-    if __opts__.get('ipv6', True):
-        keys.append('ip6_nameservers')
-    for key in keys:
+    for key in ('nameservers', 'ip4_nameservers', 'ip6_nameservers',
+                'sortlist'):
         if key in resolv:
             resolv[key] = [str(i) for i in resolv[key]]
 
@@ -2042,10 +2042,17 @@ def _hw_data(osdata):
         for key, fw_file in sysfs_firmware_info.items():
             contents_file = os.path.join('/sys/class/dmi/id', fw_file)
             if os.path.exists(contents_file):
-                with salt.utils.fopen(contents_file, 'r') as ifile:
-                    grains[key] = ifile.read()
-                    if key == 'uuid':
-                        grains['uuid'] = grains['uuid'].lower()
+                try:
+                    with salt.utils.fopen(contents_file, 'r') as ifile:
+                        grains[key] = ifile.read()
+                        if key == 'uuid':
+                            grains['uuid'] = grains['uuid'].lower()
+                except (IOError, OSError) as err:
+                    # PermissionError is new to Python 3, but corresponds to the EACESS and
+                    # EPERM error numbers. Use those instead here for PY2 compatibility.
+                    if err.errno == EACCES or err.errno == EPERM:
+                        # Skip the grain if non-root user has no access to the file.
+                        pass
     elif salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not (
             salt.utils.is_smartos() or
             (  # SunOS on SPARC - 'smbios: failed to load SMBIOS: System does not export an SMBIOS table'

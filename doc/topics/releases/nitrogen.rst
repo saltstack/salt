@@ -60,7 +60,6 @@ State Module Changes
   ``no_block`` argument which, when set to ``True`` on systemd minions, will
   start/stop the service using the ``--no-block`` flag in the ``systemctl``
   command. On non-systemd minions, a warning will be issued.
-
 - The :py:func:`module.run <salt.states.module.run>` state has dropped its
   previous syntax with ``m_`` prefix for reserved keywords. Additionally, it
   allows running several functions in a batch.
@@ -105,6 +104,9 @@ State Module Changes
 
       use_superseded:
         - module.run
+- The default for the ``fingerprint_hash_type`` option used in the ``present``
+  function in the :mod:`ssh <salt.states.ssh_know_hosts>` state changed from
+  ``md5`` to ``sha256``.
 
 
 Execution Module Changes
@@ -132,6 +134,9 @@ Execution Module Changes
   :py:func:`Arch Linux <salt.modules.pacman.list_repo_pkgs>`-based distros.
 - The :mod:`system <salt.modules.system>` module changed its return format
   from "HH:MM AM/PM" to "HH:MM:SS AM/PM" for `get_system_time`.
+- The default for the ``fingerprint_hash_type`` option used in the
+  :mod:`ssh <salt.modules.ssh>` execution module changed from ``md5`` to
+  ``sha256``.
 
 
 Proxy Module Changes

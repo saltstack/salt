@@ -13,6 +13,9 @@ Configuration Option Deprecations
 Module Deprecations
 -------------------
 
+The ``blockdev`` execution module has been removed. Its functions were merged
+with the ``disk`` module. Please use the ``disk`` execution module instead.
+
 The ``win_psget`` module had the following changes:
 
 - The ``psversion`` function was removed. Please use ``cmd.shell_info`` instead.

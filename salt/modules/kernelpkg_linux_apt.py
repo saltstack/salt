@@ -124,7 +124,7 @@ def latest_installed():
 def needs_reboot():
     '''
     Detect if a new kernel version has been installed but is not running.
-    Returns True if a new kernal is installed, False otherwise.
+    Returns True if a new kernel is installed, False otherwise.
 
     CLI Example:
 
@@ -177,6 +177,20 @@ def upgrade(reboot=False, at_time=None):
         __salt__['system.reboot'](at_time=at_time)
 
     return ret
+
+
+def upgrade_available():
+    '''
+    Detect if a new kernel version is available in the repositories.
+    Returns True if a new kernel is avaliable, False otherwise.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' kernelpkg.upgrade_available
+    '''
+    return _LooseVersion(latest_available()) > _LooseVersion(latest_installed())
 
 
 def _package_prefix():

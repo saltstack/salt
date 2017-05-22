@@ -61,3 +61,11 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
                 ),
                 hash_info['pw_hash']
             )
+
+    # 'list_users' function tests: 1
+
+    def test_list_users(self):
+        '''
+        Test if it returns a list of all users
+        '''
+        self.assertTrue(shadow.list_users())

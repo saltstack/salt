@@ -321,7 +321,10 @@ def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
     if isinstance(conf, six.string_types):
         conf = json.loads(conf)
     if not conf:
-        return None
+        # if the conf is None, we should explicitly set the VpcConfig to
+        # {'SubnetIds': [], 'SecurityGroupIds': []} to take the lambda out of
+        # the VPC it was in
+        return {'SubnetIds': [], 'SecurityGroupIds': []}
     if not isinstance(conf, dict):
         raise SaltInvocationError('VpcConfig must be a dict.')
     sns = [__salt__['boto_vpc.get_resource_id']('subnet', s, region=region, key=key,
@@ -360,7 +363,7 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
     fixed_VpcConfig = _resolve_vpcconfig(VpcConfig, region, key, keyid, profile)
     if __utils__['boto3.ordered'](oldval) != __utils__['boto3.ordered'](fixed_VpcConfig):
         need_update = True
-        ret['changes'].setdefault('new', {})['VpcConfig'] = VpcConfig
+        ret['changes'].setdefault('new', {})['VpcConfig'] = fixed_VpcConfig
         ret['changes'].setdefault(
             'old', {})['VpcConfig'] = func.get('VpcConfig')
 
@@ -382,7 +385,7 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
         _r = __salt__['boto_lambda.update_function_config'](
             FunctionName=FunctionName, Role=Role, Handler=Handler,
             Description=Description, Timeout=Timeout, MemorySize=MemorySize,
-            VpcConfig=VpcConfig, Environment=Environment, region=region,
+            VpcConfig=fixed_VpcConfig, Environment=Environment, region=region,
             key=key, keyid=keyid, profile=profile, WaitForRole=True,
             RoleRetries=RoleRetries)
         if not _r.get('updated'):

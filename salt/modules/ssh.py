@@ -237,14 +237,10 @@ def _fingerprint(public_key, fingerprint_hash_type=None):
 
     fingerprint_hash_type
         The public key fingerprint hash type that the public key fingerprint
-        was originally hashed with. This defaults to ``md5`` if not specified.
+        was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-
-        .. note::
-
-            The default value of the ``fingerprint_hash_type`` will change to
-            ``sha256`` in Salt Nitrogen.
+        .. versionchanged:: Nitrogen: default changed from ``md5`` to ``sha256``
 
     '''
     if fingerprint_hash_type:
@@ -253,7 +249,7 @@ def _fingerprint(public_key, fingerprint_hash_type=None):
         # Set fingerprint_hash_type to md5 as default
         log.warning('Public Key hashing currently defaults to "md5". This will '
                     'change to "sha256" in the Nitrogen release.')
-        hash_type = 'md5'
+        hash_type = 'sha256'
 
     try:
         hash_func = getattr(hashlib, hash_type)
@@ -302,7 +298,7 @@ def _get_known_hosts_file(config=None, user=None):
     return full
 
 
-def host_keys(keydir=None, private=True):
+def host_keys(keydir=None, private=True, certs=True):
     '''
     Return the minion's host keys
 
@@ -313,6 +309,7 @@ def host_keys(keydir=None, private=True):
         salt '*' ssh.host_keys
         salt '*' ssh.host_keys keydir=/etc/ssh
         salt '*' ssh.host_keys keydir=/etc/ssh private=False
+        salt '*' ssh.host_keys keydir=/etc/ssh certs=False
     '''
     # TODO: support parsing sshd_config for the key directory
     if not keydir:
@@ -322,20 +319,27 @@ def host_keys(keydir=None, private=True):
             # If keydir is None, os.listdir() will blow up
             raise SaltInvocationError('ssh.host_keys: Please specify a keydir')
     keys = {}
+    fnre = re.compile(
+        r'ssh_host_(?P<type>.+)_key(?P<pub>(?P<cert>-cert)?\.pub)?')
     for fn_ in os.listdir(keydir):
-        if fn_.startswith('ssh_host_'):
-            if fn_.endswith('.pub') is False and private is False:
+        m = fnre.match(fn_)
+        if m:
+            if not m.group('pub') and private is False:
                 log.info(
                     'Skipping private key file {0} as private is set to False'
                     .format(fn_)
                 )
                 continue
+            if m.group('cert') and certs is False:
+                log.info(
+                    'Skipping key file {0} as certs is set to False'
+                    .format(fn_)
+                )
+                continue
 
-            top = fn_.split('.')
-            comps = top[0].split('_')
-            kname = comps[2]
-            if len(top) > 1:
-                kname += '.{0}'.format(top[1])
+            kname = m.group('type')
+            if m.group('pub'):
+                kname += m.group('pub')
             try:
                 with salt.utils.fopen(os.path.join(keydir, fn_), 'r') as _fh:
                     # As of RFC 4716 "a key file is a text file, containing a
@@ -829,14 +833,10 @@ def recv_known_host(hostname,
 
     fingerprint_hash_type
         The public key fingerprint hash type that the public key fingerprint
-        was originally hashed with. This defaults to ``md5`` if not specified.
+        was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-
-        .. note::
-
-            The default value of the ``fingerprint_hash_type`` will change to
-            ``sha256`` in Salt Nitrogen.
+        .. versionchanged:: Nitrogen: default changed from ``md5`` to ``sha256``
 
     CLI Example:
 
@@ -1006,14 +1006,10 @@ def set_known_host(user=None,
 
     fingerprint_hash_type
         The public key fingerprint hash type that the public key fingerprint
-        was originally hashed with. This defaults to ``md5`` if not specified.
+        was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-
-        .. note::
-
-            The default value of the ``fingerprint_hash_type`` will change to
-            ``sha256`` in Salt Nitrogen.
+        .. versionchanged:: Nitrogen: default changed from ``md5`` to ``sha256``
 
     CLI Example:
 
@@ -1070,15 +1066,24 @@ def set_known_host(user=None,
             if remote_host['key'] == stored_host['key']:
                 return {'status': 'exists', 'key': stored_host['key']}
 
-    # remove everything we had in the config so far
-    rm_known_host(user, hostname, config=config)
-    # set up new value
-
     full = _get_known_hosts_file(config=config, user=user)
 
     if isinstance(full, dict):
         return full
 
+    # Get information about the known_hosts file before rm_known_host()
+    # because it will create a new file with mode 0600
+    orig_known_hosts_st = None
+    try:
+        orig_known_hosts_st = os.stat(full)
+    except OSError as exc:
+        if exc.args[1] == 'No such file or directory':
+            log.debug('{0} doesnt exist.  Nothing to preserve.'.format(full))
+
+    # remove everything we had in the config so far
+    rm_known_host(user, hostname, config=config)
+
+    # set up new value
     if key:
         remote_host = {'hostname': hostname, 'enc': enc, 'key': key}
 
@@ -1118,9 +1123,16 @@ def set_known_host(user=None,
             "Couldn't append to known hosts file: '{0}'".format(exception)
         )
 
-    if os.geteuid() == 0 and user:
-        os.chown(full, uinfo['uid'], uinfo['gid'])
-    os.chmod(full, 0o644)
+    if os.geteuid() == 0:
+        if user:
+            os.chown(full, uinfo['uid'], uinfo['gid'])
+        elif orig_known_hosts_st:
+            os.chown(full, orig_known_hosts_st.st_uid, orig_known_hosts_st.st_gid)
+
+    if orig_known_hosts_st:
+        os.chmod(full, orig_known_hosts_st.st_mode)
+    else:
+        os.chmod(full, 0o600)
 
     if key and hash_known_hosts:
         cmd_result = __salt__['ssh.hash_known_hosts'](user=user, config=full)
