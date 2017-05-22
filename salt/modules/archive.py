@@ -14,7 +14,6 @@ import shlex
 import stat
 import subprocess
 import tarfile
-import tempfile
 import zipfile
 try:
     from shlex import quote as _quote  # pylint: disable=E0611
