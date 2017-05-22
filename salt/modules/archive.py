@@ -160,7 +160,7 @@ def list_(name,
         try:
             open_kwargs = {'name': cached} \
                 if not isinstance(cached, subprocess.Popen) \
-                else {'fileobj': cached.stdout, 'mode': 'r|*'}
+                else {'fileobj': cached.stdout, 'mode': 'r|'}
             with contextlib.closing(tarfile.open(**open_kwargs)) as tar_archive:
                 for member in tar_archive.getmembers():
                     if member.issym():
