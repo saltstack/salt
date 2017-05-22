@@ -205,6 +205,17 @@ Minion Configuration Additions
   config file, or if ``pillarenv`` is provided on the CLI, it will override
   this option.
 
+salt-api Changes
+================
+
+The ``rest_cherrypy`` netapi module has recieved a few minor improvements:
+
+* A CORS bugfix.
+* A new ``/token`` convenience endpoint to generate Salt eauth tokens.
+* A proof-of-concept JavaScript single-page application intended to demonstrate
+  how to use the Server-Sent Events stream in an application. It is available
+  in a default install by visiting the ``/app`` URL in a browser.
+
 Python API Changes
 ==================
 
