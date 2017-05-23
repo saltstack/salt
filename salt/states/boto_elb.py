@@ -380,7 +380,7 @@ def present(name, listeners, availability_zones=None, subnets=None,
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    if not isinstance(security_groups, (six.string_types, list, None)):
+    if not isinstance(security_groups, (six.string_types, list, type(None))):
         msg = ("The 'security_group' parameter must be either a list or a "
                "comma-separated string.")
         log.error(msg)
@@ -1277,12 +1277,7 @@ def _policy_cname(policy_dict):
     return "{0}-{1}-{2}".format(policy_type, policy_name, policy_hash)
 
 
-def absent(
-        name,
-        region=None,
-        key=None,
-        keyid=None,
-        profile=None):
+def absent(name, region=None, key=None, keyid=None, profile=None):
     '''
     Ensure an ELB does not exist
 
@@ -1295,6 +1290,7 @@ def absent(
     if exists:
         if __opts__['test']:
             ret['comment'] = 'ELB {0} is set to be removed.'.format(name)
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_elb.delete'](name, region, key, keyid,
                                               profile)
