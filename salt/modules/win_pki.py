@@ -272,9 +272,9 @@ def import_cert(name,
         return False
 
     if password:
-        cert_props = get_cert_file(name=cached_source_path, password=password)
+        cert_props = get_cert_file(name=cached_source_path, cert_format=cert_format, password=password)
     else:
-        cert_props = get_cert_file(name=cached_source_path)
+        cert_props = get_cert_file(name=cached_source_path, cert_format=cert_format)
 
     current_certs = get_certs(context=context, store=store)
 
