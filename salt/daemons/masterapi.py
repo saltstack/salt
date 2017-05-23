@@ -534,6 +534,10 @@ class RemoteFuncs(object):
         mopts['state_aggregate'] = self.opts['state_aggregate']
         mopts['jinja_lstrip_blocks'] = self.opts['jinja_lstrip_blocks']
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
+        mopts['jinja_line_comment_prefix'] = self.opts['jinja_comment_prefix']
+        mopts['jinja_line_statement_prefix'] = self.opts['jinja_statement_prefix']
+        mopts['renderer_sls_jinja_line_comment_prefix'] = self.opts['renderer_sls_jinja_line_comment_prefix']
+        mopts['renderer_sls_jinja_line_statement_prefix'] = self.opts['renderer_sls_jinja_line_statement_prefix']
         return mopts
 
     def _ext_nodes(self, load, skip_verify=False):

@@ -1520,6 +1520,78 @@ Jinja environment init variable ``lstrip_blocks``.
 
     jinja_lstrip_blocks: False
 
+.. conf_master:: jinja_comment_prefix
+
+``jinja_line_comment_prefix``
+-----------------------------
+
+.. versionadded:: Oxygen
+
+Default: ``None``
+
+If this is set to ``##`` (suggested default), jinja will parse ``##`` as an in-line
+comment in template and will not render the rest of the line.
+This allows the following syntax to be used, to increase code readability:
+
+.. code-block:: yaml
+
+    ## set xyz with content of myvar if defined
+    ## (this comment will not stay once rendered)
+    # XYZ
+    # (this comment remains in rendered template)
+    {% if myvar is defined %}
+    xyz = {{ myvar  }} ## myvar
+    {% endif %}
+
+.. conf_master:: jinja_statement_prefix
+
+``jinja_line_statement_prefix``
+-------------------------------
+
+.. versionadded:: Oxygen
+
+Default: ``None``
+
+If this is set to ``%`` (suggested default), lines with ``%`` as the first
+non-whitespace character will be interpreted as jinja statements. This allows
+the following syntax to be used, to increase code readability:
+
+.. code-block:: yaml
+
+    % for service in formula_services:
+    enable_service_{{ serivce }}:
+      service.running:
+        name: {{ service }}
+    % endfor
+
+.. conf_master:: renderer_sls_jinja_comment_prefix
+
+``renderer_sls_jinja_line_comment_prefix``
+------------------------------------------
+
+.. versionadded:: Oxygen
+
+Default: ``None``
+
+Does the sames as :conf_master:`jinja_line_comment_prefix` but for SLS files only.
+
+If this is set to ``##`` (suggested default), jinja will parse ``##`` as an in-line
+comment in template and will not render the rest of the line.
+
+.. conf_master:: renderer_sls_jinja_statement_prefix
+
+``renderer_sls_jinja_line_statement_prefix``
+--------------------------------------------
+
+.. versionadded:: Oxygen
+
+Default: ``None``
+
+Does the sames as :conf_master:`jinja_line_statement_prefix` but for SLS files only.
+
+If this is set to ``%`` (suggested default), lines with ``%`` as the first
+non-whitespace character will be interpreted as jinja statements.
+
 .. conf_master:: failhard
 
 ``failhard``

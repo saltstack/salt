@@ -835,6 +835,20 @@ VALID_OPTS = {
     # If this is set to True the first newline after a Jinja block is removed
     'jinja_trim_blocks': bool,
 
+    # If this is set '#' jinja template will parse that line as statement, similary as it would start '{%'
+    'jinja_line_statement_prefix': str,
+
+    # If this is set '##' jinja template will parse that line as comment
+    'jinja_line_comment_prefix':  str,
+
+    # If this is set '#' jinja template will parse that line as statement, similary as it would start {%
+    # This attribute affect's only rendering of SLS files
+    'renderer_sls_jinja_line_statement_prefix': str,
+
+    # If this is set '##' jinja template will parse that line as comment
+    # This attribute affect's only rendering of SLS files
+    'renderer_sls_jinja_line_comment_prefix': str,
+
     # Cache minion ID to file
     'minion_id_caching': bool,
 
@@ -1545,6 +1559,10 @@ DEFAULT_MASTER_OPTS = {
     'syndic_wait': 5,
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
+    'jinja_line_statement_prefix': None,
+    'jinja_line_comment_prefix':  None,
+    'renderer_sls_jinja_line_statement_prefix': None,
+    'renderer_sls_jinja_line_comment_prefix': None,
     'tcp_keepalive': True,
     'tcp_keepalive_idle': 300,
     'tcp_keepalive_cnt': -1,

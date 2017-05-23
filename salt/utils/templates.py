@@ -310,16 +310,28 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         env_args['extensions'].append('jinja2.ext.loopcontrols')
     env_args['extensions'].append(salt.utils.jinja.SerializerExtension)
 
-    # Pass through trim_blocks and lstrip_blocks Jinja parameters
-    # trim_blocks removes newlines around Jinja blocks
-    # lstrip_blocks strips tabs and spaces from the beginning of
-    # line to the start of a block.
-    if opts.get('jinja_trim_blocks', False):
-        log.debug('Jinja2 trim_blocks is enabled')
-        env_args['trim_blocks'] = True
-    if opts.get('jinja_lstrip_blocks', False):
-        log.debug('Jinja2 lstrip_blocks is enabled')
-        env_args['lstrip_blocks'] = True
+    # JINJA OPTS
+    # (generally any jinja template)
+    #
+    # Pass overrides for any jinja defaults, addresses mainly:
+    # - trim_blocks (default False)
+    # - lstrip_blocks (default False)
+    # - line_comment_prefix (default None, expected to be set to ##)
+    # - line_statement_prefix (default None, expected to be set to %)
+    for k, v in six.iteritems(opts):
+        if k.startswith('jinja_'):
+            k = k.replace('jinja_', '', 1)
+            if hasattr(jinja2.defaults, k.upper()):
+                log.debug('Jinja2 environment {0} was set {1}'.format(k, v))
+                env_args[k.lower()] = v
+    # JINJA OPTS FOR SLS ONLY
+    if 'sls' in context and context['sls'] != '':
+        for k, v in six.iteritems(opts):
+            if k.startswith('renderer_sls_jinja_'):
+                k = k.replace('renderer_sls_jinja_', '', 1)
+                if hasattr(jinja2.defaults, k.upper()):
+                    log.debug('Jinja2 environment {0} was set {1}'.format(k, v))
+                    env_args[k.lower()] = v
 
     if opts.get('allow_undefined', False):
         jinja_env = jinja2.Environment(**env_args)

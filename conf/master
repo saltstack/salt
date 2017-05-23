@@ -503,6 +503,20 @@
 # of a line to a block. Defaults to False, corresponds to the Jinja
 # environment init variable "lstrip_blocks".
 #jinja_lstrip_blocks: False
+#
+# If this is set to ## jinja evaluates rest of the line as comment. Default None.
+# Corresponds to the Jinja default environment variable of the same name.
+#jinja_line_comment_prefix: ##
+#
+# Alternatively set only for rendering SLS:
+#renderer_sls_jinja_line_comment_prefix: ##
+
+# If this is set to % jinja evaluates rest of the line as comment. Default None.
+# Corresponds to the Jinja default environment variable of the same name.
+#jinja_line_statement_prefix: %
+#
+# Alternatively set only for rendering SLS:
+#renderer_sls_jinja_line_statement_prefix: %
 
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution, defaults to False

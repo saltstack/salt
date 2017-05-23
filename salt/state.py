@@ -2697,6 +2697,10 @@ class BaseHighState(object):
             opts['state_aggregate'] = mopts.get('state_aggregate', opts.get('state_aggregate', False))
             opts['jinja_lstrip_blocks'] = mopts.get('jinja_lstrip_blocks', False)
             opts['jinja_trim_blocks'] = mopts.get('jinja_trim_blocks', False)
+            opts['jinja_line_comment_prefix'] = mopts.get('jinja_line_comment_prefix', None)
+            opts['jinja_line_statement_prefix'] = mopts.get('jinja_line_statement_prefix', None)
+            opts['renderer_sls_jinja_line_comment_prefix'] = mopts.get('renderer_sls_jinja_line_comment_prefix', None)
+            opts['renderer_sls_jinja_line_statement_prefix'] = mopts.get('renderer_sls_jinja_line_statement_prefix', None)
         return opts
 
     def _get_envs(self):
