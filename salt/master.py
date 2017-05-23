@@ -1157,6 +1157,8 @@ class AESFuncs(object):
         mopts['state_aggregate'] = self.opts['state_aggregate']
         mopts['jinja_lstrip_blocks'] = self.opts['jinja_lstrip_blocks']
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
+        mopts['jinja_line_comment_prefix'] = self.opts['jinja_line_comment_prefix']
+        mopts['jinja_line_statement_prefix'] = self.opts['jinja_line_statement_prefix']
         return mopts
 
     def _mine_get(self, load):
