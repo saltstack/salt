@@ -142,11 +142,11 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         instances = ['instance-id1', 'instance-id2']
 
         ret = {'name': name,
-               'result': None,
+               'result': False,
                'changes': {},
                'comment': ''}
 
-        mock_bool = MagicMock(return_value=None)
+        mock_bool = MagicMock(return_value=False)
         with patch.dict(boto_elb.__salt__, {'boto_elb.exists': mock_bool}):
             comt = ('Could not find lb {0}'.format(name))
             ret.update({'comment': comt})
