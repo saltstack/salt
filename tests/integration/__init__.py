@@ -661,6 +661,7 @@ class TestDaemon(object):
             * syndic
             * syndic_master
             * sub_minion
+            * proxy
         '''
         return RUNTIME_VARS.RUNTIME_CONFIGS[role]
 
@@ -741,6 +742,16 @@ class TestDaemon(object):
         syndic_master_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
         syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
+
+        # This proxy connects to master
+        proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'proxy'))
+        proxy_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        proxy_opts['user'] = running_tests_user
+        proxy_opts['config_dir'] = TMP_CONF_DIR
+        proxy_opts['root_dir'] = os.path.join(TMP, 'rootdir')
+        proxy_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
+        proxy_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
+        proxy_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
 
         if transport == 'raet':
             master_opts['transport'] = 'raet'
@@ -853,7 +864,7 @@ class TestDaemon(object):
                     os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
                 )
 
-        for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
+        for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master', 'proxy'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
             with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry), 'w') as fp_:
                 fp_.write(yaml.dump(computed_config, default_flow_style=False))
@@ -938,6 +949,7 @@ class TestDaemon(object):
 
         cls.master_opts = master_opts
         cls.minion_opts = minion_opts
+        cls.proxy_opts = proxy_opts
         cls.sub_minion_opts = sub_minion_opts
         cls.syndic_opts = syndic_opts
         cls.syndic_master_opts = syndic_master_opts
@@ -949,6 +961,8 @@ class TestDaemon(object):
         '''
         self.sub_minion_process.terminate()
         self.minion_process.terminate()
+        if hasattr(self, 'proxy_process'):
+            self.proxy_process.terminate()
         self.master_process.terminate()
         try:
             self.syndic_process.terminate()
