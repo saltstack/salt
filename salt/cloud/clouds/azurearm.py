@@ -390,7 +390,7 @@ def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
     try:
         provider, driver = __active_provider_name__.split(':')
         active_resource_group = __opts__['providers'][provider][driver]['resource_group']
-    except:
+    except KeyError:
         pass
 
     for node in nodes:
