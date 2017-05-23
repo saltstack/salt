@@ -1618,7 +1618,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'proxy_always_alive': True,
 
     'proxy_keep_alive': True,  # by default will try to keep alive the connection
-    'proxy_keep_alive_interval': 1  # frequency of the proxy keepalive in minutes
+    'proxy_keep_alive_interval': 1,  # frequency of the proxy keepalive in minutes
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'proxy'),
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'proxy'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'proxy'),
