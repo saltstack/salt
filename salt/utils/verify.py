@@ -484,6 +484,9 @@ def valid_id(opts, id_):
     '''
     Returns if the passed id is valid
     '''
+    # Null byte in id is invalid
+    if b'\x00' in id_:
+        return False
     try:
         return bool(clean_path(opts['pki_dir'], id_))
     except (AttributeError, KeyError, TypeError) as e:
