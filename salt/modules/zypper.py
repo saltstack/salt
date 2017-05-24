@@ -21,6 +21,7 @@ import re
 import os
 import time
 import datetime
+from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
@@ -311,6 +312,86 @@ class _Zypper(object):
 
 
 __zypper__ = _Zypper()
+
+
+class Wildcard(object):
+    '''
+    .. versionadded:: Nitrogen
+
+    Converts string wildcard to a zypper query.
+    Example:
+       '1.2.3.4*' is '1.2.3.4.whatever.is.here' and is equal to:
+       '1.2.3.4 >= and < 1.2.3.5'
+
+    :param ptn: Pattern
+    :return: Query range
+    '''
+
+    Z_OP = ['<', '<=', '=', '>=', '>']
+
+    def __init__(self, zypper):
+        '''
+        :type zypper: a reference to an instance of a _Zypper class.
+        '''
+        self.name = None
+        self.version = None
+        self.zypper = zypper
+        self._attr_solvable_version = 'edition'
+        self._op = None
+
+    def __call__(self, pkg_name, pkg_version):
+        '''
+        Convert a string wildcard to a zypper query.
+
+        :param pkg_name:
+        :param pkg_version:
+        :return:
+        '''
+        if pkg_version:
+            self.name = pkg_name
+            self._set_version(pkg_version)  # Dissects possible operator
+            versions = sorted([LooseVersion(vrs)
+                               for vrs in self._get_scope_versions(self._get_available_versions())])
+            return versions and '{0}{1}'.format(self._op or '', versions[-1]) or None
+
+    def _get_available_versions(self):
+        '''
+        Get available versions of the package.
+        :return:
+        '''
+        solvables = self.zypper.nolock.xml.call('se', '-xv', self.name).getElementsByTagName('solvable')
+        if not solvables:
+            raise CommandExecutionError('No packages found matching \'{0}\''.format(self.name))
+
+        return sorted(set([slv.getAttribute(self._attr_solvable_version)
+                           for slv in solvables if slv.getAttribute(self._attr_solvable_version)]))
+
+    def _get_scope_versions(self, pkg_versions):
+        '''
+        Get available difference between next possible matches.
+
+        :return:
+        '''
+        get_in_versions = []
+        for p_version in pkg_versions:
+            if fnmatch.fnmatch(p_version, self.version):
+                get_in_versions.append(p_version)
+        return get_in_versions
+
+    def _set_version(self, version):
+        '''
+        Stash operator from the version, if any.
+
+        :return:
+        '''
+        if not version:
+            return
+
+        exact_version = re.sub(r'[<>=+]*', '', version)
+        self._op = version.replace(exact_version, '') or None
+        if self._op and self._op not in self.Z_OP:
+            raise CommandExecutionError('Zypper do not supports operator "{0}".'.format(self._op))
+        self.version = exact_version
 
 
 def _systemd_scope():
@@ -1003,7 +1084,7 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version_num = version
+    version_num = Wildcard(__zypper__)(name, version)
     if version_num:
         if pkgs is None and sources is None:
             # Allow "version" to work for single package target
