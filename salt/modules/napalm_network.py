@@ -577,7 +577,7 @@ def ipaddrs(**kwargs):  # pylint: disable=unused-argument
     Returns all configured IP addresses on all interfaces as a dictionary of dictionaries.\
     Keys of the main dictionary represent the name of the interface.\
     Values of the main dictionary represent are dictionaries that may consist of two keys\
-    'ipv4' and 'ipv6' (one, both or none) which are themselvs dictionaries witht the IP addresses as keys.\
+    'ipv4' and 'ipv6' (one, both or none) which are themselvs dictionaries with the IP addresses as keys.\
 
     CLI Example:
 
@@ -929,7 +929,7 @@ def load_config(filename=None,
 
     To avoid committing the configuration, set the argument ``test`` to ``True`` and will discard (dry run).
 
-    To keep the chnages but not commit, set ``commit`` to ``False``.
+    To keep the changes but not commit, set ``commit`` to ``False``.
 
     To replace the config, set ``replace`` to ``True``.
 
@@ -947,7 +947,7 @@ def load_config(filename=None,
         Commit? Default: ``True``.
 
     debug: False
-        Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` contaning the raw
+        Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` containing the raw
         configuration loaded on the device.
 
         .. versionadded:: 2016.11.2
@@ -1050,7 +1050,7 @@ def load_template(template_name,
     To avoid committing the configuration, set the argument ``test`` to ``True``
     and will discard (dry run).
 
-    To preserve the chnages, set ``commit`` to ``False``.
+    To preserve the changes, set ``commit`` to ``False``.
     However, this is recommended to be used only in exceptional cases
     when there are applied few consecutive states
     and/or configuration changes.
@@ -1074,7 +1074,7 @@ def load_template(template_name,
 
         Placing the template under ``/etc/salt/states/templates/example.jinja``,
         it can be used as ``salt://templates/example.jinja``.
-        Alternatively, for local files, the user can specify the abolute path.
+        Alternatively, for local files, the user can specify the absolute path.
         If remotely, the source can be retrieved via ``http``, ``https`` or ``ftp``.
 
         Examples:
@@ -1156,7 +1156,7 @@ def load_template(template_name,
 
     debug: False
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw result after the template was rendered.
+        as ``loaded_config`` containing the raw result after the template was rendered.
 
         .. versionadded:: 2016.11.2
 
@@ -1175,7 +1175,7 @@ def load_template(template_name,
 
         .. note::
 
-            Do not explicitely specify this argument.
+            Do not explicitly specify this argument.
             This represents any other variable that will be sent
             to the template rendering system.
             Please see the examples below!
@@ -1314,7 +1314,7 @@ def load_template(template_name,
             if template_path and not file_exists:
                 template_name = __salt__['file.join'](template_path, template_name)
                 if not saltenv:
-                    # no saltenv overriden
+                    # no saltenv overridden
                     # use the custom template path
                     saltenv = template_path if not salt_render else 'base'
             elif salt_render and not saltenv:
@@ -1539,8 +1539,8 @@ def config_control(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
     If differences found, will try to commit.
     In case commit unsuccessful, will try to rollback.
 
-    :return: A tuple with a boolean that specifies if the config was changed/commited/rollbacked on the device.\
-    And a string that provides more details of the reason why the configuration was not commited properly.
+    :return: A tuple with a boolean that specifies if the config was changed/committed/rollbacked on the device.\
+    And a string that provides more details of the reason why the configuration was not committed properly.
 
     CLI Example:
 
