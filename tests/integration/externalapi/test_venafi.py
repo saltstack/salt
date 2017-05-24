@@ -10,6 +10,8 @@ import string
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
+from salt.ext.six.moves import range
+
 
 def _random_name(prefix=''):
     ret = prefix
@@ -27,6 +29,7 @@ def with_random_name(func):
         name = _random_name(prefix='salt_')
         return func(self, _random_name(prefix='salt_test_'), *args, **kwargs)
     return wrapper
+
 
 class VenafiTest(ShellCase):
     '''

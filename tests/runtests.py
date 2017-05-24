@@ -157,6 +157,9 @@ TEST_SUITES = {
     'proxy':
         {'display_name': 'Proxy',
          'path': 'integration/proxy'},
+    'external_api':
+        {'display_name': 'ExternalAPIs',
+         'path': 'integration/externalapi'},
 }
 
 
@@ -408,7 +411,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             help='Run salt-api tests'
         )
-
         self.test_selection_group.add_option(
             '-P',
             '--proxy',
@@ -418,9 +420,18 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             help='Run salt-proxy tests'
         )
+        self.test_selection_group.add_option(
+            '--external',
+            '--external-api',
+            '--external-api-tests',
+            dest='external_api',
+            action='store_true',
+            default=False,
+            help='Run venafi runner tests'
+        )
 
     def validate_options(self):
-        if self.options.cloud_provider:
+        if self.options.cloud_provider or self.options.external_api:
             # Turn on expensive tests execution
             os.environ['EXPENSIVE_TESTS'] = 'True'
 
