@@ -44,7 +44,7 @@ Multiple policy configuration
                 Minimum password age: 1
                 Minimum password length: 14
                 Password must meet complexity requirements: Enabled
-                Store passwords using reversible encrytion: Disabled
+                Store passwords using reversible encryption: Disabled
                 Configure Automatic Updates:
                     Configure automatic updating: 4 - Auto download and schedule the intsall
                     Scheduled install day: 7 - Every Saturday

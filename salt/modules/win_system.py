@@ -168,7 +168,7 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disabl
     :param bool only_on_pending_reboot:
 
         If this is set to True, then then the reboot will only proceed
-        if the system reports a pending reboot. Setting this paramater to
+        if the system reports a pending reboot. Setting this parameter to
         True could be useful when calling this function from a final housekeeping
         state intended to be executed
         at the end of a state run (using *order: last*).
