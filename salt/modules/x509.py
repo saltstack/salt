@@ -1585,7 +1585,7 @@ def create_csr(path=None, text=False, **kwargs):
         log.warning(
             "OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key")
 
-    if 'private_key' not in kwargs not in kwargs:
+    if 'private_key' not in kwargs:
         raise salt.exceptions.SaltInvocationError('private_key is required')
 
     if 'public_key' not in kwargs:

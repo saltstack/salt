@@ -490,7 +490,7 @@ def save_reg(data):
     reg_dir = _reg_dir()
     regfile = os.path.join(reg_dir, 'register')
     try:
-        if not os.path.exists():
+        if not os.path.exists(reg_dir):
             os.makedirs(reg_dir)
     except OSError as exc:
         if exc.errno == errno.EEXIST:
