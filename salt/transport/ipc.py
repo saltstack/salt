@@ -175,13 +175,25 @@ class IPCServer(object):
                     body = framed_msg['body']
                     self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
             except tornado.iostream.StreamClosedError:
-                log.trace('Client disconnected from IPC {0}'.format(self.socket_path))
+                log.trace('Client disconnected ',
+                          'from IPC {0}'.format(self.socket_path))
                 break
             except Exception as exc:
-                log.error('Exception occurred while handling stream: {0}'.format(exc))
+                # On occasion an exception will occur which results in the
+                # event not returning properly, even though the wire_bytes
+                # is correctly populated.  In this situation, we log to trace
+                # and continue.
+                if wire_bytes:
+                    log.trace('Exception occured but wire_bytes data exists, '
+                              'spurious exception: {}'.format(exc))
+                    pass
+                else:
+                    log.error('Exception occurred while ',
+                              'handling stream: {0}'.format(exc))
 
     def handle_connection(self, connection, address):
-        log.trace('IPCServer: Handling connection to address: {0}'.format(address))
+        log.trace('IPCServer: Handling connection ',
+                  'to address: {0}'.format(address))
         try:
             stream = IOStream(
                 connection,
