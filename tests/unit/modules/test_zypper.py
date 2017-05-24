@@ -909,3 +909,21 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         assert zypper.Wildcard(_zpr)('libzypp', '16.2*') == '16.2.5-25.1'
         assert zypper.Wildcard(_zpr)('libzypp', '*6-*') == '17.2.6-27.9.1'
         assert zypper.Wildcard(_zpr)('libzypp', '*.1') == '17.2.6-27.9.1'
+
+    def test_wildcard_to_query_noversion(self):
+        '''
+        Test wildcard to query when no version has been passed on.
+
+        :return:
+        '''
+        xmldoc = """<?xml version='1.0'?><stream>
+        <search-result version="0.0"><solvable-list>
+        <solvable status="installed" name="libzypp" kind="package" edition="16.2.4-19.5" arch="x86_64" repository="foo"/>
+        <solvable status="other-version" name="libzypp" kind="package" edition="16.2.5-25.1" arch="x86_64" repository="foo"/>
+        <solvable status="other-version" name="libzypp" kind="package" edition="17.2.6-27.9.1" arch="x86_64" repository="foo"/>
+        </solvable-list></search-result></stream>
+        """
+        _zpr = MagicMock()
+        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        assert zypper.Wildcard(_zpr)('libzypp', None) is None
+
