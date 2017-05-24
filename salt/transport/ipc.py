@@ -178,15 +178,15 @@ class IPCServer(object):
                 log.trace('Client disconnected '
                           'from IPC {0}'.format(self.socket_path))
                 break
-            except socket.error as e:
+            except socket.error as exc:
                 # On occasion an exception will occur with
                 # an error code of 0, it's a spurious exception.
-                if e.errno == 0:
+                if exc.errno == 0:
                     log.trace('Exception occured with error number 0, '
-                              'spurious exception: {0}'.format(e))
+                              'spurious exception: {0}'.format(exc))
                 else:
                     log.error('Exception occurred while '
-                              'handling stream: {0}'.format(e))
+                              'handling stream: {0}'.format(exc))
             except Exception as exc:
                 log.error('Exception occurred while '
                           'handling stream: {0}'.format(exc))
