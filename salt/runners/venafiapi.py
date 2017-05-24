@@ -297,6 +297,7 @@ def request(
         loc=loc,
         org=org,
         org_unit=org_unit,
+        password=password,
     )
 
     pdata = json.dumps({
