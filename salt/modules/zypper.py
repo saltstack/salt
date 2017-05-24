@@ -347,11 +347,12 @@ class Wildcard(object):
         :param pkg_version: 
         :return: 
         '''
-        self.name = pkg_name
-        self.version = pkg_version
-        versions = sorted([LooseVersion and LooseVersion(vrs) or vrs
-                           for vrs in self._get_scope_versions(self._get_available_versions())])
-        return versions and versions[-1] or None
+        if pkg_version:
+            self.name = pkg_name
+            self.version = pkg_version
+            versions = sorted([LooseVersion and LooseVersion(vrs) or vrs
+                               for vrs in self._get_scope_versions(self._get_available_versions())])
+            return versions and '{0}'.format(versions[-1]) or None
 
     def _get_available_versions(self):
         '''
