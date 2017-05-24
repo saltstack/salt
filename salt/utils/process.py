@@ -278,7 +278,7 @@ class ProcessManager(object):
             kwargs = {}
 
         if salt.utils.is_windows():
-            # Need to ensure that 'log_queue' is correctly transfered to
+            # Need to ensure that 'log_queue' is correctly transferred to
             # processes that inherit from 'MultiprocessingProcess'.
             if type(MultiprocessingProcess) is type(tgt) and (
                     issubclass(tgt, MultiprocessingProcess)):

@@ -361,7 +361,7 @@ class DockerngTestCase(TestCase):
                 - force: true
 
         if ``image:latest`` is not downloaded and force is true
-        should pull a new image successfuly.
+        should pull a new image successfully.
         '''
         dockerng_inspect_image = Mock(
             side_effect=CommandExecutionError(

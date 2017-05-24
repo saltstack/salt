@@ -436,7 +436,7 @@ def user_getmedia(userids=None, **connection_args):
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    :return: List of retreived media, False on failure.
+    :return: List of retrieved media, False on failure.
 
     CLI Example:
     .. code-block:: bash

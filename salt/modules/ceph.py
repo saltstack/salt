@@ -143,7 +143,7 @@ def osd_prepare(**kwargs):
     Notes:
 
     cluster_uuid
-        Set the deivce to store the osd data on.
+        Set the device to store the osd data on.
 
     journal_dev
         Set the journal device. defaults to osd_dev.
@@ -194,7 +194,7 @@ def keyring_create(**kwargs):
     Notes:
 
     keyring_type
-        Required paramter
+        Required parameter
         Can be set to:
             admin, mon, osd, rgw, mds
 
@@ -223,7 +223,7 @@ def keyring_save(**kwargs):
     Notes:
 
     keyring_type
-        Required paramter
+        Required parameter
         Can be set to:
             admin, mon, osd, rgw, mds
 
@@ -251,7 +251,7 @@ def keyring_purge(**kwargs):
     Notes:
 
     keyring_type
-        Required paramter
+        Required parameter
         Can be set to:
             admin, mon, osd, rgw, mds
 
@@ -281,7 +281,7 @@ def keyring_present(**kwargs):
     Notes:
 
     keyring_type
-        Required paramter
+        Required parameter
         Can be set to:
             admin, mon, osd, rgw, mds
 
@@ -309,7 +309,7 @@ def keyring_auth_add(**kwargs):
     Notes:
 
     keyring_type
-        Required paramter
+        Required parameter
         Can be set to:
             admin, mon, osd, rgw, mds
 
@@ -337,7 +337,7 @@ def keyring_auth_del(**kwargs):
     Notes:
 
     keyring_type
-        Required paramter
+        Required parameter
         Can be set to:
             admin, mon, osd, rgw, mds
 
@@ -374,7 +374,7 @@ def mon_is(**kwargs):
 
 def mon_status(**kwargs):
     '''
-    Get status from mon deamon
+    Get status from mon daemon
 
     CLI Example:
 
@@ -396,7 +396,7 @@ def mon_status(**kwargs):
 
 def mon_quorum(**kwargs):
     '''
-    Is mon deamon in quorum
+    Is mon daemon in quorum
 
     CLI Example:
 
@@ -418,7 +418,7 @@ def mon_quorum(**kwargs):
 
 def mon_active(**kwargs):
     '''
-    Is mon deamon running
+    Is mon daemon running
 
     CLI Example:
 
@@ -518,7 +518,7 @@ def rgw_create(**kwargs):
     Notes:
 
     name:
-        Required paramter
+        Required parameter
         Set the rgw client name. Must start with 'rgw.'
 
     cluster_uuid
@@ -546,7 +546,7 @@ def rgw_destroy(**kwargs):
     Notes:
 
     name:
-        Required paramter
+        Required parameter
         Set the rgw client name. Must start with 'rgw.'
 
     cluster_uuid
@@ -576,15 +576,15 @@ def mds_create(**kwargs):
     Notes:
 
     name:
-        Required paramter
+        Required parameter
         Set the rgw client name. Must start with 'mds.'
 
     port:
-        Required paramter
+        Required parameter
         Port for the mds to listen to.
 
     addr:
-        Required paramter
+        Required parameter
         Address or IP address for the mds to listen to.
 
     cluster_uuid
@@ -612,7 +612,7 @@ def mds_destroy(**kwargs):
     Notes:
 
     name:
-        Required paramter
+        Required parameter
         Set the rgw client name. Must start with 'mds.'
 
     cluster_uuid

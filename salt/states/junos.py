@@ -162,7 +162,7 @@ def install_config(name, **kwargs):
 
     name: path to the configuration file.
 
-    keyworded arguments taken by load fucntion of PyEZ
+    keyworded arguments taken by load function of PyEZ
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     ret['changes'] = __salt__['junos.install_config'](name, **kwargs)

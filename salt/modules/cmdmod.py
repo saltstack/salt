@@ -2667,7 +2667,7 @@ def shell_info(shell, list_modules=False):
     .. versionadded:: 2016.11.0
 
     Provides information about a shell or script languages which often use
-    ``#!``. The values returned are dependant on the shell or scripting
+    ``#!``. The values returned are dependent on the shell or scripting
     languages all return the ``installed``, ``path``, ``version``,
     ``version_raw``
 

@@ -521,7 +521,7 @@ class LocalRepoGitTest(integration.ModuleCase, integration.SaltReturnAssertsMixI
             os.path.join(repo, 'refs', 'heads', 'develop')
         )
 
-        # Run git.latest state. This should successfuly clone and fail with a
+        # Run git.latest state. This should successfully clone and fail with a
         # specific error in the comment field.
         ret = self.run_state(
             'git.latest',

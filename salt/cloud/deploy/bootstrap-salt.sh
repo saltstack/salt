@@ -95,7 +95,7 @@ echoinfo() {
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  echowarn
-#   DESCRIPTION:  Echo warning informations to stdout.
+#   DESCRIPTION:  Echo warning information to stdout.
 #----------------------------------------------------------------------------------------------------------------------
 echowarn() {
     printf "${YC} *  WARN${EC}: %s\n" "$@";
@@ -304,7 +304,7 @@ __usage() {
     -U  If set, fully upgrade the system prior to bootstrapping Salt
     -I  If set, allow insecure connections while downloading any files. For
         example, pass '--no-check-certificate' to 'wget' or '--insecure' to
-        'curl'. On Debian and Ubuntu, using this option with -U allows to obtain
+        'curl'. On Debian and Ubuntu, using this option with -U allows obtaining
         GnuPG archive keys insecurely if distro has changed release signatures.
     -F  Allow copied files to overwrite existing (config, init.d, etc)
     -K  If set, keep the temporary files in the temporary directories specified
@@ -1685,7 +1685,7 @@ __git_clone_and_checkout() {
 __check_end_of_life_versions() {
     case "${DISTRO_NAME_L}" in
         debian)
-            # Debian versions bellow 6 are not supported
+            # Debian versions below 6 are not supported
             if [ "$DISTRO_MAJOR_VERSION" -lt 7 ]; then
                 echoerror "End of life distributions are not supported."
                 echoerror "Please consider upgrading to the next stable. See:"
