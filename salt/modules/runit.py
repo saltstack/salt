@@ -647,7 +647,7 @@ def enable(name, start=False, **kwargs):
 def disable(name, stop=False, **kwargs):
     '''
     Don't start service ``name`` at boot
-    Returns ``True`` if operation is successfull
+    Returns ``True`` if operation is successful
 
     name
         the service's name
@@ -686,7 +686,7 @@ def disable(name, stop=False, **kwargs):
 def remove(name):
     '''
     Remove the service <name> from system.
-    Returns ``True`` if operation is successfull.
+    Returns ``True`` if operation is successful.
     The service will be also stopped.
 
     name
