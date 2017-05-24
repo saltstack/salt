@@ -192,7 +192,7 @@ class IPCServer(object):
                           'handling stream: {0}'.format(exc))
 
     def handle_connection(self, connection, address):
-        log.trace('IPCServer: Handling connection ',
+        log.trace('IPCServer: Handling connection '
                   'to address: {0}'.format(address))
         try:
             stream = IOStream(
