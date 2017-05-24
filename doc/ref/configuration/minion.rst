@@ -451,7 +451,7 @@ FQDN (for instance, Solaris).
 .. conf_minion:: minion_id_lowercase
 
 ``minion_id_lowercase``
------------------
+-----------------------
 
 Default: ``False``
 
