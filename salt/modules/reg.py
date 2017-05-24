@@ -476,9 +476,9 @@ def set_value(hive,
         under the key. If not passed, the key (Default) value will be set.
 
     :param object vdata: The value data to be set.
-        What the type of this paramater
+        What the type of this parameter
         should be is determined by the value of the vtype
-        paramater. The correspondence
+        parameter. The correspondence
         is as follows:
 
         .. glossary::
@@ -495,15 +495,15 @@ def set_value(hive,
                str
 
     :param str vtype: The value type.
-        The possible values of the vtype paramater are indicated
-        above in the description of the vdata paramater.
+        The possible values of the vtype parameter are indicated
+        above in the description of the vdata parameter.
 
     :param bool use_32bit_registry: Sets the 32bit portion of the registry on
        64bit installations. On 32bit machines this is ignored.
 
-    :param bool volatile: When this paramater has a value of True, the registry key will be
+    :param bool volatile: When this parameter has a value of True, the registry key will be
        made volatile (i.e. it will not persist beyond a system reset or shutdown).
-       This paramater only has an effect when a key is being created and at no
+       This parameter only has an effect when a key is being created and at no
        other time.
 
     :return: Returns True if successful, False if not
