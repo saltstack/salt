@@ -215,7 +215,9 @@ class SyncClientMixin(object):
             raise salt.exceptions.SaltInvocationError(
                 'kwarg must be formatted as a dictionary'
             )
-        arglist = salt.utils.args.parse_input(arg)
+        arglist = salt.utils.args.parse_input(
+            arg,
+            no_parse=self.opts.get('no_parse', []))
 
         # if you were passed kwarg, add it to arglist
         if kwarg:
