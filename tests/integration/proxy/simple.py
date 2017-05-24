@@ -7,15 +7,10 @@ Simple Smoke Tests for Connected Proxy Minion
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../')
-
-# Import Salt libs
-import integration
+from tests.support.case import ModuleCase
 
 
-class ProxyMinionSimpleTestCase(integration.ModuleCase):
+class ProxyMinionSimpleTestCase(ModuleCase):
     '''
     Test minion blackout functionality
     '''
@@ -72,7 +67,3 @@ class ProxyMinionSimpleTestCase(integration.ModuleCase):
         ret = self.run_function('service.start', ['samba'], minion_tgt='proxytest')
         ret = self.run_function('service.status', ['samba'], minion_tgt='proxytest')
         self.assertTrue(ret)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ProxyMinionSimpleTestCase, needs_daemon=True)

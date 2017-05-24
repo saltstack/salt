@@ -5,15 +5,12 @@ from __future__ import absolute_import
 import sys
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ModuleCase
+from tests.support.helpers import destructiveTest
+from tests.support.unit import skipIf
 
 
-class SysrcModuleTest(integration.ModuleCase):
+class SysrcModuleTest(ModuleCase):
     def setUp(self):
         super(SysrcModuleTest, self).setUp()
         ret = self.run_function('cmd.has_exec', ['sysrc'])
@@ -45,8 +42,3 @@ class SysrcModuleTest(integration.ModuleCase):
         self.assertIn('YES', ret['/etc/rc.conf']['test_var'], 'sysrc.set should return the value it set.')
         ret = self.run_function('sysrc.remove', ['test_var'])
         self.assertEqual('test_var removed', ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SysrcModuleTest)
