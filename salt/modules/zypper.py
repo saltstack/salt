@@ -389,6 +389,8 @@ class Wildcard(object):
 
         exact_version = re.sub(r'[<>=]*', '', version)
         self._op = version.replace(exact_version, '') or None
+        if self._op and self._op not in self.Z_OP:
+            raise CommandExecutionError('Zypper do not supports operator "{0}".'.format(self._op))
         self.version = exact_version
 
 
