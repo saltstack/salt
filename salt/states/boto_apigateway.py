@@ -117,7 +117,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
         The canconicalization of these input parameters is done in the following order:
             1) lambda_funcname_format is formatted with the input parameters as passed,
             2) resulting string is stripped for leading/trailing spaces,
-            3) path paramter's curly braces are removed from the resource path,
+            3) path parameter's curly braces are removed from the resource path,
             4) consecutive spaces and forward slashes in the paths are replaced with '_'
             5) consecutive '_' are replaced with '_'
 

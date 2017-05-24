@@ -431,7 +431,7 @@ def remove(name=None, pkgs=None, recursive=True, **kwargs):
         The name of the package to be deleted.
 
     recursive
-        Also remove dependant packages (not required elsewhere).
+        Also remove dependent packages (not required elsewhere).
         Default mode: enabled.
 
     Multiple Package Options:
