@@ -401,7 +401,14 @@ def check_path_traversal(path, user='root', skip_perm_errors=False):
 
 def check_max_open_files(opts):
     '''
-    Check the number of max allowed open files and adjust if needed
+    Check the number of open files of the salt-master and warn if needed
+    Background:
+    The number of accecpted minions is dynamic, consumes file descriptors and can become critical.
+    The maximum number of open files (of the salt-master process) is configurable.
+    Two configuration parameters are of interest here:
+      max_open_files: 100000   in file    salt/conf/master
+      LimitNOFILE=16384        in file    salt-master.service
+    The operating system imposes max_open_files <= LimitNOFILE.
     '''
     mof_c = opts.get('max_open_files', 100000)
     if sys.platform.startswith('win'):
@@ -411,6 +418,11 @@ def check_max_open_files(opts):
         mof_s = mof_h = win32file._getmaxstdio()
     else:
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+        # RLIMIT_NOFILE description https://docs.python.org/2/library/resource.html
+        #      "The maximum number of open file descriptors for the current process."
+        # File salt-master.service contains LimitNOFILE=16384 by default
+        # systemd uses LimitNOFILE for soft and hard limit.
+        # You can verify with `cat /proc/$(cat /run/salt-master.pid)/limits`
 
     accepted_keys_dir = os.path.join(opts.get('pki_dir'), 'minions')
     accepted_count = len(os.listdir(accepted_keys_dir))
@@ -432,8 +444,8 @@ def check_max_open_files(opts):
         return
 
     msg = (
-        'The number of accepted minion keys({0}) should be lower than 1/4 '
-        'of the max open files soft setting({1}). '.format(
+        'In file salt-master.service: LimitNOFILE={1} should be 4 times '
+        'the number of accepted minion({0}). '.format(
             accepted_count, mof_s
         )
     )
@@ -456,7 +468,6 @@ def check_max_open_files(opts):
                 'margin of {0} to raise the salt\'s max_open_files '
                 'setting. ').format(mof_h - mof_c)
 
-    msg += 'Please consider raising this value.'
     log.log(level=level, msg=msg)
 
 
