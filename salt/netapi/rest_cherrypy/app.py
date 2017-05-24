@@ -117,9 +117,25 @@ A REST API for Salt
     static_path : ``/static``
         The URL prefix to use when serving static assets out of the directory
         specified in the ``static`` setting.
+    enable_sessions : ``True``
+        Enable or disable all endpoints that rely on session cookies. This can
+        be useful to enforce only header-based authentication.
+
+        .. versionadded:: Nitrogen
+
     app : ``index.html``
         A filesystem path to an HTML file that will be served as a static file.
         This is useful for bootstrapping a single-page JavaScript app.
+
+        Warning! If you set this option to a custom web application, anything
+        that uses cookie-based authentcation is vulnerable to XSRF attacks.
+        Send the custom ``X-Auth-Token`` header instead and consider disabling
+        the ``enable_sessions`` setting.
+
+        .. versionchanged:: Nitrogen
+
+            Add a proof-of-concept JavaScript single-page app.
+
     app_path : ``/app``
         The URL prefix to use for serving the HTML file specified in the ``app``
         setting. This should be a simple name containing no slashes.
@@ -750,28 +766,6 @@ def salt_auth_tool():
     cherrypy.response.headers['Cache-Control'] = 'private'
 
 
-def cors_handler(*args, **kwargs):
-    '''
-    Check a CORS preflight request and return a valid response
-    '''
-    req_head = cherrypy.request.headers
-    resp_head = cherrypy.response.headers
-
-    ac_method = req_head.get('Access-Control-Request-Method', None)
-
-    allowed_methods = ['GET', 'POST']
-    allowed_headers = ['X-Auth-Token', 'Content-Type']
-
-    if ac_method and ac_method in allowed_methods:
-        resp_head['Access-Control-Allow-Methods'] = ', '.join(allowed_methods)
-        resp_head['Access-Control-Allow-Headers'] = ', '.join(allowed_headers)
-
-        resp_head['Connection'] = 'keep-alive'
-        resp_head['Access-Control-Max-Age'] = '1400'
-
-    return {}
-
-
 def cors_tool():
     '''
     Handle both simple and complex CORS requests
@@ -788,9 +782,33 @@ def cors_tool():
     resp_head['Access-Control-Expose-Headers'] = 'GET, POST'
     resp_head['Access-Control-Allow-Credentials'] = 'true'
 
-    # If this is a non-simple CORS preflight request swap out the handler.
+    # Non-simple CORS preflight request; short-circuit the normal handler.
     if cherrypy.request.method == 'OPTIONS':
-        cherrypy.serving.request.handler = cors_handler
+        ac_method = req_head.get('Access-Control-Request-Method', None)
+
+        allowed_methods = ['GET', 'POST']
+        allowed_headers = [
+            'Content-Type',
+            'X-Auth-Token',
+            'X-Requested-With',
+        ]
+
+        if ac_method and ac_method in allowed_methods:
+            resp_head['Access-Control-Allow-Methods'] = ', '.join(allowed_methods)
+            resp_head['Access-Control-Allow-Headers'] = ', '.join(allowed_headers)
+
+            resp_head['Connection'] = 'keep-alive'
+            resp_head['Access-Control-Max-Age'] = '1400'
+
+        # CORS requests should short-circuit the other tools.
+        cherrypy.response.body = ''
+        cherrypy.response.status = 200
+        cherrypy.serving.request.handler = None
+
+        # Needed to avoid the auth_tool check.
+        if cherrypy.request.config.get('tools.sessions.on', False):
+            cherrypy.session['token'] = True
+        return True
 
 
 # Be conservative in what you send
@@ -871,7 +889,10 @@ def hypermedia_out():
     '''
     request = cherrypy.serving.request
     request._hypermedia_inner_handler = request.handler
-    request.handler = hypermedia_handler
+
+    # If handler has been explicitly set to None, don't override.
+    if request.handler is not None:
+        request.handler = hypermedia_handler
 
 
 def process_request_body(fn):
@@ -1053,22 +1074,28 @@ def lowdata_fmt():
         cherrypy.serving.request.lowstate = data
 
 
-cherrypy.tools.html_override = cherrypy.Tool('on_start_resource',
-        html_override_tool, priority=53)
-cherrypy.tools.salt_token = cherrypy.Tool('on_start_resource',
-        salt_token_tool, priority=55)
-cherrypy.tools.cors_tool = cherrypy.Tool('before_request_body',
-        cors_tool, priority=50)
-cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
-        salt_auth_tool, priority=60)
-cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
-        hypermedia_in)
-cherrypy.tools.lowdata_fmt = cherrypy.Tool('before_handler',
-        lowdata_fmt, priority=40)
-cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler',
-        hypermedia_out)
-cherrypy.tools.salt_ip_verify = cherrypy.Tool('before_handler',
-        salt_ip_verify_tool)
+tools_config = {
+    'on_start_resource': [
+        ('html_override', html_override_tool),
+        ('salt_token', salt_token_tool),
+    ],
+    'before_request_body': [
+        ('cors_tool', cors_tool),
+        ('salt_auth', salt_auth_tool),
+        ('hypermedia_in', hypermedia_in),
+    ],
+    'before_handler': [
+        ('lowdata_fmt', lowdata_fmt),
+        ('hypermedia_out', hypermedia_out),
+        ('salt_ip_verify', salt_ip_verify_tool),
+    ],
+}
+
+for hook, tool_list in tools_config.items():
+    for idx, tool_config in enumerate(tool_list):
+        tool_name, tool_fn = tool_config
+        setattr(cherrypy.tools, tool_name, cherrypy.Tool(
+            hook, tool_fn, priority=(50 + idx)))
 
 
 ###############################################################################
@@ -1082,6 +1109,7 @@ class LowDataAdapter(object):
     exposed = True
 
     _cp_config = {
+        'tools.salt_token.on': True,
         'tools.sessions.on': True,
         'tools.sessions.timeout': 60 * 10,  # 10 hours
 
@@ -1095,6 +1123,7 @@ class LowDataAdapter(object):
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
+        self.apiopts = cherrypy.config['apiopts']
         self.api = salt.netapi.NetapiClient(self.opts)
 
     def exec_lowstate(self, client=None, token=None):
@@ -1142,6 +1171,7 @@ class LowDataAdapter(object):
             else:
                 yield ret
 
+    @cherrypy.config(**{'tools.sessions.on': False})
     def GET(self):
         '''
         An explanation of the API with links of where to go next
@@ -1249,7 +1279,6 @@ class Minions(LowDataAdapter):
     Convenience URLs for working with minions
     '''
     _cp_config = dict(LowDataAdapter._cp_config, **{
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
     })
 
@@ -1369,7 +1398,6 @@ class Minions(LowDataAdapter):
 
 class Jobs(LowDataAdapter):
     _cp_config = dict(LowDataAdapter._cp_config, **{
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
     })
 
@@ -1494,7 +1522,6 @@ class Keys(LowDataAdapter):
     module <salt.wheel.key>` functions.
     '''
 
-    @cherrypy.config(**{'tools.salt_token.on': True})
     def GET(self, mid=None):
         '''
         Show the list of minion keys or detail on a specific key
@@ -1866,7 +1893,6 @@ class Logout(LowDataAdapter):
     Class to remove or invalidate sessions
     '''
     _cp_config = dict(LowDataAdapter._cp_config, **{
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
 
         'tools.lowdata_fmt.on': False,
@@ -1880,6 +1906,70 @@ class Logout(LowDataAdapter):
         cherrypy.session.regenerate()  # replace server-side with new
 
         return {'return': "Your token has been cleared"}
+
+
+class Token(LowDataAdapter):
+    '''
+    Generate a Salt token from eauth credentials
+
+    Wraps functionality in the :py:mod:`auth Runner <salt.runners.auth>`.
+
+    .. versionadded:: Nitrogen
+    '''
+    @cherrypy.config(**{'tools.sessions.on': False})
+    def POST(self, **kwargs):
+        r'''
+        .. http:post:: /token
+
+            Generate a Salt eauth token
+
+            :status 200: |200|
+            :status 400: |400|
+            :status 401: |401|
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -sSk https://localhost:8000/token \
+                -H 'Content-type: application/json' \
+                -d '{
+                    "username": "saltdev",
+                    "password": "saltdev",
+                    "eauth": "auto"
+                }'
+
+        **Example response:**
+
+        .. code-block:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            [{
+                "start": 1494987445.528182,
+                "token": "e72ca1655d05...",
+                "expire": 1495030645.528183,
+                "name": "saltdev",
+                "eauth": "auto"
+            }]
+        '''
+        for creds in cherrypy.request.lowstate:
+            try:
+                creds.update({
+                    'client': 'runner',
+                    'fun': 'auth.mk_token',
+                    'kwarg': {
+                        'username': creds['username'],
+                        'password': creds['password'],
+                        'eauth': creds['eauth'],
+                    },
+                })
+            except KeyError:
+                raise cherrypy.HTTPError(400,
+                    'Require "username", "password", and "eauth" params')
+
+        return list(self.exec_lowstate())
 
 
 class Run(LowDataAdapter):
@@ -2044,7 +2134,6 @@ class Events(object):
         'tools.encode.encoding': 'utf-8',
 
         # Auth handled manually below
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': False,
 
         'tools.hypermedia_in.on': False,
@@ -2261,7 +2350,6 @@ class WebsocketEndpoint(object):
         'tools.encode.encoding': 'utf-8',
 
         # Auth handled manually below
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': False,
 
         'tools.hypermedia_in.on': False,
@@ -2488,7 +2576,6 @@ class Webhook(object):
         'tools.lowdata_fmt.on': True,
 
         # Auth can be overridden in __init__().
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
     })
 
@@ -2502,7 +2589,6 @@ class Webhook(object):
                 listen=False)
 
         if cherrypy.config['apiopts'].get('webhook_disable_auth'):
-            self._cp_config['tools.salt_token.on'] = False
             self._cp_config['tools.salt_auth.on'] = False
 
     def POST(self, *args, **kwargs):
@@ -2611,7 +2697,6 @@ class Stats(object):
     exposed = True
 
     _cp_config = dict(LowDataAdapter._cp_config, **{
-        'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
     })
 
@@ -2680,6 +2765,7 @@ class API(object):
         'index': LowDataAdapter,
         'login': Login,
         'logout': Logout,
+        'token': Token,
         'minions': Minions,
         'run': Run,
         'jobs': Jobs,
@@ -2694,7 +2780,15 @@ class API(object):
 
         CherryPy uses class attributes to resolve URLs.
         '''
-        for url, cls in six.iteritems(self.url_map):
+        if self.apiopts.get('enable_sessions', True) is False:
+            url_blacklist = ['login', 'logout', 'minions', 'jobs']
+        else:
+            url_blacklist = []
+
+        urls = ((url, cls) for url, cls in six.iteritems(self.url_map)
+                if url not in url_blacklist)
+
+        for url, cls in urls:
             setattr(self, url, cls())
 
     def _update_url_map(self):
