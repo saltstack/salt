@@ -1157,10 +1157,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # The files are added in order of priority, so order *must* be retained.
         self.file_mapping = salt.utils.odict.OrderedDict()
 
-        for mod_dir in sorted(self.module_dirs):
+        for mod_dir in self.module_dirs:
             files = []
             try:
-                files = sorted(os.listdir(mod_dir))
+                files = os.listdir(mod_dir)
             except OSError:
                 continue  # Next mod_dir
             for filename in files:
