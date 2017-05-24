@@ -72,6 +72,7 @@ class SaltNeutron(NeutronShell):
         auth_url,
         password=None,
         region_name=None,
+        service_type='network',
         os_auth_plugin=None,
         use_keystoneauth=False,
         **kwargs
@@ -88,6 +89,7 @@ class SaltNeutron(NeutronShell):
                            project_name=tenant_name,
                            auth_url=auth_url,
                            region_name=region_name,
+                           service_type=service_type,
                            os_auth_plugin=os_auth_plugin,
                            password=password,
                            **kwargs)
@@ -96,11 +98,12 @@ class SaltNeutron(NeutronShell):
                            tenant_name=tenant_name,
                            auth_url=auth_url,
                            region_name=region_name,
+                           service_type=service_type,
                            os_auth_plugin=os_auth_plugin,
                            password=password,
                            **kwargs)
 
-    def _new_init(self, username, project_name, auth_url, region_name, password, os_auth_plugin, auth=None, verify=True, **kwargs):
+    def _new_init(self, username, project_name, auth_url, region_name, service_type, password, os_auth_plugin, auth=None, verify=True, **kwargs):
         if auth is None:
             auth = {}
 
@@ -118,20 +121,20 @@ class SaltNeutron(NeutronShell):
             self.kwargs['project_domain_name'] = kwargs.get('project_domain_name', 'default')
 
         self.client_kwargs['region_name'] = region_name
-        self.client_kwargs['service_type'] = 'network'
+        self.client_kwargs['service_type'] = service_type
 
         self.client_kwargs = sanitize_neutronclient(self.client_kwargs)
         options = loader.load_from_options(**self.kwargs)
         self.session = keystoneauth1.session.Session(auth=options, verify=verify)
         self.network_conn = client.Client(session=self.session, **self.client_kwargs)
 
-    def _old_init(self, username, tenant_name, auth_url, region_name, password, os_auth_plugin, auth=None, verify=True, **kwargs):
+    def _old_init(self, username, tenant_name, auth_url, region_name, service_type, password, os_auth_plugin, auth=None, verify=True, **kwargs):
         self.kwargs = kwargs.copy()
 
         self.kwargs['username'] = username
         self.kwargs['tenant_name'] = tenant_name
         self.kwargs['auth_url'] = auth_url
-        self.kwargs['service_type'] = 'network'
+        self.kwargs['service_type'] = service_type
         self.kwargs['password'] = password
         self.kwargs['region_name'] = region_name
         self.kwargs['verify'] = verify

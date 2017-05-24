@@ -83,14 +83,16 @@ def _auth(profile=None):
         tenant = credentials['keystone.tenant']
         auth_url = credentials['keystone.auth_url']
         region_name = credentials.get('keystone.region_name', None)
+        service_type = credentials.get('keystone.service_type', 'network')
         use_keystoneauth = credentials.get('keystone.use_keystoneauth', False)
-        verify = credentials.get('keystone.verify', None)
+        verify = credentials.get('keystone.verify', True)
     else:
         user = __salt__['config.option']('keystone.user')
         password = __salt__['config.option']('keystone.password')
         tenant = __salt__['config.option']('keystone.tenant')
         auth_url = __salt__['config.option']('keystone.auth_url')
         region_name = __salt__['config.option']('keystone.region_name')
+        service_type = __salt__['config.option']('keystone.service_type')
         use_keystoneauth = __salt__['config.option']('keystone.use_keystoneauth')
         verify = __salt__['config.option']('keystone.verify')
 
@@ -104,6 +106,7 @@ def _auth(profile=None):
             'tenant_name': tenant,
             'auth_url': auth_url,
             'region_name': region_name,
+            'service_type': service_type,
             'use_keystoneauth': use_keystoneauth,
             'verify': verify,
             'project_domain_name': project_domain_name,
@@ -116,7 +119,7 @@ def _auth(profile=None):
             'tenant_name': tenant,
             'auth_url': auth_url,
             'region_name': region_name,
-            'verify': verify
+            'service_type': service_type
         }
 
     return suoneu.SaltNeutron(**kwargs)
