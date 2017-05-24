@@ -1786,7 +1786,7 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
         except AttributeError:
             minion_id = None
 
-        return config.minion_config(self.get_config_file_path(),
+        return config.proxy_config(self.get_config_file_path(),
                                     cache_minion_id=False,
                                     minion_id=minion_id)
 
