@@ -15,6 +15,8 @@ import logging
 import os
 import signal
 import sys
+import time
+import shutil
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -939,6 +941,35 @@ def clear_cache():
         for name in files:
             try:
                 os.remove(os.path.join(root, name))
+            except OSError as exc:
+                log.error('Attempt to clear cache with saltutil.clear_cache FAILED with: {0}'.format(exc))
+                return False
+    return True
+
+
+def clear_job_cache(hours=24):
+    '''
+    Forcibly removes job cache folders and files on a minion.
+
+    .. versionadded::
+
+    WARNING: The safest way to clear a minion cache is by first stopping
+    the minion and then deleting the cache files before restarting it.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.clear_job_cache hours=12
+    '''
+    threshold = time.time() - hours * 3600
+    for root, dirs, files in salt.utils.safe_walk('{0}{1}minion_jobs'.format(__opts__['cachedir'], os.sep),
+                                                  followlinks=False):
+        for name in dirs:
+            try:
+                mtime = os.path.getmtime(os.path.join(root, name))
+                if mtime < threshold:
+                    shutil.rmtree(os.path.join(root, name))
             except OSError as exc:
                 log.error('Attempt to clear cache with saltutil.clear_cache FAILED with: {0}'.format(exc))
                 return False
