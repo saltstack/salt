@@ -39,6 +39,30 @@ Module for handling OpenStack Neutron calls
     For example::
 
         salt '*' neutron.network_list profile=openstack1
+
+    To use keystoneauth1 instead of keystoneclient, include the `use_keystoneauth`
+    option in the pillar or minion config.
+
+    .. note:: this is required to use keystone v3 as for authentication.
+
+    .. code-block:: yaml
+
+        keystone.user: admin
+        keystone.password: verybadpass
+        keystone.tenant: admin
+        keystone.auth_url: 'http://127.0.0.1:5000/v3/'
+        keystone.region_name: 'RegionOne'
+        keystone.service_type: 'network'
+        keystone.use_keystoneauth: true
+        keystone.verify: '/path/to/custom/certs/ca-bundle.crt'
+
+
+    Note: by default the neutron module will attempt to verify its connection
+    utilizing the system certificates. If you need to verify against another bundle
+    of CA certificates or want to skip verification altogether you will need to
+    specify the `verify` option. You can specify True or False to verify (or not)
+    against system certificates, a path to a bundle or CA certs to check against, or
+    None to allow keystoneauth to search for the certificates on its own.(defaults to True)
 '''
 
 # Import python libs
