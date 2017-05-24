@@ -178,17 +178,18 @@ class IPCServer(object):
                 log.trace('Client disconnected ',
                           'from IPC {0}'.format(self.socket_path))
                 break
-            except Exception as exc:
-                # On occasion an exception will occur which results in the
-                # event not returning properly, even though the wire_bytes
-                # is correctly populated.  In this situation, we log to trace
-                # and continue.
-                if wire_bytes:
-                    log.trace('Exception occured but wire_bytes data exists, '
-                              'spurious exception: {0}'.format(exc))
+            except socket.error as e:
+                # On occasion an exception will occur with
+                # an error code of 0, it's a spurious exception.
+                if e.errno == 0:
+                    log.trace('Exception occured with error number 0, '
+                              'spurious exception: {0}'.format(e))
                 else:
                     log.error('Exception occurred while '
-                              'handling stream: {0}'.format(exc))
+                              'handling stream: {0}'.format(e))
+            except Exception as exc:
+                log.error('Exception occurred while '
+                          'handling stream: {0}'.format(exc))
 
     def handle_connection(self, connection, address):
         log.trace('IPCServer: Handling connection ',
