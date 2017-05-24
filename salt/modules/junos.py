@@ -144,7 +144,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
           The rpc to be executed. (default = None)
       Optional
         * dest:
-          Destination file where the rpc ouput is stored. (default = None)
+          Destination file where the rpc output is stored. (default = None)
           Note that the file will be stored on the proxy minion. To push the
           files to the master use the salt's following execution module:
           :py:func:`cp.push <salt.modules.cp.push>`
