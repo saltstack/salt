@@ -389,7 +389,7 @@ class Wildcard(object):
         if not version:
             return
 
-        exact_version = re.sub('[<>=]*', '', version)
+        exact_version = re.sub(r'[<>=]*', '', version)
         self._op = version.replace(exact_version, '') or None
         self.version = exact_version
 
