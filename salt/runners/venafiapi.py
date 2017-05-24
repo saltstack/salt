@@ -220,6 +220,8 @@ def gen_csr(
         tmpcsr,
         subject
     )
+    if password is not None:
+        cmd += ' -passin pass:{0}'.format(password)
     output = __salt__['salt.cmd']('cmd.run', cmd)
 
     if 'problems making Certificate Request' in output:
