@@ -13,8 +13,8 @@ import os
 import re
 import shlex
 import stat
+import subprocess
 import tarfile
-import tempfile
 import zipfile
 try:
     from shlex import quote as _quote  # pylint: disable=E0611
@@ -164,7 +164,10 @@ def list_(name,
         files = []
         links = []
         try:
-            with contextlib.closing(tarfile.open(cached)) as tar_archive:
+            open_kwargs = {'name': cached} \
+                if not isinstance(cached, subprocess.Popen) \
+                else {'fileobj': cached.stdout, 'mode': 'r|'}
+            with contextlib.closing(tarfile.open(**open_kwargs)) as tar_archive:
                 for member in tar_archive.getmembers():
                     if member.issym():
                         links.append(member.name)
@@ -175,7 +178,15 @@ def list_(name,
             return dirs, files, links
 
         except tarfile.ReadError:
-            if not failhard:
+            if failhard:
+                if isinstance(cached, subprocess.Popen):
+                    stderr = cached.communicate()[1]
+                    if cached.returncode != 0:
+                        raise CommandExecutionError(
+                            'Failed to decompress {0}'.format(name),
+                            info={'error': stderr}
+                        )
+            else:
                 if not salt.utils.which('tar'):
                     raise CommandExecutionError('\'tar\' command not available')
                 if decompress_cmd is not None:
@@ -194,29 +205,12 @@ def list_(name,
                         decompress_cmd = 'xz --decompress --stdout'
 
                 if decompress_cmd:
-                    fd, decompressed = tempfile.mkstemp()
-                    os.close(fd)
-                    try:
-                        cmd = '{0} {1} > {2}'.format(decompress_cmd,
-                                                     _quote(cached),
-                                                     _quote(decompressed))
-                        result = __salt__['cmd.run_all'](cmd, python_shell=True)
-                        if result['retcode'] != 0:
-                            raise CommandExecutionError(
-                                'Failed to decompress {0}'.format(name),
-                                info={'error': result['stderr']}
-                            )
-                        return _list_tar(name, decompressed, None, True)
-                    finally:
-                        try:
-                            os.remove(decompressed)
-                        except OSError as exc:
-                            if exc.errno != errno.ENOENT:
-                                log.warning(
-                                    'Failed to remove intermediate '
-                                    'decompressed archive %s: %s',
-                                    decompressed, exc.__str__()
-                                )
+                    decompressed = subprocess.Popen(
+                        '{0} {1}'.format(decompress_cmd, _quote(cached)),
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE)
+                    return _list_tar(name, decompressed, None, True)
 
         raise CommandExecutionError(
             'Unable to list contents of {0}. If this is an XZ-compressed tar '
