@@ -83,14 +83,16 @@ def _auth(profile=None):
         tenant = credentials['keystone.tenant']
         auth_url = credentials['keystone.auth_url']
         region_name = credentials.get('keystone.region_name', None)
-        use_keystoneauth = credentials['keystone.use_keystoneauth']
-        verify = credentials['keystone.verify']
+        use_keystoneauth = credentials.get('keystone.use_keystoneauth', False)
+        verify = credentials.get('keystone.verify', None)
     else:
         user = __salt__['config.option']('keystone.user')
         password = __salt__['config.option']('keystone.password')
         tenant = __salt__['config.option']('keystone.tenant')
         auth_url = __salt__['config.option']('keystone.auth_url')
         region_name = __salt__['config.option']('keystone.region_name')
+        use_keystoneauth = __salt__['config.option']('keystone.use_keystoneauth')
+        verify = __salt__['config.option']('keystone.verify')
 
     if use_keystoneauth is True:
         project_domain_name = credentials['keystone.project_domain_name']
