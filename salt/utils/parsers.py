@@ -485,6 +485,30 @@ class HardCrashMixin(six.with_metaclass(MixInMeta, object)):
         )
 
 
+class NoParseMixin(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio_ = 50
+
+    def _mixin_setup(self):
+        no_parse = os.environ.get('SALT_NO_PARSE', '')
+        self.add_option(
+            '--no-parse', default=no_parse,
+            help=('Comma-separated list of named CLI arguments (i.e. '
+                  'argname=value) which should not be parsed as Python '
+                  'data types'),
+            metavar='argname1,argname2,...',
+        )
+
+    def process_no_parse(self):
+        if self.options.no_parse:
+            try:
+                self.options.no_parse = \
+                    [x.strip() for x in self.options.no_parse.split(',')]
+            except AttributeError:
+                self.options.no_parse = []
+        else:
+            self.options.no_parse = []
+
+
 class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = -10
     _config_filename_ = None
@@ -1818,7 +1842,8 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                              HardCrashMixin,
                                              SaltfileMixIn,
                                              ArgsStdinMixIn,
-                                             EAuthMixIn)):
+                                             EAuthMixIn,
+                                             NoParseMixin)):
 
     default_timeout = 5
 
@@ -2086,14 +2111,16 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                     # interface
                     for i in range(len(self.config['arg'])):
                         self.config['arg'][i] = salt.utils.args.parse_input(
-                            self.config['arg'][i])
+                            self.config['arg'][i],
+                            no_parse=self.options.no_parse)
                 else:
                     self.config['fun'] = self.args[1]
                     self.config['arg'] = self.args[2:]
                     # parse the args and kwargs before sending to the publish
                     # interface
-                    self.config['arg'] = \
-                        salt.utils.args.parse_input(self.config['arg'])
+                    self.config['arg'] = salt.utils.args.parse_input(
+                        self.config['arg'],
+                        no_parse=self.options.no_parse)
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
 
@@ -2453,7 +2480,8 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
                                               HardCrashMixin,
                                               SaltfileMixIn,
                                               ArgsStdinMixIn,
-                                              ProfilingPMixIn)):
+                                              ProfilingPMixIn,
+                                              NoParseMixin)):
 
     description = (
         'salt-call is used to execute module functions locally on a Salt Minion'
@@ -2671,7 +2699,8 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
                                              OutputOptionsMixIn,
                                              ArgsStdinMixIn,
                                              ProfilingPMixIn,
-                                             EAuthMixIn)):
+                                             EAuthMixIn,
+                                             NoParseMixin)):
 
     default_timeout = 1
 
@@ -2742,7 +2771,8 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
                                              TargetOptionsMixIn,
                                              OutputOptionsMixIn,
                                              SaltfileMixIn,
-                                             HardCrashMixin)):
+                                             HardCrashMixin,
+                                             NoParseMixin)):
 
     usage = '%prog [options] \'<target>\' <function> [arguments]'
 
@@ -2996,6 +3026,11 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
         if not self.config['argv'] or not self.config['tgt']:
             self.print_help()
             self.error('Insufficient arguments')
+
+        # Add back the --no-parse options so that shimmed/wrapped commands
+        # handle the arguments correctly.
+        self.config['argv'].append(
+            '--no-parse=' + ','.join(self.options.no_parse))
 
         if self.options.ssh_askpass:
             self.options.ssh_passwd = getpass.getpass('Password: ')
