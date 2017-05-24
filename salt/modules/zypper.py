@@ -1069,7 +1069,7 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version_num = version
+    version_num = Wildcard(__zypper__)(name, version)
     if version_num:
         if pkgs is None and sources is None:
             # Allow "version" to work for single package target
