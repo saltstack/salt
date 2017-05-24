@@ -329,6 +329,8 @@ class Wildcard(object):
     :return: Query range
     '''
 
+    Z_OP = ['<', '<=', '=', '>=', '>']
+
     def __init__(self, zypper):
         '''
         :type zypper: a reference to an instance of a _Zypper class.
@@ -337,6 +339,7 @@ class Wildcard(object):
         self.version = None
         self.zypper = zypper
         self._attr_solvable_version = 'edition'
+        self._op = None
 
     def __call__(self, pkg_name, pkg_version):
         '''
@@ -348,10 +351,10 @@ class Wildcard(object):
         '''
         if pkg_version:
             self.name = pkg_name
-            self.version = pkg_version
+            self._set_version(pkg_version)  # Dissects possible operator
             versions = sorted([LooseVersion and LooseVersion(vrs) or vrs
                                for vrs in self._get_scope_versions(self._get_available_versions())])
-            return versions and '{0}'.format(versions[-1]) or None
+            return versions and '{0}{1}'.format(self._op or '', versions[-1]) or None
 
     def _get_available_versions(self):
         '''
@@ -376,6 +379,19 @@ class Wildcard(object):
             if fnmatch.fnmatch(p_version, self.version):
                 get_in_versions.append(p_version)
         return get_in_versions
+
+    def _set_version(self, version):
+        '''
+        Stash operator from the version, if any.
+
+        :return:
+        '''
+        if not version:
+            return
+
+        exact_version = re.sub('[<>=]*', '', version)
+        self._op = version.replace(exact_version, '') or None
+        self.version = exact_version
 
 
 def _systemd_scope():
