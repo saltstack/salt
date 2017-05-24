@@ -62,7 +62,7 @@ def ping():
             decode=True,
         )
         log.debug(
-            'marathon.info returned succesfully: %s',
+            'marathon.info returned successfully: %s',
             response,
         )
         if 'text' in response and response['text'].strip() == 'pong':
