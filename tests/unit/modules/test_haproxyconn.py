@@ -157,7 +157,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.assertTrue(haproxyconn.show_frontends())
 
-    def test_list_frontends(self, mock):
+    def test_list_frontends(self):
         '''
         Test listing all frontends
         '''
@@ -171,13 +171,13 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.assertTrue(haproxyconn.show_backends())
 
-    def test_list_backends(self, mock):
+    def test_list_backends(self):
         '''
         Test listing of all backends
         '''
         self.assertItemsEqual(haproxyconn.list_backends(), ['backend-alpha', 'backend-beta', 'backend-gamma'])
 
-    def test_get_backend(self, mock):
+    def test_get_backend(self):
         '''
         Test get_backend and compare returned value
         '''
@@ -197,13 +197,13 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.assertDictEqual(haproxyconn.get_backend('test'), expected_data)
 
-    def test_wait_state_true(self, mock):
+    def test_wait_state_true(self):
         '''
         Test a successful wait for state
         '''
         self.assertTrue(haproxyconn.wait_state('test', 'server01'))
 
-    def test_wait_state_false(self, mock):
+    def test_wait_state_false(self):
         '''
         Test a failed wait for state, with a timeout of 0
         '''
