@@ -41,7 +41,7 @@ def ext_pillar(minion_id,
     '''
     # Set up logging
     log = logging.getLogger(__name__)
-
+    url = url+minion_id
     data = __salt__['http.query'](url=url, decode=True, decode_type='json')
 
     if 'dict' in data:
