@@ -175,7 +175,7 @@ class IPCServer(object):
                     body = framed_msg['body']
                     self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
             except tornado.iostream.StreamClosedError:
-                log.trace('Client disconnected ',
+                log.trace('Client disconnected '
                           'from IPC {0}'.format(self.socket_path))
                 break
             except socket.error as e:
