@@ -77,7 +77,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(response.headers['Location'], '/login')
 
     # Local client tests
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_simple_local_post(self):
         '''
         Test a basic API of /
@@ -312,7 +312,7 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
         for minion_id, grains in six.iteritems(response_obj['return'][0]):
             self.assertEqual(minion_id, grains['id'])
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_get(self):
         response = self.fetch('/minions/minion',
                               method='GET',
@@ -396,7 +396,7 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_get(self):
         # test with no JID
         self.http_client.fetch(self.get_url('/jobs'),
@@ -449,7 +449,7 @@ class TestRunSaltAPIHandler(SaltnadoTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_get(self):
         low = [{'client': 'local',
                 'tgt': '*',

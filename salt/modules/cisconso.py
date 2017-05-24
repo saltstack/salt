@@ -43,7 +43,7 @@ def get_data(datastore, path):
     :type  datastore: :class:`DatastoreType` (``str`` enum).
 
     :param path: The device path to set the value at,
-        a list of element names in order, / seperated
+        a list of element names in order, / separated
     :type  path: ``list``, ``str`` OR ``tuple``
 
     :return: The network configuration at that tree
@@ -67,7 +67,7 @@ def set_data_value(datastore, path, data):
     :type  datastore: :class:`DatastoreType` (``str`` enum).
 
     :param path: The device path to set the value at,
-        a list of element names in order, / seperated
+        a list of element names in order, / separated
     :type  path: ``list``, ``str`` OR ``tuple``
 
     :param data: The new value at the given path

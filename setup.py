@@ -765,8 +765,8 @@ class InstallLib(install_lib):
         chmod = []
 
         for idx, inputfile in enumerate(inp):
-            for executeable in executables:
-                if inputfile.endswith(executeable):
+            for executable in executables:
+                if inputfile.endswith(executable):
                     chmod.append(idx)
         for idx in chmod:
             filename = out[idx]

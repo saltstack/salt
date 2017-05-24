@@ -34,7 +34,7 @@ class ManageTest(integration.ShellCase):
         self.assertEqual(ret['return'], {})
         self.assertEqual(ret['out'], [])
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_list_jobs(self):
         '''
         jobs.list_jobs
