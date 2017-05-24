@@ -17,7 +17,7 @@ Module for handling OpenStack Nova calls
     If configuration for multiple OpenStack accounts is required, they can be
     set up as different configuration profiles:
     For example::
-    
+
         openstack1:
           keystone.user: admin
           keystone.password: verybadpass
@@ -63,9 +63,6 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 
-# Import salt libs
-import salt.utils.openstack.nova as suon
-
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -75,8 +72,11 @@ __func_alias__ = {
     'list_': 'list'
 }
 
-# Define the module's virtual name
-__virtualname__ = 'nova'
+try:
+    import salt.utils.openstack.nova as suon
+    HAS_NOVA = True
+except NameError as exc:
+    HAS_NOVA = False
 
 
 def __virtual__():
@@ -84,10 +84,7 @@ def __virtual__():
     Only load this module if nova
     is installed on this minion.
     '''
-    if suon.check_nova():
-        return __virtualname__
-    return (False, 'The nova execution module failed to load: '
-            'only available if nova is installed.')
+    return HAS_NOVA
 
 
 __opts__ = {}
