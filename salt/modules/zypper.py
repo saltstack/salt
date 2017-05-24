@@ -22,7 +22,7 @@ import os
 import time
 import datetime
 try:
-    from distutils.version import LooseVersion
+    from salt.utils.versions import LooseVersion
 except ImportError:
     LooseVersion = None
 
@@ -326,7 +326,7 @@ class Wildcard(object):
        '1.2.3.4*' is '1.2.3.4.whatever.is.here' and is equal to:
        '1.2.3.4 >= and < 1.2.3.5'
 
-    :param ptn: Pattern 
+    :param ptn: Pattern
     :return: Query range
     '''
 
@@ -346,9 +346,9 @@ class Wildcard(object):
         '''
         Convert a string wildcard to a zypper query.
 
-        :param pkg_name: 
-        :param pkg_version: 
-        :return: 
+        :param pkg_name:
+        :param pkg_version:
+        :return:
         '''
         if pkg_version:
             self.name = pkg_name
@@ -360,7 +360,7 @@ class Wildcard(object):
     def _get_available_versions(self):
         '''
         Get available versions of the package.
-        :return: 
+        :return:
         '''
         solvables = self.zypper.nolock.xml.call('se', '-xv', self.name).getElementsByTagName('solvable')
         if not solvables:
@@ -373,7 +373,7 @@ class Wildcard(object):
         '''
         Get available difference between next possible matches.
 
-        :return: 
+        :return:
         '''
         get_in_versions = []
         for p_version in pkg_versions:

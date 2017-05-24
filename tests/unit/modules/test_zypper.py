@@ -920,7 +920,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
     def test_wildcard_to_query_match_all(self):
         '''
         Test wildcard to query match all pattern
-        :return: 
+        :return:
         '''
         xmldoc = """<?xml version='1.0'?><stream>
         <search-result version="0.0"><solvable-list>
@@ -1047,8 +1047,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         """
         _zpr = MagicMock()
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
-
-        assert type(zypper.Wildcard(_zpr)('libzypp', '*.1')) is type('')
+        assert isinstance(zypper.Wildcard(_zpr)('libzypp', '*.1'), str)
 
     def test_wildcard_to_query_condition_preservation(self):
         '''
@@ -1072,4 +1071,3 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         # Auto-fix feature: moves operator from end to front
         for op in zypper.Wildcard.Z_OP:
             assert zypper.Wildcard(_zpr)('libzypp', '16*{0}'.format(op)) == '{0}16.2.5-25.1'.format(op)
-
