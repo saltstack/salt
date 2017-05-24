@@ -59,11 +59,13 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
 
     def test_getfacl_w_single_file_without_acl(self):
         ret = self.run_function('acl.getfacl', arg=[self.myfile])
+        user = salt.utils.get_user()
+        group = salt.utils.get_default_group(user)
         self.maxDiff = None
         self.assertEqual(
             ret,
             {self.myfile: {'other': [{'': {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}}],
-                           'user': [{'root': {'octal': 6, 'permissions': {'read': True, 'write': True, 'execute': False}}}],
-                           'group': [{'root': {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}}],
-                           'comment': {'owner': 'root', 'group': 'root', 'file': self.myfile}}}
+                           'user': [{user: {'octal': 6, 'permissions': {'read': True, 'write': True, 'execute': False}}}],
+                           'group': [{group: {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}}],
+                           'comment': {'owner': user, 'group': group, 'file': self.myfile}}}
         )
