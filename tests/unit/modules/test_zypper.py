@@ -945,3 +945,26 @@ Repository 'DUMMY' not found by its alias, number, or URI.
 
         assert type(zypper.Wildcard(_zpr)('libzypp', '*.1')) is type('')
 
+    def test_wildcard_to_query_condition_preservation(self):
+        '''
+        Test wildcard to query Zypper condition preservation.
+
+        :return:
+        '''
+        xmldoc = """<?xml version='1.0'?><stream>
+        <search-result version="0.0"><solvable-list>
+        <solvable status="installed" name="libzypp" kind="package" edition="16.2.4-19.5" arch="x86_64" repository="foo"/>
+        <solvable status="other-version" name="libzypp" kind="package" edition="16.2.5-25.1" arch="x86_64" repository="foo"/>
+        <solvable status="other-version" name="libzypp" kind="package" edition="17.2.6-27.9.1" arch="x86_64" repository="foo"/>
+        </solvable-list></search-result></stream>
+        """
+        _zpr = MagicMock()
+        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+
+        for op in zypper.Wildcard.Z_OP:
+            assert zypper.Wildcard(_zpr)('libzypp', '{0}*.1'.format(op)) == '{0}17.2.6-27.9.1'.format(op)
+
+        # Auto-fix feature: moves operator from end to front
+        for op in zypper.Wildcard.Z_OP:
+            assert zypper.Wildcard(_zpr)('libzypp', '16*{0}'.format(op)) == '{0}16.2.5-25.1'.format(op)
+
