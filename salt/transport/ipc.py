@@ -185,10 +185,9 @@ class IPCServer(object):
                 # and continue.
                 if wire_bytes:
                     log.trace('Exception occured but wire_bytes data exists, '
-                              'spurious exception: {}'.format(exc))
-                    pass
+                              'spurious exception: {0}'.format(exc))
                 else:
-                    log.error('Exception occurred while ',
+                    log.error('Exception occurred while '
                               'handling stream: {0}'.format(exc))
 
     def handle_connection(self, connection, address):
