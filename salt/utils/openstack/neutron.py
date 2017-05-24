@@ -80,7 +80,10 @@ class SaltNeutron(NeutronShell):
         '''
         Set up neutron credentials
         '''
-        if all([use_keystoneauth, HAS_KEYSTONEAUTH]):
+        if not HAS_NEUTRON:
+            return None
+
+        elif all([use_keystoneauth, HAS_KEYSTONEAUTH]):
             self._new_init(username=username,
                            project_name=tenant_name,
                            auth_url=auth_url,
