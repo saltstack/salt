@@ -21,10 +21,7 @@ import re
 import os
 import time
 import datetime
-try:
-    from salt.utils.versions import LooseVersion
-except ImportError:
-    LooseVersion = None
+from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
@@ -353,7 +350,7 @@ class Wildcard(object):
         if pkg_version:
             self.name = pkg_name
             self._set_version(pkg_version)  # Dissects possible operator
-            versions = sorted([LooseVersion and LooseVersion(vrs) or vrs
+            versions = sorted([LooseVersion(vrs)
                                for vrs in self._get_scope_versions(self._get_available_versions())])
             return versions and '{0}{1}'.format(self._op or '', versions[-1]) or None
 
