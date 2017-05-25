@@ -48,7 +48,6 @@ Example:
         passwd: my_password
         optional_args:
             port: 12201
-            config_format: set
 
 .. seealso::
 
