@@ -49,7 +49,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                                    HAS_DBUS=True):
                     self.assertEqual('A', localemod.get_locale())
                     localemod._parse_dbus_locale.assert_called_once_with()
-    
+
                 with patch.multiple(localemod,
                                    _parse_localectl=MagicMock(return_value={'LANG': 'A'}),
                                    HAS_DBUS=False):
