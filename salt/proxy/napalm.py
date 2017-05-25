@@ -252,7 +252,7 @@ def call(method, *args, **kwargs):
         on the `correct driver repo`_ and make sure to read the FAQ_
 
     .. _`correct driver repo`: https://github.com/napalm-automation/napalm/issues/new
-    .. FAQ_: https://github.com/napalm-automation/napalm#faq
+    .. _FAQ: https://github.com/napalm-automation/napalm#faq
 
     Example:
 
