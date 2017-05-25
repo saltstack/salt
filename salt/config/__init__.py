@@ -838,6 +838,9 @@ VALID_OPTS = {
     # Cache minion ID to file
     'minion_id_caching': bool,
 
+    # Always generate minion id in lowercase.
+    'minion_id_lowercase': bool,
+
     # If set, the master will sign all publications before they are sent out
     'sign_pub_messages': bool,
 
@@ -1259,6 +1262,7 @@ DEFAULT_MINION_OPTS = {
     'modules_max_memory': -1,
     'grains_refresh_every': 0,
     'minion_id_caching': True,
+    'minion_id_lowercase': False,
     'keysize': 2048,
     'transport': 'zeromq',
     'auth_timeout': 5,
@@ -3318,6 +3322,10 @@ def get_id(opts, cache_minion_id=False):
                   .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
     newid = salt.utils.network.generate_minion_id()
+
+    if opts.get('minion_id_lowercase'):
+        newid = newid.lower()
+        log.debug('Changed minion id {0} to lowercase.'.format(newid))
     if '__role' in opts and opts.get('__role') == 'minion':
         log.debug('Found minion id from generate_minion_id(): {0}'.format(newid))
     if cache_minion_id and opts.get('minion_id_caching', True):
