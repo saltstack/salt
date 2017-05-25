@@ -796,6 +796,7 @@ class SaltMessageClient(object):
         self._on_recv = None
         self._closing = False
         self._connecting_future = self.connect()
+        self._stream_return_future = tornado.concurrent.Future()
         self.io_loop.spawn_callback(self._stream_return)
 
     # TODO: timeout inflight sessions
@@ -813,6 +814,19 @@ class SaltMessageClient(object):
                 # the next message and the associated read future is marked
                 # 'StreamClosedError' when the stream is closed.
                 self._read_until_future.exc_info()
+                if (not self._stream_return_future.done() and
+                        self.io_loop != tornado.ioloop.IOLoop.current(
+                            instance=False)):
+                    # If _stream_return() hasn't completed, it means the IO
+                    # Loop is stopped (such as when using
+                    # 'salt.utils.async.SyncWrapper'). Ensure that
+                    # _stream_return() completes by restarting the IO Loop.
+                    # This will prevent potential errors on shutdown.
+                    self.io_loop.add_future(
+                        self._stream_return_future,
+                        lambda future: self.io_loop.stop()
+                    )
+                    self.io_loop.start()
         self._tcp_client.close()
         # Clear callback references to allow the object that they belong to
         # to be deleted.
@@ -863,66 +877,69 @@ class SaltMessageClient(object):
 
     @tornado.gen.coroutine
     def _stream_return(self):
-        while not self._closing and (
-                not self._connecting_future.done() or
-                self._connecting_future.result() is not True):
-            yield self._connecting_future
-        unpacker = msgpack.Unpacker()
-        while not self._closing:
-            try:
-                self._read_until_future = self._stream.read_bytes(4096, partial=True)
-                wire_bytes = yield self._read_until_future
-                unpacker.feed(wire_bytes)
-                for framed_msg in unpacker:
-                    if six.PY3:
-                        framed_msg = salt.transport.frame.decode_embedded_strs(
-                            framed_msg
-                        )
-                    header = framed_msg['head']
-                    body = framed_msg['body']
-                    message_id = header.get('mid')
+        try:
+            while not self._closing and (
+                    not self._connecting_future.done() or
+                    self._connecting_future.result() is not True):
+                yield self._connecting_future
+            unpacker = msgpack.Unpacker()
+            while not self._closing:
+                try:
+                    self._read_until_future = self._stream.read_bytes(4096, partial=True)
+                    wire_bytes = yield self._read_until_future
+                    unpacker.feed(wire_bytes)
+                    for framed_msg in unpacker:
+                        if six.PY3:
+                            framed_msg = salt.transport.frame.decode_embedded_strs(
+                                framed_msg
+                            )
+                        header = framed_msg['head']
+                        body = framed_msg['body']
+                        message_id = header.get('mid')
 
-                    if message_id in self.send_future_map:
-                        self.send_future_map.pop(message_id).set_result(body)
-                        self.remove_message_timeout(message_id)
-                    else:
-                        if self._on_recv is not None:
-                            self.io_loop.spawn_callback(self._on_recv, header, body)
+                        if message_id in self.send_future_map:
+                            self.send_future_map.pop(message_id).set_result(body)
+                            self.remove_message_timeout(message_id)
                         else:
-                            log.error('Got response for message_id {0} that we are not tracking'.format(message_id))
-            except tornado.iostream.StreamClosedError as e:
-                log.debug('tcp stream to {0}:{1} closed, unable to recv'.format(self.host, self.port))
-                for future in six.itervalues(self.send_future_map):
-                    future.set_exception(e)
-                self.send_future_map = {}
-                if self._closing:
-                    return
-                if self.disconnect_callback:
-                    self.disconnect_callback()
-                # if the last connect finished, then we need to make a new one
-                if self._connecting_future.done():
-                    self._connecting_future = self.connect()
-                yield self._connecting_future
-            except TypeError:
-                # This is an invalid transport
-                if 'detect_mode' in self.opts:
-                    log.info('There was an error trying to use TCP transport; '
-                             'attempting to fallback to another transport')
-                else:
-                    raise SaltClientError
-            except Exception as e:
-                log.error('Exception parsing response', exc_info=True)
-                for future in six.itervalues(self.send_future_map):
-                    future.set_exception(e)
-                self.send_future_map = {}
-                if self._closing:
-                    return
-                if self.disconnect_callback:
-                    self.disconnect_callback()
-                # if the last connect finished, then we need to make a new one
-                if self._connecting_future.done():
-                    self._connecting_future = self.connect()
-                yield self._connecting_future
+                            if self._on_recv is not None:
+                                self.io_loop.spawn_callback(self._on_recv, header, body)
+                            else:
+                                log.error('Got response for message_id {0} that we are not tracking'.format(message_id))
+                except tornado.iostream.StreamClosedError as e:
+                    log.debug('tcp stream to {0}:{1} closed, unable to recv'.format(self.host, self.port))
+                    for future in six.itervalues(self.send_future_map):
+                        future.set_exception(e)
+                    self.send_future_map = {}
+                    if self._closing:
+                        return
+                    if self.disconnect_callback:
+                        self.disconnect_callback()
+                    # if the last connect finished, then we need to make a new one
+                    if self._connecting_future.done():
+                        self._connecting_future = self.connect()
+                    yield self._connecting_future
+                except TypeError:
+                    # This is an invalid transport
+                    if 'detect_mode' in self.opts:
+                        log.info('There was an error trying to use TCP transport; '
+                                 'attempting to fallback to another transport')
+                    else:
+                        raise SaltClientError
+                except Exception as e:
+                    log.error('Exception parsing response', exc_info=True)
+                    for future in six.itervalues(self.send_future_map):
+                        future.set_exception(e)
+                    self.send_future_map = {}
+                    if self._closing:
+                        return
+                    if self.disconnect_callback:
+                        self.disconnect_callback()
+                    # if the last connect finished, then we need to make a new one
+                    if self._connecting_future.done():
+                        self._connecting_future = self.connect()
+                    yield self._connecting_future
+        finally:
+            self._stream_return_future.set_result(True)
 
     @tornado.gen.coroutine
     def _stream_send(self):
