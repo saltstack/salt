@@ -4,7 +4,7 @@
 
 :: Get current codepage, change codpage to Unicode
 for /f "tokens=2 delims=:." %%x in ('chcp') do set cp=%%x
-chcp 65001
+chcp 65001 > nul
 
 :: Define Variables
 Set PYTHONIOENCODING=UTF-8
@@ -20,6 +20,6 @@ Set Script=%SaltDir%\bin\Scripts\salt-call
 Set PyError=%ERRORLEVEL%
 
 :: Change codepage back
-chcp %cp%
+chcp %cp% > nul
 
 exit /B %PyError%
