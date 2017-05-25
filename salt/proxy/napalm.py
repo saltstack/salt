@@ -53,6 +53,10 @@ Example:
 
     - :mod:`NAPALM grains: select network devices based on their characteristics <salt.grains.napalm>`
     - :mod:`NET module: network basic features <salt.modules.napalm_network>`
+    - :mod:`Network config state: Manage the configuration using arbitrary templates <salt.states.netconfig>`
+    - :mod:`NAPALM YANG state: Manage the configuration according to the YANG models (OpenConfig/IETF) <salt.states.netyang>`
+    - :mod:`Network ACL module: Generate and load ACL (firewall) configuration <salt.modules.napalm_acl>`
+    - :mod:`Network ACL state: Manage the firewall configuration <salt.states.netacl>`
     - :mod:`NTP operational and configuration management module <salt.modules.napalm_ntp>`
     - :mod:`BGP operational and configuration management module <salt.modules.napalm_bgp>`
     - :mod:`Routes details <salt.modules.napalm_route>`
