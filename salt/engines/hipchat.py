@@ -53,6 +53,7 @@ import salt.utils.files
 import salt.runner
 import salt.client
 import salt.loader
+import salt.output
 
 
 def __virtual__():
@@ -110,6 +111,28 @@ Content-Disposition: attachment; name="file"; filename="{1}"
     salt.utils.http.query(url, method='POST', header_dict=headers, data=payload)
 
 
+def _publish_html_message(token, room, data, message='', outputter='nested', api_url=None):
+    '''
+    Publishes the HTML-formatted message.
+    '''
+    url = "{0}/v2/room/{1}/notification".format(api_url, room)
+    headers = {
+        'Content-type': 'text/html'
+    }
+    headers['Authorization'] = 'Bearer ' + token
+    if message:
+        message += '<br />'
+    message += salt.output.html_format(data, outputter, opts=__opts__)
+    salt.utils.http.query(
+        url,
+        'POST',
+        data=message,
+        decode=True,
+        status=True,
+        header_dict=headers,
+        opts=__opts__,
+    )
+
 def start(token,
           room='salt',
           aliases=None,
@@ -121,7 +144,9 @@ def start(token,
           api_key=None,
           api_url=None,
           max_rooms=None,
-          wait_time=None):
+          wait_time=None,
+          html=False,
+          outputter='nested'):
     '''
     Listen to Hipchat messages and forward them to Salt
     '''
@@ -258,10 +283,13 @@ def start(token,
                 local = salt.client.LocalClient()
                 ret = local.cmd('{0}'.format(target), cmd, args, kwargs, tgt_type='{0}'.format(tgt_type))
 
-            tmp_path_fn = salt.utils.files.mkstemp()
-            with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
-                fp_.write(json.dumps(ret, sort_keys=True, indent=4))
             message_string = '@{0} Results for: {1} {2} {3} on {4}'.format(partner, cmd, args, kwargs, target)
-            _publish_file(token, room, tmp_path_fn, message=message_string, api_url=api_url)
-            salt.utils.safe_rm(tmp_path_fn)
+            if html:
+                _publish_html_message(token, room, ret, message=message_string, outputter=outputter, api_url=api_url)
+            else:
+                tmp_path_fn = salt.utils.files.mkstemp()
+                with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
+                    fp_.write(json.dumps(ret, sort_keys=True, indent=4))
+                _publish_file(token, room, tmp_path_fn, message=message_string, api_url=api_url)
+                salt.utils.safe_rm(tmp_path_fn)
         time.sleep(wait_time or _DEFAULT_SLEEP)
