@@ -39,7 +39,7 @@ please refer to the `NAPALM Read the Docs page`_.
 
 * always_alive: in certain less dynamic environments, maintaining the remote connection permanently
     open with the network device is not always beneficial. In that case, the user can
-    select to initialize the connection only when needed, by specifying this fied to ``false``.
+    select to initialize the connection only when needed, by specifying this field to ``false``.
     Default: ``true`` (maintains the connection with the remote network device).
 
 Example:
