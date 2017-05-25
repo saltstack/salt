@@ -189,7 +189,64 @@ def start(token,
           output_type='file',
           outputter='nested'):
     '''
-    Listen to Hipchat messages and forward them to Salt
+    Listen to Hipchat messages and forward them to Salt.
+
+    token
+        The HipChat API key. It requires a key for global usgae,
+        assigned per user, rather than room.
+
+    room
+        The HipChat room name.
+
+    aliases
+        Define custom aliases.
+
+    valid_users
+        Restrict access only to certain users.
+
+    valid_commands
+        Restrict the execution to a limited set of commands.
+
+    control
+        Send commands to the master.
+
+    trigger: ``!``
+        Special character that triggers the execution of salt commands.
+
+    tag: ``salt/engines/hipchat/incoming``
+        The event tag on the Salt bus.
+
+    api_url: ``https://api.hipchat.com``
+        The URL to the HipChat API.
+
+    max_rooms: ``1000``
+        Maximum number of rooms allowed to fetch. If set to 0,
+        it is able to retrieve the entire list of rooms.
+
+    wait_time: ``5``
+        Maximum wait time, in seconds.
+
+    output_type: ``file``
+        The type of the output. Choose bewteen:
+
+            - ``file``: save the output into a temporary file and upload
+            - ``html``: send the output as HTML
+            - ``code``: send the output as code
+
+        This can be overriden when executing a command, using the ``--out-type`` argument.
+
+    outputter: ``nested``
+        The format to display the data, using the outputters available on the CLI.
+        This argument can also be overriden when executing a command, using the ``--out`` option.
+
+    HipChat Example:
+
+    .. code-block:: text
+
+        ! test.ping
+        ! test.ping target=minion1
+        ! test.ping --out=nested
+        ! test.ping --out-type=code --out=table
     '''
     target_room = None
 
