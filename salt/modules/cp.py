@@ -5,6 +5,7 @@ Minion side functions for salt-cp
 
 # Import python libs
 from __future__ import absolute_import
+import base64
 import errno
 import os
 import logging
@@ -79,6 +80,8 @@ def recv(dest, chunk, append=False, compressed=True, mode=None):
             else:
                 return _error(exc.__str__())
         return True
+
+    chunk = base64.b64decode(chunk)
 
     open_mode = 'ab' if append else 'wb'
     try:

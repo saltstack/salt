@@ -1095,7 +1095,16 @@ DEFAULT_MINION_OPTS = {
     'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
     'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
     'event_match_type': 'startswith',
-    'salt_cp_chunk_size': 98304,
+    'minion_restart_command': [],
+    'pub_ret': True,
+    'proxy_host': '',
+    'proxy_username': '',
+    'proxy_password': '',
+    'proxy_port': 0,
+    'minion_jid_queue_hwm': 100,
+    'ssl': None,
+    'cache': 'localfs',
+    'salt_cp_chunk_size': 65536,
 }
 
 DEFAULT_MASTER_OPTS = {
