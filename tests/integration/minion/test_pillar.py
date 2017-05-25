@@ -248,7 +248,6 @@ class DecryptGPGPillarTest(ModuleCase):
             log.debug('Result:\n%s', output)
         except OSError:
             log.debug('No need to kill: old gnupg doesn\'t start the agent.')
-            pass
 
         if cls.created_gpg_homedir:
             try:
