@@ -54,6 +54,7 @@ import salt.runner
 import salt.client
 import salt.loader
 import salt.output
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -66,7 +67,7 @@ _DEFAULT_SLEEP = 5
 _DEFAULT_MAX_ROOMS = 1000
 
 
-def _publish_file(token, room, filepath, message='', api_url=None):
+def _publish_file(token, room, filepath, message='', outputter=None, api_url=None):
     """ Send file to a HipChat room via API version 2
     Parameters
     ----------
@@ -117,12 +118,9 @@ def _publish_html_message(token, room, data, message='', outputter='nested', api
     '''
     url = "{0}/v2/room/{1}/notification".format(api_url, room)
     headers = {
-        'Content-type': 'text/html'
+        'Content-type': 'text/plain'
     }
     headers['Authorization'] = 'Bearer ' + token
-    if message:
-        message += '<br />'
-    message += salt.output.html_format(data, outputter, opts=__opts__)
     salt.utils.http.query(
         url,
         'POST',
@@ -132,6 +130,49 @@ def _publish_html_message(token, room, data, message='', outputter='nested', api
         header_dict=headers,
         opts=__opts__,
     )
+    headers['Content-type'] = 'text/html'
+    message = salt.output.html_format(data, outputter, opts=__opts__)
+    salt.utils.http.query(
+        url,
+        'POST',
+        data=message,
+        decode=True,
+        status=True,
+        header_dict=headers,
+        opts=__opts__,
+    )
+
+
+def _publish_code_message(token, room, data, message='', outputter='nested', api_url=None):
+    '''
+    Publishes the output format as code.
+    '''
+    url = "{0}/v2/room/{1}/notification".format(api_url, room)
+    headers = {
+        'Content-type': 'text/plain'
+    }
+    headers['Authorization'] = 'Bearer ' + token
+    salt.utils.http.query(
+        url,
+        'POST',
+        data=message,
+        decode=True,
+        status=True,
+        header_dict=headers,
+        opts=__opts__,
+    )
+    message = '/code '
+    message += salt.output.string_format(data, outputter, opts=__opts__)
+    salt.utils.http.query(
+        url,
+        'POST',
+        data=message,
+        decode=True,
+        status=True,
+        header_dict=headers,
+        opts=__opts__,
+    )
+
 
 def start(token,
           room='salt',
@@ -145,7 +186,7 @@ def start(token,
           api_url=None,
           max_rooms=None,
           wait_time=None,
-          html=False,
+          output_type='file',
           outputter='nested'):
     '''
     Listen to Hipchat messages and forward them to Salt
@@ -267,6 +308,16 @@ def start(token,
                 tgt_type = kwargs['tgt_type']
                 del kwargs['tgt_type']
 
+            # Check for outputter. Otherwise assume nested
+            if '--out' in kwargs:
+                outputter = kwargs['--out']
+                del kwargs['--out']
+
+            # Check for outputter. Otherwise assume nested
+            if '--out-type' in kwargs:
+                output_type = kwargs['--out-type']
+                del kwargs['--out-type']
+
             # Ensure the command is allowed
             if valid_commands:
                 if cmd not in valid_commands:
@@ -283,9 +334,18 @@ def start(token,
                 local = salt.client.LocalClient()
                 ret = local.cmd('{0}'.format(target), cmd, args, kwargs, tgt_type='{0}'.format(tgt_type))
 
-            message_string = '@{0} Results for: {1} {2} {3} on {4}'.format(partner, cmd, args, kwargs, target)
-            if html:
+            nice_args = (' ' + ' '.join(args)) if args else ''
+            nice_kwargs = (' ' + ' '.join('{0}={1}'.format(key, value) for (key, value) in six.iteritems(kwargs))) \
+                          if kwargs else ''
+            message_string = '@{0} Results for: {1}{2}{3} on {4}'.format(partner,
+                                                                         cmd,
+                                                                         nice_args,
+                                                                         nice_kwargs,
+                                                                         target)
+            if output_type == 'html':
                 _publish_html_message(token, room, ret, message=message_string, outputter=outputter, api_url=api_url)
+            elif output_type == 'code':
+                _publish_code_message(token, room, ret, message=message_string, outputter=outputter, api_url=api_url)
             else:
                 tmp_path_fn = salt.utils.files.mkstemp()
                 with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
