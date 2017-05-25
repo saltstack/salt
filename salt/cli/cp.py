@@ -9,6 +9,7 @@ Salt-cp can be used to distribute configuration files
 # Import python libs
 from __future__ import print_function
 from __future__ import absolute_import
+import base64
 import errno
 import logging
 import os
@@ -19,7 +20,7 @@ import sys
 import salt.client
 import salt.utils.gzip_util
 import salt.utils.minions
-from salt.utils import parsers
+from salt.utils import parsers, to_bytes
 from salt.utils.verify import verify_log
 import salt.output
 
@@ -150,6 +151,7 @@ class SaltCP(object):
             index = 1
             failed = {}
             for chunk in reader(fn_, chunk_size=self.opts['salt_cp_chunk_size']):
+                chunk = base64.b64encode(to_bytes(chunk))
                 append = index > 1
                 log.debug(
                     'Copying %s to %starget \'%s\' as %s%s',

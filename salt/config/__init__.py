@@ -1204,7 +1204,7 @@ DEFAULT_MINION_OPTS = {
     'minion_jid_queue_hwm': 100,
     'ssl': None,
     'cache': 'localfs',
-    'salt_cp_chunk_size': 98304,
+    'salt_cp_chunk_size': 65536,
 }
 
 DEFAULT_MASTER_OPTS = {
