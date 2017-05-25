@@ -18,7 +18,7 @@ import logging
 
 # Import salt libs
 import salt.config as config
-from salt.exceptions import SaltCloudException
+from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -190,3 +190,50 @@ def _verify(vm_):
         except SaltCloudException as exc:
             log.error('Exception: %s', exc)
             return False
+
+
+
+def destroy(name, call=None):
+    ''' Destroy a node. Will check termination protection and warn if enabled.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt-cloud --destroy mymachine
+    '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroying instance',
+        'salt/cloud/{0}/destroying'.format(name),
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    # data = show_instance(name, call='action')
+    # node = query(
+    #     method='servers', server_id=data['id'], command='action',
+    #     args={'action': 'terminate'}, http_method='post'
+    # )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroyed instance',
+        'salt/cloud/{0}/destroyed'.format(name),
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    if __opts__.get('update_cachedir', False) is True:
+        __utils__['cloud.delete_minion_cachedir'](
+            name, __active_provider_name__.split(':')[0], __opts__
+        )
+
+    return node
