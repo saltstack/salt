@@ -10,6 +10,7 @@ import string
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
+from tests.support.helpers import destructiveTest, expensiveTest
 from salt.ext.six.moves import range
 
 
@@ -31,6 +32,8 @@ def with_random_name(func):
     return wrapper
 
 
+@destructiveTest
+@expensiveTest
 class VenafiTest(ShellCase):
     '''
     Test the venafi runner
