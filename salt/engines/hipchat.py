@@ -219,6 +219,8 @@ def start(token,
     api_url: ``https://api.hipchat.com``
         The URL to the HipChat API.
 
+        .. versionadded:: Nitrogen
+
     max_rooms: ``1000``
         Maximum number of rooms allowed to fetch. If set to 0,
         it is able to retrieve the entire list of rooms.
@@ -235,9 +237,13 @@ def start(token,
 
         This can be overriden when executing a command, using the ``--out-type`` argument.
 
+        .. versionadded:: Nitrogen
+
     outputter: ``nested``
         The format to display the data, using the outputters available on the CLI.
         This argument can also be overriden when executing a command, using the ``--out`` option.
+
+        .. versionadded:: Nitrogen
 
     HipChat Example:
 
