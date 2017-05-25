@@ -2452,7 +2452,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     elif master_config_path is not None and master_config is None:
         master_config = salt.config.master_config(master_config_path)
 
-    # cloud config has a seperate cachedir
+    # cloud config has a separate cachedir
     del master_config['cachedir']
 
     # 2nd - salt-cloud configuration which was loaded before so we could

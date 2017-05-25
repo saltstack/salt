@@ -189,9 +189,9 @@ Changes:
 
     * fd2ee7d Add some simple unit tests for salt.config.api_config function
 
-    * 3d2fefc Make sure the pidfile and log_file values are overriden by api opts
+    * 3d2fefc Make sure the pidfile and log_file values are overridden by api opts
 
-    * 1f6b540 Make sure the pidfile and log_file values are overriden by api opts
+    * 1f6b540 Make sure the pidfile and log_file values are overridden by api opts
 
     * 04d307f salt-api no longer forces the default timeout
 
@@ -844,7 +844,7 @@ Changes:
 
   * 68d5475 Fixing Snapper unit tests for SUBVOLUME support
 
-  * e9919a9 Removing posible double '/' from the file paths
+  * e9919a9 Removing possible double '/' from the file paths
 
   * 8b4f87f Updating and fixing the documentation
 

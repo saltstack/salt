@@ -994,7 +994,7 @@ def unzip(zip_file,
     extract_perms : True
         The Python zipfile_ module does not extract file/directory attributes
         by default. When this argument is set to ``True``, Salt will attempt to
-        apply the file permision attributes to the extracted files/folders.
+        apply the file permission attributes to the extracted files/folders.
 
         On Windows, only the read-only flag will be extracted as set within the
         zip file, other attributes (i.e. user/group permissions) are ignored.
