@@ -281,7 +281,7 @@ def renew_by(name, window=None):
 
 def needs_renewal(name, window=None):
     '''
-    Check if a certicate needs renewal
+    Check if a certificate needs renewal
 
     :param name: CommonName of cert
     :param window: Window in days to renew earlier or True/force to just return True

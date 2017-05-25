@@ -1737,7 +1737,7 @@ def managed(name,
 
         .. note:: keep does not work with salt-ssh.
 
-            As a consequence of how the files are transfered to the minion, and
+            As a consequence of how the files are transferred to the minion, and
             the inability to connect back to the master with salt-ssh, salt is
             unable to stat the file as it exists on the fileserver and thus
             cannot mirror the mode on the salt-ssh minion
@@ -1968,7 +1968,7 @@ def managed(name,
 
     tmp_ext
         Suffix for temp file created by ``check_cmd``. Useful for checkers
-        dependant on config file extension (e.g. the init-checkconf upstart
+        dependent on config file extension (e.g. the init-checkconf upstart
         config checker).
 
         .. code-block:: yaml
