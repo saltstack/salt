@@ -2216,6 +2216,9 @@ def expand_repo_def(**kwargs):
                                                  dist)
 
     source_entry = sourceslist.SourceEntry(repo)
+    for list_args in ('architectures', 'comps'):
+        if list_args in kwargs:
+            kwargs[list_args] = kwargs[list_args].split(',')
     for kwarg in _MODIFY_OK:
         if kwarg in kwargs:
             setattr(source_entry, kwarg, kwargs[kwarg])
