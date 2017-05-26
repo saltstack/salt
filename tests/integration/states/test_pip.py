@@ -114,6 +114,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
+    @skipIf(six.PY3, 'Issue is specific to carbon module, which is PY2-only')
     @requires_system_grains
     def test_pip_installed_weird_install(self, grains=None):
         # First, check to see if this is running on CentOS 5 or MacOS.

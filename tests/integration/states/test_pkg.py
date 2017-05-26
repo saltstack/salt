@@ -494,7 +494,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         Need to check to ensure the package has been
         installed after the pkg_latest_epoch sls
         file has been run. This needs to be broken up into
-        a seperate method so I can add the requires_salt_modules
+        a separate method so I can add the requires_salt_modules
         decorator to only the pkg.info_installed command.
         '''
         # Skip test if package manager not available

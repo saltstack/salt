@@ -881,7 +881,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         represents one certificate. A dict must contain either the key
         ``serial_number`` with the value of the serial number to revoke, or
         ``certificate`` with either the PEM encoded text of the certificate,
-        or a path ot the certificate to revoke.
+        or a path to the certificate to revoke.
 
         The dict can optionally contain the ``revocation_date`` key. If this
         key is omitted the revocation date will be set to now. If should be a
