@@ -37,7 +37,7 @@ The napalm-logs transfers the messages via widely used transport
 mechanisms such as: ZeroMQ (default), Kafka, etc.
 
 The user can select the right transport using the ``transport``
-option in the configuration. The
+option in the configuration.
 
 :configuration: Example configuration
 
@@ -118,61 +118,53 @@ Event example:
         "timestamp": "1495741841"
     }
 
-Output object example:
+To consume the events and eventually react and deploy a configuration
+changes on the device(s) firing the event, one is able to
+identify the minion ID, using one of the following alternatives, but not limited to:
 
-.. code-block:: json
+- :mod:`Host grains <salt.grains.napalm.host>` to match the event tag
+- :mod:`Hostname grains <salt.grains.napalm.hostname>` to match the IP address in the event data
+- :ref:`Define static grains <static-custom-grains>`
+- :ref:`Write a grains module <writing-grains>`
+- :ref:`Targeting minions using pillar data <targeting-pillar>` -- the user
+can insert certain information in the pillar and then use it to identify minions
 
-    {
-      "error": "BGP_PREFIX_THRESH_EXCEEDED",
-      "ip": "127.0.0.1",
-      "host": "re0.edge01.bjm01",
-      "message_details": {
-        "processId": "2902",
-        "error": "BGP_PREFIX_THRESH_EXCEEDED",
-        "pri": "149",
-        "processName": "rpd",
-        "host": "re0.edge01.bjm01",
-        "time": "12:45:19",
-        "date": "Mar 30",
-        "message": "1.2.3.4 (External AS 15169): Configured maximum prefix-limit threshold(160) exceeded for inet-unicast nlri: 181 (instance master)"
-      },
-      "model_name": "openconfig_bgp",
-      "open_config": {
-        "bgp": {
-          "neighbors": {
-            "neighbor": {
-              "1.2.3.4": {
-                "neighbor-address": "1.2.3.4",
-                "state": {
-                  "peer-as": 15169
-                },
-                "afi-safis": {
-                  "afi-safi": {
-                    "inet": {
-                      "state": {
-                        "prefixes": {
-                          "received": 181
-                        }
-                      },
-                      "ipv4-unicast": {
-                        "prefix-limit": {
-                          "state": {
-                            "max-prefixes": 160
-                          }
-                        }
-                      },
-                      "afi-safi-name": "inet"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "os": "junos",
-      "timestamp": "1490877919"
-    }
+Master configuration example, to match the event and react:
+
+.. code-block:: yaml
+
+    reactor:
+      - 'napalm/syslog/*/BGP_PREFIX_THRESH_EXCEEDED/*':
+        - salt://increase_prefix_limit_on_thresh_exceeded.sls
+
+Which matches the events having the error code ``BGP_PREFIX_THRESH_EXCEEDED``
+from any network operating system, from any host and reacts, executing the
+``increase_prefix_limit_on_thresh_exceeded.sls`` reactor, found under
+one of the :conf_master:`file_roots` paths.
+
+Reactor example:
+
+.. code-block:: yaml
+
+    increase_prefix_limit_on_thresh_exceeded:
+      local.net.load_template:
+        - tgt: "hostname:{{ data['host'] }}"
+        - tgt_type: grain
+        - kwarg:
+            template_name: salt://increase_prefix_limit.jinja
+            openconfig_structure: {{ data['open_config'] }}
+
+The reactor in the example increases the BGP prefix limit
+when triggered by an event as above. The minion is matched using the ``host``
+field from the ``data`` (which is the body of the event), compared to the
+:mod:`hostname grain <salt.grains.napalm.hostname>` field. When the event
+occurs, the reactor will execute the
+:mod:`net.load_template <salt.modules.napalm_network.load_template>` function,
+sending as arguments the template ``salt://increase_prefix_limit.jinja`` defined
+by the user in their environment and the complete OpenConfig object under
+the variable name ``openconfig_structure``. Inside the Jinja template, the user
+can process the object from ``openconfig_structure`` and define the bussiness
+logic as required.
 '''
 from __future__ import absolute_import
 
