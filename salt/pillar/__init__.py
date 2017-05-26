@@ -733,18 +733,21 @@ class Pillar(object):
         if errors is None:
             errors = []
         for saltenv, pstates in six.iteritems(matches):
-            pstatesfile = []
+            pstatefiles = []
             mods = set()
             for sls_match in pstates:
+                matched_pstates = []
                 try:
-                    pstatefiles = fnmatch.filter(self.avail[saltenv], sls_match)
+                    matched_pstates = fnmatch.filter(self.avail[saltenv], sls_match)
                 except KeyError:
                     errors.extend(
                         ['No matching pillar environment for environment '
                          '\'{0}\' found'.format(saltenv)]
                     )
-                if not pstatefiles:
-                    pstatefiles = [sls_match]
+                if matched_pstates:
+                    pstatefiles.extend(matched_pstates)
+                else:
+                    pstatefiles.append(sls_match)
 
             for sls in pstatefiles:
                 pstate, mods, err = self.render_pstate(sls, saltenv, mods)
