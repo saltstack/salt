@@ -165,7 +165,7 @@ def persist(name, value, config=None):
     edited = False
     # If the sysctl.conf is not present, add it
     if not os.path.isfile(config):
-        sysctl_dir = os.path.split(config)[0]
+        sysctl_dir = os.path.dirname(config)
         if not os.path.exists(sysctl_dir):
             os.makedirs(sysctl_dir)
         try:
