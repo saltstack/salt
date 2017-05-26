@@ -155,7 +155,7 @@ def __virtual__():
     return True
 
 
-def _zmq(address, port):
+def _zmq(address, port, **kwargs):
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     if salt.utils.network.is_ipv6(address):
@@ -170,11 +170,12 @@ def _zmq(address, port):
 
 def _get_transport_recv(name='zmq',
                         address='0.0.0.0',
-                        port=49017):
+                        port=49017,
+                        **kwargs):
     if name not in TRANSPORT_FUN_MAP:
         log.error('Invalid transport: {0}. Falling back to ZeroMQ.'.format(name))
         name = 'zmq'
-    return TRANSPORT_FUN_MAP[name](address, port)
+    return TRANSPORT_FUN_MAP[name](address, port, **kwargs)
 
 
 TRANSPORT_FUN_MAP = {
