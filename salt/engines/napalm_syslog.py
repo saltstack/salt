@@ -49,7 +49,7 @@ option in the configuration. The
               address: 1.2.3.4
               port: 49018
 
-:configuration: Configuration example, excluding messages from iosxr devices:
+:configuration: Configuration example, excluding messages from IOS-XR devices:
 
     .. code-block:: yaml
 
@@ -281,7 +281,7 @@ def start(transport='zmq',
         The address of the publisher, as configured on napalm-logs.
 
     port: ``49017``
-        The port of the publisher, , as configured on napalm-logs.
+        The port of the publisher, as configured on napalm-logs.
 
     auth_address: ``0.0.0.0``
         The address used for authentication
