@@ -149,7 +149,7 @@ def absent(dbname, name,
             ret['comment'] = 'Schema {0} is set to be removed' \
                              ' from database {1}'.format(name, dbname)
             return ret
-        elif __salt__['postgres.schema_remove'](dbname, name, cascade=cascade, **db_args):
+        elif __salt__['postgres.schema_remove'](dbname, name, **db_args):
             ret['comment'] = 'Schema {0} has been removed' \
                              ' from database {1}'.format(name, dbname)
             ret['changes'][name] = 'Absent'
