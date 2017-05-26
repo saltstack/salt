@@ -53,7 +53,7 @@ def read_file(fh_, chunk_size=1048576):
                 chunk = fh_.read(chunk_size)
             except AttributeError:
                 # Open the file and re-attempt the read
-                fh_ = salt.utils.fopen(fh_, 'rb')
+                fh_ = salt.utils.fopen(fh_, 'rb')  # pylint: disable=W8470
                 chunk = fh_.read(chunk_size)
             if not chunk:
                 break

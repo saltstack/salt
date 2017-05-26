@@ -86,7 +86,7 @@ def recv(dest, chunk, append=False, compressed=True, mode=None):
 
     open_mode = 'ab' if append else 'wb'
     try:
-        fh_ = salt.utils.fopen(dest, open_mode)
+        fh_ = salt.utils.fopen(dest, open_mode)  # pylint: disable=W8470
     except (IOError, OSError) as exc:
         if exc.errno != errno.ENOENT:
             # Parent dir does not exist, we need to create it
@@ -96,7 +96,7 @@ def recv(dest, chunk, append=False, compressed=True, mode=None):
         except (IOError, OSError) as makedirs_exc:
             # Failed to make directory
             return _error(makedirs_exc.__str__())
-        fh_ = salt.utils.fopen(dest, open_mode)
+        fh_ = salt.utils.fopen(dest, open_mode)  # pylint: disable=W8470
 
     try:
         # Write the chunk to disk
