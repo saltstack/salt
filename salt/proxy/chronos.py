@@ -62,7 +62,7 @@ def ping():
             decode=True,
         )
         log.debug(
-            'chronos.info returned succesfully: %s',
+            'chronos.info returned successfully: %s',
             response,
         )
         if 'dict' in response:
