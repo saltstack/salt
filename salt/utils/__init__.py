@@ -3212,3 +3212,26 @@ def substr_in_list(string_to_search_for, list_to_search):
     string is present in any of the strings which comprise a list
     '''
     return any(string_to_search_for in s for s in list_to_search)
+
+
+def is_quoted(val):
+    '''
+    Return a single or double quote, if a string is wrapped in extra quotes.
+    Otherwise return an empty string.
+    '''
+    ret = ''
+    if (
+        isinstance(val, six.string_types) and val[0] == val[-1] and
+        val.startswith(('\'', '"'))
+    ):
+        ret = val[0]
+    return ret
+
+
+def dequote(val):
+    '''
+    Remove extra quotes around a string.
+    '''
+    if is_quoted(val):
+        return val[1:-1]
+    return val
