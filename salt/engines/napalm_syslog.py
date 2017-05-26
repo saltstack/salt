@@ -192,7 +192,13 @@ def start(transport='zmq',
           auth_address='0.0.0.0',
           auth_port=49018,
           disable_security=False,
-          certificate=None):
+          certificate=None,
+          host_blacklist=None,
+          host_whitelist=None,
+          os_blackList=None,
+          os_whitelist=None,
+          error_blackList=None,
+          error_whitelist=None):
     '''
     Listen to napalm-logs and publish events into the Salt event bus.
 
@@ -226,6 +232,9 @@ def start(transport='zmq',
         priv_key, verify_key = napalm_logs.utils.authenticate(certificate,
                                                               address=auth_address,
                                                               port=auth_port)
+    else:
+        if not certificate:
+            log.critical('Please use a certificate, or disable the security.')
     transport_recv_fun = _get_transport_recv(name=transport,
                                              address=address,
                                              port=port)
@@ -245,10 +254,34 @@ def start(transport='zmq',
         else:
             dict_object = napalm_logs.utils.unserialize(raw_object)
         try:
+            event_os = dict_object['os']
+            if os_blackList or os_whitelist:
+                valid_os = salt.utils.check_whitelist_blacklist(event_os,
+                                                                whitelist=os_whitelist,
+                                                                blacklist=os_blackList)
+                if not valid_os:
+                    log.info('Ignoring NOS {} as per whitelist/blacklist'.format(event_os))
+                    continue
+            event_error = dict_object['error']
+            if error_blackList or error_whitelist:
+                valid_error = salt.utils.check_whitelist_blacklist(event_error,
+                                                                   whitelist=error_whitelist,
+                                                                   blacklist=error_blackList)
+                if not valid_error:
+                    log.info('Ignoring error {} as per whitelist/blacklist'.format(event_error))
+                    continue
+            event_host = dict_object.get('host') or dict_object.get('ip')
+            if host_blackList or host_whitelist:
+                valid_host = salt.utils.check_whitelist_blacklist(event_host,
+                                                                   whitelist=host_whitelist,
+                                                                   blacklist=host_blackList)
+                if not valid_host:
+                    log.info('Ignoring messages from {} as per whitelist/blacklist'.format(event_host))
+                    continue
             tag = 'napalm/syslog/{os}/{error}/{host}'.format(
-                os=dict_object['os'],
-                error=dict_object['error'],
-                host=(dict_object.get('host') or dict_object.get('ip'))
+                os=event_os,
+                error=event_error,
+                host=event_host
             )
         except KeyError as kerr:
             log.warning('Missing keys from the napalm-logs object:', exc_info=True)
