@@ -385,6 +385,31 @@ def install(name=None,
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
 
+    if pkg_type == 'file' and reinstall:
+        # For file-based packages, prepare 'to_reinstall' to have a list
+        # of all the package names that may have been reinstalled.
+        # This way, we could include reinstalled packages in 'ret'.
+        for pkgfile in to_install:
+            # Convert from file name to package name.
+            cmd = ['opkg', 'info', pkgfile]
+            out = __salt__['cmd.run_all'](
+                cmd,
+                output_loglevel='trace',
+                python_shell=False
+            )
+            if out['retcode'] == 0:
+                # Just need the package name.
+                pkginfo_dict = _process_info_installed_output(
+                    out['stdout'], []
+                )
+                if pkginfo_dict:
+                    to_reinstall.append(list(pkginfo_dict.keys())[0])
+
+    for pkgname in to_reinstall:
+        if pkgname not in ret or pkgname in old:
+            ret.update({pkgname: {'old': old.get(pkgname, ''),
+                                  'new': new.get(pkgname, '')}})
+
     if errors:
         raise CommandExecutionError(
             'Problem encountered installing package(s)',
