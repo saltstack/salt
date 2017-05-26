@@ -2127,6 +2127,17 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
     _default_logging_level_ = config.DEFAULT_MASTER_OPTS['log_level']
     _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['log_file']
 
+    def _mixin_setup(self):
+        file_opts_group = optparse.OptionGroup(self, 'File Options')
+        file_opts_group.add_option(
+            '-n', '--no-compression',
+            default=True,
+            dest='compression',
+            action='store_false',
+            help='Disable gzip compression.'
+        )
+        self.add_option_group(file_opts_group)
+
     def _mixin_after_parsed(self):
         # salt-cp needs arguments
         if len(self.args) <= 1:
@@ -2140,8 +2151,9 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
                 self.config['tgt'] = self.args[0].split()
         else:
             self.config['tgt'] = self.args[0]
-        self.config['src'] = self.args[1:-1]
+        self.config['src'] = [os.path.realpath(x) for x in self.args[1:-1]]
         self.config['dest'] = self.args[-1]
+        self.config['gzip'] = True
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
