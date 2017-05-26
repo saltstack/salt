@@ -316,12 +316,12 @@ def start(transport='zmq',
         List of hosts of IPs to be ignored.
     '''
     if not disable_security:
+        if not certificate:
+            log.critical('Please use a certificate, or disable the security.')
+            return
         priv_key, verify_key = napalm_logs.utils.authenticate(certificate,
                                                               address=auth_address,
                                                               port=auth_port)
-    else:
-        if not certificate:
-            log.critical('Please use a certificate, or disable the security.')
     transport_recv_fun = _get_transport_recv(name=transport,
                                              address=address,
                                              port=port)
