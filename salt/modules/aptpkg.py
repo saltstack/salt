@@ -2103,6 +2103,11 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     The following options are available to modify a repo definition:
 
+        architectures
+            a comma separated list of supported architectures, e.g. ``amd64``
+            If this option is not set, all architectures (configured in the
+            system) will be used.
+
         comps
             a comma separated list of components for the repo, e.g. ``main``
 
