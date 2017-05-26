@@ -958,6 +958,9 @@ VALID_OPTS = {
 
     # Permit or deny allowing minions to request revoke of its own key
     'allow_minion_key_revoke': bool,
+
+    # File chunk size for salt-cp
+    'salt_cp_chunk_size': int,
 }
 
 # default configurations
@@ -1201,6 +1204,7 @@ DEFAULT_MINION_OPTS = {
     'minion_jid_queue_hwm': 100,
     'ssl': None,
     'cache': 'localfs',
+    'salt_cp_chunk_size': 65536,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1478,6 +1482,7 @@ DEFAULT_MASTER_OPTS = {
     'django_auth_path': '',
     'django_auth_settings': '',
     'allow_minion_key_revoke': True,
+    'salt_cp_chunk_size': 98304,
 }
 
 
