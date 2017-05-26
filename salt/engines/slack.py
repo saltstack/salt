@@ -104,7 +104,6 @@ try:
     HAS_SLACKCLIENT = True
 except ImportError:
     HAS_SLACKCLIENT = False
-    log.error("The slack integration can't be loaded because of an ImportError.  Do you have the dependencies installed?")
 
 # Import salt libs
 import salt.client
@@ -117,9 +116,13 @@ import salt.utils.http
 import salt.utils.slack
 from salt.utils.yamldumper import OrderedDumper
 
+__virtualname__ = 'slack'
+
 
 def __virtual__():
-    return HAS_SLACKCLIENT
+    if not HAS_SLACKCLIENT:
+        return (False, 'The \'slackclient\' Python module could not be loaded')
+    return __virtualname__
 
 
 def get_slack_users(token):
