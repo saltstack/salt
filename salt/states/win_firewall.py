@@ -2,6 +2,7 @@
 '''
 State for configuring Windows Firewall
 '''
+from __future__ import absolute_import
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
