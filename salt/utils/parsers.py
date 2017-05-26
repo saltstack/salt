@@ -3029,8 +3029,9 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
 
         # Add back the --no-parse options so that shimmed/wrapped commands
         # handle the arguments correctly.
-        self.config['argv'].append(
-            '--no-parse=' + ','.join(self.options.no_parse))
+        if self.options.no_parse:
+            self.config['argv'].append(
+                '--no-parse=' + ','.join(self.options.no_parse))
 
         if self.options.ssh_askpass:
             self.options.ssh_passwd = getpass.getpass('Password: ')
