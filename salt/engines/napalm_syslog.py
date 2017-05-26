@@ -129,6 +129,7 @@ except ImportError:
     HAS_NAPALM_LOGS = False
 
 # Import salt libs
+import salt.utils
 import salt.utils.network
 from salt.utils import event
 
