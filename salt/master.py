@@ -459,7 +459,7 @@ class Master(SMaster):
             os.chdir('/')
         except OSError as err:
             errors.append(
-                'Cannot change to root directory ({1})'.format(err)
+                'Cannot change to root directory ({0})'.format(err)
             )
 
         fileserver = salt.fileserver.Fileserver(self.opts)
