@@ -342,7 +342,8 @@ def _get_client(timeout=NOTSET, **kwargs):
             ['docker-machine', 'inspect', docker_machine],
             python_shell=False)
         try:
-            docker_machine_json = json.loads(docker_machine_json)
+            docker_machine_json = \
+                json.loads(salt.utils.to_str(docker_machine_json))
             docker_machine_tls = \
                 docker_machine_json['HostOptions']['AuthOptions']
             docker_machine_ip = docker_machine_json['Driver']['IPAddress']
@@ -618,7 +619,7 @@ def _client_wrapper(attr, *args, **kwargs):
             api_events = []
             try:
                 for event in ret:
-                    api_events.append(json.loads(event))
+                    api_events.append(json.loads(salt.utils.to_str(event)))
             except Exception as exc:
                 raise CommandExecutionError(
                     'Unable to interpret API event: \'{0}\''.format(event),
@@ -3058,7 +3059,9 @@ def build(path=None,
 
     stream_data = []
     for line in response:
-        stream_data.extend(json.loads(line, cls=DockerJSONDecoder))
+        stream_data.extend(
+            json.loads(salt.utils.to_str(line), cls=DockerJSONDecoder)
+        )
     errors = []
     # Iterate through API response and collect information
     for item in stream_data:
