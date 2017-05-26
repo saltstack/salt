@@ -67,7 +67,7 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
                'comment': ''}
 
         mock_t = MagicMock(side_effect=[True, False])
-        mock = MagicMock(side_effect=[True, True, False, False])
+        mock = MagicMock(side_effect=[True, True, True, False])
         with patch.dict(postgres_schema.__salt__,
                         {'postgres.schema_exists': mock,
                          'postgres.schema_remove': mock_t}):
@@ -75,7 +75,7 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('Schema {0} is set to be removed from database {1}'.
                         format(name, dbname))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(postgres_schema.absent(name), ret)
+                self.assertDictEqual(postgres_schema.absent(dbname, name), ret)
 
             with patch.dict(postgres_schema.__opts__, {'test': False}):
                 comt = ('Schema {0} has been removed from database {1}'.
