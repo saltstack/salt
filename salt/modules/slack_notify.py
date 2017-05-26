@@ -247,7 +247,7 @@ def call_hook(message,
               username=None,
               icon_emoji=None):
     '''
-    Send message to Slack incomming webhook.
+    Send message to Slack incoming webhook.
 
     :param message:     The topic of message.
     :param attachment:  The message to send to the Slacke WebHook.
@@ -258,7 +258,7 @@ def call_hook(message,
     :param channel:     The channel to use instead of the WebHook default.
     :param username:    Username to use instead of WebHook default.
     :param icon_emoji:  Icon to use instead of WebHook default.
-    :return:            Boolean if message was sent successfuly.
+    :return:            Boolean if message was sent successfully.
 
     CLI Example:
 

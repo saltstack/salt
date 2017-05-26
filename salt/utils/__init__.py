@@ -2298,7 +2298,7 @@ def namespaced_function(function, global_dict, defaults=None, preserve_context=F
     Redefine (clone) a function under a different globals() namespace scope
 
         preserve_context:
-            Allow to keep the context taken from orignal namespace,
+            Allow keeping the context taken from orignal namespace,
             and extend it with globals() taken from
             new targetted namespace.
     '''

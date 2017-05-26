@@ -256,7 +256,7 @@ def _get_jinja_error(trace, context=None):
         ):
             add_log = True
             template_path = error[0]
-    # if we add a log, format explicitly the exeception here
+    # if we add a log, format explicitly the exception here
     # by telling to output the macro context after the macro
     # error log place at the beginning
     if add_log:

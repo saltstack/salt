@@ -538,7 +538,7 @@ class AsyncClientMixin(object):
 
         # if this is a ret, we have our own set of rules
         if suffix == 'ret':
-            # Check if ouputter was passed in the return data. If this is the case,
+            # Check if outputter was passed in the return data. If this is the case,
             # then the return data will be a dict two keys: 'data' and 'outputter'
             if isinstance(event.get('return'), dict) \
                     and set(event['return']) == set(('data', 'outputter')):
