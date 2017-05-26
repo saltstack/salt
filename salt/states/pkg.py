@@ -823,11 +823,11 @@ def installed(
         **WILDCARD VERSIONS**
 
         As of the Nitrogen release, this state now supports wildcards in
-        package versions for Debian/Ubuntu, RHEL/CentOS, Arch Linux, and their
-        derivatives. Using wildcards can be useful for packages where the
-        release name is built into the version in some way, such as for
-        RHEL/CentOS which typically has version numbers like ``1.2.34-5.el7``.
-        An example of the usage for this would be:
+        package versions for SUSE SLES/Leap/Tumbleweed, Debian/Ubuntu, RHEL/CentOS,
+        Arch Linux, and their derivatives. Using wildcards can be useful for
+        packages where the release name is built into the version in some way,
+        such as for RHEL/CentOS which typically has version numbers like
+        ``1.2.34-5.el7``. An example of the usage for this would be:
 
         .. code-block:: yaml
 
