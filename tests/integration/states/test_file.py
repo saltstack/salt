@@ -2031,16 +2031,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertSaltTrueReturn({name: step})
             with salt.utils.fopen(testcase_filedest) as fp_:
                 contents = fp_.read().split(os.linesep)
-            self.assertEqual(
-                ['#',
-                 '#-- start managed zone PLEASE, DO NOT EDIT',
-                 'bar',
-                 '',
-                 'baz',
-                 '#-- end managed zone',
-                 ''],
-                contents
-            )
+
+            begin = contents.index(
+                '#-- start managed zone PLEASE, DO NOT EDIT') + 1
+            end = contents.index('#-- end managed zone')
+            block_contents = contents[begin:end]
+            for item in ('', 'bar', 'baz'):
+                block_contents.remove(item)
+            self.assertEqual(block_contents, [])
         finally:
             if os.path.isdir(testcase_filedest):
                 os.unlink(testcase_filedest)
