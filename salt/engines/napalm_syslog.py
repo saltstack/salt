@@ -45,9 +45,78 @@ option in the configuration. The
 
         engines:
           - napalm_syslog:
-                transport: zmq
-                address: 1.2.3.4
-                port: 49018
+              transport: zmq
+              address: 1.2.3.4
+              port: 49018
+
+:configuration: Configuration example, excluding messages from iosxr devices:
+
+    .. code-block:: yaml
+
+        engines:
+          - napalm_syslog:
+              transport: kafka
+              address: 1.2.3.4
+              port: 49018
+              os_blacklist:
+                - iosxr
+
+Event example:
+
+.. code-block:: json
+
+    napalm/syslog/junos/BGP_PREFIX_THRESH_EXCEEDED/vmx01    {
+        "_stamp": "2017-05-26T10:03:18.653045",
+        "error": "BGP_PREFIX_THRESH_EXCEEDED",
+        "host": "vmx01",
+        "ip": "192.168.140.252",
+        "message_details": {
+            "date": "May 25",
+            "host": "vmx01",
+            "message": "192.168.140.254 (External AS 65001): Configured maximum prefix-limit threshold(22) exceeded for inet-unicast nlri: 28 (instance master)",
+            "pri": "28",
+            "processId": "2957",
+            "processName": "rpd",
+            "tag": "BGP_PREFIX_THRESH_EXCEEDED",
+            "time": "20:50:41"
+        },
+        "model_name": "openconfig_bgp",
+        "open_config": {
+            "bgp": {
+                "neighbors": {
+                    "neighbor": {
+                        "192.168.140.254": {
+                            "afi_safis": {
+                                "afi_safi": {
+                                    "inet": {
+                                        "afi_safi_name": "inet",
+                                        "ipv4_unicast": {
+                                            "prefix_limit": {
+                                                "state": {
+                                                    "max_prefixes": 22
+                                                }
+                                            }
+                                        },
+                                        "state": {
+                                            "prefixes": {
+                                                "received": 28
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "neighbor_address": "192.168.140.254",
+                            "state": {
+                                "peer_as": 65001
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "os": "junos",
+        "timestamp": "1495741841"
+    }
 
 Output object example:
 
@@ -104,8 +173,6 @@ Output object example:
       "os": "junos",
       "timestamp": "1490877919"
     }
-
-
 '''
 from __future__ import absolute_import
 
@@ -195,12 +262,12 @@ def start(transport='zmq',
           auth_port=49018,
           disable_security=False,
           certificate=None,
-          host_blacklist=None,
-          host_whitelist=None,
-          os_blackList=None,
           os_whitelist=None,
-          error_blackList=None,
-          error_whitelist=None):
+          os_blacklist=None,
+          error_whitelist=None,
+          error_blacklist=None,
+          host_whitelist=None,
+          host_blacklist=None):
     '''
     Listen to napalm-logs and publish events into the Salt event bus.
 
@@ -211,10 +278,10 @@ def start(transport='zmq',
             Currently ``zmq`` is the only valid option.
 
     address: ``0.0.0.0``
-        The address of the publisher.
+        The address of the publisher, as configured on napalm-logs.
 
     port: ``49017``
-        The port of the publisher.
+        The port of the publisher, , as configured on napalm-logs.
 
     auth_address: ``0.0.0.0``
         The address used for authentication
@@ -227,8 +294,26 @@ def start(transport='zmq',
         Trust unencrypted messages.
         Strongly discouraged in production.
 
-    certificate
+    certificate: ``None``
         Absolute path to the SSL certificate.
+
+    os_whitelist: ``None``
+        List of operating systems allowed. By default everything is allowed.
+
+    os_blacklist: ``None``
+        List of operating system to be ignored. Nothing ignored by default.
+
+    error_whitelist: ``None``
+        List of errors allowed.
+
+    error_blacklist: ``None``
+        List of errors ignored.
+
+    host_whitelist: ``None``
+        List of hosts or IPs to be allowed.
+
+    host_blacklist: ``None``
+        List of hosts of IPs to be ignored.
     '''
     if not disable_security:
         priv_key, verify_key = napalm_logs.utils.authenticate(certificate,
@@ -257,26 +342,26 @@ def start(transport='zmq',
             dict_object = napalm_logs.utils.unserialize(raw_object)
         try:
             event_os = dict_object['os']
-            if os_blackList or os_whitelist:
+            if os_blacklist or os_whitelist:
                 valid_os = salt.utils.check_whitelist_blacklist(event_os,
                                                                 whitelist=os_whitelist,
-                                                                blacklist=os_blackList)
+                                                                blacklist=os_blacklist)
                 if not valid_os:
                     log.info('Ignoring NOS {} as per whitelist/blacklist'.format(event_os))
                     continue
             event_error = dict_object['error']
-            if error_blackList or error_whitelist:
+            if error_blacklist or error_whitelist:
                 valid_error = salt.utils.check_whitelist_blacklist(event_error,
                                                                    whitelist=error_whitelist,
-                                                                   blacklist=error_blackList)
+                                                                   blacklist=error_blacklist)
                 if not valid_error:
                     log.info('Ignoring error {} as per whitelist/blacklist'.format(event_error))
                     continue
             event_host = dict_object.get('host') or dict_object.get('ip')
-            if host_blackList or host_whitelist:
+            if host_blacklist or host_whitelist:
                 valid_host = salt.utils.check_whitelist_blacklist(event_host,
-                                                                   whitelist=host_whitelist,
-                                                                   blacklist=host_blackList)
+                                                                  whitelist=host_whitelist,
+                                                                  blacklist=host_blacklist)
                 if not valid_host:
                     log.info('Ignoring messages from {} as per whitelist/blacklist'.format(event_host))
                     continue
