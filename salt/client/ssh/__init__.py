@@ -984,9 +984,10 @@ class Single(object):
                 mine_fun = mine_fun_data.pop('mine_function', mine_fun)
                 mine_args = mine_fun_data
             elif isinstance(mine_fun_data, list):
-                if isinstance(mine_fun_data[0], dict) and 'mine_function' in mine_fun_data[0]:
-                    mine_fun = mine_fun_data[0]['mine_function']
-                    mine_fun_data.pop(0)
+                for item in mine_fun_data[:]:
+                    if isinstance(item, dict) and 'mine_function' in item:
+                        mine_fun = item['mine_function']
+                        mine_fun_data.pop(mine_fun_data.index(item))
                 mine_args = mine_fun_data
             else:
                 mine_args = mine_fun_data
