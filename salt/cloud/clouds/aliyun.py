@@ -778,6 +778,7 @@ def query(params=None):
     '''
     Make a web call to aliyun ECS REST API
     '''
+
     path = 'https://ecs-cn-hangzhou.aliyuncs.com'
 
     access_key_id = config.get_cloud_config_value(
