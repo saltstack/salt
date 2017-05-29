@@ -609,10 +609,10 @@ def system_properties_present(server=None, **kwargs):
 
 def system_properties_absent(name, server=None):
     '''
-    Ensures that the JMS Destination doesn't exists
+    Ensures that the system property doesn't exists
 
     name
-        Name of the JMS Destination
+        Name of the system property
     '''
     ret = {'name': '', 'result': None, 'comment': None, 'changes': {}}
 
