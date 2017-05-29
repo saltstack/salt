@@ -971,7 +971,7 @@ def clear_job_cache(hours=24):
                 if mtime < threshold:
                     shutil.rmtree(os.path.join(root, name))
             except OSError as exc:
-                log.error('Attempt to clear cache with saltutil.clear_cache FAILED with: {0}'.format(exc))
+                log.error('Attempt to clear cache with saltutil.clear_job_cache FAILED with: {0}'.format(exc))
                 return False
     return True
 
