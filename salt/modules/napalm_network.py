@@ -148,6 +148,11 @@ def _config_logic(napalm_device,
     if _compare.get('result', False):
         loaded_result['diff'] = _compare.get('out')
         loaded_result.pop('out', '')  # not needed
+    else:
+        loaded_result['diff'] = None
+        loaded_result['result'] = False
+        loaded_result['comment'] = _compare.get('comment')
+        return loaded_result
 
     _loaded_res = loaded_result.get('result', False)
     if not _loaded_res or test:
