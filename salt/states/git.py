@@ -1554,6 +1554,8 @@ def latest(name,
                                 else ''
                         )
                     )
+                    if fetch_changes:
+                        ret['changes']['bare'] = 'Refs updated'
             try:
                 new_rev = __salt__['git.revision'](
                     cwd=target,
