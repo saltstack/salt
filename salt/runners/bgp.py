@@ -33,11 +33,11 @@ Configuration
     By default the following options can be configured on the master.
     They are not necessary, but available in case the user has different requirements.
 
-    target: ``*``
+    tgt: ``*``
         From what minions will collect the mine data.
         Default: ``*`` (collect mine data from all minions)
 
-    expr_form: ``glob``
+    tgt_type: ``glob``
         Minion matching expression form. Default: ``glob``.
 
     return_fields
