@@ -12,10 +12,6 @@ or for problem solving if your minion is having problems.
 
 # Import Python Libs
 from __future__ import absolute_import
-import os
-import ctypes
-import sys
-import time
 import datetime
 import psutil
 import logging
@@ -24,15 +20,16 @@ log = logging.getLogger(__name__)
 
 # Import Salt Libs
 import salt.utils
-import salt.ext.six as six
 import salt.utils.event
 from salt._compat import subprocess
 from salt.utils.network import host_to_ips as _host_to_ips
+from salt.utils import namespaced_function as _namespaced_function
+
+# These imports needed for namespaced functions
 # pylint: disable=W0611
 from salt.modules.status import ping_master, time_
 import copy
 # pylint: enable=W0611
-from salt.utils import namespaced_function as _namespaced_function
 
 # Import 3rd Party Libs
 if salt.utils.is_windows():
