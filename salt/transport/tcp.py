@@ -822,11 +822,16 @@ class SaltMessageClient(object):
                     # 'salt.utils.async.SyncWrapper'). Ensure that
                     # _stream_return() completes by restarting the IO Loop.
                     # This will prevent potential errors on shutdown.
-                    self.io_loop.add_future(
-                        self._stream_return_future,
-                        lambda future: self.io_loop.stop()
-                    )
-                    self.io_loop.start()
+                    orig_loop = tornado.ioloop.IOLoop.current()
+                    self.io_loop.make_current()
+                    try:
+                        self.io_loop.add_future(
+                            self._stream_return_future,
+                            lambda future: self.io_loop.stop()
+                        )
+                        self.io_loop.start()
+                    finally:
+                        orig_loop.make_current()
         self._tcp_client.close()
         # Clear callback references to allow the object that they belong to
         # to be deleted.
