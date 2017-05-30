@@ -50,7 +50,6 @@ import salt.runner
 import salt.output
 import salt.version
 import salt.utils
-import salt.utils.network
 import salt.utils.process
 import salt.log.setup as salt_log_setup
 from salt.ext import six
@@ -270,13 +269,6 @@ class TestDaemon(object):
         '''
         Fire up the daemons used for zeromq tests
         '''
-        if not salt.utils.network.ip_addrs():
-            sys.stdout.write(
-                ' * {LIGHT_RED}Unable to list IPv4 addresses. Test suite startup will be\n'
-                '   slower. Install iproute/ifconfig to fix this.{ENDC}\n'.format(
-                    **self.colors
-                )
-            )
         self.log_server = ThreadedSocketServer(('localhost', SALT_LOG_PORT), SocketServerRequestHandler)
         self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
         self.log_server_process.daemon = True

@@ -184,7 +184,9 @@ class BaseCaller(object):
                 sdata['metadata'] = metadata
             args, kwargs = salt.minion.load_args_and_kwargs(
                 self.minion.functions[fun],
-                salt.utils.args.parse_input(self.opts['arg']),
+                salt.utils.args.parse_input(
+                    self.opts['arg'],
+                    no_parse=self.opts.get('no_parse', [])),
                 data=sdata)
             try:
                 with salt.utils.fopen(proc_fn, 'w+b') as fp_:

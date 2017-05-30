@@ -35,8 +35,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         Test if it clear out all of the data in the minion datastore
         '''
         with patch('os.remove', MagicMock(return_value='')):
-            mock = MagicMock(return_value='')
-            with patch.dict(data.__opts__, {'cachedir': mock}):
+            with patch.dict(data.__opts__, {'cachedir': ''}):
                 self.assertTrue(data.clear())
 
     # 'load' function tests: 1
@@ -49,10 +48,9 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
             mocked_fopen = MagicMock(return_value=True)
             mocked_fopen.__enter__ = MagicMock(return_value=mocked_fopen)
             mocked_fopen.__exit__ = MagicMock()
-            mock = MagicMock(return_value='/')
             with patch('salt.utils.fopen', MagicMock(return_value=mocked_fopen)):
                 with patch('salt.payload.Serial.loads', MagicMock(return_value=True)):
-                    with patch.dict(data.__opts__, {'cachedir': mock}):
+                    with patch.dict(data.__opts__, {'cachedir': '/'}):
                         self.assertTrue(data.load())
 
     # 'dump' function tests: 3
@@ -61,8 +59,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it replace the entire datastore with a passed data structure
         '''
-        mock = MagicMock(return_value='/')
-        with patch.dict(data.__opts__, {'cachedir': mock}):
+        with patch.dict(data.__opts__, {'cachedir': '/'}):
             with patch('salt.utils.fopen', mock_open()):
                 self.assertTrue(data.dump('{"eggs": "spam"}'))
 
@@ -77,8 +74,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it replace the entire datastore with a passed data structure
         '''
-        mock = MagicMock(return_value='/')
-        with patch.dict(data.__opts__, {'cachedir': mock}):
+        with patch.dict(data.__opts__, {'cachedir': '/'}):
             mock = MagicMock(side_effect=IOError(''))
             with patch('salt.utils.fopen', mock):
                 self.assertFalse(data.dump('{"eggs": "spam"}'))
