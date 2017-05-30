@@ -66,12 +66,12 @@ Configuration
         from network devices.
         - ``interface_description``: matches the neighbor details with the
         corresponding interface and returns its description. This will reuse
-        functionality from the :mod:`net runner <salt.runners.net>`,
+        functionality from the :mod:`net runner <salt.runners.net.interfaces>`,
         so the user needs to enable the mines as specified in the documentation.
         - ``interface_name``: matches the neighbor details with the
         corresponding interface and returns the name.
         Similar to ``interface_description``, this will reuse
-        functionality from the :mod:`net runner <salt.runners.net>`,
+        functionality from the :mod:`net runner <salt.runners.net.interfaces>`,
         so the user needs to enable the mines as specified in the documentation.
 
     display: ``True``
