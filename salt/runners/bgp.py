@@ -20,7 +20,7 @@ Configuration
           bgp.neighbors: []
 
     Which instructs Salt to cache the data returned by the ``neighbors`` function
-    from the :mod:`NAPALM BGP module <salt.modules.napalm_bgp>`
+    from the :mod:`NAPALM BGP module <salt.modules.napalm_bgp.neighbors>`.
 
     How often the mines are refreshed, can be specified using:
 
@@ -42,8 +42,8 @@ Configuration
 
     return_fields
         What fields to return in the output.
-        It can display all the fields from the ``neighbor`` function
-        from the :mod:`NAPALM BGP module <salt.modules.napalm_bgp>`.
+        It can display all the fields from the ``neighbors`` function
+        from the :mod:`NAPALM BGP module <salt.modules.napalm_bgp.neighbors>`.
 
         Some fields cannot be removed:
 
@@ -262,7 +262,7 @@ def neighbors(*asns, **kwargs):
         Specify the outputter name when displaying on the CLI. Default: :mod:`table <salt.output.table_out>`.
 
     In addition, any field from the output of the ``neighbors`` function
-    from the :mod:`NAPALM BGP module <salt.modules.napalm_bgp>` can be used as a filter.
+    from the :mod:`NAPALM BGP module <salt.modules.napalm_bgp.neighbors>` can be used as a filter.
 
     CLI Example:
 
