@@ -646,3 +646,34 @@ def delete_jdbc_resource(name, target='server', server=None):
     Delete a JDBC resource
     '''
     return _delete_element(name, 'resources/jdbc-resource', {'target': target}, server)
+
+
+# System properties
+def get_system_properties(server=None):
+    '''
+    Get system properties
+    '''
+    properties = {}
+    data = _api_get('system-properties', server)
+
+    # Get properties into a dict
+    if any(data['extraProperties']['systemProperties']):
+        for element in data['extraProperties']['systemProperties']:
+            properties[element['name']] = element['value']
+        return properties
+    return {}
+
+
+def update_system_properties(data, server=None):
+    '''
+    Update system properties
+    '''
+    _api_post('system-properties', _clean_data(data), server)
+    return data
+
+
+def delete_system_properties(name, server=None):
+    '''
+    Delete a system property
+    '''
+    _api_delete('system-properties/{0}'.format(name), None, server)
