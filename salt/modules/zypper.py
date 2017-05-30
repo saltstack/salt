@@ -20,6 +20,7 @@ import re
 import os
 import time
 import datetime
+import fnmatch
 from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
