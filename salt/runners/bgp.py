@@ -31,7 +31,7 @@ Configuration
 - Master config
 
     By default the following options can be configured on the master.
-    They are not necessary, but available in case the user has different requirements.
+    They are not mandatory, but available in case the user has different requirements.
 
     tgt: ``*``
         From what minions will collect the mine data.
@@ -75,7 +75,7 @@ Configuration
         so the user needs to enable the mines as specified in the documentation.
 
     display: ``True``
-        Display on the screen or return structured object? Default: ``True``, will return on the CLI.
+        Display on the screen or return structured object? Default: ``True`` (return on the CLI).
 
     outputter: ``table``
         Specify the outputter name when displaying on the CLI. Default: :mod:`table <salt.output.table_out>`.
