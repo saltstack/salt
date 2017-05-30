@@ -42,12 +42,9 @@ Configuration
 
     return_fields
         What fields to return in the output.
-        At most, it can display all the fields from the ``neighbor`` function
+        It can display all the fields from the ``neighbor`` function
         from the :mod:`NAPALM BGP module <salt.modules.napalm_bgp>`.
-        There's one additional field called ``connection_stats`` returning
-        an output of the form ``State|#Active/Received/Accepted/Damped``, e.g.
-        ``Established 398/399/399/0`` similar to the usual output
-        from network devices.
+
         Some fields cannot be removed:
 
         - ``as_number``: the AS number of the neighbor
@@ -56,17 +53,21 @@ Configuration
 
         By default, the following extra fields are returned (displayed):
 
-        - ``connection_stats``: connection stats, as descibed above
+        - ``connection_stats``: connection stats, as descibed below
         - ``import_policy``: the name of the import policy
         - ``export_policy``: the name of the export policy
 
         Special fields:
 
+        - ``vrf``: return the name of the VRF.
+        - ``connection_stats``: returning an output of the form
+        ``<State> <Active>/<Received>/<Accepted>/<Damped>``, e.g.
+        ``Established 398/399/399/0`` similar to the usual output
+        from network devices.
         - ``interface_description``: matches the neighbor details with the
         corresponding interface and returns its description. This will reuse
         functionality from the :mod:`net runner <salt.runners.net>`,
         so the user needs to enable the mines as specified in the documentation.
-
         - ``interface_name``: matches the neighbor details with the
         corresponding interface and returns the name.
         Similar to ``interface_description``, this will reuse
@@ -146,7 +147,8 @@ _DEFAULT_LABELS_MAPPING = {
     'neighbor_address': 'Neighbor IP',
     'connection_stats': 'State|#Active/Received/Accepted/Damped',
     'import_policy': 'Policy IN',
-    'export_policy': 'Policy OUT'
+    'export_policy': 'Policy OUT',
+    'vrf': 'VRF'
 }
 
 # -----------------------------------------------------------------------------
@@ -376,6 +378,8 @@ def neighbors(*asns, **kwargs):
                         'neighbor_address': neighbor.get('remote_address'),
                         'as_number': asn
                     }
+                    if 'vrf' in display_fields:
+                        row['vrf'] = vrf
                     if 'connection_stats' in display_fields:
                         connection_stats = '{state} {active}/{received}/{accepted}/{damped}'.format(
                             state=neighbor.get('connection_state', -1),
