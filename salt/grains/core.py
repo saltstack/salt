@@ -1455,7 +1455,7 @@ def os_data():
                         patchstr = 'SP' + patch
                         if grains['lsb_distrib_codename'] and patchstr not in grains['lsb_distrib_codename']:
                             grains['lsb_distrib_codename'] += ' ' + patchstr
-                    if not grains['lsb_distrib_codename']:
+                    if not grains.get('lsb_distrib_codename'):
                         grains['lsb_distrib_codename'] = 'n.a'
                 elif os.path.isfile('/etc/altlinux-release'):
                     # ALT Linux
