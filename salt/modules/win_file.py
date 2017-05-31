@@ -74,6 +74,13 @@ try:
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
+# This is to fix the pylint error: E0602: Undefined variable "WindowsError"
+try:
+    from exceptions import WindowsError
+except ImportError:
+    class WindowsError(OSError):
+        pass
+
 HAS_WIN_DACL = False
 try:
     if salt.utils.is_windows():
@@ -1248,7 +1255,7 @@ def mkdir(path,
 
     Returns:
         bool: True if successful
-        
+
     Raises:
         CommandExecutionError: If unsuccessful
 
