@@ -28,8 +28,7 @@ except ImportError:
     JSONSCHEMA_VERSION = _LooseVersion('0')
 
 
-@skipIf(six.PY3, 'Tests disabled under Python 3')
-class RoosterEntryConfigTest(TestCase):
+class RosterEntryConfigTest(TestCase):
     def test_config(self):
         config = ssh_schemas.RosterEntryConfig()
 
