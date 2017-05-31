@@ -963,7 +963,7 @@ def clear_job_cache(hours=24):
         salt '*' saltutil.clear_job_cache hours=12
     '''
     threshold = time.time() - hours * 3600
-    for root, dirs, files in salt.utils.safe_walk('{0}'.format(os.path.join(__opts__['cachedir'], 'minion_jobs')),
+    for root, dirs, files in salt.utils.safe_walk(os.path.join(__opts__['cachedir'], 'minion_jobs'),
                                                   followlinks=False):
         for name in dirs:
             try:
