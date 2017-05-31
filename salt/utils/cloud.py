@@ -2536,7 +2536,8 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     lock_file(index_file)
 
     if os.path.exists(index_file):
-        with salt.utils.fopen(index_file, 'r') as fh_:
+        mode = 'rb' if six.PY3 else 'r'
+        with salt.utils.fopen(index_file, mode) as fh_:
             index = msgpack.load(fh_)
     else:
         index = {}
@@ -2552,7 +2553,8 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
         }
     })
 
-    with salt.utils.fopen(index_file, 'w') as fh_:
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.fopen(index_file, mode) as fh_:
         msgpack.dump(index, fh_)
 
     unlock_file(index_file)
@@ -2568,7 +2570,8 @@ def cachedir_index_del(minion_id, base=None):
     lock_file(index_file)
 
     if os.path.exists(index_file):
-        with salt.utils.fopen(index_file, 'r') as fh_:
+        mode = 'rb' if six.PY3 else 'r'
+        with salt.utils.fopen(index_file, mode) as fh_:
             index = msgpack.load(fh_)
     else:
         return
@@ -2576,7 +2579,8 @@ def cachedir_index_del(minion_id, base=None):
     if minion_id in index:
         del index[minion_id]
 
-    with salt.utils.fopen(index_file, 'w') as fh_:
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.fopen(index_file, mode) as fh_:
         msgpack.dump(index, fh_)
 
     unlock_file(index_file)
