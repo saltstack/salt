@@ -6,29 +6,31 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 # Import python libs
 from __future__ import absolute_import
 import collections
-import uuid
-import pipes
 import json
-import pprint
 import logging
+import pipes
+import pprint
 import re
-from os import path
+import uuid
 from functools import wraps
+from os import path
+from xml.dom import minidom
+from xml.etree.ElementTree import Element, SubElement, tostring
 
 # Import third party libs
+import jinja2
 import salt.ext.six as six
+import yaml
 from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
 from jinja2.environment import TemplateModule
-from jinja2.ext import Extension
 from jinja2.exceptions import TemplateRuntimeError
-import jinja2
-import yaml
+from jinja2.ext import Extension
 
 # Import salt libs
 import salt
+import salt.fileclient
 import salt.utils
 import salt.utils.url
-import salt.fileclient
 from salt.utils.decorators import jinja_filter
 from salt.utils.odict import OrderedDict
 
@@ -579,12 +581,19 @@ class SerializerExtension(Extension, object):
         yaml = {{ data|yaml }}
         json = {{ data|json }}
         python = {{ data|python }}
+        xml  = {{ {'root_node': data}|xml }}
 
     will be rendered as::
 
         yaml = {bar: 42, baz: [1, 2, 3], foo: true, qux: 2.0}
         json = {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
         python = {'bar': 42, 'baz': [1, 2, 3], 'foo': True, 'qux': 2.0}
+        xml = """<<?xml version="1.0" ?>
+                 <root_node bar="42" foo="True" qux="2.0">
+                  <baz>1</baz>
+                  <baz>2</baz>
+                  <baz>3</baz>
+                 </root_node>"""
 
     The yaml filter takes an optional flow_style parameter to control the
     default-flow-style parameter of the YAML dumper.
@@ -725,6 +734,7 @@ class SerializerExtension(Extension, object):
         self.environment.filters.update({
             'yaml': self.format_yaml,
             'json': self.format_json,
+            'xml': self.format_xml,
             'python': self.format_python,
             'load_yaml': self.load_yaml,
             'load_json': self.load_json,
@@ -764,6 +774,52 @@ class SerializerExtension(Extension, object):
         if yaml_txt.endswith('\n...'):
             yaml_txt = yaml_txt[:len(yaml_txt)-4]
         return Markup(yaml_txt)
+
+    def format_xml(self, value):
+        """Render a formatted multi-line XML string from a complex Python
+        data structure. Supports tag attributes and nested dicts/lists.
+
+        :param value: Complex data structure representing XML contents
+        :returns: Formatted XML string rendered with newlines and indentation
+        :rtype: str
+        """
+        def normalize_iter(value):
+            if isinstance(value, (list, tuple)):
+                if isinstance(value[0], str):
+                    xmlval = value
+                else:
+                    xmlval = []
+            elif isinstance(value, dict):
+                xmlval = list(value.items())
+            else:
+                raise TemplateRuntimeError(
+                    'Value is not a dict or list. Cannot render as XML')
+            return xmlval
+
+        def recurse_tree(xmliter, element=None):
+            sub = None
+            for tag, attrs in xmliter:
+                if isinstance(attrs, list):
+                    for attr in attrs:
+                        recurse_tree(((tag, attr),), element)
+                elif element is not None:
+                    sub = SubElement(element, tag)
+                else:
+                    sub = Element(tag)
+                if isinstance(attrs, (str, int, bool, float)):
+                    sub.text = str(attrs)
+                    continue
+                if isinstance(attrs, dict):
+                    sub.attrib = {attr: str(val) for attr, val in attrs.items()
+                                  if not isinstance(val, (dict, list))}
+                for tag, val in [item for item in normalize_iter(attrs) if
+                                 isinstance(item[1], (dict, list))]:
+                    recurse_tree(((tag, val),), sub)
+            return sub
+
+        return Markup(minidom.parseString(
+            tostring(recurse_tree(normalize_iter(value)))
+        ).toprettyxml(indent=" "))
 
     def format_python(self, value):
         return Markup(pprint.pformat(value).strip())

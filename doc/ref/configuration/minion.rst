@@ -448,6 +448,20 @@ FQDN (for instance, Solaris).
 
     append_domain: foo.org
 
+.. conf_minion:: minion_id_lowercase
+
+``minion_id_lowercase``
+-----------------------
+
+Default: ``False``
+
+Convert minion id to lowercase when it is being generated. Helpful when some hosts
+get the minion id in uppercase. Cached ids will remain the same and not converted.
+
+.. code-block:: yaml
+
+    minion_id_lowercase: True
+
 .. conf_minion:: cachedir
 
 ``cachedir``

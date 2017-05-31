@@ -266,7 +266,7 @@ def state(name,
     elif __opts__.get('pillarenv'):
         cmd_kw['kwarg']['pillarenv'] = __opts__['pillarenv']
 
-    cmd_kw['kwarg']['saltenv'] = saltenv
+    cmd_kw['kwarg']['saltenv'] = saltenv if saltenv is not None else __env__
     cmd_kw['kwarg']['queue'] = queue
 
     if isinstance(concurrent, bool):
@@ -723,6 +723,16 @@ def runner(name, **kwargs):
             'Unable to fire args event due to missing __orchestration_jid__'
         )
         jid = None
+
+    if __opts__.get('test', False):
+        ret = {
+            'name': name,
+            'result': True,
+            'changes': {},
+            'comment': "Runner function '{0}' would be executed.".format(name)
+        }
+        return ret
+
     out = __salt__['saltutil.runner'](name,
                                       __orchestration_jid__=jid,
                                       __env__=__env__,
@@ -780,6 +790,12 @@ def wheel(name, **kwargs):
             'Unable to fire args event due to missing __orchestration_jid__'
         )
         jid = None
+
+    if __opts__.get('test', False):
+        ret['result'] = True,
+        ret['comment'] = "Wheel function '{0}' would be executed.".format(name)
+        return ret
+
     out = __salt__['saltutil.wheel'](name,
                                      __orchestration_jid__=jid,
                                      __env__=__env__,

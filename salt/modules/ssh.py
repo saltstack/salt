@@ -1066,15 +1066,24 @@ def set_known_host(user=None,
             if remote_host['key'] == stored_host['key']:
                 return {'status': 'exists', 'key': stored_host['key']}
 
-    # remove everything we had in the config so far
-    rm_known_host(user, hostname, config=config)
-    # set up new value
-
     full = _get_known_hosts_file(config=config, user=user)
 
     if isinstance(full, dict):
         return full
 
+    # Get information about the known_hosts file before rm_known_host()
+    # because it will create a new file with mode 0600
+    orig_known_hosts_st = None
+    try:
+        orig_known_hosts_st = os.stat(full)
+    except OSError as exc:
+        if exc.args[1] == 'No such file or directory':
+            log.debug('{0} doesnt exist.  Nothing to preserve.'.format(full))
+
+    # remove everything we had in the config so far
+    rm_known_host(user, hostname, config=config)
+
+    # set up new value
     if key:
         remote_host = {'hostname': hostname, 'enc': enc, 'key': key}
 
@@ -1114,9 +1123,16 @@ def set_known_host(user=None,
             "Couldn't append to known hosts file: '{0}'".format(exception)
         )
 
-    if os.geteuid() == 0 and user:
-        os.chown(full, uinfo['uid'], uinfo['gid'])
-    os.chmod(full, 0o644)
+    if os.geteuid() == 0:
+        if user:
+            os.chown(full, uinfo['uid'], uinfo['gid'])
+        elif orig_known_hosts_st:
+            os.chown(full, orig_known_hosts_st.st_uid, orig_known_hosts_st.st_gid)
+
+    if orig_known_hosts_st:
+        os.chmod(full, orig_known_hosts_st.st_mode)
+    else:
+        os.chmod(full, 0o600)
 
     if key and hash_known_hosts:
         cmd_result = __salt__['ssh.hash_known_hosts'](user=user, config=full)

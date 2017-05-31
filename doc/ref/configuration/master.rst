@@ -285,6 +285,7 @@ Valid options:
   - cache
   - clouds
   - tops
+  - roster
 
 .. conf_master:: module_dirs
 
@@ -1047,7 +1048,8 @@ This is completely disabled by default.
         - root
         - '^(?!sudo_).*$'   #  all non sudo users
       modules:
-        - cmd
+        - cmd.*
+        - test.echo
 
 .. conf_master:: external_auth
 

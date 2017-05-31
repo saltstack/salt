@@ -561,3 +561,86 @@ def jdbc_datasource_absent(name, both=True, server=None):
         ret['result'] = False
         ret['comment'] = 'Error: {0}'.format(pool_ret['error'])
     return ret
+
+
+def system_properties_present(server=None, **kwargs):
+    '''
+    Ensures that the system properties are present
+
+    properties
+        The system properties
+    '''
+    ret = {'name': '', 'result': None, 'comment': None, 'changes': {}}
+
+    del kwargs['name']
+    try:
+        data = __salt__['glassfish.get_system_properties'](server=server)
+    except requests.ConnectionError as error:
+        if __opts__['test']:
+            ret['changes'] = kwargs
+            ret['result'] = None
+            return ret
+        else:
+            ret['error'] = "Can't connect to the server"
+            return ret
+
+    ret['changes'] = {'data': data, 'kwargs': kwargs}
+    if not data == kwargs:
+        data.update(kwargs)
+        if not __opts__['test']:
+            try:
+                __salt__['glassfish.update_system_properties'](data, server=server)
+                ret['changes'] = kwargs
+                ret['result'] = True
+                ret['comment'] = 'System properties updated'
+            except CommandExecutionError as error:
+                ret['comment'] = error
+                ret['result'] = False
+        else:
+            ret['result'] = None
+            ret['changes'] = kwargs
+            ret['coment'] = 'System properties would have been updated'
+    else:
+        ret['changes'] = None
+        ret['result'] = True
+        ret['comment'] = 'System properties are already up-to-date'
+    return ret
+
+
+def system_properties_absent(name, server=None):
+    '''
+    Ensures that the system property doesn't exists
+
+    name
+        Name of the system property
+    '''
+    ret = {'name': '', 'result': None, 'comment': None, 'changes': {}}
+
+    try:
+        data = __salt__['glassfish.get_system_properties'](server=server)
+    except requests.ConnectionError as error:
+        if __opts__['test']:
+            ret['changes'] = {'Name': name}
+            ret['result'] = None
+            return ret
+        else:
+            ret['error'] = "Can't connect to the server"
+            return ret
+
+    if name in data:
+        if not __opts__['test']:
+            try:
+                __salt__['glassfish.delete_system_properties'](name, server=server)
+                ret['result'] = True
+                ret['comment'] = 'System properties deleted'
+            except CommandExecutionError as error:
+                ret['comment'] = error
+                ret['result'] = False
+        else:
+            ret['result'] = None
+            ret['comment'] = 'System properties would have been deleted'
+        ret['changes'] = {'Name': name}
+    else:
+        ret['result'] = True
+        ret['comment'] = 'System properties are already absent'
+    return ret

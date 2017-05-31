@@ -26,7 +26,7 @@ class Mock(object):
     '''
     def __init__(self, mapping=None, *args, **kwargs):
         """
-        Mapping allows to bypass the Mock object, but actually assign
+        Mapping allows autodoc to bypass the Mock object, but actually assign
         a specific value, expected by a specific attribute returned.
         """
         self.__mapping = mapping or {}
@@ -504,6 +504,7 @@ epub_copyright = copyright
 epub_scheme = 'URL'
 epub_identifier = 'http://saltstack.com/'
 
+epub_tocdup = False
 #epub_tocdepth = 3
 
 
