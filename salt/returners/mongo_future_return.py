@@ -230,7 +230,7 @@ def _safe_copy(dat):
         return ret
 
     if isinstance(dat, (list, tuple)):
-        return [ _safe_copy(i) for i in dat ]
+        return [_safe_copy(i) for i in dat]
 
     return dat
 
