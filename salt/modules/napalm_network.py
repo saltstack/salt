@@ -16,6 +16,7 @@ Dependencies
 - :mod:`napalm proxy minion <salt.proxy.napalm>`
 
 .. versionadded:: 2016.11.0
+.. versionchanged:: Nitrogen
 '''
 
 from __future__ import absolute_import
