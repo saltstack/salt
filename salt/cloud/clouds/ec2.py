@@ -90,6 +90,7 @@ import decimal
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.hashutils
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
@@ -342,7 +343,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         canonical_headers = 'host:' + host + '\n' + 'x-amz-date:' + amz_date + '\n'
         signed_headers = 'host;x-amz-date'
 
-        payload_hash = hashlib.sha256('').hexdigest()
+        payload_hash = salt.utils.hashutils.sha256_digest('')
 
         ec2_api_version = provider.get(
             'ec2_api_version',
@@ -351,7 +352,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
         params_with_headers['Version'] = ec2_api_version
 
-        keys = sorted(params_with_headers.keys())
+        keys = sorted(list(params_with_headers))
         values = map(params_with_headers.get, keys)
         querystring = _urlencode(list(zip(keys, values)))
         querystring = querystring.replace('+', '%20')
@@ -365,7 +366,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
         string_to_sign = algorithm + '\n' +  amz_date + '\n' + \
                          credential_scope + '\n' + \
-                         hashlib.sha256(canonical_request).hexdigest()
+                         salt.utils.hashutils.sha256_digest(canonical_request)
 
         kDate = sign(('AWS4' + provider['key']).encode('utf-8'), datestamp)
         kRegion = sign(kDate, region)
@@ -2000,7 +2001,7 @@ def request_instance(vm_=None, call=None):
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
             'kwargs': __utils__['cloud.filter_event'](
-                'requesting', params, params.keys()
+                'requesting', params, list(params)
             ),
             'location': location,
         },
@@ -2786,7 +2787,7 @@ def create(vm_=None, call=None):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('created', event_data, event_data.keys()),
+        args=__utils__['cloud.filter_event']('created', event_data, list(event_data)),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -3394,7 +3395,8 @@ def _get_node(name=None, instance_id=None, location=None):
                                   provider=provider,
                                   opts=__opts__,
                                   sigver='4')
-            return _extract_instance_info(instances).values()[0]
+            instance_info = _extract_instance_info(instances).values()
+            return next(iter(instance_info))
         except IndexError:
             attempts -= 1
             log.debug(
