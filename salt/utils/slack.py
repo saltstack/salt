@@ -43,7 +43,13 @@ def query(function,
     :param function:    The Slack api function to perform.
     :param method:      The HTTP method, e.g. GET or POST.
     :param data:        The data to be sent for POST method.
-    :return:            The json response from the API call or False.
+    :return:            A dictionary containing:
+                          - message: the shortened result of the corresponding function
+                              - channels.list:    a list of limited channel objects
+                              - users.list:       a list of user objects in no particular order
+                              - chat.postMessage: the `message` object of the sent message
+                          - res:      a boolean indicating success/failure
+                          - response: the full JSON response from the Slack API
     '''
     query_params = {}
 
@@ -53,15 +59,15 @@ def query(function,
     slack_functions = {
         'rooms': {
             'request': 'channels.list',
-            'response': 'channels',
+            'message': 'channels',
         },
         'users': {
             'request': 'users.list',
-            'response': 'members',
+            'message': 'members',
         },
         'message': {
             'request': 'chat.postMessage',
-            'response': 'channel',
+            'message': 'message',
         },
     }
 
@@ -103,12 +109,12 @@ def query(function,
 
     if result.get('status', None) == salt.ext.six.moves.http_client.OK:
         _result = result['dict']
-        response = slack_functions.get(function).get('response')
+        message = slack_functions.get(function).get('message')
         if 'error' in _result:
             ret['message'] = _result['error']
             ret['res'] = False
             return ret
-        ret['message'] = _result.get(response)
+        ret['message'] = _result.get(message)
         return ret
     elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
         return True
@@ -123,7 +129,7 @@ def query(function,
                 ret['message'] = result['error']
                 ret['res'] = False
                 return ret
-            ret['message'] = _result.get(response)
+            ret['message'] = _result.get(message)
         else:
             ret['message'] = 'invalid_auth'
             ret['res'] = False

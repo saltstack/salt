@@ -139,6 +139,8 @@ def find_room(name, api_key=None):
         rooms = ret['message']
         if rooms:
             for room in range(0, len(rooms)):
+                if rooms[room]['id'] == name:
+                    return rooms[room]
                 if rooms[room]['name'] == name:
                     return rooms[room]
     return False
@@ -176,6 +178,7 @@ def find_user(name, api_key=None):
 def post_message(channel,
                  message,
                  from_name,
+                 attachments=None,
                  api_key=None,
                  icon=None):
     '''
@@ -184,8 +187,9 @@ def post_message(channel,
     :param channel:     The channel name, either will work.
     :param message:     The message to send to the Slack channel.
     :param from_name:   Specify who the message is from.
+    :param attachments: Add attachments to the message
     :param api_key:     The Slack api key, if not specified in the configuration.
-    :param icon:        URL to an image to use as the icon for this message
+    :param icon:        URL to an image to use as the icon for this message or an emoji code such as ``:simple_smile:``
     :return:            Boolean if message was sent successfully.
 
     CLI Example:
@@ -193,6 +197,8 @@ def post_message(channel,
     .. code-block:: bash
 
         salt '*' slack.post_message channel="Development Room" message="Build is done" from_name="Build Server"
+        salt '*' slack.post_message channel="Development Room" message="Build failed" from_name="Build Server" \
+                attachments='[{"title": "Build Failure", "color": "#f00", "fields": ["title": "Component", "value": "API"]}]'
 
     '''
     if not api_key:
@@ -200,11 +206,6 @@ def post_message(channel,
 
     if not channel:
         log.error('channel is a required option.')
-
-    # channel must start with a hash or an @ (direct-message channels)
-    if not channel.startswith('#') and not channel.startswith('@'):
-        log.warning('Channel name must start with a hash or @. Prepending a hash and using "#{0}" as channel name instead of {1}'.format(channel, channel))
-        channel = '#{0}'.format(channel)
 
     if not from_name:
         log.error('from_name is a required option.')
@@ -218,11 +219,15 @@ def post_message(channel,
     parameters = {
         'channel': channel,
         'username': from_name,
-        'text': message
+        'text': message,
+        'attachments': attachments,
     }
 
     if icon is not None:
-        parameters['icon_url'] = icon
+        if icon.startswith(':') and icon.endswith(':'):
+            parameters['icon_emoji'] = icon
+        else:
+            parameters['icon_url'] = icon
 
     # Slack wants the body on POST to be urlencoded.
     result = salt.utils.slack.query(function='message',
@@ -232,10 +237,7 @@ def post_message(channel,
                                     data=_urlencode(parameters),
                                     opts=__opts__)
 
-    if result['res']:
-        return True
-    else:
-        return result
+    return result
 
 
 def call_hook(message,
@@ -250,7 +252,7 @@ def call_hook(message,
     Send message to Slack incoming webhook.
 
     :param message:     The topic of message.
-    :param attachment:  The message to send to the Slacke WebHook.
+    :param attachment:  The message to send to the Slack WebHook.
     :param color:       The color of border of left side
     :param short:       An optional flag indicating whether the value is short
                         enough to be displayed side-by-side with other values.
