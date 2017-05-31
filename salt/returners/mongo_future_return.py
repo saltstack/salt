@@ -199,6 +199,7 @@ def returner(ret):
     else:
         mdb.saltReturns.insert(sdata.copy())
 
+
 def _safe_copy(dat):
     ''' mongodb doesn't allow '.' in keys, but does allow unicode equivs.
         Apparently the docs suggest using escaped unicode full-width
