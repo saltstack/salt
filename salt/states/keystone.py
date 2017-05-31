@@ -791,7 +791,7 @@ def endpoint_absent(name, region=None, profile=None, interface=None, **connectio
                                                  profile=profile,
                                                  interface=interface,
                                                  **connection_args)
-    if not endpoint or 'Error' in endpoint:
+    if not endpoint:
         return ret
     else:
         if __opts__.get('test'):
