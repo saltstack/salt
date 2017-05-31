@@ -1166,7 +1166,10 @@ def mod_hostname(hostname):
         with salt.utils.fopen('/etc/sysconfig/network', 'w') as fh_:
             for net in network_c:
                 if net.startswith('HOSTNAME'):
-                    fh_.write('HOSTNAME={0}\n'.format(hostname))
+                    old_hostname = net.split('=', 1)[1].rstrip()
+                    quote_type = salt.utils.is_quoted(old_hostname)
+                    fh_.write('HOSTNAME={1}{0}{1}\n'.format(
+                        salt.utils.dequote(hostname), quote_type))
                 else:
                     fh_.write(net)
     elif __grains__['os_family'] in ('Debian', 'NILinuxRT'):

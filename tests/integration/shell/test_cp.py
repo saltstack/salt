@@ -9,9 +9,11 @@
 
 # Import python libs
 from __future__ import absolute_import
+import errno
 import os
 import pipes
 import shutil
+import tempfile
 
 # Import 3rd-party libs
 import yaml
@@ -114,18 +116,13 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
             self.assertTrue(data[minion])
 
     def test_issue_7754(self):
-        try:
-            old_cwd = os.getcwd()
-        except OSError:
-            # Jenkins throws an OSError from os.getcwd()??? Let's not worry
-            # about it
-            old_cwd = None
-
         config_dir = os.path.join(TMP, 'issue-7754')
-        if not os.path.isdir(config_dir):
-            os.makedirs(config_dir)
 
-        os.chdir(config_dir)
+        try:
+            os.makedirs(config_dir)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
 
         config_file_name = 'master'
         with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
@@ -136,15 +133,24 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                     yaml.dump(config, default_flow_style=False)
                 )
 
-        ret = self.run_script(
-            self._call_binary_,
-            '--out pprint --config-dir {0} \'*\' foo {0}/foo'.format(
-                config_dir
-            ),
-            catch_stderr=True,
-            with_retcode=True
-        )
         try:
+            fd_, fn_ = tempfile.mkstemp()
+            os.close(fd_)
+
+            with salt.utils.fopen(fn_, 'w') as fp_:
+                fp_.write('Hello world!\n')
+
+            ret = self.run_script(
+                self._call_binary_,
+                '--out pprint --config-dir {0} \'*\' {1} {0}/{2}'.format(
+                    config_dir,
+                    fn_,
+                    os.path.basename(fn_),
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+
             self.assertIn('minion', '\n'.join(ret[0]))
             self.assertIn('sub_minion', '\n'.join(ret[0]))
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
@@ -158,7 +164,10 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
             )
             self.assertEqual(ret[2], 2)
         finally:
-            if old_cwd is not None:
-                self.chdir(old_cwd)
+            try:
+                os.remove(fn_)
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    raise
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
