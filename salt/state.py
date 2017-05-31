@@ -489,7 +489,7 @@ class Compiler(object):
                                         # I am going beyond 80 chars on
                                         # purpose, this is just too much
                                         # of a pain to deal with otherwise
-                                        if req_val in reqs:
+                                        if req_val in sorted(reqs):
                                             if name in reqs[req_val]:
                                                 if reqs[req_val][name] == state:
                                                     if reqs[req_val]['state'] == reqs[name][req_val]:
