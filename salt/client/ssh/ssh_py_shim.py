@@ -263,9 +263,17 @@ def main(argv):  # pylint: disable=W0613
         '--metadata',
         '--out', 'json',
         '-l', 'quiet',
-        '-c', OPTIONS.saltdir,
-        '--',
-    ] + argv_prepared
+        '-c', OPTIONS.saltdir
+    ]
+
+    try:
+        if argv_prepared[-1].startswith('--no-parse='):
+            salt_argv.append(argv_prepared.pop(-1))
+    except (IndexError, TypeError):
+        pass
+
+    salt_argv.append('--')
+    salt_argv.extend(argv_prepared)
 
     sys.stderr.write('SALT_ARGV: {0}\n'.format(salt_argv))
 

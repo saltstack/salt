@@ -460,7 +460,7 @@ def __get_subnetwork(vm_):
     '''
     ex_subnetwork = config.get_cloud_config_value(
         'subnetwork', vm_, __opts__,
-        default='default', search_global=False)
+        search_global=False)
 
     return ex_subnetwork
 

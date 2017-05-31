@@ -237,6 +237,18 @@ class DecryptGPGPillarTest(ModuleCase):
 
     @classmethod
     def tearDownClass(cls):
+        cmd = ['gpg-connect-agent', '--homedir', GPG_HOMEDIR]
+        try:
+            log.debug('Killing gpg-agent using: %s', cmd)
+            output = subprocess.Popen(cmd,
+                                      stdin=subprocess.PIPE,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.STDOUT,
+                                      shell=False).communicate(input=six.b('KILLAGENT'))[0]
+            log.debug('Result:\n%s', output)
+        except OSError:
+            log.debug('No need to kill: old gnupg doesn\'t start the agent.')
+
         if cls.created_gpg_homedir:
             try:
                 shutil.rmtree(GPG_HOMEDIR)
