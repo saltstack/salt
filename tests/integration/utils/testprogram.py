@@ -183,7 +183,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
     @property
     def start_pid(self):
-        '''PID of the called script prior to deamonizing.'''
+        '''PID of the called script prior to daemonizing.'''
         return self.process.pid if self.process else None
 
     @property

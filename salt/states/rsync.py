@@ -43,7 +43,7 @@ def __virtual__():
 
 def _get_summary(rsync_out):
     '''
-    Get summary from the rsync successfull output.
+    Get summary from the rsync successful output.
     '''
 
     return "- " + "\n- ".join([elm for elm in rsync_out.split("\n\n")[-1].replace("  ", "\n").split("\n") if elm])
@@ -51,7 +51,7 @@ def _get_summary(rsync_out):
 
 def _get_changes(rsync_out):
     '''
-    Get changes from the rsync successfull output.
+    Get changes from the rsync successful output.
     '''
     copied = list()
     deleted = list()

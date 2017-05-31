@@ -103,7 +103,9 @@ def shell_jobber(self):
             continue
         args, kwargs = salt.minion.load_args_and_kwargs(
             func,
-            salt.utils.args.parse_input(data['arg']),
+            salt.utils.args.parse_input(
+                data['arg'],
+                no_parse=data.get('no_parse', [])),
             data)
         cmd = ['salt-call',
                '--out', 'json',
@@ -286,7 +288,9 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 func = self.modules.value[data['fun']]
                 args, kwargs = salt.minion.load_args_and_kwargs(
                     func,
-                    salt.utils.args.parse_input(data['arg']),
+                    salt.utils.args.parse_input(
+                        data['arg'],
+                        no_parse=data.get('no_parse', [])),
                     data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
 
