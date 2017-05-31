@@ -90,7 +90,7 @@ def compress_file(fh_, compresslevel=9, chunk_size=1048576):
         raise ValueError('chunk_size must be an integer')
     try:
         while bytes_read == chunk_size:
-            buf = StringIO()
+            buf = BytesIO()
             with open_fileobj(buf, 'wb', compresslevel) as ogz:
                 try:
                     bytes_read = ogz.write(fh_.read(chunk_size))
