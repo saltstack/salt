@@ -472,10 +472,11 @@ def latest_version(*names, **kwargs):
     def _check_cur(pkg):
         if pkg.name in cur_pkgs:
             for installed_version in cur_pkgs[pkg.name]:
-                # If any installed version is greater than the one found by
-                # yum/dnf list available, then it is not an upgrade.
+                # If any installed version is greater than (or equal to) the
+                # one found by yum/dnf list available, then it is not an
+                # upgrade.
                 if salt.utils.compare_versions(ver1=installed_version,
-                                               oper='>',
+                                               oper='>=',
                                                ver2=pkg.version,
                                                cmp_func=version_cmp):
                     return False

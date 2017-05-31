@@ -787,7 +787,10 @@ class Single(object):
         Return the function name and the arg list
         '''
         fun = self.argv[0] if self.argv else ''
-        parsed = salt.utils.args.parse_input(self.argv[1:], condition=False)
+        parsed = salt.utils.args.parse_input(
+            self.argv[1:],
+            condition=False,
+            no_parse=self.opts.get('no_parse', []))
         args = parsed[0]
         kws = parsed[1]
         return fun, args, kws
@@ -970,12 +973,27 @@ class Single(object):
         # roster, pillar, master config (in that order)
         if self.mine:
             mine_args = None
+            mine_fun_data = None
+            mine_fun = self.fun
+
             if self.mine_functions and self.fun in self.mine_functions:
-                mine_args = self.mine_functions[self.fun]
+                mine_fun_data = self.mine_functions[self.fun]
             elif opts['pillar'] and self.fun in opts['pillar'].get('mine_functions', {}):
-                mine_args = opts['pillar']['mine_functions'][self.fun]
+                mine_fun_data = opts['pillar']['mine_functions'][self.fun]
             elif self.fun in self.context['master_opts'].get('mine_functions', {}):
-                mine_args = self.context['master_opts']['mine_functions'][self.fun]
+                mine_fun_data = self.context['master_opts']['mine_functions'][self.fun]
+
+            if isinstance(mine_fun_data, dict):
+                mine_fun = mine_fun_data.pop('mine_function', mine_fun)
+                mine_args = mine_fun_data
+            elif isinstance(mine_fun_data, list):
+                for item in mine_fun_data[:]:
+                    if isinstance(item, dict) and 'mine_function' in item:
+                        mine_fun = item['mine_function']
+                        mine_fun_data.pop(mine_fun_data.index(item))
+                mine_args = mine_fun_data
+            else:
+                mine_args = mine_fun_data
 
             # If we found mine_args, replace our command's args
             if isinstance(mine_args, dict):
@@ -987,7 +1005,7 @@ class Single(object):
 
         try:
             if self.mine:
-                result = wrapper[self.fun](*self.args, **self.kwargs)
+                result = wrapper[mine_fun](*self.args, **self.kwargs)
             else:
                 result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
