@@ -61,14 +61,6 @@ Execution Options
     will ensure that all of the mapped VMs are created. If the named VM already
     exists then it will be skipped.
 
-.. option:: -H, --hard
-
-    When specifying a map file, the default behavior is to ensure that all of
-    the VMs specified in the map file are created. If the --hard option is
-    set, then any VMs that exist on configured cloud providers that are
-    not specified in the map file will be destroyed. Be advised that this can
-    be a destructive operation and should be used with care.
-
 .. option:: -d, --destroy
 
     Pass in the name(s) of VMs to destroy, salt-cloud will search the

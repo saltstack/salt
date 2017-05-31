@@ -1652,7 +1652,6 @@ DEFAULT_CLOUD_OPTS = {
     'os': '',
     'script': 'bootstrap-salt',
     'start_action': None,
-    'enable_hard_maps': False,
     'delete_sshkeys': False,
     # Custom deploy scripts
     'deploy_scripts_search_path': 'cloud.deploy.d',

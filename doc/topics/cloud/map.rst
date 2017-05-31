@@ -48,22 +48,6 @@ to create the virtual machines in parallel:
     with the GoGrid driver. Map files will work with GoGrid, but the ``-P``
     argument should not be used on maps referencing GoGrid instances.
 
-A map file can also be enforced to represent the total state of a cloud
-deployment by using the ``--hard`` option. When using the hard option any vms
-that exist but are not specified in the map file will be destroyed:
-
-.. code-block:: bash
-
-    $ salt-cloud -m /path/to/mapfile -P -H
-
-Be careful with this argument, it is very dangerous! In fact, it is so
-dangerous that in order to use it, you must explicitly enable it in the main
-configuration file.
-
-.. code-block:: yaml
-
-    enable_hard_maps: True
-
 A map file can include grains and minion configuration options:
 
 .. code-block:: yaml
