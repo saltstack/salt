@@ -71,6 +71,67 @@ def __virtual__():
     __utils__['boto3.assign_funcs'](__name__, 'elbv2')
     return True
 
+def create_target_group(name, protocol, port, vpc_id,
+                        region=None, key=None, keyid=None, profile=None,
+                        health_check_protocol='HTTP', health_check_port='traffic-port',
+                        health_check_path='/', health_check_interval_seconds=30,
+                        health_check_timeout_seconds=5, healthy_threshold_count=5,
+                        unhealthy_threshold_count=2):
+    '''
+    Create target group if not present.
+
+    CLI example:
+    .. code-block:: bash
+
+        salt myminion boto_elbv2.create_target_group learn1give1 protocol=HTTP port=54006 vpc_id=vpc-deadbeef 
+    '''
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if target_group_exists(name, region, key, keyid, profile):
+        return True
+    else:
+        try:
+            lb = conn.create_target_group(Name=name, Protocol=protocol, Port=port,
+                                        VpcId=vpc_id, HealthCheckProtocol=health_check_protocol,
+                                        HealthCheckPort=health_check_port,
+                                        HealthCheckPath=health_check_path,
+                                        HealthCheckIntervalSeconds=health_check_interval_seconds,
+                                        HealthCheckTimeoutSeconds=health_check_timeout_seconds,
+                                        HealthyThresholdCount=healthy_threshold_count,
+                                        UnhealthyThresholdCount=unhealthy_threshold_count)
+            if lb:
+                log.info('Created ALB {0}: {1}'.format(name,
+                                        lb['TargetGroups'][0]['TargetGroupArn']))
+                return True
+            else:
+                log.error('Failed to create ALB {0}'.format(name))
+                return False
+        except ClientError as error:
+            log.debug(error)
+            log.error('Failed to create ALB {0}: {1}: {2}'.format(name,
+                                            error.response['Error']['Code'],
+                                            error.response['Error']['Message']))
+
+def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete target group.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt myminion boto_elbv2.delete_target_group arn:aws:elasticloadbalancing:us-west-2:644138682826:targetgroup/learn1give1-api/414788a16b5cf163
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        conn.delete_target_group(TargetGroupArn=name)
+        log.info('Deleted target group {0}'.format(name))
+        return True
+    except ClientError as error:
+        log.debug(error)
+        log.error('Failed to delete target group {0}'.format(name))
+        return False
 
 def target_group_exists(name, region=None, key=None, keyid=None, profile=None):
     '''
@@ -80,12 +141,15 @@ def target_group_exists(name, region=None, key=None, keyid=None, profile=None):
 
     .. code-block:: bash
 
-        salt myminion boto_elbv2.exists arn:aws:elasticloadbalancing:us-west-2:644138682826:targetgroup/learn1give1-api/414788a16b5cf163
+        salt myminion boto_elbv2.target_group_exists arn:aws:elasticloadbalancing:us-west-2:644138682826:targetgroup/learn1give1-api/414788a16b5cf163
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        alb = conn.describe_target_groups(TargetGroupArns=[name])
+        if name.startswith('arn:aws:elasticloadbalancing'):
+            alb = conn.describe_target_groups(TargetGroupArns=[name])
+        else:
+            alb = conn.describe_target_groups(Names=[name])
         if alb:
             return True
         else:
