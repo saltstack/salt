@@ -33,7 +33,7 @@ Mount any type of mountable filesystem with the mounted function:
         - dump: 0
         - pass_num: 0
         - persist: True
-        - mkmnt: True 
+        - mkmnt: True
 '''
 from __future__ import absolute_import
 
