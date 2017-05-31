@@ -881,7 +881,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         represents one certificate. A dict must contain either the key
         ``serial_number`` with the value of the serial number to revoke, or
         ``certificate`` with either the PEM encoded text of the certificate,
-        or a path ot the certificate to revoke.
+        or a path to the certificate to revoke.
 
         The dict can optionally contain the ``revocation_date`` key. If this
         key is omitted the revocation date will be set to now. If should be a
@@ -1585,7 +1585,7 @@ def create_csr(path=None, text=False, **kwargs):
         log.warning(
             "OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key")
 
-    if 'private_key' not in kwargs not in kwargs:
+    if 'private_key' not in kwargs:
         raise salt.exceptions.SaltInvocationError('private_key is required')
 
     if 'public_key' not in kwargs:

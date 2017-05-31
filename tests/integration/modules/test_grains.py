@@ -115,7 +115,7 @@ class TestModulesGrains(ModuleCase):
 
         for grain in grains:
             get_grain = self.run_function('grains.get', [grain])
-            if os == 'Arch' and grain in ['osmajorrelease', 'osrelease']:
+            if os == 'Arch' and grain in ['osmajorrelease']:
                 self.assertEqual(get_grain, '')
                 continue
             if os == 'Windows' and grain in ['osmajorrelease']:

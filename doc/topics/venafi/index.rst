@@ -129,7 +129,7 @@ Request a new certificate. Analogous to:
 
 .. code-block:: bash
 
-    salt-run venafi.gen_csr minion.example.com minion.example.com country=US \ 
+    salt-run venafi.request minion.example.com minion.example.com country=US \ 
     state=California loc=Sacramento org=CompanyName org_unit=DevOps \
     zone=Internet password=SecretSauce
 

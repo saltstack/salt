@@ -77,6 +77,11 @@ def present(dbname, name,
 
     # The schema is not present, make it!
     if schema_attr is None:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Schema {0} is set to be created' \
+                             ' in database {1}.'.format(name, dbname)
+            return ret
         cret = __salt__['postgres.schema_create'](dbname,
                                                   name,
                                                   owner=owner,
@@ -139,7 +144,12 @@ def absent(dbname, name,
 
     # check if schema exists and remove it
     if __salt__['postgres.schema_exists'](dbname, name, **db_args):
-        if __salt__['postgres.schema_remove'](dbname, name, **db_args):
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Schema {0} is set to be removed' \
+                             ' from database {1}'.format(name, dbname)
+            return ret
+        elif __salt__['postgres.schema_remove'](dbname, name, **db_args):
             ret['comment'] = 'Schema {0} has been removed' \
                              ' from database {1}'.format(name, dbname)
             ret['changes'][name] = 'Absent'

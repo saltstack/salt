@@ -157,3 +157,16 @@ class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             stderr=tests.integration.utils.decode_byte_list(stderr)
         )
         master.shutdown()
+        # Do the test again to check does master shut down correctly
+        stdout, stderr, status = master.run(
+            args=['-d'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self.assert_exit_status(
+            status, 'EX_OK',
+            message='correct usage',
+            stdout=stdout,
+            stderr=tests.integration.utils.decode_byte_list(stderr)
+        )
+        master.shutdown()

@@ -127,13 +127,14 @@ def get_locale():
         salt '*' locale.get_locale
     '''
     cmd = ''
-    if salt.utils.systemd.booted(__context__):
+    if 'Suse' in __grains__['os_family']:
+        # this block applies to all SUSE systems - also with systemd
+        cmd = 'grep "^RC_LANG" /etc/sysconfig/language'
+    elif salt.utils.systemd.booted(__context__):
         params = _parse_dbus_locale() if HAS_DBUS else _parse_localectl()
         return params.get('LANG', '')
     elif 'RedHat' in __grains__['os_family']:
         cmd = 'grep "^LANG=" /etc/sysconfig/i18n'
-    elif 'Suse' in __grains__['os_family']:
-        cmd = 'grep "^RC_LANG" /etc/sysconfig/language'
     elif 'Debian' in __grains__['os_family']:
         # this block only applies to Debian without systemd
         cmd = 'grep "^LANG=" /etc/default/locale'
@@ -161,7 +162,17 @@ def set_locale(locale):
 
         salt '*' locale.set_locale 'en_US.UTF-8'
     '''
-    if salt.utils.systemd.booted(__context__):
+    if 'Suse' in __grains__['os_family']:
+        # this block applies to all SUSE systems - also with systemd
+        if not __salt__['file.file_exists']('/etc/sysconfig/language'):
+            __salt__['file.touch']('/etc/sysconfig/language')
+        __salt__['file.replace'](
+            '/etc/sysconfig/language',
+            '^RC_LANG=.*',
+            'RC_LANG="{0}"'.format(locale),
+            append_if_not_found=True
+        )
+    elif salt.utils.systemd.booted(__context__):
         return _localectl_set(locale)
     elif 'RedHat' in __grains__['os_family']:
         if not __salt__['file.file_exists']('/etc/sysconfig/i18n'):
@@ -170,15 +181,6 @@ def set_locale(locale):
             '/etc/sysconfig/i18n',
             '^LANG=.*',
             'LANG="{0}"'.format(locale),
-            append_if_not_found=True
-        )
-    elif 'Suse' in __grains__['os_family']:
-        if not __salt__['file.file_exists']('/etc/sysconfig/language'):
-            __salt__['file.touch']('/etc/sysconfig/language')
-        __salt__['file.replace'](
-            '/etc/sysconfig/language',
-            '^RC_LANG=.*',
-            'RC_LANG="{0}"'.format(locale),
             append_if_not_found=True
         )
     elif 'Debian' in __grains__['os_family']:
