@@ -95,6 +95,9 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     def setUp(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts, crypt='clear')
 
+    def tearDown(self):
+        del self.channel
+
     @classmethod
     @tornado.gen.coroutine
     def _handle_payload(cls, payload):
@@ -108,6 +111,9 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
 class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     def setUp(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts)
+
+    def tearDown(self):
+        del self.channel
 
     @classmethod
     @tornado.gen.coroutine
