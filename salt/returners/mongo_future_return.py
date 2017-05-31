@@ -220,26 +220,27 @@ def _safe_copy(dat):
         % -> %25
     '''
 
-    if isinstance(dat,dict):
+    if isinstance(dat, dict):
         ret = {}
         for k in dat:
             r = k.replace('%', '%25').replace('\\', '%5c').replace('$', '%24').replace('.', '%2e')
             if r != k:
-                log.debug(u'converting dict key from {} to {} for mongodb'.format(k,r))
+                log.debug('converting dict key from {0} to {1} for mongodb'.format(k, r))
             ret[r] = _safe_copy(dat[k])
         return ret
 
-    if isinstance(dat, (list,tuple)):
+    if isinstance(dat, (list, tuple)):
         return [ _safe_copy(i) for i in dat ]
 
     return dat
+
 
 def save_load(jid, load, minions=None):
     '''
     Save the load for a given job id
     '''
     conn, mdb = _get_conn(ret=None)
-    to_save = _safe_copy( load )
+    to_save = _safe_copy(load)
 
     if float(version) > 2.3:
         #using .copy() to ensure original data for load is unchanged
