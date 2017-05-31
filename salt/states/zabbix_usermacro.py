@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Management of Zabbix usermacros.
-
 :codeauthor: Raymond Kuiper <qix@the-wired.net>
 
 '''
