@@ -25,7 +25,7 @@ __virtual_name__ = 'network_settings'
 ATTRS = ['family', 'txqlen', 'ipdb_scope', 'index', 'operstate', 'group',
          'carrier_changes', 'ipaddr', 'neighbours', 'ifname', 'promiscuity',
          'linkmode', 'broadcast', 'address', 'num_tx_queues', 'ipdb_priority',
-         'change', 'kind', 'qdisc', 'mtu', 'num_rx_queues', 'carrier', 'flags',
+         'kind', 'qdisc', 'mtu', 'num_rx_queues', 'carrier', 'flags',
          'ifi_type', 'ports']
 
 LAST_STATS = {}
