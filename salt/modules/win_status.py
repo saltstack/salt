@@ -13,7 +13,6 @@ or for problem solving if your minion is having problems.
 # Import Python Libs
 from __future__ import absolute_import
 import datetime
-import psutil
 import logging
 
 log = logging.getLogger(__name__)
@@ -32,12 +31,16 @@ import copy
 # pylint: enable=W0611
 
 # Import 3rd Party Libs
+HAS_WMI = False
 if salt.utils.is_windows():
     import wmi
     import salt.utils.winapi
     HAS_WMI = True
-else:
-    HAS_WMI = False
+
+HAS_PSUTIL = False
+if salt.utils.is_windows():
+    import psutil
+    HAS_PSUTIL = True
 
 __opts__ = {}
 __virtualname__ = 'status'
@@ -52,6 +55,9 @@ def __virtual__():
 
     if not HAS_WMI:
         return False, 'win_status.py: Requires WMI and WinAPI'
+
+    if not HAS_PSUTIL:
+        return False, 'win_status.py: Requires psutil'
 
     # Namespace modules from `status.py`
     global ping_master, time_
