@@ -240,7 +240,6 @@ def _user_roles_to_set(user_list, name, database):
     for item in user_list:
         if item['user'] == name:
             ret = ret.union(_roles_to_set(item['roles'], database))
-    
     return ret
 
 
