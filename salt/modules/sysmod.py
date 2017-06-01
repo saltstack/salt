@@ -37,8 +37,8 @@ def __virtual__():
 
 def doc(*args):
     '''
-    Return the docstrings for all modules. Optionally, specify a module or a
-    function to narrow the selection.
+    Return docstring for a module. If not module is passed,
+    return list of loaded modules.
 
     The strings are aggregated into a single document on the master for easy
     reading.
@@ -65,9 +65,10 @@ def doc(*args):
     '''
     docs = {}
     if not args:
-        for fun in __salt__:
-            docs[fun] = __salt__[fun].__doc__
-        return _strip_rst(docs)
+        funcs = __salt__.keys()
+        for fun in funcs:
+            docs[fun] = 'Use "sys.doc {0}" for more information'.format(fun)
+        return docs
 
     for module in args:
         _use_fnmatch = False
