@@ -22,6 +22,7 @@ import logging
 log = logging.getLogger(__name__)
 
 # Salt lib
+import salt.utils.dns
 import salt.utils.napalm
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -353,6 +354,60 @@ def host(proxy=None):
         # this grain is set only when running in a proxy minion
         # otherwise will use the default Salt grains
         return {'host': _get_device_grain('hostname', proxy=proxy)}
+
+
+def host_dns(proxy=None):
+    '''
+    Return the DNS information of the host.
+    This grain is a dictionary having two keys:
+
+    - ``A``
+    - ``AAAA``
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'device*' grains.get host_dns
+
+    Output:
+
+    .. code-block:: yaml
+
+        device1:
+            A:
+                - 172.31.9.153
+            AAAA:
+                - fd52:188c:c068::1
+        device2:
+            A:
+                - 172.31.46.249
+            AAAA:
+                - fdca:3b17:31ab::17
+        device3:
+            A:
+                - 172.31.8.167
+            AAAA:
+                - fd0f:9fd6:5fab::1
+    '''
+    device_host = host(proxy=proxy)
+    if device_host:
+        device_host_value = device_host['host']
+        host_dns_ret = {
+            'host_dns': {
+                'A': [],
+                'AAAA': []
+            }
+        }
+        dns_a = salt.utils.dns.query(device_host_value, 'A')
+        if dns_a:
+            host_dns_ret['host_dns']['A'] = dns_a
+        dns_aaaa = salt.utils.dns.query(device_host_value, 'AAAA')
+        if dns_aaaa:
+            host_dns_ret['host_dns']['AAAA'] = dns_aaaa
+        return host_dns_ret
 
 
 def optional_args(proxy=None):
