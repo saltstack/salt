@@ -46,18 +46,18 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
                          ('<int>', '<int>'))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('salt.modules.pillar.items', MagicMock(return_value=pillar_value_1))
     def test_obfuscate(self):
-        self.assertEqual(pillarmod.obfuscate(),
-                         dict(a='<int>', b='<str>'))
+        with patch('salt.modules.pillar.items', MagicMock(return_value=pillar_value_1)):
+            self.assertEqual(pillarmod.obfuscate(),
+                             dict(a='<int>', b='<str>'))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('salt.modules.pillar.items', MagicMock(return_value=pillar_value_1))
     def test_ls(self):
-        if six.PY3:
-            self.assertCountEqual(pillarmod.ls(), ['a', 'b'])
-        else:
-            self.assertEqual(pillarmod.ls(), ['a', 'b'])
+        with patch('salt.modules.pillar.items', MagicMock(return_value=pillar_value_1)):
+            if six.PY3:
+                self.assertCountEqual(pillarmod.ls(), ['a', 'b'])
+            else:
+                self.assertEqual(pillarmod.ls(), ['a', 'b'])
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_pillar_get_default_merge(self):

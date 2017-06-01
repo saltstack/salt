@@ -1005,7 +1005,7 @@ def install_os(path=None, **kwargs):
         return ret
 
     image_cached_path = files.mkstemp()
-    __salt__['cp.get_template'](path, image_cached_path)
+    __salt__['cp.get_file'](path, image_cached_path)
 
     if not os.path.isfile(image_cached_path):
         ret['message'] = 'Invalid image path.'

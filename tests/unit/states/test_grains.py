@@ -500,23 +500,23 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                                       + "- correct\n"
             )
 
-    @patch('salt.modules.grains.setval')
-    def test_present_unknown_failure(self, mocked_setval):
-        mocked_setval.return_value = 'Failed to set grain foo'
-        with self.setGrains({'a': 'aval', 'foo': 'bar'}):
-            # Unknown reason failure
-            ret = grains.present(
-                name='foo',
-                value='baz')
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'Failed to set grain foo')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': 'bar'})
-            self.assertGrainFileContent("a: aval\n"
-                                      + "foo: bar\n"
-            )
+    def test_present_unknown_failure(self):
+        with patch('salt.modules.grains.setval') as mocked_setval:
+            mocked_setval.return_value = 'Failed to set grain foo'
+            with self.setGrains({'a': 'aval', 'foo': 'bar'}):
+                # Unknown reason failure
+                ret = grains.present(
+                    name='foo',
+                    value='baz')
+                self.assertEqual(ret['result'], False)
+                self.assertEqual(ret['comment'], 'Failed to set grain foo')
+                self.assertEqual(ret['changes'], {})
+                self.assertEqual(
+                    grains.__grains__,
+                    {'a': 'aval', 'foo': 'bar'})
+                self.assertGrainFileContent("a: aval\n"
+                                          + "foo: bar\n"
+                )
 
     # 'absent' function tests: 6
 
@@ -838,6 +838,21 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(
                 grains.__grains__,
                 {'a': 'aval'})
+
+    def test_append_convert_to_list_empty(self):
+        # Append to an existing list
+        with self.setGrains({'foo': None}):
+            ret = grains.append(name='foo',
+                                value='baz',
+                                convert=True)
+            self.assertEqual(ret['result'], True)
+            self.assertEqual(ret['comment'], 'Value baz was added to grain foo')
+            self.assertEqual(ret['changes'], {'added': 'baz'})
+            self.assertEqual(
+                grains.__grains__,
+                {'foo': ['baz']})
+            self.assertGrainFileContent("foo:\n"
+                                      + "- baz\n")
 
     # 'list_present' function tests: 7
 

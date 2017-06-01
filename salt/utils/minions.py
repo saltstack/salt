@@ -82,8 +82,8 @@ def get_minion_data(minion, opts):
         else:
             data = cache.fetch('minions/{0}'.format(minion), 'data')
         if data is not None:
-            grains = data['grains']
-            pillar = data['pillar']
+            grains = data.get('grains', None)
+            pillar = data.get('pillar', None)
     return minion if minion else None, grains, pillar
 
 
@@ -251,12 +251,9 @@ class CkMinions(object):
         If not 'greedy' return the only minions have cache data and matched by the condition.
         '''
         cache_enabled = self.opts.get('minion_data_cache', False)
-        cdir = os.path.join(self.opts['cachedir'], 'minions')
 
         def list_cached_minions():
-            if not os.path.isdir(cdir):
-                return []
-            return os.listdir(cdir)
+            return self.cache.list('minions')
 
         if greedy:
             minions = []

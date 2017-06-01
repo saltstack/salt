@@ -383,6 +383,7 @@ Section -Post
     nsExec::Exec "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
     nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
     nsExec::Exec "nssm.exe set salt-minion Start SERVICE_AUTO_START"
+    nsExec::Exec "nssm.exe set salt-minion AppNoConsole 1"
 
     RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
 
@@ -635,8 +636,10 @@ Function AddToPath
 
     ; Check for Error Code 234, Path too long for the variable
     IntCmp $4 234 0 +4 +4 ; $4 == ERROR_MORE_DATA
-        DetailPrint "AddToPath: original length $2 > ${NSIS_MAX_STRLEN}"
-        MessageBox MB_OK "PATH not updated, original length $2 > ${NSIS_MAX_STRLEN}"
+        DetailPrint "AddToPath Failed: original length $2 > ${NSIS_MAX_STRLEN}"
+        MessageBox MB_OK \
+            "You may add C:\salt to the %PATH% for convenience when issuing local salt commands from the command line." \
+            /SD IDOK
         Goto done
 
     ; If no error, continue
@@ -671,7 +674,9 @@ Function AddToPath
     ; Make sure the new length isn't over the NSIS_MAX_STRLEN
     IntCmp $2 ${NSIS_MAX_STRLEN} +4 +4 0
         DetailPrint "AddToPath: new length $2 > ${NSIS_MAX_STRLEN}"
-        MessageBox MB_OK "PATH not updated, new length $2 > ${NSIS_MAX_STRLEN}."
+        MessageBox MB_OK \
+            "You may add C:\salt to the %PATH% for convenience when issuing local salt commands from the command line." \
+            /SD IDOK
         Goto done
 
     ; Append dir to PATH
@@ -732,7 +737,6 @@ Function un.RemoveFromPath
     ; Check for Error Code 234, Path too long for the variable
     IntCmp $4 234 0 +4 +4 ; $4 == ERROR_MORE_DATA
         DetailPrint "AddToPath: original length $2 > ${NSIS_MAX_STRLEN}"
-        MessageBox MB_OK "PATH not updated, original length $2 > ${NSIS_MAX_STRLEN}"
         Goto done
 
     ; If no error, continue

@@ -40,6 +40,7 @@ import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
 import salt.utils.itertools
+import salt.utils.pkg
 import salt.utils.pkg.deb
 import salt.utils.systemd
 from salt.exceptions import (
@@ -379,6 +380,8 @@ def refresh_db(cache_valid_time=0, failhard=False):
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     failhard = salt.utils.is_true(failhard)
     ret = {}
     error_repos = list()
@@ -767,12 +770,13 @@ def install(name=None,
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
 
-    state = get_selections(state='hold')
-    hold_pkgs = state.get('hold')
-    to_unhold = []
-    for _pkg in hold_pkgs:
-        if _pkg in all_pkgs:
-            to_unhold.append(_pkg)
+    hold_pkgs = get_selections(state='hold').get('hold', [])
+    # all_pkgs contains the argument to be passed to apt-get install, which
+    # when a specific version is requested will be in the format name=version.
+    # Strip off the '=' if present so we can compare the held package names
+    # against the pacakges we are trying to install.
+    targeted_names = [x.split('=')[0] for x in all_pkgs]
+    to_unhold = [x for x in hold_pkgs if x in targeted_names]
 
     if to_unhold:
         unhold(pkgs=to_unhold)
@@ -1049,6 +1053,11 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
+    download_only
+        Only donwload the packages, don't unpack or install them
+
+        .. versionadded:: Oxygen
+
     force_conf_new
         Always install the new version of any configuration files.
 
@@ -1082,6 +1091,8 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         cmd.append('--force-yes')
     if kwargs.get('skip_verify', False):
         cmd.append('--allow-unauthenticated')
+    if kwargs.get('download_only', False):
+        cmd.append('--download-only')
 
     cmd.append('dist-upgrade' if dist_upgrade else 'upgrade')
 

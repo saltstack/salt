@@ -29,14 +29,12 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
         return {guestfs: {}}
 
     # 'mount' function tests: 1
-
-    @patch('os.path.join', MagicMock(return_value=True))
-    @patch('os.path.isdir', MagicMock(return_value=True))
-    @patch('os.listdir', MagicMock(return_value=False))
     def test_mount(self):
         '''
         Test if it mount an image
         '''
-        mock = MagicMock(return_value='')
-        with patch.dict(guestfs.__salt__, {'cmd.run': mock}):
+        with patch('os.path.join', MagicMock(return_value=True)), \
+                patch('os.path.isdir', MagicMock(return_value=True)), \
+                patch('os.listdir', MagicMock(return_value=False)), \
+                patch.dict(guestfs.__salt__, {'cmd.run': MagicMock(return_value='')}):
             self.assertTrue(guestfs.mount('/srv/images/fedora.qcow'))

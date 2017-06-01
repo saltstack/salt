@@ -2366,7 +2366,7 @@ def create(vm_):
         'private_key', vm_, __opts__, search_global=False, default=None
     )
     deploy = config.get_cloud_config_value(
-        'deploy', vm_, __opts__, search_global=False, default=True
+        'deploy', vm_, __opts__, search_global=True, default=True
     )
     wait_for_ip_timeout = config.get_cloud_config_value(
         'wait_for_ip_timeout', vm_, __opts__, default=20 * 60
@@ -2657,7 +2657,7 @@ def create(vm_):
             log.info("Creating {0} from {1}({2})".format(vm_['name'], clone_type, vm_['clonefrom']))
 
             if datastore and not datastore_ref and datastore_cluster_ref:
-                # datastore cluster has been specified so apply Storage DRS recomendations
+                # datastore cluster has been specified so apply Storage DRS recommendations
                 pod_spec = vim.storageDrs.PodSelectionSpec(storagePod=datastore_cluster_ref)
 
                 storage_spec = vim.storageDrs.StoragePlacementSpec(

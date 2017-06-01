@@ -66,70 +66,68 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
         })
         self.assertEqual(ret, (True, 'Valid beacon configuration.'))
 
-    @patch("salt.beacons.telegram_bot_msg.telegram")
-    def test_call_no_updates(self, telegram_api, *args, **kwargs):
-        token = 'abc'
-        config = {
-            'token': token,
-            'accept_from': ['tester']
-        }
-        inst = MagicMock(name='telegram.Bot()')
-        telegram_api.Bot = MagicMock(name='telegram', return_value=inst)
-        inst.get_updates.return_value = []
+    def test_call_no_updates(self):
+        with patch("salt.beacons.telegram_bot_msg.telegram") as telegram_api:
+            token = 'abc'
+            config = {
+                'token': token,
+                'accept_from': ['tester']
+            }
+            inst = MagicMock(name='telegram.Bot()')
+            telegram_api.Bot = MagicMock(name='telegram', return_value=inst)
+            inst.get_updates.return_value = []
 
-        ret = telegram_bot_msg.beacon(config)
+            ret = telegram_bot_msg.beacon(config)
 
-        telegram_api.Bot.assert_called_once_with(token)
-        self.assertEqual(ret, [])
+            telegram_api.Bot.assert_called_once_with(token)
+            self.assertEqual(ret, [])
 
-    @patch("salt.beacons.telegram_bot_msg.telegram")
-    def test_call_telegram_return_no_updates_for_user(
-            self, telegram_api, *args, **kwargs):
-        token = 'abc'
-        username = 'tester'
-        config = {
-            'token': token,
-            'accept_from': [username]
-        }
-        inst = MagicMock(name='telegram.Bot()')
-        telegram_api.Bot = MagicMock(name='telegram', return_value=inst)
+    def test_call_telegram_return_no_updates_for_user(self):
+        with patch("salt.beacons.telegram_bot_msg.telegram") as telegram_api:
+            token = 'abc'
+            username = 'tester'
+            config = {
+                'token': token,
+                'accept_from': [username]
+            }
+            inst = MagicMock(name='telegram.Bot()')
+            telegram_api.Bot = MagicMock(name='telegram', return_value=inst)
 
-        username = 'different_user'
-        user = telegram.User(id=1, first_name='', username=username)
-        chat = telegram.Chat(1, 'private', username=username)
-        date = datetime.datetime(2016, 12, 18, 0, 0)
-        message = telegram.Message(1, user, date=date, chat=chat)
-        update = telegram.update.Update(update_id=1, message=message)
+            username = 'different_user'
+            user = telegram.User(id=1, first_name='', username=username)
+            chat = telegram.Chat(1, 'private', username=username)
+            date = datetime.datetime(2016, 12, 18, 0, 0)
+            message = telegram.Message(1, user, date=date, chat=chat)
+            update = telegram.update.Update(update_id=1, message=message)
 
-        inst.get_updates.return_value = [update]
+            inst.get_updates.return_value = [update]
 
-        ret = telegram_bot_msg.beacon(config)
+            ret = telegram_bot_msg.beacon(config)
 
-        telegram_api.Bot.assert_called_once_with(token)
-        self.assertEqual(ret, [])
+            telegram_api.Bot.assert_called_once_with(token)
+            self.assertEqual(ret, [])
 
-    @patch("salt.beacons.telegram_bot_msg.telegram")
-    def test_call_telegram_returning_updates(self, telegram_api,
-                                             *args, **kwargs):
-        token = 'abc'
-        username = 'tester'
-        config = {
-            'token': token,
-            'accept_from': [username]
-        }
-        inst = MagicMock(name='telegram.Bot()')
-        telegram_api.Bot = MagicMock(name='telegram', return_value=inst)
+    def test_call_telegram_returning_updates(self):
+        with patch("salt.beacons.telegram_bot_msg.telegram") as telegram_api:
+            token = 'abc'
+            username = 'tester'
+            config = {
+                'token': token,
+                'accept_from': [username]
+            }
+            inst = MagicMock(name='telegram.Bot()')
+            telegram_api.Bot = MagicMock(name='telegram', return_value=inst)
 
-        user = telegram.User(id=1, first_name='', username=username)
-        chat = telegram.Chat(1, 'private', username=username)
-        date = datetime.datetime(2016, 12, 18, 0, 0)
-        message = telegram.Message(1, user, date=date, chat=chat)
-        update = telegram.update.Update(update_id=1, message=message)
+            user = telegram.User(id=1, first_name='', username=username)
+            chat = telegram.Chat(1, 'private', username=username)
+            date = datetime.datetime(2016, 12, 18, 0, 0)
+            message = telegram.Message(1, user, date=date, chat=chat)
+            update = telegram.update.Update(update_id=1, message=message)
 
-        inst.get_updates.return_value = [update]
+            inst.get_updates.return_value = [update]
 
-        ret = telegram_bot_msg.beacon(config)
+            ret = telegram_bot_msg.beacon(config)
 
-        telegram_api.Bot.assert_called_once_with(token)
-        self.assertTrue(ret)
-        self.assertEqual(ret[0]['msgs'][0], message.to_dict())
+            telegram_api.Bot.assert_called_once_with(token)
+            self.assertTrue(ret)
+            self.assertEqual(ret[0]['msgs'][0], message.to_dict())

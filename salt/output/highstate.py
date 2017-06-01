@@ -125,7 +125,6 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     The HighState Outputter is only meant to be used with the state.highstate
     function, or a function that returns highstate return data.
     '''
-
     # Discard retcode in dictionary as present in orchestrate data
     local_masters = [key for key in data.keys() if key.endswith('.local_master')]
     orchestrator_output = 'retcode' in data.keys() and len(local_masters) == 1
@@ -209,13 +208,11 @@ def _format_host(host, data):
             rcounts[ret['result']] += 1
             rduration = ret.get('duration', 0)
             try:
-                float(rduration)
-                rdurations.append(rduration)
+                rdurations.append(float(rduration))
             except ValueError:
                 rduration, _, _ = rduration.partition(' ms')
                 try:
-                    float(rduration)
-                    rdurations.append(rduration)
+                    rdurations.append(float(rduration))
                 except ValueError:
                     log.error('Cannot parse a float from duration {0}'
                               .format(ret.get('duration', 0)))
@@ -319,7 +316,10 @@ def _format_host(host, data):
             # be sure that ret['comment'] is utf-8 friendly
             try:
                 if not isinstance(ret['comment'], six.text_type):
-                    ret['comment'] = str(ret['comment']).decode('utf-8')
+                    if six.PY2:
+                        ret['comment'] = str(ret['comment']).decode('utf-8')
+                    else:
+                        ret['comment'] = salt.utils.to_str(ret['comment'])
             except UnicodeDecodeError:
                 # but try to continue on errors
                 pass

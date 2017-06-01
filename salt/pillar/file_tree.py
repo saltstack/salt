@@ -56,9 +56,11 @@ intended to be used to deploy a file using ``contents_pillar`` with a
     files would not affected by the ``keep_newline`` configuration.  However,
     this module does not actually distinguish between binary and text files.
 
-.. versionchanged:: develop
+.. versionchanged:: Nitrogen
     Templating/rendering has been added. You can now specify a default render
     pipeline and a black- and whitelist of (dis)allowed renderers.
+
+    ``template`` must be set to ``True`` for templating to happen.
 
     .. code-block:: yaml
 
@@ -71,6 +73,7 @@ intended to be used to deploy a file using ``contents_pillar`` with a
             renderer_whitelist:
               - jinja
               - yaml
+            template: True
 
 Assigning Pillar Data to Individual Hosts
 -----------------------------------------
@@ -220,7 +223,8 @@ def _construct_pillar(top_dir,
                       keep_newline=False,
                       render_default=None,
                       renderer_blacklist=None,
-                      renderer_whitelist=None):
+                      renderer_whitelist=None,
+                      template=False):
     '''
     Construct pillar from file tree.
     '''
@@ -272,11 +276,13 @@ def _construct_pillar(top_dir,
                           file_path,
                           exc.strerror)
             else:
-                data = salt.template.compile_template_str(template=contents,
-                                                          renderers=renderers,
-                                                          default=render_default,
-                                                          blacklist=renderer_blacklist,
-                                                          whitelist=renderer_whitelist)
+                data = contents
+                if template is True:
+                    data = salt.template.compile_template_str(template=contents,
+                                                              renderers=renderers,
+                                                              default=render_default,
+                                                              blacklist=renderer_blacklist,
+                                                              whitelist=renderer_whitelist)
                 if salt.utils.stringio.is_readable(data):
                     pillar_node[file_name] = data.getvalue()
                 else:
@@ -293,7 +299,8 @@ def ext_pillar(minion_id,
                keep_newline=False,
                render_default=None,
                renderer_blacklist=None,
-               renderer_whitelist=None):
+               renderer_whitelist=None,
+               template=False):
     '''
     Compile pillar data for the specified minion ID
     '''
@@ -341,7 +348,8 @@ def ext_pillar(minion_id,
                                               keep_newline,
                                               render_default,
                                               renderer_blacklist,
-                                              renderer_whitelist)
+                                              renderer_whitelist,
+                                              template)
                         )
         else:
             if debug is True:
@@ -367,7 +375,8 @@ def ext_pillar(minion_id,
                                     keep_newline,
                                     render_default,
                                     renderer_blacklist,
-                                    renderer_whitelist)
+                                    renderer_whitelist,
+                                    template)
     return salt.utils.dictupdate.merge(ngroup_pillar,
                                        host_pillar,
                                        strategy='recurse')

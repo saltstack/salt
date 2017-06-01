@@ -28,182 +28,183 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_hosts' function tests: 1
 
-    @patch('salt.modules.hosts._list_hosts',
-           MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']}))
     def test_list_hosts(self):
         '''
         Tests return the hosts found in the hosts file
         '''
-        self.assertDictEqual({'10.10.10.10': ['Salt1', 'Salt2']},
-                             hosts.list_hosts())
+        with patch('salt.modules.hosts._list_hosts',
+                   MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']})):
+            self.assertDictEqual({'10.10.10.10': ['Salt1', 'Salt2']},
+                                 hosts.list_hosts())
 
     # 'get_ip' function tests: 3
 
-    @patch('salt.modules.hosts._list_hosts',
-           MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']}))
     def test_get_ip(self):
         '''
         Tests return ip associated with the named host
         '''
-        self.assertEqual('10.10.10.10', hosts.get_ip('Salt1'))
+        with patch('salt.modules.hosts._list_hosts',
+                   MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']})):
+            self.assertEqual('10.10.10.10', hosts.get_ip('Salt1'))
 
-        self.assertEqual('', hosts.get_ip('Salt3'))
+            self.assertEqual('', hosts.get_ip('Salt3'))
 
-    @patch('salt.modules.hosts._list_hosts', MagicMock(return_value=''))
     def test_get_ip_none(self):
         '''
         Tests return ip associated with the named host
         '''
-        self.assertEqual('', hosts.get_ip('Salt1'))
+        with patch('salt.modules.hosts._list_hosts', MagicMock(return_value='')):
+            self.assertEqual('', hosts.get_ip('Salt1'))
 
     # 'get_alias' function tests: 2
 
-    @patch('salt.modules.hosts._list_hosts',
-           MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']}))
     def test_get_alias(self):
         '''
         Tests return the list of aliases associated with an ip
         '''
-        self.assertListEqual(['Salt1', 'Salt2'], hosts.get_alias('10.10.10.10'))
+        with patch('salt.modules.hosts._list_hosts',
+                   MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']})):
+            self.assertListEqual(['Salt1', 'Salt2'], hosts.get_alias('10.10.10.10'))
 
-    @patch('salt.modules.hosts._list_hosts',
-           MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']}))
     def test_get_alias_none(self):
         '''
         Tests return the list of aliases associated with an ip
         '''
-        self.assertListEqual([], hosts.get_alias('10.10.10.11'))
+        with patch('salt.modules.hosts._list_hosts',
+                   MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']})):
+            self.assertListEqual([], hosts.get_alias('10.10.10.11'))
 
     # 'has_pair' function tests: 1
 
-    @patch('salt.modules.hosts._list_hosts',
-           MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']}))
     def test_has_pair(self):
         '''
         Tests return True / False if the alias is set
         '''
-        self.assertTrue(hosts.has_pair('10.10.10.10', 'Salt1'))
+        with patch('salt.modules.hosts._list_hosts',
+                   MagicMock(return_value={'10.10.10.10': ['Salt1', 'Salt2']})):
+            self.assertTrue(hosts.has_pair('10.10.10.10', 'Salt1'))
 
-        self.assertFalse(hosts.has_pair('10.10.10.10', 'Salt3'))
+            self.assertFalse(hosts.has_pair('10.10.10.10', 'Salt3'))
 
     # 'set_host' function tests: 3
 
-    @patch('salt.modules.hosts.__get_hosts_filename',
-           MagicMock(return_value='/etc/hosts'))
-    @patch('os.path.isfile', MagicMock(return_value=False))
     def test_set_host(self):
         '''
         Tests true if the alias is set
         '''
-        mock_opt = MagicMock(return_value=None)
-        with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
+        with patch('salt.modules.hosts.__get_hosts_filename',
+                  MagicMock(return_value='/etc/hosts')), \
+                patch('os.path.isfile', MagicMock(return_value=False)), \
+                    patch.dict(hosts.__salt__,
+                               {'config.option': MagicMock(return_value=None)}):
             self.assertFalse(hosts.set_host('10.10.10.10', 'Salt1'))
 
-    @patch('salt.modules.hosts.__get_hosts_filename',
-           MagicMock(return_value='/etc/hosts'))
-    @patch('os.path.isfile', MagicMock(return_value=True))
     def test_set_host_true(self):
         '''
         Tests true if the alias is set
         '''
-        with patch('salt.utils.fopen', mock_open()):
+        with patch('salt.modules.hosts.__get_hosts_filename',
+                   MagicMock(return_value='/etc/hosts')), \
+                patch('os.path.isfile', MagicMock(return_value=True)), \
+                    patch('salt.utils.fopen', mock_open()):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
                 self.assertTrue(hosts.set_host('10.10.10.10', 'Salt1'))
 
-    @patch('salt.modules.hosts.__get_hosts_filename',
-           MagicMock(return_value='/etc/hosts'))
-    @patch('os.path.isfile', MagicMock(return_value=True))
     def test_set_host_true_remove(self):
         '''
         Test if an empty hosts value removes existing entries
         '''
-        data = ['\n'.join((
-            '1.1.1.1 foo.foofoo foo',
-            '2.2.2.2 bar.barbar bar',
-            '3.3.3.3 asdf.asdfadsf asdf',
-            '1.1.1.1 foofoo.foofoo foofoo',
-        ))]
+        with patch('salt.modules.hosts.__get_hosts_filename',
+                   MagicMock(return_value='/etc/hosts')), \
+                patch('os.path.isfile', MagicMock(return_value=True)):
+            data = ['\n'.join((
+                '1.1.1.1 foo.foofoo foo',
+                '2.2.2.2 bar.barbar bar',
+                '3.3.3.3 asdf.asdfadsf asdf',
+                '1.1.1.1 foofoo.foofoo foofoo',
+            ))]
 
-        class TmpStringIO(StringIO):
-            def __init__(self, fn, mode='r'):
-                initial_value = data[0]
-                if 'w' in mode:
-                    initial_value = ''
-                StringIO.__init__(self, initial_value)
+            class TmpStringIO(StringIO):
+                def __init__(self, fn, mode='r'):
+                    initial_value = data[0]
+                    if 'w' in mode:
+                        initial_value = ''
+                    StringIO.__init__(self, initial_value)
 
-            def __enter__(self):
-                return self
+                def __enter__(self):
+                    return self
 
-            def __exit__(self, exc_type, exc_value, traceback):
-                self.close()
+                def __exit__(self, exc_type, exc_value, traceback):
+                    self.close()
 
-            def close(self):
-                data[0] = self.getvalue()
-                StringIO.close(self)
+                def close(self):
+                    data[0] = self.getvalue()
+                    StringIO.close(self)
 
-        expected = '\n'.join((
-            '2.2.2.2 bar.barbar bar',
-            '3.3.3.3 asdf.asdfadsf asdf',
-        )) + '\n'
+            expected = '\n'.join((
+                '2.2.2.2 bar.barbar bar',
+                '3.3.3.3 asdf.asdfadsf asdf',
+            )) + '\n'
 
-        with patch('salt.utils.fopen', TmpStringIO):
-            mock_opt = MagicMock(return_value=None)
-            with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
-                self.assertTrue(hosts.set_host('1.1.1.1', ' '))
-        self.assertEqual(data[0], expected)
+            with patch('salt.utils.fopen', TmpStringIO):
+                mock_opt = MagicMock(return_value=None)
+                with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
+                    self.assertTrue(hosts.set_host('1.1.1.1', ' '))
+            self.assertEqual(data[0], expected)
 
     # 'rm_host' function tests: 2
 
-    @patch('salt.modules.hosts.__get_hosts_filename',
-           MagicMock(return_value='/etc/hosts'))
-    @patch('salt.modules.hosts.has_pair', MagicMock(return_value=True))
-    @patch('os.path.isfile', MagicMock(return_value=True))
     def test_rm_host(self):
         '''
         Tests if specified host entry gets removed from the hosts file
         '''
-        with patch('salt.utils.fopen', mock_open()):
+        with patch('salt.utils.fopen', mock_open()), \
+                patch('salt.modules.hosts.__get_hosts_filename',
+                      MagicMock(return_value='/etc/hosts')), \
+                patch('salt.modules.hosts.has_pair',
+                      MagicMock(return_value=True)), \
+                patch('os.path.isfile', MagicMock(return_value=True)):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
                 self.assertTrue(hosts.rm_host('10.10.10.10', 'Salt1'))
 
-    @patch('salt.modules.hosts.has_pair', MagicMock(return_value=False))
     def test_rm_host_false(self):
         '''
         Tests if specified host entry gets removed from the hosts file
         '''
-        self.assertTrue(hosts.rm_host('10.10.10.10', 'Salt1'))
+        with patch('salt.modules.hosts.has_pair', MagicMock(return_value=False)):
+            self.assertTrue(hosts.rm_host('10.10.10.10', 'Salt1'))
 
     # 'add_host' function tests: 3
 
-    @patch('salt.modules.hosts.__get_hosts_filename',
-           MagicMock(return_value='/etc/hosts'))
     def test_add_host(self):
         '''
         Tests if specified host entry gets added from the hosts file
         '''
-        with patch('salt.utils.fopen', mock_open()):
+        with patch('salt.utils.fopen', mock_open()), \
+                patch('salt.modules.hosts.__get_hosts_filename',
+                      MagicMock(return_value='/etc/hosts')):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
                 self.assertTrue(hosts.add_host('10.10.10.10', 'Salt1'))
 
-    @patch('os.path.isfile', MagicMock(return_value=False))
     def test_add_host_no_file(self):
         '''
         Tests if specified host entry gets added from the hosts file
         '''
-        with patch('salt.utils.fopen', mock_open()):
+        with patch('salt.utils.fopen', mock_open()), \
+                patch('os.path.isfile', MagicMock(return_value=False)):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
                 self.assertFalse(hosts.add_host('10.10.10.10', 'Salt1'))
 
-    @patch('os.path.isfile', MagicMock(return_value=True))
     def test_add_host_create_entry(self):
         '''
         Tests if specified host entry gets added from the hosts file
         '''
-        with patch('salt.utils.fopen', mock_open()):
+        with patch('salt.utils.fopen', mock_open()), \
+                patch('os.path.isfile', MagicMock(return_value=True)):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
                 self.assertTrue(hosts.add_host('10.10.10.10', 'Salt1'))

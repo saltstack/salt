@@ -51,7 +51,7 @@ def _get_keys():
 
 def start(interval=3600, expire=604800):
     ck = salt.utils.minions.CkMinions(__opts__)
-    presence_file = '{0}/minions/presence.p'.format(__opts__['cachedir'])
+    presence_file = '{0}/presence.p'.format(__opts__['cachedir'])
     wheel = salt.wheel.WheelClient(__opts__)
 
     while True:

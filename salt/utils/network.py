@@ -12,6 +12,7 @@ import types
 import socket
 import logging
 import platform
+import subprocess
 from string import ascii_letters, digits
 
 # Import 3rd-party libs
@@ -26,7 +27,8 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt._compat import subprocess, ipaddress
+from salt._compat import ipaddress
+from salt.utils.decorators import jinja_filter
 
 # inet_pton does not exist in Windows, this is a workaround
 if salt.utils.is_windows():
@@ -93,12 +95,12 @@ def _generate_minion_id():
 
     class DistinctList(list):
         '''
-        List, which allows to append only distinct objects.
+        List, which allows one to append only distinct objects.
         Needs to work on Python 2.6, because of collections.OrderedDict only since 2.7 version.
         Override 'filter()' for custom filtering.
         '''
-        localhost_matchers = ['localhost.*', 'ip6-.*', '127.*', r'0\.0\.0\.0',
-                              '::1.*', 'ipv6-.*', 'fe00::.*', 'fe02::.*', '1.0.0.*.ip6.arpa']
+        localhost_matchers = [r'localhost.*', r'ip6-.*', r'127[.]\d', r'0\.0\.0\.0',
+                              r'::1.*', r'ipv6-.*', r'fe00::.*', r'fe02::.*', r'1.0.0.*.ip6.arpa']
 
         def append(self, p_object):
             if p_object and p_object not in self and not self.filter(p_object):
@@ -231,6 +233,7 @@ def is_ipv6(ip):
         return False
 
 
+@jinja_filter('is_ip')
 def is_ip_filter(ip, options=None):
     '''
     Returns a bool telling if the passed IP is a valid IPv4 or IPv6 address.
@@ -333,6 +336,7 @@ def _is_ipv(ip, version, options=None):
     return _ip_options(ip_obj, version, options=options)
 
 
+@jinja_filter('is_ipv4')
 def is_ipv4_filter(ip, options=None):
     '''
     Returns a bool telling if the value passed to it was a valid IPv4 address.
@@ -350,6 +354,7 @@ def is_ipv4_filter(ip, options=None):
     return isinstance(_is_ipv4, six.string_types)
 
 
+@jinja_filter('is_ipv6')
 def is_ipv6_filter(ip, options=None):
     '''
     Returns a bool telling if the value passed to it was a valid IPv6 address.
@@ -385,6 +390,7 @@ def _ipv_filter(value, version, options=None):
     return None
 
 
+@jinja_filter('ipv4')
 def ipv4(value, options=None):
     '''
     Filters a list and returns IPv4 values only.
@@ -392,6 +398,7 @@ def ipv4(value, options=None):
     return _ipv_filter(value, 4, options=options)
 
 
+@jinja_filter('ipv6')
 def ipv6(value, options=None):
     '''
     Filters a list and returns IPv6 values only.
@@ -399,6 +406,7 @@ def ipv6(value, options=None):
     return _ipv_filter(value, 6, options=options)
 
 
+@jinja_filter('ipaddr')
 def ipaddr(value, options=None):
     '''
     Filters and returns only valid IP objects.
@@ -430,6 +438,7 @@ def _filter_ipaddr(value, options, version=None):
     return ipaddr_filter_out
 
 
+@jinja_filter('ip_host')
 def ip_host(value, options=None, version=None):
     '''
     Returns the interfaces IP address, e.g.: 192.168.0.1/28.
@@ -449,6 +458,7 @@ def _network_hosts(ip_addr_entry):
     ]
 
 
+@jinja_filter('network_hosts')
 def network_hosts(value, options=None, version=None):
     '''
     Return the list of hosts within a network.
@@ -468,6 +478,7 @@ def _network_size(ip_addr_entry):
     return ipaddress.ip_network(ip_addr_entry, strict=False).num_addresses
 
 
+@jinja_filter('network_size')
 def network_size(value, options=None, version=None):
     '''
     Get the size of a network.

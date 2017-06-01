@@ -175,7 +175,7 @@ If (Test-Path "$($ini['Settings']['Python2Dir'])\python.exe") {
     DownloadFileWithProgress $url $file
 
     Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python2']) . . ."
-    $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['Python2Dir'])" -Wait -NoNewWindow -PassThru
+    $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,SharedCRT,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['Python2Dir'])" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -260,6 +260,17 @@ DownloadFileWithProgress $url $file
 
 # Install
 Start_Process_and_test_exitcode  "$($ini['Settings']['Scripts2Dir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyCrypto"
+
+#==============================================================================
+# Download sitecustomize.py
+#==============================================================================
+Write-Output " ----------------------------------------------------------------"
+Write-Output "   - $script_name :: Download sitecustomize . . ."
+Write-Output " ----------------------------------------------------------------"
+$file = "sitecustomize.py"
+$url  = "$($ini['Settings']['SaltRepo'])/$file"
+$file = "$($ini['Settings']['SitePkgs2Dir'])\$file"
+DownloadFileWithProgress $url $file
 
 #==============================================================================
 # Copy DLLs to Python Directory

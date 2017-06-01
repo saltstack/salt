@@ -22,6 +22,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
@@ -412,6 +413,8 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     if 'eix.sync' in __salt__:
         return __salt__['eix.sync']()
 

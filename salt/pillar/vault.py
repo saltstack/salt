@@ -10,7 +10,7 @@ Vault Pillar Module
 
 This module allows pillar data to be stored in Hashicorp Vault.
 
-Base configuration instructions are documented in the execution module docs.
+Base configuration instructions are documented in the :ref:`execution module docs <vault-setup>`.
 Below are noted extra configuration required for the pillar module, but the base
 configuration must also be completed.
 
@@ -76,7 +76,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
 
     if not comps[0].startswith('path='):
         salt.utils.warn_until(
-            'Oxygen',
+            'Fluorine',
             'The \'profile\' argument has been deprecated. Any parts up until '
             'and following the first "path=" are discarded'
         )

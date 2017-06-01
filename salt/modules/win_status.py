@@ -18,14 +18,13 @@ import sys
 import time
 import datetime
 import logging
-
+import subprocess
 log = logging.getLogger(__name__)
 
 # Import Salt Libs
 import salt.utils
 import salt.ext.six as six
 import salt.utils.event
-from salt._compat import subprocess
 from salt.utils.network import host_to_ips as _host_to_ips
 # pylint: disable=W0611
 from salt.modules.status import ping_master, time_
@@ -111,7 +110,7 @@ def diskusage(human_readable=False, path=None):
     _, total, free = \
         ctypes.c_ulonglong(), ctypes.c_ulonglong(), ctypes.c_longlong()
     if sys.version_info >= (3, ) or isinstance(path, six.text_type):
-        fun = ctypes.windll.kernel32.GetDiskFreeSpaceExw
+        fun = ctypes.windll.kernel32.GetDiskFreeSpaceExW
     else:
         fun = ctypes.windll.kernel32.GetDiskFreeSpaceExA
     ret = fun(path, ctypes.byref(_), ctypes.byref(total), ctypes.byref(free))

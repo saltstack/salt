@@ -60,7 +60,6 @@ State Module Changes
   ``no_block`` argument which, when set to ``True`` on systemd minions, will
   start/stop the service using the ``--no-block`` flag in the ``systemctl``
   command. On non-systemd minions, a warning will be issued.
-
 - The :py:func:`module.run <salt.states.module.run>` state has dropped its
   previous syntax with ``m_`` prefix for reserved keywords. Additionally, it
   allows running several functions in a batch.
@@ -105,6 +104,9 @@ State Module Changes
 
       use_superseded:
         - module.run
+- The default for the ``fingerprint_hash_type`` option used in the ``present``
+  function in the :mod:`ssh <salt.states.ssh_know_hosts>` state changed from
+  ``md5`` to ``sha256``.
 
 
 Execution Module Changes
@@ -132,6 +134,9 @@ Execution Module Changes
   :py:func:`Arch Linux <salt.modules.pacman.list_repo_pkgs>`-based distros.
 - The :mod:`system <salt.modules.system>` module changed its return format
   from "HH:MM AM/PM" to "HH:MM:SS AM/PM" for `get_system_time`.
+- The default for the ``fingerprint_hash_type`` option used in the
+  :mod:`ssh <salt.modules.ssh>` execution module changed from ``md5`` to
+  ``sha256``.
 
 
 Proxy Module Changes
@@ -200,8 +205,22 @@ Minion Configuration Additions
   config file, or if ``pillarenv`` is provided on the CLI, it will override
   this option.
 
+salt-api Changes
+================
+
+The ``rest_cherrypy`` netapi module has recieved a few minor improvements:
+
+* A CORS bugfix.
+* A new ``/token`` convenience endpoint to generate Salt eauth tokens.
+* A proof-of-concept JavaScript single-page application intended to demonstrate
+  how to use the Server-Sent Events stream in an application. It is available
+  in a default install by visiting the ``/app`` URL in a browser.
+
 Python API Changes
 ==================
+
+``expr_form`` Deprecation
+-------------------------
 
 The :ref:`LocalClient <local-client>`'s ``expr_form`` argument has been
 deprecated and renamed to ``tgt_type``. This change was made due to numerous
@@ -215,6 +234,37 @@ release cycle (two major releases after this one), those who are using the
 :ref:`netapi module <all-netapi-modules>`) are encouraged to update their code
 to use ``tgt_type``.
 
+``full_return`` Argument in ``LocalClient`` and ``RunnerClient``
+----------------------------------------------------------------
+
+An ``full_return`` argument has been added to the ``cmd`` and ``cmd_sync``
+methods in ``LocalClient`` and ``RunnerClient`` which causes the return data
+structure to include job meta data such as ``retcode``.
+
+This is useful at the Python API:
+
+.. code-block:: python
+
+    >>> import salt.client
+    >>> client = salt.client.LocalClient()
+    >>> client.cmd('*', 'cmd.run', ['return 1'], full_return=True)
+    {'jerry': {'jid': '20170520151213898053', 'ret': '', 'retcode': 1}}
+
+As well as from salt-api:
+
+.. code-block:: bash
+
+    % curl -b /tmp/cookies.txt -sS http://localhost:8000 \
+        -H 'Content-type: application/json' \
+        -d '[{
+            "client": "local",
+            "tgt": "*",
+            "fun": "cmd.run",
+            "arg": ["return 1"],
+            "full_return": true
+        }]'
+
+    {"return": [{"jerry": {"jid": "20170520151531477653", "retcode": 1, "ret": ""}}]}
 
 Network Automation
 ==================
@@ -247,7 +297,7 @@ have been improved, enhanced and widenened in scope:
 
 New modules:
 
-- :mod:`Netconfig state <salt.states.netconfig>` - Manage the configuration
+- :mod:`Netconfig state module <salt.states.netconfig>` - Manage the configuration
   of network devices using arbitrary templates and the Salt-specific
   advanced templating methodologies.
 - :mod:`Network ACL execution module <salt.modules.napalm_acl>` - Generate and
@@ -256,8 +306,10 @@ New modules:
   configuration. It only requires writing the pillar structure correctly!
 - :mod:`NAPALM YANG execution module <salt.modules.napalm_yang_mod>` - Parse,
   generate and load native device configuration in a standard way,
-  using the OpenConfig/IETF models. This module cotains also helpers for
+  using the OpenConfig/IETF models. This module contains also helpers for
   the states.
+- :mod:`NAPALM YANG state module <salt.states.netyang>` - Manage the
+  network device configuration according to the YANG models (OpenConfig or IETF).
 - :mod:`NET finder <salt.runners.net>` - Runner to find details easily and
   fast. It's smart enough to know what you are looking for. It will search
   in the details of the network interfaces, IP addresses, MAC address tables,
@@ -267,6 +319,11 @@ New modules:
   from the napalm-logs library into the Salt event bus. The events are based
   on the syslog messages from the network devices and structured following
   the OpenConfig/IETF YANG models.
+- :mod:`NAPALM Helpers <salt.modules.napalm>` - Generic helpers for
+  NAPALM-related operations. For example, the
+  :mod:`Compliance report <salt.modules.napalm.compliance_report>` function
+  can be used inside the state modules to compare the expected and the
+  existing configuration.
 
 New functions:
 
@@ -347,6 +404,18 @@ This is similar to how Salt handles MySQL, MongoDB, Zabbix, and other cases
 where the same execution module is used to manage several different kinds
 of objects (users, databases, roles, etc.).
 
+.. note::
+    With the `Moby announcement`_ coming at this year's DockerCon_, Salt's
+    :mod:`docker <salt.modules.dockermod>` execution module (as well as the
+    state modules) work interchangably when **docker** is replaced with
+    **moby** (e.g.  :py:func:`moby_container.running
+    <salt.states.docker_container.running>`, :py:func:`moby_image.present
+    <salt.states.docker_image.present>`, :py:func:`moby.inspect_container
+    <salt.modules.dockermod.inspect_container>`, etc.)
+
+.. _`Moby announcement`: https://blog.docker.com/2017/04/introducing-the-moby-project/
+.. _DockerCon: http://2017.dockercon.com/
+
 The old syntax will continue to work until the **Fluorine** release of Salt.
 The old ``dockerng`` naming will also continue to work until that release, so
 no immediate changes need to be made to your SLS files (unless you were still
@@ -395,6 +464,15 @@ so it is now possible to target minions identically through `salt` and `salt-ssh
 Using the new ``roster_order`` configuration syntax it's now possible to compose a roster out of any combination
 of grains, pillar and mine data and even Salt SDB URLs.
 The new release is also fully IPv4 and IPv6 enabled and even has support for CIDR ranges.
+
+New Modules
+===========
+
+Outputters
+----------
+
+- :mod:`table <salt.output.table_out>`
+- :mod:`profile <salt.output.profile>`
 
 Deprecations
 ============

@@ -226,9 +226,8 @@ def _new_serial(ca_name):
     '''
     hashnum = int(
         binascii.hexlify(
-            '{0}_{1}'.format(
-                _microtime(),
-                os.urandom(5))),
+            six.b('{0}_{1}'.format(_microtime(), os.urandom(5)))
+        ),
         16
     )
     log.debug('Hashnum: %s', hashnum)
@@ -264,7 +263,7 @@ def _get_basic_info(ca_name, cert, ca_dir=None):
 
     expire_date = _four_digit_year_to_two_digit(
         datetime.strptime(
-            cert.get_notAfter(),
+            salt.utils.to_str(cert.get_notAfter()),
             four_digit_year_fmt)
     )
     serial_number = format(cert.get_serial_number(), 'X')
@@ -708,18 +707,18 @@ def create_ca(ca_name,
 
     if X509_EXT_ENABLED:
         ca.add_extensions([
-            OpenSSL.crypto.X509Extension('basicConstraints', True,
-                                         'CA:TRUE, pathlen:0'),
-            OpenSSL.crypto.X509Extension('keyUsage', True,
-                                         'keyCertSign, cRLSign'),
-            OpenSSL.crypto.X509Extension('subjectKeyIdentifier', False,
-                                         'hash', subject=ca)])
+            OpenSSL.crypto.X509Extension(
+                six.b('basicConstraints'), True, six.b('CA:TRUE, pathlen:0')),
+            OpenSSL.crypto.X509Extension(
+                six.b('keyUsage'), True, six.b('keyCertSign, cRLSign')),
+            OpenSSL.crypto.X509Extension(
+                six.b('subjectKeyIdentifier'), False, six.b('hash'), subject=ca)])
 
         ca.add_extensions([
             OpenSSL.crypto.X509Extension(
-                'authorityKeyIdentifier',
+                six.b('authorityKeyIdentifier'),
                 False,
-                'issuer:always,keyid:always',
+                six.b('issuer:always,keyid:always'),
                 issuer=ca)])
     ca.sign(key, digest)
 
@@ -740,10 +739,10 @@ def create_ca(ca_name,
                     bckf.write(old_key)
                     os.chmod(bck, 0o600)
     if write_key:
-        with salt.utils.fopen(ca_keyp, 'w') as ca_key:
+        with salt.utils.fopen(ca_keyp, 'wb') as ca_key:
             ca_key.write(keycontent)
 
-    with salt.utils.fopen(certp, 'w') as ca_crt:
+    with salt.utils.fopen(certp, 'wb') as ca_crt:
         ca_crt.write(
             OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, ca))
 
@@ -1007,9 +1006,13 @@ def create_csr(ca_name,
         extension_adds = []
 
         for ext, value in extensions.items():
-            extension_adds.append(OpenSSL.crypto.X509Extension(ext, False,
-                                                               value))
-
+            if six.PY3:
+                ext = salt.utils.to_bytes(ext)
+                if isinstance(value, six.string_types):
+                    value = salt.utils.to_bytes(value)
+            extension_adds.append(
+                OpenSSL.crypto.X509Extension(
+                    ext, False, value))
     except AssertionError as err:
         log.error(err)
         extensions = []
@@ -1021,7 +1024,7 @@ def create_csr(ca_name,
 
             extension_adds.append(
                 OpenSSL.crypto.X509Extension(
-                    'subjectAltName', False, ", ".join(subjectAltName)))
+                    six.b('subjectAltName'), False, six.b(", ".join(subjectAltName))))
         else:
             raise ValueError('subjectAltName cannot be set as X509 '
                              'extensions are not supported in pyOpenSSL '
@@ -1036,12 +1039,12 @@ def create_csr(ca_name,
 
     # Write private key and request
     with salt.utils.fopen('{0}/{1}.key'.format(csr_path,
-                                               csr_filename), 'w+') as priv_key:
+                                               csr_filename), 'wb+') as priv_key:
         priv_key.write(
             OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
         )
 
-    with salt.utils.fopen(csr_f, 'w+') as csr:
+    with salt.utils.fopen(csr_f, 'wb+') as csr:
         csr.write(
             OpenSSL.crypto.dump_certificate_request(
                 OpenSSL.crypto.FILETYPE_PEM,
@@ -1176,19 +1179,18 @@ def create_self_signed_cert(tls_dir='tls',
     cert.sign(key, digest)
 
     # Write private key and cert
-    with salt.utils.fopen(
-        '{0}/{1}/certs/{2}.key'.format(cert_base_path(),
-                                       tls_dir, cert_filename),
-        'w+'
-    ) as priv_key:
+    priv_key_path = '{0}/{1}/certs/{2}.key'.format(cert_base_path(),
+                                                   tls_dir,
+                                                   cert_filename)
+    with salt.utils.fopen(priv_key_path, 'wb+') as priv_key:
         priv_key.write(
             OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
         )
 
-    with salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
-                                                         tls_dir,
-                                                         cert_filename
-                                                         ), 'w+') as crt:
+    crt_path = '{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
+                                              tls_dir,
+                                              cert_filename)
+    with salt.utils.fopen(crt_path, 'wb+') as crt:
         crt.write(
             OpenSSL.crypto.dump_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
@@ -1428,14 +1430,13 @@ def create_ca_signed_cert(ca_name,
 
     cert_full_path = '{0}/{1}.crt'.format(cert_path, cert_filename)
 
-    with salt.utils.fopen(cert_full_path, 'w+') as crt:
+    with salt.utils.fopen(cert_full_path, 'wb+') as crt:
         crt.write(
             OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert))
 
     _write_cert_to_database(ca_name, cert)
 
-    return ('Created Certificate for "{0}": '
-            '"{1}/{2}.crt"').format(
+    return 'Created Certificate for "{0}": "{1}/{2}.crt"'.format(
         CN,
         cert_path,
         cert_filename
@@ -1522,7 +1523,7 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None, replace=False):
 
     with salt.utils.fopen('{0}/{1}/certs/{2}.p12'.format(cert_base_path(),
                                                          ca_name,
-                                                         CN), 'w') as ofile:
+                                                         CN), 'wb') as ofile:
         ofile.write(pkcs12.export(passphrase=passphrase))
 
     return ('Created PKCS#12 Certificate for "{0}": '
@@ -1557,16 +1558,33 @@ def cert_info(cert_path, digest='sha256'):
             OpenSSL.crypto.FILETYPE_PEM,
             cert_file.read()
         )
+
+    issuer = {}
+    for key, value in cert.get_issuer().get_components():
+        if isinstance(key, bytes):
+            key = salt.utils.to_str(key, __salt_system_encoding__)
+        if isinstance(value, bytes):
+            value = salt.utils.to_str(value, __salt_system_encoding__)
+        issuer[key] = value
+
+    subject = {}
+    for key, value in cert.get_subject().get_components():
+        if isinstance(key, bytes):
+            key = salt.utils.to_str(key, __salt_system_encoding__)
+        if isinstance(value, bytes):
+            value = salt.utils.to_str(value, __salt_system_encoding__)
+        subject[key] = value
+
     ret = {
-        'fingerprint': cert.digest(digest),
-        'subject': dict(cert.get_subject().get_components()),
-        'issuer': dict(cert.get_issuer().get_components()),
+        'fingerprint': salt.utils.to_str(cert.digest(digest)),
+        'subject': subject,
+        'issuer': issuer,
         'serial_number': cert.get_serial_number(),
         'not_before': calendar.timegm(time.strptime(
             str(cert.get_notBefore().decode(__salt_system_encoding__)),
             date_fmt)),
         'not_after': calendar.timegm(time.strptime(
-            cert.get_notAfter().decode('utf-8'),
+            cert.get_notAfter().decode(__salt_system_encoding__),
             date_fmt)),
     }
 
@@ -1574,8 +1592,11 @@ def cert_info(cert_path, digest='sha256'):
     if hasattr(cert, 'get_extension_count'):
         ret['extensions'] = {}
         for i in _range(cert.get_extension_count()):
-            ext = cert.get_extension(i)
-            ret['extensions'][ext.get_short_name()] = str(ext)
+            try:
+                ext = cert.get_extension(i)
+                ret['extensions'][ext.get_short_name()] = str(ext)
+            except AttributeError:
+                continue
 
     if 'subjectAltName' in ret.get('extensions', {}):
         valid_names = set()
@@ -1588,7 +1609,12 @@ def cert_info(cert_path, digest='sha256'):
         ret['subject_alt_names'] = ' '.join(valid_names)
 
     if hasattr(cert, 'get_signature_algorithm'):
-        ret['signature_algorithm'] = cert.get_signature_algorithm()
+        try:
+            ret['signature_algorithm'] = cert.get_signature_algorithm()
+        except AttributeError:
+            # On py3 at least
+            # AttributeError: cdata 'X509 *' points to an opaque type: cannot read fields
+            pass
 
     return ret
 

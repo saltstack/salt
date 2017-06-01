@@ -55,15 +55,15 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_snmp.__salt__, {'reg.read_value': mock_value}):
             self.assertTrue(win_snmp.get_auth_traps_enabled())
 
-    @patch('salt.modules.win_snmp.get_auth_traps_enabled',
-           MagicMock(return_value=True))
     def test_set_auth_traps_enabled(self):
         '''
         Test - Manage the sending of authentication traps.
         '''
         mock_value = MagicMock(return_value=True)
         kwargs = {'status': True}
-        with patch.dict(win_snmp.__salt__, {'reg.set_value': mock_value}):
+        with patch.dict(win_snmp.__salt__, {'reg.set_value': mock_value}), \
+                patch('salt.modules.win_snmp.get_auth_traps_enabled',
+                      MagicMock(return_value=True)):
             self.assertTrue(win_snmp.set_auth_traps_enabled(**kwargs))
 
     def test_get_community_names(self):
@@ -76,13 +76,13 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_snmp.get_community_names(),
                              COMMUNITY_NAMES)
 
-    @patch('salt.modules.win_snmp.get_community_names',
-           MagicMock(return_value=COMMUNITY_NAMES))
     def test_set_community_names(self):
         '''
         Test - Manage the SNMP accepted community names and their permissions.
         '''
         mock_value = MagicMock(return_value=True)
         kwargs = {'communities': COMMUNITY_NAMES}
-        with patch.dict(win_snmp.__salt__, {'reg.set_value': mock_value}):
+        with patch.dict(win_snmp.__salt__, {'reg.set_value': mock_value}), \
+                patch('salt.modules.win_snmp.get_community_names',
+                      MagicMock(return_value=COMMUNITY_NAMES)):
             self.assertTrue(win_snmp.set_community_names(**kwargs))

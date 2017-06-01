@@ -37,7 +37,6 @@ execution modules
     bcache
     beacons
     bigip
-    blockdev
     bluez
     boto3_elasticache
     boto3_route53
@@ -197,6 +196,10 @@ execution modules
     layman
     ldap3
     ldapmod
+    libcloud_compute
+    libcloud_dns
+    libcloud_loadbalancer
+    libcloud_storage
     linux_acl
     linux_ip
     linux_lvm

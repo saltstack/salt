@@ -31,26 +31,33 @@ class APIConfigTestCase(TestCase):
     '''
     TestCase for the api_config function in salt.config.__init__.py
     '''
+    def setUp(self):
+        # Copy DEFAULT_API_OPTS to restore after the test
+        self.default_api_opts = salt.config.DEFAULT_API_OPTS.copy()
 
-    @patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS))
+    def tearDown(self):
+        # Reset DEFAULT_API_OPTS settings as to not interfere with other unit tests
+        salt.config.DEFAULT_API_OPTS = self.default_api_opts
+
     def test_api_config_log_file_values(self):
         '''
         Tests the opts value of the 'log_file' after running through the
         various default dict updates. 'log_file' should be updated to match
         the DEFAULT_API_OPTS 'api_logfile' value.
         '''
-        ret = salt.config.api_config('/some/fake/path')
-        self.assertEqual(ret['log_file'], '/var/log/salt/api')
+        with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+            ret = salt.config.api_config('/some/fake/path')
+            self.assertEqual(ret['log_file'], '/var/log/salt/api')
 
-    @patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS))
     def test_api_config_pidfile_values(self):
         '''
         Tests the opts value of the 'pidfile' after running through the
         various default dict updates. 'pidfile' should be updated to match
         the DEFAULT_API_OPTS 'api_pidfile' value.
         '''
-        ret = salt.config.api_config('/some/fake/path')
-        self.assertEqual(ret['pidfile'], '/var/run/salt-api.pid')
+        with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+            ret = salt.config.api_config('/some/fake/path')
+            self.assertEqual(ret['pidfile'], '/var/run/salt-api.pid')
 
     @destructiveTest
     def test_master_config_file_overrides_defaults(self):
@@ -59,9 +66,6 @@ class APIConfigTestCase(TestCase):
         various default dict updates that should be overridden by settings in
         the user's master config file.
         '''
-        # Copy DEFAULT_API_OPTS to restore after the test
-        default_api_opts = salt.config.DEFAULT_API_OPTS.copy()
-
         foo_dir = '/foo/bar/baz'
         hello_dir = '/hello/world'
         mock_master_config = {
@@ -80,9 +84,6 @@ class APIConfigTestCase(TestCase):
             self.assertEqual(ret['api_logfile'], hello_dir)
             self.assertEqual(ret['log_file'], hello_dir)
 
-        # Reset DEFAULT_API_OPTS settings as to not interfere with other unit tests
-        salt.config.DEFAULT_API_OPTS = default_api_opts
-
     @destructiveTest
     def test_api_config_prepend_root_dirs_return(self):
         '''
@@ -91,9 +92,6 @@ class APIConfigTestCase(TestCase):
         values is present in the list of opts keys that should have the root_dir
         prepended when the api_config function returns the opts dictionary.
         '''
-        # Copy DEFAULT_API_OPTS to restore after the test
-        default_api_opts = salt.config.DEFAULT_API_OPTS.copy()
-
         mock_log = '/mock/root/var/log/salt/api'
         mock_pid = '/mock/root/var/run/salt-api.pid'
 
@@ -107,6 +105,3 @@ class APIConfigTestCase(TestCase):
             self.assertEqual(ret['log_file'], mock_log)
             self.assertEqual(ret['api_pidfile'], mock_pid)
             self.assertEqual(ret['pidfile'], mock_pid)
-
-        # Reset DEFAULT_API_OPTS settings as to not interfere with other unit tests
-        salt.config.DEFAULT_API_OPTS = default_api_opts

@@ -26,16 +26,16 @@ class PowerpathTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {powerpath: {}}
 
-    @patch('os.path.exists')
-    def test_has_powerpath(self, mock_exists):
+    def test_has_powerpath(self):
         '''
         Test for powerpath
         '''
-        mock_exists.return_value = True
-        self.assertTrue(powerpath.has_powerpath())
+        with patch('os.path.exists') as mock_exists:
+            mock_exists.return_value = True
+            self.assertTrue(powerpath.has_powerpath())
 
-        mock_exists.return_value = False
-        self.assertFalse(powerpath.has_powerpath())
+            mock_exists.return_value = False
+            self.assertFalse(powerpath.has_powerpath())
 
     def test_list_licenses(self):
         '''

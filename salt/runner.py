@@ -74,13 +74,16 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
         reserved_kwargs = dict([(i, low.pop(i)) for i in [
             'username', 'password', 'eauth', 'token', 'client', 'user', 'key',
+            '__current_eauth_groups', '__current_eauth_user',
         ] if i in low])
 
         # Run name=value args through parse_input. We don't need to run kwargs
         # through because there is no way to send name=value strings in the low
         # dict other than by including an `arg` array.
         arg, kwarg = salt.utils.args.parse_input(
-                low.pop('arg', []), condition=False)
+            low.pop('arg', []),
+            condition=False,
+            no_parse=self.opts.get('no_parse', []))
         kwarg.update(low.pop('kwarg', {}))
 
         # If anything hasn't been pop()'ed out of low by this point it must be
@@ -175,7 +178,9 @@ class Runner(RunnerClient):
                 verify_fun(self.functions, low['fun'])
                 args, kwargs = salt.minion.load_args_and_kwargs(
                     self.functions[low['fun']],
-                    salt.utils.args.parse_input(self.opts['arg']),
+                    salt.utils.args.parse_input(
+                        self.opts['arg'],
+                        no_parse=self.opts.get('no_parse', [])),
                     self.opts,
                 )
                 low['arg'] = args

@@ -38,7 +38,6 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.which', MagicMock(return_value=False)):
             self.assertRaises(SaltRenderError, gpg._get_gpg_exec)
 
-    @patch('salt.utils.which', MagicMock())
     def test__decrypt_ciphertext(self):
         '''
         test _decrypt_ciphertext
@@ -55,7 +54,8 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
             def communicate(self, *args, **kwargs):
                 return [None, 'decrypt error']
 
-        with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
+        with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)), \
+                patch('salt.utils.which', MagicMock()):
             with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGDecrypt())):
                 self.assertEqual(gpg._decrypt_ciphertext(crypted), secret)
             with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGNotDecrypt())):
