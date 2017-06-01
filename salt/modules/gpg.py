@@ -133,7 +133,7 @@ def _get_user_gnupghome(user):
     Return default GnuPG home directory path for a user
     '''
     if user == 'salt':
-        gnupghome = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+        gnupghome = os.path.join(__salt__['config.get']('config_dir'), 'gpgkeys')
     else:
         gnupghome = os.path.join(_get_user_info(user)['home'], '.gnupg')
 
