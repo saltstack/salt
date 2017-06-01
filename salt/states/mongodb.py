@@ -10,6 +10,7 @@ Management of Mongodb users and databases
 # Define the module's virtual name
 __virtualname__ = 'mongodb'
 
+
 def __virtual__():
     for i in ('mongodb.user_exists', 'mongodb.db_exists',):
         if i not in __salt__:
@@ -221,15 +222,17 @@ def user_absent(name,
             ).format(name)
     return ret
 
+
 def _roles_to_set(roles, database):
     ret = set()
     for r in roles:
-        if isinstance(r,dict):
+        if isinstance(r, dict):
             if r['db'] == database:
-                ret.add( r['role'] )
+                ret.add(r['role'])
         else:
             ret.add(r)
     return ret
+
 
 def _user_roles_to_set(user_list, name, database):
     ret = set()
@@ -239,6 +242,7 @@ def _user_roles_to_set(user_list, name, database):
             ret = ret.union(_roles_to_set(item['roles'], database))
     
     return ret
+
 
 def user_grant_roles(name, roles,
             database="admin",
@@ -282,7 +286,7 @@ def user_grant_roles(name, roles,
            'result': False,
            'comment': ''}
 
-    if not isinstance(roles, (list,tuple)):
+    if not isinstance(roles, (list, tuple)):
         roles = [roles]
 
     if not roles:
@@ -309,7 +313,7 @@ def user_grant_roles(name, roles,
     user_list = __salt__['mongodb.user_list'](database=database,
         user=user, password=password, host=host, port=port, authdb=authdb)
 
-    user_set  = _user_roles_to_set(user_list, name, database)
+    user_set = _user_roles_to_set(user_list, name, database)
     roles_set = _roles_to_set(roles, database)
     diff = roles_set - user_set
 
@@ -321,13 +325,14 @@ def user_grant_roles(name, roles,
     # The user is not present, make it!
     if __salt__['mongodb.user_grant_roles'](name, roles, database,
         user=user, password=password, host=host, port=port, authdb=authdb):
-        ret['comment'] = 'Granted roles to {0} on {1}'.format(name,database)
+        ret['comment'] = 'Granted roles to {0} on {1}'.format(name, database)
         ret['changes'][name] = [ '{0} granted'.format(i) for i in diff ]
         ret['result'] = True
     else:
-        ret['comment'] = 'Failed to grant roles ({2}) to {0} on {1}'.format(name,database,diff)
+        ret['comment'] = 'Failed to grant roles ({2}) to {0} on {1}'.format(name, database, diff)
 
     return ret
+
 
 def user_set_roles(name, roles,
             database="admin",
@@ -371,7 +376,7 @@ def user_set_roles(name, roles,
            'result': False,
            'comment': ''}
 
-    if not isinstance(roles, (list,tuple)):
+    if not isinstance(roles, (list, tuple)):
         roles = [roles]
 
     if not roles:
@@ -390,21 +395,21 @@ def user_set_roles(name, roles,
     user_list = __salt__['mongodb.user_list'](database=database,
         user=user, password=password, host=host, port=port, authdb=authdb)
 
-    user_set  = _user_roles_to_set(user_list, name, database)
+    user_set = _user_roles_to_set(user_list, name, database)
     roles_set = _roles_to_set(roles, database)
-    to_grant  = list(roles_set - user_set)
+    to_grant = list(roles_set - user_set)
     to_revoke = list(user_set - roles_set)
 
     if not to_grant and not to_revoke:
         ret['result'] = True
-        ret['comment'] = "User {0} has the appropriate roles on {1}".format(name,database)
+        ret['comment'] = "User {0} has the appropriate roles on {1}".format(name, database)
         return ret
 
     if __opts__['test']:
         lsg = ', '.join(to_grant)
         lsr = ', '.join(to_revoke)
         ret['result'] = None
-        ret['comment'] = "Would have modified roles (grant: {0}; revoke: {1})".format(lsg,lsr)
+        ret['comment'] = "Would have modified roles (grant: {0}; revoke: {1})".format(lsg, lsr)
         return ret
 
     ret['changes'][name] = changes = {}
@@ -412,7 +417,7 @@ def user_set_roles(name, roles,
     if to_grant:
         if not __salt__['mongodb.user_grant_roles'](name, to_grant, database,
             user=user, password=password, host=host, port=port, authdb=authdb):
-            ret['comment'] = "failed to grant some or all of {0} to {1} on {2}".format(to_grant,name,database)
+            ret['comment'] = "failed to grant some or all of {0} to {1} on {2}".format(to_grant, name, database)
             return ret
         else:
             changes['granted'] = list(to_grant)
@@ -420,7 +425,7 @@ def user_set_roles(name, roles,
     if to_revoke:
         if not __salt__['mongodb.user_revoke_roles'](name, to_revoke, database,
             user=user, password=password, host=host, port=port, authdb=authdb):
-            ret['comment'] = "failed to revoke some or all of {0} to {1} on {2}".format(to_revoke,name,database)
+            ret['comment'] = "failed to revoke some or all of {0} to {1} on {2}".format(to_revoke, name, database)
             return ret
         else:
             changes['revoked'] = list(to_revoke)
