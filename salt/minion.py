@@ -3118,6 +3118,9 @@ class ProxyMinion(Minion):
         if 'proxy' not in self.opts:
             self.opts['proxy'] = self.opts['pillar']['proxy']
 
+        # update opts, to override data with pillar data
+        self.opts.update(self.opts['pillar'])
+
         fq_proxyname = self.opts['proxy']['proxytype']
 
         # Need to load the modules so they get all the dunder variables
