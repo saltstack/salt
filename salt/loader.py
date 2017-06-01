@@ -696,6 +696,7 @@ def grains(opts, force_refresh=False, proxy=None):
             # one parameter.  Then the grains can have access to the
             # proxymodule for retrieving information from the connected
             # device.
+            log.trace('Loading {0} grain'.format(key))
             if funcs[key].__code__.co_argcount == 1:
                 ret = funcs[key](proxy)
             else:
@@ -1160,7 +1161,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         for mod_dir in self.module_dirs:
             files = []
             try:
-                files = os.listdir(mod_dir)
+                # Make sure we have a sorted listdir in order to have expectable override results
+                files = sorted(os.listdir(mod_dir))
             except OSError:
                 continue  # Next mod_dir
             for filename in files:
