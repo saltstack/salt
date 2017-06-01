@@ -48,6 +48,7 @@ import hashlib
 # Import salt cloud libs
 import salt.config as config
 import salt.utils.cloud
+import salt.utils.hashutils
 from salt.exceptions import SaltCloudSystemExit, SaltCloudException
 
 # Get logging started
@@ -534,7 +535,7 @@ def _query(action=None,
 
     epoch = str(int(time.time()))
     hashtext = ''.join((apikey, sharedsecret, epoch))
-    args['sig'] = hashlib.md5(hashtext).hexdigest()
+    args['sig'] = salt.utils.hashutils.md5_digest(hashtext)
     args['format'] = 'json'
     args['v'] = '1.0'
     args['api_key'] = apikey
