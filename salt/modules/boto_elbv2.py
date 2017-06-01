@@ -71,6 +71,7 @@ def __virtual__():
     __utils__['boto3.assign_funcs'](__name__, 'elbv2')
     return True
 
+
 def create_target_group(name, protocol, port, vpc_id,
                         region=None, key=None, keyid=None, profile=None,
                         health_check_protocol='HTTP', health_check_port='traffic-port',
@@ -83,7 +84,7 @@ def create_target_group(name, protocol, port, vpc_id,
     CLI example:
     .. code-block:: bash
 
-        salt myminion boto_elbv2.create_target_group learn1give1 protocol=HTTP port=54006 vpc_id=vpc-deadbeef 
+        salt myminion boto_elbv2.create_target_group learn1give1 protocol=HTTP port=54006 vpc_id=vpc-deadbeef
     '''
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -112,6 +113,7 @@ def create_target_group(name, protocol, port, vpc_id,
                                             error.response['Error']['Code'],
                                             error.response['Error']['Message']))
 
+
 def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete target group.
@@ -132,6 +134,7 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
         log.debug(error)
         log.error('Failed to delete target group {0}'.format(name))
         return False
+
 
 def target_group_exists(name, region=None, key=None, keyid=None, profile=None):
     '''
