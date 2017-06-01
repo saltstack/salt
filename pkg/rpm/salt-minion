@@ -85,6 +85,7 @@ _get_salt_config_value() {
             \"$SALTCALL\" \
             -c \"$CONFIG_DIR\" \
             --no-color \
+            --skip-grains \
             --local config.get \
             \"$1\" \
         " \
