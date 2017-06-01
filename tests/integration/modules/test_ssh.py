@@ -10,29 +10,32 @@ import shutil
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP
 from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
 import salt.utils
-import salt.utils.http
+
+# Import 3rd-party libs
+from tornado.httpclient import HTTPClient
 
 SUBSALT_DIR = os.path.join(TMP, 'subsalt')
 AUTHORIZED_KEYS = os.path.join(SUBSALT_DIR, 'authorized_keys')
 KNOWN_HOSTS = os.path.join(SUBSALT_DIR, 'known_hosts')
-GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
+GITHUB_FINGERPRINT = '9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f'
 
 
 def check_status():
     '''
     Check the status of Github for remote operations
     '''
-    return salt.utils.http.query('http://github.com', status=True)['status'] == 200
+    try:
+        return HTTPClient().fetch('http://github.com').code == 200
+    except Exception:  # pylint: disable=broad-except
+        return False
 
 
 @skip_if_binaries_missing(['ssh', 'ssh-keygen'], check_all=True)
-@skipIf(not check_status(), 'External source, github.com is down')
 class SSHModuleTest(ModuleCase):
     '''
     Test the ssh module
@@ -41,6 +44,8 @@ class SSHModuleTest(ModuleCase):
         '''
         Set up the ssh module tests
         '''
+        if not check_status():
+            self.skipTest('External source, github.com is down')
         super(SSHModuleTest, self).setUp()
         if not os.path.isdir(SUBSALT_DIR):
             os.makedirs(SUBSALT_DIR)

@@ -606,6 +606,9 @@ def find_pool_and_volume(conn, path):
 
 
 def generate_new_name(orig_name):
+    if '.' not in orig_name:
+        return '{0}-{1}'.format(orig_name, uuid.uuid1())
+
     name, ext = orig_name.rsplit('.', 1)
     return '{0}-{1}.{2}'.format(name, uuid.uuid1(), ext)
 

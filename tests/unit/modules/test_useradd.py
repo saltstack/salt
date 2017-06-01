@@ -72,32 +72,32 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'getent' function tests: 2
 
-    @patch('salt.modules.useradd.__context__', MagicMock(return_value='Salt'))
     def test_getent(self):
         '''
         Test if user.getent already have a value
         '''
-        self.assertTrue(useradd.getent())
+        with patch('salt.modules.useradd.__context__', MagicMock(return_value='Salt')):
+            self.assertTrue(useradd.getent())
 
     @skipIf(HAS_PWD is False, 'The pwd module is not available')
-    @patch('pwd.getpwall', MagicMock(return_value=['']))
     def test_getent_user(self):
         '''
         Tests the return information on all users
         '''
-        ret = [{'gid': 0,
-                'groups': ['root'],
-                'home': '/root',
-                'name': 'root',
-                'passwd': 'x',
-                'shell': '/bin/bash',
-                'uid': 0,
-                'fullname': 'root',
-                'roomnumber': '',
-                'workphone': '',
-                'homephone': ''}]
-        with patch('salt.modules.useradd._format_info', MagicMock(return_value=self.mock_pwall)):
-            self.assertEqual(useradd.getent(), ret)
+        with patch('pwd.getpwall', MagicMock(return_value=[''])):
+            ret = [{'gid': 0,
+                    'groups': ['root'],
+                    'home': '/root',
+                    'name': 'root',
+                    'passwd': 'x',
+                    'shell': '/bin/bash',
+                    'uid': 0,
+                    'fullname': 'root',
+                    'roomnumber': '',
+                    'workphone': '',
+                    'homephone': ''}]
+            with patch('salt.modules.useradd._format_info', MagicMock(return_value=self.mock_pwall)):
+                self.assertEqual(useradd.getent(), ret)
 
     # 'chuid' function tests: 1
 
@@ -350,12 +350,12 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_groups' function tests: 1
 
-    @patch('salt.utils.get_group_list', MagicMock(return_value='Salt'))
     def test_list_groups(self):
         '''
         Test if it return a list of groups the named user belongs to
         '''
-        self.assertEqual(useradd.list_groups('name'), 'Salt')
+        with patch('salt.utils.get_group_list', MagicMock(return_value='Salt')):
+            self.assertEqual(useradd.list_groups('name'), 'Salt')
 
     # 'list_users' function tests: 1
 

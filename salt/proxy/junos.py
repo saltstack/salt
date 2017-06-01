@@ -116,6 +116,15 @@ def conn():
     return thisproxy['conn']
 
 
+def alive(opts):
+    '''
+    Return the connection status with the remote device.
+
+    .. versionadded:: Oxygen
+    '''
+    return thisproxy['conn'].connected
+
+
 def proxytype():
     '''
     Returns the name of this proxy
@@ -131,10 +140,9 @@ def get_serialized_facts():
     # For backward compatibility. 'junos_info' is present
     # only of in newer versions of facts.
     if 'junos_info' in facts:
-        facts['junos_info']['re0']['object'] = \
-            dict(facts['junos_info']['re0']['object'])
-        facts['junos_info']['re1']['object'] = \
-            dict(facts['junos_info']['re1']['object'])
+        for re in facts['junos_info']:
+            facts['junos_info'][re]['object'] = \
+                dict(facts['junos_info'][re]['object'])
     return facts
 
 

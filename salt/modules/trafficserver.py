@@ -14,7 +14,7 @@ import logging
 import subprocess
 
 # Import salt libs
-from salt import utils
+import salt.utils
 
 __virtualname__ = 'trafficserver'
 
@@ -22,14 +22,14 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if utils.which('traffic_ctl') or utils.which('traffic_line'):
+    if salt.utils.which('traffic_ctl') or salt.utils.which('traffic_line'):
         return __virtualname__
     return (False, 'trafficserver execution module not loaded: '
             'neither traffic_ctl nor traffic_line was found.')
 
 
-_TRAFFICLINE = utils.which('traffic_line')
-_TRAFFICCTL = utils.which('traffic_ctl')
+_TRAFFICLINE = salt.utils.which('traffic_line')
+_TRAFFICCTL = salt.utils.which('traffic_ctl')
 
 
 def _traffic_ctl(*args):
@@ -57,7 +57,7 @@ def _subprocess(cmd):
 
     try:
         proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-        ret = utils.to_str(proc.communicate()[0]).strip()
+        ret = salt.utils.to_str(proc.communicate()[0]).strip()
         retcode = proc.wait()
 
         if ret:
@@ -206,13 +206,18 @@ def match_var(regex):
     Display the current values of all performance statistics or configuration
     variables whose names match the given regular expression.
 
-    .. deprecated:: Oxygen
+    .. deprecated:: Fluorine
         Use ``match_metric`` or ``match_config`` instead.
 
     .. code-block:: bash
 
         salt '*' trafficserver.match_var regex
     '''
+    salt.utils.warn_until(
+        'Fluorine',
+        'The \'match_var\' function has been deprecated and will be removed in Salt '
+        '{version}. Please use \'match_metric\' or \'match_config\' instead.'
+    )
     cmd = _traffic_line('-m', regex)
     log.debug('Running: %s', cmd)
     return _subprocess(cmd)
@@ -342,7 +347,7 @@ def read_var(*args):
     '''
     Read variable definitions from the traffic_line command.
 
-    .. deprecated:: Oxygen
+    .. deprecated:: Fluorine
         Use ``read_metric`` or ``read_config`` instead. Note that this
         function does not work for Traffic Server versions >= 7.0.
 
@@ -350,6 +355,11 @@ def read_var(*args):
 
         salt '*' trafficserver.read_var proxy.process.http.tcp_hit_count_stat
     '''
+    salt.utils.warn_until(
+        'Fluorine',
+        'The \'read_var\' function has been deprecated and will be removed in Salt '
+        '{version}. Please use \'read_metric\' or \'read_config\' instead.'
+    )
 
     ret = {}
 
@@ -368,16 +378,18 @@ def set_var(variable, value):
     '''
     .. code-block:: bash
 
-    .. deprecated:: Oxygen
+    .. deprecated:: Fluorine
         Use ``set_config`` instead. Note that this function does
         not work for Traffic Server versions >= 7.0.
 
         salt '*' trafficserver.set_var proxy.config.http.server_ports
     '''
-
-    cmd = _traffic_line('-s', variable, '-v', value)
-    log.debug('Setting %s to %s', variable, value)
-    return _subprocess(cmd)
+    salt.utils.warn_until(
+        'Fluorine',
+        'The \'set_var\' function has been deprecated and will be removed in Salt '
+        '{version}. Please use \'set_config\' instead.'
+    )
+    return set_config(variable, value)
 
 
 def shutdown():

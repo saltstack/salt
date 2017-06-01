@@ -50,7 +50,6 @@ import salt.runner
 import salt.output
 import salt.version
 import salt.utils
-import salt.utils.network
 import salt.utils.process
 import salt.log.setup as salt_log_setup
 from salt.ext import six
@@ -58,12 +57,6 @@ from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
-
-try:
-    from salt.utils.gitfs import HAS_GITPYTHON, HAS_PYGIT2
-    HAS_GITFS = HAS_GITPYTHON or HAS_PYGIT2
-except ImportError:
-    HAS_GITFS = False
 
 try:
     import salt.master
@@ -168,6 +161,7 @@ class SocketServerRequestHandler(socketserver.StreamRequestHandler):
                     record = logging.makeLogRecord(record_dict)
                     logger = logging.getLogger(record.name)
                     logger.handle(record)
+                    del record_dict
             except (EOFError, KeyboardInterrupt, SystemExit):
                 break
             except socket.error as exc:
@@ -208,14 +202,6 @@ class TestDaemon(object):
 
         # Set up PATH to mockbin
         self._enter_mockbin()
-
-        if not HAS_GITFS:
-            sys.stdout.write(
-                ' * {LIGHT_RED}No suitable provider for git_pillar is installed. Install\n'
-                '   GitPython or Pygit2.{ENDC}\n'.format(
-                    **self.colors
-                )
-            )
 
         if self.parser.options.transport == 'zeromq':
             self.start_zeromq_daemons()
@@ -283,13 +269,6 @@ class TestDaemon(object):
         '''
         Fire up the daemons used for zeromq tests
         '''
-        if not salt.utils.network.ip_addrs():
-            sys.stdout.write(
-                ' * {LIGHT_RED}Unable to list IPv4 addresses. Test suite startup will be\n'
-                '   slower. Install iproute/ifconfig to fix this.{ENDC}\n'.format(
-                    **self.colors
-                )
-            )
         self.log_server = ThreadedSocketServer(('localhost', SALT_LOG_PORT), SocketServerRequestHandler)
         self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
         self.log_server_process.daemon = True
@@ -755,6 +734,16 @@ class TestDaemon(object):
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
         syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
 
+        # This proxy connects to master
+        # proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'proxy'))
+        # proxy_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        # proxy_opts['user'] = running_tests_user
+        # proxy_opts['config_dir'] = TMP_CONF_DIR
+        # proxy_opts['root_dir'] = os.path.join(TMP, 'rootdir')
+        # proxy_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
+        # proxy_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
+        # proxy_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+
         if transport == 'raet':
             master_opts['transport'] = 'raet'
             master_opts['raet_port'] = 64506
@@ -951,6 +940,7 @@ class TestDaemon(object):
 
         cls.master_opts = master_opts
         cls.minion_opts = minion_opts
+        # cls.proxy_opts = proxy_opts
         cls.sub_minion_opts = sub_minion_opts
         cls.syndic_opts = syndic_opts
         cls.syndic_master_opts = syndic_master_opts
@@ -962,6 +952,8 @@ class TestDaemon(object):
         '''
         self.sub_minion_process.terminate()
         self.minion_process.terminate()
+        # if hasattr(self, 'proxy_process'):
+        #     self.proxy_process.terminate()
         self.master_process.terminate()
         try:
             self.syndic_process.terminate()

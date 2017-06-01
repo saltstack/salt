@@ -13,7 +13,9 @@ from tests.support.helpers import destructiveTest
 
 # Import salt libs
 import salt.utils
-import salt.utils.http
+
+# Import 3rd-party libs
+from tornado.httpclient import HTTPClient
 
 GEM = 'tidy'
 GEM_VER = '1.1.2'
@@ -27,19 +29,21 @@ def check_status():
     Check the status of the rubygems source
     '''
     try:
-        ret = salt.utils.http.query('https://rubygems.org', status=True)
-    except Exception:
+        return HTTPClient().fetch('https://rubygems.org').code == 200
+    except Exception:  # pylint: disable=broad-except
         return False
-    return ret['status'] == 200
 
 
 @destructiveTest
 @skipIf(not salt.utils.which('gem'), 'Gem is not available')
-@skipIf(not check_status(), 'External source \'https://rubygems.org\' is not available')
 class GemModuleTest(ModuleCase):
     '''
     Validate gem module
     '''
+
+    def setUp(self):
+        if check_status() is False:
+            self.skipTest('External resource \'https://rubygems.org\' is not available')
 
     def test_install_uninstall(self):
         '''
