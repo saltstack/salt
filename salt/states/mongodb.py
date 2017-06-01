@@ -12,9 +12,8 @@ __virtualname__ = 'mongodb'
 
 
 def __virtual__():
-    for i in ('mongodb.user_exists', 'mongodb.db_exists',):
-        if i not in __salt__:
-            return False
+    if 'mongodb.user_exists' not in __salt__:
+        return False
     return __virtualname__
 
 
