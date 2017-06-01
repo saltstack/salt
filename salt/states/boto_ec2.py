@@ -1664,4 +1664,3 @@ def private_ips_absent(name, network_interface_name=None, network_interface_id=N
         ret['changes'] = {}
 
     return ret
-
