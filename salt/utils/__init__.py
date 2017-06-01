@@ -2068,19 +2068,31 @@ def parse_docstring(docstring):
         return ret
 
 
-def print_cli(msg):
+def print_cli(msg, retries=10, step=0.01):
     '''
     Wrapper around print() that suppresses tracebacks on broken pipes (i.e.
     when salt output is piped to less and less is stopped prematurely).
     '''
-    try:
+    while retries:
         try:
-            print(msg)
-        except UnicodeEncodeError:
-            print(msg.encode('utf-8'))
-    except IOError as exc:
-        if exc.errno != errno.EPIPE:
-            raise
+            try:
+                print(msg)
+            except UnicodeEncodeError:
+                print(msg.encode('utf-8'))
+        except IOError as exc:
+            err = "{0}".format(exc)
+            if exc.errno != errno.EPIPE:
+                if (
+                    ("temporarily unavailable" in err or
+                     exc.errno in [11]) and
+                    retries
+                ):
+                    time.sleep(step)
+                    retries -= 1
+                    continue
+                else:
+                    raise
+        break
 
 
 def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
