@@ -43,7 +43,6 @@ from __future__ import absolute_import
 import pprint
 import logging
 import time
-import hashlib
 
 # Import salt cloud libs
 import salt.config as config
