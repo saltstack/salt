@@ -1737,10 +1737,10 @@ def delete_vpc_peering_connection(name, conn_id=None, conn_name=None,
         Name of the state
 
     conn_id
-        ID of the peering connection to delete.  Exlusive with conn_name.
+        ID of the peering connection to delete.  Exclusive with conn_name.
 
     conn_name
-        The name of the peering connection to delete.  Exlusive with conn_id.
+        The name of the peering connection to delete.  Exclusive with conn_id.
 
     region
         Region to connect to.

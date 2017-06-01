@@ -1700,7 +1700,9 @@ def is_proxy():
     # then this will fail.
     is_proxy = False
     try:
-        if 'salt-proxy' in main.__file__:
+        # Changed this from 'salt-proxy in main...' to 'proxy in main...'
+        # to support the testsuite's temp script that is called 'cli_salt_proxy'
+        if 'proxy' in main.__file__:
             is_proxy = True
     except AttributeError:
         pass
@@ -2296,7 +2298,7 @@ def namespaced_function(function, global_dict, defaults=None, preserve_context=F
     Redefine (clone) a function under a different globals() namespace scope
 
         preserve_context:
-            Allow to keep the context taken from orignal namespace,
+            Allow keeping the context taken from orignal namespace,
             and extend it with globals() taken from
             new targetted namespace.
     '''
@@ -2912,6 +2914,14 @@ def repack_dictlist(data,
     return ret
 
 
+def get_default_group(user):
+    if HAS_GRP is False or HAS_PWD is False:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty list
+        return None
+    return grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
+
+
 def get_group_list(user=None, include_default=True):
     '''
     Returns a list of all of the system group names of which the user
@@ -2950,7 +2960,7 @@ def get_group_list(user=None, include_default=True):
         log.trace('Trying generic group list for \'{0}\''.format(user))
         group_names = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
         try:
-            default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
+            default_group = get_default_group(user)
             if default_group not in group_names:
                 group_names.append(default_group)
         except KeyError:
@@ -3439,3 +3449,26 @@ def fnmatch_multiple(candidates, pattern):
         except TypeError:
             pass
     return None
+
+
+def is_quoted(val):
+    '''
+    Return a single or double quote, if a string is wrapped in extra quotes.
+    Otherwise return an empty string.
+    '''
+    ret = ''
+    if (
+        isinstance(val, six.string_types) and val[0] == val[-1] and
+        val.startswith(('\'', '"'))
+    ):
+        ret = val[0]
+    return ret
+
+
+def dequote(val):
+    '''
+    Remove extra quotes around a string.
+    '''
+    if is_quoted(val):
+        return val[1:-1]
+    return val

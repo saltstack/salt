@@ -160,7 +160,8 @@ def _check_cron(user,
                 dayweek=None,
                 comment=None,
                 commented=None,
-                identifier=None):
+                identifier=None,
+                special=None):
     '''
     Return the changes
     '''
@@ -181,16 +182,21 @@ def _check_cron(user,
     if cmd is not None:
         cmd = str(cmd)
     lst = __salt__['cron.list_tab'](user)
-    for cron in lst['crons']:
-        if _cron_matched(cron, cmd, identifier):
-            if any([_needs_change(x, y) for x, y in
-                    ((cron['minute'], minute), (cron['hour'], hour),
-                     (cron['daymonth'], daymonth), (cron['month'], month),
-                     (cron['dayweek'], dayweek), (cron['identifier'], identifier),
-                     (cron['cmd'], cmd), (cron['comment'], comment),
-                     (cron['commented'], commented))]):
-                return 'update'
-            return 'present'
+    if special is None:
+        for cron in lst['crons']:
+            if _cron_matched(cron, cmd, identifier):
+                if any([_needs_change(x, y) for x, y in
+                        ((cron['minute'], minute), (cron['hour'], hour),
+                         (cron['daymonth'], daymonth), (cron['month'], month),
+                         (cron['dayweek'], dayweek), (cron['identifier'], identifier),
+                         (cron['cmd'], cmd), (cron['comment'], comment),
+                         (cron['commented'], commented))]):
+                    return 'update'
+                return 'present'
+    else:
+        for cron in lst['special']:
+            if special == cron['spec'] and cmd == cron['cmd']:
+                return 'present'
     return 'absent'
 
 
@@ -311,7 +317,8 @@ def present(name,
                              dayweek=dayweek,
                              comment=comment,
                              commented=commented,
-                             identifier=identifier)
+                             identifier=identifier,
+                             special=special)
         ret['result'] = None
         if status == 'absent':
             ret['comment'] = 'Cron {0} is set to be added'.format(name)

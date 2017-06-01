@@ -74,6 +74,7 @@ except ImportError:
     HAS_KAZOO = False
 
 # Import Salt libraries
+import salt.utils
 
 __virtualname__ = 'zookeeper'
 
@@ -182,7 +183,7 @@ def create(path, value='', acls=None, ephemeral=False, sequence=False, makepath=
     acls = [make_digest_acl(**acl) for acl in acls]
     conn = _get_zk_conn(profile=profile, hosts=hosts, scheme=scheme,
                         username=username, password=password, default_acl=default_acl)
-    return conn.create(path, value, acls, ephemeral, sequence, makepath)
+    return conn.create(path, salt.utils.to_bytes(value), acls, ephemeral, sequence, makepath)
 
 
 def ensure_path(path, acls=None, profile=None, hosts=None, scheme=None,
@@ -301,7 +302,7 @@ def get(path, profile=None, hosts=None, scheme=None, username=None, password=Non
     conn = _get_zk_conn(profile=profile, hosts=hosts, scheme=scheme,
                         username=username, password=password, default_acl=default_acl)
     ret, _ = conn.get(path)
-    return ret
+    return salt.utils.to_str(ret)
 
 
 def get_children(path, profile=None, hosts=None, scheme=None, username=None, password=None, default_acl=None):
@@ -383,7 +384,7 @@ def set(path, value, version=-1, profile=None, hosts=None, scheme=None,
     '''
     conn = _get_zk_conn(profile=profile, hosts=hosts, scheme=scheme,
                         username=username, password=password, default_acl=default_acl)
-    return conn.set(path, value, version=version)
+    return conn.set(path, salt.utils.to_bytes(value), version=version)
 
 
 def get_acls(path, profile=None, hosts=None, scheme=None, username=None, password=None, default_acl=None):

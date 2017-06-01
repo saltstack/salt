@@ -838,6 +838,9 @@ VALID_OPTS = {
     # Cache minion ID to file
     'minion_id_caching': bool,
 
+    # Always generate minion id in lowercase.
+    'minion_id_lowercase': bool,
+
     # If set, the master will sign all publications before they are sent out
     'sign_pub_messages': bool,
 
@@ -1044,6 +1047,9 @@ VALID_OPTS = {
 
     # Permit or deny allowing minions to request revoke of its own key
     'allow_minion_key_revoke': bool,
+
+    # File chunk size for salt-cp
+    'salt_cp_chunk_size': int,
 }
 
 # default configurations
@@ -1259,6 +1265,7 @@ DEFAULT_MINION_OPTS = {
     'modules_max_memory': -1,
     'grains_refresh_every': 0,
     'minion_id_caching': True,
+    'minion_id_lowercase': False,
     'keysize': 2048,
     'transport': 'zeromq',
     'auth_timeout': 5,
@@ -1306,6 +1313,7 @@ DEFAULT_MINION_OPTS = {
     'beacons_before_connect': False,
     'scheduler_before_connect': False,
     'cache': 'localfs',
+    'salt_cp_chunk_size': 65536,
     'extmod_whitelist': {},
     'extmod_blacklist': {},
 }
@@ -1607,17 +1615,15 @@ DEFAULT_MASTER_OPTS = {
     'django_auth_path': '',
     'django_auth_settings': '',
     'allow_minion_key_revoke': True,
+    'salt_cp_chunk_size': 98304,
 }
 
 
 # ----- Salt Proxy Minion Configuration Defaults ----------------------------------->
-# Note DEFAULT_MINION_OPTS
-# is loaded first, then if we are setting up a proxy, the config is overwritten with
-# these settings.
+# These are merged with DEFAULT_MINION_OPTS since many of them also apply here.
 DEFAULT_PROXY_MINION_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
-    'sign_pub_messages': False,
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': True,
     'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include'],
@@ -1630,9 +1636,11 @@ DEFAULT_PROXY_MINION_OPTS = {
     'proxy_always_alive': True,
 
     'proxy_keep_alive': True,  # by default will try to keep alive the connection
-    'proxy_keep_alive_interval': 1  # frequency of the proxy keepalive in minutes
+    'proxy_keep_alive_interval': 1,  # frequency of the proxy keepalive in minutes
+    'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'proxy'),
+    'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'proxy'),
+    'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'proxy'),
 }
-
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
 DEFAULT_CLOUD_OPTS = {
     'verify_env': True,
@@ -2141,9 +2149,6 @@ def minion_config(path,
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS.copy()
 
-    if path is not None and path.endswith('proxy'):
-        defaults.update(DEFAULT_PROXY_MINION_OPTS)
-
     if not os.environ.get(env_var, None):
         # No valid setting was given using the configuration variable.
         # Lets see is SALT_CONFIG_DIR is of any use
@@ -2156,6 +2161,58 @@ def minion_config(path,
                 os.environ[env_var] = env_config_file_path
 
     overrides = load_config(path, env_var, DEFAULT_MINION_OPTS['conf_file'])
+    default_include = overrides.get('default_include',
+                                    defaults['default_include'])
+    include = overrides.get('include', [])
+
+    overrides.update(include_config(default_include, path, verbose=False,
+                                    exit_on_config_errors=not ignore_config_errors))
+    overrides.update(include_config(include, path, verbose=True,
+                                    exit_on_config_errors=not ignore_config_errors))
+
+    opts = apply_minion_config(overrides, defaults,
+                               cache_minion_id=cache_minion_id,
+                               minion_id=minion_id)
+    apply_sdb(opts)
+    _validate_opts(opts)
+    return opts
+
+
+def proxy_config(path,
+                 env_var='SALT_PROXY_CONFIG',
+                 defaults=None,
+                 cache_minion_id=False,
+                 ignore_config_errors=True,
+                 minion_id=None):
+    '''
+    Reads in the proxy minion configuration file and sets up special options
+
+    This is useful for Minion-side operations, such as the
+    :py:class:`~salt.client.Caller` class, and manually running the loader
+    interface.
+
+    .. code-block:: python
+
+        import salt.config
+        proxy_opts = salt.config.proxy_config('/etc/salt/proxy')
+    '''
+    if defaults is None:
+        defaults = DEFAULT_MINION_OPTS.copy()
+
+    defaults.update(DEFAULT_PROXY_MINION_OPTS)
+
+    if not os.environ.get(env_var, None):
+        # No valid setting was given using the configuration variable.
+        # Lets see is SALT_CONFIG_DIR is of any use
+        salt_config_dir = os.environ.get('SALT_CONFIG_DIR', None)
+        if salt_config_dir:
+            env_config_file_path = os.path.join(salt_config_dir, 'proxy')
+            if salt_config_dir and os.path.isfile(env_config_file_path):
+                # We can get a configuration file using SALT_CONFIG_DIR, let's
+                # update the environment with this information
+                os.environ[env_var] = env_config_file_path
+
+    overrides = load_config(path, env_var, DEFAULT_PROXY_MINION_OPTS['conf_file'])
     default_include = overrides.get('default_include',
                                     defaults['default_include'])
     include = overrides.get('include', [])
@@ -2402,7 +2459,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     elif master_config_path is not None and master_config is None:
         master_config = salt.config.master_config(master_config_path)
 
-    # cloud config has a seperate cachedir
+    # cloud config has a separate cachedir
     del master_config['cachedir']
 
     # 2nd - salt-cloud configuration which was loaded before so we could
@@ -3272,6 +3329,10 @@ def get_id(opts, cache_minion_id=False):
                   .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
     newid = salt.utils.network.generate_minion_id()
+
+    if opts.get('minion_id_lowercase'):
+        newid = newid.lower()
+        log.debug('Changed minion id {0} to lowercase.'.format(newid))
     if '__role' in opts and opts.get('__role') == 'minion':
         log.debug('Found minion id from generate_minion_id(): {0}'.format(newid))
     if cache_minion_id and opts.get('minion_id_caching', True):

@@ -61,7 +61,7 @@ api = None
 # Define the module's virtual name
 __virtualname__ = 'consul'
 
-__func_alias__ = {'ls': 'list'}
+__func_alias__ = {'list': 'ls'}
 
 
 def __virtual__():

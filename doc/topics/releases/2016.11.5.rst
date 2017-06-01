@@ -19,6 +19,25 @@ Statistics:
 
 Changes:
 
+Patched Packages
+----------------
+Due to the critical nature of issue `#41230`_ we have decided to patch the 2016.11.5 packages with PR `#41244`_. This issue affects all calls to a salt-minion if there is an ipv6 nameserver set on the minion's host. The patched packages on repo.saltstack.com will divert from the v2016.11.5 tag and pypi packages due to the additional PR applied to the packages.
+
+- **PR** `#41244`_: (*cachedout*) Fix ipv6 nameserver grains
+  @ *2017-05-15T17:55:39Z*
+
+  - **ISSUE** `#41230`_: (*RealKelsar*) 2016.11.5 IPv6 nameserver in resolv.conf leads to minion exception
+    | refs: `#41244`_ `#41244`_
+  - **ISSUE** `#40912`_: (*razed11*) IPV6 Warning when ipv6 set to False
+    | refs: `#40934`_
+  - **PR** `#40934`_: (*gtmanfred*) Only display IPvX warning if role is master
+    | refs: `#41244`_ `#41244`_
+  * 53d5b3e Merge pull request `#41244`_ from cachedout/fix_ipv6_nameserver_grains
+  * f745db1 Lint
+
+  * 6e1ab69 Partial revert of `#40934`_
+
+  * 88f49f9 Revert "Only display IPvX warning if role is master"
 
 - **PR** `#41173`_: (*twangboy*) Add silent action to MsgBox for Path Actions
   @ *2017-05-10T17:22:18Z*
@@ -780,6 +799,8 @@ Changes:
 .. _`#40930`: https://github.com/saltstack/salt/pull/40930
 .. _`#40933`: https://github.com/saltstack/salt/pull/40933
 .. _`#40934`: https://github.com/saltstack/salt/pull/40934
+.. _`#41230`: https://github.com/saltstack/salt/issues/41230
+.. _`#41244`: https://github.com/saltstack/salt/pull/41244
 .. _`#40935`: https://github.com/saltstack/salt/pull/40935
 .. _`#40936`: https://github.com/saltstack/salt/pull/40936
 .. _`#40939`: https://github.com/saltstack/salt/pull/40939

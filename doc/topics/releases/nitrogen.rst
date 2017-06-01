@@ -205,8 +205,22 @@ Minion Configuration Additions
   config file, or if ``pillarenv`` is provided on the CLI, it will override
   this option.
 
+salt-api Changes
+================
+
+The ``rest_cherrypy`` netapi module has recieved a few minor improvements:
+
+* A CORS bugfix.
+* A new ``/token`` convenience endpoint to generate Salt eauth tokens.
+* A proof-of-concept JavaScript single-page application intended to demonstrate
+  how to use the Server-Sent Events stream in an application. It is available
+  in a default install by visiting the ``/app`` URL in a browser.
+
 Python API Changes
 ==================
+
+``expr_form`` Deprecation
+-------------------------
 
 The :ref:`LocalClient <local-client>`'s ``expr_form`` argument has been
 deprecated and renamed to ``tgt_type``. This change was made due to numerous
@@ -220,6 +234,37 @@ release cycle (two major releases after this one), those who are using the
 :ref:`netapi module <all-netapi-modules>`) are encouraged to update their code
 to use ``tgt_type``.
 
+``full_return`` Argument in ``LocalClient`` and ``RunnerClient``
+----------------------------------------------------------------
+
+An ``full_return`` argument has been added to the ``cmd`` and ``cmd_sync``
+methods in ``LocalClient`` and ``RunnerClient`` which causes the return data
+structure to include job meta data such as ``retcode``.
+
+This is useful at the Python API:
+
+.. code-block:: python
+
+    >>> import salt.client
+    >>> client = salt.client.LocalClient()
+    >>> client.cmd('*', 'cmd.run', ['return 1'], full_return=True)
+    {'jerry': {'jid': '20170520151213898053', 'ret': '', 'retcode': 1}}
+
+As well as from salt-api:
+
+.. code-block:: bash
+
+    % curl -b /tmp/cookies.txt -sS http://localhost:8000 \
+        -H 'Content-type: application/json' \
+        -d '[{
+            "client": "local",
+            "tgt": "*",
+            "fun": "cmd.run",
+            "arg": ["return 1"],
+            "full_return": true
+        }]'
+
+    {"return": [{"jerry": {"jid": "20170520151531477653", "retcode": 1, "ret": ""}}]}
 
 Network Automation
 ==================

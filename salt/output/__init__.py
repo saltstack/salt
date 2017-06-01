@@ -7,6 +7,7 @@ for managing outputters.
 # Import python libs
 from __future__ import print_function
 from __future__ import absolute_import
+import re
 import os
 import sys
 import errno
@@ -183,6 +184,23 @@ def out_format(data, out, opts=None, **kwargs):
     Return the formatted outputter string for the passed data
     '''
     return try_printout(data, out, opts, **kwargs)
+
+
+def string_format(data, out, opts=None, **kwargs):
+    '''
+    Return the formatted outputter string, removing the ANSI escape sequences.
+    '''
+    raw_output = try_printout(data, out, opts, **kwargs)
+    ansi_escape = re.compile(r'\x1b[^m]*m')
+    return ansi_escape.sub('', raw_output)
+
+
+def html_format(data, out, opts=None, **kwargs):
+    '''
+    Return the formatted string as HTML.
+    '''
+    ansi_escaped_string = string_format(data, out, opts, **kwargs)
+    return ansi_escaped_string.replace(' ', '&nbsp;').replace('\n', '<br />')
 
 
 def strip_esc_sequence(txt):
