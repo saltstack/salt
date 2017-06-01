@@ -112,7 +112,7 @@ def create(vm_):
         public_ips = list_public_ips()
         if len(public_ips.keys()) < 1:
             raise SaltCloudException('No more IPs available')
-        host_ip = public_ips.keys()[0]
+        host_ip = list(public_ips)[0]
 
     create_kwargs = {
         'name': vm_['name'],

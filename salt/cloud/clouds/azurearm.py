@@ -1201,8 +1201,8 @@ def create(vm_):
     def _query_ip_address():
         data = request_instance(kwargs=vm_)
         ifaces = data['network_profile']['network_interfaces']
-        iface = ifaces.keys()[0]
-        ip_name = ifaces[iface]['ip_configurations'].keys()[0]
+        iface = list(ifaces)[0]
+        ip_name = list(ifaces[iface]['ip_configurations'])[0]
 
         if vm_.get('public_ip') is True:
             hostname = ifaces[iface]['ip_configurations'][ip_name]['public_ip_address']
