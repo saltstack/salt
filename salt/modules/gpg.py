@@ -22,7 +22,6 @@ import time
 
 # Import salt libs
 import salt.utils
-import salt.syspaths
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -929,7 +928,7 @@ def trust_key(keyid=None,
     _user = user
 
     if user == 'salt':
-        homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+        homeDir = os.path.join(__salt__['config.get']('config_dir'), 'gpgkeys')
         cmd.extend([' --homedir', homeDir])
         _user = 'root'
     res = __salt__['cmd.run_all'](cmd,
