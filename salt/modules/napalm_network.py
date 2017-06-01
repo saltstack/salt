@@ -16,6 +16,7 @@ Dependencies
 - :mod:`napalm proxy minion <salt.proxy.napalm>`
 
 .. versionadded:: 2016.11.0
+.. versionchanged:: Nitrogen
 '''
 
 from __future__ import absolute_import
@@ -1037,7 +1038,7 @@ def load_template(template_name,
                   template_mode='755',
                   saltenv=None,
                   template_engine='jinja',
-                  skip_verify=True,
+                  skip_verify=False,
                   defaults=None,
                   test=False,
                   commit=True,
