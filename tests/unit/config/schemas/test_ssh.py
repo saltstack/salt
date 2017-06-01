@@ -17,7 +17,6 @@ from salt.config.schemas.minion import MinionConfiguration
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
 try:
     import jsonschema
     import jsonschema.exceptions

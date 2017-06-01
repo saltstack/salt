@@ -196,7 +196,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(args[0].startswith('django-admin.py createsuperuser --'))
             self.assertCountEqual(args[0].split(), 'django-admin.py createsuperuser --settings=settings.py --noinput '
                                                    '--username=testuser --email=user@example.com'.split())
-            self.assertDictEqual(kwargs, {'python_shell':False, 'env':None})
+            self.assertDictEqual(kwargs, {'python_shell': False, 'env': None})
 
     def no_test_loaddata(self):
         mock = MagicMock()

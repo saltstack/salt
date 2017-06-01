@@ -15,7 +15,7 @@ import salt.utils
 
 # Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six import BytesIO, StringIO
+from salt.ext.six import BytesIO
 
 
 class GzipFile(gzip.GzipFile):

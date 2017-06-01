@@ -5,27 +5,20 @@ unit tests for the localfs cache
 
 # Import Python libs
 from __future__ import absolute_import
-import tempfile
 
 # Import Salt Testing libs
 # import integration
-from salttesting import skipIf, TestCase
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-from salttesting.mock import (
-    MagicMock,
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     patch,
-    call
 )
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.payload
 import salt.utils
 import salt.cache
-from salt.exceptions import SaltCacheError
 
 
 class CacheFunctionsTest(TestCase):
@@ -225,12 +218,3 @@ class MemCacheTest(TestCase):
         # Check debug data
         self.assertEqual(self.cache.call, 6)
         self.assertEqual(self.cache.hit, 3)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(
-        CacheFunctionsTest,
-        MemCacheTest,
-        needs_daemon=False
-    )
