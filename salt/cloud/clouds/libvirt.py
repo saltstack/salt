@@ -409,8 +409,8 @@ def create(vm_):
                 else:
                     raise SaltCloudExecutionFailure("Disk type '{0}' not supported".format(disk_type))
 
-            log.debug("Clone XML '{0}'".format(domain_xml))
             clone_xml = ElementTree.tostring(domain_xml)
+            log.debug("Clone XML '{0}'".format(clone_xml))
 
             clone_domain = conn.defineXMLFlags(clone_xml, libvirt.VIR_DOMAIN_DEFINE_VALIDATE)
             cleanup.append({'what': 'domain', 'item': clone_domain})
