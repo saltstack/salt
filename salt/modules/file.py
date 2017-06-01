@@ -501,6 +501,140 @@ def chgrp(path, group):
     return chown(path, user, group)
 
 
+def _cmp_attrs(path, attrs):
+    '''
+    .. versionadded: Oxygen
+
+    Compare attributes of a given file to given attributes.
+    Returns a pair (list) where first item are attributes to
+    add and second item are to be removed.
+
+    path
+        path to file to compare attributes with.
+
+    attrs
+        string of attributes to compare against a given file
+    '''
+    diff = [None, None]
+
+    lattrs = lsattr(path).get(path, '')
+
+    old = [chr for chr in lattrs if chr not in attrs]
+    if len(old) > 0:
+        diff[1] = ''.join(old)
+
+    new = [chr for chr in attrs if chr not in lattrs]
+    if len(new) > 0:
+        diff[0] = ''.join(new)
+
+    return diff
+
+
+def lsattr(path):
+    '''
+    .. versionadded: Oxygen
+
+    Obtain the modifiable attributes of the given file. If path
+    is to a directory, an empty list is returned.
+
+    path
+        path to file to obtain attributes of. File/directory must exist.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.lsattr foo1.txt
+    '''
+    if not os.path.exists(path):
+        raise SaltInvocationError("File or directory does not exist.")
+
+    # Put quotes around path to ensure we can handle spaces in filename.
+    if not salt.utils.is_quoted(path):
+        path = '"{0}"'.format(path)
+
+    cmd = 'lsattr {0}'.format(path)
+    result = __salt__['cmd.run'](cmd, python_shell=False)
+
+    results = {}
+    for line in result.splitlines():
+        if not line.startswith('lsattr'):
+            vals = line.split()
+            results[vals[1]] = re.findall(r"[acdijstuADST]", vals[0])
+
+    return results
+
+
+def chattr(*args, **kwargs):
+    '''
+    .. versionadded: Oxygen
+
+    Change the attributes of files
+
+    *args
+        list of files to modify attributes of
+
+    **kwargs - the following are valid <key,value> pairs:
+
+    operator
+        add|remove
+        determines whether attributes should be added or removed from files
+
+    attributes
+        acdijstuADST
+        string of characters representing attributes to add/remove from files
+
+    version
+        a version number to assign to the files
+
+    flags
+        [RVf]
+        flags to assign to chattr (recurse, verbose, suppress most errors)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.chattr foo1.txt foo2.txt operator=add attributes=ai
+        salt '*' file.chattr foo3.txt operator=remove attributes=i version=2
+    '''
+    args = [arg if salt.utils.is_quoted(arg) else '"{0}"'.format(arg)
+            for arg in args]
+
+    operator = kwargs.pop('operator', None)
+    attributes = kwargs.pop('attributes', None)
+    flags = kwargs.pop('flags', None)
+    version = kwargs.pop('version', None)
+
+    if (operator is None) or (operator not in ['add', 'remove']):
+        raise SaltInvocationError(
+            "Need an operator: 'add' or 'remove' to modify attributes.")
+    if attributes is None:
+        raise SaltInvocationError("Need attributes: [AacDdijsTtSu]")
+
+    if operator == "add":
+        attrs = '+{0}'.format(attributes)
+    elif operator == "remove":
+        attrs = '-{0}'.format(attributes)
+
+    flgs = ''
+    if flags is not None:
+        flgs = '-{0}'.format(flags)
+
+    vrsn = ''
+    if version is not None:
+        vrsn = '-v {0}'.format(version)
+
+    cmd = 'chattr {0} {1} {2} {3}'.format(attrs, flgs, vrsn, ' '.join(args))
+    result = __salt__['cmd.run'](cmd, python_shell=False)
+
+    if bool(result):
+        raise CommandExecutionError(
+            "chattr failed to run, possibly due to bad parameters.")
+
+    return True
+
+
 def get_sum(path, form='sha256'):
     '''
     Return the checksum for the given file. The following checksum algorithms
@@ -3725,6 +3859,7 @@ def get_managed(
         user,
         group,
         mode,
+        attrs,
         saltenv,
         context,
         defaults,
@@ -3759,6 +3894,11 @@ def get_managed(
 
     mode
         Permissions of file
+
+    attrs
+        Attributes of file
+
+        .. versionadded:: Oxygen
 
     context
         Variables to add to the template context
@@ -3876,6 +4016,7 @@ def get_managed(
                     user=user,
                     group=group,
                     mode=mode,
+                    attrs=attrs,
                     saltenv=saltenv,
                     context=context_dict,
                     salt=__salt__,
@@ -4129,15 +4270,15 @@ def extract_hash(hash_fn,
     return None
 
 
-def check_perms(name, ret, user, group, mode, follow_symlinks=False):
+def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False):
     '''
-    Check the permissions on files and chown if needed
+    Check the permissions on files, modify attributes and chown if needed
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.check_perms /etc/sudoers '{}' root root 400
+        salt '*' file.check_perms /etc/sudoers '{}' root root 400 ai
 
     .. versionchanged:: 2014.1.3
         ``follow_symlinks`` option added
@@ -4167,6 +4308,14 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     perms['lgroup'] = cur['group']
     perms['lmode'] = salt.utils.normalize_mode(cur['mode'])
 
+    is_dir = os.path.isdir(name)
+    if not salt.utils.is_windows and not is_dir:
+        # List attributes on file
+        perms['lattrs'] = ''.join(lsattr(name)[name])
+        # Remove attributes on file so changes can be enforced.
+        if perms['lattrs']:
+            chattr(name, operator='remove', attributes=perms['lattrs'])
+
     # Mode changes if needed
     if mode is not None:
         # File is a symlink, ignore the mode setting
@@ -4187,6 +4336,7 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
                         )
                     else:
                         ret['changes']['mode'] = mode
+
     # user/group changes if needed, then check if it worked
     if user:
         if isinstance(user, int):
@@ -4269,6 +4419,37 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
         ret['comment'] = '; '.join(ret['comment'])
     if __opts__['test'] is True and ret['changes']:
         ret['result'] = None
+
+    if not salt.utils.is_windows and not is_dir:
+        # Replace attributes on file if it had been removed
+        if perms['lattrs']:
+            chattr(name, operator='add', attributes=perms['lattrs'])
+
+    # Modify attributes of file if needed
+    if attrs is not None and not is_dir:
+        # File is a symlink, ignore the mode setting
+        # if follow_symlinks is False
+        if os.path.islink(name) and not follow_symlinks:
+            pass
+        else:
+            diff_attrs = _cmp_attrs(name, attrs)
+            if diff_attrs[0] is not None or diff_attrs[1] is not None:
+                if __opts__['test'] is True:
+                    ret['changes']['attrs'] = attrs
+                else:
+                    if diff_attrs[0] is not None:
+                        chattr(name, operator="add", attributes=diff_attrs[0])
+                    if diff_attrs[1] is not None:
+                        chattr(name, operator="remove", attributes=diff_attrs[1])
+                    cmp_attrs = _cmp_attrs(name, attrs)
+                    if cmp_attrs[0] is not None or cmp_attrs[1] is not None:
+                        ret['result'] = False
+                        ret['comment'].append(
+                            'Failed to change attributes to {0}'.format(attrs)
+                        )
+                    else:
+                        ret['changes']['attrs'] = attrs
+
     return ret, perms
 
 
@@ -4280,6 +4461,7 @@ def check_managed(
         user,
         group,
         mode,
+        attrs,
         template,
         context,
         defaults,
@@ -4315,6 +4497,7 @@ def check_managed(
             user,
             group,
             mode,
+            attrs,
             saltenv,
             context,
             defaults,
@@ -4324,7 +4507,7 @@ def check_managed(
             __clean_tmp(sfn)
             return False, comments
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, saltenv, contents)
+                              group, mode, attrs, saltenv, contents)
     # Ignore permission for files written temporary directories
     # Files in any path will still be set correctly using get_managed()
     if name.startswith(tempfile.gettempdir()):
@@ -4348,6 +4531,7 @@ def check_managed_changes(
         user,
         group,
         mode,
+        attrs,
         template,
         context,
         defaults,
@@ -4384,6 +4568,7 @@ def check_managed_changes(
             user,
             group,
             mode,
+            attrs,
             saltenv,
             context,
             defaults,
@@ -4400,7 +4585,7 @@ def check_managed_changes(
                 except Exception as exc:
                     log.warning('Unable to stat %s: %s', sfn, exc)
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, saltenv, contents)
+                              group, mode, attrs, saltenv, contents)
     __clean_tmp(sfn)
     return changes
 
@@ -4413,6 +4598,7 @@ def check_file_meta(
         user,
         group,
         mode,
+        attrs,
         saltenv,
         contents=None):
     '''
@@ -4453,6 +4639,11 @@ def check_file_meta(
 
     mode
         Destination file permissions mode
+
+    attrs
+        Destination file attributes
+
+        .. versionadded:: Oxygen
 
     saltenv
         Salt environment used to resolve source files
@@ -4533,6 +4724,14 @@ def check_file_meta(
         if mode is not None and mode != smode:
             changes['mode'] = mode
 
+        diff_attrs = _cmp_attrs(name, attrs)
+        if (
+            attrs is not None and
+            diff_attrs[0] is not None or
+            diff_attrs[1] is not None
+        ):
+            changes['attrs'] = attrs
+
     return changes
 
 
@@ -4584,6 +4783,7 @@ def manage_file(name,
                 user,
                 group,
                 mode,
+                attrs,
                 saltenv,
                 backup,
                 makedirs=False,
@@ -4634,6 +4834,11 @@ def manage_file(name,
 
     backup
         backup_mode
+
+    attrs
+        attributes to be set on file: '' means remove all of them
+
+        .. versionadded: Oxygen
 
     makedirs
         make directories if they do not exist
@@ -4887,9 +5092,10 @@ def manage_file(name,
                               kwargs.get('win_owner'),
                               kwargs.get('win_perms'),
                               kwargs.get('win_deny_perms'),
+                              None,
                               kwargs.get('win_inheritance'))
         else:
-            ret, _ = check_perms(name, ret, user, group, mode, follow_symlinks)
+            ret, _ = check_perms(name, ret, user, group, mode, attrs, follow_symlinks)
 
         if ret['changes']:
             ret['comment'] = 'File {0} updated'.format(name)
@@ -5050,9 +5256,10 @@ def manage_file(name,
                               kwargs.get('win_owner'),
                               kwargs.get('win_perms'),
                               kwargs.get('win_deny_perms'),
+                              None,
                               kwargs.get('win_inheritance'))
         else:
-            ret, _ = check_perms(name, ret, user, group, mode)
+            ret, _ = check_perms(name, ret, user, group, mode, attrs)
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
