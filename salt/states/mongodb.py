@@ -326,7 +326,7 @@ def user_grant_roles(name, roles,
     if __salt__['mongodb.user_grant_roles'](name, roles, database,
         user=user, password=password, host=host, port=port, authdb=authdb):
         ret['comment'] = 'Granted roles to {0} on {1}'.format(name, database)
-        ret['changes'][name] = [ '{0} granted'.format(i) for i in diff ]
+        ret['changes'][name] = ['{0} granted'.format(i) for i in diff]
         ret['result'] = True
     else:
         ret['comment'] = 'Failed to grant roles ({2}) to {0} on {1}'.format(name, database, diff)
