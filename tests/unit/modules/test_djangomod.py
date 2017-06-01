@@ -194,8 +194,9 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
             # cmdline arguments are extracted from a kwargs dict so order isn't guaranteed.
             self.assertEqual(len(args), 1)
             self.assertTrue(args[0].startswith('django-admin.py createsuperuser --'))
-            self.assertCountEqual(args[0].split(), 'django-admin.py createsuperuser --settings=settings.py --noinput '
-                                                   '--username=testuser --email=user@example.com'.split())
+            self.assertEqual(set(args[0].split()),
+                             set('django-admin.py createsuperuser --settings=settings.py --noinput '
+                                                   '--username=testuser --email=user@example.com'.split()))
             self.assertDictEqual(kwargs, {'python_shell': False, 'env': None})
 
     def no_test_loaddata(self):
