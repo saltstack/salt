@@ -1375,7 +1375,7 @@ def deploy_script(host,
                         salt_config_to_yaml(minion_grains),
                         ssh_kwargs
                     )
-                if cloud_grains:
+                if cloud_grains and opts.get('enable_cloud_grains', True):
                     minion_conf['grains'] = {'salt-cloud': cloud_grains}
                 ssh_file(
                     opts,
