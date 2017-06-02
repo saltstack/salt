@@ -146,6 +146,24 @@ def _format_opts(opts):
     return opts
 
 
+def _find_git_ssh_exe():
+    '''
+    find git ssh executable on windows or throw an exception
+    '''
+    for suffix in ('', ' (x86)'):
+        for bindir in ('bin', 'usr\\bin'):
+            ssh_exe = (
+                'C:\\Program Files{0}\\Git\\{1}\\ssh.exe'
+                .format(suffix, bindir)
+            )
+            if os.path.isfile(ssh_exe):
+                return ssh_exe
+
+    raise CommandExecutionError(
+         'Failed to find ssh.exe, unable to use identity file'
+    )
+
+
 def _git_run(command, cwd=None, user=None, password=None, identity=None,
              ignore_retcode=False, failhard=True, redirect_stderr=False,
              saltenv='base', **kwargs):
@@ -194,18 +212,9 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                 'git/ssh-id-wrapper'
             )
             if salt.utils.is_windows():
-                for suffix in ('', ' (x86)'):
-                    ssh_exe = (
-                        'C:\\Program Files{0}\\Git\\bin\\ssh.exe'
-                        .format(suffix)
-                    )
-                    if os.path.isfile(ssh_exe):
-                        env['GIT_SSH_EXE'] = ssh_exe
-                        break
-                else:
-                    raise CommandExecutionError(
-                        'Failed to find ssh.exe, unable to use identity file'
-                    )
+                if not os.path.isfile(env['GIT_SSH_EXE']):
+                    env['GIT_SSH_EXE'] = _find_git_ssh_exe()
+
                 # Use the windows batch file instead of the bourne shell script
                 ssh_id_wrapper += '.bat'
                 env['GIT_SSH'] = ssh_id_wrapper
