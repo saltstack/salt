@@ -156,7 +156,7 @@ def _replace_auth_key(
                     lines.append(line)
                     continue
                 comps = re.findall(r'((.*)\s)?(ssh-[a-z0-9-]+|ecdsa-[a-z0-9-]+)\s([a-zA-Z0-9+/]+={0,2})(\s(.*))?', line)
-                if comps[0][3] == key:
+                if len(comps) > 0 and len(comps[0]) > 3 and comps[0][3] == key:
                     lines.append(auth_line)
                 else:
                     lines.append(line)

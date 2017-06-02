@@ -1610,7 +1610,10 @@ def cert_info(cert_path, digest='sha256'):
 
     if hasattr(cert, 'get_signature_algorithm'):
         try:
-            ret['signature_algorithm'] = cert.get_signature_algorithm()
+            value = cert.get_signature_algorithm()
+            if isinstance(value, bytes):
+                value = salt.utils.to_str(value, __salt_system_encoding__)
+            ret['signature_algorithm'] = value
         except AttributeError:
             # On py3 at least
             # AttributeError: cdata 'X509 *' points to an opaque type: cannot read fields
