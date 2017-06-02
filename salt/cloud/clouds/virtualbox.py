@@ -155,7 +155,7 @@ def create(vm_info):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_info['name']),
-        args=__utils__['cloud.filter_event']('requesting', request_kwargs, request_kwargs.keys()),
+        args=__utils__['cloud.filter_event']('requesting', request_kwargs, list(request_kwargs)),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -181,7 +181,7 @@ def create(vm_info):
         'event',
         'created machine',
         'salt/cloud/{0}/created'.format(vm_info['name']),
-        args=__utils__['cloud.filter_event']('created', vm_result, vm_result.keys()),
+        args=__utils__['cloud.filter_event']('created', vm_result, list(vm_result)),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
