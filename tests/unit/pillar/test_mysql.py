@@ -13,7 +13,7 @@ from salt.ext.six import PY3
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(PY3, 'MySQL-python is not compatible with python3')
+@skipIf(mysql.HAS_MYSQL is False, 'Install MySQL bindings before running MySQL unit tests.')
 class MysqlPillarTestCase(TestCase):
     maxDiff = None
 
