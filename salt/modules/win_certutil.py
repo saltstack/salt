@@ -42,10 +42,10 @@ def get_cert_serial(cert_file):
 
         salt '*' certutil.get_cert_serial <certificate name>
     '''
-    cmd = "certutil.exe -verify {0}".format(cert_file)
+    cmd = "certutil.exe -silent -verify {0}".format(cert_file)
     out = __salt__['cmd.run'](cmd)
     # match serial number by paragraph to work with multiple languages
-    matches = re.search(r":\w*(.*)\r\n\r\n", out)
+    matches = re.search(r":\s*(\w*)\r\n\r\n", out)
     if matches is not None:
         return matches.groups()[0].strip()
     else:
