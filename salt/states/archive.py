@@ -24,6 +24,7 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: dis
 # Import salt libs
 import salt.utils
 import salt.utils.files
+import salt.utils.url
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 log = logging.getLogger(__name__)
@@ -888,7 +889,9 @@ def extracted(name,
             ret['result'] = None
             ret['comment'] = (
                 'Archive {0} would be downloaded to cache and checked to '
-                'discover if extraction is necessary'.format(source_match)
+                'discover if extraction is necessary'.format(
+                    salt.utils.url.redact_http_basic_auth(source_match)
+                )
             )
             return ret
 
@@ -918,18 +921,27 @@ def extracted(name,
 
         try:
             if not file_result['result']:
-                log.debug('failed to download {0}'.format(source_match))
+                log.debug(
+                    'failed to download %s',
+                    salt.utils.url.redact_http_basic_auth(source_match)
+                )
                 return file_result
         except TypeError:
             if not file_result:
-                log.debug('failed to download {0}'.format(source_match))
+                log.debug(
+                    'failed to download %s',
+                    salt.utils.url.redact_http_basic_auth(source_match)
+                )
                 return file_result
 
         if source_hash:
             _update_checksum(cached_source)
 
     else:
-        log.debug('Archive %s is already in cache', source_match)
+        log.debug(
+            'Archive %s is already in cache',
+            salt.utils.url.redact_http_basic_auth(source_match)
+        )
 
     if archive_format == 'zip' and not password:
         log.debug('Checking %s to see if it is password-protected',
@@ -950,7 +962,7 @@ def extracted(name,
                 ret['comment'] = (
                     'Archive {0} is password-protected, but no password was '
                     'specified. Please set the \'password\' argument.'.format(
-                        source_match
+                        salt.utils.url.redact_http_basic_auth(source_match)
                     )
                 )
                 return ret
@@ -1138,7 +1150,7 @@ def extracted(name,
             ret['result'] = None
             ret['comment'] = \
                 'Archive {0} would be extracted to {1}'.format(
-                    source_match,
+                    salt.utils.url.redact_http_basic_auth(source_match),
                     name
                 )
             if clean and contents is not None:
@@ -1421,13 +1433,18 @@ def extracted(name,
             if created_destdir:
                 ret['changes']['directories_created'] = [name]
             ret['changes']['extracted_files'] = files
-            ret['comment'] = '{0} extracted to {1}'.format(source_match, name)
+            ret['comment'] = '{0} extracted to {1}'.format(
+                salt.utils.url.redact_http_basic_auth(source_match),
+                name,
+            )
             _add_explanation(ret, source_hash_trigger, contents_missing)
             ret['result'] = True
 
         else:
             ret['result'] = False
-            ret['comment'] = 'Can\'t extract content of {0}'.format(source_match)
+            ret['comment'] = 'No files were extracted from {0}'.format(
+                salt.utils.url.redact_http_basic_auth(source_match)
+            )
     else:
         ret['result'] = True
         if if_missing_path_exists:
