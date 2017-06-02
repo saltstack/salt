@@ -451,6 +451,10 @@ def bootstrap(vm_, opts):
         'maxtries': salt.config.get_cloud_config_value(
             'wait_for_passwd_maxtries', vm_, opts, default=15
         ),
+        'cloud_grains': {'driver': vm_['driver'],
+                         'provider': vm_['provider'],
+                         'profile': vm_['profile']
+                         }
     }
 
     inline_script_kwargs = deploy_kwargs
@@ -1216,6 +1220,7 @@ def deploy_script(host,
                   tmp_dir='/tmp/.saltcloud',
                   file_map=None,
                   master_sign_pub_file=None,
+                  cloud_grains={},
                   **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
@@ -1370,6 +1375,8 @@ def deploy_script(host,
                         salt_config_to_yaml(minion_grains),
                         ssh_kwargs
                     )
+                if cloud_grains:
+                    minion_conf['grains'] = {'salt-cloud': cloud_grains}
                 ssh_file(
                     opts,
                     '{0}/minion'.format(tmp_dir),
