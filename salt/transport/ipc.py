@@ -177,13 +177,25 @@ class IPCServer(object):
                     body = framed_msg['body']
                     self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
             except tornado.iostream.StreamClosedError:
-                log.trace('Client disconnected from IPC {0}'.format(self.socket_path))
+                log.trace('Client disconnected '
+                          'from IPC {0}'.format(self.socket_path))
                 break
+            except socket.error as exc:
+                # On occasion an exception will occur with
+                # an error code of 0, it's a spurious exception.
+                if exc.errno == 0:
+                    log.trace('Exception occured with error number 0, '
+                              'spurious exception: {0}'.format(exc))
+                else:
+                    log.error('Exception occurred while '
+                              'handling stream: {0}'.format(exc))
             except Exception as exc:
-                log.error('Exception occurred while handling stream: {0}'.format(exc))
+                log.error('Exception occurred while '
+                          'handling stream: {0}'.format(exc))
 
     def handle_connection(self, connection, address):
-        log.trace('IPCServer: Handling connection to address: {0}'.format(address))
+        log.trace('IPCServer: Handling connection '
+                  'to address: {0}'.format(address))
         try:
             stream = IOStream(
                 connection,

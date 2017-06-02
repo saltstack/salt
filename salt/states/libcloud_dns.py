@@ -29,16 +29,19 @@ Example:
 
 .. code-block:: yaml
 
-    webserver:
+    my-zone:
       libcloud_dns.zone_present:
-        name: mywebsite.com
-        profile: profile1
+        - name: mywebsite.com
+        - profile: profile1
+    my-website:
       libcloud_dns.record_present:
-        name: www
-        zone: mywebsite.com
-        type: A
-        data: 12.34.32.3
-        profile: profile1
+        - name: www
+        - zone: mywebsite.com
+        - type: A
+        - data: 12.34.32.3
+        - profile: profile1
+        - require:
+          - libcloud_dns: my-zone
 
 
 :depends: apache-libcloud

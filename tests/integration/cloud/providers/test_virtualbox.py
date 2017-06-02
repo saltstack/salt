@@ -468,19 +468,19 @@ class XpcomConversionTests(TestCase):
         for key in expected_extras:
             self.assertIn(key, ret_keys)
 
-    def test_extra_nonexistant_attributes(self):
+    def test_extra_nonexistent_attributes(self):
         expected_extra_dict = {
-            "nonexistant": ""
+            "nonexistent": ""
         }
         xpcom = XpcomConversionTests._mock_xpcom_object()
 
         ret = vb_xpcom_to_attribute_dict(xpcom, extra_attributes=expected_extra_dict.keys())
         self.assertDictEqual(ret, expected_extra_dict)
 
-    def test_extra_nonexistant_attribute_with_default(self):
-        expected_extras = [("nonexistant", list)]
+    def test_extra_nonexistent_attribute_with_default(self):
+        expected_extras = [("nonexistent", list)]
         expected_extra_dict = {
-            "nonexistant": []
+            "nonexistent": []
         }
         xpcom = XpcomConversionTests._mock_xpcom_object()
 

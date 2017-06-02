@@ -96,8 +96,8 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
                     if default_type == data_type:
                         continue
                     self.assertEqual(
-                        pillarmod.get(item, default=defaults[default_type], merge=True),
-                        pillarmod.__pillar__[item]
+                        pillarmod.get(data_type, default=defaults[default_type], merge=True),
+                        pillarmod.__pillar__[data_type]
                     )
 
             # Test recursive dict merging

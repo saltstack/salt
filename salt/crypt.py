@@ -596,7 +596,7 @@ class AsyncAuth(object):
                             'minion.\nOr restart the Salt Master in open mode to '
                             'clean out the keys. The Salt Minion will now exit.'
                         )
-                        sys.exit(salt.defaults.exitcodes.EX_OK)
+                        sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 # has the master returned that its maxed out with minions?
                 elif payload['load']['ret'] == 'full':
                     raise tornado.gen.Return('full')
@@ -1138,7 +1138,7 @@ class SAuth(AsyncAuth):
                             'minion.\nOr restart the Salt Master in open mode to '
                             'clean out the keys. The Salt Minion will now exit.'
                         )
-                        sys.exit(salt.defaults.exitcodes.EX_OK)
+                        sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 # has the master returned that its maxed out with minions?
                 elif payload['load']['ret'] == 'full':
                     return 'full'

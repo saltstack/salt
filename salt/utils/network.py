@@ -95,7 +95,7 @@ def _generate_minion_id():
 
     class DistinctList(list):
         '''
-        List, which allows to append only distinct objects.
+        List, which allows one to append only distinct objects.
         Needs to work on Python 2.6, because of collections.OrderedDict only since 2.7 version.
         Override 'filter()' for custom filtering.
         '''

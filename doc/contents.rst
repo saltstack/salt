@@ -28,3 +28,4 @@ Salt Table of Contents
     topics/windows/index
     topics/development/index
     topics/releases/index
+    topics/venafi/index
