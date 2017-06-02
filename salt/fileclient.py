@@ -593,9 +593,9 @@ class Client(object):
         try:
             # Tornado calls streaming_callback on redirect response bodies.
             # But we need streaming to support fetching large files (> RAM
-            # avail).  Here we working this around by disabling recording the
-            # body for redirections.  The issue is fixed in Tornado 4.3.0 so
-            # on_header callback could be removed when we'll deprecate
+            # avail). Here we are working around this by disabling recording
+            # the body for redirections. The issue is fixed in Tornado 4.3.0
+            # so on_header callback could be removed when we'll deprecate
             # Tornado<4.3.0. See #27093 and #30431 for details.
 
             # Use list here to make it writable inside the on_header callback.
