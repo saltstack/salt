@@ -317,7 +317,7 @@ class KeystoneTestCase(TestCase):
                                             'keystone.endpoint_create': mock}):
 
             comt = ('Endpoint for service "{0}" already exists'.format(name))
-            ret.update({'comment': comt, 'result': None, 'changes': {}})
+            ret.update({'comment': comt, 'result': True, 'changes': {}})
             self.assertDictEqual(keystone.endpoint_present(name), ret)
 
             with patch.dict(keystone.__opts__, {'test': True}):
@@ -326,7 +326,7 @@ class KeystoneTestCase(TestCase):
                 self.assertDictEqual(keystone.endpoint_present(name), ret)
 
                 comt = ('Endpoint for service "{0}" already exists'.format(name))
-                ret.update({'comment': comt, 'result': None, 'changes': {}})
+                ret.update({'comment': comt, 'result': True, 'changes': {}})
                 self.assertDictEqual(keystone.endpoint_present(name), ret)
 
             with patch.dict(keystone.__opts__, {'test': False}):
