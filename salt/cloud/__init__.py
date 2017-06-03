@@ -2014,17 +2014,6 @@ class Map(Cloud):
                             ret['existing'] = {}
                         ret['existing'][name] = ret['create'].pop(name)
 
-        if 'hard' in self.opts and self.opts['hard']:
-            if self.opts['enable_hard_maps'] is False:
-                raise SaltCloudSystemExit(
-                    'The --hard map can be extremely dangerous to use, '
-                    'and therefore must explicitly be enabled in the main '
-                    'configuration file, by setting \'enable_hard_maps\' '
-                    'to True'
-                )
-
-            # Hard maps are enabled, Look for the items to delete.
-            ret['destroy'] = exist.difference(defined)
         return ret
 
     def run_map(self, dmap):

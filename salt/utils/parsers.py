@@ -1417,14 +1417,6 @@ class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
                  'The map can also be filtered by a list of VM names.'
         )
         group.add_option(
-            '-H', '--hard',
-            default=False,
-            action='store_true',
-            help='Delete all VMs that are not defined in the map file. '
-                 'CAUTION!!! This operation can irrevocably destroy VMs! It '
-                 'must be explicitly enabled in the cloud config file.'
-        )
-        group.add_option(
             '-d', '--destroy',
             default=False,
             action='store_true',
