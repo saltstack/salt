@@ -249,10 +249,18 @@ def get_device_opts(opts, salt_obj=None):
         # still not able to setup
         log.error('Incorrect minion config. Please specify at least the napalm driver name!')
     # either under the proxy hier, either under the napalm in the config file
-    network_device['HOSTNAME'] = device_dict.get('host') or device_dict.get('hostname')
-    network_device['USERNAME'] = device_dict.get('username') or device_dict.get('user')
-    network_device['DRIVER_NAME'] = device_dict.get('driver') or device_dict.get('os')
-    network_device['PASSWORD'] = device_dict.get('passwd') or device_dict.get('password') or device_dict.get('pass')
+    network_device['HOSTNAME'] = device_dict.get('host') or \
+                                 device_dict.get('hostname') or \
+                                 device_dict.get('fqdn') or \
+                                 device_dict.get('ip')
+    network_device['USERNAME'] = device_dict.get('username') or \
+                                 device_dict.get('user')
+    network_device['DRIVER_NAME'] = device_dict.get('driver') or \
+                                    device_dict.get('os')
+    network_device['PASSWORD'] = device_dict.get('passwd') or \
+                                 device_dict.get('password') or \
+                                 device_dict.get('pass') or \
+                                 ''
     network_device['TIMEOUT'] = device_dict.get('timeout', 60)
     network_device['OPTIONAL_ARGS'] = device_dict.get('optional_args', {})
     network_device['ALWAYS_ALIVE'] = device_dict.get('always_alive', True)
