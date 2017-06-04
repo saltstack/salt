@@ -3511,3 +3511,12 @@ def mkstemp(*args, **kwargs):
     # Late import to avoid circular import.
     import salt.utils.files
     return salt.utils.files.mkstemp(*args, **kwargs)
+
+
+def expanduser(path):
+    '''
+    None-safe version of os.path.expanduser.
+    '''
+    if not path:
+        return path
+    return os.path.expanduser(path)

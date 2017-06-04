@@ -1087,3 +1087,10 @@ class UtilsTestCase(TestCase):
             ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
             un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
             self.assertEqual(utils.to_unicode(ut, 'utf-8'), un)
+
+    def test_expanduser(self):
+        self.assertEqual(utils.expanduser(None), None)
+        self.assertEqual(utils.expanduser(''), '')
+        self.assertEqual(utils.expanduser(0), 0)
+        with patch('os.path.expanduser', '/root/myfile'):
+            self.assertEqual(utils.expanduser('~root/myfile'), '/root/myfile')
