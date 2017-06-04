@@ -3513,10 +3513,19 @@ def mkstemp(*args, **kwargs):
     return salt.utils.files.mkstemp(*args, **kwargs)
 
 
-def expanduser(path):
+def expanduser(*paths):
     '''
-    None-safe version of os.path.expanduser.
+    None-safe version of os.path.expanduser, that can also expand multiple
+    arguments at the same time.
     '''
-    if not path:
-        return path
-    return os.path.expanduser(path)
+    expanded_paths = []
+    for path in paths:
+        if not path:
+            expanded_paths.append(path)
+        else:
+            expanded_paths.append(os.path.expanduser(path))
+
+    if len(expanded_paths) == 1:
+        return expanded_paths[0]
+    else:
+        return tuple(expanded_paths)

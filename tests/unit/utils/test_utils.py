@@ -1094,3 +1094,4 @@ class UtilsTestCase(TestCase):
         self.assertEqual(utils.expanduser(0), 0)
         with patch('os.path.expanduser', '/root/myfile'):
             self.assertEqual(utils.expanduser('~root/myfile'), '/root/myfile')
+            self.assertEqual(utils.expanduser(None, '~root/myfile'), (None, '/root/myfile'))
