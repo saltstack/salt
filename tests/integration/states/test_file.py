@@ -545,6 +545,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test file.managed passing a basic check_cmd kwarg. See Issue #38111.
         '''
+        r_group = 'root'
+        if salt.utils.is_darwin():
+            r_group = 'wheel'
         if not salt.utils.which('visudo'):
             self.fail('sudo is missing')
         try:
@@ -552,7 +555,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 'file.managed',
                 name='/tmp/sudoers',
                 user='root',
-                group='root',
+                group=r_group,
                 mode=440,
                 check_cmd='visudo -c -s -f'
             )
