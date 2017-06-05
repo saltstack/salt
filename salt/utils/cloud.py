@@ -1756,6 +1756,12 @@ def filter_event(tag, data, defaults):
     if use_defaults is False:
         defaults = []
 
+    # For PY3, if something like ".keys()" or ".values()" is used on a dictionary,
+    # it returns a dict_view and not a list like in PY2. "defaults" should be passed
+    # in with the correct data type, but don't stack-trace in case it wasn't.
+    if not isinstance(defaults, list):
+        defaults = list(defaults)
+
     defaults = list(set(defaults + keys))
 
     for key in defaults:
