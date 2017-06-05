@@ -19,6 +19,7 @@ import contextlib
 import multiprocessing
 from random import randint, shuffle
 from stat import S_IMODE
+import salt.serializers.msgpack
 
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -1185,6 +1186,12 @@ class Minion(MinionBase):
         else:
             return
 
+        if self.opts['sign_minion_messages']:
+            log.trace('Signing event being published onto the bus.')
+            minion_privkey_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
+            sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
+            load['sig'] = sig
+
         def timeout_handler(*_):
             log.info('fire_master failed: master could not be contacted. Request timed out.')
             return True
@@ -1383,7 +1390,7 @@ class Minion(MinionBase):
                                 iret = []
                             iret.append(single)
                         tag = tagify([data['jid'], 'prog', opts['id'], str(ind)], 'job')
-                        event_data = {'return': single}
+
                         minion_instance._fire_master(event_data, tag)
                         ind += 1
                     ret['return'] = iret

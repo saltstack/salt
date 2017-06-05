@@ -19,6 +19,7 @@ import logging
 import multiprocessing
 import tempfile
 import traceback
+import salt.serializers.msgpack
 
 # Import third party libs
 from Crypto.PublicKey import RSA
@@ -1085,6 +1086,15 @@ class AESFuncs(object):
             return False
         if 'tok' in load:
             load.pop('tok')
+
+        if 'sig' in load:
+            log.trace('Verifying signed event publish from minion')
+            sig = load.pop('sig')
+            this_minion_pubkey = os.path.join(self.opts['pki_dir'], 'minions/{0}'.format(load['id']))
+            serialized_load = salt.serializers.msgpack.serialize(load)
+            if not salt.crypt.verify_signature(this_minion_pubkey, serialized_load, sig):
+                log.info('Signature for signed event from minion published on bus did not verify')
+
         return load
 
     def _ext_nodes(self, load):
