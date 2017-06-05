@@ -74,6 +74,13 @@ try:
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
+# This is to fix the pylint error: E0602: Undefined variable "WindowsError"
+try:
+    from exceptions import WindowsError
+except ImportError:
+    class WindowsError(OSError):
+        pass
+
 HAS_WIN_DACL = False
 try:
     if salt.utils.is_windows():
@@ -1247,7 +1254,10 @@ def mkdir(path,
         not apply to parent directories if they must be created
 
     Returns:
-        bool: True if successful, otherwise raise an error
+        bool: True if successful
+
+    Raises:
+        CommandExecutionError: If unsuccessful
 
     CLI Example:
 
@@ -1272,24 +1282,27 @@ def mkdir(path,
 
     if not os.path.isdir(path):
 
-        # Make the directory
-        os.mkdir(path)
+        try:
+            # Make the directory
+            os.mkdir(path)
 
-        # Set owner
-        if owner:
-            salt.utils.win_dacl.set_owner(path, owner)
+            # Set owner
+            if owner:
+                salt.utils.win_dacl.set_owner(path, owner)
 
-        # Set permissions
-        set_perms(path, grant_perms, deny_perms, inheritance)
+            # Set permissions
+            set_perms(path, grant_perms, deny_perms, inheritance)
+        except WindowsError as exc:
+            raise CommandExecutionError(exc)
 
     return True
 
 
-def makedirs(path,
-             owner=None,
-             grant_perms=None,
-             deny_perms=None,
-             inheritance=True):
+def makedirs_(path,
+              owner=None,
+              grant_perms=None,
+              deny_perms=None,
+              inheritance=True):
     '''
     Ensure that the parent directory containing this path is available.
 
@@ -1332,6 +1345,12 @@ def makedirs(path,
         ``C:\\temp\\test``, then it would be treated as ``C:\\temp\\`` but if
         the path ends with a trailing slash like ``C:\\temp\\test\\``, then it
         would be treated as ``C:\\temp\\test\\``.
+
+    Returns:
+        bool: True if successful
+
+    Raises:
+        CommandExecutionError: If unsuccessful
 
     CLI Example:
 
@@ -1385,7 +1404,9 @@ def makedirs(path,
     for directory_to_create in directories_to_create:
         # all directories have the user, group and mode set!!
         log.debug('Creating directory: %s', directory_to_create)
-        mkdir(path, owner, grant_perms, deny_perms, inheritance)
+        mkdir(directory_to_create, owner, grant_perms, deny_perms, inheritance)
+
+    return True
 
 
 def makedirs_perms(path,

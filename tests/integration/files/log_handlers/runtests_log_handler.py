@@ -47,7 +47,10 @@ def setup_handlers():
             log.warning('Failed to connect to log server')
             return
     finally:
-        sock.shutdown(socket.SHUT_RDWR)
+        try:
+            sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
         sock.close()
 
     queue = Queue()
