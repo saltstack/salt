@@ -981,21 +981,24 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         OpenSSL.crypto.FILETYPE_PEM,
         get_pem_entry(signing_private_key))
 
+    export_kwargs = {
+        'cert': cert,
+        'key': key,
+        'type': OpenSSL.crypto.FILETYPE_PEM,
+        'days': days_valid
+    }
+    if digest:
+        export_kwargs['digest'] = bytes(digest)
+    else:
+        log.warning('No digest specified. The default md5 digest will be used.')
+
     try:
-        crltext = crl.export(
-            cert,
-            key,
-            OpenSSL.crypto.FILETYPE_PEM,
-            days=days_valid,
-            digest=bytes(digest))
-    except TypeError:
+        crltext = crl.export(**export_kwargs)
+    except (TypeError, ValueError):
         log.warning(
             'Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used.')
-        crltext = crl.export(
-            cert,
-            key,
-            OpenSSL.crypto.FILETYPE_PEM,
-            days=days_valid)
+        export_kwargs.pop('digest', None)
+        crltext = crl.export(**export_kwargs)
 
     if text:
         return crltext
