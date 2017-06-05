@@ -514,9 +514,10 @@ class SaltReturnAssertsMixin(object):
 
     def __getWithinSaltReturn(self, ret, keys):
         self.assertReturnNonEmptySaltType(ret)
-        keys = self.__return_valid_keys(keys)
-        okeys = keys[:]
+        ret_data = []
         for part in six.itervalues(ret):
+            keys = self.__return_valid_keys(keys)
+            okeys = keys[:]
             try:
                 ret_item = part[okeys.pop(0)]
             except (KeyError, TypeError):
@@ -534,11 +535,13 @@ class SaltReturnAssertsMixin(object):
                             ''.join(['[\'{0}\']'.format(k) for k in keys]), part
                         )
                     )
-            return ret_item
+            ret_data.append(ret_item)
+        return ret_data
 
     def assertSaltTrueReturn(self, ret):
         try:
-            self.assertTrue(self.__getWithinSaltReturn(ret, 'result'))
+            for saltret in self.assertTrue(self.__getWithinSaltReturn(ret, 'result')):
+                self.assertTrue(saltret)
         except AssertionError:
             log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
@@ -556,7 +559,8 @@ class SaltReturnAssertsMixin(object):
 
     def assertSaltFalseReturn(self, ret):
         try:
-            self.assertFalse(self.__getWithinSaltReturn(ret, 'result'))
+            for saltret in self.assertFalse(self.__getWithinSaltReturn(ret, 'result')):
+                self.assertFalse(saltret)
         except AssertionError:
             log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
@@ -572,7 +576,8 @@ class SaltReturnAssertsMixin(object):
 
     def assertSaltNoneReturn(self, ret):
         try:
-            self.assertIsNone(self.__getWithinSaltReturn(ret, 'result'))
+            for saltret in self.assertIsNone(self.__getWithinSaltReturn(ret, 'result')):
+                self.assertIsNone(saltret)
         except AssertionError:
             log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
@@ -587,54 +592,45 @@ class SaltReturnAssertsMixin(object):
                 )
 
     def assertInSaltComment(self, in_comment, ret):
-        return self.assertIn(
-            in_comment, self.__getWithinSaltReturn(ret, 'comment')
-        )
+        for saltret in self.__getWithinSaltReturn(ret, 'comment'):
+            self.assertIn(in_comment, saltret)
 
     def assertNotInSaltComment(self, not_in_comment, ret):
-        return self.assertNotIn(
-            not_in_comment, self.__getWithinSaltReturn(ret, 'comment')
-        )
+        for saltret in self.__getWithinSaltReturn(ret, 'comment'):
+            self.assertNotIn(not_in_comment, saltret)
 
     def assertSaltCommentRegexpMatches(self, ret, pattern):
         return self.assertInSaltReturnRegexpMatches(ret, pattern, 'comment')
 
     def assertInSaltStateWarning(self, in_comment, ret):
-        return self.assertIn(
-            in_comment, self.__getWithinSaltReturn(ret, 'warnings')
-        )
+        for saltret in self.__getWithinSaltReturn(ret, 'warnings'):
+            self.assetIn(in_comment, saltret)
 
     def assertNotInSaltStateWarning(self, not_in_comment, ret):
-        return self.assertNotIn(
-            not_in_comment, self.__getWithinSaltReturn(ret, 'warnings')
-        )
+        for saltret in self.__getWithinSaltReturn(ret, 'warnings'):
+            self.assetNotIn(not_in_comment, saltret)
 
     def assertInSaltReturn(self, item_to_check, ret, keys):
-        return self.assertIn(
-            item_to_check, self.__getWithinSaltReturn(ret, keys)
-        )
+        for saltret in self.__getWithinSaltReturn(ret, keys):
+            self.assetIn(item_to_check, saltret)
 
     def assertNotInSaltReturn(self, item_to_check, ret, keys):
-        return self.assertNotIn(
-            item_to_check, self.__getWithinSaltReturn(ret, keys)
-        )
+        for saltret in self.__getWithinSaltReturn(ret, keys):
+            self.assetNotIn(item_to_check, saltret)
 
     def assertInSaltReturnRegexpMatches(self, ret, pattern, keys=()):
-        return self.assertRegex(
-            self.__getWithinSaltReturn(ret, keys), pattern
-        )
+        for saltret in self.__getWithinSaltReturn(ret, keys):
+            self.assertRegexpMatches(saltret, pattern)
 
     def assertSaltStateChangesEqual(self, ret, comparison, keys=()):
         keys = ['changes'] + self.__return_valid_keys(keys)
-        return self.assertEqual(
-            self.__getWithinSaltReturn(ret, keys), comparison
-        )
+        for saltret in self.__getWithinSaltReturn(ret, keys):
+            self.assertEqual(saltret, comparison)
 
     def assertSaltStateChangesNotEqual(self, ret, comparison, keys=()):
         keys = ['changes'] + self.__return_valid_keys(keys)
-        return self.assertNotEqual(
-            self.__getWithinSaltReturn(ret, keys), comparison
-        )
+        for saltret in self.__getWithinSaltReturn(ret, keys):
+            self.assertNotEqual(saltret, comparison)
 
 
 class SaltMinionEventAssertsMixin(object):
