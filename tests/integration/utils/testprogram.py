@@ -771,11 +771,11 @@ class TestDaemon(TestProgram):
         if not self._shutdown:
             try:
                 pid = self.wait_for_daemon_pid(timeout)
-                terminate_process(pid=pid)
+                terminate_process(pid=pid, kill_children=True)
             except TimeoutError:
                 pass
         if self.process:
-            terminate_process(pid=self.process.pid)
+            terminate_process(pid=self.process.pid, kill_children=True)
             self.process.wait()
             self.process = None
         self._shutdown = True
