@@ -392,6 +392,8 @@ def host_dns(proxy=None):
             AAAA:
                 - fd0f:9fd6:5fab::1
     '''
+    if not __opts__.get('napalm_host_dns_grain', False):
+        return
     device_host = host(proxy=proxy)
     if device_host:
         device_host_value = device_host['host']
