@@ -364,6 +364,16 @@ def host_dns(proxy=None):
     - ``A``
     - ``AAAA``
 
+    .. note::
+        This grain is disabled by default, as the proxy startup may be slower
+        when the lookup fails.
+        The user can enable it using the ``napalm_host_dns_grain`` option (in
+        the pillar or proxy configuration file):
+
+        .. code-block:: yaml
+
+            napalm_host_dns_grain: true
+
     .. versionadded:: Nitrogen
 
     CLI Example:
