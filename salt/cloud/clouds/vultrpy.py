@@ -14,10 +14,10 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 .. code-block:: yaml
 
-my-vultr-config:
-  # Vultr account api key
-  api_key: <supersecretapi_key>
-  driver: vultr
+    my-vultr-config:
+      # Vultr account api key
+      api_key: <supersecretapi_key>
+      driver: vultr
 
 Set up the cloud profile at ``/etc/salt/cloud.profiles`` or
 ``/etc/salt/cloud.profiles.d/vultr.conf``:
@@ -38,11 +38,11 @@ from __future__ import absolute_import
 import pprint
 import logging
 import time
-import urllib
 
-# Import salt cloud libs
+# Import salt libs
 import salt.config as config
 import salt.ext.six as six
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudSystemExit
@@ -173,7 +173,7 @@ def destroy(name):
     '''
     node = show_instance(name, call='action')
     params = {'SUBID': node['SUBID']}
-    result = _query('server/destroy', method='POST', decode=False, data=urllib.urlencode(params))
+    result = _query('server/destroy', method='POST', decode=False, data=_urlencode(params))
 
     # The return of a destroy call is empty in the case of a success.
     # Errors are only indicated via HTTP status code. Status code 200
@@ -291,7 +291,7 @@ def create(vm_):
     )
 
     try:
-        data = _query('server/create', method='POST', data=urllib.urlencode(kwargs))
+        data = _query('server/create', method='POST', data=_urlencode(kwargs))
         if int(data.get('status', '200')) >= 300:
             log.error('Error creating {0} on Vultr\n\n'
                 'Vultr API returned {1}\n'.format(vm_['name'], data))
