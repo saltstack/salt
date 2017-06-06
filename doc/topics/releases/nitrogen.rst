@@ -465,6 +465,35 @@ Using the new ``roster_order`` configuration syntax it's now possible to compose
 of grains, pillar and mine data and even Salt SDB URLs.
 The new release is also fully IPv4 and IPv6 enabled and even has support for CIDR ranges.
 
+Additional Features
+===================
+
+- The :mod:`mine.update <salt.modules.mine.update>` function
+  has a new optional argument ``mine_functions`` that can be used
+  to refresh mine functions at a more specific interval
+  than scheduled using the ``mine_interval`` option.
+  However, this argument can be used by explicit schedule.
+  For example, if we need the mines for ``net.lldp`` to be refreshed
+  every 12 hours:
+
+  .. code-block:: yaml
+
+      schedule:
+        lldp_mine_update:
+          function: mine.update
+          kwargs:
+            mine_functions:
+              net.lldp: []
+          hours: 12
+
+- The ``salt`` runner has a new function: :mod:`salt.execute <salt.runners.salt.execute>`.
+  It is mainly a shortcut to facilitate the execution of various functions
+  from other runners, e.g.:
+
+  .. code-block:: python
+
+      ret1 = __salt__['salt.execute']('*', 'mod.fun')
+
 New Modules
 ===========
 
