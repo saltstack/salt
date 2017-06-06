@@ -27,7 +27,6 @@ except Exception:
 
 # pylint: disable=import-error,no-name-in-module
 import salt.ext.six as six
-from salt.ext.six import string_types, text_type
 from salt.ext.six.moves.urllib.parse import urlparse
 # pylint: enable=import-error,no-name-in-module
 
@@ -108,10 +107,10 @@ FLO_DIR = os.path.join(
 
 VALID_OPTS = {
     # The address of the salt master. May be specified as IP address or hostname
-    'master': (string_types, list),
+    'master': (six.string_types, list),
 
     # The TCP/UDP port of the master to connect to in order to listen to publications
-    'master_port': (string_types, int),
+    'master_port': (six.string_types, int),
 
     # The behaviour of the minion when connecting to a master. Can specify 'failover',
     # 'disable' or 'func'. If 'func' is specified, the 'master' option should be set to an
@@ -460,7 +459,7 @@ VALID_OPTS = {
 
     # If a minion is running an esky build of salt, upgrades can be performed using the url
     # defined here. See saltutil.update() for additional information
-    'update_url': (bool, string_types),
+    'update_url': (bool, six.string_types),
 
     # If using update_url with saltutil.update(), provide a list of services to be restarted
     # post-install
@@ -489,7 +488,7 @@ VALID_OPTS = {
 
     # Specify one or more returners in which all events will be sent to. Requires that the returners
     # in question have an event_return(event) function!
-    'event_return': (list, string_types),
+    'event_return': (list, six.string_types),
 
     # The number of events to queue up in memory before pushing them down the pipe to an event
     # returner specified by 'event_return'
@@ -679,7 +678,7 @@ VALID_OPTS = {
     'ping_on_rotate': bool,
     'peer': dict,
     'preserve_minion_cache': bool,
-    'syndic_master': (string_types, list),
+    'syndic_master': (six.string_types, list),
 
     # The behaviour of the multimaster syndic when connection to a master of masters failed. Can
     # specify 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random
@@ -696,8 +695,8 @@ VALID_OPTS = {
     'token_expire_user_override': (bool, dict),
     'file_recv': bool,
     'file_recv_max_size': int,
-    'file_ignore_regex': (list, string_types),
-    'file_ignore_glob': (list, string_types),
+    'file_ignore_regex': (list, six.string_types),
+    'file_ignore_glob': (list, six.string_types),
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
@@ -1924,7 +1923,7 @@ def _read_conf_file(path):
             else:
                 conf_opts['id'] = sdecode(conf_opts['id'])
         for key, value in six.iteritems(conf_opts.copy()):
-            if isinstance(value, text_type) and six.PY2:
+            if isinstance(value, six.text_type) and six.PY2:
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
         return conf_opts
@@ -2029,7 +2028,7 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
         # defaults, not actually loading the whole configuration.
         return {}
 
-    if isinstance(include, str):
+    if isinstance(include, six.string_types):
         include = [include]
 
     configuration = {}
@@ -2116,7 +2115,7 @@ def insert_system_path(opts, paths):
     '''
     Inserts path into python path taking into consideration 'root_dir' option.
     '''
-    if isinstance(paths, str):
+    if isinstance(paths, six.string_types):
         paths = [paths]
     for path in paths:
         path_options = {'path': path, 'root_dir': opts['root_dir']}
@@ -2307,7 +2306,7 @@ def apply_sdb(opts, sdb_opts=None):
     import salt.utils.sdb
     if sdb_opts is None:
         sdb_opts = opts
-    if isinstance(sdb_opts, string_types) and sdb_opts.startswith('sdb://'):
+    if isinstance(sdb_opts, six.string_types) and sdb_opts.startswith('sdb://'):
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
         for key, value in six.iteritems(sdb_opts):
@@ -2402,7 +2401,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         'deploy_scripts_search_path',
         defaults.get('deploy_scripts_search_path', 'cloud.deploy.d')
     )
-    if isinstance(deploy_scripts_search_path, string_types):
+    if isinstance(deploy_scripts_search_path, six.string_types):
         deploy_scripts_search_path = [deploy_scripts_search_path]
 
     # Check the provided deploy scripts search path removing any non existing
@@ -3182,7 +3181,7 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['nova', 'virtualbox', 'libvirt']
+    non_image_drivers = ['nova', 'virtualbox', 'libvirt', 'softlayer']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
@@ -3355,7 +3354,7 @@ def _update_ssl_config(opts):
         val = opts['ssl'].get(key)
         if val is None:
             continue
-        if not isinstance(val, string_types) or not val.startswith(prefix) or not hasattr(ssl, val):
+        if not isinstance(val, six.string_types) or not val.startswith(prefix) or not hasattr(ssl, val):
             message = 'SSL option \'{0}\' must be set to one of the following values: \'{1}\'.' \
                     .format(key, '\', \''.join([val for val in dir(ssl) if val.startswith(prefix)]))
             log.error(message)
