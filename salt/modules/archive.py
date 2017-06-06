@@ -6,6 +6,7 @@ A module to wrap (non-Windows) archive calls
 '''
 from __future__ import absolute_import
 import contextlib  # For < 2.7 compat
+import copy
 import errno
 import glob
 import logging
@@ -249,13 +250,16 @@ def list_(name,
                         else:
                             files.append(path)
 
-                for path in files:
+                _files = copy.deepcopy(files)
+                for path in _files:
                     # ZIP files created on Windows do not add entries
                     # to the archive for directories. So, we'll need to
                     # manually add them.
                     dirname = ''.join(path.rpartition('/')[:2])
                     if dirname:
                         dirs.add(dirname)
+                        if dirname in files:
+                            files.remove(dirname)
             return list(dirs), files, links
         except zipfile.BadZipfile:
             raise CommandExecutionError('{0} is not a ZIP file'.format(name))
@@ -1055,7 +1059,15 @@ def unzip(zip_file,
                             continue
                     zfile.extract(target, dest, password)
                     if extract_perms:
-                        os.chmod(os.path.join(dest, target), zfile.getinfo(target).external_attr >> 16)
+                        perm = zfile.getinfo(target).external_attr >> 16
+                        if perm == 0:
+                            umask_ = os.umask(0)
+                            os.umask(umask_)
+                            if target.endswith('/'):
+                                perm = 0o777 & ~umask_
+                            else:
+                                perm = 0o666 & ~umask_
+                        os.chmod(os.path.join(dest, target), perm)
     except Exception as exc:
         if runas:
             os.seteuid(euid)
