@@ -117,6 +117,10 @@ def _rand_key_name(length):
     )
 
 
+def _windows_or_mac():
+    return salt.utils.is_windows() or salt.utils.is_darwin()
+
+
 class GitPythonMixin(object):
     '''
     GitPython doesn't support anything fancy in terms of authentication
@@ -353,7 +357,7 @@ class GitPythonMixin(object):
 
 @destructiveTest
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, 'sshd not present')
@@ -368,7 +372,7 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
@@ -381,7 +385,7 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
@@ -412,7 +416,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 
 @destructiveTest
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} required'.format(PYGIT2_MINVER))
 @skipIf(not HAS_SSHD, 'sshd not present')
@@ -1192,7 +1196,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} required'.format(PYGIT2_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
@@ -1445,7 +1449,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} required'.format(PYGIT2_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
