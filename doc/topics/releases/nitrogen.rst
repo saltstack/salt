@@ -468,10 +468,124 @@ The new release is also fully IPv4 and IPv6 enabled and even has support for CID
 New Modules
 ===========
 
+Beacons
+-------
+
+- :mod:`Log <salt.beacons.log>`
+
+Engines
+-------
+
+- :mod:`salt.engines.stalekey <salt.engines.stalekey>`
+- :mod:`salt.engines.junos_syslog <salt.engines.junos_syslog>`
+- :mod:`salt.engines.napalm_syslog <salt.engines.napalm_syslog>`
+
+Execution modules
+-----------------
+
+- :mod:`salt.modules.apk <salt.modules.apk>`
+- :mod:`salt.modules.at_solaris <salt.modules.at_solaris>`
+- :mod:`salt.modules.boto_kinesis <salt.modules.boto_kinesis>`
+- :mod:`salt.modules.boto3_elasticache <salt.modules.boto3_elasticache>`
+- :mod:`salt.modules.boto3_route53 <salt.modules.boto3_route53>`
+- :mod:`salt.modules.capirca_acl <salt.modules.capirca_acl>`
+- :mod:`salt.modules.freebsd_update <salt.modules.freebsd_update>`
+- :mod:`salt.modules.grafana4 <salt.modules.grafana4>`
+- :mod:`salt.modules.heat <salt.modules.heat>`
+- :mod:`salt.modules.icinga2 <salt.modules.icinga2>`
+- :mod:`salt.modules.logmod <salt.modules.logmod>`
+- :mod:`salt.modules.mattermost <salt.modules.mattermost>`
+- :mod:`salt.modules.mattermost <salt.modules.mattermost>`
+- :mod:`salt.modules.namecheap_dns <salt.modules.namecheap_dns>`
+- :mod:`salt.modules.namecheap_domains <salt.modules.namecheap_domains>`
+- :mod:`salt.modules.namecheap_ns <salt.modules.namecheap_ns>`
+- :mod:`salt.modules.namecheap_users <salt.modules.namecheap_users>`
+- :mod:`salt.modules.namecheap_ssl <salt.modules.namecheap_ssl>`
+- :mod:`salt.modules.napalm <salt.modules.napalm>`
+- :mod:`salt.modules.napalm_acl <salt.modules.napalm_acl>`
+- :mod:`salt.modules.napalm_yang_mod <salt.modules.napalm_yang_mod>`
+- :mod:`salt.modules.pdbedit <salt.modules.pdbedit>`
+- :mod:`salt.modules.solrcloud <salt.modules.solrcloud>`
+- :mod:`salt.modules.statuspage <salt.modules.statuspage>`
+- :mod:`salt.modules.zonecfg <salt.modules.zonecfg>`
+- :mod:`salt.modules.zoneadm <salt.modules.zoneadm>`
+
+Grains
+------
+
+- :mod:`salt.grains.metadata <salt.grains.metadata>`
+- :mod:`salt.grains.mdata <salt.grains.mdata>`
+
 Outputters
 ----------
 
-- :mod:`table <salt.output.table_out>`
+- :mod:`salt.output.table_out <salt.output.table_out>`
+
+Pillar
+------
+
+- :mod:`salt.pillar.postgres <salt.pillar.postgres>`
+- :mod:`salt.pillar.vmware_pillar <salt.pillar.vmware_pillar>`
+
+Returners
+---------
+
+- :mod:`salt.returners.mattermost_returner <salt.returners.mattermost_returner>`
+- :mod:`salt.returners.highstate_return <salt.returners.highstate_return>`
+
+Roster
+------
+
+- :mod:`salt.roster.cache <salt.roster.cache>`
+
+Runners
+-------
+
+- :mod:`salt.runners.bgp <salt.runners.bgp>`
+- :mod:`salt.runners.mattermost <salt.runners.mattermost>`
+- :mod:`salt.runners.net <salt.runners.net>`
+
+SDB
+---
+
+- :mod:`salt.sdb.yaml <salt.sdb.yaml>`
+- :mod:`salt.sdb.tism <salt.sdb.tism>`
+- :mod:`salt.sdb.cache <salt.sdb.cache>`
+
+States
+------
+
+- :mod:`salt.states.boto_kinesis <salt.states.boto_kinesis>`
+- :mod:`salt.states.boto_efs <salt.states.boto_efs>`
+- :mod:`salt.states.boto3_elasticache <salt.states.boto3_elasticache>`
+- :mod:`salt.states.boto3_route53 <salt.states.boto3_route53>`
+- :mod:`salt.states.docker_container <salt.states.docker_container>`
+- :mod:`salt.states.docker_image <salt.states.docker_image>`
+- :mod:`salt.states.docker_network <salt.states.docker_network>`
+- :mod:`salt.states.docker_volume <salt.states.docker_volume>`
+- :mod:`salt.states.elasticsearch <salt.states.elasticsearch>`
+- :mod:`salt.states.grafana4_dashboard <salt.states.grafana4_dashboard>`
+- :mod:`salt.states.grafana4_datasource <salt.states.grafana4_datasource>`
+- :mod:`salt.states.grafana4_org <salt.states.grafana4_org>`
+- :mod:`salt.states.grafana4_user <salt.states.grafana4_user>`
+- :mod:`salt.states.heat <salt.states.heat>`
+- :mod:`salt.states.icinga2 <salt.states.icinga2>`
+- :mod:`salt.states.influxdb_continuous_query <salt.states.influxdb_continuous_query>`
+- :mod:`salt.states.influxdb_retention_policy <salt.states.influxdb_retention_policy>`
+- :mod:`salt.states.logadm <salt.states.logadm>`
+- :mod:`salt.states.logrotate <salt.states.logrotate>`
+- :mod:`salt.states.msteams <salt.states.msteams>`
+- :mod:`salt.states.netacl <salt.states.netacl>`
+- :mod:`salt.states.netconfig <salt.states.netconfig>`
+- :mod:`salt.states.netyang <salt.states.netyang>`
+- :mod:`salt.states.nix <salt.states.nix>`
+- :mod:`salt.states.pdbedit <salt.states.pdbedit>`
+- :mod:`salt.states.service <salt.states.service>`
+- :mod:`salt.states.solrcloud <salt.states.solrcloud>`
+- :mod:`salt.states.statuspage <salt.states.statuspage>`
+- :mod:`salt.states.vault <salt.states.vault>`
+- :mod:`salt.states.win_wua <salt.states.win_wua>`
+- :mod:`salt.states.zone <salt.states.zone>`
 
 Deprecations
 ============
