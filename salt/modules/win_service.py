@@ -519,9 +519,11 @@ def execute_salt_restart_task():
     return __salt__['task.run'](name='restart-salt-minion')
 
 
-def status(name, sig=None):
+def status(*names, **kwargs):
     '''
-    Return the status for a service
+    Return the status for a service.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
 
     Args:
         name (str): The name of the service to check
@@ -529,23 +531,33 @@ def status(name, sig=None):
 
     Returns:
         bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status <service name> [service signature]
+        salt '*' service.status <service name>
+        salt '*' service.status <service1> <service2> <service3> ...
     '''
-    if re.search('\*|\?|\[.+\]', name):
-        services = fnmatch.filter(get_all(), name)
-    else:
-        services = [name]
+
+    if len(names) == 0:
+        return ''
+
     results = {}
-    for service in services:
-        results[service] = info(service)['Status'] in ['Running', 'Stop Pending']
-    if re.search('\*|\?|\[.+\]', name):
-        return results
-    return results[name]
+    all_services = get_all()
+    for name in names:
+        if re.search('\*|\?|\[.+\]', name):
+            services = fnmatch.filter(all_services, name)
+        else:
+            services = [name]
+        for service in services:
+            if service in results:
+                continue
+            results[service] = info(service)['Status'] in ['Running', 'Stop Pending']
+    if len(names) == 0 and re.search('\*|\?|\[.+\]', names[0]) == false:
+        return results[name]
+    return results
 
 def getsid(name):
     '''
