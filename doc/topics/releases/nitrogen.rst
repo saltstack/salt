@@ -472,7 +472,6 @@ Outputters
 ----------
 
 - :mod:`table <salt.output.table_out>`
-- :mod:`profile <salt.output.profile>`
 
 Deprecations
 ============
