@@ -471,7 +471,7 @@ New Modules
 Beacons
 -------
 
-- :mod:`Log <salt.beacons.log>`
+- :mod:`salt.beacons.log <salt.beacons.log>`
 
 Engines
 -------
