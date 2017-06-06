@@ -331,7 +331,7 @@ Returns:
 .. jinja_ref:: quote
 
 ``quote``
------------
+---------
 
 .. versionadded:: Nitrogen
 
