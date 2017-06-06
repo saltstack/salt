@@ -1584,6 +1584,7 @@ class LocalClient(object):
                                          expect_minions=(verbose or show_timeout),
                                          **kwargs
                                          ):
+            log.debug('return event: %s', ret)
             return_count = return_count + 1
             if progress:
                 for id_, min_ret in six.iteritems(ret):
