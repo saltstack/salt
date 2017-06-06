@@ -410,6 +410,7 @@ New functions:
   (in dBm).
 
 New grains: :mod:`Host <salt.grains.napalm.host>`,
+:mod:`Host DNS<salt.grains.napalm.host_dns>`,
 :mod:`Username <salt.grains.napalm.username>` and
 :mod:`Optional args <salt.grains.napalm.optional_args>`.
 
