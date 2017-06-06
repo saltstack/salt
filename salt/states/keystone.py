@@ -714,11 +714,16 @@ def endpoint_present(name,
 
             if endpoint.get('publicurl', None) != publicurl:
                 change_publicurl = True
-                ret['comment'] = _changes('Public URL changes from "{0}" to "{1}"'.format(endpoint.get('publicurl', None), publicurl))
+
+                ret['comment'] = _changes('Public URL changes from "{0}" to "{1}"'.format(
+                    endpoint.get('publicurl', None), publicurl)
+                )
 
             if endpoint.get('adminurl', None) != adminurl:
                 change_adminurl = True
-                ret['comment'] = _changes('Admin URL changes from "{0}" to "{1}"'.format(endpoint.get('adminurl', None), adminurl))
+                ret['comment'] = _changes('Admin URL changes from "{0}" to "{1}"'.format(
+                    endpoint.get('adminurl', None), adminurl)
+                )
 
             if endpoint.get('internalurl', None) != internalurl:
                 change_internalurl = True
