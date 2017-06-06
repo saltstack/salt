@@ -727,7 +727,7 @@ def runner(name, **kwargs):
     if __opts__.get('test', False):
         ret = {
             'name': name,
-            'result': True,
+            'result': False,
             'changes': {},
             'comment': "Runner function '{0}' would be executed.".format(name)
         }
@@ -792,7 +792,7 @@ def wheel(name, **kwargs):
         jid = None
 
     if __opts__.get('test', False):
-        ret['result'] = True,
+        ret['result'] = False,
         ret['comment'] = "Wheel function '{0}' would be executed.".format(name)
         return ret
 
