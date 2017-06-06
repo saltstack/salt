@@ -1390,7 +1390,7 @@ class Minion(MinionBase):
                                 iret = []
                             iret.append(single)
                         tag = tagify([data['jid'], 'prog', opts['id'], str(ind)], 'job')
-
+                        event_data = {'return': single}
                         minion_instance._fire_master(event_data, tag)
                         ind += 1
                     ret['return'] = iret
