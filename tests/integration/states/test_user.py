@@ -104,7 +104,8 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('user.present', name=self.user_name,
                              home=self.user_home)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(self.user_home))
+        if not salt.utils.is_darwin():
+            self.assertTrue(os.path.isdir(self.user_home))
 
     @requires_system_grains
     def test_user_present_gid_from_name_default(self, grains=None):
