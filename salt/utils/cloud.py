@@ -77,7 +77,6 @@ from salt.exceptions import (
 
 # Import third party libs
 import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin,W0611
 from jinja2 import Template
 import yaml
 
@@ -2766,15 +2765,25 @@ def list_cache_nodes_full(opts=None, provider=None, base=None):
     return minions
 
 
-def cache_nodes_ip(opts, base=None):
+def get_cache_node(minion_id, base=None):
     '''
-    Retrieve a list of all nodes from Salt Cloud cache, and any associated IP
-    addresses. Returns a dict.
+    Retrieve cache data from a single node from Salt Cloud cache.
+    Returns a dict.
     '''
     if base is None:
-        base = opts['cachedir']
+        base = __opts__['cachedir']
 
-    minions = list_cache_nodes_full(opts, base=base)
+    path = os.path.join(base, 'active', '{0}.p'.format(minion_id))
+    cache_data = {}
+    try:
+        with salt.utils.fopen(path, 'r') as fh_:
+            try:
+                cache_data = msgpack.load(fh_)
+            except ValueError:
+                log.warning('Cache for {0} was corrupt: Ignoring'.format(minion_id))
+    except OSError:
+        log.debug('Cache file not found for {0}'.format(minion_id))
+    return cache_data
 
 
 def update_bootstrap(config, url=None):
