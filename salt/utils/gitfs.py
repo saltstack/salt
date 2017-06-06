@@ -1674,9 +1674,15 @@ class Pygit2(GitProvider):
         add_mountpoint = lambda path: salt.utils.path_join(
             self.mountpoint(tgt_env), path, use_posixpath=True)
         for repo_path in blobs.get('files', []):
-            files.add(add_mountpoint(relpath(repo_path)))
+            if not salt.utils.is_windows():
+                files.add(add_mountpoint(relpath(repo_path)))
+            else:
+                files.add('/'.join(repo_path.replace('.:\\', '', 1).split(os.sep)))
         for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
-            symlinks[add_mountpoint(relpath(repo_path))] = link_tgt
+            if not salt.utils.is_windows():
+                symlinks[add_mountpoint(relpath(repo_path))] = link_tgt
+            else:
+                symlinks['/'.join(repo_path.replace('.:\\', '', 1).split(os.sep))] = link_tgt
         return files, symlinks
 
     def find_file(self, path, tgt_env):
