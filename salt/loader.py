@@ -53,7 +53,7 @@ if six.PY3:
     for suffix in importlib.machinery.BYTECODE_SUFFIXES:
         SUFFIXES.append((suffix, 'rb', 2))
     for suffix in importlib.machinery.SOURCE_SUFFIXES:
-        SUFFIXES.append((suffix, 'r', 1))
+        SUFFIXES.append((suffix, 'rb', 1))
     # pylint: enable=no-member,no-name-in-module,import-error
 else:
     SUFFIXES = imp.get_suffixes()
