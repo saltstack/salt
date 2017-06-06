@@ -68,7 +68,10 @@ def import_cert(name, cert_format=_DEFAULT_FORMAT, context=_DEFAULT_CONTEXT, sto
 
     cached_source_path = __salt__['cp.cache_file'](name, saltenv)
     current_certs = __salt__['win_pki.get_certs'](context=context, store=store)
-    cert_props = __salt__['win_pki.get_cert_file'](name=cached_source_path)
+    if password:
+        cert_props = __salt__['win_pki.get_cert_file'](name=cached_source_path, cert_format=cert_format, password=password)
+    else:
+        cert_props = __salt__['win_pki.get_cert_file'](name=cached_source_path, cert_format=cert_format)
 
     if cert_props['thumbprint'] in current_certs:
         ret['comment'] = ("Certificate '{0}' already contained in store:"
