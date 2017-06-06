@@ -337,7 +337,7 @@ is being able to log debug messages directly from the template:
 
 .. code-block:: jinja
 
-  {%- do salt.log.error('logging from jinja') -%}
+    {%- do salt.log.error('logging from jinja') -%}
 
 See the :jinja_ref:`logs` paragraph.
 
