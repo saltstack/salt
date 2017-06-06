@@ -10,6 +10,8 @@ from __future__ import absolute_import
 import salt.utils
 import time
 import logging
+import fnmatch
+import re
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd party libs
@@ -534,11 +536,16 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    if info(name)['Status'] in ['Running', 'Stop Pending']:
-        return True
-
-    return False
-
+    if re.search('\*|\?|\[.+\]', name):
+        services = fnmatch.filter(get_all(), name)
+    else:
+        services = [name]
+    results = {}
+    for service in services:
+        results[service] = info(service)['Status'] in ['Running', 'Stop Pending']
+    if re.search('\*|\?|\[.+\]', name):
+        return results
+    return results[name]
 
 def getsid(name):
     '''
