@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest, skip_if_not_root, flaky
 
 # Import salt libs
 import salt.utils
@@ -40,6 +40,7 @@ class MacPowerModuleTest(ModuleCase):
         self.run_function('power.set_harddisk_sleep', [self.HARD_DISK_SLEEP])
 
     @destructiveTest
+    @flaky
     def test_computer_sleep(self):
         '''
         Test power.get_computer_sleep
