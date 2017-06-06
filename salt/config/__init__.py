@@ -858,6 +858,13 @@ VALID_OPTS = {
     # Always generate minion id in lowercase.
     'minion_id_lowercase': bool,
 
+    # The behavior when generating a minion ID. Can specify 'str' or 'func'.
+    # If 'str' is specified (the default), the 'id' option should be set to
+    # the minion ID or left unspecified for default minion ID generation
+    # behavior. If 'func' is specified, the 'id' option should be set to an
+    # exec module function to run to determine the minion ID.
+    'minion_id_type': str,
+
     # If set, the master will sign all publications before they are sent out
     'sign_pub_messages': bool,
 
@@ -1299,6 +1306,7 @@ DEFAULT_MINION_OPTS = {
     'grains_refresh_every': 0,
     'minion_id_caching': True,
     'minion_id_lowercase': False,
+    'minion_id_type': 'str',
     'keysize': 2048,
     'transport': 'zeromq',
     'auth_timeout': 5,
@@ -3336,6 +3344,42 @@ def _cache_id(minion_id, cache_file):
         log.error('Could not cache minion ID: {0}'.format(exc))
 
 
+def eval_minion_id_func(opts):
+    '''
+    Evaluate minion ID function if 'minion_id_type' is 'func'
+    and return the result
+    '''
+    if '__minion_id_func_evaluated' in opts:
+        return opts['id']
+
+    import salt.loader as loader
+
+    # split module and function and try loading the module
+    mod_fun = opts['id']
+    mod, fun = mod_fun.split('.')
+    if not opts.get('grains'):
+        # Get grains for use by the module
+        opts['grains'] = loader.grains(opts)
+
+    try:
+        minion_id_mod = loader.raw_mod(opts, mod, fun)
+        if not minion_id_mod:
+            raise KeyError
+        # we take whatever the module returns as the minion ID
+        newid = minion_id_mod[mod_fun]()
+        if not isinstance(newid, str):
+            log.error('{0} returned from {1} is not a string'.format(
+                newid, mod_fun)
+            )
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+        opts['__minion_id_func_evaluated'] = True
+        log.info('Evaluated minion ID from module: {0}'.format(mod_fun))
+        return newid
+    except KeyError:
+        log.error('Failed to load module {0}'.format(mod_fun))
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+
+
 def get_id(opts, cache_minion_id=False):
     '''
     Guess the id of the minion.
@@ -3377,13 +3421,19 @@ def get_id(opts, cache_minion_id=False):
         log.debug('Guessing ID. The id can be explicitly set in {0}'
                   .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
-    newid = salt.utils.network.generate_minion_id()
+    if opts.get('minion_id_type', 'str') == 'func':
+        newid = eval_minion_id_func(opts)
+    else:
+        newid = salt.utils.network.generate_minion_id()
 
     if opts.get('minion_id_lowercase'):
         newid = newid.lower()
         log.debug('Changed minion id {0} to lowercase.'.format(newid))
     if '__role' in opts and opts.get('__role') == 'minion':
-        log.debug('Found minion id from generate_minion_id(): {0}'.format(newid))
+        if opts.get('minion_id_type', 'str') == 'func':
+            log.debug('Found minion id from eval_minion_id_func(): {0}'.format(newid))
+        else:
+            log.debug('Found minion id from generate_minion_id(): {0}'.format(newid))
     if cache_minion_id and opts.get('minion_id_caching', True):
         _cache_id(newid, id_cache)
     is_ipv4 = salt.utils.network.is_ipv4(newid)
@@ -3452,7 +3502,7 @@ def apply_minion_config(overrides=None,
 
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
-    if not opts.get('id'):
+    if not opts.get('id') or opts.get('minion_id_type', 'str') == 'func':
         if minion_id:
             opts['id'] = minion_id
         else:
@@ -3626,7 +3676,7 @@ def apply_master_config(overrides=None, defaults=None):
         opts['ipc_write_buffer'] = 0
     using_ip_for_id = False
     append_master = False
-    if not opts.get('id'):
+    if not opts.get('id') or opts.get('minion_id_type', 'str') == 'func':
         opts['id'], using_ip_for_id = get_id(
                 opts,
                 cache_minion_id=None)
