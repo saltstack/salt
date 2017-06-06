@@ -723,41 +723,41 @@ State Deprecations
 
 The ``apache_conf`` state had the following functions removed:
 
-  - ``disable``: Please use ``disabled`` instead.
-  - ``enable``: Please use ``enabled`` instead.
+- ``disable``: Please use ``disabled`` instead.
+- ``enable``: Please use ``enabled`` instead.
 
 The ``apache_module`` state had the following functions removed:
 
-  - ``disable``: Please use ``disabled`` instead.
-  - ``enable``: Please use ``enabled`` instead.
+- ``disable``: Please use ``disabled`` instead.
+- ``enable``: Please use ``enabled`` instead.
 
 The ``apache_site`` state had the following functions removed:
 
-  - ``disable``: Please use ``disabled`` instead.
-  - ``enable``: Please use ``enabled`` instead.
+- ``disable``: Please use ``disabled`` instead.
+- ``enable``: Please use ``enabled`` instead.
 
 The ``chocolatey`` state had the following functions removed:
 
-  - ``install``: Please use ``installed`` instead.
-  - ``uninstall``: Please use ``uninstalled`` instead.
+- ``install``: Please use ``installed`` instead.
+- ``uninstall``: Please use ``uninstalled`` instead.
 
 The ``git`` state had the following changes:
 
-  - The ``config`` function was removed. Please use ``config_set`` instead.
-  - The ``is_global`` option was removed from the ``config_set`` function.
-    Please use ``global`` instead.
-  - The ``always_fetch`` option was removed from the ``latest`` function, as
-    it no longer has any effect. Please see the :ref:`2015.8.0<release-2015-8-0>`
-    release notes for more information.
-  - The ``force`` option was removed from the ``latest`` function. Please
-    use ``force_clone`` instead.
-  - The ``remote_name`` option was removed from the ``latest`` function.
-    Please use ``remote`` instead.
+- The ``config`` function was removed. Please use ``config_set`` instead.
+- The ``is_global`` option was removed from the ``config_set`` function.
+  Please use ``global`` instead.
+- The ``always_fetch`` option was removed from the ``latest`` function, as
+  it no longer has any effect. Please see the :ref:`2015.8.0<release-2015-8-0>`
+  release notes for more information.
+- The ``force`` option was removed from the ``latest`` function. Please
+  use ``force_clone`` instead.
+- The ``remote_name`` option was removed from the ``latest`` function.
+  Please use ``remote`` instead.
 
 The ``glusterfs`` state had the following function removed:
 
-  - ``created``: Please use ``volume_present`` instead.
+- ``created``: Please use ``volume_present`` instead.
 
 The ``openvswitch_port`` state had the following change:
 
-  - The ``type`` option was removed from the ``present`` function. Please use ``tunnel_type`` instead.
+- The ``type`` option was removed from the ``present`` function. Please use ``tunnel_type`` instead.
