@@ -15,6 +15,8 @@ import glob
 import logging
 import os
 import stat
+import fnmatch
+import re
 
 # Import salt libs
 import salt.utils
@@ -470,22 +472,34 @@ def reload_(name):
 
 def status(name, sig=None):
     '''
-    Return the status for a service, returns a bool whether the service is
-    running.
+    Returns a bool indicating whether the service is running.
+
+    If ``name`` contains globbing characters (such as ``*``, ``?``, or anything between brackets),
+    returns a dict name/bool instead of a simple bool.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status <service name>
+        salt '*' service.status sshd
+        salt '*' service.status '*'
     '''
-    if _service_is_upstart(name):
-        cmd = 'status {0}'.format(name)
-        return 'start/running' in __salt__['cmd.run'](cmd, python_shell=False)
-    if sig:
-        return bool(__salt__['status.pid'](sig))
-    cmd = '/sbin/service {0} status'.format(name)
-    return __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=True) == 0
+    if re.search('\*|\?|\[.+\]', name):
+        services = fnmatch.filter(get_all(), name)
+    else:
+        services = [name]
+    results = {}
+    for service in services:
+        if _service_is_upstart(service):
+            cmd = 'status {0}'.format(service)
+            results[service] = 'start/running' in __salt__['cmd.run'](cmd, python_shell=False)
+        if sig:
+            results[service] = bool(__salt__['status.pid'](sig))
+        cmd = '/sbin/service {0} status'.format(service)
+        results[service] = __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=True) == 0
+    if re.search('\*|\?|\[.+\]', name):
+        return results
+    return results[name]
 
 
 def delete(name, **kwargs):
