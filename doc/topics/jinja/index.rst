@@ -1475,6 +1475,8 @@ Returns:
 
   /usr/local/salt/virtualenv/bin/salt-master
 
+.. jinja_ref:: jinja-in-files
+
 Jinja in Files
 ==============
 
@@ -1511,6 +1513,8 @@ external template file.
     starting with one or more underscores, and should be managed by one of the
     following tags: `macro`, `set`, `load_yaml`, `load_json`, `import_yaml` and
     `import_json`.
+
+.. jinja_ref:: escaping-jinja
 
 Escaping Jinja
 ==============
@@ -1560,6 +1564,8 @@ escaped:
 
 .. _`Escaping`: http://jinja.pocoo.org/docs/dev/templates/#escaping
 
+.. jinja_ref:: calling-salt-functions
+
 Calling Salt Functions
 ======================
 
@@ -1574,6 +1580,8 @@ dictionary of :term:`execution function <Execution Function>`.
     {{ salt['cmd.run']('whoami') }}
     {{ salt.cmd.run('whoami') }}
 
+.. jinja_ref:: debugging
+
 Debugging
 =========
 
@@ -1585,6 +1593,8 @@ in the current Jinja context.
 .. code-block:: jinja
 
     Context is: {{ show_full_context() }}
+
+.. jinja_ref:: logs
 
 Logs
 ----
@@ -1604,6 +1614,8 @@ Will insert the following message in the minion logs:
 
     2017-02-01 01:24:40,728 [salt.module.logmod][ERROR   ][3779] testing jinja logging
 
+.. jinja_ref:: custom-execution-modules
+
 Custom Execution Modules
 ========================
 
@@ -1621,6 +1633,8 @@ module dictionary just like the built-in execution modules:
 
 - :ref:`How to Convert Jinja Logic to an Execution Module <tutorial-jinja_to_execution-module>`
 - :ref:`Writing Execution Modules <writing-execution-modules>`
+
+.. jinja_ref:: custom-jinja-filters
 
 Custom Jinja filters
 ====================
