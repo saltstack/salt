@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2017 by the SaltStack Team, see AUTHORS for more details.
+    :copyright: Copyright 2017 by the SaltStack Team, see AUTHORS for more details.
 
 
     tests.unit.beacons.test_status

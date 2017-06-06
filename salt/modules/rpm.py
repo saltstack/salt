@@ -117,8 +117,12 @@ def bin_pkg_info(path, saltenv='base'):
         output,
         osarch=__grains__['osarch']
     )
-    for field in pkginfo._fields:
-        ret[field] = getattr(pkginfo, field)
+    try:
+        for field in pkginfo._fields:
+            ret[field] = getattr(pkginfo, field)
+    except AttributeError:
+        # pkginfo is None
+        return None
     return ret
 
 
