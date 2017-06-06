@@ -21,6 +21,7 @@ the jinja templating system would look like this:
         - user: root
         - group: root
         - mode: 644
+        - attrs: ai
         - template: jinja
         - defaults:
             custom_var: "default value"
@@ -74,6 +75,7 @@ salt fileserver. Here's an example:
         - user: foo
         - group: users
         - mode: 644
+        - attrs: i
         - backup: minion
 
 .. note::
@@ -94,6 +96,7 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
         - user: foo
         - group: users
         - mode: '0644'
+        - attrs: i
 
 .. warning::
 
@@ -1515,6 +1518,7 @@ def managed(name,
             user=None,
             group=None,
             mode=None,
+            attrs=None,
             template=None,
             makedirs=False,
             dir_mode=None,
@@ -1742,6 +1746,16 @@ def managed(name,
             unable to stat the file as it exists on the fileserver and thus
             cannot mirror the mode on the salt-ssh minion
 
+    attrs
+        The attributes to have on this file, e.g. ``a``, ``i``. The attributes
+        can be any or a combination of the following characters:
+        ``acdijstuADST``.
+
+        .. note::
+            This option is **not** supported on Windows.
+
+        .. versionadded: Oxygen
+
     template
         If this setting is applied, the named templating engine will be used to
         render the downloaded file. The following templates are supported:
@@ -1837,6 +1851,7 @@ def managed(name,
                 - user: deployer
                 - group: deployer
                 - mode: 600
+                - attrs: a
                 - contents_pillar: userdata:deployer:id_rsa
 
         This would populate ``/home/deployer/.ssh/id_rsa`` with the contents of
@@ -1959,6 +1974,7 @@ def managed(name,
                 - user: root
                 - group: root
                 - mode: 0440
+                - attrs: i
                 - source: salt://sudoers/files/sudoers.jinja
                 - template: jinja
                 - check_cmd: /usr/sbin/visudo -c -f
@@ -2065,6 +2081,9 @@ def managed(name,
 
     if mode is not None and salt.utils.is_windows():
         return _error(ret, 'The \'mode\' option is not supported on Windows')
+
+    if attrs is not None and salt.utils.is_windows():
+        return _error(ret, 'The \'attrs\' option is not supported on Windows')
 
     try:
         keep_mode = mode.lower() == 'keep'
@@ -2263,11 +2282,11 @@ def managed(name,
         # Check and set the permissions if necessary
         if salt.utils.is_windows():
             ret = __salt__['file.check_perms'](
-                name, ret, win_owner, win_perms, win_deny_perms,
+                name, ret, win_owner, win_perms, win_deny_perms, None,
                 win_inheritance)
         else:
             ret, _ = __salt__['file.check_perms'](
-                name, ret, user, group, mode, follow_symlinks)
+                name, ret, user, group, mode, attrs, follow_symlinks)
         if __opts__['test']:
             ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
@@ -2292,6 +2311,7 @@ def managed(name,
                     user,
                     group,
                     mode,
+                    attrs,
                     template,
                     context,
                     defaults,
@@ -2304,7 +2324,7 @@ def managed(name,
 
                 if salt.utils.is_windows():
                     ret = __salt__['file.check_perms'](
-                        name, ret, win_owner, win_perms, win_deny_perms,
+                        name, ret, win_owner, win_perms, win_deny_perms, None,
                         win_inheritance)
 
             if isinstance(ret['pchanges'], tuple):
@@ -2344,6 +2364,7 @@ def managed(name,
             user,
             group,
             mode,
+            attrs,
             __env__,
             context,
             defaults,
@@ -2382,6 +2403,7 @@ def managed(name,
                 user,
                 group,
                 mode,
+                attrs,
                 __env__,
                 backup,
                 makedirs,
@@ -2451,6 +2473,7 @@ def managed(name,
                 user,
                 group,
                 mode,
+                attrs,
                 __env__,
                 backup,
                 makedirs,
@@ -2868,10 +2891,10 @@ def directory(name,
     if not children_only:
         if salt.utils.is_windows():
             ret = __salt__['file.check_perms'](
-                name, ret, win_owner, win_perms, win_deny_perms, win_inheritance)
+                name, ret, win_owner, win_perms, win_deny_perms, None, win_inheritance)
         else:
             ret, perms = __salt__['file.check_perms'](
-                name, ret, user, group, dir_mode, follow_symlinks)
+                name, ret, user, group, dir_mode, None, follow_symlinks)
 
     errors = []
     if recurse or clean:
@@ -2939,11 +2962,11 @@ def directory(name,
                     try:
                         if salt.utils.is_windows():
                             ret = __salt__['file.check_perms'](
-                                full, ret, win_owner, win_perms, win_deny_perms,
+                                full, ret, win_owner, win_perms, win_deny_perms, None,
                                 win_inheritance)
                         else:
                             ret, _ = __salt__['file.check_perms'](
-                                full, ret, user, group, file_mode, follow_symlinks)
+                                full, ret, user, group, file_mode, None, follow_symlinks)
                     except CommandExecutionError as exc:
                         if not exc.strerror.endswith('does not exist'):
                             errors.append(exc.strerror)
@@ -2954,11 +2977,11 @@ def directory(name,
                     try:
                         if salt.utils.is_windows():
                             ret = __salt__['file.check_perms'](
-                                full, ret, win_owner, win_perms, win_deny_perms,
+                                full, ret, win_owner, win_perms, win_deny_perms, None,
                                 win_inheritance)
                         else:
                             ret, _ = __salt__['file.check_perms'](
-                                full, ret, user, group, dir_mode, follow_symlinks)
+                                full, ret, user, group, dir_mode, None, follow_symlinks)
                     except CommandExecutionError as exc:
                         if not exc.strerror.endswith('does not exist'):
                             errors.append(exc.strerror)
@@ -3315,6 +3338,7 @@ def recurse(name,
             user=user,
             group=group,
             mode='keep' if keep_mode else file_mode,
+            attrs=None,
             template=template,
             makedirs=True,
             context=context,
@@ -5726,6 +5750,7 @@ def serialize(name,
             user=user,
             group=group,
             mode=mode,
+            attrs=None,
             template=None,
             context=None,
             defaults=None,
@@ -5755,6 +5780,7 @@ def serialize(name,
                                         user=user,
                                         group=group,
                                         mode=mode,
+                                        attrs=None,
                                         saltenv=__env__,
                                         backup=backup,
                                         makedirs=makedirs,
