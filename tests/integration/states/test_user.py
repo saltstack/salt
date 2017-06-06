@@ -128,7 +128,8 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         group_name = grp.getgrgid(ret['gid']).gr_name
 
-        self.assertTrue(os.path.isdir(self.user_home))
+        if not salt.utils.is_darwin():
+            self.assertTrue(os.path.isdir(self.user_home))
         if grains['os_family'] in ('Suse',):
             self.assertEqual(group_name, 'users')
         elif grains['os_family'] == 'MacOS':
@@ -152,7 +153,8 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         group_name = grp.getgrgid(ret['gid']).gr_name
 
-        self.assertTrue(os.path.isdir(self.user_home))
+        if not salt.utils.is_darwin():
+            self.assertTrue(os.path.isdir(self.user_home))
         self.assertEqual(group_name, self.user_name)
         ret = self.run_state('user.absent', name=self.user_name)
         self.assertSaltTrueReturn(ret)
