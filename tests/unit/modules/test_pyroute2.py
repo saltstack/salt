@@ -1,18 +1,10 @@
 # -*- coding: UTF-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
-# Import Salt libs
+from tests.support.unit import TestCase
+from tests.support.unit import skipIf
 from salt.beacons.network_settings import ATTRS
-
-# Import Third Party libs
 try:
     from pyroute2 import IPDB
     HAS_PYROUTE2 = True
@@ -33,8 +25,3 @@ class Pyroute2TestCase(TestCase):
                 # ipdb.interfaces[1] is an interface with index 1,
                 # that is the loopback interface.
                 self.assertIn(attr, ipdb.interfaces[1])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(Pyroute2TestCase, needs_daemon=False)
