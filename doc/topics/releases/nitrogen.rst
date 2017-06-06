@@ -266,6 +266,82 @@ As well as from salt-api:
 
     {"return": [{"jerry": {"jid": "20170520151531477653", "retcode": 1, "ret": ""}}]}
 
+Jinja
+=====
+
+Filters
+-------
+
+New filters in Nitrogen:
+
+- :jinja_ref:`to_bool`
+- :jinja_ref:`exactly_n_true`
+- :jinja_ref:`exactly_one_true`
+- :jinja_ref:`quote`
+- :jinja_ref:`regex_search`
+- :jinja_ref:`regex_match`
+- :jinja_ref:`uuid`
+- :jinja_ref:`is_list`
+- :jinja_ref:`is_iter`
+- :jinja_ref:`min`
+- :jinja_ref:`max`
+- :jinja_ref:`avg`
+- :jinja_ref:`union`
+- :jinja_ref:`intersect`
+- :jinja_ref:`difference`
+- :jinja_ref:`symmetric_difference`
+- :jinja_ref:`is_sorted`
+- :jinja_ref:`compare_lists`
+- :jinja_ref:`compare_dicts`
+- :jinja_ref:`is_hex`
+- :jinja_ref:`contains_whitespace`
+- :jinja_ref:`substring_in_list`
+- :jinja_ref:`check_whitelist_blacklist`
+- :jinja_ref:`date_format`
+- :jinja_ref:`str_to_num`
+- :jinja_ref:`to_bytes`
+- :jinja_ref:`json_decode_list`
+- :jinja_ref:`json_decode_dict`
+- :jinja_ref:`rand_str`
+- :jinja_ref:`md5`
+- :jinja_ref:`sha256`
+- :jinja_ref:`sha512`
+- :jinja_ref:`base64_encode`
+- :jinja_ref:`base64_decode`
+- :jinja_ref:`hmac`
+- :jinja_ref:`http_query`
+- :jinja_ref:`is_ip`
+- :jinja_ref:`is_ipv4`
+- :jinja_ref:`is_ipv6`
+- :jinja_ref:`ipaddr`
+- :jinja_ref:`ipv4`
+- :jinja_ref:`ipv6`
+- :jinja_ref:`network_hosts`
+- :jinja_ref:`network_size`
+- :jinja_ref:`gen_mac`
+- :jinja_ref:`mac_str_to_bytes`
+- :jinja_ref:`dns_check`
+- :jinja_ref:`is_text_file`
+- :jinja_ref:`is_binary_file`
+- :jinja_ref:`is_empty_file`
+- :jinja_ref:`file_hashsum`
+- :jinja_ref:`list_files`
+- :jinja_ref:`path_join`
+- :jinja_ref:`which`
+
+Logs
+----
+
+Another new feature - although not limited to Jinja only -
+is being able to log debug messages directly from the template:
+
+.. code-block:: jinja
+
+  {%- do salt.log.error('logging from jinja') -%}
+
+See the :jinja_ref:`logs` paragraph.
+
+
 Network Automation
 ==================
 
