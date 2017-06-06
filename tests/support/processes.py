@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :copyright: © 2017 by the SaltStack Team, see AUTHORS for more details.
+    :copyright: Copyright 2017 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 
 
