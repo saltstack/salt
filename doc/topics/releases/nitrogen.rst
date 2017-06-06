@@ -580,7 +580,6 @@ States
 - :mod:`salt.states.netyang <salt.states.netyang>`
 - :mod:`salt.states.nix <salt.states.nix>`
 - :mod:`salt.states.pdbedit <salt.states.pdbedit>`
-- :mod:`salt.states.service <salt.states.service>`
 - :mod:`salt.states.solrcloud <salt.states.solrcloud>`
 - :mod:`salt.states.statuspage <salt.states.statuspage>`
 - :mod:`salt.states.vault <salt.states.vault>`
