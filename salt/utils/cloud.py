@@ -77,6 +77,7 @@ from salt.exceptions import (
 
 # Import third party libs
 import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin,W0611
 from jinja2 import Template
 import yaml
 
@@ -888,7 +889,7 @@ def validate_windows_cred(host,
         host
     )
 
-    for i in xrange(retries):
+    for i in range(retries):
         ret_code = win_cmd(
             cmd,
             logging_command=logging_cmd
