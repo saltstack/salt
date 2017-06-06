@@ -41,6 +41,11 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
     if not pub_data:
         return pub_data
 
+    log.debug(
+        'manage runner will ping the following minion(s): %s',
+        ', '.join(sorted(pub_data['minions']))
+    )
+
     returned = set()
     for fn_ret in client.get_cli_event_returns(
             pub_data['jid'],
@@ -50,13 +55,16 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
             tgt_type,
             gather_job_timeout=gather_job_timeout):
 
+        log.debug('fn_ret: %s', fn_ret)
         if fn_ret:
             for mid, _ in six.iteritems(fn_ret):
+                log.debug('minion \'%s\' returned from ping', mid)
                 returned.add(mid)
 
-    not_returned = set(pub_data['minions']) - returned
+    not_returned = sorted(set(pub_data['minions']) - returned)
+    returned = sorted(returned)
 
-    return list(returned), list(not_returned)
+    return returned, not_returned
 
 
 def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):
