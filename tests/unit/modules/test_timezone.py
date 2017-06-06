@@ -309,8 +309,11 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         # Incomplete
+        hwclock = 'localtime'
+        if not os.path.isfile('/etc/environment'):
+            hwclock = 'UTC'
         with patch.dict(timezone.__grains__, {'os_family': ['AIX']}):
-            assert timezone.get_hwclock() == 'localtime'
+            assert timezone.get_hwclock() == hwclock
 
     @patch('salt.utils.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
