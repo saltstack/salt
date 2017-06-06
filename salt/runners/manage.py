@@ -55,7 +55,6 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
             tgt_type,
             gather_job_timeout=gather_job_timeout):
 
-        log.debug('fn_ret: %s', fn_ret)
         if fn_ret:
             for mid, _ in six.iteritems(fn_ret):
                 log.debug('minion \'%s\' returned from ping', mid)
