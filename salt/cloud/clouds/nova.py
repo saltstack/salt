@@ -715,7 +715,10 @@ def request_instance(vm_=None, call=None):
         if floating_ip_conf.get('ip_address', None) is not None:
             ip_address = floating_ip_conf.get('ip_address', None)
             # DEBUG ONLY
-            for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
+            floating_ips_list = conn.floating_ip_list()
+            log.debug("Default List:")
+            log.debug(floating_ips_list)
+            for fl_ip, opts in six.iteritems(floating_ips_list):
                 if opts['fixed_ip'] is None and opts['pool'] == 'External-net':
                     floating_ip = fl_ip
                     log.debug("Default:")
@@ -727,9 +730,13 @@ def request_instance(vm_=None, call=None):
                 log.debug("New:")
                 log.debug(floating_ip)
             except Exception as err:
-                log.error('Specified Fixed Floating IP does not exist or is not yet allocated')
-                # Trigger a failure in the wait for IP function
-                return False
+                raise SaltCloudSystemExit(
+                    'Error assigning floating_ip for {0} on Nova\n\n'
+                    'The following exception was thrown by libcloud when trying to '
+                    'assign a floating ip: {1}\n'.format(
+                        vm_['name'], exc
+                    )
+                )
 
         else:
             pool = floating_ip_conf.get('pool', 'public')
@@ -790,7 +797,7 @@ def request_instance(vm_=None, call=None):
                     vm_['name'], exc
                 )
             )
-        
+
     if not vm_.get('password', None):
         vm_['password'] = data.extra.get('password', '')
 
