@@ -25,7 +25,7 @@ The methodologies for network automation have been introduced in
 minions:
 
 - :mod:`NAPALM proxy <salt.proxy.napalm>`
-- :mod:`Junos <salt.proxy.junos>`
+- :mod:`Junos proxy<salt.proxy.junos>`
 - :mod:`Cisco NXOS <salt.proxy.nxos>`
 - :mod:`Cisco NOS <salt.proxy.cisconso>`
 
@@ -40,7 +40,7 @@ and the interaction with the network device does not rely on a particular vendor
 
 .. image:: /_static/napalm_logo.png
 
-Bgeginning with Nitrogen, the NAPALM modules have been transformed so they can
+Beginning with Nitrogen, the NAPALM modules have been transformed so they can
 run in both proxy and regular minions. That means, if the operating system
 allows, the salt-minion package can be installed directly on the network gear.
 The interface between the network operating system and Salt in that case would
@@ -410,6 +410,224 @@ multi-vendor network:
 
 Besides CLI, the state can be scheduled or executed when triggered by a certain
 event.
+
+JUNOS
+-----
+
+Juniper has developed a Junos specific proxy infrastructure which allows
+remote execution and configuration management of Junos devices without
+having to install SaltStack on the device. The infrastructure includes:
+
+- :mod:`Junos proxy <salt.proxy.junos>`
+- :mod:`Junos execution module <salt.modules.junos>`
+- :mod:`Junos state module <salt.states.junos>`
+- :mod:`Junos syslog engine <salt.engines.junos_syslog>`
+
+The execution and state modules are implemented using junos-eznc (PyEZ).
+Junos PyEZ is a microframework for Python that enables you to remotely manage
+and automate devices running the Junos operating system.
+
+
+Getting started
+###############
+
+Install PyEZ on the system which will run the Junos proxy minion.
+It is required to run Junos specific modules.
+
+.. code-block:: shell
+
+    pip install junos-eznc
+
+Next, set the master of the proxy minions.
+
+``/etc/salt/proxy``
+
+.. code-block:: yaml
+
+    master: <master_ip>
+
+Add the details of the Junos device. Device details are usually stored in
+salt pillars. If the you do not wish to store credentials in the pillar,
+one can setup passwordless ssh.
+
+``/srv/pillar/vmx_details.sls``
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: junos
+      host: <hostip>
+      username: user
+      passwd: secret123
+
+Map the pillar file to the proxy minion. This is done in the top file.
+
+``/srv/pillar/top.sls``
+
+.. code-block:: yaml
+
+    base:
+      vmx:
+        - vmx_details
+
+.. note::
+
+    Before starting the Junos proxy make sure that netconf is enabled on the
+    Junos device. This can be done by adding the following configuration on
+    the Junos device.
+
+    .. code-block:: shell
+
+        set system services netconf ssh
+
+Start the salt master.
+
+.. code-block:: bash
+
+    salt-master -l debug
+
+
+Then start the salt proxy.
+
+.. code-block:: bash
+
+    salt-proxy --proxyid=vmx -l debug
+
+Once the master and junos proxy minion have started, we can run execution
+and state modules on the proxy minion. Below are few examples.
+
+CLI examples
+############
+
+For detailed documentation of all the junos execution modules refer:
+:mod:`Junos execution module <salt.modules.junos>`
+
+Display device facts.
+
+.. code-block:: bash
+
+    $ sudo salt 'vmx' junos.facts
+
+
+Refresh the Junos facts. This function will also refresh the facts which are
+stored in salt grains. (Junos proxy stores Junos facts in the salt grains)
+
+.. code-block:: bash
+
+    $ sudo salt 'vmx' junos.facts_refresh
+
+
+Call an RPC.
+
+.. code-block:: bash
+
+    $ sudo salt 'vmx' junos.rpc 'get-interface-information' '/var/log/interface-info.txt' terse=True
+
+
+Install config on the device.
+
+.. code-block:: bash
+
+    $ sudo salt 'vmx' junos.install_config 'salt://my_config.set'
+
+
+Shutdown the junos device.
+
+.. code-block:: bash
+
+    $ sudo salt 'vmx' junos.shutdown shutdown=True in_min=10
+
+
+State file examples
+###################
+
+For detailed documentation of all the junos state modules refer:
+:mod:`Junos state module <salt.states.junos>`
+
+Executing an RPC on Junos device and storing the output in a file.
+
+``/srv/salt/rpc.sls``
+
+.. code-block:: yaml
+
+    get-interface-information:
+        junos:
+          - rpc
+          - dest: /home/user/rpc.log
+          - interface_name: lo0
+
+
+Lock the junos device, load the configuration, commit it and unlock
+the device.
+
+``/srv/salt/load.sls``
+
+.. code-block:: yaml
+
+    lock the config:
+      junos.lock
+
+    salt://configs/my_config.set:
+      junos:
+        - install_config
+        - timeout: 100
+        - diffs_file: 'var/log/diff'
+
+    commit the changes:
+      junos:
+        - commit
+
+    unlock the config:
+      junos.unlock
+
+
+According to the device personality install appropriate image on the device.
+
+``/srv/salt/image_install.sls``
+
+.. code-block:: jinja
+
+    {% if grains['junos_facts']['personality'] == MX %}
+    salt://images/mx_junos_image.tgz:
+      junos:
+        - install_os
+        - timeout: 100
+        - reboot: True
+    {% elif grains['junos_facts']['personality'] == EX %}
+    salt://images/ex_junos_image.tgz:
+      junos:
+        - install_os
+        - timeout: 150
+    {% elif grains['junos_facts']['personality'] == SRX %}
+    salt://images/srx_junos_image.tgz:
+      junos:
+        - install_os
+        - timeout: 150
+    {% endif %}
+
+Junos Syslog Engine
+###################
+
+:mod:`Junos Syslog Engine <salt.engines.junos_syslog>` is a Salt engine
+which receives data from various Junos devices, extracts event information and
+forwards it on the master/minion event bus. To start the engine on the salt
+master, add the following configuration in the master config file.
+The engine can also run on the salt minion.
+
+``/etc/salt/master``
+
+.. code-block:: yaml
+
+    engines:
+      - junos_syslog:
+          port: xxx
+
+For junos_syslog engine to receive events, syslog must be set on the Junos device.
+This can be done via following configuration:
+
+.. code-block:: shell
+
+    set system syslog host <ip-of-the-salt-device> port xxx any any
 
 .. toctree::
     :maxdepth: 2

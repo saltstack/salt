@@ -34,6 +34,10 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
 
         uinfo = self.run_function('user.info', [user])
 
+        if salt.utils.is_darwin():
+            # MacOS does not support createhome with user.present
+            self.assertSaltTrueReturn(self.run_state('file.directory', name=uinfo['home'], user=user, group=uinfo['groups'][0], dir_mode=755))
+
         venv_dir = os.path.join(
             RUNTIME_VARS.SYS_TMP_DIR, 'issue-1959-virtualenv-runas'
         )
