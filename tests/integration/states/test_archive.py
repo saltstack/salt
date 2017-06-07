@@ -99,10 +99,13 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test archive.extracted with user and group set to "root"
         '''
+        r_group = 'root'
+        if salt.utils.is_darwin():
+            r_group = 'wheel'
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
                              source=self.archive_tar_source, archive_format='tar',
                              source_hash=ARCHIVE_TAR_HASH,
-                             user='root', group='root')
+                             user='root', group=r_group)
         log.debug('ret = %s', ret)
         if 'Timeout' in ret:
             self.skipTest('Timeout talking to local tornado server.')

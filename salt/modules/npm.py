@@ -252,7 +252,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
     return True
 
 
-def list_(pkg=None, dir=None, runas=None, env=None):
+def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     '''
     List installed NPM packages.
 
@@ -278,6 +278,11 @@ def list_(pkg=None, dir=None, runas=None, env=None):
 
         .. versionadded:: 2014.7.0
 
+    depth
+        Limit the depth of the packages listed
+
+        .. versionadded:: tbd
+
     CLI Example:
 
     .. code-block:: bash
@@ -296,6 +301,11 @@ def list_(pkg=None, dir=None, runas=None, env=None):
 
     if not dir:
         cmd.append('--global')
+
+    if depth is not None:
+        if not isinstance(depth, (int, float)):
+            raise salt.exceptions.SaltInvocationError('Error: depth {} must be a number'.format(depth))
+        cmd.append('--depth={}'.format(int(depth)))
 
     if pkg:
         # Protect against injection
