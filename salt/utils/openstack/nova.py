@@ -1145,7 +1145,14 @@ class SaltNova(object):
         floating_ips = nt_ks.floating_ips.list()
         for floating_ip in floating_ips:
             if floating_ip.ip == ip:
-                return floating_ip
+                response = {
+                    'ip': floating_ip.ip,
+                    'fixed_ip': floating_ip.fixed_ip,
+                    'id': floating_ip.id,
+                    'instance_id': floating_ip.instance_id,
+                    'pool': floating_ip.pool
+                }
+                return response
         return {}
 
     def floating_ip_create(self, pool=None):

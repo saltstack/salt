@@ -775,7 +775,7 @@ def request_instance(vm_=None, call=None):
             raise SaltCloudSystemExit(
                 'Error assigning floating_ip for {0} on Nova\n\n'
                 'The following exception was thrown by libcloud when trying to '
-                'assing a floating ip: {1}\n'.format(
+                'assign a floating ip: {1}\n'.format(
                     vm_['name'], exc
                 )
             )
