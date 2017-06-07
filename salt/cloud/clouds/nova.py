@@ -714,8 +714,17 @@ def request_instance(vm_=None, call=None):
         floating_ip = None
         if floating_ip_conf.get('ip_address', None) is not None:
             ip_address = floating_ip_conf.get('ip_address', None)
+            ## DEBUG ONLY
+            for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
+                if opts['fixed_ip'] is None and opts['pool'] == 'External-net':
+                    floating_ip = fl_ip
+                    log.debug("Default:")
+                    log.debug(floating_ip)
+            ## END DEBUG
             try:
                 floating_ip = conn.floating_ip_show(ip_address)
+                log.debug("New:")
+                log.debug(floating_ip)
             except Exception as err:
                 log.error('Specified Fixed Floating IP does not exist or is not yet allocated')
                 # Trigger a failure in the wait for IP function
@@ -726,6 +735,7 @@ def request_instance(vm_=None, call=None):
             for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
                 if opts['fixed_ip'] is None and opts['pool'] == pool:
                     floating_ip = fl_ip
+                    log.debug
                     break
             if floating_ip is None:
                 floating_ip = conn.floating_ip_create(pool)['ip']
