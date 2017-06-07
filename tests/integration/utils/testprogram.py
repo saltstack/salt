@@ -183,7 +183,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
     @property
     def start_pid(self):
-        '''PID of the called script prior to deamonizing.'''
+        '''PID of the called script prior to daemonizing.'''
         return self.process.pid if self.process else None
 
     @property
@@ -771,11 +771,11 @@ class TestDaemon(TestProgram):
         if not self._shutdown:
             try:
                 pid = self.wait_for_daemon_pid(timeout)
-                terminate_process(pid=pid)
+                terminate_process(pid=pid, kill_children=True)
             except TimeoutError:
                 pass
         if self.process:
-            terminate_process(pid=self.process.pid)
+            terminate_process(pid=self.process.pid, kill_children=True)
             self.process.wait()
             self.process = None
         self._shutdown = True

@@ -5,6 +5,7 @@ Module for running arbitrary tests
 from __future__ import absolute_import
 
 # Import Python libs
+import logging
 import os
 import sys
 import time
@@ -26,6 +27,8 @@ __func_alias__ = {
     'true_': 'true',
     'false_': 'false'
 }
+
+log = logging.getLogger(__name__)
 
 
 @depends('non_existantmodulename')
@@ -112,6 +115,7 @@ def ping():
     '''
 
     if not salt.utils.is_proxy():
+        log.debug('test.ping received for minion \'%s\'', __opts__.get('id'))
         return True
     else:
         ping_cmd = __opts__['proxy']['proxytype'] + '.ping'

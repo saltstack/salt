@@ -784,10 +784,13 @@ def _find_install_targets(name=None,
             ' and are at the desired version' if version_spec and not sources
             else ''
         )
-        return {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': msg}
+        ret = {'name': name,
+               'changes': {},
+               'result': True,
+               'comment': msg}
+        if warnings:
+            ret.setdefault('warnings', []).extend(warnings)
+        return ret
 
     return (desired, targets, to_unpurge, to_reinstall, altered_files,
             warnings, was_refreshed)
@@ -1398,7 +1401,7 @@ def installed(
        ``3010`` is the only recognized exit code,
        but this is subject to future refinement.
        The value of this param
-       defaults to ``True``. This paramater has no effect
+       defaults to ``True``. This parameter has no effect
        on non-Windows systems.
 
        .. versionadded:: 2016.11.0
@@ -1529,7 +1532,7 @@ def installed(
                'result': False,
                'comment': 'lowpkg.unpurge not implemented'}
         if warnings:
-            ret['comment'] += '.' + '. '.join(warnings) + '.'
+            ret.setdefault('warnings', []).extend(warnings)
         return ret
 
     # Remove any targets not returned by _find_install_targets
@@ -1592,7 +1595,7 @@ def installed(
                'result': None,
                'comment': '\n'.join(comment)}
         if warnings:
-            ret['comment'] += '\n' + '. '.join(warnings) + '.'
+            ret.setdefault('warnings', []).extend(warnings)
         return ret
 
     changes = {'installed': {}}
@@ -1627,7 +1630,7 @@ def installed(
                 ret['comment'] = ('An error was encountered while installing '
                                   'package(s): {0}'.format(exc))
             if warnings:
-                ret['comment'] += '\n\n' + '. '.join(warnings) + '.'
+                ret.setdefault('warnings', []).extend(warnings)
             return ret
 
         if refresh:
@@ -1662,7 +1665,7 @@ def installed(
                            'result': False,
                            'comment': '\n'.join(comment)}
                     if warnings:
-                        ret['comment'] += '.' + '. '.join(warnings) + '.'
+                        ret.setdefault('warnings', []).extend(warnings)
                     return ret
                 else:
                     if 'result' in hold_ret and not hold_ret['result']:
@@ -1673,7 +1676,7 @@ def installed(
                                           'holding/unholding package(s): {0}'
                                           .format(hold_ret['comment'])}
                         if warnings:
-                            ret['comment'] += '.' + '. '.join(warnings) + '.'
+                            ret.setdefault('warnings', []).extend(warnings)
                         return ret
                     else:
                         modified_hold = [hold_ret[x] for x in hold_ret
@@ -1863,7 +1866,7 @@ def installed(
            'result': result,
            'comment': '\n'.join(comment)}
     if warnings:
-        ret['comment'] += '\n' + '. '.join(warnings) + '.'
+        ret.setdefault('warnings', []).extend(warnings)
     return ret
 
 
@@ -2249,7 +2252,7 @@ def latest(
         for the remainder of the current boot session. For the time being,
         ``3010`` is the only recognized exit code, but this
         is subject to future refinement. The value of this param
-        defaults to ``True``. This paramater has no effect on
+        defaults to ``True``. This parameter has no effect on
         non-Windows systems.
 
         .. versionadded:: 2016.11.0

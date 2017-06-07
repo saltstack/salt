@@ -2648,7 +2648,7 @@ def create(vm_):
             'event',
             'requesting instance',
             'salt/cloud/{0}/requesting'.format(vm_['name']),
-            args=__utils__['cloud.filter_event']('requesting', event_kwargs, event_kwargs.keys()),
+            args=__utils__['cloud.filter_event']('requesting', event_kwargs, list(event_kwargs)),
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
@@ -2657,7 +2657,7 @@ def create(vm_):
             log.info("Creating {0} from {1}({2})".format(vm_['name'], clone_type, vm_['clonefrom']))
 
             if datastore and not datastore_ref and datastore_cluster_ref:
-                # datastore cluster has been specified so apply Storage DRS recomendations
+                # datastore cluster has been specified so apply Storage DRS recommendations
                 pod_spec = vim.storageDrs.PodSelectionSpec(storagePod=datastore_cluster_ref)
 
                 storage_spec = vim.storageDrs.StoragePlacementSpec(

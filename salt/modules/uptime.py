@@ -56,7 +56,7 @@ def create(name, **params):
         raise CommandExecutionError(
             'request to uptime failed : {0}'.format(req.reason)
         )
-    log.debug('[uptime] PUT request successfull')
+    log.debug('[uptime] PUT request successful')
     return req.json()['_id']
 
 
@@ -83,7 +83,7 @@ def delete(name):
         raise CommandExecutionError(
             'request to uptime failed : {0}'.format(req.reason)
         )
-    log.debug('[uptime] DELETE request successfull')
+    log.debug('[uptime] DELETE request successful')
     return True
 
 
