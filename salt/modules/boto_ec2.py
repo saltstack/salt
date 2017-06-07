@@ -1900,7 +1900,7 @@ def delete_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=N
 
 
 def detach_volume(volume_id, instance_id=None, device=None, force=False,
-                  region=None, key=None, keyid=None, profile=None):
+                  wait_for_detachement=False, region=None, key=None, keyid=None, profile=None):
     '''
     Detach an EBS volume from an EC2 instance.
 
@@ -1918,6 +1918,8 @@ def detach_volume(volume_id, instance_id=None, device=None, force=False,
                  only as a last resort to detach a volume from a failed instance. The instance
                  will not have an opportunity to flush file system caches nor file system meta data.
                  If you use this option, you must perform file system check and repair procedures.
+    wait_for_detachement
+       (bool) - Whether or not to wait for volume detachement to complete.
 
     returns
         (bool) - True on success, False on failure.
@@ -1931,7 +1933,12 @@ def detach_volume(volume_id, instance_id=None, device=None, force=False,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        return conn.detach_volume(volume_id, instance_id, device, force)
+        ret = conn.detach_volume(volume_id, instance_id, device, force)
+        if ret and wait_for_detachement and not _wait_for_volume_available(conn, volume_id):
+            timeout_msg = 'Timed out waiting for the volume status "available".'
+            log.error(timeout_msg)
+            return False
+        return ret
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
@@ -1972,3 +1979,111 @@ def delete_volume(volume_id, instance_id=None, device=None, force=False,
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
+
+
+def _wait_for_volume_available(conn, volume_id, retries=5, interval=5):
+    i = 0
+    while True:
+        i = i + 1
+        time.sleep(interval)
+        vols = conn.get_all_volumes(volume_ids=[volume_id])
+        if len(vols) != 1:
+            return False
+        vol = vols[0]
+        if vol.status == 'available':
+            return True
+        if i > retries:
+            return False
+
+
+def attach_volume(volume_id, instance_id, device,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Attach an EBS volume to an EC2 instance.
+    ..
+
+    volume_id
+        (string) – The ID of the EBS volume to be attached.
+    instance_id
+        (string) – The ID of the EC2 instance to attach the volume to.
+    device
+        (string) – The device on the instance through which the volume is exposed (e.g. /dev/sdh)
+
+    returns
+        (bool) - True on success, False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.attach_volume vol-12345678 i-87654321 /dev/sdh
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        return conn.attach_volume(volume_id, instance_id, device)
+    except boto.exception.BotoServerError as error:
+        log.error(error)
+        return False
+
+
+def create_volume(zone_name, size=None, snapshot_id=None, volume_type=None,
+                  iops=None, encrypted=False, kms_key_id=None, wait_for_creation=False,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Create an EBS volume to an availability zone.
+
+    ..
+
+    zone_name
+        (string) – The Availability zone name of the EBS volume to be created.
+    size
+        (int) –  The size of the new volume, in GiB. If you're creating the
+                 volume from a snapshot and don't specify a volume size, the
+                 default is the snapshot size.
+    snapshot_id
+        (string) –  The snapshot ID from which the new volume will be created.
+    volume_type
+        (string) -  The type of the volume. Valid volume types for AWS can be found here:
+                    http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
+    iops
+        (int) - The provisioned IOPS you want to associate with this volume.
+    encrypted
+        (bool) - Specifies whether the volume should be encrypted.
+    kms_key_id
+        (string) - If encrypted is True, this KMS Key ID may be specified to
+                   encrypt volume with this key
+                   e.g.: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
+    wait_for_creation
+        (bool) - Whether or not to wait for volume creation to complete.
+
+    returns
+        (string) - created volume id on success, error message on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.create_volume us-east-1a size=10
+        salt-call boto_ec2.create_volume us-east-1a snapshot_id=snap-0123abcd
+
+    '''
+    if size is None and snapshot_id is None:
+        raise SaltInvocationError(
+            'Size must be provided if not created from snapshot.'
+        )
+    ret = {}
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        vol = conn.create_volume(size=size, zone=zone_name, snapshot=snapshot_id,
+                                 volume_type=volume_type, iops=iops, encrypted=encrypted,
+                                 kms_key_id=kms_key_id)
+        if wait_for_creation and not _wait_for_volume_available(conn, vol.id):
+            timeout_msg = 'Timed out waiting for the volume status "available".'
+            log.error(timeout_msg)
+            ret['error'] = timeout_msg
+        else:
+            ret['result'] = vol.id
+    except boto.exception.BotoServerError as error:
+        ret['error'] = __utils__['boto.get_error'](error)
+    return ret

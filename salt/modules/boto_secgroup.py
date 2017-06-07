@@ -597,7 +597,7 @@ def set_tags(tags,
         a dict of key:value pair of tags to set on the security group
 
     name
-        the name of the security gruop
+        the name of the security group
 
     group_id
         the group id of the security group (in lie of a name/vpc combo)
