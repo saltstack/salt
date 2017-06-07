@@ -711,14 +711,24 @@ def request_instance(vm_=None, call=None):
                                                      search_global=False,
                                                      default={})
     if floating_ip_conf.get('auto_assign', False):
-        pool = floating_ip_conf.get('pool', 'public')
         floating_ip = None
-        for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
-            if opts['fixed_ip'] is None and opts['pool'] == pool:
-                floating_ip = fl_ip
-                break
-        if floating_ip is None:
-            floating_ip = conn.floating_ip_create(pool)['ip']
+        if floating_ip_conf.get('ip_address', None) is not None:
+            ip_address = floating_ip_conf.get('ip_address', None)
+            try:
+                floating_ip = conn.floating_ip_show(ip_address)
+            except Exception as err:
+                log.error('Specified Fixed Floating IP does not exist or is not yet allocated')
+                # Trigger a failure in the wait for IP function
+                return False
+
+        else:
+            pool = floating_ip_conf.get('pool', 'public')
+            for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
+                if opts['fixed_ip'] is None and opts['pool'] == pool:
+                    floating_ip = fl_ip
+                    break
+            if floating_ip is None:
+                floating_ip = conn.floating_ip_create(pool)['ip']
 
         def __query_node_data(vm_):
             try:
@@ -769,7 +779,7 @@ def request_instance(vm_=None, call=None):
                     vm_['name'], exc
                 )
             )
-
+        
     if not vm_.get('password', None):
         vm_['password'] = data.extra.get('password', '')
 
