@@ -734,7 +734,7 @@ def request_instance(vm_=None, call=None):
                     'Error assigning floating_ip for {0} on Nova\n\n'
                     'The following exception was thrown by libcloud when trying to '
                     'assign a floating ip: {1}\n'.format(
-                        vm_['name'], exc
+                        vm_['name'], err
                     )
                 )
 
