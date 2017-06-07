@@ -224,19 +224,39 @@ def force_reload(name):
 
 def status(name, sig=None):
     '''
-    Return the status for a service, pass a signature to use to find
-    the service via ps
+    Return the status for a service.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
+
+    Args:
+        name (str): The name of the service to check
+        sig (str): Signature to use to find the service via ps
+
+    Returns:
+        bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status <service name>
+        salt '*' service.status <service name> [service signature]
     '''
     if sig:
         return bool(__salt__['status.pid'](sig))
-    cmd = _service_cmd(name, 'status')
-    return not __salt__['cmd.retcode'](cmd, ignore_retcode=True)
+
+    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(get_all(), name)
+    else:
+        services = [name]
+    results = {}
+    for service in services:
+        cmd = _service_cmd(service, 'status')
+        results[service] = not __salt__['cmd.retcode'](cmd, ignore_retcode=True)
+    if contains_globbing:
+        return results
+    return results[name]
 
 
 def _osrel():

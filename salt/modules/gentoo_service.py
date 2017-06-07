@@ -236,9 +236,17 @@ def zap(name):
 
 def status(name, sig=None):
     '''
-    Return the status for a service, returns the PID or an empty string if the
-    service is running or not, pass a signature to use to find the service via
-    ps
+    Return the status for a service.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
+
+    Args:
+        name (str): The name of the service to check
+        sig (str): Signature to use to find the service via ps
+
+    Returns:
+        bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
@@ -248,8 +256,21 @@ def status(name, sig=None):
     '''
     if sig:
         return bool(__salt__['status.pid'](sig))
-    cmd = _service_cmd(name, 'status')
-    return not _ret_code(cmd)
+
+    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(get_all(), name)
+    else:
+        services = [name]
+    results = {}
+    for service in services:
+        cmd = _service_cmd(service, 'status')
+        results[service] = not _ret_code(cmd)
+    if contains_globbing:
+        return results
+    return results[name]
+
+
 
 
 def enable(name, **kwargs):

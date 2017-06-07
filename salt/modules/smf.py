@@ -226,8 +226,17 @@ def reload_(name):
 
 def status(name, sig=None):
     '''
-    Return the status for a service, returns a bool whether the service is
-    running.
+    Return the status for a service.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
+
+    Args:
+        name (str): The name of the service to check
+        sig (str): Not implemented
+
+    Returns:
+        bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
@@ -235,12 +244,19 @@ def status(name, sig=None):
 
         salt '*' service.status <service name>
     '''
-    cmd = '/usr/bin/svcs -H -o STATE {0}'.format(name)
-    line = __salt__['cmd.run'](cmd, python_shell=False)
-    if line == 'online':
-        return True
+    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(get_all(), name)
     else:
-        return False
+        services = [name]
+    results = {}
+    for service in services:
+        cmd = '/usr/bin/svcs -H -o STATE {0}'.format(service)
+        line = __salt__['cmd.run'](cmd, python_shell=False)
+        results[service] = line == 'online':
+    if contains_globbing:
+        return results
+    return results[name]
 
 
 def enable(name, **kwargs):

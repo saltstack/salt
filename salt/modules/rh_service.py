@@ -472,19 +472,29 @@ def reload_(name):
 
 def status(name, sig=None):
     '''
-    Returns a bool indicating whether the service is running.
+    Return the status for a service.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
 
-    If ``name`` contains globbing characters (such as ``*``, ``?``, or anything between brackets),
-    returns a dict name/bool instead of a simple bool.
+    Args:
+        name (str): The name of the service to check
+        sig (str): Signature to use to find the service via ps
+
+    Returns:
+        bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status sshd
-        salt '*' service.status '*'
+        salt '*' service.status <service name> [service signature]
     '''
-    if re.search('\*|\?|\[.+\]', name):
+    if sig:
+        return bool(__salt__['status.pid'](sig))
+
+    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:
         services = [name]
@@ -493,11 +503,10 @@ def status(name, sig=None):
         if _service_is_upstart(service):
             cmd = 'status {0}'.format(service)
             results[service] = 'start/running' in __salt__['cmd.run'](cmd, python_shell=False)
-        if sig:
-            results[service] = bool(__salt__['status.pid'](sig))
-        cmd = '/sbin/service {0} status'.format(service)
-        results[service] = __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=True) == 0
-    if re.search('\*|\?|\[.+\]', name):
+        else:
+            cmd = '/sbin/service {0} status'.format(service)
+            results[service] = __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=True) == 0
+    if contains_globbing:
         return results
     return results[name]
 
