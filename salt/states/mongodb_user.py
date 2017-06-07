@@ -7,6 +7,10 @@ Management of Mongodb users
     This module requires PyMongo to be installed.
 '''
 
+from __future__ import absolute_import
+
+import salt.utils
+
 # Define the module's virtual name
 __virtualname__ = 'mongodb_user'
 
