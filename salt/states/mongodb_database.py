@@ -10,6 +10,7 @@ from __future__ import absolute_import
 
 import salt.utils
 
+
 def absent(name,
            user=None,
            password=None,
