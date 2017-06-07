@@ -123,7 +123,8 @@ changes on the device(s) firing the event, one is able to
 identify the minion ID, using one of the following alternatives, but not limited to:
 
 - :mod:`Host grains <salt.grains.napalm.host>` to match the event tag
-- :mod:`Hostname grains <salt.grains.napalm.hostname>` to match the IP address in the event data
+- :mod:`Host DNS grain <salt.grains.napalm.host_dns>` to match the IP address in the event data
+- :mod:`Hostname grains <salt.grains.napalm.hostname>` to match the event tag
 - :ref:`Define static grains <static-custom-grains>`
 - :ref:`Write a grains module <writing-grains>`
 - :ref:`Targeting minions using pillar data <targeting-pillar>` -- the user

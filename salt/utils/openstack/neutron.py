@@ -537,12 +537,16 @@ class SaltNeutron(NeutronShell):
 
         return self.network_conn.create_floatingip(body={'floatingip': body})
 
-    def update_floatingip(self, floatingip_id, port):
+    def update_floatingip(self, floatingip_id, port=None):
         '''
-        Updates a floatingip
+        Updates a floatingip, disassociates the floating ip if
+        port is set to `None`
         '''
-        port_id = self._find_port_id(port)
-        body = {'floatingip': {'port_id': port_id}}
+        if port is None:
+            body = {'floatingip': {}}
+        else:
+            port_id = self._find_port_id(port)
+            body = {'floatingip': {'port_id': port_id}}
         return self.network_conn.update_floatingip(
             floatingip=floatingip_id, body=body)
 
