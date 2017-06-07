@@ -473,24 +473,40 @@ def reload_(name, jail=None):
 
 def status(name, sig=None, jail=None):
     '''
-    Return the status for a service (True or False).
-
-    name
-        Name of service
+    Return the status for a service.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
 
     .. versionchanged:: 2016.3.4
 
-    jail: optional jid or jail name
+    Args:
+        name (str): The name of the service to check
+        sig (str): Signature to use to find the service via ps
+
+    Returns:
+        bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status <service name>
+        salt '*' service.status <service name> [service signature]
     '''
     if sig:
         return bool(__salt__['status.pid'](sig))
-    cmd = '{0} {1} onestatus'.format(_cmd(jail), name)
-    return not __salt__['cmd.retcode'](cmd,
-                                       python_shell=False,
-                                       ignore_retcode=True)
+
+    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(get_all(), name)
+    else:
+        services = [name]
+    results = {}
+    for service in services:
+        cmd = '{0} {1} onestatus'.format(_cmd(jail), service)
+        results[service] = not __salt__['cmd.retcode'](cmd,
+                                        python_shell=False,
+                                        ignore_retcode=True)
+    if contains_globbing:
+        return results
+    return results[name]
