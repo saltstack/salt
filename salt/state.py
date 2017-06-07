@@ -1650,27 +1650,18 @@ class State(object):
         errors.extend(req_in_errors)
         return req_in_high, errors
 
-    def _call_parallel_target(self, cdata, low):
+    def _call_parallel_target(self, name, cdata, low):
         '''
         The target function to call that will create the parallel thread/process
         '''
         tag = _gen_tag(low)
         try:
-            ret = self.states[cdata['full']](*cdata['args'],
+            ret = {'start_timestamp': datetime.datetime.now().timestamp()}
+            ret_state = self.states[cdata['full']](*cdata['args'],
                                              **cdata['kwargs'])
+            ret.update(ret_state)
         except Exception:
             trb = traceback.format_exc()
-            # There are a number of possibilities to not have the cdata
-            # populated with what we might have expected, so just be smart
-            # enough to not raise another KeyError as the name is easily
-            # guessable and fallback in all cases to present the real
-            # exception to the user
-            if len(cdata['args']) > 0:
-                name = cdata['args'][0]
-            elif 'name' in cdata['kwargs']:
-                name = cdata['kwargs']['name']
-            else:
-                name = low.get('name', low.get('__id__'))
             ret = {
                 'result': False,
                 'name': name,
@@ -1694,11 +1685,23 @@ class State(object):
         '''
         Call the state defined in the given cdata in parallel
         '''
+        # There are a number of possibilities to not have the cdata
+        # populated with what we might have expected, so just be smart
+        # enough to not raise another KeyError as the name is easily
+        # guessable and fallback in all cases to present the real
+        # exception to the user
+        if len(cdata['args']) > 0:
+            name = cdata['args'][0]
+        elif 'name' in cdata['kwargs']:
+            name = cdata['kwargs']['name']
+        else:
+            name = low.get('name', low.get('__id__'))
+
         proc = salt.utils.process.MultiprocessingProcess(
                 target=self._call_parallel_target,
-                args=(cdata, low))
+                args=(name, cdata, low))
         proc.start()
-        ret = {'name': cdata['args'][0],
+        ret = {'name': name,
                 'result': None,
                 'changes': {},
                 'comment': 'Started in a seperate process',
@@ -2031,12 +2034,17 @@ class State(object):
                                'changes': {}}
                     try:
                         with salt.utils.fopen(ret_cache, 'rb') as fp_:
-                            ret = msgpack.loads(fp_.read())
+                            ret = msgpack.loads(fp_.read(), encoding=__salt_system_encoding__)
                     except (OSError, IOError):
                         ret = {'result': False,
                                'comment': 'Parallel cache failure',
                                'name': running[tag]['name'],
                                'changes': {}}
+                    start = datetime.datetime.fromtimestamp(ret['start_timestamp'])
+                    delta = datetime.datetime.now() - start
+                    duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+
+                    ret['duration'] = duration
                     running[tag].update(ret)
                     running[tag].pop('proc')
                 else:
