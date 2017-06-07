@@ -816,7 +816,7 @@ def create_floatingip(floating_network, port=None, profile=None):
     return conn.create_floatingip(floating_network, port)
 
 
-def update_floatingip(floatingip_id, port, profile=None):
+def update_floatingip(floatingip_id, port=None, profile=None):
     '''
     Updates a floatingIP
 
@@ -827,7 +827,8 @@ def update_floatingip(floatingip_id, port, profile=None):
         salt '*' neutron.update_floatingip network-name port-name
 
     :param floatingip_id: ID of floatingIP
-    :param port: ID or name of port
+    :param port: ID or name of port, to associate floatingip to
+    `None` or do not specify to disassociate the floatingip (Optional)
     :param profile: Profile to build on (Optional)
     :return: Value of updated floating IP information
     '''
