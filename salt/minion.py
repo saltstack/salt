@@ -1538,6 +1538,7 @@ class Minion(MinionBase):
             else:
                 data['ret'] = opts['return']
 
+        log.debug('minion return: %s', ret)
         # TODO: make a list? Seems odd to split it this late :/
         if data['ret'] and isinstance(data['ret'], six.string_types):
             if 'ret_config' in data:
