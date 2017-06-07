@@ -714,21 +714,9 @@ def request_instance(vm_=None, call=None):
         floating_ip = None
         if floating_ip_conf.get('ip_address', None) is not None:
             ip_address = floating_ip_conf.get('ip_address', None)
-            # DEBUG ONLY
-            floating_ips_list = conn.floating_ip_list()
-            log.debug("Default List:")
-            log.debug(floating_ips_list)
-            for fl_ip, opts in six.iteritems(floating_ips_list):
-                if opts['fixed_ip'] is None and opts['pool'] == 'External-net':
-                    floating_ip = fl_ip
-                    log.debug("Default:")
-                    log.debug(floating_ip)
-            # END DEBUG
             try:
                 fl_ip_dict = conn.floating_ip_show(ip_address)
                 floating_ip = fl_ip_dict['ip']
-                log.debug("New:")
-                log.debug(floating_ip)
             except Exception as err:
                 raise SaltCloudSystemExit(
                     'Error assigning floating_ip for {0} on Nova\n\n'
