@@ -1084,8 +1084,6 @@ class AESFuncs(object):
                 )
             )
             return False
-        if 'tok' in load:
-            load.pop('tok')
 
         if 'sig' in load:
             log.trace('Verifying signed event publish from minion')
@@ -1094,6 +1092,9 @@ class AESFuncs(object):
             serialized_load = salt.serializers.msgpack.serialize(load)
             if not salt.crypt.verify_signature(this_minion_pubkey, serialized_load, sig):
                 log.info('Signature for signed event from minion published on bus did not verify')
+
+        if 'tok' in load:
+            load.pop('tok')
 
         return load
 
