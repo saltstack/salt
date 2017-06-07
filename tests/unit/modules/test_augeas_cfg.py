@@ -15,6 +15,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.augeas_cfg as augeas_cfg
 from salt.exceptions import SaltInvocationError
+import salt.ext.six as six
 # Make sure augeas python interface is installed
 if augeas_cfg.HAS_AUGEAS:
     from augeas import Augeas as _Augeas
@@ -26,7 +27,7 @@ class AugeasCfgTestCase(TestCase):
     Test cases for salt.modules.augeas_cfg
     '''
     # 'execute' function tests: 3
-
+    @skipIf(six.PY3, 'Disabled pending https://github.com/hercules-team/python-augeas/issues/30')
     def test_execute(self):
         '''
         Test if it execute Augeas commands
