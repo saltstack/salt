@@ -714,16 +714,16 @@ def request_instance(vm_=None, call=None):
         floating_ip = None
         if floating_ip_conf.get('ip_address', None) is not None:
             ip_address = floating_ip_conf.get('ip_address', None)
-            ## DEBUG ONLY
+            # DEBUG ONLY
             for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
                 if opts['fixed_ip'] is None and opts['pool'] == 'External-net':
                     floating_ip = fl_ip
                     log.debug("Default:")
                     log.debug(floating_ip)
-            ## END DEBUG
+            # END DEBUG
             try:
-                fl_ip = conn.floating_ip_show(ip_address)
-                floating_ip = str(fl_ip.ip)
+                fl_ip_dict = conn.floating_ip_show(ip_address)
+                floating_ip = str(fl_ip_dict['ip'])
                 log.debug("New:")
                 log.debug(floating_ip)
             except Exception as err:
