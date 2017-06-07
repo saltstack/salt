@@ -542,13 +542,14 @@ def status(name, sig = None):
 
     results = {}
     all_services = get_all()
-    if re.search('\*|\?|\[.+\]', name):
+    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    if contains_globbing:
         services = fnmatch.filter(all_services, name)
     else:
         services = [name]
     for service in services:
         results[service] = info(service)['Status'] in ['Running', 'Stop Pending']
-    if re.search('\*|\?|\[.+\]', names[0]):
+    if contains_globbing:
         return results
     return results[name]
 
