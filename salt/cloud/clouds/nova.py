@@ -723,7 +723,7 @@ def request_instance(vm_=None, call=None):
             # END DEBUG
             try:
                 fl_ip_dict = conn.floating_ip_show(ip_address)
-                floating_ip = str(fl_ip_dict['ip'])
+                floating_ip = fl_ip_dict['ip']
                 log.debug("New:")
                 log.debug(floating_ip)
             except Exception as err:
