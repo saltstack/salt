@@ -3151,7 +3151,7 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['nova', 'virtualbox', 'libvirt']
+    non_image_drivers = ['nova', 'virtualbox', 'libvirt', 'softlayer']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',

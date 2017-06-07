@@ -335,6 +335,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
     # to quote problems
     cmd_kwargs = copy.deepcopy(cmd_kwargs)
     cmd_kwargs['use_vt'] = False
+    cmd_kwargs['bg'] = False
 
     if onlyif is not None:
         if isinstance(onlyif, string_types):
