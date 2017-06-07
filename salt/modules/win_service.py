@@ -519,7 +519,7 @@ def execute_salt_restart_task():
     return __salt__['task.run'](name='restart-salt-minion')
 
 
-def status(*names, **kwargs):
+def status(name, sig = None):
     '''
     Return the status for a service.
     If the name contains globbing, a dict mapping service name to True/False
@@ -538,26 +538,19 @@ def status(*names, **kwargs):
     .. code-block:: bash
 
         salt '*' service.status <service name>
-        salt '*' service.status <service1> <service2> <service3> ...
     '''
-
-    if len(names) == 0:
-        return ''
 
     results = {}
     all_services = get_all()
-    for name in names:
-        if re.search('\*|\?|\[.+\]', name):
-            services = fnmatch.filter(all_services, name)
-        else:
-            services = [name]
-        for service in services:
-            if service in results:
-                continue
-            results[service] = info(service)['Status'] in ['Running', 'Stop Pending']
-    if len(names) == 0 and re.search('\*|\?|\[.+\]', names[0]) == false:
-        return results[name]
-    return results
+    if re.search('\*|\?|\[.+\]', name):
+        services = fnmatch.filter(all_services, name)
+    else:
+        services = [name]
+    for service in services:
+        results[service] = info(service)['Status'] in ['Running', 'Stop Pending']
+    if re.search('\*|\?|\[.+\]', names[0]):
+        return results
+    return results[name]
 
 def getsid(name):
     '''
