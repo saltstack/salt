@@ -266,6 +266,82 @@ As well as from salt-api:
 
     {"return": [{"jerry": {"jid": "20170520151531477653", "retcode": 1, "ret": ""}}]}
 
+Jinja
+=====
+
+Filters
+-------
+
+New filters in Nitrogen:
+
+- :jinja_ref:`to_bool`
+- :jinja_ref:`exactly_n_true`
+- :jinja_ref:`exactly_one_true`
+- :jinja_ref:`quote`
+- :jinja_ref:`regex_search`
+- :jinja_ref:`regex_match`
+- :jinja_ref:`uuid`
+- :jinja_ref:`is_list`
+- :jinja_ref:`is_iter`
+- :jinja_ref:`min`
+- :jinja_ref:`max`
+- :jinja_ref:`avg`
+- :jinja_ref:`union`
+- :jinja_ref:`intersect`
+- :jinja_ref:`difference`
+- :jinja_ref:`symmetric_difference`
+- :jinja_ref:`is_sorted`
+- :jinja_ref:`compare_lists`
+- :jinja_ref:`compare_dicts`
+- :jinja_ref:`is_hex`
+- :jinja_ref:`contains_whitespace`
+- :jinja_ref:`substring_in_list`
+- :jinja_ref:`check_whitelist_blacklist`
+- :jinja_ref:`date_format`
+- :jinja_ref:`str_to_num`
+- :jinja_ref:`to_bytes`
+- :jinja_ref:`json_decode_list`
+- :jinja_ref:`json_decode_dict`
+- :jinja_ref:`rand_str`
+- :jinja_ref:`md5`
+- :jinja_ref:`sha256`
+- :jinja_ref:`sha512`
+- :jinja_ref:`base64_encode`
+- :jinja_ref:`base64_decode`
+- :jinja_ref:`hmac`
+- :jinja_ref:`http_query`
+- :jinja_ref:`is_ip`
+- :jinja_ref:`is_ipv4`
+- :jinja_ref:`is_ipv6`
+- :jinja_ref:`ipaddr`
+- :jinja_ref:`ipv4`
+- :jinja_ref:`ipv6`
+- :jinja_ref:`network_hosts`
+- :jinja_ref:`network_size`
+- :jinja_ref:`gen_mac`
+- :jinja_ref:`mac_str_to_bytes`
+- :jinja_ref:`dns_check`
+- :jinja_ref:`is_text_file`
+- :jinja_ref:`is_binary_file`
+- :jinja_ref:`is_empty_file`
+- :jinja_ref:`file_hashsum`
+- :jinja_ref:`list_files`
+- :jinja_ref:`path_join`
+- :jinja_ref:`which`
+
+Logs
+----
+
+Another new feature - although not limited to Jinja only -
+is being able to log debug messages directly from the template:
+
+.. code-block:: jinja
+
+    {%- do salt.log.error('logging from jinja') -%}
+
+See the :jinja_ref:`logs` paragraph.
+
+
 Network Automation
 ==================
 
@@ -334,6 +410,7 @@ New functions:
   (in dBm).
 
 New grains: :mod:`Host <salt.grains.napalm.host>`,
+:mod:`Host DNS<salt.grains.napalm.host_dns>`,
 :mod:`Username <salt.grains.napalm.username>` and
 :mod:`Optional args <salt.grains.napalm.optional_args>`.
 
@@ -465,14 +542,155 @@ Using the new ``roster_order`` configuration syntax it's now possible to compose
 of grains, pillar and mine data and even Salt SDB URLs.
 The new release is also fully IPv4 and IPv6 enabled and even has support for CIDR ranges.
 
+Additional Features
+===================
+
+- The :mod:`mine.update <salt.modules.mine.update>` function
+  has a new optional argument ``mine_functions`` that can be used
+  to refresh mine functions at a more specific interval
+  than scheduled using the ``mine_interval`` option.
+  However, this argument can be used by explicit schedule.
+  For example, if we need the mines for ``net.lldp`` to be refreshed
+  every 12 hours:
+
+  .. code-block:: yaml
+
+      schedule:
+        lldp_mine_update:
+          function: mine.update
+          kwargs:
+            mine_functions:
+              net.lldp: []
+          hours: 12
+
+- The ``salt`` runner has a new function: :mod:`salt.execute <salt.runners.salt.execute>`.
+  It is mainly a shortcut to facilitate the execution of various functions
+  from other runners, e.g.:
+
+  .. code-block:: python
+
+      ret1 = __salt__['salt.execute']('*', 'mod.fun')
+
 New Modules
 ===========
+
+Beacons
+-------
+
+- :mod:`salt.beacons.log <salt.beacons.log>`
+
+Engines
+-------
+
+- :mod:`salt.engines.stalekey <salt.engines.stalekey>`
+- :mod:`salt.engines.junos_syslog <salt.engines.junos_syslog>`
+- :mod:`salt.engines.napalm_syslog <salt.engines.napalm_syslog>`
+
+Execution modules
+-----------------
+
+- :mod:`salt.modules.apk <salt.modules.apk>`
+- :mod:`salt.modules.at_solaris <salt.modules.at_solaris>`
+- :mod:`salt.modules.boto_kinesis <salt.modules.boto_kinesis>`
+- :mod:`salt.modules.boto3_elasticache <salt.modules.boto3_elasticache>`
+- :mod:`salt.modules.boto3_route53 <salt.modules.boto3_route53>`
+- :mod:`salt.modules.capirca_acl <salt.modules.capirca_acl>`
+- :mod:`salt.modules.freebsd_update <salt.modules.freebsd_update>`
+- :mod:`salt.modules.grafana4 <salt.modules.grafana4>`
+- :mod:`salt.modules.heat <salt.modules.heat>`
+- :mod:`salt.modules.icinga2 <salt.modules.icinga2>`
+- :mod:`salt.modules.logmod <salt.modules.logmod>`
+- :mod:`salt.modules.mattermost <salt.modules.mattermost>`
+- :mod:`salt.modules.mattermost <salt.modules.mattermost>`
+- :mod:`salt.modules.namecheap_dns <salt.modules.namecheap_dns>`
+- :mod:`salt.modules.namecheap_domains <salt.modules.namecheap_domains>`
+- :mod:`salt.modules.namecheap_ns <salt.modules.namecheap_ns>`
+- :mod:`salt.modules.namecheap_users <salt.modules.namecheap_users>`
+- :mod:`salt.modules.namecheap_ssl <salt.modules.namecheap_ssl>`
+- :mod:`salt.modules.napalm <salt.modules.napalm>`
+- :mod:`salt.modules.napalm_acl <salt.modules.napalm_acl>`
+- :mod:`salt.modules.napalm_yang_mod <salt.modules.napalm_yang_mod>`
+- :mod:`salt.modules.pdbedit <salt.modules.pdbedit>`
+- :mod:`salt.modules.solrcloud <salt.modules.solrcloud>`
+- :mod:`salt.modules.statuspage <salt.modules.statuspage>`
+- :mod:`salt.modules.zonecfg <salt.modules.zonecfg>`
+- :mod:`salt.modules.zoneadm <salt.modules.zoneadm>`
+
+Grains
+------
+
+- :mod:`salt.grains.metadata <salt.grains.metadata>`
+- :mod:`salt.grains.mdata <salt.grains.mdata>`
 
 Outputters
 ----------
 
-- :mod:`table <salt.output.table_out>`
-- :mod:`profile <salt.output.profile>`
+- :mod:`salt.output.table_out <salt.output.table_out>`
+
+Pillar
+------
+
+- :mod:`salt.pillar.postgres <salt.pillar.postgres>`
+- :mod:`salt.pillar.vmware_pillar <salt.pillar.vmware_pillar>`
+
+Returners
+---------
+
+- :mod:`salt.returners.mattermost_returner <salt.returners.mattermost_returner>`
+- :mod:`salt.returners.highstate_return <salt.returners.highstate_return>`
+
+Roster
+------
+
+- :mod:`salt.roster.cache <salt.roster.cache>`
+
+Runners
+-------
+
+- :mod:`salt.runners.bgp <salt.runners.bgp>`
+- :mod:`salt.runners.mattermost <salt.runners.mattermost>`
+- :mod:`salt.runners.net <salt.runners.net>`
+
+SDB
+---
+
+- :mod:`salt.sdb.yaml <salt.sdb.yaml>`
+- :mod:`salt.sdb.tism <salt.sdb.tism>`
+- :mod:`salt.sdb.cache <salt.sdb.cache>`
+
+States
+------
+
+- :mod:`salt.states.boto_kinesis <salt.states.boto_kinesis>`
+- :mod:`salt.states.boto_efs <salt.states.boto_efs>`
+- :mod:`salt.states.boto3_elasticache <salt.states.boto3_elasticache>`
+- :mod:`salt.states.boto3_route53 <salt.states.boto3_route53>`
+- :mod:`salt.states.docker_container <salt.states.docker_container>`
+- :mod:`salt.states.docker_image <salt.states.docker_image>`
+- :mod:`salt.states.docker_network <salt.states.docker_network>`
+- :mod:`salt.states.docker_volume <salt.states.docker_volume>`
+- :mod:`salt.states.elasticsearch <salt.states.elasticsearch>`
+- :mod:`salt.states.grafana4_dashboard <salt.states.grafana4_dashboard>`
+- :mod:`salt.states.grafana4_datasource <salt.states.grafana4_datasource>`
+- :mod:`salt.states.grafana4_org <salt.states.grafana4_org>`
+- :mod:`salt.states.grafana4_user <salt.states.grafana4_user>`
+- :mod:`salt.states.heat <salt.states.heat>`
+- :mod:`salt.states.icinga2 <salt.states.icinga2>`
+- :mod:`salt.states.influxdb_continuous_query <salt.states.influxdb_continuous_query>`
+- :mod:`salt.states.influxdb_retention_policy <salt.states.influxdb_retention_policy>`
+- :mod:`salt.states.logadm <salt.states.logadm>`
+- :mod:`salt.states.logrotate <salt.states.logrotate>`
+- :mod:`salt.states.msteams <salt.states.msteams>`
+- :mod:`salt.states.netacl <salt.states.netacl>`
+- :mod:`salt.states.netconfig <salt.states.netconfig>`
+- :mod:`salt.states.netyang <salt.states.netyang>`
+- :mod:`salt.states.nix <salt.states.nix>`
+- :mod:`salt.states.pdbedit <salt.states.pdbedit>`
+- :mod:`salt.states.solrcloud <salt.states.solrcloud>`
+- :mod:`salt.states.statuspage <salt.states.statuspage>`
+- :mod:`salt.states.vault <salt.states.vault>`
+- :mod:`salt.states.win_wua <salt.states.win_wua>`
+- :mod:`salt.states.zone <salt.states.zone>`
 
 Deprecations
 ============
@@ -611,41 +829,41 @@ State Deprecations
 
 The ``apache_conf`` state had the following functions removed:
 
-  - ``disable``: Please use ``disabled`` instead.
-  - ``enable``: Please use ``enabled`` instead.
+- ``disable``: Please use ``disabled`` instead.
+- ``enable``: Please use ``enabled`` instead.
 
 The ``apache_module`` state had the following functions removed:
 
-  - ``disable``: Please use ``disabled`` instead.
-  - ``enable``: Please use ``enabled`` instead.
+- ``disable``: Please use ``disabled`` instead.
+- ``enable``: Please use ``enabled`` instead.
 
 The ``apache_site`` state had the following functions removed:
 
-  - ``disable``: Please use ``disabled`` instead.
-  - ``enable``: Please use ``enabled`` instead.
+- ``disable``: Please use ``disabled`` instead.
+- ``enable``: Please use ``enabled`` instead.
 
 The ``chocolatey`` state had the following functions removed:
 
-  - ``install``: Please use ``installed`` instead.
-  - ``uninstall``: Please use ``uninstalled`` instead.
+- ``install``: Please use ``installed`` instead.
+- ``uninstall``: Please use ``uninstalled`` instead.
 
 The ``git`` state had the following changes:
 
-  - The ``config`` function was removed. Please use ``config_set`` instead.
-  - The ``is_global`` option was removed from the ``config_set`` function.
-    Please use ``global`` instead.
-  - The ``always_fetch`` option was removed from the ``latest`` function, as
-    it no longer has any effect. Please see the :ref:`2015.8.0<release-2015-8-0>`
-    release notes for more information.
-  - The ``force`` option was removed from the ``latest`` function. Please
-    use ``force_clone`` instead.
-  - The ``remote_name`` option was removed from the ``latest`` function.
-    Please use ``remote`` instead.
+- The ``config`` function was removed. Please use ``config_set`` instead.
+- The ``is_global`` option was removed from the ``config_set`` function.
+  Please use ``global`` instead.
+- The ``always_fetch`` option was removed from the ``latest`` function, as
+  it no longer has any effect. Please see the :ref:`2015.8.0<release-2015-8-0>`
+  release notes for more information.
+- The ``force`` option was removed from the ``latest`` function. Please
+  use ``force_clone`` instead.
+- The ``remote_name`` option was removed from the ``latest`` function.
+  Please use ``remote`` instead.
 
 The ``glusterfs`` state had the following function removed:
 
-  - ``created``: Please use ``volume_present`` instead.
+- ``created``: Please use ``volume_present`` instead.
 
 The ``openvswitch_port`` state had the following change:
 
-  - The ``type`` option was removed from the ``present`` function. Please use ``tunnel_type`` instead.
+- The ``type`` option was removed from the ``present`` function. Please use ``tunnel_type`` instead.
