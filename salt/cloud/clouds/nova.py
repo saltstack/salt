@@ -722,7 +722,8 @@ def request_instance(vm_=None, call=None):
                     log.debug(floating_ip)
             ## END DEBUG
             try:
-                floating_ip = conn.floating_ip_show(ip_address)
+                fl_ip = conn.floating_ip_show(ip_address)
+                floating_ip = str(fl_ip.ip)
                 log.debug("New:")
                 log.debug(floating_ip)
             except Exception as err:
