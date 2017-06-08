@@ -45,6 +45,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
 
@@ -251,6 +252,8 @@ def refresh_db(jail=None, chroot=None, root=None, force=False):
 
             salt '*' pkg.refresh_db force=True
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     cmd = _pkg(jail, chroot, root)
     cmd.append('update')
     if force:
@@ -1151,8 +1154,6 @@ def upgrade(*names, **kwargs):
         opts += 'n'
     if not dryrun:
         opts += 'y'
-    if opts:
-        opts = '-' + opts
 
     cmd = _pkg(jail, chroot, root)
     cmd.append('upgrade')

@@ -9,12 +9,12 @@ from __future__ import absolute_import
 import os
 import re
 import plistlib
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd party libs
 import salt.ext.six as six
@@ -43,7 +43,7 @@ def __virtual__():
         return (False, 'Failed to load the mac_service module:\n'
                        'Required binary not found: "plutil"')
 
-    if LooseVersion(__grains__['osrelease']) < LooseVersion('10.11'):
+    if _LooseVersion(__grains__['osrelease']) < _LooseVersion('10.11'):
         return (False, 'Failed to load the mac_service module:\n'
                        'Requires macOS 10.11 or newer')
 

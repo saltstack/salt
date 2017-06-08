@@ -334,6 +334,9 @@ def _parse_settings_bond_1(opts, iface, bond_def):
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
 
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
+
     return bond
 
 
@@ -373,9 +376,6 @@ def _parse_settings_bond_2(opts, iface, bond_def):
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
         bond.update({'arp_interval': bond_def['arp_interval']})
-
-    if 'primary' in opts:
-        bond.update({'primary': opts['primary']})
 
     if 'hashing-algorithm' in opts:
         valid = ['layer2', 'layer2+3', 'layer3+4']
@@ -507,6 +507,9 @@ def _parse_settings_bond_5(opts, iface, bond_def):
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
 
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
+
     return bond
 
 
@@ -542,6 +545,9 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     else:
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
+
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
 
     return bond
 
@@ -793,21 +799,30 @@ def _parse_network_settings(opts, current):
     retain_settings = opts.get('retain_settings', False)
     result = current if retain_settings else {}
 
+    # Default quote type is an empty string, which will not quote values
+    quote_type = ''
+
     valid = _CONFIG_TRUE + _CONFIG_FALSE
     if 'enabled' not in opts:
         try:
             opts['networking'] = current['networking']
+            # If networking option is quoted, use its quote type
+            quote_type = salt.utils.is_quoted(opts['networking'])
             _log_default_network('networking', current['networking'])
         except ValueError:
             _raise_error_network('networking', valid)
     else:
         opts['networking'] = opts['enabled']
 
-    if opts['networking'] in valid:
-        if opts['networking'] in _CONFIG_TRUE:
-            result['networking'] = 'yes'
-        elif opts['networking'] in _CONFIG_FALSE:
-            result['networking'] = 'no'
+    true_val = '{0}yes{0}'.format(quote_type)
+    false_val = '{0}no{0}'.format(quote_type)
+
+    networking = salt.utils.dequote(opts['networking'])
+    if networking in valid:
+        if networking in _CONFIG_TRUE:
+            result['networking'] = true_val
+        elif networking in _CONFIG_FALSE:
+            result['networking'] = false_val
     else:
         _raise_error_network('networking', valid)
 
@@ -819,22 +834,25 @@ def _parse_network_settings(opts, current):
             _raise_error_network('hostname', ['server1.example.com'])
 
     if opts['hostname']:
-        result['hostname'] = opts['hostname']
+        result['hostname'] = '{1}{0}{1}'.format(
+            salt.utils.dequote(opts['hostname']), quote_type)
     else:
         _raise_error_network('hostname', ['server1.example.com'])
 
     if 'nozeroconf' in opts:
-        if opts['nozeroconf'] in valid:
-            if opts['nozeroconf'] in _CONFIG_TRUE:
-                result['nozeroconf'] = 'true'
-            elif opts['nozeroconf'] in _CONFIG_FALSE:
-                result['nozeroconf'] = 'false'
+        nozeroconf = salt.utils.dequote(opts['nozerconf'])
+        if nozeroconf in valid:
+            if nozeroconf in _CONFIG_TRUE:
+                result['nozeroconf'] = true_val
+            elif nozeroconf in _CONFIG_FALSE:
+                result['nozeroconf'] = false_val
         else:
             _raise_error_network('nozeroconf', valid)
 
     for opt in opts:
         if opt not in ['networking', 'hostname', 'nozeroconf']:
-            result[opt] = opts[opt]
+            result[opt] = '{1}{0}{1}'.format(
+                salt.utils.dequote(opts[opt]), quote_type)
     return result
 
 
@@ -870,9 +888,12 @@ def _read_file(path):
     Reads and returns the contents of a file
     '''
     try:
-        with salt.utils.fopen(path, 'rb') as contents:
+        with salt.utils.fopen(path, 'rb') as rfh:
+            contents = rfh.read()
+            if six.PY3:
+                contents = contents.encode(__salt_system_encoding__)
             # without newlines character. http://stackoverflow.com/questions/12330522/reading-a-file-without-newlines
-            lines = contents.read().splitlines()
+            lines = contents.splitlines()
             try:
                 lines.remove('')
             except ValueError:
@@ -968,7 +989,6 @@ def build_interface(iface, iface_type, enabled, **settings):
     else:
         rh_major = __grains__['osrelease'][:1]
 
-    iface = iface.lower()
     iface_type = iface_type.lower()
 
     if iface_type not in _IFACE_TYPES:
@@ -987,7 +1007,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type == 'bridge':
         __salt__['pkg.install']('bridge-utils')
 
-    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip', 'ib']:
+    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip', 'ib', 'alias']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
             template = JINJA.get_template('rh{0}_eth.jinja'.format(rh_major))

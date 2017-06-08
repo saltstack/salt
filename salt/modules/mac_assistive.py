@@ -11,13 +11,13 @@ This module allows you to manage assistive access on macOS minions with 10.9+
 
 # Import Python Libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 import re
 import logging
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin() and LooseVersion(__grains__['osrelease']) >= '10.9':
+    if salt.utils.is_darwin() and _LooseVersion(__grains__['osrelease']) >= '10.9':
         return True
     return False, 'The assistive module cannot be loaded: must be run on ' \
                   'macOS 10.9 or newer.'
@@ -52,7 +52,7 @@ def install(app_id, enable=True):
         salt '*' assistive.install /usr/bin/osascript
         salt '*' assistive.install com.smileonmymac.textexpander
     '''
-    ge_el_capitan = True if LooseVersion(__grains__['osrelease']) >= '10.11' else False
+    ge_el_capitan = True if _LooseVersion(__grains__['osrelease']) >= '10.11' else False
     client_type = _client_type(app_id)
     enable_str = '1' if enable else '0'
     cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" ' \

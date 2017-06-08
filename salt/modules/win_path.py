@@ -16,8 +16,8 @@ from salt.ext.six.moves import map
 
 # Third party libs
 try:
-    import win32gui
-    import win32con
+    from win32con import HWND_BROADCAST, WM_SETTINGCHANGE
+    from win32api import SendMessage
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
@@ -55,12 +55,7 @@ def rehash():
 
         salt '*' win_path.rehash
     '''
-    return win32gui.SendMessageTimeout(win32con.HWND_BROADCAST,
-                                       win32con.WM_SETTINGCHANGE,
-                                       0,
-                                       'Environment',
-                                       0,
-                                       10000)[0] == 1
+    return bool(SendMessage(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 'Environment'))
 
 
 def get_path():
