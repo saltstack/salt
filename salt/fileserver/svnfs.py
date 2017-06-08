@@ -481,10 +481,30 @@ def _env_is_exposed(env):
     Check if an environment is exposed by comparing it against a whitelist and
     blacklist.
     '''
+    if __opts__['svnfs_env_whitelist']:
+        salt.utils.warn_until(
+            'Neon',
+            'The svnfs_env_whitelist config option has been renamed to '
+            'svnfs_saltenv_whitelist. Please update your configuration.'
+        )
+        whitelist = __opts__['svnfs_env_whitelist']
+    else:
+        whitelist = __opts__['svnfs_saltenv_whitelist']
+
+    if __opts__['svnfs_env_blacklist']:
+        salt.utils.warn_until(
+            'Neon',
+            'The svnfs_env_blacklist config option has been renamed to '
+            'svnfs_saltenv_blacklist. Please update your configuration.'
+        )
+        blacklist = __opts__['svnfs_env_blacklist']
+    else:
+        blacklist = __opts__['svnfs_saltenv_blacklist']
+
     return salt.utils.check_whitelist_blacklist(
         env,
-        whitelist=__opts__['svnfs_env_whitelist'],
-        blacklist=__opts__['svnfs_env_blacklist']
+        whitelist=whitelist,
+        blacklist=blacklist,
     )
 
 
@@ -624,9 +644,12 @@ def serve_file(load, fnd):
         return ret
     ret['dest'] = fnd['rel']
     gzip = load.get('gzip', None)
-    with salt.utils.fopen(fnd['path'], 'rb') as fp_:
+    fpath = os.path.normpath(fnd['path'])
+    with salt.utils.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
+        if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+            data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
             ret['gzip'] = gzip

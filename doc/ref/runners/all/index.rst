@@ -11,12 +11,15 @@ runner modules
     :template: autosummary.rst.tmpl
 
     asam
+    auth
+    bgp
     cache
     cloud
     ddns
     doc
     drac
     error
+    event
     f5
     fileserver
     git_pillar
@@ -25,8 +28,10 @@ runner modules
     launchd
     lxc
     manage
+    mattermost
     mine
     nacl
+    net
     network
     pagerduty
     pillar
@@ -36,12 +41,15 @@ runner modules
     salt
     saltutil
     sdb
-    search
+    smartos_vmadm
     spacewalk
     ssh
     state
     survey
     test
     thin
+    vault
+    venafiapi
     virt
+    vistara
     winrepo

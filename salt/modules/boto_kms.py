@@ -41,11 +41,11 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 from salt.serializers import json
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.utils.compat
 import salt.utils.odict as odict
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 

@@ -106,6 +106,9 @@ import json
 import salt.returners
 import salt.utils.jid
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 __virtualname__ = 'elasticsearch'
 
 log = logging.getLogger(__name__)
@@ -257,7 +260,7 @@ def returner(ret):
             index = '{0}-ordered'.format(index)
             max_chars = len(str(len(ret['return'])))
 
-            for uid, data in ret['return'].iteritems():
+            for uid, data in six.iteritems(ret['return']):
                 # Skip keys we've already prefixed
                 if uid.startswith(tuple('0123456789')):
                     continue

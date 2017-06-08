@@ -9,9 +9,6 @@ Support for Stormpath.
 from __future__ import absolute_import
 import pprint
 
-# Import salt libs
-import salt.utils
-
 
 def __virtual__():
     '''
@@ -58,9 +55,7 @@ def present(name, **kwargs):
     '''
     # Because __opts__ is not available outside of functions
     backend = __opts__.get('backend', False)
-    if not backend and __opts__.get('requests_lib', False):
-        salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
-                                            'please change your config')
+    if not backend:
         backend = 'requests'
 
     if backend == 'requests':
@@ -83,7 +78,7 @@ def present(name, **kwargs):
         pass
     needs_update = {}
     if info.get('email', False):
-        for field in kwargs.keys():
+        for field in kwargs:
             if info.get(field, None) != kwargs[field]:
                 needs_update[field] = kwargs[field]
         del needs_update['directory_id']
@@ -148,9 +143,7 @@ def absent(name, directory_id=None):
     '''
     # Because __opts__ is not available outside of functions
     backend = __opts__.get('backend', False)
-    if not backend and __opts__.get('requests_lib', False):
-        salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
-                                            'please change your config')
+    if not backend:
         backend = 'requests'
 
     if backend == 'requests':

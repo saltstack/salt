@@ -280,6 +280,15 @@ configuration.
 This ID can be queried using the `list_vlans` function, as described below. This
 setting is optional.
 
+If this setting is set to `None`, salt-cloud will connect to the private ip of
+the server.
+
+.. note::
+
+    If this setting is not provided and the server is not built with a public
+    vlan, `private_ssh` or `private_wds` will need to be set to make sure that
+    salt-cloud attempts to connect to the private ip.
+
 private_vlan
 ------------
 If it is necessary for an instance to be created within a specific backend VLAN,
@@ -295,12 +304,12 @@ If a server is to only be used internally, meaning it does not have a public
 VLAN associated with it, this value would be set to True. This setting is
 optional. The default is False.
 
-private_ssh
------------
+private_ssh or private_wds
+--------------------------
 Whether to run the deploy script on the server using the public IP address
-or the private IP address. If set to True, Salt Cloud will attempt to SSH into
-the new server using the private IP address. The default is False. This
-settiong is optional.
+or the private IP address. If set to True, Salt Cloud will attempt to SSH or
+WinRM into the new server using the private IP address. The default is False.
+This settiong is optional.
 
 global_identifier
 -----------------

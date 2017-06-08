@@ -7,13 +7,10 @@ The macOS (Maverick) Developer Step By Step Guide To Salt Installation
 This document provides a step-by-step guide to installing a Salt cluster
 consisting of  one master, and one minion running on a local VM hosted on macOS.
 
-
 .. note::
     This guide is aimed at developers who wish to run Salt in a virtual machine.
     The official (Linux) walkthrough can be found
     `here <http://docs.saltstack.com/topics/tutorials/walkthrough.html>`_.
-
-
 
 The 5 Cent Salt Intro
 ---------------------
@@ -63,18 +60,19 @@ Here's a brief overview of a Salt cluster:
     that.
 
 
-
 Before Digging In, The Architecture Of The Salt Cluster
 -------------------------------------------------------
 
 Salt Master
 +++++++++++
+
 The "Salt master" server is going to be the Mac OS machine, directly. Commands
 will be run from a terminal app, so Salt will need to be installed on the Mac.
 This is going to be more convenient for toying around with configuration files.
 
 Salt Minion
 +++++++++++
+
 We'll only have one "Salt minion" server. It is going to be running on a
 Virtual Machine running on the Mac, using VirtualBox. It will run an Ubuntu
 distribution.
@@ -193,6 +191,7 @@ There should be no errors when running the above command.
 
 
 Now that the master is set, let's configure a minion on a VM.
+
 
 Step 2 - Configuring The Minion VM
 ==================================
@@ -324,6 +323,7 @@ following:
 
 It's now time to connect the VM to the salt master
 
+
 Step 3 - Connecting Master and Minion
 =====================================
 
@@ -369,7 +369,6 @@ Then copy the .pub file into the list of accepted minions:
 
     sudo cp minion1.pub /etc/salt/pki/master/minions/minion1
 
-
 Modify Vagrantfile to Use Salt Provisioner
 ------------------------------------------
 
@@ -414,6 +413,7 @@ following:
 
 You should see your minion answering the ping. It's now time to do some
 configuration.
+
 
 Step 4 - Configure Services to Install On the Minion
 ====================================================

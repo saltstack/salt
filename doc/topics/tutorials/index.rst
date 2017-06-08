@@ -33,3 +33,4 @@ Tutorials Index
 * :ref:`The macOS (Maverick) Developer Step By Step Guide To Salt Installation <tutorial-macos-walk-through>`
 * :ref:`SaltStack Walk-through <tutorial-salt-walk-through>`
 * :ref:`Writing Salt Tests <tutorial-salt-testing>`
+* :ref:`Multi-cloud orchestration with Apache Libcloud <tutorial-libcloud>`

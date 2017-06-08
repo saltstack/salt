@@ -12,7 +12,6 @@ Provides the service module for systemd
 '''
 # Import python libs
 from __future__ import absolute_import
-import copy
 import errno
 import glob
 import logging
@@ -29,7 +28,8 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
-    'reload_': 'reload'
+    'reload_': 'reload',
+    'unmask_': 'unmask',
 }
 
 SYSTEM_CONFIG_PATHS = ('/lib/systemd/system', '/usr/lib/systemd/system')
@@ -117,6 +117,17 @@ def _check_for_unit_changes(name):
         __context__[contextkey] = True
 
 
+def _check_unmask(name, unmask, unmask_runtime):
+    '''
+    Common code for conditionally removing masks before making changes to a
+    service's state.
+    '''
+    if unmask:
+        unmask_(name, runtime=False)
+    if unmask_runtime:
+        unmask_(name, runtime=True)
+
+
 def _clear_context():
     '''
     Remove context
@@ -125,8 +136,7 @@ def _clear_context():
     # raise a RuntimeError.
     for key in list(__context__):
         try:
-            if key.startswith('systemd._systemctl_status.') \
-                    or key in ('systemd.systemd_services',):
+            if key.startswith('systemd._systemctl_status.'):
                 __context__.pop(key)
         except AttributeError:
             continue
@@ -178,9 +188,6 @@ def _get_systemd_services():
     '''
     Use os.listdir() to get all the unit files
     '''
-    contextkey = 'systemd.systemd_services'
-    if contextkey in __context__:
-        return __context__[contextkey]
     ret = set()
     for path in SYSTEM_CONFIG_PATHS + (LOCAL_CONFIG_PATH,):
         # Make sure user has access to the path, and if the path is a link
@@ -194,18 +201,17 @@ def _get_systemd_services():
                     continue
                 if unit_type in VALID_UNIT_TYPES:
                     ret.add(unit_name if unit_type == 'service' else fullname)
-    __context__[contextkey] = copy.deepcopy(ret)
     return ret
 
 
-def _get_sysv_services():
+def _get_sysv_services(systemd_services=None):
     '''
     Use os.listdir() and os.access() to get all the initscripts
     '''
     try:
         sysv_services = os.listdir(INITSCRIPT_PATH)
     except OSError as exc:
-        if exc.errno == errno.EEXIST:
+        if exc.errno == errno.ENOENT:
             pass
         elif exc.errno == errno.EACCES:
             log.error(
@@ -220,7 +226,9 @@ def _get_sysv_services():
             )
         return []
 
-    systemd_services = _get_systemd_services()
+    if systemd_services is None:
+        systemd_services = _get_systemd_services()
+
     ret = []
     for sysv_service in sysv_services:
         if os.access(os.path.join(INITSCRIPT_PATH, sysv_service), os.X_OK):
@@ -274,7 +282,19 @@ def _runlevel():
     return ret
 
 
-def _systemctl_cmd(action, name=None, systemd_scope=False):
+def _strip_scope(msg):
+    '''
+    Strip unnecessary message about running the command with --scope from
+    stderr so that we can raise an exception with the remaining stderr text.
+    '''
+    ret = []
+    for line in msg.splitlines():
+        if not line.endswith('.scope'):
+            ret.append(line)
+    return '\n'.join(ret).strip()
+
+
+def _systemctl_cmd(action, name=None, systemd_scope=False, no_block=False):
     '''
     Build a systemctl command line. Treat unit names without one
     of the valid suffixes as a service.
@@ -285,6 +305,8 @@ def _systemctl_cmd(action, name=None, systemd_scope=False):
             and __salt__['config.get']('systemd.scope', True):
         ret.extend(['systemd-run', '--scope'])
     ret.append('systemctl')
+    if no_block:
+        ret.append('--no-block')
     if isinstance(action, six.string_types):
         action = shlex.split(action)
     ret.extend(action)
@@ -537,7 +559,7 @@ def get_all():
         salt '*' service.get_all
     '''
     ret = _get_systemd_services()
-    ret.update(set(_get_sysv_services()))
+    ret.update(set(_get_sysv_services(systemd_services=ret)))
     return sorted(ret)
 
 
@@ -575,7 +597,7 @@ def missing(name):
     return not available(name)
 
 
-def unmask(name, runtime=False):
+def unmask_(name, runtime=False):
     '''
     .. versionadded:: 2015.5.0
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -731,7 +753,7 @@ def masked(name, runtime=False):
         return False
 
 
-def start(name):
+def start(name, no_block=False, unmask=False, unmask_runtime=False):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -746,6 +768,27 @@ def start(name):
 
     Start the specified service with systemd
 
+    no_block : False
+        Set to ``True`` to start the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
+    unmask : False
+        Set to ``True`` to remove an indefinite mask before attempting to start
+        the service.
+
+        .. versionadded:: Nitrogen
+            In previous releases, Salt would simply unmask a service before
+            starting. This behavior is no longer the default.
+
+    unmask_runtime : False
+        Set to ``True`` to remove a runtime mask before attempting to start the
+        service.
+
+        .. versionadded:: Nitrogen
+            In previous releases, Salt would simply unmask a service before
+            starting. This behavior is no longer the default.
+
     CLI Example:
 
     .. code-block:: bash
@@ -753,13 +796,20 @@ def start(name):
         salt '*' service.start <service name>
     '''
     _check_for_unit_changes(name)
-    unmask(name)
-    return __salt__['cmd.retcode'](
-        _systemctl_cmd('start', name, systemd_scope=True),
-        python_shell=False) == 0
+    _check_unmask(name, unmask, unmask_runtime)
+    ret = __salt__['cmd.run_all'](
+        _systemctl_cmd('start', name, systemd_scope=True, no_block=no_block),
+        python_shell=False)
+
+    if ret['retcode'] != 0:
+        # Instead of returning a bool, raise an exception so that we can
+        # include the error message in the return data. This helps give more
+        # information to the user in instances where the service is masked.
+        raise CommandExecutionError(_strip_scope(ret['stderr']))
+    return True
 
 
-def stop(name):
+def stop(name, no_block=False):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -774,6 +824,11 @@ def stop(name):
 
     Stop the specified service with systemd
 
+    no_block : False
+        Set to ``True`` to start the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
@@ -781,12 +836,13 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     _check_for_unit_changes(name)
-    return __salt__['cmd.retcode'](
-        _systemctl_cmd('stop', name, systemd_scope=True),
-        python_shell=False) == 0
+    # Using cmd.run_all instead of cmd.retcode here to make unit tests easier
+    return __salt__['cmd.run_all'](
+        _systemctl_cmd('stop', name, systemd_scope=True, no_block=no_block),
+        python_shell=False)['retcode'] == 0
 
 
-def restart(name):
+def restart(name, no_block=False, unmask=False, unmask_runtime=False):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -801,6 +857,27 @@ def restart(name):
 
     Restart the specified service with systemd
 
+    no_block : False
+        Set to ``True`` to start the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
+    unmask : False
+        Set to ``True`` to remove an indefinite mask before attempting to
+        restart the service.
+
+        .. versionadded:: Nitrogen
+            In previous releases, Salt would simply unmask a service before
+            restarting. This behavior is no longer the default.
+
+    unmask_runtime : False
+        Set to ``True`` to remove a runtime mask before attempting to restart
+        the service.
+
+        .. versionadded:: Nitrogen
+            In previous releases, Salt would simply unmask a service before
+            restarting. This behavior is no longer the default.
+
     CLI Example:
 
     .. code-block:: bash
@@ -808,13 +885,20 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     _check_for_unit_changes(name)
-    unmask(name)
-    return __salt__['cmd.retcode'](
-        _systemctl_cmd('restart', name, systemd_scope=True),
-        python_shell=False) == 0
+    _check_unmask(name, unmask, unmask_runtime)
+    ret = __salt__['cmd.run_all'](
+        _systemctl_cmd('restart', name, systemd_scope=True, no_block=no_block),
+        python_shell=False)
+
+    if ret['retcode'] != 0:
+        # Instead of returning a bool, raise an exception so that we can
+        # include the error message in the return data. This helps give more
+        # information to the user in instances where the service is masked.
+        raise CommandExecutionError(_strip_scope(ret['stderr']))
+    return True
 
 
-def reload_(name):
+def reload_(name, no_block=False, unmask=False, unmask_runtime=False):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -829,6 +913,27 @@ def reload_(name):
 
     Reload the specified service with systemd
 
+    no_block : False
+        Set to ``True`` to reload the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
+    unmask : False
+        Set to ``True`` to remove an indefinite mask before attempting to
+        reload the service.
+
+        .. versionadded:: Nitrogen
+            In previous releases, Salt would simply unmask a service before
+            reloading. This behavior is no longer the default.
+
+    unmask_runtime : False
+        Set to ``True`` to remove a runtime mask before attempting to reload
+        the service.
+
+        .. versionadded:: Nitrogen
+            In previous releases, Salt would simply unmask a service before
+            reloading. This behavior is no longer the default.
+
     CLI Example:
 
     .. code-block:: bash
@@ -836,13 +941,20 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     _check_for_unit_changes(name)
-    unmask(name)
-    return __salt__['cmd.retcode'](
-        _systemctl_cmd('reload', name, systemd_scope=True),
-        python_shell=False) == 0
+    _check_unmask(name, unmask, unmask_runtime)
+    ret = __salt__['cmd.run_all'](
+        _systemctl_cmd('reload', name, systemd_scope=True, no_block=no_block),
+        python_shell=False)
+
+    if ret['retcode'] != 0:
+        # Instead of returning a bool, raise an exception so that we can
+        # include the error message in the return data. This helps give more
+        # information to the user in instances where the service is masked.
+        raise CommandExecutionError(_strip_scope(ret['stderr']))
+    return True
 
 
-def force_reload(name):
+def force_reload(name, no_block=True, unmask=False, unmask_runtime=False):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -859,6 +971,27 @@ def force_reload(name):
 
     Force-reload the specified service with systemd
 
+    no_block : False
+        Set to ``True`` to start the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
+    unmask : False
+        Set to ``True`` to remove an indefinite mask before attempting to
+        force-reload the service.
+
+        .. versionadded:: Nitrogen
+            In previous releases, Salt would simply unmask a service before
+            force-reloading. This behavior is no longer the default.
+
+    unmask_runtime : False
+        Set to ``True`` to remove a runtime mask before attempting to
+        force-reload the service.
+
+        .. versionadded:: Nitrogen
+            In previous releases, Salt would simply unmask a service before
+            force-reloading. This behavior is no longer the default.
+
     CLI Example:
 
     .. code-block:: bash
@@ -866,10 +999,18 @@ def force_reload(name):
         salt '*' service.force_reload <service name>
     '''
     _check_for_unit_changes(name)
-    unmask(name)
-    return __salt__['cmd.retcode'](
-        _systemctl_cmd('force-reload', name, systemd_scope=True),
-        python_shell=False) == 0
+    _check_unmask(name, unmask, unmask_runtime)
+    ret = __salt__['cmd.run_all'](
+        _systemctl_cmd('force-reload', name,
+                       systemd_scope=True, no_block=no_block),
+        python_shell=False)
+
+    if ret['retcode'] != 0:
+        # Instead of returning a bool, raise an exception so that we can
+        # include the error message in the return data. This helps give more
+        # information to the user in instances where the service is masked.
+        raise CommandExecutionError(_strip_scope(ret['stderr']))
+    return True
 
 
 # The unused sig argument is required to maintain consistency with the API
@@ -914,9 +1055,9 @@ def status(name, sig=None):  # pylint: disable=unused-argument
 
 
 
-# The unused kwargs argument is required to maintain consistency with the API
-# established by Salt's service management states.
-def enable(name, **kwargs):  # pylint: disable=unused-argument
+# **kwargs is required to maintain consistency with the API established by
+# Salt's service management states.
+def enable(name, no_block=False, unmask=False, unmask_runtime=False, **kwargs):  # pylint: disable=unused-argument
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -931,6 +1072,27 @@ def enable(name, **kwargs):  # pylint: disable=unused-argument
 
     Enable the named service to start when the system boots
 
+    no_block : False
+        Set to ``True`` to start the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
+
+    unmask : False
+        Set to ``True`` to remove an indefinite mask before attempting to
+        enable the service.
+
+        .. versionadded:: Nitrogen
+            In previous releases, Salt would simply unmask a service before
+            enabling. This behavior is no longer the default.
+
+    unmask_runtime : False
+        Set to ``True`` to remove a runtime mask before attempting to enable
+        the service.
+
+        .. versionadded:: Nitrogen
+            In previous releases, Salt would simply unmask a service before
+            enabling. This behavior is no longer the default.
+
     CLI Example:
 
     .. code-block:: bash
@@ -938,7 +1100,7 @@ def enable(name, **kwargs):  # pylint: disable=unused-argument
         salt '*' service.enable <service name>
     '''
     _check_for_unit_changes(name)
-    unmask(name)
+    _check_unmask(name, unmask, unmask_runtime)
     if name in _get_sysv_services():
         cmd = []
         if salt.utils.systemd.has_scope(__context__) \
@@ -952,15 +1114,22 @@ def enable(name, **kwargs):  # pylint: disable=unused-argument
         return __salt__['cmd.retcode'](cmd,
                                        python_shell=False,
                                        ignore_retcode=True) == 0
-    return __salt__['cmd.retcode'](
-        _systemctl_cmd('enable', name, systemd_scope=True),
+    ret = __salt__['cmd.run_all'](
+        _systemctl_cmd('enable', name, systemd_scope=True, no_block=no_block),
         python_shell=False,
-        ignore_retcode=True) == 0
+        ignore_retcode=True)
+
+    if ret['retcode'] != 0:
+        # Instead of returning a bool, raise an exception so that we can
+        # include the error message in the return data. This helps give more
+        # information to the user in instances where the service is masked.
+        raise CommandExecutionError(_strip_scope(ret['stderr']))
+    return True
 
 
 # The unused kwargs argument is required to maintain consistency with the API
 # established by Salt's service management states.
-def disable(name, **kwargs):  # pylint: disable=unused-argument
+def disable(name, no_block=False, **kwargs):  # pylint: disable=unused-argument
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -974,6 +1143,11 @@ def disable(name, **kwargs):  # pylint: disable=unused-argument
     .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
 
     Disable the named service to not start when the system boots
+
+    no_block : False
+        Set to ``True`` to start the service using ``--no-block``.
+
+        .. versionadded:: Nitrogen
 
     CLI Example:
 
@@ -995,10 +1169,11 @@ def disable(name, **kwargs):  # pylint: disable=unused-argument
         return __salt__['cmd.retcode'](cmd,
                                        python_shell=False,
                                        ignore_retcode=True) == 0
-    return __salt__['cmd.retcode'](
-        _systemctl_cmd('disable', name, systemd_scope=True),
+    # Using cmd.run_all instead of cmd.retcode here to make unit tests easier
+    return __salt__['cmd.run_all'](
+        _systemctl_cmd('disable', name, systemd_scope=True, no_block=no_block),
         python_shell=False,
-        ignore_recode=True) == 0
+        ignore_retcode=True)['retcode'] == 0
 
 
 # The unused kwargs argument is required to maintain consistency with the API

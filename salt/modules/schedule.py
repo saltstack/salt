@@ -215,7 +215,7 @@ def purge(**kwargs):
                         else:
                             ret['comment'].append('Failed to delete job {0} from schedule.'.format(name))
                             ret['result'] = True
-                        return ret
+
             except KeyError:
                 # Effectively a no-op, since we can't really return without an event system
                 ret['comment'] = 'Event module not available. Schedule add failed.'
@@ -359,8 +359,9 @@ def build_schedule_item(name, **kwargs):
         else:
             schedule[name]['splay'] = kwargs['splay']
 
-    for item in ['range', 'when', 'once', 'once_fmt', 'cron', 'returner',
-                 'return_config', 'return_kwargs', 'until', 'run_on_start']:
+    for item in ['range', 'when', 'once', 'once_fmt', 'cron',
+                 'returner', 'after', 'return_config', 'return_kwargs',
+                 'until', 'run_on_start']:
         if item in kwargs:
             schedule[name][item] = kwargs[item]
 

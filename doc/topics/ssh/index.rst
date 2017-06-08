@@ -110,6 +110,17 @@ Calling Salt SSH
 
         salt-ssh centos-5-minion -r 'yum -y install epel-release ; yum -y install python26'
 
+.. note:: ``salt-ssh`` on systems with Python 3.x
+
+    Salt, before the Nitrogen release, does not support Python 3.x which is the
+    default on for example the popular 16.04 LTS release of Ubuntu. An easy
+    workaround for this scenario is to use the ``-r`` option similar to the
+    example above:
+
+    .. code-block:: bash
+
+        salt-ssh ubuntu-1604-minion -r 'apt update ; apt install -y python-minimal'
+
 The ``salt-ssh`` command can be easily executed in the same way as a salt
 command:
 
@@ -225,6 +236,9 @@ Boolean-style options should be specified in their YAML representation.
     For the `Saltfile` to be automatically detected it needs to be named
     `Saltfile` with a capital `S` and be readable by the user running
     salt-ssh.
+
+At last you can create ``~/.salt/Saltfile`` and ``salt-ssh``
+will automatically load it by default.
 
 Debugging salt-ssh
 ==================

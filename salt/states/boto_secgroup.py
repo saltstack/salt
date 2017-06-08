@@ -638,7 +638,7 @@ def _tags_present(name, tags, vpc_id=None, vpc_name=None, region=None,
         tags_to_update = {}
         tags_to_remove = []
         if sg.get('tags'):
-            for existing_tag in sg['tags'].keys():
+            for existing_tag in sg['tags']:
                 if existing_tag not in tags:
                     if existing_tag not in tags_to_remove:
                         tags_to_remove.append(existing_tag)

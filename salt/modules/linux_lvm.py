@@ -56,7 +56,7 @@ def fullversion():
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         comps = line.split(':')
-    ret[comps[0].strip()] = comps[1].strip()
+        ret[comps[0].strip()] = comps[1].strip()
     return ret
 
 
@@ -205,7 +205,7 @@ def pvcreate(devices, override=True, **kwargs):
     Set a physical device to be used as an LVM physical volume
 
     override
-        Skip devices, if they are already an LVM physical volumes
+        Skip devices, if they are already LVM physical volumes
 
     CLI Examples:
 
@@ -223,13 +223,12 @@ def pvcreate(devices, override=True, **kwargs):
     for device in devices:
         if not os.path.exists(device):
             raise CommandExecutionError('{0} does not exist'.format(device))
-        # Verify pvcreate was successful
         if not pvdisplay(device):
             cmd.append(device)
         elif not override:
             raise CommandExecutionError('Device "{0}" is already an LVM physical volume.'.format(device))
 
-    if not cmd[1:]:
+    if not cmd[2:]:
         # All specified devices are already LVM volumes
         return True
 
@@ -258,7 +257,7 @@ def pvremove(devices, override=True):
     Remove a physical device being used as an LVM physical volume
 
     override
-        Skip devices, if they are already not used as an LVM physical volumes
+        Skip devices, if they are already not used as LVM physical volumes
 
     CLI Examples:
 

@@ -921,6 +921,9 @@ def _parse_settings_bond_1(opts, iface, bond_def):
             _log_default_iface(iface, binding, bond_def[binding])
             bond.update({binding: bond_def[binding]})
 
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
+
     if not (__grains__['os'] == "Ubuntu" and __grains__['osrelease_info'][0] >= 16):
         if 'use_carrier' in opts:
             if opts['use_carrier'] in _CONFIG_TRUE:
@@ -973,9 +976,6 @@ def _parse_settings_bond_2(opts, iface, bond_def):
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
         bond.update({'arp_interval': bond_def['arp_interval']})
-
-    if 'primary' in opts:
-        bond.update({'primary': opts['primary']})
 
     if 'hashing-algorithm' in opts:
         valid = ['layer2', 'layer2+3', 'layer3+4']
@@ -1107,6 +1107,9 @@ def _parse_settings_bond_5(opts, iface, bond_def):
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
 
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
+
     return bond
 
 
@@ -1142,6 +1145,9 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     else:
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
+
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
 
     return bond
 
@@ -1575,13 +1581,13 @@ def _write_file_ifaces(iface, data, **settings):
         if adapter == iface:
             saved_ifcfg = tmp
 
-    _SEPERATE_FILE = False
+    _SEPARATE_FILE = False
     if 'filename' in settings:
         if not settings['filename'].startswith('/'):
             filename = '{0}/{1}'.format(_DEB_NETWORK_DIR, settings['filename'])
         else:
             filename = settings['filename']
-        _SEPERATE_FILE = True
+        _SEPARATE_FILE = True
     else:
         if 'filename' in adapters[adapter]['data']:
             filename = adapters[adapter]['data']
@@ -1594,7 +1600,7 @@ def _write_file_ifaces(iface, data, **settings):
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.flopen(filename, 'w') as fout:
-        if _SEPERATE_FILE:
+        if _SEPARATE_FILE:
             fout.write(saved_ifcfg)
         else:
             fout.write(ifcfg)

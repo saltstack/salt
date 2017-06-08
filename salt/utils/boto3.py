@@ -39,12 +39,12 @@ from __future__ import absolute_import
 import hashlib
 import logging
 import sys
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 from functools import partial
 
 # Import salt libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext import six
 import salt.utils
 
@@ -338,11 +338,11 @@ def get_role_arn(name, region=None, key=None, keyid=None, profile=None):
     return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
 
 
-def _ordered(obj):
+def ordered(obj):
     if isinstance(obj, (list, tuple)):
-        return sorted(_ordered(x) for x in obj)
+        return sorted(ordered(x) for x in obj)
     elif isinstance(obj, dict):
-        return dict((six.text_type(k) if isinstance(k, six.string_types) else k, _ordered(v)) for k, v in obj.items())
+        return dict((six.text_type(k) if isinstance(k, six.string_types) else k, ordered(v)) for k, v in obj.items())
     elif isinstance(obj, six.string_types):
         return six.text_type(obj)
     return obj
@@ -351,4 +351,4 @@ def _ordered(obj):
 def json_objs_equal(left, right):
     """ Compare two parsed JSON objects, given non-ordering in JSON objects
     """
-    return _ordered(left) == _ordered(right)
+    return ordered(left) == ordered(right)

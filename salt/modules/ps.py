@@ -496,6 +496,9 @@ def total_physical_memory():
 
         salt '*' ps.total_physical_memory
     '''
+    if psutil.version_info < (0, 6, 0):
+        msg = 'virtual_memory is only available in psutil 0.6.0 or greater'
+        raise CommandExecutionError(msg)
     try:
         return psutil.virtual_memory().total
     except AttributeError:
@@ -637,7 +640,7 @@ def get_users():
 
 def lsof(name):
     '''
-    Retrieve the lsof informations of the given process name.
+    Retrieve the lsof information of the given process name.
 
     CLI Example:
 
@@ -654,7 +657,7 @@ def lsof(name):
 
 def netstat(name):
     '''
-    Retrieve the netstat informations of the given process name.
+    Retrieve the netstat information of the given process name.
 
     CLI Example:
 

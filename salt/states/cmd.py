@@ -500,16 +500,6 @@ def wait(name,
         interactively to the console and the logs.
         This is experimental.
     '''
-    if 'user' in kwargs or 'group' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The legacy user/group arguments are deprecated. '
-            'Replace them with runas. '
-            'These arguments will be removed in Salt Oxygen.'
-        )
-        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
-            runas = kwargs.pop('user')
-
     # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
@@ -589,7 +579,7 @@ def wait_script(name,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies.>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
         Variables as values are not evaluated. So $PATH in the following
         example is a literal '$PATH':
@@ -630,16 +620,6 @@ def wait_script(name,
         regardless, unless ``quiet`` is used for this value.
 
     '''
-    if 'user' in kwargs or 'group' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The legacy user/group arguments are deprecated. '
-            'Replace them with runas. '
-            'These arguments will be removed in Salt Oxygen.'
-        )
-        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
-            runas = kwargs.pop('user')
-
     # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
@@ -767,6 +747,12 @@ def run(name,
         interactively to the console and the logs.
         This is experimental.
 
+    bg
+        If ``True``, run command in background and do not await or deliver it's
+        results.
+
+        .. versionadded:: 2016.3.6
+
     .. note::
 
         cmd.run supports the usage of ``reload_modules``. This functionality
@@ -787,10 +773,10 @@ def run(name,
                 - reload_modules: True
 
     '''
-    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
-    ###       cannot be removed from the function definition, otherwise the use
-    ###       of unsupported arguments in a cmd.run state will result in a
-    ###       traceback.
+    ### NOTE: The keyword arguments in **kwargs are passed directly to the
+    ###       ``cmd.run_all`` function and cannot be removed from the function
+    ###       definition, otherwise the use of unsupported arguments in a
+    ###       ``cmd.run`` state will result in a traceback.
 
     test_name = None
     if not isinstance(stateful, list):
@@ -811,16 +797,6 @@ def run(name,
         ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
                           'documentation.')
         return ret
-
-    if 'user' in kwargs or 'group' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The legacy user/group arguments are deprecated. '
-            'Replace them with runas. '
-            'These arguments will be removed in Salt Oxygen.'
-        )
-        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
-            runas = kwargs.pop('user')
 
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({'cwd': cwd,
@@ -1047,16 +1023,6 @@ def script(name,
     tmpctx = defaults if defaults else {}
     if context:
         tmpctx.update(context)
-
-    if 'user' in kwargs or 'group' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The legacy user/group arguments are deprecated. '
-            'Replace them with runas. '
-            'These arguments will be removed in Salt Oxygen.'
-        )
-        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
-            runas = kwargs.pop('user')
 
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({'runas': runas,

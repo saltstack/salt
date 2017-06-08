@@ -271,7 +271,8 @@ class KeyCLI(object):
                         ret = list_ret
                     for minions in ret.values():
                         for minion in minions:
-                            print('Key for minion {0} {1}ed.'.format(minion, cmd))
+                            print('Key for minion {0} {1}ed.'.format(minion,
+                                                                     cmd.rstrip('e')))
                 elif isinstance(ret, dict):
                     salt.output.display_output(ret, 'key', opts=self.opts)
                 else:
@@ -494,10 +495,10 @@ class Key(object):
                 for minion in os.listdir(m_cache):
                     if minion not in minions and minion not in preserve_minions:
                         shutil.rmtree(os.path.join(m_cache, minion))
-            cache = salt.cache.Cache(self.opts)
-            clist = cache.list(self.ACC)
+            cache = salt.cache.factory(self.opts)
+            clist = cache.ls(self.ACC)
             if clist:
-                for minion in cache.list(self.ACC):
+                for minion in clist:
                     if minion not in minions and minion not in preserve_minions:
                         cache.flush('{0}/{1}'.format(self.ACC, minion))
 
@@ -972,10 +973,10 @@ class RaetKey(Key):
             for minion in os.listdir(m_cache):
                 if minion not in minions:
                     shutil.rmtree(os.path.join(m_cache, minion))
-            cache = salt.cache.Cache(self.opts)
-            clist = cache.list(self.ACC)
+            cache = salt.cache.factory(self.opts)
+            clist = cache.ls(self.ACC)
             if clist:
-                for minion in cache.list(self.ACC):
+                for minion in clist:
                     if minion not in minions and minion not in preserve_minions:
                         cache.flush('{0}/{1}'.format(self.ACC, minion))
 
@@ -1016,7 +1017,7 @@ class RaetKey(Key):
         '''
         Use libnacl to generate and safely save a private key
         '''
-        import libnacl.public
+        import libnacl.dual  # pylint: disable=3rd-party-module-not-gated
         d_key = libnacl.dual.DualSecret()
         keydir, keyname, _, _ = self._get_key_attrs(keydir, keyname,
                                                     keysize, user)

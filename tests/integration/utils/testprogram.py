@@ -21,14 +21,15 @@ import time
 
 import yaml
 
+import salt.utils
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
 import salt.defaults.exitcodes as exitcodes
 import salt.ext.six as six
 
-from salttesting import TestCase
-
-import integration
+from tests.support.unit import TestCase
+from tests.support.paths import CODE_DIR
+from tests.support.processes import terminate_process
 
 log = logging.getLogger(__name__)
 
@@ -182,7 +183,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
     @property
     def start_pid(self):
-        '''PID of the called script prior to deamonizing.'''
+        '''PID of the called script prior to daemonizing.'''
         return self.process.pid if self.process else None
 
     @property
@@ -208,7 +209,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         if not config:
             return
         cpath = self.abs_path(self.config_file_get(config))
-        with open(cpath, 'w') as cfo:
+        with salt.utils.fopen(cpath, 'w') as cfo:
             cfg = self.config_stringify(config)
             log.debug('Writing configuration for {0} to {1}:\n{2}'.format(self.name, cpath, cfg))
             cfo.write(cfg)
@@ -385,8 +386,8 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                     if path not in env_pypath:
                         env_pypath.append(path)
             # Always ensure that the test tree is searched first for python modules
-            if integration.CODE_DIR != env_pypath[0]:
-                env_pypath.insert(0, integration.CODE_DIR)
+            if CODE_DIR != env_pypath[0]:
+                env_pypath.insert(0, CODE_DIR)
             env_delta['PYTHONPATH'] = ':'.join(env_pypath)
 
         cmd_env = dict(os.environ)
@@ -657,8 +658,8 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
     def install_script(self):
         '''Generate the script file that calls python objects and libraries.'''
         lines = []
-        script_source = os.path.join(integration.CODE_DIR, 'scripts', self.script)
-        with open(script_source, 'r') as sso:
+        script_source = os.path.join(CODE_DIR, 'scripts', self.script)
+        with salt.utils.fopen(script_source, 'r') as sso:
             lines.extend(sso.readlines())
         if lines[0].startswith('#!'):
             lines.pop(0)
@@ -666,7 +667,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
 
         script_path = self.abs_path(os.path.join(self.script_dir, self.script))
         log.debug('Installing "{0}" to "{1}"'.format(script_source, script_path))
-        with open(script_path, 'w') as sdo:
+        with salt.utils.fopen(script_path, 'w') as sdo:
             sdo.write(''.join(lines))
             sdo.flush()
 
@@ -770,11 +771,11 @@ class TestDaemon(TestProgram):
         if not self._shutdown:
             try:
                 pid = self.wait_for_daemon_pid(timeout)
-                integration.terminate_process_pid(pid)
+                terminate_process(pid=pid, kill_children=True)
             except TimeoutError:
                 pass
         if self.process:
-            integration.terminate_process_pid(self.process.pid)
+            terminate_process(pid=self.process.pid, kill_children=True)
             self.process.wait()
             self.process = None
         self._shutdown = True

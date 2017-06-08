@@ -73,17 +73,17 @@ def get_minion_data(minion, opts):
     grains = None
     pillar = None
     if opts.get('minion_data_cache', False):
-        cache = salt.cache.Cache(opts)
+        cache = salt.cache.factory(opts)
         if minion is None:
-            for id_ in cache.list('minions'):
+            for id_ in cache.ls('minions'):
                 data = cache.fetch('minions/{0}'.format(id_), 'data')
                 if data is None:
                     continue
         else:
             data = cache.fetch('minions/{0}'.format(minion), 'data')
         if data is not None:
-            grains = data['grains']
-            pillar = data['pillar']
+            grains = data.get('grains', None)
+            pillar = data.get('pillar', None)
     return minion if minion else None, grains, pillar
 
 
@@ -180,7 +180,7 @@ class CkMinions(object):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
-        self.cache = salt.cache.Cache(opts)
+        self.cache = salt.cache.factory(opts)
         # TODO: this is actually an *auth* check
         if self.opts.get('transport', 'zeromq') in ('zeromq', 'tcp'):
             self.acc = 'minions'
@@ -207,7 +207,8 @@ class CkMinions(object):
         '''
         if isinstance(expr, six.string_types):
             expr = [m for m in expr.split(',') if m]
-        return [x for x in expr if x in self._pki_minions()]
+        minions = self._pki_minions()
+        return [x for x in expr if x in minions]
 
     def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
@@ -250,12 +251,9 @@ class CkMinions(object):
         If not 'greedy' return the only minions have cache data and matched by the condition.
         '''
         cache_enabled = self.opts.get('minion_data_cache', False)
-        cdir = os.path.join(self.opts['cachedir'], 'minions')
 
         def list_cached_minions():
-            if not os.path.isdir(cdir):
-                return []
-            return os.listdir(cdir)
+            return self.cache.list('minions')
 
         if greedy:
             minions = []
@@ -344,13 +342,13 @@ class CkMinions(object):
         if greedy:
             minions = self._pki_minions()
         elif cache_enabled:
-            minions = self.cache.list('minions')
+            minions = self.cache.ls('minions')
         else:
             return []
 
         if cache_enabled:
             if greedy:
-                cminions = self.cache.list('minions')
+                cminions = self.cache.ls('minions')
             else:
                 cminions = minions
             if cminions is None:
@@ -414,7 +412,7 @@ class CkMinions(object):
                         mlist.append(fn_)
                 return mlist
             elif cache_enabled:
-                return self.cache.list('minions')
+                return self.cache.ls('minions')
             else:
                 return list()
 
@@ -576,7 +574,7 @@ class CkMinions(object):
         '''
         minions = set()
         if self.opts.get('minion_data_cache', False):
-            search = self.cache.list('minions')
+            search = self.cache.ls('minions')
             if search is None:
                 return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts['publish_port']))
@@ -816,7 +814,7 @@ class CkMinions(object):
                     log.info('Malformed ACL: {0}'.format(auth_list_entry))
                     continue
             allowed_minions.update(set(auth_list_entry.keys()))
-            for key in auth_list_entry.keys():
+            for key in auth_list_entry:
                 for match in self._expand_matching(key):
                     if match in auth_dictionary:
                         auth_dictionary[match].extend(auth_list_entry[key])
@@ -854,7 +852,8 @@ class CkMinions(object):
                    tgt_type='glob',
                    groups=None,
                    publish_validate=False,
-                   minions=None):
+                   minions=None,
+                   whitelist=None):
         '''
         Returns a bool which defines if the requested function is authorized.
         Used to evaluate the standard structure under external master
@@ -882,6 +881,8 @@ class CkMinions(object):
             args = [args]
         try:
             for num, fun in enumerate(funs):
+                if whitelist and fun in whitelist:
+                    return True
                 for ind in auth_list:
                     if isinstance(ind, six.string_types):
                         # Allowed for all minions
@@ -982,24 +983,6 @@ class CkMinions(object):
                 if group_name.rstrip("%") in user_groups:
                     for matcher in auth_provider[group_name]:
                         auth_list.append(matcher)
-        return auth_list
-
-    def fill_auth_list_from_ou(self, auth_list, opts=None):
-        '''
-        Query LDAP, retrieve list of minion_ids from an OU or other search.
-        For each minion_id returned from the LDAP search, copy the perms
-        matchers into the auth dictionary
-        :param auth_list:
-        :param opts: __opts__ for when __opts__ is not injected
-        :return: Modified auth list.
-        '''
-        ou_names = []
-        for item in auth_list:
-            if isinstance(item, six.string_types):
-                continue
-            ou_names.extend([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
-        if ou_names:
-            auth_list = salt.auth.ldap.expand_ldap_entries(auth_list, opts)
         return auth_list
 
     def wheel_check(self, auth_list, fun):
@@ -1110,7 +1093,7 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
     minions = checker.check_minions(
             tgt,
             tgt_type)
-    cache = salt.cache.Cache(opts)
+    cache = salt.cache.factory(opts)
     for minion in minions:
         mdata = cache.fetch('minions/{0}'.format(minion), 'mine')
         if mdata is None:

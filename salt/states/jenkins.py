@@ -69,7 +69,7 @@ def present(name,
                 ET.tostringlist(oldXML, encoding='utf8', method='xml'),
                 ET.tostringlist(newXML, encoding='utf8', method='xml'), lineterm='')
             __salt__['jenkins.update_job'](name, config, __env__)
-            ret['changes'] = ''.join(diff)
+            ret['changes'][name] = ''.join(diff)
             ret['comment'].append('Job {0} updated.'.format(name))
 
     else:
@@ -80,10 +80,8 @@ def present(name,
         __salt__['jenkins.create_job'](name, config, __env__)
 
         buf = six.moves.StringIO(new_config_xml)
-        _current_job_config = buf.readlines()
-
-        diff = difflib.unified_diff('', buf, lineterm='')
-        ret['changes'] = ''.join(diff)
+        diff = difflib.unified_diff('', buf.readlines(), lineterm='')
+        ret['changes'][name] = ''.join(diff)
         ret['comment'].append('Job {0} added.'.format(name))
 
     ret['comment'] = '\n'.join(ret['comment'])

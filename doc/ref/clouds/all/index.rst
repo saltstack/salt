@@ -26,13 +26,15 @@ Full list of Salt Cloud modules
     opennebula
     openstack
     parallels
+    profitbricks
     proxmox
     pyrax
     qingcloud
-    rackspace
     saltify
     scaleway
     softlayer
     softlayer_hw
     virtualbox
     vmware
+    vultrpy
+    xen

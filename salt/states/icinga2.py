@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Icinga2 state
-==========================
+=============
 
-.. versionadded:: TODO
+.. versionadded:: Nitrogen
 
 :depends:   - Icinga2 Python module
 :configuration: See :py:mod:`salt.modules.icinga2` for setup instructions.

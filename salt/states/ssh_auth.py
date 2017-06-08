@@ -142,9 +142,9 @@ def _absent_test(user, name, enc, comment, options, source, config):
         if keys:
             comment = ''
             for key, status in list(keys.items()):
-                if status == 'exists':
+                if status == 'add':
                     continue
-                comment += 'Set to {0}: {1}\n'.format(status, key)
+                comment += 'Set to remove: {0}\n'.format(key)
             if comment:
                 return result, comment
         err = sys.modules[
@@ -356,9 +356,9 @@ def present(
             ret['comment'] = ('Failed to add the ssh key. Is the home '
                               'directory available, and/or does the key file '
                               'exist?')
-    elif data == 'invalid':
+    elif data == 'invalid' or data == 'Invalid public key':
         ret['result'] = False
-        ret['comment'] = 'Invalid public ssh key, most likely has spaces'
+        ret['comment'] = 'Invalid public ssh key, most likely has spaces or invalid syntax'
 
     return ret
 

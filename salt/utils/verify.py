@@ -16,9 +16,9 @@ import socket
 import logging
 
 # Import third party libs
-if sys.platform.startswith('win'):
+try:
     import win32file
-else:
+except ImportError:
     import resource
 
 # Import salt libs
@@ -160,11 +160,12 @@ def verify_files(files, user):
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         try:
-            try:
-                os.makedirs(dirname)
-            except OSError as err:
-                if err.errno != errno.EEXIST:
-                    raise
+            if dirname:
+                try:
+                    os.makedirs(dirname)
+                except OSError as err:
+                    if err.errno != errno.EEXIST:
+                        raise
             if not os.path.isfile(fn_):
                 with salt.utils.fopen(fn_, 'w+') as fp_:
                     fp_.write('')
@@ -485,7 +486,7 @@ def valid_id(opts, id_):
     '''
     try:
         return bool(clean_path(opts['pki_dir'], id_))
-    except (AttributeError, KeyError) as e:
+    except (AttributeError, KeyError, TypeError) as e:
         return False
 
 
@@ -555,7 +556,7 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
         if not permissive:
             try:
                 # Get a clean dacl by not passing an obj_name
-                dacl = salt.utils.win_dacl.Dacl()
+                dacl = salt.utils.win_dacl.dacl()
 
                 # Add aces to the dacl, use the GUID (locale non-specific)
                 # Administrators Group
@@ -599,7 +600,7 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
 
                 # Give Admins, System and Owner permissions
                 # Get a clean dacl by not passing an obj_name
-                dacl = salt.utils.win_dacl.Dacl()
+                dacl = salt.utils.win_dacl.dacl()
 
                 # Add aces to the dacl, use the GUID (locale non-specific)
                 # Administrators Group

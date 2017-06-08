@@ -35,10 +35,14 @@ def __define_global_system_encoding_variable__():
     # This is the most trustworthy source of the system encoding, though, if
     # salt is being imported after being daemonized, this information is lost
     # and reset to None
-    if sys.stdin is not None:
+    encoding = None
+
+    if not sys.platform.startswith('win') and sys.stdin is not None:
+        # On linux we can rely on sys.stdin for the encoding since it
+        # most commonly matches the filesystem encoding. This however
+        # does not apply to windows
         encoding = sys.stdin.encoding
-    else:
-        encoding = None
+
     if not encoding:
         # If the system is properly configured this should return a valid
         # encoding. MS Windows has problems with this and reports the wrong
@@ -57,7 +61,18 @@ def __define_global_system_encoding_variable__():
             # This is most likely ascii which is not the best but we were
             # unable to find a better encoding. If this fails, we fall all
             # the way back to ascii
-            encoding = sys.getdefaultencoding() or 'ascii'
+            encoding = sys.getdefaultencoding()
+        if not encoding:
+            if sys.platform.startswith('darwin'):
+                # Mac OS X uses UTF-8
+                encoding = 'utf-8'
+            elif sys.platform.startswith('win'):
+                # Windows uses a configurable encoding; on Windows, Python uses the name “mbcs”
+                # to refer to whatever the currently configured encoding is.
+                encoding = 'mbcs'
+            else:
+                # On linux default to ascii as a last resort
+                encoding = 'ascii'
 
     # We can't use six.moves.builtins because these builtins get deleted sooner
     # than expected. See:

@@ -194,6 +194,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         guestinfo.foo: bar
         guestinfo.domain: foobar.com
         guestinfo.customVariable: customValue
+      annotation: Created by Salt-Cloud
 
       deploy: True
       customization: True
@@ -451,6 +452,11 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     present, it will be reset with the new value provided. Otherwise, a new option is
     added. Keys with empty values will be removed.
 
+``annotation``
+    User-provided description of the virtual machine. This will store a message in the
+    vSphere interface, under the annotations section in the Summary view of the virtual
+    machine.
+
 ``deploy``
     Specifies if salt should be installed on the newly created VM. Default is ``True``
     so salt will be installed using the bootstrap script. If ``template: True`` or
@@ -686,8 +692,8 @@ Example of a complete profile:
           SCSI controller 0:
             type: lsilogic_sas
         ide:
-          IDE 0
-          IDE 1
+          IDE 0: {}
+          IDE 1: {}
         disk:
           Hard disk 0:
             controller: 'SCSI controller 0'

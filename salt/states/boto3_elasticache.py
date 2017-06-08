@@ -160,7 +160,7 @@ def _diff_cache_cluster(current, desired):
     return need_update
 
 
-def cache_cluster_present(name, wait=600, security_groups=None, region=None, key=None,
+def cache_cluster_present(name, wait=900, security_groups=None, region=None, key=None,
                           keyid=None, profile=None, **args):
     '''
     Ensure a given cache cluster exists.
@@ -398,7 +398,7 @@ def cache_cluster_present(name, wait=600, security_groups=None, region=None, key
                                                       keyid=keyid, profile=profile)
             ret['comment'] = 'Cache cluster {0} was created.'.format(name)
             ret['changes']['old'] = None
-            ret['changes']['new'] = new['CacheClusters'][0]
+            ret['changes']['new'] = new[0]
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to create {0} cache cluster.'.format(name)
@@ -428,7 +428,7 @@ def cache_cluster_present(name, wait=600, security_groups=None, region=None, key
                 else:
                     ret['comment'] = 'Cache cluster {0} was modified.'.format(name)
                     ret['changes']['old'] = current
-                ret['changes']['new'] = new['CacheClusters'][0]
+                ret['changes']['new'] = new[0]
             else:
                 ret['result'] = False
                 ret['comment'] = 'Failed to modify cache cluster {0}.'.format(name)
@@ -551,7 +551,7 @@ def _diff_replication_group(current, desired):
     return need_update
 
 
-def replication_group_present(name, wait=600, security_groups=None, region=None, key=None,
+def replication_group_present(name, wait=900, security_groups=None, region=None, key=None,
                               keyid=None, profile=None, **args):
     '''
     Ensure a replication group exists and is in the given state.
@@ -788,7 +788,7 @@ def replication_group_present(name, wait=600, security_groups=None, region=None,
                                                           keyid=keyid, profile=profile)
             ret['comment'] = 'Replication group {0} was created.'.format(name)
             ret['changes']['old'] = None
-            ret['changes']['new'] = new['ReplicationGroups'][0]
+            ret['changes']['new'] = new[0]
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to create {0} replication group.'.format(name)
@@ -830,10 +830,10 @@ def replication_group_present(name, wait=600, security_groups=None, region=None,
 def replication_group_absent(name, wait=600, region=None, key=None, keyid=None,
                              profile=None, **args):
     '''
-    Ensure a given cache cluster is deleted.
+    Ensure a given replication group is deleted.
 
     name
-        Name of the cache cluster.
+        Name of the replication group.
 
     wait
         Integer describing how long, in seconds, to wait for confirmation from AWS that the
@@ -850,9 +850,10 @@ def replication_group_absent(name, wait=600, region=None, key=None, keyid=None,
         If set to true, all of the read replicas are deleted, but the primary node is retained.
 
     FinalSnapshotIdentifier
-        The user-supplied name of a final cache cluster snapshot.  This is the unique name
-        that identifies the snapshot.  ElastiCache creates the snapshot, and then deletes the
-        cache cluster immediately afterward.
+        The name of a final node group (shard) snapshot.  ElastiCache creates the snapshot from
+        the primary node in the cluster, rather than one of the replicas; this is to ensure that
+        it captures the freshest data.  After the final snapshot is taken, the replication group is
+        immediately deleted.
 
     region
         Region to connect to.
@@ -983,7 +984,7 @@ def cache_subnet_group_present(name, subnets=None, region=None, key=None, keyid=
                                                            keyid=keyid, profile=profile)
             ret['comment'] = 'Cache subnet group {0} was created.'.format(name)
             ret['changes']['old'] = None
-            ret['changes']['new'] = new['CacheSubnetGroups'][0]
+            ret['changes']['new'] = new[0]
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to create {0} cache subnet group.'.format(name)
@@ -1005,7 +1006,7 @@ def cache_subnet_group_present(name, subnets=None, region=None, key=None, keyid=
                                                                keyid=keyid, profile=profile)
                 ret['comment'] = 'Cache subnet group {0} was modified.'.format(name)
                 ret['changes']['old'] = current['CacheSubetGroups'][0]
-                ret['changes']['new'] = new['CacheSubnetGroups'][0]
+                ret['changes']['new'] = new[0]
             else:
                 ret['result'] = False
                 ret['comment'] = 'Failed to modify cache subnet group {0}.'.format(name)

@@ -70,6 +70,7 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,
 )
+from salt.ext.six.moves import filter
 
 # Import 3rd-party libs
 HAS_LIBS = False
@@ -93,6 +94,7 @@ try:
         OSDisk,
         OSProfile,
         StorageProfile,
+        SubResource,
         VirtualHardDisk,
         VirtualMachine,
         VirtualMachineSizeTypes,
@@ -253,23 +255,6 @@ def avail_locations(conn=None, call=None):  # pylint: disable=unused-argument
     return ret
 
 
-def _cache(bank, key, fun, **kwargs):
-    '''
-    Cache an Azure ARM object
-    '''
-    items = cache.fetch(bank, key)
-    if items is None:
-        items = {}
-        try:
-            item_list = fun(**kwargs)
-        except CloudError as exc:
-            log.warning('There was a cloud error calling {0} with kwargs {1}: {2}'.format(fun, kwargs, exc))
-        for item in item_list:
-            items[item.name] = object_to_dict(item)
-        cache.store(bank, key, items)
-    return items
-
-
 def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
     '''
     List available images for Azure
@@ -286,59 +271,79 @@ def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
 
     region = get_location()
     bank = 'cloud/metadata/azurearm/{0}'.format(region)
-    publishers = _cache(
+    publishers = cache.cache(
         bank,
         'publishers',
         compconn.virtual_machine_images.list_publishers,
+        loop_fun=object_to_dict,
+        expire=config.get_cloud_config_value(
+            'expire_publisher_cache', get_configured_provider(),
+            __opts__, search_global=False, default=604800,  # 7 days
+        ),
         location=region,
     )
 
     ret = {}
     for publisher in publishers:
-        pub_bank = os.path.join(bank, 'publishers', publisher)
-        offers = _cache(
+        pub_bank = os.path.join(bank, 'publishers', publisher['name'])
+        offers = cache.cache(
             pub_bank,
             'offers',
             compconn.virtual_machine_images.list_offers,
+            loop_fun=object_to_dict,
+            expire=config.get_cloud_config_value(
+                'expire_offer_cache', get_configured_provider(),
+                __opts__, search_global=False, default=518400,  # 6 days
+            ),
             location=region,
-            publisher_name=publishers[publisher]['name'],
+            publisher_name=publisher['name'],
         )
 
         for offer in offers:
-            offer_bank = os.path.join(pub_bank, 'offers', offer)
-            skus = _cache(
+            offer_bank = os.path.join(pub_bank, 'offers', offer['name'])
+            skus = cache.cache(
                 offer_bank,
                 'skus',
                 compconn.virtual_machine_images.list_skus,
+                loop_fun=object_to_dict,
+                expire=config.get_cloud_config_value(
+                    'expire_sku_cache', get_configured_provider(),
+                    __opts__, search_global=False, default=432000,  # 5 days
+                ),
                 location=region,
-                publisher_name=publishers[publisher]['name'],
-                offer=offers[offer]['name'],
+                publisher_name=publisher['name'],
+                offer=offer['name'],
             )
 
             for sku in skus:
-                sku_bank = os.path.join(offer_bank, 'skus', sku)
-                results = _cache(
+                sku_bank = os.path.join(offer_bank, 'skus', sku['name'])
+                results = cache.cache(
                     sku_bank,
                     'results',
                     compconn.virtual_machine_images.list,
+                    loop_fun=object_to_dict,
+                    expire=config.get_cloud_config_value(
+                        'expire_version_cache', get_configured_provider(),
+                        __opts__, search_global=False, default=345600,  # 4 days
+                    ),
                     location=region,
-                    publisher_name=publishers[publisher]['name'],
-                    offer=offers[offer]['name'],
-                    skus=skus[sku]['name'],
+                    publisher_name=publisher['name'],
+                    offer=offer['name'],
+                    skus=sku['name'],
                 )
 
                 for version in results:
                     name = '|'.join((
-                        publishers[publisher]['name'],
-                        offers[offer]['name'],
-                        skus[sku]['name'],
-                        results[version]['name'],
+                        publisher['name'],
+                        offer['name'],
+                        sku['name'],
+                        version['name'],
                     ))
                     ret[name] = {
-                        'publisher': publishers[publisher]['name'],
-                        'offer': offers[offer]['name'],
-                        'sku': skus[sku]['name'],
-                        'version': results[version]['name'],
+                        'publisher': publisher['name'],
+                        'offer': offer['name'],
+                        'sku': sku['name'],
+                        'version': version['name'],
                     }
     return ret
 
@@ -367,7 +372,7 @@ def avail_sizes(call=None):  # pylint: disable=unused-argument
 
 def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
     '''
-    List VMs on this Azure account
+    List VMs on this Azure Active Provider
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -380,7 +385,17 @@ def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
         compconn = get_conn()
 
     nodes = list_nodes_full(compconn, call)
+
+    active_resource_group = None
+    try:
+        provider, driver = __active_provider_name__.split(':')
+        active_resource_group = __opts__['providers'][provider][driver]['resource_group']
+    except KeyError:
+        pass
+
     for node in nodes:
+        if not nodes[node]['resource_group'] == active_resource_group:
+            continue
         ret[node] = {'name': node}
         for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
             ret[node][prop] = nodes[node].get(prop)
@@ -412,6 +427,7 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
             ret[node.name]['private_ips'] = node.network_profile.network_interfaces
             ret[node.name]['public_ips'] = node.network_profile.network_interfaces
             ret[node.name]['storage_profile']['data_disks'] = []
+            ret[node.name]['resource_group'] = group
             for disk in node.storage_profile.data_disks:
                 ret[node.name]['storage_profile']['data_disks'].append(make_safe(disk))
             try:
@@ -454,7 +470,7 @@ def list_resource_groups(conn=None, call=None):  # pylint: disable=unused-argume
         loop_fun=object_to_dict,
         expire=config.get_cloud_config_value(
             'expire_group_cache', get_configured_provider(),
-            __opts__, search_global=False, default=86400,
+            __opts__, search_global=False, default=14400,
         )
     )
 
@@ -561,7 +577,7 @@ def list_networks(call=None, kwargs=None):  # pylint: disable=unused-argument
                 loop_fun=make_safe,
                 expire=config.get_cloud_config_value(
                     'expire_network_cache', get_configured_provider(),
-                    __opts__, search_global=False, default=86400,
+                    __opts__, search_global=False, default=3600,
                 ),
                 resource_group_name=group,
             )
@@ -703,16 +719,17 @@ def show_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     data['ip_configurations'] = {}
     for ip_ in iface.ip_configurations:
         data['ip_configurations'][ip_.name] = make_safe(ip_)
-        try:
-            pubip = netconn.public_ip_addresses.get(
-                kwargs['resource_group'],
-                ip_.name,
-            )
-            data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
-        except Exception as exc:
-            log.warning('There was a cloud error: {0}'.format(exc))
-            log.warning('{0}'.format(type(exc)))
-            continue
+        if ip_.public_ip_address is not None:
+            try:
+                pubip = netconn.public_ip_addresses.get(
+                    kwargs['resource_group'],
+                    ip_.name,
+                )
+                data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
+            except Exception as exc:
+                log.warning('There was a cloud error: {0}'.format(exc))
+                log.warning('{0}'.format(type(exc)))
+                continue
 
     return data
 
@@ -763,6 +780,9 @@ def list_interfaces(call=None, kwargs=None):  # pylint: disable=unused-argument
         kwargs = {}
 
     if kwargs.get('resource_group') is None:
+        kwargs['resource_group'] = kwargs.get('group')
+
+    if kwargs['resource_group'] is None:
         kwargs['resource_group'] = config.get_cloud_config_value(
             'resource_group', {}, __opts__, search_global=True,
             default=config.get_cloud_config_value(
@@ -779,7 +799,7 @@ def list_interfaces(call=None, kwargs=None):  # pylint: disable=unused-argument
         loop_fun=make_safe,
         expire=config.get_cloud_config_value(
             'expire_interface_cache', get_configured_provider(),
-            __opts__, search_global=False, default=86400,
+            __opts__, search_global=False, default=3600,
         ),
         resource_group_name=kwargs['resource_group']
     )
@@ -816,6 +836,17 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     if kwargs.get('iface_name') is None:
         kwargs['iface_name'] = '{0}-iface0'.format(vm_['name'])
+
+    backend_pools = None
+    if kwargs.get('load_balancer') and kwargs.get('backend_pool'):
+        load_balancer_obj = netconn.load_balancers.get(
+            resource_group_name=kwargs['network_resource_group'],
+            load_balancer_name=kwargs['load_balancer'],
+        )
+        backend_pools = list(filter(
+            lambda backend: backend.name == kwargs['backend_pool'],
+            load_balancer_obj.backend_address_pools,
+        ))
 
     subnet_obj = netconn.subnets.get(
         resource_group_name=kwargs['network_resource_group'],
@@ -857,6 +888,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                     ip_configurations = [
                         NetworkInterfaceIPConfiguration(
                             name='{0}-ip'.format(kwargs['iface_name']),
+                            load_balancer_backend_address_pools=backend_pools,
                             subnet=subnet_obj,
                             **ip_kwargs
                         )
@@ -873,6 +905,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         ip_configurations = [
             NetworkInterfaceIPConfiguration(
                 name='{0}-ip'.format(kwargs['iface_name']),
+                load_balancer_backend_address_pools=backend_pools,
                 subnet=subnet_obj,
                 **ip_kwargs
             )
@@ -932,6 +965,16 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
             'name', vm_, __opts__, search_global=True
         )
 
+    vm_['availability_set_id'] = None
+    if vm_.get('availability_set'):
+        availability_set = compconn.availability_sets.get(
+            resource_group_name=vm_['resource_group'],
+            availability_set_name=vm_['availability_set'],
+        )
+        vm_['availability_set_id'] = SubResource(
+            id=availability_set.id
+        )
+
     os_kwargs = {}
     userdata = None
     userdata_file = config.get_cloud_config_value(
@@ -946,8 +989,13 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
             with salt.utils.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
+    userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
+
     if userdata is not None:
-        os_kwargs['custom_data'] = base64.b64encode(userdata)
+        try:
+            os_kwargs['custom_data'] = base64.b64encode(userdata)
+        except Exception as exc:
+            log.exception('Failed to encode userdata: %s', exc)
 
     iface_data = create_interface(kwargs=vm_)
     vm_['iface_id'] = iface_data['id']
@@ -1095,6 +1143,16 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 NetworkInterfaceReference(vm_['iface_id']),
             ],
         ),
+        availability_set=vm_['availability_set_id'],
+    )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'requesting instance',
+        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        args=__utils__['cloud.filter_event']('requesting', vm_, ['name', 'profile', 'provider', 'driver']),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
     )
 
     poller = compconn.virtual_machines.create_or_update(
@@ -1130,11 +1188,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1147,8 +1201,8 @@ def create(vm_):
     def _query_ip_address():
         data = request_instance(kwargs=vm_)
         ifaces = data['network_profile']['network_interfaces']
-        iface = ifaces.keys()[0]
-        ip_name = ifaces[iface]['ip_configurations'].keys()[0]
+        iface = list(ifaces)[0]
+        ip_name = list(ifaces[iface]['ip_configurations'])[0]
 
         if vm_.get('public_ip') is True:
             hostname = ifaces[iface]['ip_configurations'][ip_name]['public_ip_address']
@@ -1210,11 +1264,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )

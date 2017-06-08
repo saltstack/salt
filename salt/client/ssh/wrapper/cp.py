@@ -68,7 +68,7 @@ def get_url(path, dest, saltenv='base'):
     '''
     retrieve a URL
     '''
-    src = __context__['fileclient'].get_url(
+    src = __context__['fileclient'].cache_file(
         path,
         saltenv,
         cachedir=os.path.join('salt-ssh', __salt__.kwargs['id_']))

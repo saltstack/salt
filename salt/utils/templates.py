@@ -17,21 +17,23 @@ import sys
 # Import third party libs
 import jinja2
 import jinja2.ext
+import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
+import salt.utils.http
 import salt.utils.files
 import salt.utils.yamlencoding
 import salt.utils.locales
+import salt.utils.hashutils
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
 import salt.utils.jinja
 import salt.utils.network
 from salt.utils.odict import OrderedDict
+from salt.utils.decorators import JinjaFilter
 from salt import __path__ as saltpath
-from salt.ext.six import string_types
-import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -126,7 +128,7 @@ def wrap_tmpl_func(render_str):
             context['sls_path'] = slspath.replace('/', '_')
             context['slspath'] = slspath
 
-        if isinstance(tmplsrc, string_types):
+        if isinstance(tmplsrc, six.string_types):
             if from_str:
                 tmplstr = tmplsrc
             else:
@@ -154,6 +156,8 @@ def wrap_tmpl_func(render_str):
             tmplsrc.close()
         try:
             output = render_str(tmplstr, context, tmplpath)
+            if six.PY2:
+                output = output.encode(SLS_ENCODING)
             if salt.utils.is_windows():
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
@@ -168,7 +172,9 @@ def wrap_tmpl_func(render_str):
             if to_str:  # then render as string
                 return dict(result=True, data=output)
             with tempfile.NamedTemporaryFile('wb', delete=False, prefix=salt.utils.files.TEMPFILE_PREFIX) as outf:
-                outf.write(SLS_ENCODER(output)[0])
+                if six.PY3:
+                    output = output.encode(SLS_ENCODING)
+                outf.write(output)
                 # Note: If nothing is replaced or added by the rendering
                 #       function, then the contents of the output file will
                 #       be exactly the same as the input.
@@ -250,7 +256,7 @@ def _get_jinja_error(trace, context=None):
         ):
             add_log = True
             template_path = error[0]
-    # if we add a log, format explicitly the exeception here
+    # if we add a log, format explicitly the exception here
     # by telling to output the macro context after the macro
     # error log place at the beginning
     if add_log:
@@ -321,21 +327,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined,
                                        **env_args)
 
-    jinja_env.filters['strftime'] = salt.utils.date_format
-    jinja_env.filters['sequence'] = salt.utils.jinja.ensure_sequence_filter
-    jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
-    jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
-    jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
-    jinja_env.filters['is_ip'] = salt.utils.network.is_ip_filter  # check if valid IP address
-    jinja_env.filters['is_ipv4'] = salt.utils.network.is_ipv4_filter  # check if valid IPv4 address
-    jinja_env.filters['is_ipv6'] = salt.utils.network.is_ipv6_filter  # check if valid IPv6 address
-    jinja_env.filters['ipaddr'] = salt.utils.network.ipaddr  # filter IP addresses
-    jinja_env.filters['ipv4'] = salt.utils.network.ipv4  # filter IPv4-only addresses
-    jinja_env.filters['ipv6'] = salt.utils.network.ipv6  # filter IPv6-only addresses
-    jinja_env.filters['ip_host'] = salt.utils.network.ip_host  # return the network interface IP
-    jinja_env.filters['network_hosts'] = salt.utils.network.network_hosts  # return the hosts within a network
-    jinja_env.filters['network_size'] = salt.utils.network.network_size  # return the network size
+    jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
 
+    # globals
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = salt.utils.jinja.show_full_context
 
@@ -343,7 +337,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     decoded_context = {}
     for key, value in six.iteritems(context):
-        if not isinstance(value, string_types):
+        if not isinstance(value, six.string_types):
             decoded_context[key] = value
             continue
 
@@ -409,6 +403,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     return output
 
 
+# pylint: disable=3rd-party-module-not-gated
 def render_mako_tmpl(tmplstr, context, tmplpath=None):
     import mako.exceptions
     from mako.template import Template
@@ -479,6 +474,7 @@ def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
     '''
     from Cheetah.Template import Template
     return str(Template(tmplstr, searchList=[context]))
+# pylint: enable=3rd-party-module-not-gated
 
 
 def py(sfn, string=False, **kwargs):  # pylint: disable=C0103

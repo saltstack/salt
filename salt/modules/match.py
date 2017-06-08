@@ -37,7 +37,7 @@ def compound(tgt, minion_id=None):
 
         salt '*' match.compound 'L@cheese,foo and *'
     '''
-    opts = {'grains': __grains__}
+    opts = {'grains': __grains__, 'pillar': __pillar__}
     if minion_id is not None:
         if not isinstance(minion_id, string_types):
             minion_id = str(minion_id)
@@ -309,7 +309,8 @@ def glob(tgt, minion_id=None):
 def filter_by(lookup,
               tgt_type='compound',
               minion_id=None,
-              expr_form=None):
+              expr_form=None,
+              default='default'):
     '''
     Return the first match in a dictionary of target patterns
 
@@ -323,13 +324,13 @@ def filter_by(lookup,
 
     Pillar Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         # Filter the data for the current minion into a variable:
         {% set roles = salt['match.filter_by']({
             'web*': ['app', 'caching'],
             'db*': ['db'],
-        }) %}
+        }, default='web*') %}
 
         # Make the filtered data available to Pillar:
         roles: {{ roles | yaml() }}
@@ -353,7 +354,7 @@ def filter_by(lookup,
         if expr_funcs[tgt_type](*params):
             return lookup[key]
 
-    return None
+    return lookup.get(default, None)
 
 
 def search_by(lookup, tgt_type='compound', minion_id=None):

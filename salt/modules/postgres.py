@@ -34,7 +34,6 @@ Module to provide Postgres compatibility to salt.
 # Import python libs
 from __future__ import absolute_import
 import datetime
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
 import hashlib
 import os
@@ -52,6 +51,7 @@ import salt.utils
 import salt.utils.files
 import salt.utils.itertools
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -293,7 +293,7 @@ def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
     )
 
     if psql_version:
-        return distutils.version.LooseVersion(psql_version)
+        return _LooseVersion(psql_version)
     else:
         log.warning('Attempt to parse version of Postgres server failed. '
                     'Is the server responding?')
@@ -369,7 +369,7 @@ def _psql_prepare_and_run(cmd,
 
 
 def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
-               password=None, runas=None):
+               password=None, runas=None, write=False):
     '''
     Run an SQL-Query and return the results as a list. This command
     only supports SELECT statements.  This limitation can be worked around
@@ -399,6 +399,9 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
     runas
         User to run the command as.
 
+    write
+        Mark query as READ WRITE transaction.
+
     CLI Example:
 
     .. code-block:: bash
@@ -409,6 +412,11 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
 
     csv_query = 'COPY ({0}) TO STDOUT WITH CSV HEADER'.format(
         query.strip().rstrip(';'))
+
+    # Mark transaction as R/W to achieve write will be allowed
+    # Commit is necessary due to transaction
+    if write:
+        csv_query = 'START TRANSACTION READ WRITE; {0}; COMMIT TRANSACTION;'.format(csv_query)
 
     # always use the same datestyle settings to allow parsing dates
     # regardless what server settings are configured
@@ -430,6 +438,10 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
             header = row
             continue
         ret.append(dict(zip(header, row)))
+
+    # Remove 'COMMIT' message if query is inside R/W transction
+    if write:
+        ret = ret[0:-1]
 
     return ret
 
@@ -810,11 +822,11 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
                           password=password,
                           runas=runas)
     if ver:
-        if ver >= distutils.version.LooseVersion('9.1'):
+        if ver >= _LooseVersion('9.1'):
             replication_column = 'pg_roles.rolreplication'
         else:
             replication_column = 'NULL'
-        if ver >= distutils.version.LooseVersion('9.5'):
+        if ver >= _LooseVersion('9.5'):
             rolcatupdate_column = 'NULL'
         else:
             rolcatupdate_column = 'pg_roles.rolcatupdate'

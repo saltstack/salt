@@ -5,7 +5,7 @@
 The minionswarm script will start a group of salt minions with different ids
 on a single system to test scale capabilities
 '''
-
+# pylint: disable=resource-leakage
 # Import Python Libs
 from __future__ import absolute_import, print_function
 import os
@@ -18,6 +18,8 @@ import random
 import tempfile
 import shutil
 import sys
+import hashlib
+import uuid
 
 # Import salt libs
 import salt
@@ -90,6 +92,18 @@ def parse():
         action='store_true',
         help='Each Minion claims a different version grain')
     parser.add_option(
+        '--rand-machine-id',
+        dest='rand_machine_id',
+        default=False,
+        action='store_true',
+        help='Each Minion claims a different machine id grain')
+    parser.add_option(
+        '--rand-uuid',
+        dest='rand_uuid',
+        default=False,
+        action='store_true',
+        help='Each Minion claims a different UUID grain')
+    parser.add_option(
         '-k',
         '--keep-modules',
         dest='keep',
@@ -103,6 +117,11 @@ def parse():
         action='store_true',
         help=('Run the minions with debug output of the swarm going to '
               'the terminal'))
+    parser.add_option(
+        '--temp-dir',
+        dest='temp_dir',
+        default=None,
+        help='Place temporary files/directories here')
     parser.add_option(
         '--no-clean',
         action='store_true',
@@ -118,6 +137,12 @@ def parse():
         dest='transport',
         default='zeromq',
         help='Declare which transport to use, default is zeromq')
+    parser.add_option(
+        '--start-delay',
+        dest='start_delay',
+        default=0.0,
+        type='float',
+        help='Seconds to wait between minion starts')
     parser.add_option(
         '-c', '--config-dir', default='',
         help=('Pass in a configuration directory containing base configuration.')
@@ -142,15 +167,18 @@ class Swarm(object):
         self.opts = opts
         self.raet_port = 4550
 
-        # If given a root_dir, keep the tmp files there as well
-        if opts['root_dir']:
-            tmpdir = os.path.join(opts['root_dir'], 'tmp')
+        # If given a temp_dir, use it for temporary files
+        if opts['temp_dir']:
+            self.swarm_root = opts['temp_dir']
         else:
-            tmpdir = opts['root_dir']
-
-        self.swarm_root = tempfile.mkdtemp(
-            prefix='mswarm-root', suffix='.d',
-            dir=tmpdir)
+            # If given a root_dir, keep the tmp files there as well
+            if opts['root_dir']:
+                tmpdir = os.path.join(opts['root_dir'], 'tmp')
+            else:
+                tmpdir = opts['root_dir']
+            self.swarm_root = tempfile.mkdtemp(
+                prefix='mswarm-root', suffix='.d',
+                dir=tmpdir)
 
         if self.opts['transport'] == 'zeromq':
             self.pki = self._pki_dir()
@@ -158,21 +186,24 @@ class Swarm(object):
 
         self.confs = set()
 
+        random.seed(0)
+
     def _pki_dir(self):
         '''
         Create the shared pki directory
         '''
         path = os.path.join(self.swarm_root, 'pki')
-        os.makedirs(path)
+        if not os.path.exists(path):
+            os.makedirs(path)
 
-        print('Creating shared pki keys for the swarm on: {0}'.format(path))
-        subprocess.call(
-            'salt-key -c {0} --gen-keys minion --gen-keys-dir {0} '
-            '--log-file {1} --user {2}'.format(
-                path, os.path.join(path, 'keys.log'), self.opts['user'],
-            ), shell=True
-        )
-        print('Keys generated')
+            print('Creating shared pki keys for the swarm on: {0}'.format(path))
+            subprocess.call(
+              'salt-key -c {0} --gen-keys minion --gen-keys-dir {0} '
+              '--log-file {1} --user {2}'.format(
+                  path, os.path.join(path, 'keys.log'), self.opts['user'],
+              ), shell=True
+            )
+            print('Keys generated')
         return path
 
     def start(self):
@@ -258,6 +289,7 @@ class MinionSwarm(Swarm):
             else:
                 cmd += ' -d &'
             subprocess.call(cmd, shell=True)
+            time.sleep(self.opts['start_delay'])
 
     def mkconf(self, idx):
         '''
@@ -274,7 +306,8 @@ class MinionSwarm(Swarm):
                 )
 
         dpath = os.path.join(self.swarm_root, minion_id)
-        os.makedirs(dpath)
+        if not os.path.exists(dpath):
+            os.makedirs(dpath)
 
         data.update({
             'id': minion_id,
@@ -287,11 +320,12 @@ class MinionSwarm(Swarm):
 
         if self.opts['transport'] == 'zeromq':
             minion_pkidir = os.path.join(dpath, 'pki')
-            os.makedirs(minion_pkidir)
-            minion_pem = os.path.join(self.pki, 'minion.pem')
-            minion_pub = os.path.join(self.pki, 'minion.pub')
-            shutil.copy(minion_pem, minion_pkidir)
-            shutil.copy(minion_pub, minion_pkidir)
+            if not os.path.exists(minion_pkidir):
+                os.makedirs(minion_pkidir)
+                minion_pem = os.path.join(self.pki, 'minion.pem')
+                minion_pub = os.path.join(self.pki, 'minion.pub')
+                shutil.copy(minion_pem, minion_pkidir)
+                shutil.copy(minion_pub, minion_pkidir)
             data['pki_dir'] = minion_pkidir
         elif self.opts['transport'] == 'raet':
             data['transport'] = 'raet'
@@ -318,6 +352,10 @@ class MinionSwarm(Swarm):
             data['grains']['os'] = random.choice(OSES)
         if self.opts['rand_ver']:
             data['grains']['saltversion'] = random.choice(VERS)
+        if self.opts['rand_machine_id']:
+            data['grains']['machine_id'] = hashlib.md5(minion_id).hexdigest()
+        if self.opts['rand_uuid']:
+            data['grains']['uuid'] = str(uuid.uuid4())
 
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)

@@ -64,7 +64,7 @@ to them:
 Environments
 ============
 
-Environments are directory hierarchies which contain a top files and a set
+Environments are directory hierarchies which contain a top file and a set
 of state files.
 
 Environments can be used in many ways, however there is no requirement that
@@ -158,8 +158,8 @@ Our top file references the environments:
         - db
 
 As seen above, the top file now declares the three environments and for each,
-targets are defined to map globs of minion IDs to state files. For example,
-all minions which have an ID beginning with the string ``webserver`` will have the
+target expressions are defined to map minions to state files. For example, all
+minions which have an ID beginning with the string ``webserver`` will have the
 webserver state from the requested environment assigned to it.
 
 In this manner, a proposed change to a state could first be made in a state
@@ -219,12 +219,51 @@ also available:
 Advanced Minion Targeting
 =========================
 
-In addition to globs, minions can be specified in top files a few other
-ways. Some common ones are :ref:`compound matches <targeting-compound>`
-and :ref:`node groups <targeting-nodegroups>`.
+In the examples above, notice that all of the target expressions are globs. The
+default match type in top files (since version 2014.7.0) is actually the
+:ref:`compound matcher <targeting-compound>`, not the glob matcher as in the
+CLI.
 
-Below is a slightly more complex top file example, showing the different types
-of matches you can perform:
+A single glob, when passed through the compound matcher, acts the same way as
+matching by glob, so in most cases the two are indistinguishable. However,
+there is an edge case in which a minion ID contains whitespace. While it is not
+recommended to include spaces in a minion ID, Salt will not stop you from doing
+so. However, since compound expressions are parsed word-by-word, if a minion ID
+contains spaces it will fail to match. In this edge case, it will be necessary
+to explicitly use the ``glob`` matcher:
+
+.. code-block:: yaml
+
+    base:
+      'minion 1':
+        - match: glob
+        - foo
+
+.. _top-file-match-types:
+
+The available match types which can be set for a target expression in the top
+file are:
+
+============ ================================================================================================================
+Match Type   Description
+============ ================================================================================================================
+glob         Full minion ID or glob expression to match multiple minions (e.g. ``minion123`` or ``minion*``)
+pcre         Perl-compatible regular expression (PCRE) matching a minion ID (e.g.  ``web[0-3].domain.com``)
+grain        Match a :ref:`grain <grain>`, optionally using globbing (e.g. ``kernel:Linux`` or ``kernel:*BSD``)
+grain_pcre   Match a :ref:`grain <grain>` using PCRE (e.g. ``kernel:(Free|Open)BSD``)
+list         Comma-separated list of minions (e.g. ``minion1,minion2,minion3``)
+pillar       :ref:`Pillar <pillar>` match, optionally using globbing (e.g. ``role:webserver`` or ``role:web*``)
+pillar_pcre  :ref:`Pillar <pillar>` match using PCRE (e.g. ``role:web(server|proxy)``
+pillar_exact :ref:`Pillar <pillar>` match with no globbing or PCRE (e.g. ``role:webserver``)
+ipcidr       Subnet or IP address (e.g. ``172.17.0.0/16`` or ``10.2.9.80``)
+data         Match values kept in the minion's datastore (created using the :mod:`data <salt.modules.data>` execution module)
+range        :ref:`Range <targeting-range>` cluster
+compound     Complex expression combining multiple match types (see :ref:`here <targeting-compound>`)
+nodegroup    Pre-defined compound expressions in the master config file (see :ref:`here <targeting-nodegroups>`)
+============ ================================================================================================================
+
+Below is a slightly more complex top file example, showing some of the above
+match types:
 
 .. code-block:: yaml
 
@@ -232,6 +271,13 @@ of matches you can perform:
     # environment in the ``file_roots`` configuration value.
 
     base:
+        # All minions which begin with the strings 'nag1' or any minion with
+        # a grain set called 'role' with the value of 'monitoring' will have
+        # the 'server.sls' state file applied from the 'nagios/' directory.
+
+        'nag1* or G@role:monitoring':
+            - nagios.server
+
         # All minions get the following three state files applied
 
         '*':
@@ -295,14 +341,6 @@ of matches you can perform:
         'somekey:abc':
             - match: pillar
             - xyz
-
-        # All minions which begin with the strings 'nag1' or any minion with
-        # a grain set called 'role' with the value of 'monitoring' will have
-        # the 'server.sls' state file applied from the 'nagios/' directory.
-
-        'nag1* or G@role:monitoring':
-            - match: compound
-            - nagios.server
 
 How Top Files Are Compiled
 ==========================

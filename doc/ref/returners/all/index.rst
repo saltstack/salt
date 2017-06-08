@@ -18,11 +18,14 @@ returner modules
     django_return
     elasticsearch_return
     etcd_return
+    highstate_return
     hipchat_return
     influxdb_return
     kafka_return
+    librato_return
     local
     local_cache
+    mattermost_returner
     memcache_return
     mongo_future_return
     mongo_return
@@ -44,3 +47,4 @@ returner modules
     sqlite3_return
     syslog_return
     xmpp_return
+    zabbix_return

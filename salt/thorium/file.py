@@ -53,6 +53,9 @@ def save(name, filter=False):
     Save the register to <salt cachedir>/thorium/saves/<name>, or to an
     absolute path.
 
+    If an absolute path is specified, then the directory will be created
+    non-recursively if it doesn't exist.
+
     USAGE:
 
     .. code-block:: yaml
@@ -68,10 +71,11 @@ def save(name, filter=False):
            'comment': '',
            'result': True}
     if name.startswith('/'):
-        tgt_dir = name
+        tgt_dir = os.path.dirname(name)
+        fn_ = name
     else:
         tgt_dir = os.path.join(__opts__['cachedir'], 'thorium', 'saves')
-    fn_ = os.path.join(tgt_dir, name)
+        fn_ = os.path.join(tgt_dir, name)
     if not os.path.isdir(tgt_dir):
         os.makedirs(tgt_dir)
     with salt.utils.fopen(fn_, 'w+') as fp_:

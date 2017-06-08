@@ -9,8 +9,8 @@ UsePrivilegeSeparation yes
 StrictModes no
 
 # Lifetime and size of ephemeral version 1 server key
-KeyRegenerationInterval 3600
-ServerKeyBits 1024
+#KeyRegenerationInterval 3600
+#ServerKeyBits 1024
 
 # Logging
 SyslogFacility AUTH
@@ -21,7 +21,7 @@ LoginGraceTime 120
 PermitRootLogin without-password
 StrictModes yes
 
-RSAAuthentication yes
+#RSAAuthentication yes
 PubkeyAuthentication yes
 #AuthorizedKeysFile	%h/.ssh/authorized_keys
 #AuthorizedKeysFile	key_test.pub
@@ -29,7 +29,7 @@ PubkeyAuthentication yes
 # Don't read the user's ~/.rhosts and ~/.shosts files
 IgnoreRhosts yes
 # For this to work you will also need host keys in /etc/ssh_known_hosts
-RhostsRSAAuthentication no
+#RhostsRSAAuthentication no
 # similar for protocol version 2
 HostbasedAuthentication no
 #IgnoreUserKnownHosts yes
