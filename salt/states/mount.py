@@ -630,14 +630,6 @@ def swap(name, persist=True, config='/etc/fstab'):
 
     if persist:
         fstab_data = __salt__['mount.fstab'](config)
-        if __opts__['test']:
-            if name not in fstab_data:
-                ret['result'] = None
-                if name in on_:
-                    ret['comment'] = ('Swap {0} is set to be added to the '
-                                      'fstab and to be activated').format(name)
-            return ret
-
         if 'none' in fstab_data:
             if fstab_data['none']['device'] == name and \
                fstab_data['none']['fstype'] != 'swap':
@@ -665,6 +657,13 @@ def swap(name, persist=True, config='/etc/fstab'):
         if out == 'bad config':
             ret['result'] = False
             ret['comment'] += '. However, the fstab was not found.'
+            return ret
+        if __opts__['test']:
+            if name not in fstab_data:
+                ret['result'] = None
+                if name in on_:
+                    ret['comment'] = ('Swap {0} is set to be added to the '
+                                      'fstab and to be activated').format(name)
             return ret
     return ret
 

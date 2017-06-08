@@ -205,9 +205,8 @@ class MountTestCase(TestCase):
                                          'mount.fstab': mock_fs,
                                          'file.is_link': mock_f}):
             with patch.dict(mount.__opts__, {'test': True}):
-                comt = ('Swap {0} is set to be added to the '
-                        'fstab and to be activated'.format(name))
-                ret.update({'comment': comt})
+                comt = ('Swap {0} already active'.format(name))
+                ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(mount.swap(name), ret)
 
             with patch.dict(mount.__opts__, {'test': False}):
