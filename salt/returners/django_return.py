@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-A returner that will infor a Django system that
+A returner that will inform a Django system that
 returns are available using Django's signal system.
 
 https://docs.djangoproject.com/en/dev/topics/signals/

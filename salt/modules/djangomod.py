@@ -161,18 +161,19 @@ def loaddata(settings_module,
         salt '*' django.loaddata <settings_module> <comma delimited list of fixtures>
 
     '''
-
+    args = []
     kwargs = {}
     if database:
         kwargs['database'] = database
 
+    cmd = '{0} {1}'.format('loaddata', ' '.join(fixtures.split(',')))
+
     return command(settings_module,
-                   'loaddata',
+                   cmd,
                    bin_env,
                    pythonpath,
                    env,
-                   *fixtures.split(','),
-                   **kwargs)
+                   *args, **kwargs)
 
 
 def collectstatic(settings_module,

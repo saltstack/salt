@@ -29,7 +29,8 @@ from json import loads, dumps
 
 # salt modules
 from salt.ext import six
-
+# import NAPALM utils
+import salt.utils.napalm
 
 # ----------------------------------------------------------------------------------------------------------------------
 # state properties
@@ -47,12 +48,10 @@ __virtualname__ = 'probes'
 
 
 def __virtual__():
-
     '''
-    This is a virtual state module called "probes".
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
     '''
-
-    return True
+    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -76,7 +75,7 @@ def _default_ret(name):
 def _retrieve_rpm_probes():
 
     '''
-    Will retrive the probes from the network device using salt module "probes" throught NAPALM proxy.
+    Will retrieve the probes from the network device using salt module "probes" throught NAPALM proxy.
     '''
 
     return __salt__['probes.config']()

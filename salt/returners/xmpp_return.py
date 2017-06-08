@@ -70,11 +70,12 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 from __future__ import absolute_import
 
 # Import python libs
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
 import pprint
 
+# Import salt libs
 import salt.returners
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 HAS_LIBS = False
 try:
@@ -121,10 +122,10 @@ def __virtual__():
     '''
     min_version = '1.3.1'
     if HAS_LIBS:
-        import sleekxmpp
+        import sleekxmpp  # pylint: disable=3rd-party-module-not-gated
         # Certain XMPP functionaility we're using doesn't work with versions under 1.3.1
-        sleekxmpp_version = distutils.version.LooseVersion(sleekxmpp.__version__)
-        valid_version = distutils.version.LooseVersion(min_version)
+        sleekxmpp_version = _LooseVersion(sleekxmpp.__version__)
+        valid_version = _LooseVersion(min_version)
         if sleekxmpp_version >= valid_version:
             return __virtualname__
     return False, 'Could not import xmpp returner; sleekxmpp python client is not ' \

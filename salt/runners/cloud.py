@@ -14,6 +14,7 @@ import os
 
 # Import Salt libs
 import salt.cloud
+from salt.exceptions import SaltCloudConfigError
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -117,7 +118,7 @@ def profile(prof=None, instances=None, opts=None, **kwargs):
     return info
 
 
-def map_run(path, **kwargs):
+def map_run(path=None, **kwargs):
     '''
     Execute a salt cloud map file
     '''
@@ -150,8 +151,12 @@ def action(func=None,
 
         salt-run cloud.action start my-salt-vm
     '''
+    info = {}
     client = _get_client()
-    info = client.action(func, cloudmap, instances, provider, instance, **_filter_kwargs(kwargs))
+    try:
+        info = client.action(func, cloudmap, instances, provider, instance, **_filter_kwargs(kwargs))
+    except SaltCloudConfigError as err:
+        log.error(err)
     return info
 
 

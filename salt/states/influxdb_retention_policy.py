@@ -3,6 +3,8 @@
 Management of Influxdb retention policies
 =========================================
 
+.. versionadded:: Nitrogen
+
 (compatible with InfluxDB version 0.9+)
 '''
 
