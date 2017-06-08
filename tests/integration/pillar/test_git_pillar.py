@@ -131,6 +131,8 @@ class GitPythonMixin(object):
         Test using a single ext_pillar repo
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -156,6 +158,8 @@ class GitPythonMixin(object):
         pillar_merge_lists disabled.
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -184,6 +188,8 @@ class GitPythonMixin(object):
         pillar_merge_lists disabled.
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -212,6 +218,8 @@ class GitPythonMixin(object):
         pillar_merge_lists enabled.
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -240,6 +248,8 @@ class GitPythonMixin(object):
         pillar_merge_lists enabled.
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -264,6 +274,8 @@ class GitPythonMixin(object):
         Test using pillarenv to restrict results to those from a single branch
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -289,6 +301,8 @@ class GitPythonMixin(object):
         SLS file (included_pillar) in the compiled pillar data.
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -317,6 +331,8 @@ class GitPythonMixin(object):
         message in the compiled data.
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             git_pillar_includes: False
             cachedir: {cachedir}
@@ -437,6 +453,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -450,6 +468,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -467,6 +487,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -481,6 +503,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -513,6 +537,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -528,6 +554,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -549,6 +577,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -565,6 +595,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -602,6 +634,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -617,6 +651,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -638,6 +674,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -654,6 +692,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -691,6 +731,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -706,6 +748,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -727,6 +771,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -743,6 +789,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -780,6 +828,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -795,6 +845,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -816,6 +868,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -832,6 +886,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -864,6 +920,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -879,6 +937,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -900,6 +960,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -916,6 +978,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -951,6 +1015,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -966,6 +1032,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -987,6 +1055,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -1003,6 +1073,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1041,6 +1113,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             git_pillar_pubkey: {pubkey_nopass}
@@ -1057,6 +1131,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             cachedir: {cachedir}
@@ -1079,6 +1155,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             git_pillar_pubkey: {pubkey_withpass}
@@ -1096,6 +1174,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             cachedir: {cachedir}
@@ -1144,6 +1224,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1171,6 +1253,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1200,6 +1284,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1229,6 +1315,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1258,6 +1346,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1282,6 +1372,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1309,6 +1401,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1339,6 +1433,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             cachedir: {cachedir}
@@ -1388,6 +1484,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1402,6 +1500,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1433,6 +1533,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1449,6 +1551,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1485,6 +1589,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1501,6 +1607,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1537,6 +1645,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1553,6 +1663,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1589,6 +1701,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1605,6 +1719,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1636,6 +1752,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1652,6 +1770,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1686,6 +1806,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1702,6 +1824,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1739,6 +1863,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             git_pillar_user: {user}
@@ -1756,6 +1882,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             cachedir: {cachedir}
