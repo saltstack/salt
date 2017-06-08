@@ -1246,8 +1246,8 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         elif salt.utils.is_true(state.get('hold', False)):
             if 'test' in __opts__ and __opts__['test']:
                 ret[target].update(result=None)
-                ret['comment'] = ('Package {0} is set not to be held.'
-                                  .format(target))
+                ret[target]['comment'] = ('Package {0} is set not to be '
+                                          'held.'.format(target))
             else:
                 result = set_selections(selection={'install': [target]})
                 ret[target].update(changes=result[target], result=True)
