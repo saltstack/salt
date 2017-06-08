@@ -72,7 +72,8 @@ def event_return(events):
     try:
         with salt.utils.flopen(opts['filename'], 'a') as logfile:
             for event in events:
-                logfile.write(str(json.dumps(event))+'\n')
+                json.dump(event, logfile)
+                logfile.write('\n')
     except:
         log.error('Could not write to rawdata_json file {0}'.format(opts['filename']))
         raise
