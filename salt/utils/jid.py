@@ -2,59 +2,57 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from calendar import month_abbr as months
 import datetime
 import hashlib
 import os
+import uuid
+import time
 
 from salt.ext import six
 
 
 def gen_jid():
     '''
-    Generate a jid
+    Generate a jid.
+    jid is a UUIDv4 string. Its first field is timestamp (without microseconds).
     '''
-    return '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+    int_time = int(time.time())
+    uuid_fields = list(uuid.uuid4().fields)
+    uuid_fields[0] = int_time
+    return str(uuid.UUID(fields=uuid_fields))
 
 
 def is_jid(jid):
     '''
     Returns True if the passed in value is a job id
+    Assert `jid` is a valid uuid.uuid4() string.
     '''
-    if not isinstance(jid, six.string_types):
-        return False
-    if len(jid) != 20:
-        return False
     try:
-        int(jid)
-        return True
+        uid = uuid.UUID(str(jid), version=4)
     except ValueError:
         return False
+    else:
+        try:
+            # Valid jid needs first hex part is non zero.
+            if int(str(jid).split('-')[0], 16) == 0:
+                return False
+        except ValueError:
+            return False
+
+    return True
 
 
 def jid_to_time(jid):
     '''
-    Convert a salt job id into the time when the job was invoked
+    Convert a salt job id into the time when the job was invoked.
+    Extract first field of uuid4 `jid` and parse it to formatted date string.
     '''
-    jid = str(jid)
-    if len(jid) != 20:
+    if not is_jid(jid):
         return ''
-    year = jid[:4]
-    month = jid[4:6]
-    day = jid[6:8]
-    hour = jid[8:10]
-    minute = jid[10:12]
-    second = jid[12:14]
-    micro = jid[14:]
 
-    ret = '{0}, {1} {2} {3}:{4}:{5}.{6}'.format(year,
-                                                months[int(month)],
-                                                day,
-                                                hour,
-                                                minute,
-                                                second,
-                                                micro)
-    return ret
+    jid = uuid.UUID(str(jid), version=4)
+    jid_time = datetime.datetime.fromtimestamp(float(jid.fields[0]))
+    return jid_time.strftime('%Y, %b %d %H:%M:%S')
 
 
 def format_job_instance(job):

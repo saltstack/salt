@@ -24,6 +24,7 @@ from salt import utils
 # Import Python libraries
 import os
 import datetime
+import time
 import yaml
 import zmq
 from collections import namedtuple
@@ -60,13 +61,12 @@ class UtilsTestCase(TestCase):
         self.assertEqual(ret, expected_context)
 
     def test_jid_to_time(self):
-        test_jid = 20131219110700123489
-        expected_jid = '2013, Dec 19 11:07:00.123489'
-        self.assertEqual(utils.jid.jid_to_time(test_jid), expected_jid)
+        now = 1493901415.26
+        with patch('time.time'):
+            time.time.return_value = now
+            test_jid = utils.jid.gen_jid()
 
-        # Test incorrect lengths
-        incorrect_jid_length = 2012
-        self.assertEqual(utils.jid.jid_to_time(incorrect_jid_length), '')
+        self.assertEqual(utils.jid.jid_to_time(test_jid), '2017, May 04 14:36:55')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_gen_mac(self):
@@ -91,9 +91,11 @@ class UtilsTestCase(TestCase):
         self.assertEqual('[{0}]'.format(test_ipv6), utils.ip_bracket(test_ipv6))
 
     def test_is_jid(self):
-        self.assertTrue(utils.jid.is_jid('20131219110700123489'))  # Valid JID
+        self.assertTrue(utils.jid.is_jid('2aba721e-f1c6-421e-8f9b-a974c111e72d'))  # Valid JID
         self.assertFalse(utils.jid.is_jid(20131219110700123489))  # int
-        self.assertFalse(utils.jid.is_jid('2013121911070012348911111'))  # Wrong length
+        self.assertFalse(utils.jid.is_jid('2aba721e-f1c6-421e-8f9b-a974c111e72de3f'))  # Wrong length
+        self.assertFalse(utils.jid.is_jid('2aba721e-f1c6-421e-8f9b'))  # Wrong length
+        self.assertFalse(utils.jid.is_jid('00000000-f1c6-421e-8f9b-a974c111e72d'))  # Empty date JID
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_path_join(self):
@@ -1037,11 +1039,8 @@ class UtilsTestCase(TestCase):
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_gen_jid(self):
-        now = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
-        with patch('datetime.datetime'):
-            datetime.datetime.now.return_value = now
-            ret = utils.jid.gen_jid()
-            self.assertEqual(ret, '20021225120000000000')
+        jid = utils.jid.gen_jid()
+        self.assertTrue(utils.jid.is_jid(jid))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_check_or_die(self):
