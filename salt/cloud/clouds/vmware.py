@@ -988,7 +988,10 @@ def _format_instance_info_select(vm, selection):
     if 'size' in selection:
         cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
         ram = "{0} MB".format(vm["config.hardware.memoryMB"]) if "config.hardware.memoryMB" in vm else "N/A"
-        vm_select_info['size'] = u"cpu: {0}\nram: {1}".format(cpu, ram)
+        vm_select_info['size'] = {
+            'cpu': cpu, 
+            'ram': ram
+        }
 
     if 'state' in selection:
         vm_select_info['state'] = str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A"
@@ -1175,7 +1178,10 @@ def _format_instance_info(vm):
     vm_full_info = {
         'id': str(vm['name']),
         'image': "{0} (Detected)".format(vm["config.guestFullName"]) if "config.guestFullName" in vm else "N/A",
-        'size': u"cpu: {0}\nram: {1}".format(cpu, ram),
+        'size': {
+            'cpu': cpu, 
+            'ram': ram
+        },
         'state': str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A",
         'private_ips': ip_addresses,
         'public_ips': [],
@@ -1579,7 +1585,10 @@ def list_nodes(kwargs=None, call=None):
         vm_info = {
             'id': vm["name"],
             'image': "{0} (Detected)".format(vm["config.guestFullName"]) if "config.guestFullName" in vm else "N/A",
-            'size': u"cpu: {0}\nram: {1}".format(cpu, ram),
+            'size': {
+                'cpu': cpu, 
+                'ram': ram
+            },
             'state': str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A",
             'private_ips': [vm["guest.ipAddress"]] if "guest.ipAddress" in vm else [],
             'public_ips': []
