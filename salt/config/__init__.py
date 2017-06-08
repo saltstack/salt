@@ -2058,7 +2058,9 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
                 else:
                     # Initialize default config if we wish to skip config errors
                     opts = {}
-
+            schedule = opts.get('schedule', {})
+            if schedule and 'schedule' in configuration:
+                configuration['schedule'].update(schedule)
             include = opts.get('include', [])
             if include:
                 opts.update(include_config(include, fn_, verbose))
