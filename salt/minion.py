@@ -1158,11 +1158,25 @@ class Minion(MinionBase):
         return functions, returners, errors, executors
 
     def _send_req_sync(self, load, timeout):
+
+        if self.opts['minion_sign_messages']:
+            log.trace('Signing event to be published onto the bus.')
+            minion_privkey_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
+            sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
+            load['sig'] = sig
+
         channel = salt.transport.Channel.factory(self.opts)
         return channel.send(load, timeout=timeout)
 
     @tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
+
+        if self.opts['minion_sign_messages']:
+            log.trace('Signing event to be published onto the bus.')
+            minion_privkey_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
+            sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
+            load['sig'] = sig
+
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts)
         ret = yield channel.send(load, timeout=timeout)
         raise tornado.gen.Return(ret)
@@ -1185,12 +1199,6 @@ class Minion(MinionBase):
             load['tag'] = tag
         else:
             return
-
-        if self.opts['sign_minion_messages']:
-            log.trace('Signing event being published onto the bus.')
-            minion_privkey_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
-            sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
-            load['sig'] = sig
 
         def timeout_handler(*_):
             log.info('fire_master failed: master could not be contacted. Request timed out.')
@@ -1635,6 +1643,7 @@ class Minion(MinionBase):
                    'the worker_threads value.').format(jid)
             log.warning(msg)
             return True
+
 
         if sync:
             try:

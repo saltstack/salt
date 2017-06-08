@@ -874,6 +874,19 @@ VALID_OPTS = {
 
     # File chunk size for salt-cp
     'salt_cp_chunk_size': int,
+
+    # Require that the minion sign messages it posts to the master on the event
+    # bus
+    'minion_sign_messages': bool,
+
+    # Have master drop messages from minions for which their signatures do
+    # not verify
+    'drop_messages_signature_fail': bool,
+
+    # Require that payloads from minions have a 'sig' entry
+    # (in other words, require that minions have 'minion_sign_messages'
+    # turned on)
+    'require_minion_sign_messages': bool,
 }
 
 # default configurations
@@ -1105,6 +1118,7 @@ DEFAULT_MINION_OPTS = {
     'ssl': None,
     'cache': 'localfs',
     'salt_cp_chunk_size': 65536,
+    'minion_sign_messages': False,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1364,6 +1378,8 @@ DEFAULT_MASTER_OPTS = {
     'thin_extra_mods': '',
     'allow_minion_key_revoke': True,
     'salt_cp_chunk_size': 98304,
+    'require_minion_sign_messages': False,
+    'drop_messages_signature_fail': False,
 }
 
 
