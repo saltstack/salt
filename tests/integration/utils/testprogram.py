@@ -29,7 +29,7 @@ import salt.ext.six as six
 
 from tests.support.unit import TestCase
 from tests.support.paths import CODE_DIR
-from tests.support.processes import terminate_process
+from tests.support.processes import terminate_process, terminate_process_list
 
 log = logging.getLogger(__name__)
 
@@ -416,10 +416,10 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         elif sys.platform.lower().startswith('win') and timeout is not None:
             raise RuntimeError('Timeout is not supported under windows')
 
-        argv = [self.program]
-        argv.extend(args)
-        log.debug('TestProgram.run: {0} Environment {1}'.format(argv, env_delta))
-        process = subprocess.Popen(argv, **popen_kwargs)
+        self.argv = [self.program]
+        self.argv.extend(args)
+        log.debug('TestProgram.run: %s Environment %s', self.argv, env_delta)
+        process = subprocess.Popen(self.argv, **popen_kwargs)
         self.process = process
 
         if timeout is not None:
@@ -766,7 +766,12 @@ class TestDaemon(TestProgram):
                 pass
         return ret
 
-    def shutdown(self, signum=signal.SIGTERM, timeout=10):
+    def find_orphans(self, cmdline):
+        '''Find orphaned processes matching the specified cmdline'''
+        return [x for x in psutils.process_iter()
+                if x.ppid() == 1 and x.cmdline()[-len(cmdline):] == cmdline]
+
+    def shutdown(self, signum=signal.SIGTERM, timeout=10, wait_for_orphans=0):
         '''Shutdown a running daemon'''
         if not self._shutdown:
             try:
@@ -777,6 +782,24 @@ class TestDaemon(TestProgram):
         if self.process:
             terminate_process(pid=self.process.pid, kill_children=True)
             self.process.wait()
+            if wait_for_orphans:
+                # NOTE: The process for finding orphans is greedy, it just
+                # looks for processes with the same cmdline which are owned by
+                # PID 1.
+                orphans = self.find_orphans(self.argv)
+                last = time.time()
+                while True:
+                    if orphans:
+                        log.debug(
+                            'Terminating orphaned child processes: %s',
+                            orphans
+                        )
+                        terminate_process_list(orphans)
+                        last = time.time()
+                    if (time.time() - last) >= wait_for_orphans:
+                        break
+                    time.sleep(0.25)
+                    orphans = self.find_orphans(self.argv)
             self.process = None
         self._shutdown = True
 
