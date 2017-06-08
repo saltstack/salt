@@ -4195,7 +4195,7 @@ def extract_hash(hash_fn,
                             hash_matched = True
                     except IndexError:
                         pass
-                elif re.match(re.escape(file_name) + r'\s+',
+                elif re.match(re.escape(source_hash_name) + r'\s+',
                               line):
                     _add_to_matches(found, line, 'source_hash_name',
                                     source_hash_name, matched)
