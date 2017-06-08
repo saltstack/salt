@@ -525,6 +525,9 @@ def status(name, sig = None):
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
+    .. versionchanged:: Oxygen
+        The service name can now be a glob (e.g. ``salt*``)
+
     Args:
         name (str): The name of the service to check
         sig (str): Not supported on Windows

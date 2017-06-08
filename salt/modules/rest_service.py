@@ -121,6 +121,9 @@ def status(name, sig=None):
 
     .. versionadded:: 2015.8.0
 
+    .. versionchanged:: Oxygen
+        The service name can now be a glob (e.g. ``salt*``)
+
     Args:
         name (str): The name of the service to check
         sig (str): Not implemented

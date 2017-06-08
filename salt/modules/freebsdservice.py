@@ -479,6 +479,9 @@ def status(name, sig=None, jail=None):
 
     .. versionchanged:: 2016.3.4
 
+    .. versionchanged:: Oxygen
+        The service name can now be a glob (e.g. ``salt*``)
+
     Args:
         name (str): The name of the service to check
         sig (str): Signature to use to find the service via ps
