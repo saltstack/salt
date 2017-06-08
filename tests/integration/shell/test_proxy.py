@@ -45,13 +45,18 @@ class ProxyTest(testprogram.TestProgramCase):
             # without daemonizing - protect that with a timeout.
             timeout=60,
         )
-        self.assert_exit_status(
-            status, 'EX_USAGE',
-            message='no --proxyid specified',
-            stdout=stdout,
-            stderr=tests.integration.utils.decode_byte_list(stderr)
-        )
-        # proxy.shutdown() should be unnecessary since the start-up should fail
+        try:
+            self.assert_exit_status(
+                status, 'EX_USAGE',
+                message='no --proxyid specified',
+                stdout=stdout,
+                stderr=tests.integration.utils.decode_byte_list(stderr)
+            )
+        finally:
+            # Although the start-up should fail, call shutdown() to set the
+            # internal _shutdown flag and avoid the registered atexit calls to
+            # cause timeout exeptions and respective traceback
+            proxy.shutdown()
 
     def test_exit_status_unknown_user(self):
         '''
@@ -70,13 +75,18 @@ class ProxyTest(testprogram.TestProgramCase):
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_NOUSER',
-            message='unknown user not on system',
-            stdout=stdout,
-            stderr=tests.integration.utils.decode_byte_list(stderr)
-        )
-        # proxy.shutdown() should be unnecessary since the start-up should fail
+        try:
+            self.assert_exit_status(
+                status, 'EX_NOUSER',
+                message='unknown user not on system',
+                stdout=stdout,
+                stderr=tests.integration.utils.decode_byte_list(stderr)
+            )
+        finally:
+            # Although the start-up should fail, call shutdown() to set the
+            # internal _shutdown flag and avoid the registered atexit calls to
+            # cause timeout exeptions and respective traceback
+            proxy.shutdown()
 
     # pylint: disable=invalid-name
     def test_exit_status_unknown_argument(self):
@@ -95,12 +105,17 @@ class ProxyTest(testprogram.TestProgramCase):
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_USAGE',
-            message='unknown argument',
-            stdout=stdout, stderr=stderr
-        )
-        # proxy.shutdown() should be unnecessary since the start-up should fail
+        try:
+            self.assert_exit_status(
+                status, 'EX_USAGE',
+                message='unknown argument',
+                stdout=stdout, stderr=stderr
+            )
+        finally:
+            # Although the start-up should fail, call shutdown() to set the
+            # internal _shutdown flag and avoid the registered atexit calls to
+            # cause timeout exeptions and respective traceback
+            proxy.shutdown()
 
     def test_exit_status_correct_usage(self):
         '''
@@ -118,10 +133,12 @@ class ProxyTest(testprogram.TestProgramCase):
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_OK',
-            message='correct usage',
-            stdout=stdout,
-            stderr=tests.integration.utils.decode_byte_list(stderr)
-        )
-        proxy.shutdown()
+        try:
+            self.assert_exit_status(
+                status, 'EX_OK',
+                message='correct usage',
+                stdout=stdout,
+                stderr=tests.integration.utils.decode_byte_list(stderr)
+            )
+        finally:
+            proxy.shutdown(wait_for_orphans=3)
