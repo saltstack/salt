@@ -793,8 +793,8 @@ def dns_check(addr, port, safe=False, ipv6=None):
                 if h[0] != socket.AF_INET6 or ipv6 is not None:
                     candidates.append(candidate_addr)
 
-                s = socket.socket(h[0], socket.SOCK_STREAM)
                 try:
+                    s = socket.socket(h[0], socket.SOCK_STREAM)
                     s.connect((candidate_addr.strip('[]'), port))
                     s.close()
 
