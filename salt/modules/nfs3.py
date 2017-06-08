@@ -71,6 +71,22 @@ def del_export(exports='/etc/exports', path=None):
     _write_exports(exports, edict)
     return edict
 
+def add_export(exports='/etc/exports', path=None, hosts=None, options=['ro']):
+    '''
+    Add an export
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nfs3.add_export path='/srv/test' hosts=['127.0.0.1'] options=['rw']
+    '''
+    edict = list_exports(exports)
+    new = [{'hosts': hosts, 'options': options}]
+    edict[path] = new
+    _write_exports(exports, edict)
+
+    return new
 
 def _write_exports(exports, edict):
     '''
