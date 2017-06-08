@@ -209,6 +209,29 @@ default configuration file for the minion contains the information and format
 used to pass data to the modules. :mod:`salt.modules.test`,
 :file:`conf/minion`.
 
+.. _module_init:
+
+``__init__`` Function
+---------------------
+
+If you want your module to have different execution modes based on minion
+configuration, you can use the ``__init__(opts)`` function to perform initial
+module setup. The parameter ``opts`` is the complete minion configuration,
+as also available in the ``__opts__`` dict.
+
+.. code-block:: python
+
+    '''
+    Cheese module initialization example
+    '''
+    def __init__(opts):
+        '''
+        Allow foreign imports if configured to do so
+        '''
+        if opts.get('cheese.allow_foreign', False):
+            _enable_foreign_products()
+
+
 Strings and Unicode
 ===================
 
