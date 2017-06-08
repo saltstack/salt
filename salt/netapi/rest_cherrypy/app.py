@@ -1617,6 +1617,10 @@ class Keys(LowDataAdapter):
         Accepts all the same parameters as the :py:func:`key.gen_accept
         <salt.wheel.key.gen_accept>`.
 
+        .. note:: A note about ``curl``
+           Avoid using the ``-i`` flag or HTTP headers will be written and
+           produce an invalid tar file.
+
         Example partial kickstart script to bootstrap a new minion:
 
         .. code-block:: text
