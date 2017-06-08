@@ -2963,7 +2963,8 @@ class Matcher(object):
                'L': 'list',
                'N': None,      # Nodegroups should already be expanded
                'S': 'ipcidr',
-               'E': 'pcre'}
+               'E': 'pcre',
+               'D': 'data'}
         if HAS_RANGE:
             ref['R'] = 'range'
 
