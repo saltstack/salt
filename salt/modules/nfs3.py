@@ -109,3 +109,26 @@ def _write_exports(exports, edict):
                 options = ','.join(perms['options'])
                 line += ' {0}({1})'.format(hosts, options)
             efh.write('{0}\n'.format(line))
+
+# exportfs doesn't take a file path argument
+# so we don't either
+def reload_exports():
+    '''
+    Trigger a reload of the exports file to apply changes
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nfs3.reload_exports
+    '''
+    ret = {}
+
+    command = 'exportfs -r'
+
+    output = __salt__['cmd.run_all'](command)
+    ret['stdout'] = output['stdout']
+    ret['stderr'] = output['stderr']
+    ret['result'] = not output['retcode']
+
+    return ret
