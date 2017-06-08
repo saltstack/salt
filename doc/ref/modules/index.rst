@@ -273,8 +273,9 @@ module is not loaded. ``False`` lets the module perform system checks and
 prevent loading if dependencies are not met.
 
 Since ``__virtual__`` is called before the module is loaded, ``__salt__`` will
-be unavailable as it will not have been packed into the module at this point in
-time.
+be unreliable as not all modules will be available at this point in time. The
+``__pillar`` and ``__grains__`` :ref:`"dunder" dictionaries <dunder-dictionaries>`
+are available however.
 
 .. note::
     Modules which return a string from ``__virtual__`` that is already used by
@@ -313,10 +314,14 @@ the case when the dependency is unavailable.
         else:
             return False, 'The cheese execution module cannot be loaded: enzymes unavailable.'
 
+    def slice():
+        pass
+
 .. code-block:: python
 
     '''
-    Cheese state module
+    Cheese state module. Note that this works in state modules because it is
+    guaranteed that execution modules are loaded first
     '''
 
     def __virtual__():
