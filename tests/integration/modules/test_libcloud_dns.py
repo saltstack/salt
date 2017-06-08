@@ -18,6 +18,7 @@ try:
 except ImportError:
     HAS_LIBCLOUD = False
 
+
 @skipIf(not HAS_LIBCLOUD, 'Requires libcloud >= {0}'.format(REQUIRED_LIBCLOUD_VERSION))
 class LibcloudDNSTest(ModuleCase):
     '''
