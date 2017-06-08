@@ -604,19 +604,19 @@ class SaltReturnAssertsMixin(object):
 
     def assertInSaltStateWarning(self, in_comment, ret):
         for saltret in self.__getWithinSaltReturn(ret, 'warnings'):
-            self.assetIn(in_comment, saltret)
+            self.assertIn(in_comment, saltret)
 
     def assertNotInSaltStateWarning(self, not_in_comment, ret):
         for saltret in self.__getWithinSaltReturn(ret, 'warnings'):
-            self.assetNotIn(not_in_comment, saltret)
+            self.assertNotIn(not_in_comment, saltret)
 
     def assertInSaltReturn(self, item_to_check, ret, keys):
         for saltret in self.__getWithinSaltReturn(ret, keys):
-            self.assetIn(item_to_check, saltret)
+            self.assertIn(item_to_check, saltret)
 
     def assertNotInSaltReturn(self, item_to_check, ret, keys):
         for saltret in self.__getWithinSaltReturn(ret, keys):
-            self.assetNotIn(item_to_check, saltret)
+            self.assertNotIn(item_to_check, saltret)
 
     def assertInSaltReturnRegexpMatches(self, ret, pattern, keys=()):
         for saltret in self.__getWithinSaltReturn(ret, keys):
