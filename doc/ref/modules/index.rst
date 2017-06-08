@@ -13,7 +13,7 @@ Writing Salt execution modules is straightforward.
 
 A Salt execution module is a Python or `Cython`_ module placed in a directory
 called ``_modules/`` at the root of the Salt fileserver. When using the default
-fileserver backend (i.e. :py:mod:`roots <salt.fileserver.roots`), unless
+fileserver backend (i.e. :py:mod:`roots <salt.fileserver.roots>`), unless
 environments are otherwise defined in the :conf_master:`file_roots` config
 option, the ``_modules/`` directory would be located in ``/srv/salt/_modules``
 on most systems.
