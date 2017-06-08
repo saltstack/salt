@@ -1644,7 +1644,6 @@ class Minion(MinionBase):
             log.warning(msg)
             return True
 
-
         if sync:
             try:
                 ret_val = self._send_req_sync(load, timeout=timeout)
