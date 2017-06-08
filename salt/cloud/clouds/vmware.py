@@ -2573,7 +2573,7 @@ def create(vm_):
             config_spec.extraConfig.append(option)
 
     if annotation:
-        config_spec.annotation = annotation
+        config_spec.annotation = str(annotation)
 
     if 'clonefrom' in vm_:
         clone_spec = handle_snapshot(
