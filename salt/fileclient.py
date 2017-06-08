@@ -486,8 +486,11 @@ class Client(object):
                     'Path \'{0}\' is not absolute'.format(url_path)
                 )
             if dest is None:
-                with salt.utils.fopen(url_path, 'r') as fp_:
+                mode = 'rb' if six.PY3 else 'r'
+                with salt.utils.fopen(url_path, mode) as fp_:
                     data = fp_.read()
+                    if six.PY3:
+                        data = data.decode()
                 return data
             return url_path
 

@@ -64,6 +64,7 @@ class CPModuleTest(ModuleCase):
             self.assertIn('Gromit', data)
             self.assertNotIn('bacon', data)
 
+    @skipIf(__salt_system_encoding__ == 'US-ASCII', 'Requires a unicode locale, i.e. en_US.UTF-8')
     def test_get_file_gzipped(self):
         '''
         cp.get_file
@@ -84,8 +85,11 @@ class CPModuleTest(ModuleCase):
             ],
             gzip=5
         )
-        with salt.utils.fopen(tgt, 'r') as scene:
+        mode = 'rb' if six.PY3 else 'r'
+        with salt.utils.fopen(tgt, mode) as scene:
             data = scene.read()
+            if six.PY3:
+                data = data.decode()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
             if six.PY3:
@@ -246,8 +250,11 @@ class CPModuleTest(ModuleCase):
                 'https://repo.saltstack.com/index.html',
                 tgt,
             ])
-        with salt.utils.fopen(tgt, 'r') as instructions:
+        mode = 'rb' if six.PY3 else 'r'
+        with salt.utils.fopen(tgt, mode) as instructions:
             data = instructions.read()
+            if six.PY3:
+                data = data.decode()
             self.assertIn('Bootstrap', data)
             self.assertIn('Debian', data)
             self.assertIn('Windows', data)
@@ -262,8 +269,11 @@ class CPModuleTest(ModuleCase):
             [
                 'https://repo.saltstack.com/index.html',
             ])
-        with salt.utils.fopen(ret, 'r') as instructions:
+        mode = 'rb' if six.PY3 else 'r'
+        with salt.utils.fopen(ret, mode) as instructions:
             data = instructions.read()
+            if six.PY3:
+                data = data.decode()
             self.assertIn('Bootstrap', data)
             self.assertIn('Debian', data)
             self.assertIn('Windows', data)
@@ -297,8 +307,11 @@ class CPModuleTest(ModuleCase):
                 src,
                 tgt,
             ])
-        with salt.utils.fopen(ret, 'r') as scene:
+        mode = 'rb' if six.PY3 else 'r'
+        with salt.utils.fopen(ret, mode) as scene:
             data = scene.read()
+            if six.PY3:
+                data = data.decode()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
 
