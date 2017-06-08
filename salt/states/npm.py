@@ -96,7 +96,7 @@ def installed(name,
     pkg_list = pkgs if pkgs else [name]
 
     try:
-        installed_pkgs = __salt__['npm.list'](dir=dir, runas=user, env=env)
+        installed_pkgs = __salt__['npm.list'](dir=dir, runas=user, env=env, depth=0)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error looking up \'{0}\': {1}'.format(name, err)
@@ -232,7 +232,7 @@ def removed(name, dir=None, user=None):
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     try:
-        installed_pkgs = __salt__['npm.list'](dir=dir)
+        installed_pkgs = __salt__['npm.list'](dir=dir, depth=0)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
         ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
