@@ -4227,7 +4227,7 @@ def extract_hash(hash_fn,
                             hash_matched = True
                     except IndexError:
                         pass
-                elif re.match(source.replace('.', r'\.') + r'\s+', line):
+                elif re.match(re.escape(source) + r'\s+', line):
                     _add_to_matches(found, line, 'source', source, matched)
                     hash_matched = True
 
