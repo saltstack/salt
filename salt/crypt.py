@@ -899,8 +899,8 @@ class AsyncAuth(object):
             with salt.utils.fopen(m_pub_fn) as fp_:
                 local_master_pub = fp_.read()
 
-            if payload['pub_key'].replace('\n', '').replace('\r', '') != \
-                    local_master_pub.replace('\n', '').replace('\r', ''):
+            if payload['pub_key'].replace('\n', '').replace('\r', '').replace('RSA ', '') != \
+                    local_master_pub.replace('\n', '').replace('\r', '').replace('RSA ', ''):
                 if not self.check_auth_deps(payload):
                     return ''
 
