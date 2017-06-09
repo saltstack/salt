@@ -160,13 +160,16 @@ def get_certs(context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
     return ret
 
 
-def get_cert_file(name, cert_format=_DEFAULT_FORMAT):
+def get_cert_file(name, cert_format=_DEFAULT_FORMAT, password=''):
     '''
     Get the details of the certificate file.
 
     :param str name: The filesystem path of the certificate file.
     :param str cert_format: The certificate format. Specify 'cer' for X.509, or
         'pfx' for PKCS #12.
+    :param str password: The password of the certificate. Only applicable to pfx
+        format. Note that if used interactively, the password will be seen by all minions.
+        To protect the password, use a state and get the password from pillar.
 
     :return: A dictionary of the certificate thumbprints and properties.
     :rtype: dict
@@ -189,9 +192,18 @@ def get_cert_file(name, cert_format=_DEFAULT_FORMAT):
         return ret
 
     if cert_format == 'pfx':
-        cmd.append(r"Get-PfxCertificate -FilePath '{0}'".format(name))
-        cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
-                   'Thumbprint, Version')
+        if password:
+            cmd.append('$CertObject = New-Object')
+            cmd.append(' System.Security.Cryptography.X509Certificates.X509Certificate2;')
+            cmd.append(r" $CertObject.Import('{0}'".format(name))
+            cmd.append(",'{0}'".format(password))
+            cmd.append(",'DefaultKeySet') ; $CertObject")
+            cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
+                    'Thumbprint, Version')
+        else:
+            cmd.append(r"Get-PfxCertificate -FilePath '{0}'".format(name))
+            cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
+                    'Thumbprint, Version')
     else:
         cmd.append('$CertObject = New-Object')
         cmd.append(' System.Security.Cryptography.X509Certificates.X509Certificate2;')
@@ -233,7 +245,8 @@ def import_cert(name,
     :param bool exportable: Mark the certificate as exportable. Only applicable
         to pfx format.
     :param str password: The password of the certificate. Only applicable to pfx
-        format.
+        format. Note that if used interactively, the password will be seen by all minions.
+        To protect the password, use a state and get the password from pillar.
     :param str saltenv: The environment the file resides in.
 
     :return: A boolean representing whether all changes succeeded.
@@ -258,7 +271,10 @@ def import_cert(name,
         _LOG.error('Unable to get cached copy of file: %s', name)
         return False
 
-    cert_props = get_cert_file(name=cached_source_path)
+    if password:
+        cert_props = get_cert_file(name=cached_source_path, cert_format=cert_format, password=password)
+    else:
+        cert_props = get_cert_file(name=cached_source_path, cert_format=cert_format)
 
     current_certs = get_certs(context=context, store=store)
 
@@ -321,7 +337,8 @@ def export_cert(name,
     :param str context: The name of the certificate store location context.
     :param str store: The name of the certificate store.
     :param str password: The password of the certificate. Only applicable to pfx
-        format.
+        format. Note that if used interactively, the password will be seen by all minions.
+        To protect the password, use a state and get the password from pillar.
 
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool

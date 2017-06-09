@@ -2,6 +2,8 @@
 '''
 Installation of Windows Updates using the Windows Update Agent
 
+.. versionadded:: Nitrogen
+
 Salt can manage Windows updates via the "wua" state module. Updates can be
 installed and removed. Update management declarations are as follows:
 

@@ -13,6 +13,9 @@ import logging
 # Import Salt libs
 import salt.utils
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 __outputter__ = {
     'display': 'txt',
@@ -87,7 +90,10 @@ def show_link(name):
 
     try:
         with salt.utils.fopen(path, 'rb') as r_file:
-            return r_file.readlines()[1].rstrip('\n')
+            contents = r_file.read()
+            if six.PY3:
+                contents = contents.decode(__salt_system_encoding__)
+            return contents.splitlines(True)[1].rstrip('\n')
     except OSError:
         log.error(
             'alternatives: {0} does not exist'.format(name)

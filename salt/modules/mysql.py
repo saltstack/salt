@@ -621,19 +621,22 @@ def query(database, query, **connection_args):
     orig_conv = MySQLdb.converters.conversions
     conv_iter = iter(orig_conv)
     conv = dict(zip(conv_iter, [str] * len(orig_conv)))
+
     # some converters are lists, do not break theses
-    conv[FIELD_TYPE.BLOB] = [
-        (FLAG.BINARY, str),
-    ]
-    conv[FIELD_TYPE.STRING] = [
-        (FLAG.BINARY, str),
-    ]
-    conv[FIELD_TYPE.VAR_STRING] = [
-        (FLAG.BINARY, str),
-    ]
-    conv[FIELD_TYPE.VARCHAR] = [
-        (FLAG.BINARY, str),
-    ]
+    conv_mysqldb = {'MYSQLDB': True}
+    if conv_mysqldb.get(MySQLdb.__package__.upper()):
+        conv[FIELD_TYPE.BLOB] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.STRING] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.VAR_STRING] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.VARCHAR] = [
+            (FLAG.BINARY, str),
+        ]
 
     connection_args.update({'connection_db': database, 'connection_conv': conv})
     dbc = _connect(**connection_args)
@@ -734,7 +737,7 @@ def file_query(database, file_name, **connection_args):
     ret['query time']['raw'] = round(float(ret['query time']['raw']), 5)
 
     # Remove empty keys in ret
-    ret = dict((k, v) for k, v in ret.iteritems() if v)
+    ret = dict((k, v) for k, v in six.iteritems(ret) if v)
 
     return ret
 
@@ -1448,7 +1451,10 @@ def user_chpass(user,
     if salt.utils.is_true(allow_passwordless) and \
             salt.utils.is_true(unix_socket):
         if host == 'localhost':
-            qry += ' IDENTIFIED VIA unix_socket'
+            qry = ('UPDATE mysql.user SET ' + password_column + '='
+                   + password_sql + ', plugin=%(unix_socket)s' +
+                   ' WHERE User=%(user)s AND Host = %(host)s;')
+            args['unix_socket'] = 'unix_socket'
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
     try:
