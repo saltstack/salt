@@ -2096,6 +2096,11 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     The following options are available to modify a repo definition:
 
+        architectures
+            a comma separated list of supported architectures, e.g. ``amd64``
+            If this option is not set, all architectures (configured in the
+            system) will be used.
+
         comps
             a comma separated list of components for the repo, e.g. ``main``
 
@@ -2471,6 +2476,9 @@ def expand_repo_def(**kwargs):
             kwargs['file'] = filename.format(owner_name, ppa_name, dist)
 
     source_entry = sourceslist.SourceEntry(repo)
+    for list_args in ('architectures', 'comps'):
+        if list_args in kwargs:
+            kwargs[list_args] = kwargs[list_args].split(',')
     for kwarg in _MODIFY_OK:
         if kwarg in kwargs:
             setattr(source_entry, kwarg, kwargs[kwarg])
