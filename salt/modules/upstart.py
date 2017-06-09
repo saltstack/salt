@@ -475,7 +475,6 @@ def status(name, sig=None):
     return results[name]
 
 
-
 def _get_service_exec():
     '''
     Debian uses update-rc.d to manage System-V style services.
