@@ -17,6 +17,7 @@ from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 import logging
 import os
 import plistlib
+import fnmatch
 import re
 
 # Import salt libs
@@ -230,7 +231,7 @@ def status(name, runas=None):
         salt '*' service.status <service name>
     '''
 
-    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:

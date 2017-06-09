@@ -7,6 +7,8 @@ from __future__ import absolute_import
 import salt.utils
 
 import logging
+import fnmatch
+import re
 
 log = logging.getLogger(__name__)
 
@@ -140,7 +142,7 @@ def status(name, sig=None):
     '''
 
     proxy_fn = 'rest_sample.service_status'
-    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:

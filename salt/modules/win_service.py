@@ -519,7 +519,7 @@ def execute_salt_restart_task():
     return __salt__['task.run'](name='restart-salt-minion')
 
 
-def status(name, sig = None):
+def status(name, sig=None):
     '''
     Return the status for a service.
     If the name contains globbing, a dict mapping service name to True/False
@@ -545,7 +545,7 @@ def status(name, sig = None):
 
     results = {}
     all_services = get_all()
-    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
     if contains_globbing:
         services = fnmatch.filter(all_services, name)
     else:
@@ -555,6 +555,7 @@ def status(name, sig = None):
     if contains_globbing:
         return results
     return results[name]
+
 
 def getsid(name):
     '''

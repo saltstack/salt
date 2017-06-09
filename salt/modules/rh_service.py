@@ -36,7 +36,7 @@ if salt.utils.which('initctl'):
     try:
         # Don't re-invent the wheel, import the helper functions from the
         # upstart module.
-        from salt.modules.upstart \
+        from salt.modules.upstart
             import _upstart_enable, _upstart_disable, _upstart_is_enabled
     except Exception as exc:
         log.error('Unable to import helper functions from '
@@ -496,7 +496,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
 
-    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:

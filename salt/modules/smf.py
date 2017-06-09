@@ -12,6 +12,8 @@ that use SMF also. (e.g. SmartOS)
 
 # Import Python libs
 from __future__ import absolute_import
+import fnmatch
+import re
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -247,7 +249,7 @@ def status(name, sig=None):
 
         salt '*' service.status <service name>
     '''
-    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:
@@ -256,7 +258,7 @@ def status(name, sig=None):
     for service in services:
         cmd = '/usr/bin/svcs -H -o STATE {0}'.format(service)
         line = __salt__['cmd.run'](cmd, python_shell=False)
-        results[service] = line == 'online':
+        results[service] = line == 'online'
     if contains_globbing:
         return results
     return results[name]

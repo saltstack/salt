@@ -17,6 +17,7 @@ import errno
 import glob
 import logging
 import os
+import fnmatch
 import re
 import shlex
 
@@ -897,7 +898,7 @@ def status(name, sig=None):  # pylint: disable=unused-argument
 
         salt '*' service.status <service name> [service signature]
     '''
-    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:

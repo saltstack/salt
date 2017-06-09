@@ -6,6 +6,8 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import fnmatch
+import re
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -158,7 +160,7 @@ def status(name, sig=None):
     if sig:
         return __salt__['status.pid'](sig)
 
-    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:

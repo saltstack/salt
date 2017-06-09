@@ -450,7 +450,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
 
-    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:
@@ -462,12 +462,13 @@ def status(name, sig=None):
             # decide result base on cmd output, thus ignore retcode,
             # which makes cmd output not at error lvl even when cmd fail.
             results[service] = 'start/running' in __salt__['cmd.run'](cmd, python_shell=False,
-                                                        ignore_retcode=True)
+                                                                      ignore_retcode=True)
         else:
             # decide result base on retcode, thus ignore output (set quite)
             # because there is no way to avoid logging at error lvl when
             # service is not running - retcode != 0 (which is totally relevant).
             results[service] = not bool(__salt__['cmd.retcode'](cmd, python_shell=False,
+                                                                ignore_retcode=True)
     if contains_globbing:
         return results
     return results[name]
