@@ -50,13 +50,16 @@ import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt.exceptions import SaltInvocationError
 import salt.utils.dictupdate as dictupdate
-from salt.ext.six import string_types
+
+# Import 3rd-party libs
+import salt.ext.six as six
 from salt.ext.six.moves import range
-from salt.ext.six import StringIO
 
 log = logging.getLogger(__name__)
+
 __virtualname__ = 'lgpo'
 __func_alias__ = {'set_': 'set'}
+
 adm_policy_name_map = {True: {}, False: {}}
 HAS_WINDOWS_MODULES = False
 # define some global XPATH variables that we'll set assuming all our imports are
@@ -345,11 +348,11 @@ class _policy_info(object):
             },
         }
         self.security_options_gpedit_path = [
-                'Computer Configuration',
-                'Windows Settings',
-                'Security Settings',
-                'Local Policies',
-                'Security Options'
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Local Policies',
+            'Security Options'
         ]
         self.password_policy_gpedit_path = [
             'Computer Configuration',
@@ -2478,7 +2481,8 @@ class _policy_info(object):
         '''
         minimum = 0
         maximum = 1
-        if isinstance(val, string_types):
+
+        if isinstance(val, six.string_types):
             if val.lower() == 'not defined':
                 return True
             else:
@@ -2547,7 +2551,7 @@ class _policy_info(object):
         '''
         converts a list of pysid objects to string representations
         '''
-        if isinstance(val, string_types):
+        if isinstance(val, six.string_types):
             val = val.split(',')
         usernames = []
         for _sid in val:
@@ -2569,7 +2573,7 @@ class _policy_info(object):
         '''
         if not val:
             return val
-        if isinstance(val, string_types):
+        if isinstance(val, six.string_types):
             val = val.split(',')
         sids = []
         for _user in val:
@@ -2629,7 +2633,7 @@ class _policy_info(object):
         else:
             value_lookup = False
         if 'lookup' in kwargs:
-            for k, v in kwargs['lookup'].iteritems():
+            for k, v in six.iteritems(kwargs['lookup']):
                 if value_lookup:
                     if str(v).lower() == str(item).lower():
                         log.debug('returning key {0}'.format(k))
@@ -2662,7 +2666,7 @@ def _updateNamespace(item, new_namespace):
         temp_item = item.tag
     item.tag = '{{{0}}}{1}'.format(new_namespace, temp_item)
     for child in item.getiterator():
-        if isinstance(child.tag, string_types):
+        if isinstance(child.tag, six.string_types):
             temp_item = ''
             i = child.tag.find('}')
             if i >= 0:
@@ -2692,10 +2696,10 @@ def _remove_unicode_encoding(xml_file):
     as lxml does not support that on a windows node currently
     see issue #38100
     '''
-    with open(xml_file, 'rb') as f:
+    with salt.utils.fopen(xml_file, 'rb') as f:
         xml_content = f.read()
     modified_xml = re.sub(r' encoding=[\'"]+unicode[\'"]+', '', xml_content.decode('utf-16'), count=1)
-    xmltree = lxml.etree.parse(StringIO(modified_xml))
+    xmltree = lxml.etree.parse(six.StringIO(modified_xml))
     return xmltree
 
 
@@ -3087,9 +3091,14 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
                 if len(pol_entry) >= 5:
                     value = pol_entry[4]
                     if vtype == 'REG_DWORD' or vtype == 'REG_QWORD':
-                        value = value.replace(chr(0), '')
                         if value:
-                            value = ord(value)
+                            vlist = list(ord(v) for v in value)
+                            if vtype == 'REG_DWORD':
+                                for v in struct.unpack('I', struct.pack('2H', *vlist)):
+                                    value = v
+                            elif vtype == 'REG_QWORD':
+                                for v in struct.unpack('I', struct.pack('4H', *vlist)):
+                                    value = v
                         else:
                             value = 0
                     elif vtype == 'REG_MULTI_SZ':
@@ -3211,11 +3220,11 @@ def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
         if reg_vtype == 'REG_DWORD':
             this_element_value = ''
             for v in struct.unpack('2H', struct.pack('I', int(reg_data))):
-                this_element_value = this_element_value + unichr(v)
+                this_element_value = this_element_value + six.unichr(v)
         elif reg_vtype == 'REG_QWORD':
             this_element_value = ''
             for v in struct.unpack('4H', struct.pack('I', int(reg_data))):
-                this_element_value = this_element_value + unichr(v)
+                this_element_value = this_element_value + six.unichr(v)
         elif reg_vtype == 'REG_SZ':
             this_element_value = '{0}{1}'.format(reg_data, chr(0))
     if check_deleted:
@@ -3225,7 +3234,7 @@ def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
                                 reg_key,
                                 reg_valueName,
                                 chr(registry.vtype[reg_vtype]),
-                                unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
+                                six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
                                 ' ')
     else:
         expected_string = u'[{1}{0};{2}{0};{3}{0};{4}{0};{5}]'.format(
@@ -3233,7 +3242,7 @@ def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
                                 reg_key,
                                 reg_valueName,
                                 chr(registry.vtype[reg_vtype]),
-                                unichr(len(this_element_value.encode('utf-16-le'))),
+                                six.unichr(len(this_element_value.encode('utf-16-le'))),
                                 this_element_value)
     return expected_string
 
@@ -3268,7 +3277,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
         if 'value' in element.attrib:
             this_element_value = ''
             for val in struct.unpack('2H', struct.pack('I', int(element.attrib['value']))):
-                this_element_value = this_element_value + unichr(val)
+                this_element_value = this_element_value + six.unichr(val)
         else:
             msg = ('The {2} child {1} element for the policy with attributes: '
                    '{0} does not have the required "value" attribute. The '
@@ -3285,7 +3294,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
         if 'value' in element.attrib:
             this_element_value = ''
             for val in struct.unpack('4H', struct.pack('I', int(element.attrib['value']))):
-                this_element_value = this_element_value + unichr(val)
+                this_element_value = this_element_value + six.unichr(val)
         else:
             msg = ('The {2} child {1} element for the policy with attributes: '
                    '{0} does not have the required "value" attribute. The '
@@ -3317,9 +3326,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             if this_element_value is not None:
                 temp_val = ''
                 for v in struct.unpack('2H', struct.pack('I', int(this_element_value))):
-                    # Not Python 3 compliant
-                    # `unichr` not available in Python 3
-                    temp_val = temp_val + unichr(v)
+                    temp_val = temp_val + six.unichr(v)
                 this_element_value = temp_val
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
@@ -3335,9 +3342,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             if this_element_value is not None:
                 temp_val = ''
                 for v in struct.unpack('4H', struct.pack('I', int(this_element_value))):
-                    # Not Python 3 compliant
-                    # `unichr` not available in Python 3
-                    temp_val = temp_val + unichr(v)
+                    temp_val = temp_val + six.unichr(v)
                 this_element_value = temp_val
             if 'storeAsText' in element.attrib:
                 if element.attrib['storeAsText'].lower() == 'true':
@@ -3396,7 +3401,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                                 reg_key,
                                                 element_valuenames[i],
                                                 chr(registry.vtype[this_vtype]),
-                                                unichr(len('{0}{1}'.format(element_values[i],
+                                                six.unichr(len('{0}{1}'.format(element_values[i],
                                                                            chr(0)).encode('utf-16-le'))),
                                                 '{0}{1}'.format(element_values[i], chr(0)))
                 else:
@@ -3420,9 +3425,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                         reg_key,
                                         reg_valuename,
                                         chr(registry.vtype[this_vtype]),
-                                        # Not Python 3 compliant
-                                        # `unichr` not available in Python 3
-                                        unichr(len(this_element_value.encode('utf-16-le'))),
+                                        six.unichr(len(this_element_value.encode('utf-16-le'))),
                                         this_element_value)
             else:
                 expected_string = u'[{1}{0};{2}{0};{3}{0};'.format(chr(0),
@@ -3438,9 +3441,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                     reg_key,
                                     reg_valuename,
                                     chr(registry.vtype[this_vtype]),
-                                    # Not Python 3 compliant
-                                    # `unichr` not available in Python 3
-                                    unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
+                                    six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))),
                                     ' ')
         else:
             expected_string = standard_layout.format(
@@ -3448,9 +3449,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                     reg_key,
                                     reg_valuename,
                                     chr(registry.vtype[this_vtype]),
-                                    # Not Python 3 compliant
-                                    # `unichr` not available in Python 3
-                                    unichr(len(this_element_value.encode('utf-16-le'))),
+                                    six.unichr(len(this_element_value.encode('utf-16-le'))),
                                     this_element_value)
     return expected_string
 
@@ -3500,7 +3499,8 @@ def _checkAllAdmxPolicies(policy_class,
             log.debug('returning non configured policies')
             not_configured_policies = ALL_CLASS_POLICY_XPATH(admx_policy_definitions, registry_class=policy_class)
             for policy_item in admx_policies:
-                not_configured_policies.remove(policy_item)
+                if policy_item in not_configured_policies:
+                    not_configured_policies.remove(policy_item)
 
             for not_configured_policy in not_configured_policies:
                 policy_vals[not_configured_policy.attrib['name']] = 'Not Configured'
@@ -3510,6 +3510,11 @@ def _checkAllAdmxPolicies(policy_class,
                             not_configured_policy.attrib['name'],
                             return_full_policy_names,
                             adml_policy_resources)
+                log.debug('building hierarchy for non-configured item {0}'.format(not_configured_policy.attrib['name']))
+                hierarchy[not_configured_policy.attrib['name']] = _build_parent_list(not_configured_policy,
+                                                                                     admx_policy_definitions,
+                                                                                     return_full_policy_names,
+                                                                                     adml_policy_resources)
         for admx_policy in admx_policies:
             this_key = None
             this_valuename = None
@@ -3810,7 +3815,7 @@ def _checkAllAdmxPolicies(policy_class,
     if policy_vals and return_full_policy_names and not hierarchical_return:
         unpathed_dict = {}
         pathed_dict = {}
-        for policy_item in policy_vals.keys():
+        for policy_item in list(policy_vals):
             if full_names[policy_item] in policy_vals:
                 # add this item with the path'd full name
                 full_path_list = hierarchy[policy_item]
@@ -3822,7 +3827,7 @@ def _checkAllAdmxPolicies(policy_class,
                 policy_vals[full_names[policy_item]] = policy_vals.pop(policy_item)
                 unpathed_dict[full_names[policy_item]] = policy_item
         # go back and remove any "unpathed" policies that need a full path
-        for path_needed in pathed_dict.keys():
+        for path_needed in unpathed_dict:
             # remove the item with the same full name and re-add it w/a path'd version
             full_path_list = hierarchy[unpathed_dict[path_needed]]
             full_path_list.reverse()
@@ -3831,7 +3836,7 @@ def _checkAllAdmxPolicies(policy_class,
             policy_vals['\\'.join(full_path_list)] = policy_vals.pop(path_needed)
     if policy_vals and hierarchical_return:
         if hierarchy:
-            for hierarchy_item in hierarchy.keys():
+            for hierarchy_item in hierarchy:
                 if hierarchy_item in policy_vals:
                     tdict = {}
                     first_item = True
@@ -3865,7 +3870,7 @@ def _build_parent_list(policy_definition,
     policy
     '''
     parent_list = []
-    policy_namespace = policy_definition.nsmap.keys()[0]
+    policy_namespace = list(policy_definition.nsmap.keys())[0]
     parent_category = policy_definition.xpath('{0}:parentCategory/@ref'.format(policy_namespace),
                                               namespaces=policy_definition.nsmap)
     if parent_category:
@@ -3933,7 +3938,7 @@ def _read_regpol_file(reg_pol_path):
     '''
     returndata = None
     if os.path.exists(reg_pol_path):
-        with open(reg_pol_path, 'rb') as pol_file:
+        with salt.utils.fopen(reg_pol_path, 'rb') as pol_file:
             returndata = pol_file.read()
         returndata = returndata.decode('utf-16-le')
     return returndata
@@ -3981,14 +3986,14 @@ def _write_regpol_data(data_to_write,
             reg_pol_header = u'\u5250\u6765\x01\x00'
             if not os.path.exists(policy_file_path):
                 ret = __salt__['file.makedirs'](policy_file_path)
-            with open(policy_file_path, 'wb') as pol_file:
+            with salt.utils.fopen(policy_file_path, 'wb') as pol_file:
                 if not data_to_write.startswith(reg_pol_header):
                     pol_file.write(reg_pol_header.encode('utf-16-le'))
                 pol_file.write(data_to_write.encode('utf-16-le'))
             try:
                 gpt_ini_data = ''
                 if os.path.exists(gpt_ini_path):
-                    with open(gpt_ini_path, 'rb') as gpt_file:
+                    with salt.utils.fopen(gpt_ini_path, 'rb') as gpt_file:
                         gpt_ini_data = gpt_file.read()
                 if not _regexSearchRegPolData(r'\[General\]\r\n', gpt_ini_data):
                     gpt_ini_data = '[General]\r\n' + gpt_ini_data
@@ -4024,8 +4029,7 @@ def _write_regpol_data(data_to_write,
                         version_nums = (version_nums[0], version_nums[1] + 1)
                     elif gpt_extension.lower() == 'gPCUserExtensionNames'.lower():
                         version_nums = (version_nums[0] + 1, version_nums[1])
-                    version_num = int("{0}{1}".format(str(version_nums[0]).zfill(4),
-                                                      str(version_nums[1]).zfill(4)), 16)
+                    version_num = struct.unpack('>I', struct.pack('>2H', *version_nums))[0]
                     gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
                             gpt_ini_data[0:version_loc.start()],
                             'Version', version_num,
@@ -4044,7 +4048,7 @@ def _write_regpol_data(data_to_write,
                             int("{0}{1}".format(str(version_nums[0]).zfill(4), str(version_nums[1]).zfill(4)), 16),
                             gpt_ini_data[general_location.end():])
                 if gpt_ini_data:
-                    with open(gpt_ini_path, 'wb') as gpt_file:
+                    with salt.utils.fopen(gpt_ini_path, 'wb') as gpt_file:
                         gpt_file.write(gpt_ini_data)
             except Exception as e:
                 msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(
@@ -4141,14 +4145,14 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                                      hierarchical_return=False,
                                                      return_not_configured=False)
         log.debug('preparing to loop through policies requested to be configured')
-        for adm_policy in admtemplate_data.keys():
+        for adm_policy in admtemplate_data:
             if str(admtemplate_data[adm_policy]).lower() == 'not configured':
                 if adm_policy in base_policy_settings:
                     base_policy_settings.pop(adm_policy)
             else:
                 log.debug('adding {0} to base_policy_settings'.format(adm_policy))
                 base_policy_settings[adm_policy] = admtemplate_data[adm_policy]
-        for admPolicy in base_policy_settings.keys():
+        for admPolicy in base_policy_settings:
             log.debug('working on admPolicy {0}'.format(admPolicy))
             explicit_enable_disable_value_setting = False
             this_key = None
@@ -4215,7 +4219,7 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                             # WARNING: no OOB adm files use true/falseList items
                                             # this has not been fully vetted
                                             temp_dict = {'trueList': TRUE_LIST_XPATH, 'falseList': FALSE_LIST_XPATH}
-                                            for this_list in temp_dict.keys():
+                                            for this_list in temp_dict:
                                                 disabled_list_strings = _checkListItem(
                                                         child_item,
                                                         admPolicy,
@@ -4590,7 +4594,7 @@ def _lookup_admin_template(policy_name,
             if len(adml_search_results) > 1:
                 multiple_adml_entries = True
                 for adml_search_result in adml_search_results:
-                    if not adml_search_result.attrib['text'].strip() == policy_name:
+                    if not getattr(adml_search_result, 'text', '').strip() == policy_name:
                         adml_search_results.remove(adml_search_result)
             for adml_search_result in adml_search_results:
                 dmsg = 'found an ADML entry matching the string! {0} -- {1}'
@@ -4673,14 +4677,6 @@ def _lookup_admin_template(policy_name,
     return (False, None, [], 'Unable to find {0} policy {1}'.format(policy_class, policy_name))
 
 
-def list_configurable_policies(policy_class='Machine',
-                               include_administrative_templates=True,
-                               adml_language='en-US'):
-    '''
-    list the policies that the execution module can configure
-    '''
-
-
 def get_policy_info(policy_name,
                     policy_class,
                     adml_language='en-US'):
@@ -4729,7 +4725,7 @@ def get_policy_info(policy_name,
             ret['rights_assignment'] = True
         return ret
     else:
-        for pol in policy_data.policies[policy_class]['policies'].keys():
+        for pol in policy_data.policies[policy_class]['policies']:
             if policy_data.policies[policy_class]['policies'][pol]['Policy'].lower() == policy_name.lower():
                 ret['policy_aliases'].append(pol)
                 ret['policy_found'] = True
@@ -4831,7 +4827,7 @@ def get(policy_class=None, return_full_policy_names=True,
             if policy_name in _policydata.policies[p_class]['policies']:
                 _pol = _policydata.policies[p_class]['policies'][policy_name]
             else:
-                for policy in _policydata.policies[p_class]['policies'].keys():
+                for policy in _policydata.policies[p_class]['policies']:
                     if _policydata.policies[p_class]['policies'][policy]['Policy'].upper() == policy_name.upper():
                         _pol = _policydata.policies[p_class]['policies'][policy]
                         policy_name = policy
@@ -4939,9 +4935,9 @@ def set_computer_policy(name,
     pol = {}
     pol[name] = setting
     ret = set_(computer_policy=pol,
-              user_policy=None,
-              cumulative_rights_assignments=cumulative_rights_assignments,
-              adml_language=adml_language)
+               user_policy=None,
+               cumulative_rights_assignments=cumulative_rights_assignments,
+               adml_language=adml_language)
     return ret
 
 
@@ -4976,9 +4972,9 @@ def set_user_policy(name,
     pol = {}
     pol[name] = setting
     ret = set_(user_policy=pol,
-              computer_policy=None,
-              cumulative_rights_assignments=True,
-              adml_language=adml_language)
+               computer_policy=None,
+               cumulative_rights_assignments=True,
+               adml_language=adml_language)
     return ret
 
 
@@ -5070,7 +5066,7 @@ def set_(computer_policy=None, user_policy=None,
     policies['User'] = user_policy
     policies['Machine'] = computer_policy
     if policies:
-        for p_class in policies.keys():
+        for p_class in policies:
             _secedits = {}
             _modal_sets = {}
             _admTemplateData = {}
@@ -5079,13 +5075,13 @@ def set_(computer_policy=None, user_policy=None,
             _policydata = _policy_info()
             admxPolicyDefinitions, admlPolicyResources = _processPolicyDefinitions(display_language=adml_language)
             if policies[p_class]:
-                for policy_name in policies[p_class].keys():
+                for policy_name in policies[p_class]:
                     _pol = None
                     policy_key_name = policy_name
                     if policy_name in _policydata.policies[p_class]['policies']:
                         _pol = _policydata.policies[p_class]['policies'][policy_name]
                     else:
-                        for policy in _policydata.policies[p_class]['policies'].keys():
+                        for policy in _policydata.policies[p_class]['policies']:
                             if _policydata.policies[p_class]['policies'][policy]['Policy'].upper() == \
                                     policy_name.upper():
                                 _pol = _policydata.policies[p_class]['policies'][policy]
@@ -5235,7 +5231,7 @@ def set_(computer_policy=None, user_policy=None,
                                         msg = msg.format(policy_name)
                                         raise SaltInvocationError(msg)
                 if _regedits:
-                    for regedit in _regedits.keys():
+                    for regedit in _regedits:
                         log.debug('{0} is a Registry policy'.format(regedit))
                         # if the value setting is None or "(value not set)", we will delete the value from the registry
                         if _regedits[regedit]['value'] is not None and _regedits[regedit]['value'] != '(value not set)':
@@ -5255,7 +5251,7 @@ def set_(computer_policy=None, user_policy=None,
                                    '  Some changes may not be applied as expected')
                             raise CommandExecutionError(msg.format(regedit))
                 if _lsarights:
-                    for lsaright in _lsarights.keys():
+                    for lsaright in _lsarights:
                         _existingUsers = None
                         if not cumulative_rights_assignments:
                             _existingUsers = _getRightsAssignments(
@@ -5294,7 +5290,7 @@ def set_(computer_policy=None, user_policy=None,
                 if _modal_sets:
                     # we've got modalsets to make
                     log.debug(_modal_sets)
-                    for _modal_set in _modal_sets.keys():
+                    for _modal_set in _modal_sets:
                         try:
                             _existingModalData = win32net.NetUserModalsGet(None, _modal_set)
                             _newModalSetData = dictupdate.update(_existingModalData, _modal_sets[_modal_set])

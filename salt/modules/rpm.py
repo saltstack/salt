@@ -117,8 +117,12 @@ def bin_pkg_info(path, saltenv='base'):
         output,
         osarch=__grains__['osarch']
     )
-    for field in pkginfo._fields:
-        ret[field] = getattr(pkginfo, field)
+    try:
+        for field in pkginfo._fields:
+            ret[field] = getattr(pkginfo, field)
+    except AttributeError:
+        # pkginfo is None
+        return None
     return ret
 
 
@@ -575,7 +579,7 @@ def info(*packages, **attr):
             # Convert Unix ticks into ISO time format
             if key in ['build_date', 'install_date']:
                 try:
-                    pkg_data[key] = datetime.datetime.fromtimestamp(int(value)).isoformat() + "Z"
+                    pkg_data[key] = datetime.datetime.utcfromtimestamp(int(value)).isoformat() + "Z"
                 except ValueError:
                     log.warning('Could not convert "{0}" into Unix time'.format(value))
                 continue
@@ -599,7 +603,7 @@ def info(*packages, **attr):
     # pick only latest versions
     # (in case multiple packages installed, e.g. kernel)
     ret = dict()
-    for pkg_data in reversed(sorted(_ret, cmp=lambda a_vrs, b_vrs: version_cmp(a_vrs['edition'], b_vrs['edition']))):
+    for pkg_data in reversed(sorted(_ret, key=lambda x: x['edition'])):
         pkg_name = pkg_data.pop('name')
         # Filter out GPG public keys packages
         if pkg_name.startswith('gpg-pubkey'):

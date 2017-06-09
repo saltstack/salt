@@ -57,7 +57,16 @@ Writing Thorium Formulas
 ========================
 Like some other Salt subsystems, Thorium uses its own directory structure. The
 default location for this structure is ``/srv/thorium/``, but it can be changed
-using the ``thorium_roots_dir`` setting in the ``master`` configuration file.
+using the ``thorium_roots`` setting in the ``master`` configuration file.
+
+This would explicitly set the roots to the default:
+
+.. code-block:: yaml
+
+    thorium_roots:
+      base:
+        - /srv/thorium
+
 
 
 The Thorium top.sls File
@@ -136,7 +145,7 @@ to function properly you will also need to enable the ``status`` beacon in the
 
     beacons:
       status:
-        interval: 10
+        - interval: 10
 
 This will cause the minion to use the status beacon to check in with the master
 every 10 seconds.

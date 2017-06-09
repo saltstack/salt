@@ -418,3 +418,15 @@ and bug resolution. See the :ref:`Labels and Milestones
 .. _'Git resources`: https://help.github.com/articles/good-resources-for-learning-git-and-github/
 .. _`Closing issues via commit message`: https://help.github.com/articles/closing-issues-via-commit-messages
 .. _`git format-patch`: https://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
+.. _salt-users: https://groups.google.com/forum/#!forum/salt-users
+
+Mentionbot
+==========
+
+SaltStack runs a mention-bot which notifies contributors who might be able
+to help review incoming pull-requests based on their past contribution to
+files which are being changed.
+
+If you do not wish to receive these notifications, please add your GitHub
+handle to the blacklist line in the `.mention-bot` file located in the
+root of the Salt repository.

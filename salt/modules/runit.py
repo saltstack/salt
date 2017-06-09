@@ -600,7 +600,7 @@ def enable(name, start=False, **kwargs):
         log.trace('need a temporary file {0}'.format(down_file))
         if not os.path.exists(down_file):
             try:
-                salt.utils.fopen(down_file, "w").close()
+                salt.utils.fopen(down_file, "w").close()  # pylint: disable=resource-leakage
             except IOError:
                 log.error('Unable to create file {0}'.format(down_file))
                 return False
@@ -647,7 +647,7 @@ def enable(name, start=False, **kwargs):
 def disable(name, stop=False, **kwargs):
     '''
     Don't start service ``name`` at boot
-    Returns ``True`` if operation is successfull
+    Returns ``True`` if operation is successful
 
     name
         the service's name
@@ -675,7 +675,7 @@ def disable(name, stop=False, **kwargs):
 
     if not os.path.exists(down_file):
         try:
-            salt.utils.fopen(down_file, "w").close()
+            salt.utils.fopen(down_file, "w").close()  # pylint: disable=resource-leakage
         except IOError:
             log.error('Unable to create file {0}'.format(down_file))
             return False
@@ -686,7 +686,7 @@ def disable(name, stop=False, **kwargs):
 def remove(name):
     '''
     Remove the service <name> from system.
-    Returns ``True`` if operation is successfull.
+    Returns ``True`` if operation is successful.
     The service will be also stopped.
 
     name

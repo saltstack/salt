@@ -48,13 +48,11 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
-import salt.ext.six as six
-from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
+import salt.ext.six as six
 try:
     # pylint: disable=unused-import
     import boto
@@ -65,7 +63,10 @@ try:
 except ImportError:
     HAS_BOTO = False
 
+# Import Salt libs
 import salt.utils.odict as odict
+from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.exceptions import SaltInvocationError
 
 
@@ -596,7 +597,7 @@ def set_tags(tags,
         a dict of key:value pair of tags to set on the security group
 
     name
-        the name of the security gruop
+        the name of the security group
 
     group_id
         the group id of the security group (in lie of a name/vpc combo)

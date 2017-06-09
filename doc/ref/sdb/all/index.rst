@@ -10,12 +10,17 @@ sdb modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    cache
     confidant
     consul
     couchdb
+    env
     etcd_db
     keyring_db
     memcached
     rest
     sqlite3
+    tism
     vault
+    yaml
+

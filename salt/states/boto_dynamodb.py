@@ -563,7 +563,7 @@ def _update_global_secondary_indexes(ret, changes_old, changes_new, comments, ex
         if success:
             comments.append(
                 'Updated GSIs with new throughputs {0}'.format(str(index_updates)))
-            for index_name in index_updates.keys():
+            for index_name in index_updates:
                 changes_old['global_indexes'][index_name] = provisioned_throughputs[index_name]
                 changes_new['global_indexes'][index_name] = index_updates[index_name]
         else:

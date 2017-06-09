@@ -181,7 +181,7 @@ def build(format='qcow2', path='/tmp/'):
 
     CLI Example:
 
-    .. code-block:: bash:
+    .. code-block:: bash
 
         salt myminion inspector.build
         salt myminion inspector.build format=iso path=/opt/builds/
@@ -209,7 +209,7 @@ def export(local=False, path="/tmp", format='qcow2'):
 
     CLI Example:
 
-    .. code-block:: bash:
+    .. code-block:: bash
 
         salt myminion inspector.export
         salt myminion inspector.export format=iso path=/opt/builds/
@@ -232,7 +232,7 @@ def snapshots():
 
     CLI Example:
 
-    .. code-block:: bash:
+    .. code-block:: bash
 
         salt myminion inspector.snapshots
     '''
@@ -254,7 +254,7 @@ def delete(all=False, *databases):
 
     CLI example:
 
-    .. code-block:: bash:
+    .. code-block:: bash
 
         salt myminion inspector.delete <ID> <ID1> <ID2>..
         salt myminion inspector.delete all=True

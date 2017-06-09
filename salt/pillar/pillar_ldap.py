@@ -69,7 +69,7 @@ The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
         server:    ldap.company.tld
         port:      389
         tls:       true
-        dn:        'dc=company,dc=tld
+        dn:        'dc=company,dc=tld'
         binddn:    'cn=salt-pillars,ou=users,dc=company,dc=tld'
         bindpw:    bi7ieBai5Ano
         referrals: false
@@ -109,7 +109,7 @@ The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
 List Mode
 ---------
 
-TODO: see also `_result_to_dict()` documentation
+TODO: see also ``_result_to_dict()`` documentation
 '''
 
 # Import python libs

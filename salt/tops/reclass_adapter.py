@@ -85,8 +85,10 @@ def top(**kwargs):
 
     # If reclass is installed, __virtual__ put it onto the search path, so we
     # don't need to protect against ImportError:
+    # pylint: disable=3rd-party-module-not-gated
     from reclass.adapters.salt import top as reclass_top
     from reclass.errors import ReclassException
+    # pylint: enable=3rd-party-module-not-gated
 
     try:
         # Salt's top interface is inconsistent with ext_pillar (see #5786) and

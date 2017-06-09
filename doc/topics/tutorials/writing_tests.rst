@@ -8,7 +8,7 @@ Salt's Test Suite: An Introduction
 
     This tutorial makes a couple of assumptions. The first assumption is that
     you have a basic knowledge of Salt. To get up to speed, check out the
-    :ref:`Salt Walkthrough </topics/tutorials/walkthrough>`.
+    :ref:`Salt Walkthrough <tutorial-salt-walk-through>`.
 
     The second assumption is that your Salt development environment is already
     configured and that you have a basic understanding of contributing to the
@@ -39,8 +39,8 @@ depending on your relevant version of Python:
 
 .. code-block:: bash
 
-    pip install -r requirements/dev_python26.txt
     pip install -r requirements/dev_python27.txt
+    pip install -r requirements/dev_python34.txt
 
 To be able to run integration tests which utilizes ZeroMQ transport, you also
 need to install additional requirements for it. Make sure you have installed
@@ -164,7 +164,8 @@ the test suite, allowing you to write tests to assert against expected or
 unexpected behaviors.
 
 A simple example of a test utilizing a typical master/minion execution module command
-is the test for the ``test_ping`` function in the ``tests/integration/modules/test.py``
+is the test for the ``test_ping`` function in the 
+``tests/integration/modules/test_test.py``
 file:
 
 .. code-block:: python
@@ -233,8 +234,8 @@ of ``/`` as separators and no file extension:
 
 .. code-block:: bash
 
-    ./tests/runtests.py --name=integration.modules.pillar
-    ./tests/runtests.py -n integration.modules.pillar
+    ./tests/runtests.py --name=integration.modules.test_pillar
+    ./tests/runtests.py -n integration.modules.test_pillar
 
 Some test files contain only one test class while other test files contain multiple
 test classes. To run a specific test class within the file, append the name of
@@ -242,24 +243,27 @@ the test class to the end of the file path:
 
 .. code-block:: bash
 
-    ./tests/runtests.py --name=integration.modules.pillar.PillarModuleTest
-    ./tests/runtests.py -n integration.modules.pillar.PillarModuleTest
+    ./tests/runtests.py --name=integration.modules.test_pillar.PillarModuleTest
+    ./tests/runtests.py -n integration.modules.test_pillar.PillarModuleTest
 
 To run a single test within a file, append both the name of the test class the
 individual test belongs to, as well as the name of the test itself:
 
 .. code-block:: bash
 
-    ./tests/runtests.py --name=integration.modules.pillar.PillarModuleTest.test_data
-    ./tests/runtests.py -n integration.modules.pillar.PillarModuleTest.test_data
+    ./tests/runtests.py \
+      --name=integration.modules.test_pillar.PillarModuleTest.test_data
+    ./tests/runtests.py \
+      -n integration.modules.test_pillar.PillarModuleTest.test_data
 
 The ``--name`` and ``-n`` options can be used for unit tests as well as integration
 tests. The following command is an example of how to execute a single test found in
-the ``tests/unit/modules/cp_test.py`` file:
+the ``tests/unit/modules/test_cp.py`` file:
 
 .. code-block:: bash
 
-    ./tests/runtests.py -n unit.modules.cp_test.CpTestCase.test_get_template_success
+    ./tests/runtests.py \
+      -n unit.modules.test_cp.CpTestCase.test_get_template_success
 
 
 Writing Tests for Salt
@@ -316,7 +320,8 @@ Args can be passed in to the ``run_function`` method as well:
         '''
         self.assertEqual(self.run_function('test.echo', ['text']), 'text')
 
-The next example is taken from the ``tests/integration/modules/aliases.py`` file and
+The next example is taken from the 
+``tests/integration/modules/test_aliases.py`` file and
 demonstrates how to pass kwargs to the ``run_function`` call. Also note that this
 test uses another salt function to ensure the correct data is present (via the
 ``aliases.set_target`` call) before attempting to assert what the ``aliases.get_target``
@@ -338,7 +343,7 @@ call should return.
                 alias='fred')
         self.assertEqual(tgt_ret, 'bob')
 
-Using multiple Salt commands in this manor provides two useful benefits. The first is
+Using multiple Salt commands in this manner provides two useful benefits. The first is
 that it provides some additional coverage for the ``aliases.set_target`` function.
 The second benefit is the call to ``aliases.get_target`` is not dependent on the
 presence of any aliases set outside of this test. Tests should not be dependent on
@@ -379,7 +384,7 @@ the test method:
 .. code-block:: python
 
     import integration
-    from salttesting.helpers import destructiveTest
+    from tests.support.helpers import destructiveTest
 
     class PkgTest(integration.ModuleCase):
         @destructiveTest
@@ -409,7 +414,7 @@ Salt's unit tests utilize Python's mock class as well as `MagicMock`_. The
 ``@patch`` decorator is also heavily used when "blocking all the exits".
 
 A simple example of a unit test currently in use in Salt is the
-``test_get_file_not_found`` test in the ``tests/unit/modules/cp_test.py`` file.
+``test_get_file_not_found`` test in the ``tests/unit/modules/test_cp.py`` file.
 This test uses the ``@patch`` decorator and ``MagicMock`` to mock the return
 of the call to Salt's ``cp.hash_file`` execution module function. This ensures
 that we're testing the ``cp.get_file`` function directly, instead of inadvertently
@@ -417,15 +422,15 @@ testing the call to ``cp.hash_file``, which is used in ``cp.get_file``.
 
 .. code-block:: python
 
-    @patch('salt.modules.cp.hash_file', MagicMock(return_value=False))
     def test_get_file_not_found(self):
         '''
         Test if get_file can't find the file.
         '''
-        path = 'salt://saltines'
-        dest = '/srv/salt/cheese'
-        ret = ''
-        self.assertEqual(cp.get_file(path, dest), ret)
+        with patch('salt.modules.cp.hash_file', MagicMock(return_value=False)):
+            path = 'salt://saltines'
+            dest = '/srv/salt/cheese'
+            ret = ''
+            self.assertEqual(cp.get_file(path, dest), ret)
 
 Note that Salt's ``cp`` module is imported at the top of the file, along with all
 of the other necessary testing imports. The ``get_file`` function is then called
@@ -462,7 +467,7 @@ can be used
 .. code-block:: python
 
     # Import logging handler
-    from salttesting.helpers import TestsLoggingHandler
+    from tests.support.helpers import TestsLoggingHandler
 
     # .. inside test
     with TestsLoggingHandler() as handler:

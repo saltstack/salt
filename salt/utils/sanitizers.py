@@ -56,7 +56,7 @@ class InputSanitizer(object):
         :param value:
         :return:
         '''
-        return re.sub(r'[^a-zA-Z0-9.-]', '', InputSanitizer.trim(value))
+        return re.sub(r'[^a-zA-Z0-9.-]', '', InputSanitizer.trim(value)).strip('.')
 
     id = hostname
 

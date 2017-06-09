@@ -197,3 +197,24 @@ Another example:
 
 The above example makes the ``web3`` minion answer to the local master, not the
 newly created master.
+
+
+Using Direct Map Data
+=====================
+When using modules that access the ``CloudClient`` directly (notably, the
+``cloud`` execution and runner modules), it is possible to pass in the contents
+of a map file, rather than a path to the location of the map file.
+
+Normally when using these modules, the path to the map file is passed in using:
+
+.. code-block:: bash
+
+    salt-run cloud.map_run /path/to/cloud.map
+
+To pass in the actual map data, use the ``map_data`` argument:
+
+.. code-block:: bash
+
+    salt-run cloud.map_run map_data='{"centos7": [{"saltmaster": {"minion": \
+        {"transport": "tcp"}, "make_master": true, "master": {"transport": \
+        "tcp"}}}, {"minion001": {"minion": {"transport": "tcp"}}}]}'

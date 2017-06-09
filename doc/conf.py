@@ -26,7 +26,7 @@ class Mock(object):
     '''
     def __init__(self, mapping=None, *args, **kwargs):
         """
-        Mapping allows to bypass the Mock object, but actually assign
+        Mapping allows autodoc to bypass the Mock object, but actually assign
         a specific value, expected by a specific attribute returned.
         """
         self.__mapping = mapping or {}
@@ -165,6 +165,11 @@ MOCK_MODULES = [
     'pyroute2.ipdb',
     'avahi',
     'dbus',
+    'twisted',
+    'twisted.internet',
+    'twisted.internet.protocol',
+    'twisted.internet.protocol.DatagramProtocol',
+    'msgpack',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -239,8 +244,8 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2016.11.1'  # latest release
-previous_release = '2016.3.4'  # latest release from previous branch
+latest_release = '2016.11.5'  # latest release
+previous_release = '2016.3.6'  # latest release from previous branch
 previous_release_dir = '2016.3'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
@@ -499,6 +504,7 @@ epub_copyright = copyright
 epub_scheme = 'URL'
 epub_identifier = 'http://saltstack.com/'
 
+epub_tocdup = False
 #epub_tocdepth = 3
 
 

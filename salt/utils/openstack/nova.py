@@ -5,7 +5,6 @@ Nova class
 
 # Import Python libs
 from __future__ import absolute_import, with_statement
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module,import-error
 import inspect
 import logging
 import time
@@ -39,6 +38,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltCloudSystemExit
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -63,8 +63,8 @@ CLIENT_BDM2_KEYS = {
 
 def check_nova():
     if HAS_NOVA:
-        novaclient_ver = LooseVersion(novaclient.__version__)
-        min_ver = LooseVersion(NOVACLIENT_MINVER)
+        novaclient_ver = _LooseVersion(novaclient.__version__)
+        min_ver = _LooseVersion(NOVACLIENT_MINVER)
         if novaclient_ver >= min_ver:
             return HAS_NOVA
         log.debug('Newer novaclient version required.  Minimum: {0}'.format(NOVACLIENT_MINVER))
@@ -241,7 +241,7 @@ class SaltNova(object):
                            os_auth_plugin=os_auth_plugin,
                            **kwargs)
 
-    def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, **kwargs):
+    def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, verify=True, **kwargs):
         if auth is None:
             auth = {}
 
@@ -281,7 +281,7 @@ class SaltNova(object):
 
         self.client_kwargs = sanatize_novaclient(self.client_kwargs)
         options = loader.load_from_options(**self.kwargs)
-        self.session = keystoneauth1.session.Session(auth=options)
+        self.session = keystoneauth1.session.Session(auth=options, verify=verify)
         conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
         self.kwargs['auth_token'] = conn.client.session.get_token()
         self.catalog = conn.client.session.get('/auth/catalog', endpoint_filter={'service_type': 'identity'}).json().get('catalog', [])

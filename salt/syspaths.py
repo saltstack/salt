@@ -36,7 +36,8 @@ except ImportError:
                 'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR',
                 'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
                 'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
-                'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH', 'SPM_REACTOR_PATH'):
+                'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH', 'SPM_REACTOR_PATH',
+                'SHARE_DIR'):
         setattr(__generated_syspaths, key, None)
 
 
@@ -73,6 +74,19 @@ if CONFIG_DIR is None:
         CONFIG_DIR = os.path.join(ROOT_DIR, 'opt', 'local', 'etc', 'salt')
     else:
         CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
+
+SHARE_DIR = __generated_syspaths.SHARE_DIR
+if SHARE_DIR is None:
+    if __PLATFORM.startswith('win'):
+        SHARE_DIR = os.path.join(ROOT_DIR, 'share')
+    elif 'freebsd' in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'local', 'share', 'salt')
+    elif 'netbsd' in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'share', 'salt')
+    elif 'sunos5' in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'share', 'salt')
+    else:
+        SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'share', 'salt')
 
 CACHE_DIR = __generated_syspaths.CACHE_DIR
 if CACHE_DIR is None:
@@ -125,6 +139,7 @@ if SPM_REACTOR_PATH is None:
 
 __all__ = [
     'ROOT_DIR',
+    'SHARE_DIR',
     'CONFIG_DIR',
     'CACHE_DIR',
     'SOCK_DIR',

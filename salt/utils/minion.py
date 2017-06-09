@@ -12,7 +12,9 @@ import threading
 # Import Salt Libs
 import salt.utils
 import salt.payload
-from salt.utils.network import remote_port_tcp as _remote_port_tcp
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -55,22 +57,6 @@ def cache_jobs(opts, jid, ret):
         fp_.write(serial.dumps(ret))
 
 
-def connected_masters():
-    '''
-    Return current connected masters
-    '''
-    # default port
-    port = 4505
-
-    config_port = __salt__['config.get']('publish_port')
-    if config_port:
-        port = config_port
-
-    connected_masters_ips = _remote_port_tcp(port)
-
-    return connected_masters_ips
-
-
 def _read_proc_file(path, opts):
     '''
     Return a dict of JID metadata, or None
@@ -101,7 +87,7 @@ def _read_proc_file(path, opts):
         except IOError:
             pass
         return None
-    if opts['multiprocessing']:
+    if opts.get('multiprocessing'):
         if data.get('pid') == pid:
             return None
     else:
@@ -155,7 +141,7 @@ def _check_cmdline(data):
         return False
     try:
         with salt.utils.fopen(path, 'rb') as fp_:
-            if 'salt' in fp_.read():
+            if six.b('salt') in fp_.read():
                 return True
     except (OSError, IOError):
         return False

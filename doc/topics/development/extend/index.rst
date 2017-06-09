@@ -29,7 +29,7 @@ Creates a new execution module within salt/modules/{{module_name}}.py
 module_unit
 ^^^^^^^^^^^
 
-Creates a new execution module unit test suite within tests/unit/modules/{{module_name}}_test.py
+Creates a new execution module unit test suite within tests/unit/modules/test_{{module_name}}.py
 
 state
 ^^^^^
@@ -39,7 +39,7 @@ Creates a new state module within salt/states/{{module_name}}.py
 state_unit
 ^^^^^^^^^^
 
-Creates a new state module unit test suite within tests/unit/states/{{module_name}}_test.py
+Creates a new state module unit test suite within tests/unit/states/test_{{module_name}}.py
 
 
 Adding templates

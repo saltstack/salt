@@ -13,6 +13,7 @@ import os
 import salt.utils
 
 # 3rd-party libs
+import salt.ext.six as six
 from ctypes import cdll, c_char_p, c_int, c_void_p, pointer, create_string_buffer
 from ctypes.util import find_library
 
@@ -38,9 +39,10 @@ def _load_libcrypto():
             # Solaris-like distribution that use pkgsrc have
             # libraries in a non standard location.
             # (SmartOS, OmniOS, OpenIndiana, ...)
-            lib = glob.glob(os.path.join(
-                '/opt/local/lib',
-                'libcrypto.so*'))
+            # This could be /opt/tools/lib (Global Zone)
+            # or /opt/local/lib (non-Global Zone), thus the
+            # two checks below
+            lib = glob.glob('/opt/local/lib/libcrypto.so*') + glob.glob('/opt/tools/lib/libcrypto.so*')
             lib = lib[0] if len(lib) > 0 else None
         if lib:
             return cdll.LoadLibrary(lib)
@@ -134,6 +136,7 @@ class RSAX931Verifier(object):
         :param str pubdata: The RSA public key in PEM format
         '''
         pubdata = salt.utils.to_bytes(pubdata, 'ascii')
+        pubdata = pubdata.replace(six.b('RSA '), six.b(''))
         self._bio = libcrypto.BIO_new_mem_buf(pubdata, len(pubdata))
         self._rsa = c_void_p(libcrypto.RSA_new())
         if not libcrypto.PEM_read_bio_RSA_PUBKEY(self._bio, pointer(self._rsa), None, None):

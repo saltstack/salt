@@ -2,6 +2,8 @@
 '''
  Namecheap management
 
+.. versionadded:: Nitrogen
+
  General Notes
  -------------
 

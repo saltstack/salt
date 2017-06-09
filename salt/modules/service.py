@@ -47,7 +47,8 @@ def __virtual__():
         'Void',
         'Mint',
         'Raspbian',
-        'XenServer'
+        'XenServer',
+        'Cumulus'
     ))
     if __grains__.get('os', '') in disable:
         return (False, 'Your OS is on the disabled list')
@@ -55,7 +56,7 @@ def __virtual__():
     if __grains__['kernel'] != 'Linux':
         return (False, 'Non Linux OSes are not supported')
     # SUSE >=12.0 uses systemd
-    if __grains__.get('os_family', '') == 'SUSE':
+    if __grains__.get('os_family', '') == 'Suse':
         try:
             # osrelease might be in decimal format (e.g. "12.1"), or for
             # SLES might include service pack (e.g. "11 SP3"), so split on

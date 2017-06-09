@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import fnmatch
 import os
 import re
 import logging
@@ -38,6 +39,9 @@ import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
+import salt.utils.itertools
+import salt.utils.pkg
+import salt.utils.pkg.deb
 import salt.utils.systemd
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -376,6 +380,8 @@ def refresh_db(cache_valid_time=0, failhard=False):
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     failhard = salt.utils.is_true(failhard)
     ret = {}
     error_repos = list()
@@ -716,11 +722,13 @@ def install(name=None,
             if reinstall and cver \
                     and salt.utils.compare_versions(ver1=version_num,
                                                     oper='==',
-                                                    ver2=cver):
+                                                    ver2=cver,
+                                                    cmp_func=version_cmp):
                 to_reinstall[pkgname] = pkgstr
             elif not cver or salt.utils.compare_versions(ver1=version_num,
                                                          oper='>=',
-                                                         ver2=cver):
+                                                         ver2=cver,
+                                                         cmp_func=version_cmp):
                 targets.append(pkgstr)
             else:
                 downgrade.append(pkgstr)
@@ -762,12 +770,13 @@ def install(name=None,
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
 
-    state = get_selections(state='hold')
-    hold_pkgs = state.get('hold')
-    to_unhold = []
-    for _pkg in hold_pkgs:
-        if _pkg in all_pkgs:
-            to_unhold.append(_pkg)
+    hold_pkgs = get_selections(state='hold').get('hold', [])
+    # all_pkgs contains the argument to be passed to apt-get install, which
+    # when a specific version is requested will be in the format name=version.
+    # Strip off the '=' if present so we can compare the held package names
+    # against the pacakges we are trying to install.
+    targeted_names = [x.split('=')[0] for x in all_pkgs]
+    to_unhold = [x for x in hold_pkgs if x in targeted_names]
 
     if to_unhold:
         unhold(pkgs=to_unhold)
@@ -1044,6 +1053,11 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
+    download_only
+        Only donwload the packages, don't unpack or install them
+
+        .. versionadded:: Oxygen
+
     force_conf_new
         Always install the new version of any configuration files.
 
@@ -1077,6 +1091,8 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         cmd.append('--force-yes')
     if kwargs.get('skip_verify', False):
         cmd.append('--allow-unauthenticated')
+    if kwargs.get('download_only', False):
+        cmd.append('--download-only')
 
     cmd.append('dist-upgrade' if dist_upgrade else 'upgrade')
 
@@ -1579,6 +1595,75 @@ def _consolidate_repo_sources(sources):
     return sources
 
 
+def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
+    '''
+    .. versionadded:: Nitrogen
+
+    Returns all available packages. Optionally, package names (and name globs)
+    can be passed and the results will be filtered to packages matching those
+    names.
+
+    This function can be helpful in discovering the version or repo to specify
+    in a :mod:`pkg.installed <salt.states.pkg.installed>` state.
+
+    The return data will be a dictionary mapping package names to a list of
+    version numbers, ordered from newest to oldest. For example:
+
+    .. code-block:: python
+
+        {
+            'bash': ['4.3-14ubuntu1.1',
+                     '4.3-14ubuntu1'],
+            'nginx': ['1.10.0-0ubuntu0.16.04.4',
+                      '1.9.15-0ubuntu1']
+        }
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_repo_pkgs
+        salt '*' pkg.list_repo_pkgs foo bar baz
+    '''
+    out = __salt__['cmd.run_all'](
+        ['apt-cache', 'dump'],
+        output_loglevel='trace',
+        ignore_retcode=True,
+        python_shell=False
+    )
+
+    ret = {}
+    pkg_name = None
+    skip_pkg = False
+    new_pkg = re.compile('^Package: (.+)')
+    for line in salt.utils.itertools.split(out['stdout'], '\n'):
+        try:
+            cur_pkg = new_pkg.match(line).group(1)
+        except AttributeError:
+            pass
+        else:
+            if cur_pkg != pkg_name:
+                pkg_name = cur_pkg
+                if args:
+                    for arg in args:
+                        if fnmatch.fnmatch(pkg_name, arg):
+                            skip_pkg = False
+                            break
+                    else:
+                        # Package doesn't match any of the passed args, skip it
+                        skip_pkg = True
+                else:
+                    # No args passed, we're getting all packages
+                    skip_pkg = False
+                continue
+        if not skip_pkg:
+            comps = line.strip().split(None, 1)
+            if comps[0] == 'Version:':
+                ret.setdefault(pkg_name, []).append(comps[1])
+
+    return ret
+
+
 def list_repos():
     '''
     Lists all repos in the sources.list (and sources.lists.d) files
@@ -2033,13 +2118,17 @@ def mod_repo(repo, saltenv='base', **kwargs):
         key_url
             URL to a GPG key to add to the APT GPG keyring
 
+        key_text
+            GPG key in string form to add to the APT GPG keyring
+
         consolidate
             if ``True``, will attempt to de-dup and consolidate sources
 
         comments
             Sometimes you want to supply additional information, but not as
-            enabled configuration. Anything supplied for this list will be saved
-            in the repo configuration with a comment marker (#) in front.
+            enabled configuration. All comments provided here will be joined
+            into a single string and appended to the repo configuration with a
+            comment marker (#) before it.
 
             .. versionadded:: 2015.8.9
 
@@ -2232,6 +2321,16 @@ def mod_repo(repo, saltenv='base', **kwargs):
                 'Error: failed to add key from {0}'.format(key_url)
             )
 
+    elif 'key_text' in kwargs:
+        key_text = kwargs['key_text']
+        cmd = ['apt-key', 'add', '-']
+        out = __salt__['cmd.run_stdout'](cmd, stdin=key_text,
+                                         python_shell=False, **kwargs)
+        if not out.upper().startswith('OK'):
+            raise CommandExecutionError(
+                'Error: failed to add key:\n{0}'.format(key_text)
+            )
+
     if 'comps' in kwargs:
         kwargs['comps'] = kwargs['comps'].split(',')
         full_comp_list |= set(kwargs['comps'])
@@ -2264,13 +2363,17 @@ def mod_repo(repo, saltenv='base', **kwargs):
             if mod_source:
                 break
 
+    if 'comments' in kwargs:
+        kwargs['comments'] = \
+            salt.utils.pkg.deb.combine_comments(kwargs['comments'])
+
     if not mod_source:
         mod_source = sourceslist.SourceEntry(repo)
         if 'comments' in kwargs:
-            mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
+            mod_source.comment = kwargs['comments']
         sources.list.append(mod_source)
     elif 'comments' in kwargs:
-        mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
+        mod_source.comment = kwargs['comments']
 
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):
@@ -2638,7 +2741,7 @@ def owner(*paths):
     return ret
 
 
-def info_installed(*names):
+def info_installed(*names, **kwargs):
     '''
     Return the information of the named package(s) installed on the system.
 
@@ -2647,15 +2750,27 @@ def info_installed(*names):
     names
         The names of the packages for which to return information.
 
+    failhard
+        Whether to throw an exception if none of the packages are installed.
+        Defaults to True.
+
+        .. versionadded:: 2016.11.3
+
     CLI example:
 
     .. code-block:: bash
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
+        salt '*' pkg.info_installed <package1> failhard=false
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    failhard = kwargs.pop('failhard', True)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names).items():
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard).items():
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():

@@ -2,7 +2,7 @@
 '''
 Beacon to fire events at specific log messages.
 
-.. code-block:: yaml
+.. versionadded:: Nitrogen
 
 '''
 

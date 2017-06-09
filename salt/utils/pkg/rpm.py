@@ -7,9 +7,7 @@ Common functions for working with RPM packages
 from __future__ import absolute_import
 import collections
 import logging
-
-# Import salt libs
-from salt._compat import subprocess
+import subprocess
 
 log = logging.getLogger(__name__)
 

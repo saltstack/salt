@@ -31,18 +31,18 @@ config:
 .. code-block:: yaml
 
     myprofile:
-        keyid: GKTADJGHEIQSXMKKRBJ08H
-        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
 
 .. code-block:: yaml
 
     Ensure Apigateway API exists:
-        boto_apigateway.present:
-            - name: myfunction
-            - region: us-east-1
-            - keyid: GKTADJGHEIQSXMKKRBJ08H
-            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      boto_apigateway.present:
+        - name: myfunction
+        - region: us-east-1
+        - keyid: GKTADJGHEIQSXMKKRBJ08H
+        - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
 '''
 
@@ -58,6 +58,7 @@ import yaml
 # Import Salt Libs
 import salt.ext.six as six
 import salt.utils
+from salt.utils.yamlloader import SaltYamlSafeLoader
 
 log = logging.getLogger(__name__)
 
@@ -115,7 +116,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
         The canconicalization of these input parameters is done in the following order:
             1) lambda_funcname_format is formatted with the input parameters as passed,
             2) resulting string is stripped for leading/trailing spaces,
-            3) path paramter's curly braces are removed from the resource path,
+            3) path parameter's curly braces are removed from the resource path,
             4) consecutive spaces and forward slashes in the paths are replaced with '_'
             5) consecutive '_' are replaced with '_'
 
@@ -436,7 +437,7 @@ def _gen_md5_filehash(fname, *args):
             _hash.update(chunk)
 
     for extra_arg in args:
-        _hash.update(str(extra_arg))
+        _hash.update(six.b(str(extra_arg)))
     return _hash.hexdigest()
 
 
@@ -713,7 +714,10 @@ class _Swagger(object):
                                                        error_response_template,
                                                        response_template)
                 with salt.utils.fopen(self._swagger_file, 'rb') as sf:
-                    self._cfg = yaml.load(sf)
+                    self._cfg = yaml.load(
+                        sf,
+                        Loader=SaltYamlSafeLoader
+                    )
                 self._swagger_version = ''
             else:
                 raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))

@@ -82,7 +82,7 @@ Run an arbitrary shell command:
 
     salt '*' cmd.run 'uname -a'
 
-.. seealso:: :ref:`the full list of modules <all-salt_modules>`
+.. seealso:: :ref:`the full list of modules <all-salt.modules>`
 
 arguments
 ---------

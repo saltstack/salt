@@ -14,22 +14,37 @@
 
             pip install requests
 
- - As saltstack depends on ``requests`` this shouldn't be a problem
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 import logging
-import salt.utils
-import requests
 import xml.dom.minidom
-import salt.config
+
+# Import Salt libs
 import salt.loader
 
-__opts__ = salt.config.minion_config('/etc/salt/minion')
-__grains__ = salt.loader.grains(__opts__)
-__opts__['grains'] = __grains__
-__salt__ = salt.loader.minion_mods(__opts__)
 # Import third party libs
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
+# Get logging started
 log = logging.getLogger(__name__)
+
+__salt__ = None
+
+
+def __virtual__():
+    if not HAS_REQUESTS:
+        return False, 'Missing dependency: \'requests\'. The namecheap utils module ' \
+                      'cannot be loaded. '
+    global __salt__
+    if not __salt__:
+        __salt__ = salt.loader.minion_mods(__opts__)
+    return True
 
 
 def post_request(opts):

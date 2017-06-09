@@ -22,7 +22,7 @@ refreshed on a very limited basis and are largely static data. Mines are
 designed to replace slow peer publishing calls when Minions need data from
 other Minions. Rather than having a Minion reach out to all the other Minions
 for a piece of data, the Salt Mine, running on the Master, can collect it from
-all the Minions every :ref:`mine-interval`, resulting in
+all the Minions every :ref:`mine_interval`, resulting in
 almost fresh data at any given time, with much less overhead.
 
 Mine Functions
@@ -31,8 +31,10 @@ Mine Functions
 To enable the Salt Mine the ``mine_functions`` option needs to be applied to a
 Minion. This option can be applied via the Minion's configuration file, or the
 Minion's Pillar. The ``mine_functions`` option dictates what functions are
-being executed and allows for arguments to be passed in. If no arguments are
-passed, an empty list must be added:
+being executed and allows for arguments to be passed in.  The list of
+functions are available in the :py:mod:`salt.module`.  If no arguments
+are passed, an empty list must be added like in the ``test.ping`` function in
+the example below:
 
 .. code-block:: yaml
 
@@ -41,6 +43,11 @@ passed, an empty list must be added:
       network.ip_addrs:
         interface: eth0
         cidr: '10.0.0.0/8'
+
+In the example above :py:mod:`salt.modules.network.ip_addrs` has additional
+filters to help narrow down the results.  In the above example IP addresses
+are only returned if they are on a eth0 interface and in the 10.0.0.0/8 IP
+range.
 
 Mine Functions Aliases
 ----------------------
@@ -152,12 +159,47 @@ to add them to the pool of load balanced servers.
     mine_functions:
       network.ip_addrs: [eth0]
 
+Then trigger the minions to refresh their pillar data by running:
+
+.. code-block:: bash
+
+    salt '*' saltutil.refresh_pillar
+
+Verify that the results are showing up in the pillar on the minions by
+executing the following and checking for ``network.ip_addrs`` in the output:
+
+.. code-block:: bash
+
+    salt '*' pillar.items
+
+Which should show that the function is present on the minion, but not include
+the output:
+
+.. code-block:: shell
+
+    minion1.example.com:
+        ----------
+        mine_functions:
+            ----------
+            network.ip_addrs:
+                - eth0
+
+Mine data is typically only updated on the master every 60 minutes, this can
+be modified by setting:
+
 :file:`/etc/salt/minion.d/mine.conf`:
 
 .. code-block:: yaml
 
     mine_interval: 5
 
+To force the mine data to update immediately run:
+
+.. code-block:: bash
+
+    salt '*' mine.update
+
+Setup the :py:mod:`salt.states.file.managed` state in
 :file:`/srv/salt/haproxy.sls`:
 
 .. code-block:: yaml
@@ -168,7 +210,7 @@ to add them to the pool of load balanced servers.
         - source: salt://haproxy_config
         - template: jinja
 
-:file:`/srv/salt/haproxy_config`:
+Create the Jinja template in :file:`/srv/salt/haproxy_config`:
 
 .. code-block:: yaml
 
@@ -179,6 +221,8 @@ to add them to the pool of load balanced servers.
     {% endfor %}
 
     <...file contents snipped...>
+
+In the above example, ``server`` will be expanded to the ``minion_id``.
 
 .. note::
     The expr_form argument will be renamed to ``tgt_type`` in the Nitrogen

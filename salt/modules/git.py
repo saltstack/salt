@@ -9,7 +9,6 @@ import copy
 import logging
 import os
 import re
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=no-name-in-module
 
 # Import salt libs
 import salt.utils
@@ -17,6 +16,7 @@ import salt.utils.files
 import salt.utils.itertools
 import salt.utils.url
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -144,6 +144,21 @@ def _format_opts(opts):
     except IndexError:
         pass
     return opts
+
+
+def _format_git_opts(opts):
+    '''
+    Do a version check and make sure that the installed version of git can
+    support git -c
+    '''
+    if opts:
+        version_ = version(versioninfo=False)
+        if _LooseVersion(version_) < _LooseVersion('1.7.2'):
+            raise SaltInvocationError(
+                'git_opts is only supported for git versions >= 1.7.2 '
+                '(detected: {0})'.format(version_)
+            )
+    return _format_opts(opts)
 
 
 def _git_run(command, cwd=None, user=None, password=None, identity=None,
@@ -355,6 +370,7 @@ def _which_git_config(global_, cwd, user, password):
 def add(cwd,
         filename,
         opts='',
+        git_opts='',
         user=None,
         password=None,
         ignore_retcode=False):
@@ -377,6 +393,16 @@ def add(cwd,
             On the Salt CLI, if the opts are preceded with a dash, it is
             necessary to precede them with ``opts=`` (as in the CLI examples
             below) to avoid causing errors with Salt's own argument parsing.
+
+    git_opts
+        Any additional options to add to git command itself (not the ``add``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -407,7 +433,8 @@ def add(cwd,
     cwd = _expand_path(cwd, user)
     if not isinstance(filename, six.string_types):
         filename = str(filename)
-    command = ['git', 'add', '--verbose']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.extend(['add', '--verbose'])
     command.extend(
         [x for x in _format_opts(opts) if x not in ('-v', '--verbose')]
     )
@@ -423,6 +450,7 @@ def archive(cwd,
             output,
             rev='HEAD',
             prefix=None,
+            git_opts='',
             user=None,
             password=None,
             ignore_retcode=False,
@@ -491,6 +519,16 @@ def archive(cwd,
             specifying a prefix, if the prefix is intended to create a
             top-level directory.
 
+    git_opts
+        Any additional options to add to git command itself (not the
+        ``archive`` subcommand), in a single string. This is useful for passing
+        ``-c`` to run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -527,7 +565,8 @@ def archive(cwd,
     if kwargs:
         salt.utils.invalid_kwargs(kwargs)
 
-    command = ['git', 'archive']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('archive')
     # If prefix was set to '' then we skip adding the --prefix option
     if prefix != '':
         if prefix:
@@ -557,6 +596,7 @@ def archive(cwd,
 def branch(cwd,
            name=None,
            opts='',
+           git_opts='',
            user=None,
            password=None,
            ignore_retcode=False):
@@ -583,6 +623,16 @@ def branch(cwd,
             dash, it is necessary to precede them with ``opts=`` (as in the CLI
             examples below) to avoid causing errors with Salt's own argument
             parsing.
+
+    git_opts
+        Any additional options to add to git command itself (not the ``branch``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -617,7 +667,8 @@ def branch(cwd,
         salt myminion git.branch /path/to/repo newbranch opts='-m oldbranch'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git', 'branch']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('branch')
     command.extend(_format_opts(opts))
     if name is not None:
         command.append(name)
@@ -633,6 +684,7 @@ def checkout(cwd,
              rev=None,
              force=False,
              opts='',
+             git_opts='',
              user=None,
              password=None,
              ignore_retcode=False):
@@ -649,6 +701,17 @@ def checkout(cwd,
             On the Salt CLI, if the opts are preceded with a dash, it is
             necessary to precede them with ``opts=`` (as in the CLI examples
             below) to avoid causing errors with Salt's own argument parsing.
+
+    git_opts
+        Any additional options to add to git command itself (not the
+        ``checkout`` subcommand), in a single string. This is useful for
+        passing ``-c`` to run git with temporary changes to the git
+        configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     rev
         The remote branch or revision to checkout.
@@ -692,7 +755,8 @@ def checkout(cwd,
         salt myminion git.checkout /path/to/repo opts='-b newbranch'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git', 'checkout']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('checkout')
     if force:
         command.append('--force')
     opts = _format_opts(opts)
@@ -720,6 +784,7 @@ def clone(cwd,
           url=None,  # Remove default value once 'repository' arg is removed
           name=None,
           opts='',
+          git_opts='',
           user=None,
           password=None,
           identity=None,
@@ -751,6 +816,16 @@ def clone(cwd,
 
     opts
         Any additional options to add to the command line, in a single string
+
+    git_opts
+        Any additional options to add to git command itself (not the ``clone``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -827,7 +902,8 @@ def clone(cwd,
     except ValueError as exc:
         raise SaltInvocationError(exc.__str__())
 
-    command = ['git', 'clone']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('clone')
     command.extend(_format_opts(opts))
     command.extend(['--', url])
     if name is not None:
@@ -859,6 +935,7 @@ def clone(cwd,
 def commit(cwd,
            message,
            opts='',
+           git_opts='',
            user=None,
            password=None,
            filename=None,
@@ -873,7 +950,8 @@ def commit(cwd,
         Commit message
 
     opts
-        Any additional options to add to the command line, in a single string
+        Any additional options to add to the command line, in a single string.
+        These opts will be added to the end of the git command being run.
 
         .. note::
             On the Salt CLI, if the opts are preceded with a dash, it is
@@ -882,6 +960,16 @@ def commit(cwd,
 
             The ``-m`` option should not be passed here, as the commit message
             will be defined by the ``message`` argument.
+
+    git_opts
+        Any additional options to add to git command itself (not the ``commit``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -921,7 +1009,8 @@ def commit(cwd,
         salt myminion git.commit /path/to/repo 'The commit message' filename=foo/bar.py
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git', 'commit', '-m', message]
+    command = ['git'] + _format_git_opts(git_opts)
+    command.extend(['commit', '-m', message])
     command.extend(_format_opts(opts))
     if filename:
         if not isinstance(filename, six.string_types):
@@ -1472,6 +1561,7 @@ def diff(cwd,
          item1=None,
          item2=None,
          opts='',
+         git_opts='',
          user=None,
          password=None,
          no_index=False,
@@ -1500,6 +1590,16 @@ def diff(cwd,
             On the Salt CLI, if the opts are preceded with a dash, it is
             necessary to precede them with ``opts=`` (as in the CLI examples
             below) to avoid causing errors with Salt's own argument parsing.
+
+    git_opts
+        Any additional options to add to git command itself (not the ``diff``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -1561,7 +1661,8 @@ def diff(cwd,
             'The \'no_index\' and \'cached\' options cannot be used together'
         )
 
-    command = ['git', 'diff']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('diff')
     command.extend(_format_opts(opts))
 
     if paths is not None and not isinstance(paths, (list, tuple)):
@@ -1620,6 +1721,7 @@ def fetch(cwd,
           force=False,
           refspecs=None,
           opts='',
+          git_opts='',
           user=None,
           password=None,
           identity=None,
@@ -1659,6 +1761,16 @@ def fetch(cwd,
             On the Salt CLI, if the opts are preceded with a dash, it is
             necessary to precede them with ``opts=`` (as in the CLI examples
             below) to avoid causing errors with Salt's own argument parsing.
+
+    git_opts
+        Any additional options to add to git command itself (not the ``fetch``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -1715,7 +1827,8 @@ def fetch(cwd,
         salt myminion git.fetch /path/to/repo identity=/root/.ssh/id_rsa
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git', 'fetch']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('fetch')
     if force:
         command.append('--force')
     command.extend(
@@ -1780,6 +1893,7 @@ def init(cwd,
          separate_git_dir=None,
          shared=None,
          opts='',
+         git_opts='',
          user=None,
          password=None,
          ignore_retcode=False):
@@ -1818,6 +1932,16 @@ def init(cwd,
             necessary to precede them with ``opts=`` (as in the CLI examples
             below) to avoid causing errors with Salt's own argument parsing.
 
+    git_opts
+        Any additional options to add to git command itself (not the ``init``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -1849,7 +1973,8 @@ def init(cwd,
         salt myminion git.init /path/to/bare/repo.git bare=True
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git', 'init']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('init')
     if bare:
         command.append('--bare')
     if template is not None:
@@ -2334,6 +2459,7 @@ def ls_remote(cwd=None,
               remote='origin',
               ref=None,
               opts='',
+              git_opts='',
               user=None,
               password=None,
               identity=None,
@@ -2373,6 +2499,17 @@ def ls_remote(cwd=None,
         Any additional options to add to the command line, in a single string
 
         .. versionadded:: 2015.8.0
+
+    git_opts
+        Any additional options to add to git command itself (not the
+        ``ls-remote`` subcommand), in a single string. This is useful for
+        passing ``-c`` to run git with temporary changes to the git
+        configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -2447,7 +2584,8 @@ def ls_remote(cwd=None,
                                                     https_only=True)
     except ValueError as exc:
         raise SaltInvocationError(exc.__str__())
-    command = ['git', 'ls-remote']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('ls-remote')
     command.extend(_format_opts(opts))
     if not isinstance(remote, six.string_types):
         remote = str(remote)
@@ -2476,6 +2614,7 @@ def ls_remote(cwd=None,
 def merge(cwd,
           rev=None,
           opts='',
+          git_opts='',
           user=None,
           password=None,
           ignore_retcode=False,
@@ -2499,6 +2638,16 @@ def merge(cwd,
             On the Salt CLI, if the opts are preceded with a dash, it is
             necessary to precede them with ``opts=`` (as in the CLI examples
             below) to avoid causing errors with Salt's own argument parsing.
+
+    git_opts
+        Any additional options to add to git command itself (not the ``merge``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -2535,7 +2684,8 @@ def merge(cwd,
         salt.utils.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
-    command = ['git', 'merge']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('merge')
     command.extend(_format_opts(opts))
     if rev:
         if not isinstance(rev, six.string_types):
@@ -2555,6 +2705,7 @@ def merge_base(cwd,
                independent=False,
                fork_point=None,
                opts='',
+               git_opts='',
                user=None,
                password=None,
                ignore_retcode=False,
@@ -2618,6 +2769,17 @@ def merge_base(cwd,
 
             This option should not be necessary unless new CLI arguments are
             added to `git-merge-base(1)`_ and are not yet supported in Salt.
+
+    git_opts
+        Any additional options to add to git command itself (not the
+        ``merge-base`` subcommand), in a single string. This is useful for
+        passing ``-c`` to run git with temporary changes to the git
+        configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -2708,7 +2870,8 @@ def merge_base(cwd,
                               password=password,
                               ignore_retcode=ignore_retcode) == first_commit
 
-    command = ['git', 'merge-base']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('merge-base')
     command.extend(_format_opts(opts))
     if all_:
         command.append('--all')
@@ -2814,6 +2977,7 @@ def merge_tree(cwd,
 
 def pull(cwd,
          opts='',
+         git_opts='',
          user=None,
          password=None,
          identity=None,
@@ -2832,6 +2996,16 @@ def pull(cwd,
             On the Salt CLI, if the opts are preceded with a dash, it is
             necessary to precede them with ``opts=`` (as in the CLI examples
             below) to avoid causing errors with Salt's own argument parsing.
+
+    git_opts
+        Any additional options to add to git command itself (not the ``pull``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -2886,7 +3060,8 @@ def pull(cwd,
         salt myminion git.pull /path/to/repo opts='--rebase origin master'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git', 'pull']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('pull')
     command.extend(_format_opts(opts))
     return _git_run(command,
                     cwd=cwd,
@@ -2901,6 +3076,7 @@ def push(cwd,
          remote=None,
          ref=None,
          opts='',
+         git_opts='',
          user=None,
          password=None,
          identity=None,
@@ -2932,6 +3108,16 @@ def push(cwd,
             On the Salt CLI, if the opts are preceded with a dash, it is
             necessary to precede them with ``opts=`` (as in the CLI examples
             below) to avoid causing errors with Salt's own argument parsing.
+
+    git_opts
+        Any additional options to add to git command itself (not the ``push``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -2996,7 +3182,8 @@ def push(cwd,
         salt.utils.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
-    command = ['git', 'push']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('push')
     command.extend(_format_opts(opts))
     if not isinstance(remote, six.string_types):
         remote = str(remote)
@@ -3015,6 +3202,7 @@ def push(cwd,
 def rebase(cwd,
            rev='master',
            opts='',
+           git_opts='',
            user=None,
            password=None,
            ignore_retcode=False):
@@ -3034,6 +3222,16 @@ def rebase(cwd,
             On the Salt CLI, if the opts are preceded with a dash, it is
             necessary to precede them with ``opts=`` (as in the CLI examples
             below) to avoid causing errors with Salt's own argument parsing.
+
+    git_opts
+        Any additional options to add to git command itself (not the ``rebase``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -3066,7 +3264,8 @@ def rebase(cwd,
     opts = _format_opts(opts)
     if any(x for x in opts if x in ('-i', '--interactive')):
         raise SaltInvocationError('Interactive rebases are not supported')
-    command = ['git', 'rebase']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('rebase')
     command.extend(opts)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
@@ -3455,6 +3654,7 @@ def remotes(cwd,
 
 def reset(cwd,
           opts='',
+          git_opts='',
           user=None,
           password=None,
           ignore_retcode=False):
@@ -3471,6 +3671,16 @@ def reset(cwd,
             On the Salt CLI, if the opts are preceded with a dash, it is
             necessary to precede them with ``opts=`` (as in the CLI examples
             below) to avoid causing errors with Salt's own argument parsing.
+
+    git_opts
+        Any additional options to add to git command itself (not the ``reset``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -3501,7 +3711,8 @@ def reset(cwd,
         salt myminion git.reset /path/to/repo opts='--hard origin/master'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git', 'reset']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('reset')
     command.extend(_format_opts(opts))
     return _git_run(command,
                     cwd=cwd,
@@ -3513,6 +3724,7 @@ def reset(cwd,
 def rev_parse(cwd,
               rev=None,
               opts='',
+              git_opts='',
               user=None,
               password=None,
               ignore_retcode=False):
@@ -3533,6 +3745,17 @@ def rev_parse(cwd,
 
     opts
         Any additional options to add to the command line, in a single string
+
+    git_opts
+        Any additional options to add to git command itself (not the
+        ``rev-parse`` subcommand), in a single string. This is useful for
+        passing ``-c`` to run git with temporary changes to the git
+        configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -3569,7 +3792,8 @@ def rev_parse(cwd,
         salt myminion git.rev_parse /path/to/repo opts='--is-bare-repository'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git', 'rev-parse']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('rev-parse')
     command.extend(_format_opts(opts))
     if rev is not None:
         if not isinstance(rev, six.string_types):
@@ -3639,6 +3863,7 @@ def revision(cwd,
 def rm_(cwd,
         filename,
         opts='',
+        git_opts='',
         user=None,
         password=None,
         ignore_retcode=False):
@@ -3662,6 +3887,16 @@ def rm_(cwd,
             On the Salt CLI, if the opts are preceded with a dash, it is
             necessary to precede them with ``opts=`` (as in the CLI examples
             below) to avoid causing errors with Salt's own argument parsing.
+
+    git_opts
+        Any additional options to add to git command itself (not the ``rm``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -3691,7 +3926,8 @@ def rm_(cwd,
         salt myminion git.rm /path/to/repo foo/baz opts='-r'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git', 'rm']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('rm')
     command.extend(_format_opts(opts))
     command.extend(['--', filename])
     return _git_run(command,
@@ -3704,6 +3940,7 @@ def rm_(cwd,
 def stash(cwd,
           action='save',
           opts='',
+          git_opts='',
           user=None,
           password=None,
           ignore_retcode=False):
@@ -3719,6 +3956,16 @@ def stash(cwd,
         arguments (i.e.  ``'save <stash comment>'``, ``'apply stash@{2}'``,
         ``'show'``, etc.).  Omitting this argument will simply run ``git
         stash``.
+
+    git_opts
+        Any additional options to add to git command itself (not the ``stash``
+        subcommand), in a single string. This is useful for passing ``-c`` to
+        run git with temporary changes to the git configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -3753,7 +4000,8 @@ def stash(cwd,
         # No numeric actions but this will prevent a traceback when the git
         # command is run.
         action = str(action)
-    command = ['git', 'stash', action]
+    command = ['git'] + _format_git_opts(git_opts)
+    command.extend(['stash', action])
     command.extend(_format_opts(opts))
     return _git_run(command,
                     cwd=cwd,
@@ -3824,6 +4072,7 @@ def status(cwd,
 def submodule(cwd,
               command,
               opts='',
+              git_opts='',
               user=None,
               password=None,
               identity=None,
@@ -3857,6 +4106,17 @@ def submodule(cwd,
             On the Salt CLI, if the opts are preceded with a dash, it is
             necessary to precede them with ``opts=`` (as in the CLI examples
             below) to avoid causing errors with Salt's own argument parsing.
+
+    git_opts
+        Any additional options to add to git command itself (not the
+        ``submodule`` subcommand), in a single string. This is useful for
+        passing ``-c`` to run git with temporary changes to the git
+        configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     init : False
         If ``True``, ensures that new submodules are initialized
@@ -3943,7 +4203,8 @@ def submodule(cwd,
         )
     if not isinstance(command, six.string_types):
         command = str(command)
-    cmd = ['git', 'submodule', command]
+    cmd = ['git'] + _format_git_opts(git_opts)
+    cmd.extend(['submodule', command])
     cmd.extend(_format_opts(opts))
     return _git_run(cmd,
                     cwd=cwd,
@@ -3958,6 +4219,7 @@ def symbolic_ref(cwd,
                  ref,
                  value=None,
                  opts='',
+                 git_opts='',
                  user=None,
                  password=None,
                  ignore_retcode=False):
@@ -3982,6 +4244,17 @@ def symbolic_ref(cwd,
 
     opts
         Any additional options to add to the command line, in a single string
+
+    git_opts
+        Any additional options to add to git command itself (not the
+        ``symbolic-refs`` subcommand), in a single string. This is useful for
+        passing ``-c`` to run git with temporary changes to the git
+        configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -4014,7 +4287,8 @@ def symbolic_ref(cwd,
         salt myminion git.symbolic_ref /path/to/repo FOO opts='--delete'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git', 'symbolic-ref']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('symbolic-ref')
     opts = _format_opts(opts)
     if value is not None and any(x in opts for x in ('-d', '--delete')):
         raise SaltInvocationError(
@@ -4089,6 +4363,7 @@ def worktree_add(cwd,
                  force=None,
                  detach=False,
                  opts='',
+                 git_opts='',
                  user=None,
                  password=None,
                  ignore_retcode=False,
@@ -4141,6 +4416,17 @@ def worktree_add(cwd,
             argument is unnecessary unless new CLI arguments are added to
             `git-worktree(1)`_ and are not yet supported in Salt.
 
+    git_opts
+        Any additional options to add to git command itself (not the
+        ``worktree`` subcommand), in a single string. This is useful for
+        passing ``-c`` to run git with temporary changes to the git
+        configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -4179,7 +4465,8 @@ def worktree_add(cwd,
             'Only one of \'branch\' and \'detach\' is allowed'
         )
 
-    command = ['git', 'worktree', 'add']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.extend(['worktree', 'add'])
     if detach:
         if force:
             log.warning(
@@ -4215,6 +4502,7 @@ def worktree_prune(cwd,
                    verbose=True,
                    expire=None,
                    opts='',
+                   git_opts='',
                    user=None,
                    password=None,
                    ignore_retcode=False):
@@ -4253,6 +4541,17 @@ def worktree_prune(cwd,
             argument is unnecessary unless new CLI arguments are added to
             `git-worktree(1)`_ and are not yet supported in Salt.
 
+    git_opts
+        Any additional options to add to git command itself (not the
+        ``worktree`` subcommand), in a single string. This is useful for
+        passing ``-c`` to run git with temporary changes to the git
+        configuration.
+
+        .. versionadded:: Nitrogen
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -4283,7 +4582,8 @@ def worktree_prune(cwd,
     '''
     _check_worktree_support()
     cwd = _expand_path(cwd, user)
-    command = ['git', 'worktree', 'prune']
+    command = ['git'] + _format_git_opts(git_opts)
+    command.extend(['worktree', 'prune'])
     if dry_run:
         command.append('--dry-run')
     if verbose:

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 General management and processing of queues.
+============================================
 
 This runner facilitates interacting with various queue backends such as the
 included sqlite3 queue or the planned AWS SQS and Redis queues
@@ -25,6 +26,40 @@ reactor is set up to match on event tags for a specific queue and then take
 infrastructure actions on those minion IDs. These actions might be to delete
 the minion's key from the master, use salt-cloud to destroy the vm, or some
 other custom action.
+
+Queued runners
+==============
+
+Using the Salt Queues, references to the commandline arguments of other runners
+can be saved to be processed later.  The queue runners require a queue backend
+that can store json data (default: :mod:`pgjsonb <salt.queues.pgjsonb_queue>`).
+
+Once the queue is setup, the `runner_queue` will need to be configured.
+
+.. code-block:: yaml
+
+    runner_queue:
+      queue: runners
+      backend: pgjsonb
+
+.. note:: only the queue is required, this defaults to using pgjsonb
+
+Once this is set, then the following can be added to the scheduler on the
+master and it will run the specified amount of commands per time period.
+
+.. code-block:: yaml
+
+    schedule:
+      runner queue:
+        schedule:
+          function: queue.process_runner
+          minutes: 1
+          kwargs:
+            quantity: 2
+
+The above configuration will pop 2 runner jobs off the runner queue, and then
+run them.  And it will do this every minute, unless there are any jobs that are
+still running from the last time the process_runner task was executed.
 '''
 
 # Import python libs
@@ -33,8 +68,8 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.loader
-import salt.utils.event
-from salt.utils.event import tagify
+import salt.ext.six as six
+from salt.utils.event import get_event, tagify
 from salt.exceptions import SaltInvocationError
 
 
@@ -172,7 +207,7 @@ def process_queue(queue, quantity=1, backend='sqlite'):
         salt-run queue.process_queue myqueue all backend=sqlite
     '''
     # get ready to send an event
-    event = salt.utils.event.get_event(
+    event = get_event(
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
@@ -190,3 +225,81 @@ def process_queue(queue, quantity=1, backend='sqlite'):
             'queue': queue,
             }
     event.fire_event(data, tagify([queue, 'process'], prefix='queue'))
+    return data
+
+
+def __get_queue_opts(queue=None, backend=None):
+    '''
+    Get consistent opts for the queued runners
+    '''
+    if queue is None:
+        queue = __opts__.get('runner_queue', {}).get('queue')
+    if backend is None:
+        backend = __opts__.get('runner_queue', {}).get('backend', 'pgjsonb')
+    return {'backend': backend,
+            'queue': queue}
+
+
+def insert_runner(fun, args=None, kwargs=None, queue=None, backend=None):
+    '''
+    Insert a reference to a runner into the queue so that it can be run later.
+
+    fun
+        The runner function that is going to be run
+
+    args
+        list or comma-seperated string of args to send to fun
+
+    kwargs
+        dictionary of keyword arguments to send to fun
+
+    queue
+        queue to insert the runner reference into
+
+    backend
+        backend that to use for the queue
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run queue.insert_runner test.stdout_print
+        salt-run queue.insert_runner event.send test_insert_runner kwargs='{"data": {"foo": "bar"}}'
+
+    '''
+    if args is None:
+        args = []
+    elif isinstance(args, six.string_types):
+        args = args.split(',')
+    if kwargs is None:
+        kwargs = {}
+    queue_kwargs = __get_queue_opts(queue=queue, backend=backend)
+    data = {'fun': fun, 'args': args, 'kwargs': kwargs}
+    return insert(items=data, **queue_kwargs)
+
+
+def process_runner(quantity=1, queue=None, backend=None):
+    '''
+    Process queued runners
+
+    quantity
+        number of runners to process
+
+    queue
+        queue to insert the runner reference into
+
+    backend
+        backend that to use for the queue
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run queue.process_runner
+        salt-run queue.process_runner 5
+
+    '''
+    queue_kwargs = __get_queue_opts(queue=queue, backend=backend)
+    data = process_queue(quantity=quantity, **queue_kwargs)
+    for job in data['items']:
+        __salt__[job['fun']](*job['args'], **job['kwargs'])

@@ -24,15 +24,25 @@ import getpass
 import salt.ext.six as six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 try:
-    from Crypto.Cipher import AES, PKCS1_OAEP
-    from Crypto.Hash import SHA
-    from Crypto.PublicKey import RSA
-    from Crypto.Signature import PKCS1_v1_5
-    # let this be imported, if possible
-    import Crypto.Random  # pylint: disable=W0611
+    from Cryptodome.Cipher import AES, PKCS1_OAEP
+    from Cryptodome.Hash import SHA
+    from Cryptodome.PublicKey import RSA
+    from Cryptodome.Signature import PKCS1_v1_5
+    import Cryptodome.Random  # pylint: disable=W0611
+    CDOME = True
 except ImportError:
-    # No need for crypt in local mode
-    pass
+    CDOME = False
+if not CDOME:
+    try:
+        from Crypto.Cipher import AES, PKCS1_OAEP
+        from Crypto.Hash import SHA
+        from Crypto.PublicKey import RSA
+        from Crypto.Signature import PKCS1_v1_5
+        # let this be imported, if possible
+        import Crypto.Random  # pylint: disable=W0611
+    except ImportError:
+        # No need for crypt in local mode
+        pass
 
 # Import salt libs
 import salt.defaults.exitcodes
@@ -293,9 +303,10 @@ class MasterKeys(dict):
                             name + '.pub')
         if not os.path.isfile(path):
             key = self.__get_keys()
-            with salt.utils.fopen(path, 'wb+') as f:
-                f.write(key.publickey().exportKey('PEM'))
-        return salt.utils.fopen(path).read()
+            with salt.utils.fopen(path, 'wb+') as wfh:
+                wfh.write(key.publickey().exportKey('PEM'))
+        with salt.utils.fopen(path) as rfh:
+            return rfh.read()
 
     def get_mkey_paths(self):
         return self.pub_path, self.rsa_path
@@ -585,7 +596,7 @@ class AsyncAuth(object):
                             'minion.\nOr restart the Salt Master in open mode to '
                             'clean out the keys. The Salt Minion will now exit.'
                         )
-                        sys.exit(salt.defaults.exitcodes.EX_OK)
+                        sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 # has the master returned that its maxed out with minions?
                 elif payload['load']['ret'] == 'full':
                     raise tornado.gen.Return('full')
@@ -886,7 +897,8 @@ class AsyncAuth(object):
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         m_pub_exists = os.path.isfile(m_pub_fn)
         if m_pub_exists and master_pub and not self.opts['open_mode']:
-            local_master_pub = salt.utils.fopen(m_pub_fn).read()
+            with salt.utils.fopen(m_pub_fn) as fp_:
+                local_master_pub = fp_.read()
 
             if payload['pub_key'].replace('\n', '').replace('\r', '') != \
                     local_master_pub.replace('\n', '').replace('\r', ''):
@@ -936,9 +948,8 @@ class AsyncAuth(object):
                 if not m_pub_exists:
                     # the minion has not received any masters pubkey yet, write
                     # the newly received pubkey to minion_master.pub
-                    salt.utils.fopen(m_pub_fn, 'wb+').write(
-                        salt.utils.to_bytes(payload['pub_key'])
-                    )
+                    with salt.utils.fopen(m_pub_fn, 'wb+') as fp_:
+                        fp_.write(salt.utils.to_bytes(payload['pub_key']))
                 return self.extract_aes(payload, master_pub=False)
 
     def _finger_fail(self, finger, master_key):
@@ -1127,7 +1138,7 @@ class SAuth(AsyncAuth):
                             'minion.\nOr restart the Salt Master in open mode to '
                             'clean out the keys. The Salt Minion will now exit.'
                         )
-                        sys.exit(salt.defaults.exitcodes.EX_OK)
+                        sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 # has the master returned that its maxed out with minions?
                 elif payload['load']['ret'] == 'full':
                     return 'full'
@@ -1226,6 +1237,8 @@ class Crypticle(object):
         aes_key, hmac_key = self.keys
         sig = data[-self.SIG_SIZE:]
         data = data[:-self.SIG_SIZE]
+        if six.PY3 and not isinstance(data, bytes):
+            data = salt.utils.to_bytes(data)
         mac_bytes = hmac.new(hmac_key, data, hashlib.sha256).digest()
         if len(mac_bytes) != len(sig):
             log.debug('Failed to authenticate message')

@@ -2,6 +2,8 @@
 '''
 Module for sending messages to Mattermost
 
+.. versionadded:: Nitrogen
+
 :configuration: This module can be used by either passing an api_url and hook
     directly or by specifying both in a configuration profile in the salt
     master/minion config.

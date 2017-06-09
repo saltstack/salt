@@ -79,7 +79,6 @@ import atexit
 import errno
 import logging
 import time
-from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
 
 # Import Salt Libs
 import salt.exceptions
@@ -88,6 +87,8 @@ import salt.utils
 
 
 # Import Third Party Libs
+import salt.ext.six as six
+from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
 try:
     from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub
     from pyVmomi import vim, vmodl
@@ -116,7 +117,7 @@ def __virtual__():
         return False, 'Missing dependency: The salt.utils.vmware module requires pyVmomi.'
 
 
-def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
+def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None, credstore=None):
     '''
     Shell out and call the specified esxcli commmand, parse the result
     and return something sane.
@@ -128,6 +129,8 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
     :param cmd: esxcli command and arguments
     :param esxi_host: If `host` is a vCenter host, then esxi_host is the
                       ESXi machine on which to execute this command
+    :param credstore: Optional path to the credential store file
+
     :return: Dictionary
     '''
 
@@ -141,6 +144,9 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
         port = 443
     if protocol is None:
         protocol = 'https'
+
+    if credstore:
+        esx_cmd += ' --credstore \'{0}\''.format(credstore)
 
     if not esxi_host:
         # Then we are connecting directly to an ESXi server,
@@ -544,8 +550,9 @@ def get_gssapi_token(principal, host, domain):
     while not ctx.established:
         out_token = ctx.step(in_token)
         if out_token:
-            encoded_token = base64.b64encode(out_token)
-            return encoded_token
+            if six.PY2:
+                return base64.b64encode(out_token)
+            return base64.b64encode(salt.utils.to_bytes(out_token))
         if ctx.established:
             break
         if not in_token:

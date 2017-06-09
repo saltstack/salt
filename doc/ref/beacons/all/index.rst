@@ -20,6 +20,7 @@ beacon modules
     inotify
     journald
     load
+    log
     memusage
     network_info
     network_settings
@@ -31,5 +32,6 @@ beacon modules
     service
     sh
     status
+    telegram_bot_msg
     twilio_txt_msg
     wtmp
