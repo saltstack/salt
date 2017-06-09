@@ -4,6 +4,12 @@ Connection module for Amazon S3 Buckets
 
 .. versionadded:: 2016.3.0
 
+:depends:
+    - boto
+    - boto3
+
+The dependencies listed above can be installed via package or pip.
+
 :configuration: This module accepts explicit Lambda credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
@@ -39,18 +45,15 @@ Connection module for Amazon S3 Buckets
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 
-:depends: boto3
-
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
-# disable complaints about perfectly falid non-assignment code
-#pylint: disable=W0106
+# pylint: disable=E0602
+#  disable complaints about perfectly valid non-assignment code
+# pylint: disable=W0106
 
 # Import Python libs
 from __future__ import absolute_import
 import logging
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import json
 
 # Import Salt libs
@@ -59,6 +62,7 @@ from salt.ext.six.moves import range  # pylint: disable=import-error
 import salt.utils.compat
 import salt.utils
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -66,10 +70,10 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=import-error
 try:
-    #pylint: disable=unused-import
+    # pylint: disable=unused-import
     import boto
     import boto3
-    #pylint: enable=unused-import
+    # pylint: enable=unused-import
     from botocore.exceptions import ClientError
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True

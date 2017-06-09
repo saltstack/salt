@@ -100,24 +100,15 @@ def _additions_install_opensuse(**kwargs):
     kernel_type = re.sub(
         r'^(\d|\.|-)*', '', __grains__.get('kernelrelease', ''))
     kernel_devel = 'kernel-{0}-devel'.format(kernel_type)
-    ret = __salt__['state.single']('pkg.installed', 'devel packages',
-                                   pkgs=['make', 'gcc', kernel_devel],
-                                   concurrent=bool(__opts__.get('sudo_user')))
-    return ret
+    return __states__['pkg.installed'](None, pkgs=['make', 'gcc', kernel_devel])
 
 
 def _additions_install_ubuntu(**kwargs):
-    ret = __salt__['state.single']('pkg.installed', 'devel packages',
-                                   pkgs=['dkms', ],
-                                   concurrent=bool(__opts__.get('sudo_user')))
-    return ret
+    return __states__['pkg.installed'](None, pkgs=['dkms', ])
 
 
 def _additions_install_fedora(**kwargs):
-    ret = __salt__['state.single']('pkg.installed', 'devel packages',
-                                   pkgs=['dkms', 'gcc'],
-                                   concurrent=bool(__opts__.get('sudo_user')))
-    return ret
+    return __states__['pkg.installed'](None, pkgs=['dkms', 'gcc'])
 
 
 def _additions_install_linux(mount_point, **kwargs):

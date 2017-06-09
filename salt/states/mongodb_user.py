@@ -24,7 +24,8 @@ def present(name,
             password=None,
             host="localhost",
             port=27017,
-            authdb=None):
+            authdb=None,
+            roles=None):
     '''
     Ensure that the user is present with the specified properties
 
@@ -55,6 +56,9 @@ def present(name,
     authdb
         The database in which to authenticate
 
+    roles
+        The roles assigned to user specified with the ``name`` parameter
+
     Example:
 
     .. code-block:: yaml
@@ -63,15 +67,24 @@ def present(name,
           mongodb_user.present:
           - name: myapp
           - passwd: password-of-myapp
+          - database: admin
           # Connect as admin:sekrit
           - user: admin
           - password: sekrit
+          - roles:
+              - readWrite
+              - userAdmin
+              - dbOwner
 
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': 'User {0} is already present'.format(name)}
+
+    # setup default empty roles if not provided to preserve previous API interface
+    if roles is None:
+        roles = []
 
     # Check for valid port
     try:
@@ -82,14 +95,31 @@ def present(name,
         return ret
 
     # check if user exists
-    user_exists = __salt__['mongodb.user_exists'](name, user, password, host, port, database, authdb)
-    if user_exists is True:
+    users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
+    if len(users) > 0:
+        # check each user occurrence
+        users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
+        # check each user occurrence
+        for usr in users:
+            # prepare empty list for current roles
+            current_roles = []
+            # iterate over user roles and append each to current_roles list
+            for role in usr['roles']:
+                # check correct database to be sure to fill current_roles only for desired db
+                if role['db'] == database:
+                    current_roles.append(role['role'])
+
+            # fill changes if the roles and current roles differ
+            if not set(current_roles) == set(roles):
+                ret['changes'].update({name: {'database': database, 'roles': {'old': current_roles, 'new': roles}}})
+
+            __salt__['mongodb.user_create'](name, passwd, user, password, host, port, database=database, authdb=authdb, roles=roles)
         return ret
 
     # if the check does not return a boolean, return an error
     # this may be the case if there is a database connection error
-    if not isinstance(user_exists, bool):
-        ret['comment'] = user_exists
+    if not isinstance(users, list):
+        ret['comment'] = users
         ret['result'] = False
         return ret
 
@@ -99,7 +129,7 @@ def present(name,
                 ).format(name)
         return ret
     # The user is not present, make it!
-    if __salt__['mongodb.user_create'](name, passwd, user, password, host, port, database=database, authdb=authdb):
+    if __salt__['mongodb.user_create'](name, passwd, user, password, host, port, database=database, authdb=authdb, roles=roles):
         ret['comment'] = 'User {0} has been created'.format(name)
         ret['changes'][name] = 'Present'
     else:

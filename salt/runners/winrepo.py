@@ -29,7 +29,7 @@ import salt.template
 log = logging.getLogger(__name__)
 
 # Global parameters which can be overridden on a per-remote basis
-PER_REMOTE_OVERRIDES = ('ssl_verify',)
+PER_REMOTE_OVERRIDES = ('ssl_verify', 'refspecs')
 
 
 def genrepo(opts=None, fire_event=True):

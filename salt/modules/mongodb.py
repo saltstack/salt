@@ -17,16 +17,16 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 import json
 import re
 
 # Import salt libs
-from salt.ext.six import string_types
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import get_error_message as _get_error_message
 
 
 # Import third party libs
+import salt.ext.six as six
 try:
     import pymongo
     HAS_MONGODB = True
@@ -79,7 +79,7 @@ def _to_dict(objects):
     Potentially interprets a string as JSON for usage with mongo
     """
     try:
-        if isinstance(objects, string_types):
+        if isinstance(objects, six.string_types):
             objects = json.loads(objects)
     except ValueError as err:
         log.error("Could not parse objects: %s", err)
@@ -122,7 +122,7 @@ def db_exists(name, user=None, password=None, host=None, port=None, authdb=None)
     '''
     dbs = db_list(user, password, host, port, authdb=authdb)
 
-    if isinstance(dbs, string_types):
+    if isinstance(dbs, six.string_types):
         return False
 
     return name in dbs
@@ -156,6 +156,67 @@ def db_remove(name, user=None, password=None, host=None, port=None, authdb=None)
     return True
 
 
+def _version(mdb):
+    return mdb.command('buildInfo')['version']
+
+
+def version(user=None, password=None, host=None, port=None, database='admin', authdb=None):
+    '''
+    Get MongoDB instance version
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.version <user> <password> <host> <port> <database>
+    '''
+    conn = _connect(user, password, host, port, authdb=authdb)
+    if not conn:
+        err_msg = "Failed to connect to MongoDB database {0}:{1}".format(host, port)
+        log.error(err_msg)
+        return (False, err_msg)
+
+    try:
+        mdb = pymongo.database.Database(conn, database)
+        return _version(mdb)
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Listing users failed with error: {0}'.format(
+                str(err)
+            )
+        )
+        return str(err)
+
+
+def user_find(name, user=None, password=None, host=None, port=None,
+                database='admin', authdb=None):
+    '''
+    Get single user from MongoDB
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_find <name> <user> <password> <host> <port> <database> <authdb>
+    '''
+    conn = _connect(user, password, host, port, authdb=authdb)
+    if not conn:
+        err_msg = "Failed to connect to MongoDB database {0}:{1}".format(host, port)
+        log.error(err_msg)
+        return (False, err_msg)
+
+    mdb = pymongo.database.Database(conn, database)
+    try:
+        return mdb.command("usersInfo", name)["users"]
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Listing users failed with error: {0}'.format(
+                str(err)
+            )
+        )
+        return (False, str(err))
+
+
 def user_list(user=None, password=None, host=None, port=None, database='admin', authdb=None):
     '''
     List users of a Mongodb database
@@ -175,20 +236,20 @@ def user_list(user=None, password=None, host=None, port=None, database='admin', 
         mdb = pymongo.database.Database(conn, database)
 
         output = []
-        mongodb_version = mdb.eval('db.version()')
+        mongodb_version = _version(mdb)
 
-        if LooseVersion(mongodb_version) >= LooseVersion('2.6'):
-            for user in mdb.eval('db.getUsers()'):
-                output.append([
-                    ('user', user['user']),
-                    ('roles', user['roles'])
-                ])
+        if _LooseVersion(mongodb_version) >= _LooseVersion('2.6'):
+            for user in mdb.command('usersInfo')['users']:
+                output.append(
+                    {'user': user['user'],
+                     'roles': user['roles']}
+                )
         else:
             for user in mdb.system.users.find():
-                output.append([
-                    ('user', user['user']),
-                    ('readOnly', user.get('readOnly', 'None'))
-                ])
+                output.append(
+                    {'user': user['user'],
+                     'readOnly': user.get('readOnly', 'None')}
+                )
         return output
 
     except pymongo.errors.PyMongoError as err:
@@ -213,7 +274,7 @@ def user_exists(name, user=None, password=None, host=None, port=None,
     '''
     users = user_list(user, password, host, port, database, authdb)
 
-    if isinstance(users, string_types):
+    if isinstance(users, six.string_types):
         return 'Failed to connect to mongo database'
 
     for user in users:
@@ -224,7 +285,7 @@ def user_exists(name, user=None, password=None, host=None, port=None,
 
 
 def user_create(name, passwd, user=None, password=None, host=None, port=None,
-                database='admin', authdb=None):
+                database='admin', authdb=None, roles=None):
     '''
     Create a Mongodb user
 
@@ -232,16 +293,19 @@ def user_create(name, passwd, user=None, password=None, host=None, port=None,
 
     .. code-block:: bash
 
-        salt '*' mongodb.user_create <name> <user> <password> <host> <port> <database>
+        salt '*' mongodb.user_create <user_name> <user_password> <roles> <user> <password> <host> <port> <database>
     '''
     conn = _connect(user, password, host, port, authdb=authdb)
     if not conn:
         return 'Failed to connect to mongo database'
 
+    if not roles:
+        roles = []
+
     try:
         log.info('Creating user {0}'.format(name))
         mdb = pymongo.database.Database(conn, database)
-        mdb.add_user(name, passwd)
+        mdb.add_user(name, passwd, roles=roles)
     except pymongo.errors.PyMongoError as err:
         log.error(
             'Creating database {0} failed with error: {1}'.format(
@@ -304,7 +368,7 @@ def user_roles_exists(name, roles, database, user=None, password=None, host=None
 
     users = user_list(user, password, host, port, database, authdb)
 
-    if isinstance(users, string_types):
+    if isinstance(users, six.string_types):
         return 'Failed to connect to mongo database'
 
     for user in users:
@@ -347,7 +411,7 @@ def user_grant_roles(name, roles, database, user=None, password=None, host=None,
     try:
         log.info('Granting roles {0} to user {1}'.format(roles, name))
         mdb = pymongo.database.Database(conn, database)
-        mdb.eval("db.grantRolesToUser('{0}', {1})".format(name, roles))
+        mdb.command("grantRolesToUser", name, roles=roles)
     except pymongo.errors.PyMongoError as err:
         log.error(
             'Granting roles {0} to user {1} failed with error: {2}'.format(
@@ -386,7 +450,7 @@ def user_revoke_roles(name, roles, database, user=None, password=None, host=None
     try:
         log.info('Revoking roles {0} from user {1}'.format(roles, name))
         mdb = pymongo.database.Database(conn, database)
-        mdb.eval("db.revokeRolesFromUser('{0}', {1})".format(name, roles))
+        mdb.command("revokeRolesFromUser", name, roles=roles)
     except pymongo.errors.PyMongoError as err:
         log.error(
             'Revoking roles {0} from user {1} failed with error: {2}'.format(

@@ -89,7 +89,13 @@ def run_file(name,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Database {0} is already present'.format(name)}
+           'comment': 'Database {0} is already present'.format(database)}
+
+    if not os.path.exists(query_file):
+        ret['comment'] = 'File {0} does not exist'.format(query_file)
+        ret['result'] = False
+        return ret
+
     # check if database exists
     if not __salt__['mysql.db_exists'](database, **connection_args):
         err = _get_mysql_error()
@@ -234,7 +240,7 @@ def run(name,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Database {0} is already present'.format(name)}
+           'comment': 'Database {0} is already present'.format(database)}
     # check if database exists
     if not __salt__['mysql.db_exists'](database, **connection_args):
         err = _get_mysql_error()

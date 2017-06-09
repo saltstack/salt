@@ -2,6 +2,8 @@
 '''
 Manage Grafana v4.0 Dashboards
 
+.. versionadded:: Nitrogen
+
 .. code-block:: yaml
 
     grafana:

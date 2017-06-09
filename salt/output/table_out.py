@@ -3,6 +3,8 @@
 Display output in a table format
 =================================
 
+.. versionadded:: Nitrogen
+
 This outputter displays a sequence of rows as table.
 
 Example output::
@@ -323,6 +325,12 @@ def output(ret, **kwargs):
         * labels_key: use the labels under a certain key. Otherwise will try to use the dictionary keys (if any).
         * title: display title when only one table is selected (using the ``rows_key`` argument).
     '''
+
+    # to facilitate re-use
+    if 'opts' in kwargs:
+        global __opts__  # pylint: disable=W0601
+        __opts__ = kwargs.pop('opts')
+
     # Prefer kwargs before opts
     base_indent = kwargs.get('nested_indent', 0) \
         or __opts__.get('out.table.nested_indent', 0)
@@ -339,8 +347,8 @@ def output(ret, **kwargs):
     for argk in argks:
         argv = kwargs.get(argk) \
             or __opts__.get('out.table.{key}'.format(key=argk))
-        if argv:
-            class_kvargs[argv] = argk
+        if argv is not None:
+            class_kvargs[argk] = argv
 
     table = TableDisplay(**class_kvargs)
 

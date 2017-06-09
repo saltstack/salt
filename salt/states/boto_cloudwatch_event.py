@@ -72,7 +72,7 @@ def __virtual__():
     return 'boto_cloudwatch_event' if 'boto_cloudwatch_event.exists' in __salt__ else False
 
 
-def present(name, Name,
+def present(name, Name=None,
            ScheduleExpression=None,
            EventPattern=None,
            Description=None,
@@ -87,7 +87,8 @@ def present(name, Name,
         The name of the state definition
 
     Name
-        Name of the event rule.
+        Name of the event rule.  Defaults to the value of the 'name' param if
+        not provided.
 
     ScheduleExpression
         The scheduling expression. For example, "cron(0 20 * * ? *)",
@@ -127,6 +128,8 @@ def present(name, Name,
            'comment': '',
            'changes': {}
            }
+
+    Name = Name if Name else name
 
     if isinstance(Targets, six.string_types):
         Targets = json.loads(Targets)
@@ -264,8 +267,7 @@ def present(name, Name,
     return ret
 
 
-def absent(name, Name,
-                  region=None, key=None, keyid=None, profile=None):
+def absent(name, Name=None, region=None, key=None, keyid=None, profile=None):
     '''
     Ensure CloudWatch event rule with passed properties is absent.
 
@@ -273,7 +275,8 @@ def absent(name, Name,
         The name of the state definition.
 
     Name
-        Name of the event rule.
+        Name of the event rule.  Defaults to the value of the 'name' param if
+        not provided.
 
     region
         Region to connect to.
@@ -294,6 +297,8 @@ def absent(name, Name,
            'comment': '',
            'changes': {}
            }
+
+    Name = Name if Name else name
 
     r = __salt__['boto_cloudwatch_event.exists'](Name,
                        region=region, key=key, keyid=keyid, profile=profile)
