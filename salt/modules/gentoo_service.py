@@ -13,6 +13,8 @@ to the correct service manager
 # Import Python libs
 from __future__ import absolute_import
 import logging
+import fnmatch
+import re
 
 # Import salt libs
 import salt.utils.systemd
@@ -260,7 +262,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
 
-    contains_globbing = bool(re.search('\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:
@@ -272,8 +274,6 @@ def status(name, sig=None):
     if contains_globbing:
         return results
     return results[name]
-
-
 
 
 def enable(name, **kwargs):
