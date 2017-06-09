@@ -731,7 +731,6 @@ def request_instance(vm_=None, call=None):
             for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
                 if opts['fixed_ip'] is None and opts['pool'] == pool:
                     floating_ip = fl_ip
-                    log.debug
                     break
             if floating_ip is None:
                 floating_ip = conn.floating_ip_create(pool)['ip']
