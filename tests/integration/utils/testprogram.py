@@ -26,6 +26,7 @@ import salt.utils.process
 import salt.utils.psutil_compat as psutils
 import salt.defaults.exitcodes as exitcodes
 import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 from tests.support.unit import TestCase
 from tests.support.paths import CODE_DIR
@@ -768,8 +769,21 @@ class TestDaemon(TestProgram):
 
     def find_orphans(self, cmdline):
         '''Find orphaned processes matching the specified cmdline'''
-        return [x for x in psutils.process_iter()
-                if x.ppid() == 1 and x.cmdline()[-len(cmdline):] == cmdline]
+        ret = []
+        if six.PY3:
+            cmdline = ' '.join(cmdline)
+            for proc in psutils.process_iter():
+                for item in proc.cmdline():
+                    if cmdline in item:
+                        ret.append(proc)
+        else:
+            cmd_len = len(cmdline)
+            for proc in psutils.process_iter():
+                proc_cmdline = proc.cmdline()
+                if any((cmdline == proc_cmdline[n:n + cmd_len])
+                        for n in range(len(proc_cmdline) - cmd_len + 1)):
+                    ret.append(proc)
+        return ret
 
     def shutdown(self, signum=signal.SIGTERM, timeout=10, wait_for_orphans=0):
         '''Shutdown a running daemon'''
