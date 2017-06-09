@@ -2365,6 +2365,9 @@ def create(vm_):
     extra_config = config.get_cloud_config_value(
         'extra_config', vm_, __opts__, default=None
     )
+    annotation = config.get_cloud_config_value(
+        'annotation', vm_, __opts__, default=None
+    )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=True
     )
@@ -2574,6 +2577,9 @@ def create(vm_):
         for key, value in six.iteritems(extra_config):
             option = vim.option.OptionValue(key=key, value=value)
             config_spec.extraConfig.append(option)
+
+    if annotation:
+        config_spec.annotation = str(annotation)
 
     if 'clonefrom' in vm_:
         clone_spec = handle_snapshot(
