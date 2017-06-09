@@ -1,4 +1,4 @@
-.. _virtual-pkg:
+.. _virtual-kernelpkg:
 
 ======================
 salt.modules.kernelpkg
