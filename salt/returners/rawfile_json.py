@@ -66,7 +66,7 @@ def returner(ret):
 
 def event_return(events):
     '''
-    Write event return data to a file on the master.
+    Write event data (return data and non-return data) to file on the master.
     '''
     if len(events) == 0:
         # events is an empty list.
@@ -76,10 +76,6 @@ def event_return(events):
     try:
         with salt.utils.flopen(opts['filename'], 'a') as logfile:
             for event in events:
-                if not 'id' in event['data']:
-                    # Return data has Minion name in the id key in the data dictionary.
-                    # Skip non return data (e.g. authentication or Salt-master to Minion communication)
-                    continue
                 json.dump(event, logfile)
                 logfile.write('\n')
     except:
