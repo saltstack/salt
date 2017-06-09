@@ -620,7 +620,7 @@ class SaltReturnAssertsMixin(object):
 
     def assertInSaltReturnRegexpMatches(self, ret, pattern, keys=()):
         for saltret in self.__getWithinSaltReturn(ret, keys):
-            self.assertRegexpMatches(saltret, pattern)
+            self.assertRegex(saltret, pattern)
 
     def assertSaltStateChangesEqual(self, ret, comparison, keys=()):
         keys = ['changes'] + self.__return_valid_keys(keys)
