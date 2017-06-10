@@ -258,8 +258,8 @@ class Runner(RunnerClient):
             except salt.exceptions.SaltException as exc:
                 evt = salt.utils.event.get_event('master', opts=self.opts)
                 evt.fire_event({'success': False,
-                                'comment': 'Runner function {0} is not '
-                                           'available'.format(low['fun']),
+                                'return': "'{0}'' is not "
+                                          "available".format(low['fun']),
                                 'fun': low['fun'],
                                 'jid': self.jid},
                                tag='salt/run/{0}/ret'.format(self.jid))
