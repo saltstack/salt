@@ -828,6 +828,7 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
     def destroy(self):
         for message_client in self.message_clients:
             message_client.destroy()
+        self.message_clients = []
 
     def send(self, *args, **kwargs):
         message_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))

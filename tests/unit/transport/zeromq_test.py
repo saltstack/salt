@@ -253,12 +253,8 @@ class AsyncReqMessageClientPoolTest(TestCase):
         self.assertEqual([1], self.message_client_pool.send())
 
     def test_destroy(self):
-        for message_client_mock in self.message_client_pool.message_clients:
-            message_client_mock.destroy.return_value = None
-
         self.message_client_pool.destroy()
-        for message_client_mock in self.message_client_pool.message_clients:
-            self.assertTrue(message_client_mock.destroy.called)
+        self.assertEqual([], self.message_client_pool.message_clients)
 
 
 if __name__ == '__main__':

@@ -776,6 +776,7 @@ class SaltMessageClientPool(salt.transport.MessageClientPool):
     def close(self):
         for message_client in self.message_clients:
             message_client.close()
+        self.message_clients = []
 
     @tornado.gen.coroutine
     def connect(self):

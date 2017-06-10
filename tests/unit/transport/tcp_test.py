@@ -238,11 +238,8 @@ class SaltMessageClientPoolTest(AsyncTestCase):
         self.assertEqual([1], self.message_client_pool.write_to_stream(''))
 
     def test_close(self):
-        for message_client_mock in self.message_client_pool.message_clients:
-            message_client_mock.close.return_value = None
         self.message_client_pool.close()
-        for message_client_mock in self.message_client_pool.message_clients:
-            self.assertTrue(message_client_mock.close.called)
+        self.assertEqual([], self.message_client_pool.message_clients)
 
     def test_on_recv(self):
         for message_client_mock in self.message_client_pool.message_clients:

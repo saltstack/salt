@@ -67,9 +67,3 @@ class MessageClientPool(object):
             kwargs = {}
 
         self.message_clients = [tgt(*args, **kwargs) for _ in range(sock_pool_size)]
-
-    def __del__(self):
-        while self.message_clients:
-            message_client = self.message_clients.pop()
-            if message_client is not None:
-                del message_client
