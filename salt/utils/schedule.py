@@ -791,7 +791,7 @@ class Schedule(object):
 
                 log.debug('schedule.handle_func: Removing {0}'.format(proc_fn))
                 os.unlink(proc_fn)
-            except OSError as exc:
+            except Exception as exc:
                 if exc.errno == errno.EEXIST or exc.errno == errno.ENOENT:
                     # EEXIST and ENOENT are OK because the file is gone and that's what
                     # we wanted
