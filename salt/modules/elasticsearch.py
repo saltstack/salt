@@ -50,7 +50,9 @@ Module to provide Elasticsearch compatibility to Salt
 '''
 
 from __future__ import absolute_import
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.fileclient
+import salt.utils
 
 # Import Python libs
 import logging
@@ -261,7 +263,7 @@ def cluster_stats(nodes=None, hosts=None, profile=None):
         raise CommandExecutionError("Cannot retrieve cluster stats, server returned code {0} with message {1}".format(e.status_code, e.error))
 
 
-def alias_create(indices, alias, hosts=None, body=None, profile=None):
+def alias_create(indices, alias, hosts=None, body=None, source=None, profile=None):
     '''
     Create an alias for a specific index/indices
 
@@ -277,7 +279,20 @@ def alias_create(indices, alias, hosts=None, body=None, profile=None):
         salt myminion elasticsearch.alias_create testindex_v1 testindex
     '''
     es = _get_instance(hosts, profile)
-
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        if 'cp.fileclient_{0}'.format(id(__opts__)) not in __context__:
+            client = __context__['cp.fileclient_{0}'.format(id(__opts__))] \
+                   = salt.fileclient.get_file_client(__opts__)
+        path = client.is_cached(source,
+                                saltenv=__opts__.get('saltenv', 'base'))
+        if path == '':
+          path = client.cache_file(source,
+                                   saltenv=__opts__.get('saltenv', 'base'))
+        with salt.utils.fopen(path, 'r') as f:
+            body = f.read()
     try:
         result = es.indices.put_alias(index=indices, name=alias, body=body)
         return result.get('acknowledged', False)
@@ -285,7 +300,7 @@ def alias_create(indices, alias, hosts=None, body=None, profile=None):
         raise CommandExecutionError("Cannot create alias {0} in index {1}, server returned code {2} with message {3}".format(alias, indices, e.status_code, e.error))
 
 
-def alias_delete(indices, aliases, hosts=None, body=None, profile=None):
+def alias_delete(indices, aliases, hosts=None, body=None, source=None, profile=None):
     '''
     Delete an alias of an index
 
@@ -299,7 +314,20 @@ def alias_delete(indices, aliases, hosts=None, body=None, profile=None):
         salt myminion elasticsearch.alias_delete testindex_v1 testindex
     '''
     es = _get_instance(hosts, profile)
-
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        if 'cp.fileclient_{0}'.format(id(__opts__)) not in __context__:
+            client = __context__['cp.fileclient_{0}'.format(id(__opts__))] \
+                   = salt.fileclient.get_file_client(__opts__)
+        path = client.is_cached(source,
+                                saltenv=__opts__.get('saltenv', 'base'))
+        if path == '':
+          path = client.cache_file(source,
+                                   saltenv=__opts__.get('saltenv', 'base'))
+        with salt.utils.fopen(path, 'r') as f:
+            body = f.read()
     try:
         result = es.indices.delete_alias(index=indices, name=aliases)
 
@@ -355,7 +383,7 @@ def alias_get(indices=None, aliases=None, hosts=None, profile=None):
         raise CommandExecutionError("Cannot get alias {0} in index {1}, server returned code {2} with message {3}".format(aliases, indices, e.status_code, e.error))
 
 
-def document_create(index, doc_type, body=None, id=None, hosts=None, profile=None):
+def document_create(index, doc_type, body=None, source=None, id=None, hosts=None, profile=None):
     '''
     Create a document in a specified index
 
@@ -373,7 +401,20 @@ def document_create(index, doc_type, body=None, id=None, hosts=None, profile=Non
         salt myminion elasticsearch.document_create testindex doctype1 '{}'
     '''
     es = _get_instance(hosts, profile)
-
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        if 'cp.fileclient_{0}'.format(id(__opts__)) not in __context__:
+            client = __context__['cp.fileclient_{0}'.format(id(__opts__))] \
+                   = salt.fileclient.get_file_client(__opts__)
+        path = client.is_cached(source,
+                                saltenv=__opts__.get('saltenv', 'base'))
+        if path == '':
+          path = client.cache_file(source,
+                                   saltenv=__opts__.get('saltenv', 'base'))
+        with salt.utils.fopen(path, 'r') as f:
+            body = f.read()
     try:
         return es.index(index=index, doc_type=doc_type, body=body, id=id)
     except elasticsearch.TransportError as e:
@@ -455,7 +496,7 @@ def document_get(index, id, doc_type='_all', hosts=None, profile=None):
         raise CommandExecutionError("Cannot retrieve document {0} from index {1}, server returned code {2} with message {3}".format(id, index, e.status_code, e.error))
 
 
-def index_create(index, body=None, hosts=None, profile=None):
+def index_create(index, body=None, source=None, hosts=None, profile=None):
     '''
     Create an index
 
@@ -470,7 +511,20 @@ def index_create(index, body=None, hosts=None, profile=None):
         salt myminion elasticsearch.index_create testindex2 '{"settings" : {"index" : {"number_of_shards" : 3, "number_of_replicas" : 2}}}'
     '''
     es = _get_instance(hosts, profile)
-
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        if 'cp.fileclient_{0}'.format(id(__opts__)) not in __context__:
+            client = __context__['cp.fileclient_{0}'.format(id(__opts__))] \
+                   = salt.fileclient.get_file_client(__opts__)
+        path = client.is_cached(source,
+                                saltenv=__opts__.get('saltenv', 'base'))
+        if path == '':
+          path = client.cache_file(source,
+                                   saltenv=__opts__.get('saltenv', 'base'))
+        with salt.utils.fopen(path, 'r') as f:
+            body = f.read()
     try:
         result = es.indices.create(index=index, body=body)
         return result.get('acknowledged', False) and result.get("shards_acknowledged", True)
@@ -604,7 +658,7 @@ def index_close(index, allow_no_indices=True, expand_wildcards='open', ignore_un
         raise CommandExecutionError("Cannot close index {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
-def mapping_create(index, doc_type, body, hosts=None, profile=None):
+def mapping_create(index, doc_type, body=None, source=None, hosts=None, profile=None):
     '''
     Create a mapping in a given index
 
@@ -620,6 +674,20 @@ def mapping_create(index, doc_type, body, hosts=None, profile=None):
         salt myminion elasticsearch.mapping_create testindex user '{ "user" : { "properties" : { "message" : {"type" : "string", "store" : true } } } }'
     '''
     es = _get_instance(hosts, profile)
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        if 'cp.fileclient_{0}'.format(id(__opts__)) not in __context__:
+            client = __context__['cp.fileclient_{0}'.format(id(__opts__))] \
+                   = salt.fileclient.get_file_client(__opts__)
+        path = client.is_cached(source,
+                                saltenv=__opts__.get('saltenv', 'base'))
+        if path == '':
+          path = client.cache_file(source,
+                                   saltenv=__opts__.get('saltenv', 'base'))
+        with salt.utils.fopen(path, 'r') as f:
+            body = f.read()
     try:
         result = es.indices.put_mapping(index=index, doc_type=doc_type, body=body)
 
@@ -677,12 +745,16 @@ def mapping_get(index, doc_type, hosts=None, profile=None):
         raise CommandExecutionError("Cannot retrieve mapping {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
-def index_template_create(name, body, hosts=None, profile=None):
+def index_template_create(name, body=None, source=None, hosts=None, profile=None):
     '''
     Create an index template
 
     name
         Index template name
+
+    source
+        File containing an index template specification. Source can be any protocol specified by the file module.
+
     body
         Template definition as specified in http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
 
@@ -691,6 +763,20 @@ def index_template_create(name, body, hosts=None, profile=None):
         salt myminion elasticsearch.index_template_create testindex_templ '{ "template": "logstash-*", "order": 1, "settings": { "number_of_shards": 1 } }'
     '''
     es = _get_instance(hosts, profile)
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        if 'cp.fileclient_{0}'.format(id(__opts__)) not in __context__:
+            client = __context__['cp.fileclient_{0}'.format(id(__opts__))] \
+                   = salt.fileclient.get_file_client(__opts__)
+        path = client.is_cached(source,
+                                saltenv=__opts__.get('saltenv', 'base'))
+        if path == '':
+          path = client.cache_file(source,
+                                   saltenv=__opts__.get('saltenv', 'base'))
+        with salt.utils.fopen(path, 'r') as f:
+            body = f.read()
     try:
         result = es.indices.put_template(name=name, body=body)
 
