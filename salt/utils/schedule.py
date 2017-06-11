@@ -280,6 +280,7 @@ from __future__ import absolute_import, with_statement
 import os
 import sys
 import time
+import copy
 import signal
 import datetime
 import itertools
@@ -715,7 +716,7 @@ class Schedule(object):
             kwargs = {}
             if 'kwargs' in data:
                 kwargs = data['kwargs']
-                ret['fun_args'].append(data['kwargs'])
+                ret['fun_args'].append(copy.deepcopy(data['kwargs']))
 
             if func not in self.functions:
                 ret['return'] = self.functions.missing_fun_string(func)
