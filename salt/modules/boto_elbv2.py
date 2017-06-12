@@ -81,6 +81,41 @@ def create_target_group(name, protocol, port, vpc_id,
     '''
     Create target group if not present.
 
+    name
+        (string) - The name of the target group.
+    protocol
+        (string) - The protocol to use for routing traffic to the targets
+    port
+        (int) - The port on which the targets receive traffic. This port is used unless
+        you specify a port override when registering the traffic.
+    vpc_id
+        (string) - The identifier of the virtual private cloud (VPC).
+    health_check_protocol
+        (string) - The protocol the load balancer uses when performing health check on
+        targets. The default is the HTTP protocol.
+    health_check_port
+        (string) - The port the load balancer uses when performing health checks on
+        targets. The default is 'traffic-port', which indicates the port on which each
+        target receives traffic from the load balancer.
+    health_check_path
+        (string) - The ping path that is the destination on the targets for health
+        checks. The default is /.
+    health_check_interval_seconds
+        (integer) - The approximate amount of time, in seconds, between health checks
+        of an individual target. The default is 30 seconds.
+    health_check_timeout_seconds
+        (integer) - The amount of time, in seconds, during which no response from a
+        target means a failed health check. The default is 5 seconds.
+    healthy_threshold_count
+        (integer) - The number of consecutive health checks successes required before
+        considering an unhealthy target healthy. The default is 5.
+    unhealthy_threshold_count
+        (integer) - The number of consecutive health check failures required before
+        considering a target unhealthy. The default is 2.
+
+    returns
+        (bool) - True on success, False on failure.
+
     CLI example:
     .. code-block:: bash
 
@@ -117,6 +152,12 @@ def create_target_group(name, protocol, port, vpc_id,
 def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete target group.
+
+    name
+        (string) - The Amazon Resource Name (ARN) of the resource.
+
+    returns
+        (bool) - True on success, False on failure.
 
     CLI example:
 
