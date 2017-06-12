@@ -380,7 +380,7 @@ def mkfs(device, fs_type):
                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
         raise CommandExecutionError('Invalid fs_type passed to partition.mkfs')
 
-    if fs_type is 'linux-swap':
+    if fs_type == 'linux-swap':
         mkfs_cmd = 'mkswap'
     else:
         mkfs_cmd = 'mkfs.{0}'.format(fs_type)
