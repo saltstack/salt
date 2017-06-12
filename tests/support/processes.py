@@ -16,7 +16,7 @@ import logging
 
 # Import pytest-salt libs
 from pytestsalt.utils import SaltRunEventListener as PytestSaltRunEventListener
-from pytestsalt.utils import collect_child_processes, terminate_process  # pylint: disable=unused-import
+from pytestsalt.utils import collect_child_processes, terminate_process, terminate_process_list  # pylint: disable=unused-import
 from pytestsalt.fixtures.daemons import Salt as PytestSalt
 from pytestsalt.fixtures.daemons import SaltKey as PytestSaltKey
 from pytestsalt.fixtures.daemons import SaltRun as PytestSaltRun
