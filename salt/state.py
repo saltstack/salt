@@ -983,9 +983,12 @@ class State(object):
             errors.append('Missing "name" data')
         if data['name'] and not isinstance(data['name'], six.string_types):
             errors.append(
-                'ID \'{0}\' in SLS \'{1}\' is not formed as a string, but is '
-                'a {2}'.format(
-                    data['name'], data['__sls__'], type(data['name']).__name__)
+                'ID \'{0}\' {1}is not formed as a string, but is a {2}'.format(
+                    data['name'],
+                    'in SLS \'{0}\' '.format(data['__sls__'])
+                        if '__sls__' in data else '',
+                    type(data['name']).__name__
+                )
             )
         if errors:
             return errors
