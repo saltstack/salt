@@ -40,7 +40,11 @@ def list_exports(exports='/etc/exports'):
             if line.startswith('#'):
                 continue
             comps = line.split()
-            ret[comps[0]] = []
+
+            # Handle the case where the same path is given twice
+            if not comps[0] in ret:
+                ret[comps[0]] = []
+
             newshares = []
             for perm in comps[1:]:
                 if perm.startswith('/'):
