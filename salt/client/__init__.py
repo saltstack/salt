@@ -620,6 +620,7 @@ class LocalClient(object):
             * ``nodegroup`` - Match on nodegroup
             * ``range`` - Use a Range server for matching
             * ``compound`` - Pass a compound match string
+            * ``ipcidr`` - Match based on Subnet (CIDR notation) or IPv4 address.
 
         :param ret: The returner to use. The value passed can be single
             returner, or a comma delimited list of returners to call in order
