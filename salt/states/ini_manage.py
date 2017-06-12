@@ -86,8 +86,9 @@ def options_present(name, sections=None, separator='=', strict=False):
                         changes[section_name].update({key_to_remove: ''})
                         changes[section_name].update({key_to_remove: {'before': orig_value,
                                                                       'after': None}})
-                changes[section_name].update(
-                    __salt__['ini.set_option'](name, {section_name: section_body}, separator)[section_name])
+                options_updated = __salt__['ini.set_option'](name, {section_name: section_body}, separator)
+                if options_updated:
+                    changes[section_name].update(options_updated[section_name])
         else:
             changes = __salt__['ini.set_option'](name, sections, separator)
     except IOError as err:
@@ -99,8 +100,12 @@ def options_present(name, sections=None, separator='=', strict=False):
         ret['comment'] = 'Errors encountered. {0}'.format(changes['error'])
         ret['changes'] = {}
     else:
-        ret['comment'] = 'Changes take effect'
-        ret['changes'] = changes
+        if all(value == {} for value in changes.values()):
+            ret['changes'] = {}
+            ret['comment'] = 'No changes take effect'
+        else:
+            ret['changes'] = changes
+            ret['comment'] = 'Changes take effect'
     return ret
 
 
