@@ -324,7 +324,7 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     return json.loads(result['stdout']).get('dependencies', {})
 
 
-def cache_clean(path=None, runas=None, env=None):
+def cache_clean(path=None, runas=None, env=None, force=False):
     '''
     Clean cached NPM packages.
 
@@ -341,11 +341,16 @@ def cache_clean(path=None, runas=None, env=None):
         format as the :py:func:`cmd.run <salt.modules.cmdmod.run>` execution
         function.
 
+    force
+        Force cleaning of cache.  Required for npm@5 and greater
+
+        .. versionadded:: 2016.11.7
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' npm.cache_clean
+        salt '*' npm.cache_clean force=True
 
     '''
     env = env or {}
@@ -358,6 +363,8 @@ def cache_clean(path=None, runas=None, env=None):
     cmd = ['npm', 'cache', 'clean']
     if path:
         cmd.append(path)
+    if force is True:
+        cmd.append('--force')
 
     cmd = ' '.join(cmd)
     result = __salt__['cmd.run_all'](
