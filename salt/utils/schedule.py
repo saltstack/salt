@@ -790,7 +790,7 @@ class Schedule(object):
                     try:
                         event.fire_event(load, '__schedule_return')
                     except Exception as exc:
-                        log.exception("Unhandled exception firing evnet: {0}".format(exc))
+                        log.exception("Unhandled exception firing event: {0}".format(exc))
 
             log.debug('schedule.handle_func: Removing {0}'.format(proc_fn))
             try:
