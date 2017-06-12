@@ -344,7 +344,7 @@ def cache_clean(path=None, runas=None, env=None, force=False):
     force
         Force cleaning of cache.  Required for npm@5 and greater
 
-        .. versionadded:: 2016.11.7
+        .. versionadded:: 2016.11.6
 
     CLI Example:
 

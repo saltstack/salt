@@ -325,7 +325,7 @@ def cache_cleaned(name=None,
     force
         Force cleaning of cache.  Required for npm@5 and greater
 
-        .. versionadded:: 2016.11.7
+        .. versionadded:: 2016.11.6
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     specific_pkg = None
