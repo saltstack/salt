@@ -55,7 +55,7 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         Basic test to determine if NPM successfully cleans it's cached packages.
         '''
-        ret = self.run_state('npm.cache_cleaned', name=None)
+        ret = self.run_state('npm.cache_cleaned', name=None, force=True)
         self.assertSaltTrueReturn(ret)
 
 
