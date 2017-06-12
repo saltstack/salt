@@ -309,7 +309,8 @@ def bootstrap(name, user=None, silent=True):
 
 
 def cache_cleaned(name=None,
-                  user=None):
+                  user=None,
+                  force=False):
     '''
     Ensure that the given package is not cached.
 
@@ -320,6 +321,11 @@ def cache_cleaned(name=None,
 
     user
         The user to run NPM with
+
+    force
+        Force cleaning of cache.  Required for npm@5 and greater
+
+        .. versionadded:: 2016.11.7
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     specific_pkg = None
