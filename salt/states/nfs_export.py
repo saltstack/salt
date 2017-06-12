@@ -3,21 +3,29 @@
 Management of NFS exports 
 ===============================================
 
-.. code-block:: yaml
-
 To ensure an NFS export exists:
+
+.. code-block:: yaml
 
     add_export:
       nfs_export.present:
         - name: '/srv/nfs'
-        - hosts:
-          - '10.0.2.0/24'
-        - options:
-          - 'rw'
+        - exports:
+          - hosts:
+            - '10.0.2.0/24'
+          - options:
+            - 'rw'
 
-To have different options for different hosts on the same export, define a separate state.
+This creates the following in /etc/exports:
+
+.. code-block:: bash
+    /srv/nfs 10.0.2.0/24(rw)
+
+Any export of the given path will be modified to match the one specified.
 
 To ensure an NFS export is absent:
+
+.. code-block:: yaml
 
     delete_export:
       nfs_export.absent:
