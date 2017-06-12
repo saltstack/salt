@@ -179,12 +179,14 @@ class Runner(RunnerClient):
                 async_pub = self._gen_async_pub()
                 self.jid = async_pub['jid']
 
+                fun_args = salt.utils.args.parse_input(
+                        self.opts['arg'],
+                        no_parse=self.opts.get('no_parse', []))
+
                 verify_fun(self.functions, low['fun'])
                 args, kwargs = salt.minion.load_args_and_kwargs(
                     self.functions[low['fun']],
-                    salt.utils.args.parse_input(
-                        self.opts['arg'],
-                        no_parse=self.opts.get('no_parse', [])),
+                    fun_args,
                     self.opts,
                 )
                 low['arg'] = args
@@ -259,7 +261,9 @@ class Runner(RunnerClient):
                 evt = salt.utils.event.get_event('master', opts=self.opts)
                 evt.fire_event({'success': False,
                                 'return':  "{0}".format(exc),
+                                'retcode': 254,
                                 'fun': low['fun'],
+                                'fun_args': fun_args,
                                 'jid': self.jid},
                                tag='salt/run/{0}/ret'.format(self.jid))
                 ret = '{0}'.format(exc)
