@@ -33,14 +33,20 @@ import salt.config as config
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.utils import namespaced_function
 from salt.exceptions import SaltCloudSystemExit
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # CloudStackNetwork will be needed during creation of a new node
 # pylint: disable=import-error
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
-    # See https://github.com/saltstack/salt/issues/32743
-    import libcloud.security
-    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
+    # This work-around for Issue #32743 is no longer needed for libcloud >= 2.0.0.
+    # However, older versions of libcloud must still be supported with this work-around.
+    # This work-around can be removed when the required minimum version of libcloud is
+    # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+    if _LooseVersion(libcloud.__version__) < _LooseVersion('2.0.0'):
+        # See https://github.com/saltstack/salt/issues/32743
+        import libcloud.security
+        libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False

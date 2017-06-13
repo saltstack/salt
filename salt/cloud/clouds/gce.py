@@ -54,10 +54,12 @@ import pprint
 import logging
 import msgpack
 from ast import literal_eval
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 # pylint: disable=import-error
 try:
+    import libcloud
     from libcloud.compute.types import Provider
     from libcloud.compute.providers import get_driver
     from libcloud.loadbalancer.types import Provider as Provider_lb
@@ -66,9 +68,14 @@ try:
         ResourceInUseError,
         ResourceNotFoundError,
         )
-    # See https://github.com/saltstack/salt/issues/32743
-    import libcloud.security
-    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
+    # This work-around for Issue #32743 is no longer needed for libcloud >= 2.0.0.
+    # However, older versions of libcloud must still be supported with this work-around.
+    # This work-around can be removed when the required minimum version of libcloud is
+    # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+    if _LooseVersion(libcloud.__version__) < _LooseVersion('2.0.0'):
+        # See https://github.com/saltstack/salt/issues/32743
+        import libcloud.security
+        libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
