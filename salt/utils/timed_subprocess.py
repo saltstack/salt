@@ -2,6 +2,7 @@
 '''For running command line executables with a timeout'''
 from __future__ import absolute_import
 
+import shlex
 import subprocess
 import threading
 import salt.exceptions
@@ -40,13 +41,29 @@ class TimedProc(object):
         try:
             self.process = subprocess.Popen(args, **kwargs)
         except TypeError:
-            str_args = []
-            for arg in args:
-                if not isinstance(arg, six.string_types):
-                    str_args.append(str(arg))
-                else:
-                    str_args.append(arg)
-            args = str_args
+            if not kwargs.get('shell', False):
+                if not isinstance(args, (list, tuple)):
+                    try:
+                        args = shlex.split(args)
+                    except AttributeError:
+                        args = shlex.split(str(args))
+                str_args = []
+                for arg in args:
+                    if not isinstance(arg, six.string_types):
+                        str_args.append(str(arg))
+                    else:
+                        str_args.append(arg)
+                args = str_args
+            else:
+                if not isinstance(args, (list, tuple, six.string_types)):
+                    # Handle corner case where someone does a 'cmd.run 3'
+                    args = str(args)
+            # Ensure that environment variables are strings
+            for key, val in six.iteritems(kwargs.get('env', {})):
+                if not isinstance(val, six.string_types):
+                    kwargs['env'][key] = str(val)
+                if not isinstance(key, six.string_types):
+                    kwargs['env'][str(key)] = kwargs['env'].pop(key)
             self.process = subprocess.Popen(args, **kwargs)
         self.command = args
 
