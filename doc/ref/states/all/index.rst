@@ -128,6 +128,7 @@ state modules
     junos
     k8s
     kapacitor
+    kernelpkg
     keyboard
     keystone
     kmod
