@@ -99,8 +99,7 @@ def gen_hyper_keys(minion_id,
         with salt.utils.fopen(srvinfo, 'w+') as fp_:
             infodat = ('organization = salted\ncn = {0}\ntls_www_server'
                        '\nencryption_key\nsigning_key'
-                       '\ndigitalSignature\n'
-                       'expiration_days = {1}'
+                       '\ndigitalSignature\nexpiration_days = {1}'
                        ).format(
                                __grains__['fqdn'], expiration_days)
             fp_.write(infodat)
