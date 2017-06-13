@@ -4053,7 +4053,7 @@ def extract_hash(hash_fn,
                             hash_matched = True
                     except IndexError:
                         pass
-                elif re.match(source_hash_name.replace('.', r'\.') + r'\s+',
+                elif re.match(re.escape(source_hash_name) + r'\s+',
                               line):
                     _add_to_matches(found, line, 'source_hash_name',
                                     source_hash_name, matched)
@@ -4071,7 +4071,7 @@ def extract_hash(hash_fn,
                             hash_matched = True
                     except IndexError:
                         pass
-                elif re.match(file_name.replace('.', r'\.') + r'\s+', line):
+                elif re.match(re.escape(file_name) + r'\s+', line):
                     _add_to_matches(found, line, 'file_name',
                                     file_name, matched)
                     hash_matched = True
@@ -4085,7 +4085,7 @@ def extract_hash(hash_fn,
                             hash_matched = True
                     except IndexError:
                         pass
-                elif re.match(source.replace('.', r'\.') + r'\s+', line):
+                elif re.match(re.escape(source) + r'\s+', line):
                     _add_to_matches(found, line, 'source', source, matched)
                     hash_matched = True
 

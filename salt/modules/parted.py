@@ -377,16 +377,19 @@ def mkfs(device, fs_type):
     _validate_device(device)
 
     if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
+                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ntfs', 'ufs']):
         raise CommandExecutionError('Invalid fs_type passed to partition.mkfs')
 
-    if fs_type is 'linux-swap':
+    if fs_type == 'NTFS':
+        fs_type = 'ntfs'
+
+    if fs_type == 'linux-swap':
         mkfs_cmd = 'mkswap'
     else:
         mkfs_cmd = 'mkfs.{0}'.format(fs_type)
 
     if not salt.utils.which(mkfs_cmd):
-        return 'Error: {0} is unavailable.'
+        return 'Error: {0} is unavailable.'.format(mkfs_cmd)
     cmd = '{0} {1}'.format(mkfs_cmd, device)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
