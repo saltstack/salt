@@ -221,6 +221,10 @@ def get_function_parameter_docs(function):
     if not function.__doc__:
         return
     doc_lines = function.__doc__.split('\n')
+
+    # Search for docs like
+    # param
+    #     docs
     i = 0
     while i < len(doc_lines):
         line = doc_lines[i]
@@ -232,6 +236,13 @@ def get_function_parameter_docs(function):
                 i += 1
             yield parameter_name, ''.join(parameter_doc)
         i += 1
+
+    # Search for docs like
+    # :param param: docs
+    doc_re = re.compile(r':param (\w+):([\w\s\n.,/]+)', re.MULTILINE)
+    for parameter_name, parameter_doc in doc_re.findall(function.__doc__):
+        clean_docs = ' '.join(parameter_doc.split())
+        yield parameter_name, clean_docs
 
 
 def get_function_parameter_names(function):
