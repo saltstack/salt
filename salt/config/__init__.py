@@ -723,6 +723,10 @@ VALID_OPTS = {
     # A mapping of external systems that can be used to generate topfile data.
     'master_tops': dict,
 
+    # Whether or not matches from master_tops should be executed before or
+    # after those from the top file(s).
+    'master_tops_first': bool,
+
     # A flag that should be set on a top-level master when it is ordering around subordinate masters
     # via the use of a salt syndic
     'order_masters': bool,
@@ -1283,6 +1287,7 @@ DEFAULT_MINION_OPTS = {
     'auth_timeout': 5,
     'auth_tries': 7,
     'master_tries': _MASTER_TRIES,
+    'master_tops_first': False,
     'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
