@@ -11,25 +11,28 @@ To ensure an NFS export exists:
       nfs_export.present:
         - name:     '/srv/nfs'
         - hosts:    '10.0.2.0/24'
-        - options:  'rw'
+        - options:
+          - 'rw'
 
-For more complex exports with multiple groups of hosts:
+This creates the following in /etc/exports:
+
+.. code-block:: bash
+    /srv/nfs 10.0.2.0/24(rw)
+
+For more complex exports with multiple groups of hosts, use 'clients':
 
 .. code-block:: yaml
 
     add_complex_export:
       nfs_export.present:
         - name: '/srv/nfs'
-        - exports:
+        - clients:
           # First export, same as simple one above
-          - hosts:
-              - '10.0.2.0/24'
+          - hosts: '10.0.2.0/24'
             options:
               - 'rw'
           # Second export
-          - hosts:
-              - '192.168.0.0/24'
-              - '172.19.0.0/16'
+          - hosts: '*.example.com'
             options:
               - 'ro'
               - 'subtree_check'
@@ -37,7 +40,7 @@ For more complex exports with multiple groups of hosts:
 This creates the following in /etc/exports:
 
 .. code-block:: bash
-    /srv/nfs 10.0.2.0/24(rw)
+    /srv/nfs 10.0.2.0/24(rw) 192.168.0.0/24,172.19.0.0/16(ro,subtree_check)
 
 Any export of the given path will be modified to match the one specified.
 
@@ -51,7 +54,55 @@ To ensure an NFS export is absent:
 
 '''
 
-#from __future__ import absolute_import
+def present(name, clients=None, hosts=None, options=None, exports='/etc/exports'):
+    '''
+    Ensure that the named export is present with the given options
+
+    name
+        The export path to configure
+
+    clients
+        A list of hosts and the options applied to them.
+        This option may not be used in combination with
+        the 'hosts' or 'options' shortcuts.
+
+    ... code-block:: yaml
+
+        - clients:
+          # First export
+          - hosts: '10.0.2.0/24'
+            options:
+              - 'rw'
+          # Second export
+          - hosts: '*.example.com'
+            options:
+              - 'ro'
+              - 'subtree_check'
+
+    hosts
+        A string matching a number of hosts, for example:
+
+    ... code-block:: yaml
+
+        hosts: '10.0.2.123'
+
+        hosts: '10.0.2.0/24'
+
+        hosts: 'minion1.example.com'
+
+        hosts: '*.example.com'
+
+    options
+        A list of NFS options, for example:
+
+    ... code-block:: yaml
+
+        options:
+          - 'rw'
+          - 'subtree_check'
+
+    '''
+
 
 def absent(name, exports='/etc/exports'):
     '''
