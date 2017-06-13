@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Management of NFS exports 
+Management of NFS exports
 ===============================================
 
 To ensure an NFS export exists:
@@ -54,6 +54,13 @@ To ensure an NFS export is absent:
 #from __future__ import absolute_import
 
 def absent(name, exports='/etc/exports'):
+    '''
+    Ensure that the named path is not exported
+
+    name
+        The export path to remove
+    '''
+
     path = name
     ret = {'name': name,
            'changes': {},
