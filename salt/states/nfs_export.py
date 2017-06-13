@@ -62,9 +62,14 @@ def absent(name, exports='/etc/exports'):
 
     old = __salt__['nfs3.list_exports'](exports)
     if path in old:
+        if __opts__['test']:
+            ret['comment']  = 'Export {0} would be removed'.format(path)
+            ret['result']   = None
+            return ret
+
         __salt__['nfs3.del_export'](exports, path)
         ret['comment']  = 'Export {0} removed'.format(path)
-        ret['changes']  = {'path': path}
+        ret['changes'][path] = old[path]
         ret['result']   = True
     else:
         ret['comment'] = 'Export {0} already absent'.format(path)
