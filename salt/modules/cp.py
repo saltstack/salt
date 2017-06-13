@@ -384,8 +384,11 @@ def get_file_str(path, saltenv='base'):
     '''
     fn_ = cache_file(path, saltenv)
     if isinstance(fn_, six.string_types):
-        with salt.utils.fopen(fn_, 'r') as fp_:
+        mode = 'rb' if six.PY3 else 'r'
+        with salt.utils.fopen(fn_, mode) as fp_:
             data = fp_.read()
+            if six.PY3:
+                data = data.decode()
         return data
     return fn_
 
