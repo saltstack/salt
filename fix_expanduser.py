@@ -17,7 +17,7 @@ def main():
         whitelist = load_whitelist(args.load_whitelist)
 
     modules = get_modules()
-    search_keywords = set(['file', 'directory', 'path'])
+    search_keywords = set(['file', 'directory', 'path', 'location'])
     for module in modules:
         # module_path = get_path_to_module(module.__name__)
         # zookeeper, # import after __virtualname__
