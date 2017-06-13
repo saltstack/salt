@@ -783,6 +783,11 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                                                         in_states=running_states)
         if not len(instances):
             _create = True
+        elif len(instances) > 1:
+            log.debug('Multiple instances matching criteria found - cannot determine a singular instance-id')
+            instance_id = None  # No way to know, we'll just have to bail later....
+        else:
+            instance_id = instances[0]
 
     if _create:
         if __opts__['test']:
@@ -897,8 +902,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
         for k, v in six.iteritems(attributes):
             curr = __salt__['boto_ec2.get_attribute'](k, instance_id=instance_id, region=region, key=key,
                                                       keyid=keyid, profile=profile)
-            if not isinstance(curr, dict):
-                curr = {}
+            curr = {} if not isinstance(curr, dict) else curr
             if curr.get(k) == v:
                 continue
             else:
@@ -925,6 +929,51 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
         else:
             ret['comment'] = 'Instance {0} is in the correct state'.format(instance_name if instance_name else name)
             ret['result'] = True
+
+    if tags and instance_id is not None:
+        tags = dict(tags)
+        curr_tags = dict(__salt__['boto_ec2.get_all_tags'](filters={'resource-id': instance_id},
+                region=region, key=key, keyid=keyid, profile=profile).get(instance_id, {}))
+        current = set(curr_tags.keys())
+        desired = set(tags.keys())
+        remove = current - desired
+        add = dict([(t, tags[t]) for t in (desired - current)])
+        replace = dict([(t, tags[t]) for t in tags if tags.get(t) != curr_tags.get(t)])
+        # Tag keys are unique despite the bizarre semantics uses which make it LOOK like they could be duplicative.
+        add.update(replace)
+        if add or remove:
+            if __opts__['test']:
+                ret['changes']['old'] = ret['changes']['old'] if 'old' in ret['changes'] else {}
+                ret['changes']['new'] = ret['changes']['new'] if 'new' in ret['changes'] else {}
+                ret['changes']['old']['tags'] = curr_tags
+                ret['changes']['new']['tags'] = tags
+                ret['comment'] += '  Tags would be updated on instance {0}.'.format(instance_name if
+                                                                                    instance_name else name)
+            else:
+                if remove:
+                    if not __salt__['boto_ec2.delete_tags'](resource_ids=instance_id, tags=remove,
+                                                            region=region, key=key, keyid=keyid,
+                                                            profile=profile):
+                        msg = "Error while deleting tags on instance {0}".format(instance_name if
+                                                                                instance_name else name)
+                        log.error(msg)
+                        ret['comment'] += '  ' + msg
+                        ret['result'] = False
+                        return ret
+                if add:
+                    if not __salt__['boto_ec2.create_tags'](resource_ids=instance_id, tags=add,
+                                                            region=region, key=key, keyid=keyid,
+                                                            profile=profile):
+                        msg = "Error while creating tags on instance {0}".format(instance_name if
+                                                                                instance_name else name)
+                        log.error(msg)
+                        ret['comment'] += '  ' + msg
+                        ret['result'] = False
+                        return ret
+                ret['changes']['old'] = ret['changes']['old'] if 'old' in ret['changes'] else {}
+                ret['changes']['new'] = ret['changes']['new'] if 'new' in ret['changes'] else {}
+                ret['changes']['old']['tags'] = curr_tags
+                ret['changes']['new']['tags'] = tags
 
     return ret
 
