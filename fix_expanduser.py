@@ -8,6 +8,7 @@ import inspect
 
 
 import salt.states
+import salt.modules
 
 
 def main():
@@ -201,6 +202,13 @@ def get_modules():
         module_name = os.path.splitext(filename)[0]
         module = imp.find_module(module_name, salt.states.__path__)
         yield imp.load_module('salt.states.%s' % module_name, *module)
+
+    for filename in os.listdir('salt/modules'):
+        if not valid_python_re.match(filename):
+            continue
+        module_name = os.path.splitext(filename)[0]
+        module = imp.find_module(module_name, salt.modules.__path__)
+        yield imp.load_module('salt.modules.%s' % module_name, *module)
 
 
 def get_global_functions(module):
