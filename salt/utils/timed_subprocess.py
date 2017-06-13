@@ -42,7 +42,7 @@ class TimedProc(object):
             self.process = subprocess.Popen(args, **kwargs)
         except TypeError:
             if not kwargs.get('shell', False):
-                if not isinstance(args, list):
+                if not isinstance(args, (list, tuple)):
                     try:
                         args = shlex.split(args)
                     except AttributeError:
@@ -55,7 +55,7 @@ class TimedProc(object):
                         str_args.append(arg)
                 args = str_args
             else:
-                if not isinstance(args, (list, six.string_types)):
+                if not isinstance(args, (list, tuple, six.string_types)):
                     # Handle corner case where someone does a 'cmd.run 3'
                     args = str(args)
             # Ensure that environment variables are strings
