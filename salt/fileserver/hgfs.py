@@ -314,7 +314,7 @@ def init():
     if new_remote:
         remote_map = os.path.join(__opts__['cachedir'], 'hgfs/remote_map.txt')
         try:
-            with salt.utils.fopen(remote_map, 'w+') as fp_:
+            with salt.utils.fopen(remote_map, 'wb+') as fp_:
                 timestamp = datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
                 fp_.write('# hgfs_remote map as of {0}\n'.format(timestamp))
                 for repo in repos:
@@ -538,7 +538,7 @@ def update():
             os.makedirs(env_cachedir)
         new_envs = envs(ignore_cache=True)
         serial = salt.payload.Serial(__opts__)
-        with salt.utils.fopen(env_cache, 'w+') as fp_:
+        with salt.utils.fopen(env_cache, 'wb+') as fp_:
             fp_.write(serial.dumps(new_envs))
             log.trace('Wrote env cache data to {0}'.format(env_cache))
 
