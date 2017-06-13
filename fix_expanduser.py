@@ -194,8 +194,9 @@ def load_whitelist(whitelist_path):
 
 
 def get_modules():
+    valid_python_re = re.compile(r'^\w+\.py$')
     for filename in os.listdir('salt/states'):
-        if filename.startswith('_') or filename.endswith('.pyc'):
+        if not valid_python_re.match(filename):
             continue
         module_name = os.path.splitext(filename)[0]
         module = imp.find_module(module_name, salt.states.__path__)
