@@ -59,20 +59,30 @@ def keys(name, basepath='/etc/pki', **kwargs):
         country
             The country that the certificate should use.  Defaults to US.
 
+        .. versionadded:: Oxygen
+
         state
             The state that the certificate should use.  Defaults to Utah.
+
+        .. versionadded:: Oxygen
 
         locality
             The locality that the certificate should use.
             Defaults to Salt Lake City.
 
+        .. versionadded:: Oxygen
+
         organization
             The organization that the certificate should use.
             Defaults to Salted.
 
+        .. versionadded:: Oxygen
+
         expiration_days
             The number of days that the certificate should be valid for.
             Defaults to 365 days (1 year)
+
+        .. versionadded:: Oxygen
 
     '''
     # libvirt.serverkey.pem
