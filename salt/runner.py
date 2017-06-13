@@ -262,7 +262,7 @@ class Runner(RunnerClient):
                 evt.fire_event({'success': False,
                                 'return':  "{0}".format(exc),
                                 'retcode': 254,
-                                'fun': low['fun'],
+                                'fun': self.opts['fun'],
                                 'fun_args': fun_args,
                                 'jid': self.jid},
                                tag='salt/run/{0}/ret'.format(self.jid))
