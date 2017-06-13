@@ -28,7 +28,6 @@ except ImportError:
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
-
 __virtualname__ = 'virt'
 
 
