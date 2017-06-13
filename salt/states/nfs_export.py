@@ -52,3 +52,22 @@ To ensure an NFS export is absent:
 '''
 
 #from __future__ import absolute_import
+
+def absent(name, exports='/etc/exports'):
+    path = name
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    old = __salt__['nfs3.list_exports'](exports)
+    if path in old:
+        __salt__['nfs3.del_export'](exports, path)
+        ret['comment']  = 'Export {0} removed'.format(path)
+        ret['changes']  = {'path': path}
+        ret['result']   = True
+    else:
+        ret['comment'] = 'Export {0} already absent'.format(path)
+        ret['result']   = True
+
+    return ret
