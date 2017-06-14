@@ -53,16 +53,11 @@ log = logging.getLogger(__name__)
 try:
     import botocore
     import boto3
+    import jmespath
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
-
-try:
-    import jmespath
-    HAS_JMESPATH = True
-except ImportError:
-    HAS_JMESPATH = False
 #pylint: enable=unused-import
 
 def __virtual__():
@@ -71,8 +66,6 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return (False, 'The boto3_sns module could not be loaded: boto3 libraries not found')
-    if not HAS_JMESPATH:
-        return (False, 'The boto3_sns module could not be loaded: jmespath module not found')
     __utils__['boto3.assign_funcs'](__name__, 'sns')
     return True
 
