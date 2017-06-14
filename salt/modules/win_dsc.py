@@ -123,19 +123,19 @@ def run_config(path,
             file containing the proper hash table or the PowerShell code to
             create the hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         config_data_source (str): The path to the ``.psd1`` file on
             ``file_roots`` to cache at the location specified by
             ``config_data``. If this is specified, ``config_data`` must be a
             local path instead of a hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         script_parameters (str): Any additional parameters expected by the
             configuration script. These must be defined in the script itself.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         salt_env (str): The salt environment to use when copying the source.
             Default is 'base'
@@ -205,19 +205,19 @@ def compile_config(path,
             file containing the proper hash table or the PowerShell code to
             create the hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         config_data_source (str): The path to the ``.psd1`` file on
             ``file_roots`` to cache at the location specified by
             ``config_data``. If this is specified, ``config_data`` must be a
             local path instead of a hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         script_parameters (str): Any additional parameters expected by the
             configuration script. These must be defined in the script itself.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         salt_env (str): The salt environment to use when copying the source.
             Default is 'base'
