@@ -672,6 +672,7 @@ class LocalClient(object):
             * ``nodegroup`` - Match on nodegroup
             * ``range`` - Use a Range server for matching
             * ``compound`` - Pass a compound match string
+            * ``ipcidr`` - Match based on Subnet (CIDR notation) or IPv4 address.
 
             .. versionchanged:: Nitrogen
                 Renamed from ``expr_form`` to ``tgt_type``

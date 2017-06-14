@@ -1051,7 +1051,7 @@ def script(name,
         source = name
 
     # If script args present split from name and define args
-    if len(name.split()) > 1:
+    if not cmd_kwargs.get('args', None) and len(name.split()) > 1:
         cmd_kwargs.update({'args': name.split(' ', 1)[1]})
 
     cret = mod_run_check(
