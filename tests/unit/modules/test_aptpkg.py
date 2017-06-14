@@ -3,7 +3,7 @@
     :synopsis: Unit Tests for Advanced Packaging Tool module 'module.aptpkg'
     :platform: Linux
     :maturity: develop
-    versionadded:: nitrogen
+    versionadded:: 2017.7.0
 '''
 
 # Import Python Libs

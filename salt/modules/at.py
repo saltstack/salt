@@ -7,7 +7,7 @@ easily tag jobs.
 
 :platform:      linux,openbsd,freebsd
 
-.. versionchanged:: nitrogen
+.. versionchanged:: 2017.7.0
 '''
 from __future__ import absolute_import
 
