@@ -94,8 +94,10 @@ def add_export(exports='/etc/exports', path=None, hosts=None, options=None):
         # Lists, etc would silently mangle /etc/exports
         raise TypeError('hosts argument must be a string')
     edict = list_exports(exports)
-    new = [{'hosts': hosts, 'options': options}]
-    edict[path] = new
+    if not path in edict:
+        edict[path] = []
+    new = {'hosts': hosts, 'options': options}
+    edict[path].append(new)
     _write_exports(exports, edict)
 
     return new
