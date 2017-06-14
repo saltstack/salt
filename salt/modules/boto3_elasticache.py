@@ -3,7 +3,7 @@
 Execution module for Amazon Elasticache using boto3
 ===================================================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :configuration: This module accepts explicit elasticache credentials but can
     also utilize IAM roles assigned to the instance through Instance Profiles.

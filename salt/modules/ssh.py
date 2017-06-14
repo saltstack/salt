@@ -240,7 +240,7 @@ def _fingerprint(public_key, fingerprint_hash_type=None):
         was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-        .. versionchanged:: Nitrogen: default changed from ``md5`` to ``sha256``
+        .. versionchanged:: 2017.7.0: default changed from ``md5`` to ``sha256``
 
     '''
     if fingerprint_hash_type:
@@ -248,7 +248,7 @@ def _fingerprint(public_key, fingerprint_hash_type=None):
     else:
         # Set fingerprint_hash_type to md5 as default
         log.warning('Public Key hashing currently defaults to "md5". This will '
-                    'change to "sha256" in the Nitrogen release.')
+                    'change to "sha256" in the 2017.7.0 release.')
         hash_type = 'sha256'
 
     try:
@@ -836,7 +836,7 @@ def recv_known_host(hostname,
         was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-        .. versionchanged:: Nitrogen: default changed from ``md5`` to ``sha256``
+        .. versionchanged:: 2017.7.0: default changed from ``md5`` to ``sha256``
 
     CLI Example:
 
@@ -1009,7 +1009,7 @@ def set_known_host(user=None,
         was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-        .. versionchanged:: Nitrogen: default changed from ``md5`` to ``sha256``
+        .. versionchanged:: 2017.7.0: default changed from ``md5`` to ``sha256``
 
     CLI Example:
 

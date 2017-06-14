@@ -3367,7 +3367,7 @@ def access(path, mode):
 
 def read(path, binary=False):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Return the content of the file.
 
@@ -4880,14 +4880,14 @@ def manage_file(name,
         See https://docs.python.org/3/library/codecs.html#standard-encodings
         for the list of available encodings.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     encoding_errors : 'strict'
         Default is ```'strict'```.
         See https://docs.python.org/2/library/codecs.html#codec-base-classes
         for the error handling schemes.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     CLI Example:
 

@@ -685,7 +685,7 @@ def file_query(database, file_name, **connection_args):
     Run an arbitrary SQL query from the specified file and return the
     the number of affected rows.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 

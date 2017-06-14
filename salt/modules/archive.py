@@ -481,7 +481,7 @@ def tar(options, tarfile, sources=None, dest=None,
         Comma delimited list of files to **pack** into the tarfile. Can also be
         passed as a Python list.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             Globbing is now supported for this argument
 
     dest
@@ -506,7 +506,7 @@ def tar(options, tarfile, sources=None, dest=None,
 
         # Create a tarfile
         salt '*' archive.tar -cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
-        # Create a tarfile using globbing (Nitrogen and later)
+        # Create a tarfile using globbing (2017.7.0 and later)
         salt '*' archive.tar -cjvf /tmp/tarfile.tar.bz2 '/tmp/file_*'
         # Unpack a tarfile
         salt '*' archive.tar xf foo.tar dest=/target/directory
@@ -632,7 +632,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
         Comma-separated list of sources to include in the zip file. Sources can
         also be passed in a Python list.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             Globbing is now supported for this argument
 
     template : None
@@ -669,7 +669,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
     .. code-block:: bash
 
         salt '*' archive.cmd_zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
-        # Globbing for sources (Nitrogen and later)
+        # Globbing for sources (2017.7.0 and later)
         salt '*' archive.cmd_zip /tmp/zipfile.zip '/tmp/sourcefile*'
     '''
     cmd = ['zip', '-r']
@@ -701,7 +701,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
         Comma-separated list of sources to include in the zip file. Sources can
         also be passed in a Python list.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             Globbing is now supported for this argument
 
     template : None
@@ -734,7 +734,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     .. code-block:: bash
 
         salt '*' archive.zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
-        # Globbing for sources (Nitrogen and later)
+        # Globbing for sources (2017.7.0 and later)
         salt '*' archive.zip /tmp/zipfile.zip '/tmp/sourcefile*'
     '''
     if runas:
@@ -1163,7 +1163,7 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
         Comma-separated list of sources to include in the rar file. Sources can
         also be passed in a Python list.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             Globbing is now supported for this argument
 
     cwd : None
@@ -1188,7 +1188,7 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
     .. code-block:: bash
 
         salt '*' archive.rar /tmp/rarfile.rar /tmp/sourcefile1,/tmp/sourcefile2
-        # Globbing for sources (Nitrogen and later)
+        # Globbing for sources (2017.7.0 and later)
         salt '*' archive.rar /tmp/rarfile.rar '/tmp/sourcefile*'
     '''
     cmd = ['rar', 'a', '-idp', '{0}'.format(rarfile)]

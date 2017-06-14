@@ -316,7 +316,7 @@ __zypper__ = _Zypper()
 
 class Wildcard(object):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Converts string wildcard to a zypper query.
     Example:

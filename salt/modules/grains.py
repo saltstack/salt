@@ -415,7 +415,7 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
 
 def delkey(key):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: 2017.7.0
 
     Remove a grain completely from the grain system, this will remove the
     grain key and value
@@ -765,7 +765,7 @@ def equals(key, value):
 
     Returns ``True`` if matches otherwise ``False``.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
