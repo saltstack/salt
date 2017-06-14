@@ -742,6 +742,7 @@ def get_id(name=None, tags=None, region=None, key=None,
         log.warning('Could not find instance.')
         return None
 
+
 def get_tags(instance_id=None, keyid=None, key=None, profile=None,
              region=None):
     '''
