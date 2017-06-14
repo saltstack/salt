@@ -60,7 +60,7 @@ def get(key,
         dictionaries, the dictionaries will be recursively merged.
 
         .. versionadded:: 2014.7.0
-        .. versionchanged:: 2016.3.7,2016.11.4,Nitrogen
+        .. versionchanged:: 2016.3.7,2016.11.4,2017.7.0
             If the default and the retrieved value are not of the same type,
             then merging will be skipped and the retrieved value will be
             returned. Earlier releases raised an error in these cases.
@@ -86,13 +86,13 @@ def get(key,
         data. This tradeoff in performance however allows for the use case
         where pillar data is desired only from a single environment.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     saltenv
         Included only for compatibility with
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -191,7 +191,7 @@ def items(*args, **kwargs):
             will be necessary if the encrypted pillar data must be made
             available in an decrypted state pillar/ext_pillar rendering.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     pillarenv
         Pass a specific pillar environment from which to compile pillar data.
@@ -393,7 +393,7 @@ def raw(key=None):
 
 def ext(external, pillar=None):
     '''
-    .. versionchanged:: 2016.3.6,2016.11.3,Nitrogen
+    .. versionchanged:: 2016.3.6,2016.11.3,2017.7.0
         The supported ext_pillar types are now tunable using the
         :conf_master:`on_demand_ext_pillar` config option. Earlier releases
         used a hard-coded default.
@@ -546,7 +546,7 @@ def filter_by(lookup_dict,
               default='default',
               base=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Look up the given pillar in a given dictionary and return the result
 

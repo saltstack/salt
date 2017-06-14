@@ -399,7 +399,7 @@ def add(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -524,7 +524,7 @@ def archive(cwd,
         ``archive`` subcommand), in a single string. This is useful for passing
         ``-c`` to run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -629,7 +629,7 @@ def branch(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -708,7 +708,7 @@ def checkout(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -822,7 +822,7 @@ def clone(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -966,7 +966,7 @@ def commit(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -1596,7 +1596,7 @@ def diff(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -1767,7 +1767,7 @@ def fetch(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -1937,7 +1937,7 @@ def init(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -2506,7 +2506,7 @@ def ls_remote(cwd=None,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -2644,7 +2644,7 @@ def merge(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -2776,7 +2776,7 @@ def merge_base(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -3002,7 +3002,7 @@ def pull(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -3114,7 +3114,7 @@ def push(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -3228,7 +3228,7 @@ def rebase(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -3677,7 +3677,7 @@ def reset(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -3752,7 +3752,7 @@ def rev_parse(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -3893,7 +3893,7 @@ def rm_(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -3962,7 +3962,7 @@ def stash(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -4113,7 +4113,7 @@ def submodule(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -4251,7 +4251,7 @@ def symbolic_ref(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -4422,7 +4422,7 @@ def worktree_add(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.
@@ -4547,7 +4547,7 @@ def worktree_prune(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
         .. note::
             This is only supported in git 1.7.2 and newer.

@@ -2,7 +2,7 @@
 '''
 Module to provide icinga2 compatibility to salt.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends:   - icinga2 server
 '''
