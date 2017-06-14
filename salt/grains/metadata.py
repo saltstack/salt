@@ -2,7 +2,7 @@
 '''
 Grains from cloud metadata servers at 169.254.169.254
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends: requests
 
