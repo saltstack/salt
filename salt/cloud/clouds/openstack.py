@@ -143,7 +143,7 @@ import os
 import logging
 import socket
 import pprint
-from distutils.version import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import libcloud
 try:

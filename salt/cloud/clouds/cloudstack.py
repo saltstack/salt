@@ -33,7 +33,7 @@ import salt.config as config
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.utils import namespaced_function
 from salt.exceptions import SaltCloudSystemExit
-from distutils.version import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # CloudStackNetwork will be needed during creation of a new node
 # pylint: disable=import-error
