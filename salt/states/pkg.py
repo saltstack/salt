@@ -158,16 +158,7 @@ def _get_comparison_spec(pkgver):
     comparison operator was passed, the comparison is assumed to be an "equals"
     comparison, and "==" will be the operator returned.
     '''
-    match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
-    if not match:
-        raise CommandExecutionError(
-            'Invalid version specification \'{0}\'.'.format(pkgver)
-        )
-    gt_lt, eq, verstr = match.groups()
-    oper = gt_lt or ''
-    oper += eq or ''
-    # A comparison operator of "=" is redundant, but possible.
-    # Change it to "==" so that the version comparison works
+    oper, verstr = salt.utils.pkg.split_comparison(pkgver)
     if oper in ('=', ''):
         oper = '=='
     return oper, verstr
