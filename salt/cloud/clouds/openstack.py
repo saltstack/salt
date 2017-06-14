@@ -143,7 +143,7 @@ import os
 import logging
 import socket
 import pprint
-from salt.utils.versions import LooseVersion as _LooseVersion
+from distutils.version import LooseVersion as _LooseVersion
 
 # Import libcloud
 try:
@@ -158,11 +158,11 @@ HAS014 = False
 try:
     from libcloud.compute.drivers.openstack import OpenStackNetwork
     from libcloud.compute.drivers.openstack import OpenStack_1_1_FloatingIpPool
-    # This work-around for Issue #32743 is no longer needed for libcloud >= 2.0.0.
+    # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
     # However, older versions of libcloud must still be supported with this work-around.
     # This work-around can be removed when the required minimum version of libcloud is
     # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
-    if _LooseVersion(libcloud.__version__) < _LooseVersion('2.0.0'):
+    if _LooseVersion(libcloud.__version__) < _LooseVersion('1.4.0'):
         # See https://github.com/saltstack/salt/issues/32743
         import libcloud.security
         libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
