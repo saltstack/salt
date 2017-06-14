@@ -33,7 +33,7 @@ specified target expression.
     minions. However, this requires the file to be located within one of the
     fileserver directories.
 
-.. versionchanged:: 2016.3.7,2016.11.6,Nitrogen
+.. versionchanged:: 2016.3.7,2016.11.6,2017.7.0
     Compression support added, disable with ``-n``. Also, if the destination
     path ends in a path separator (i.e. ``/``,  or ``\`` on Windows, the
     desitination will be assumed to be a directory. Finally, recursion is now
@@ -60,7 +60,7 @@ Options
 
     Disable gzip compression.
 
-    .. versionadded:: 2016.3.7,2016.11.6,Nitrogen
+    .. versionadded:: 2016.3.7,2016.11.6,2017.7.0
 
 See also
 ========
