@@ -1,8 +1,8 @@
-:orphan:
+.. _release-2017-7-0:
 
-======================================
-Salt Release Notes - Codename Nitrogen
-======================================
+===============================================
+Salt 2017.7.0 Release Notes - Codename Nitrogen
+===============================================
 
 States Added for Management of systemd Unit Masking
 ===================================================
@@ -272,7 +272,7 @@ Jinja
 Filters
 -------
 
-New filters in Nitrogen:
+New filters in 2017.7.0:
 
 - :jinja_ref:`to_bool`
 - :jinja_ref:`exactly_n_true`
@@ -365,7 +365,7 @@ have been improved, enhanced and widenened in scope:
 - Proxy keepalive: due to external factors, the connection with the remote
   device can be dropped, e.g.: packet loss, idle time (no commands issued
   within a couple of minutes or seconds), or simply the device decides to kill
-  the process. In Nitrogen we have introduced the functionality to re-establish
+  the process. In 2017.7.0 we have introduced the functionality to re-establish
   the connection. One can disable this feature through the
   :conf_proxy:`proxy_keep_alive` option and adjust the polling frequency
   speciying a custom value for :conf_proxy:`proxy_keep_alive_interval`,
@@ -520,7 +520,7 @@ documentation for :ref:`skip_translate
 .. note::
     When running the :py:func:`docker_container.running
     <salt.states.docker_container.running>` state for the first time after
-    upgrading to Nitrogen, your container(s) may be replaced. The changes may
+    upgrading to 2017.7.0, your container(s) may be replaced. The changes may
     show diffs for certain parameters which say that the old value was an empty
     string, and the new value is ``None``. This is due to the fact that in
     prior releases Salt was passing empty strings for these values when
@@ -748,7 +748,7 @@ The ``htpasswd`` execution module had the following function removed:
 - ``useradd_all``: Please use ``useradd`` instead.
 
 The ``img`` execution module has been removed. All of its associated functions
-were marked for removal in the Nitrogen release. The functions removed in this
+were marked for removal in the 2017.7.0 release. The functions removed in this
 module are mapped as follows:
 
 - ``mount_image``/``mnt_image``: Please use ``mount.mount`` instead.

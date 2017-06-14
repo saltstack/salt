@@ -248,7 +248,7 @@ each of Salt's module types such as ``runners``, ``output``, ``wheel``,
 ``extmod_whitelist/extmod_blacklist``
 -------------------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 By using this dictionary, the modules that are synced to the master's extmod cache using `saltutil.sync_*` can be
 limited.  If nothing is set to a specific type, then all modules are accepted.  To block all modules of a specific type,
@@ -1742,9 +1742,9 @@ on a large number of minions.
 .. conf_master:: fileserver_verify_config
 
 ``fileserver_verify_config``
-------------------------------
+----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``True``
 
@@ -2259,7 +2259,7 @@ authenticate is protected by a passphrase.
 ``gitfs_refspecs``
 ~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
 
@@ -2813,7 +2813,7 @@ configuration is the same as :conf_master:`file_roots`:
 ``on_demand_ext_pillar``
 ------------------------
 
-.. versionadded:: 2016.3.6,2016.11.3,Nitrogen
+.. versionadded:: 2016.3.6,2016.11.3,2017.7.0
 
 Default: ``['libvirt', 'virtkey']``
 
@@ -2841,7 +2841,7 @@ The external pillars permitted to be used on-demand using :py:func:`pillar.ext
 ``decrypt_pillar``
 ------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``[]``
 
@@ -2863,7 +2863,7 @@ specified by :conf_master:`decrypt_pillar_default` will be used.
 ``decrypt_pillar_delimiter``
 ----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``:``
 
@@ -2882,7 +2882,7 @@ The delimiter used to distinguish nested data structures in the
 ``decrypt_pillar_default``
 --------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``gpg``
 
@@ -2898,7 +2898,7 @@ pillar key in :conf_master:`decrypt_pillar`.
 ``decrypt_pillar_renderers``
 ----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``['gpg']``
 
@@ -3222,7 +3222,7 @@ they were created by a different master.
 ``git_pillar_includes``
 ***********************
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``True``
 
@@ -3353,7 +3353,7 @@ authenticate is protected by a passphrase.
 ``git_pillar_refspecs``
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
 
@@ -3376,7 +3376,7 @@ configured both globally and for individual remotes.
 ``git_pillar_verify_config``
 ----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``True``
 
@@ -3734,9 +3734,9 @@ check in with their lists of expected minions before giving up.
 .. conf_master:: syndic_forward_all_events
 
 ``syndic_forward_all_events``
--------------------
+-----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``False``
 
@@ -4363,7 +4363,7 @@ authenticate is protected by a passphrase.
 ``winrepo_refspecs``
 ~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
 

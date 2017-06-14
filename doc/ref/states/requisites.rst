@@ -517,7 +517,7 @@ inherit inherited options.
 runas
 ~~~~~
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 The ``runas`` global option is used to set the user which will be used to run the command in the ``cmd.run`` module.
 
@@ -849,7 +849,7 @@ this one, include a ``mod_run_check_cmd`` in the states file for the state.
 Retrying States
 ===============
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 The retry option in a state allows it to be executed multiple times until a desired
 result is obtained or the maximum number of attempts have been made.
