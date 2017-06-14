@@ -2,7 +2,7 @@
 '''
 Management of Docker images
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends: docker_ Python module
 
@@ -28,7 +28,7 @@ Management of Docker images
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 
 These states were moved from the :mod:`docker <salt.states.docker>` state
-module (formerly called **dockerng**) in the Nitrogen release.
+module (formerly called **dockerng**) in the 2017.7.0 release.
 
 .. note::
     To pull from a Docker registry, authentication must be configured. See
@@ -148,17 +148,17 @@ def present(name,
                 - base: centos
                 - saltenv: base
 
-        .. versionadded: Nitrogen
+        .. versionadded: 2017.7.0
 
     base
         Base image with which to start ``dockerng.sls_build``
 
-        .. versionadded: Nitrogen
+        .. versionadded: 2017.7.0
 
     saltenv
         environment from which to pull sls files for ``dockerng.sls_build``.
 
-        .. versionadded: Nitrogen
+        .. versionadded: 2017.7.0
     '''
     ret = {'name': name,
            'changes': {},
