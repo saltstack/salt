@@ -17,6 +17,7 @@ To ensure an NFS export exists:
 This creates the following in /etc/exports:
 
 .. code-block:: bash
+
     /srv/nfs 10.0.2.0/24(rw)
 
 For more complex exports with multiple groups of hosts, use 'clients':
@@ -40,6 +41,7 @@ For more complex exports with multiple groups of hosts, use 'clients':
 This creates the following in /etc/exports:
 
 .. code-block:: bash
+
     /srv/nfs 10.0.2.0/24(rw) 192.168.0.0/24,172.19.0.0/16(ro,subtree_check)
 
 Any export of the given path will be modified to match the one specified.
@@ -66,7 +68,7 @@ def present(name, clients=None, hosts=None, options=None, exports='/etc/exports'
         This option may not be used in combination with
         the 'hosts' or 'options' shortcuts.
 
-    ... code-block:: yaml
+    .. code-block:: yaml
 
         - clients:
           # First export
@@ -82,7 +84,7 @@ def present(name, clients=None, hosts=None, options=None, exports='/etc/exports'
     hosts
         A string matching a number of hosts, for example:
 
-    ... code-block:: yaml
+    .. code-block:: yaml
 
         hosts: '10.0.2.123'
 
@@ -92,10 +94,12 @@ def present(name, clients=None, hosts=None, options=None, exports='/etc/exports'
 
         hosts: '*.example.com'
 
+        hosts: '*'
+
     options
         A list of NFS options, for example:
 
-    ... code-block:: yaml
+    .. code-block:: yaml
 
         options:
           - 'rw'
