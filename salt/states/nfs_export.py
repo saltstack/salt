@@ -106,7 +106,50 @@ def present(name, clients=None, hosts=None, options=None, exports='/etc/exports'
           - 'subtree_check'
 
     '''
+    path = name
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
 
+    if not clients:
+        if not hosts:
+            ret['result']   = False
+            ret['comment']  = 'Either \'clients\' or \'hosts\' must be defined'
+            return ret
+        # options being None is handled by add_export()
+        clients = [{'hosts': hosts, 'options': options}]
+
+    old = __salt__['nfs3.list_exports'](exports)
+    if path in old:
+        if old[path] == clients:
+            ret['result']   = True
+            ret['comment']  = 'Export {0} already configured'.format(path)
+            return ret
+
+        ret['changes']['new'] = clients
+        ret['changes']['old'] = old[path]
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment']  = 'Export {0} would be changed'.format(path)
+            return ret
+
+        __salt__['nfs3.del_export'](exports, path)
+
+    else:
+        ret['changes']['old'] = None
+        ret['changes']['new'] = clients
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment']  = 'Export {0} would be added'.format(path)
+            return ret
+
+    for exp in clients:
+        __salt__['nfs3.add_export'](exports, path, exp['hosts'], exp['options'])
+
+    ret['result'] = True
+    ret['changes']['new'] = clients
+    return ret
 
 def absent(name, exports='/etc/exports'):
     '''
