@@ -3,7 +3,7 @@
 Send a message card to Microsoft Teams
 =======================
 This state is useful for sending messages to Teams during state runs.
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 .. code-block:: yaml
     teams-message:
       msteams.post_card:

@@ -2,7 +2,7 @@
 '''
 States for solrcloud alias and collection configuration
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 '''
 

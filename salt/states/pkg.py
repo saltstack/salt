@@ -968,7 +968,7 @@ def installed(
         <salt.modules.yumpkg.list_repo_pkgs>` in 2014.1.0, and was expanded to
         :py:func:`Debian/Ubuntu <salt.modules.aptpkg.list_repo_pkgs>` and
         :py:func:`Arch Linux <salt.modules.pacman.list_repo_pkgs>`-based
-        distros in the Nitrogen release.
+        distros in the 2017.7.0 release.
 
         The version strings returned by either of these functions can be used
         as version specifiers in pkg states.
@@ -990,7 +990,7 @@ def installed(
 
         **WILDCARD VERSIONS**
 
-        As of the Nitrogen release, this state now supports wildcards in
+        As of the 2017.7.0 release, this state now supports wildcards in
         package versions for SUSE SLES/Leap/Tumbleweed, Debian/Ubuntu, RHEL/CentOS,
         Arch Linux, and their derivatives. Using wildcards can be useful for
         packages where the release name is built into the version in some way,

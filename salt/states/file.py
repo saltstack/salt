@@ -1934,14 +1934,14 @@ def managed(name,
         See https://docs.python.org/3/library/codecs.html#standard-encodings
         for available encodings.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     encoding_errors : 'strict'
         Error encoding scheme. Default is ```'strict'```.
         See https://docs.python.org/2/library/codecs.html#codec-base-classes
         for the list of available schemes.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     allow_empty : True
         .. versionadded:: 2015.8.4
@@ -2014,26 +2014,30 @@ def managed(name,
         The owner of the directory. If this is not passed, user will be used. If
         user is not passed, the account under which Salt is running will be
         used.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     win_perms : None
         A dictionary containing permissions to grant and their propagation. For
         example: ``{'Administrators': {'perms': 'full_control'}}`` Can be a
         single basic perm or a list of advanced perms. ``perms`` must be
         specified. ``applies_to`` does not apply to file objects.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     win_deny_perms : None
         A dictionary containing permissions to deny and their propagation. For
         example: ``{'Administrators': {'perms': 'full_control'}}`` Can be a
         single basic perm or a list of advanced perms. ``perms`` must be
         specified. ``applies_to`` does not apply to file objects.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     win_inheritance : True
         True to inherit permissions from the parent directory, False not to
         inherit permission.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -2696,7 +2700,8 @@ def directory(name,
         The owner of the directory. If this is not passed, user will be used. If
         user is not passed, the account under which Salt is running will be
         used.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     win_perms : None
         A dictionary containing permissions to grant and their propagation. For
@@ -2704,19 +2709,22 @@ def directory(name,
         'this_folder_only'}}`` Can be a single basic perm or a list of advanced
         perms. ``perms`` must be specified. ``applies_to`` is optional and
         defaults to ``this_folder_subfoler_files``.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     win_deny_perms : None
         A dictionary containing permissions to deny and their propagation. For
         example: ``{'Administrators': {'perms': 'full_control', 'applies_to':
         'this_folder_only'}}`` Can be a single basic perm or a list of advanced
         perms.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     win_inheritance : True
         True to inherit permissions from the parent directory, False not to
         inherit permission.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -5568,14 +5576,14 @@ def serialize(name,
         See https://docs.python.org/3/library/codecs.html#standard-encodings
         for available encodings.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     encoding_errors : 'strict'
         Error encoding scheme. Default is ```'strict'```.
         See https://docs.python.org/2/library/codecs.html#codec-base-classes
         for the list of available schemes.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     user
         The user to own the directory, this defaults to the user salt is

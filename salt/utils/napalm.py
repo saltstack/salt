@@ -12,7 +12,7 @@ Utils for the NAPALM modules and proxy.
     - :mod:`SNMP configuration module <salt.modules.napalm_snmp>`
     - :mod:`Users configuration management <salt.modules.napalm_users>`
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 '''
 
 from __future__ import absolute_import

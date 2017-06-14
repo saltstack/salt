@@ -692,7 +692,7 @@ class SerializerExtension(Extension, object):
 
     ** Escape Filters **
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Allows escaping of strings so they can be interpreted literally by another
     function.
@@ -709,7 +709,7 @@ class SerializerExtension(Extension, object):
 
     ** Set Theory Filters **
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Performs set math using Jinja filters.
 

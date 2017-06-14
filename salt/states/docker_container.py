@@ -2,7 +2,7 @@
 '''
 Management of Docker containers
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends: docker_ Python module
 
@@ -28,9 +28,9 @@ Management of Docker containers
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 
 These states were moved from the :mod:`docker <salt.states.docker>` state
-module (formerly called **dockerng**) in the Nitrogen release. When running the
+module (formerly called **dockerng**) in the 2017.7.0 release. When running the
 :py:func:`docker_container.running <salt.states.docker_container.running>`
-state for the first time after upgrading to Nitrogen, your container(s) may be
+state for the first time after upgrading to 2017.7.0, your container(s) may be
 replaced. The changes may show diffs for certain parameters which say that the
 old value was an empty string, and the new value is ``None``. This is due to
 the fact that in prior releases Salt was passing empty strings for these values
@@ -254,7 +254,7 @@ def running(name,
         <salt.modules.dockermod.stop>` as the ``timeout`` value, telling Docker
         how long to wait for a graceful shutdown before killing the container.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             This option was renamed from ``stop_timeout`` to
             ``shutdown_timeout`` to acommodate the ``stop_timeout`` container
             configuration setting.
@@ -1322,7 +1322,7 @@ def running(name,
                 - stop_timeout: 5
 
         .. note::
-            In releases prior to Nitrogen, this option was not set in the
+            In releases prior to 2017.7.0, this option was not set in the
             container configuration, but rather this timeout was enforced only
             when shutting down an existing container to replace it. To remove
             the ambiguity, and to allow for the container to have a stop

@@ -67,7 +67,7 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
             Allow mulitiple versions of the package to be installed. Do not use
             with ``force``. Does not work with all packages. Default is False.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
     .. code-block:: yaml
 

@@ -2,7 +2,7 @@
 '''
 State module to manage Elasticsearch.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 '''
 
 # Import python libs

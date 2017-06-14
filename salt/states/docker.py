@@ -2,12 +2,12 @@
 '''
 States to manage Docker containers, images, volumes, and networks
 
-.. versionchanged:: Nitrogen
+.. versionchanged:: 2017.7.0
     The legacy Docker state and execution module have been removed, and the
     new modules (formerly called ``dockerng`` have taken their places).
 
 .. important::
-    As of the Nitrogen release, the states in this module have been separated
+    As of the 2017.7.0 release, the states in this module have been separated
     into the following four state modules:
 
     - :mod:`docker_container <salt.states.docker_container>` - States to manage
@@ -81,7 +81,7 @@ def __virtual__():
 
 def running(name, **kwargs):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`docker_container.running
         <salt.states.docker_container.running>`.
     '''
@@ -101,7 +101,7 @@ def running(name, **kwargs):
 
 def stopped(**kwargs):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`docker_container.stopped
         <salt.states.docker_container.stopped>`.
     '''
@@ -120,7 +120,7 @@ def stopped(**kwargs):
 
 def absent(name, **kwargs):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`docker_container.absent
         <salt.states.docker_container.absent>`.
     '''
@@ -140,7 +140,7 @@ def absent(name, **kwargs):
 
 def network_present(name, **kwargs):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`docker_network.present
         <salt.states.docker_network.present>`.
     '''
@@ -160,7 +160,7 @@ def network_present(name, **kwargs):
 
 def network_absent(name, **kwargs):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`docker_network.absent
         <salt.states.docker_network.absent>`.
     '''
@@ -180,7 +180,7 @@ def network_absent(name, **kwargs):
 
 def image_present(name, **kwargs):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`docker_image.present
         <salt.states.docker_image.present>`.
     '''
@@ -200,7 +200,7 @@ def image_present(name, **kwargs):
 
 def image_absent(**kwargs):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`docker_image.absent
         <salt.states.docker_image.absent>`.
     '''
@@ -219,7 +219,7 @@ def image_absent(**kwargs):
 
 def volume_present(name, driver=None, driver_opts=None, force=False):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`docker_volume.present
         <salt.states.docker_volume.present>`.
     '''
@@ -239,7 +239,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
 
 def volume_absent(name, driver=None):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`docker_volume.absent
         <salt.states.docker_volume.absent>`.
     '''
