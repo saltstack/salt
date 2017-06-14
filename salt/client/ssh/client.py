@@ -224,7 +224,7 @@ class SSHClient(object):
             >>> sshclient.cmd_subset('*', 'test.ping', sub=1)
             {'jerry': True}
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
         '''
         if 'expr_form' in kwargs:
             salt.utils.warn_until(

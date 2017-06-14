@@ -562,7 +562,7 @@ def __get_ssh_credentials(vm_):
 
 def create_network(kwargs=None, call=None):
     '''
-    ... versionchanged:: Nitrogen
+    ... versionchanged:: 2017.7.0
     Create a GCE network. Must specify name and cidr.
 
     CLI Example:
@@ -713,7 +713,7 @@ def show_network(kwargs=None, call=None):
 
 def create_subnetwork(kwargs=None, call=None):
     '''
-    ... versionadded:: Nitrogen
+    ... versionadded:: 2017.7.0
     Create a GCE Subnetwork. Must specify name, cidr, network, and region.
 
     CLI Example:
@@ -795,7 +795,7 @@ def create_subnetwork(kwargs=None, call=None):
 
 def delete_subnetwork(kwargs=None, call=None):
     '''
-    ... versionadded:: Nitrogen
+    ... versionadded:: 2017.7.0
     Delete a GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -863,7 +863,7 @@ def delete_subnetwork(kwargs=None, call=None):
 
 def show_subnetwork(kwargs=None, call=None):
     '''
-    ... versionadded:: Nitrogen
+    ... versionadded:: 2017.7.0
     Show details of an existing GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -2172,7 +2172,7 @@ def start(vm_name, call=None):
     '''
     Call GCE 'start on the instance.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -2216,7 +2216,7 @@ def stop(vm_name, call=None):
     '''
     Call GCE 'stop' on the instance.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -2392,7 +2392,7 @@ def create_attach_volumes(name, kwargs, call=None):
     Volumes are attached in the order in which they are given, thus on a new
     node the first volume will be /dev/sdb, the second /dev/sdc, and so on.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2425,7 +2425,7 @@ def request_instance(vm_):
     '''
     Request a single GCE instance from a data dict.
 
-    .. versionchanged: Nitrogen
+    .. versionchanged: 2017.7.0
     '''
     if not GCE_VM_NAME_REGEX.match(vm_['name']):
         raise SaltCloudSystemExit(

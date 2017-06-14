@@ -2,7 +2,7 @@
 '''
 Beacon to fire events at specific log messages.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 '''
 
