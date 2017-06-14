@@ -38,11 +38,6 @@ found.
 
 There are installers available for Python 2 and Python 3.
 
-.. note::
-
-    An installer and documentation for Salt Master on Windows is available
-    through Salt Enterprise.
-
 The installer will detect previous installations of Salt and ask if you would
 like to remove them. Clicking OK will remove the Salt binaries and related files
 but leave any existing config, cache, and PKI information.
