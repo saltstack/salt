@@ -2,7 +2,7 @@
 '''
 Management of Docker networks
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends: docker_ Python module
 
@@ -28,7 +28,7 @@ Management of Docker networks
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 
 These states were moved from the :mod:`docker <salt.states.docker>` state
-module (formerly called **dockerng**) in the Nitrogen release.
+module (formerly called **dockerng**) in the 2017.7.0 release.
 '''
 from __future__ import absolute_import
 import logging
