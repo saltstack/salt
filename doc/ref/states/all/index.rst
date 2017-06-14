@@ -174,6 +174,7 @@ state modules
     netusers
     network
     netyang
+    nfs_export
     nftables
     npm
     ntp
