@@ -60,6 +60,7 @@ except ImportError:
     HAS_BOTO = False
 #pylint: enable=unused-import
 
+
 def __virtual__():
     '''
     Only load if boto libraries exist.
