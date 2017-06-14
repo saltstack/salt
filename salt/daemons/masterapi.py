@@ -772,6 +772,7 @@ class RemoteFuncs(object):
         # If the return data is invalid, just ignore it
         if any(key not in load for key in ('return', 'jid', 'id')):
             return False
+
         if load['jid'] == 'req':
             # The minion is returning a standalone job, request a jobid
             prep_fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
