@@ -4,6 +4,15 @@
 Salt Release Notes - Codename Oxygen
 ====================================
 
+Comparison Operators in Package Installation
+--------------------------------------------
+
+Salt now supports using comparison operators (e.g. ``>=1.2.3``) when installing
+packages on minions which use :mod:`yum/dnf <salt.modules.yumpkg>` or :mod:`apt
+<salt.modules.aptpkg>`. This is supported both in the :py:func:`pkg.installed
+<salt.states.pkg.installed>` state and in the ``pkg.install`` remote execution
+function.
+
 Configuration Option Deprecations
 ---------------------------------
 
