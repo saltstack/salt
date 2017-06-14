@@ -79,7 +79,7 @@ def execute(tgt,
             kwarg=None,
             **kwargs):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Execute ``fun`` on all minions matched by ``tgt`` and ``tgt_type``.
     Parameter ``fun`` is the name of execution module function to call.
@@ -115,7 +115,7 @@ def execute(tgt,
                          fun,
                          arg=arg,
                          timeout=timeout or __opts__['timeout'],
-                         tgt_type=tgt_type,  # no warn_until, as this is introduced only in Nitrogen
+                         tgt_type=tgt_type,  # no warn_until, as this is introduced only in 2017.7.0
                          ret=ret,
                          jid=jid,
                          kwarg=kwarg,

@@ -2,7 +2,7 @@
 '''
 Retrieve Pillar data by doing a postgres query
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :maturity: new
 :depends: psycopg2
