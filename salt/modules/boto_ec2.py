@@ -1829,6 +1829,39 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
     return ret
 
 
+def get_all_tags(filters=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Describe all tags matching the filter criteria, or all tags in the account otherwise.
+
+    .. versionadded:: Nitrogen
+
+    filters
+        (dict) - Additional constraints on which volumes to return.  Note that valid filters vary
+        extensively depending on the resource type.  When in doubt, search first without a filter
+        and then use the returned data to help fine-tune your search.  You can generally garner the
+        resource type from its ID (e.g. `vol-XXXXX` is a volume, `i-XXXXX` is an instance, etc.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.get_all_tags '{"tag:Name": myInstanceNameTag, resource-type: instance}'
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        ret = conn.get_all_tags(filters)
+        tags = {}
+        for t in ret:
+            if t.res_id not in tags:
+                tags[t.res_id] = {}
+            tags[t.res_id][t.name] = t.value
+        return tags
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return {}
+
+
 def create_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=None):
     '''
     Create new metadata tags for the specified resource ids.
