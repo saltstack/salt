@@ -564,29 +564,20 @@ def install(name=None,
             if version_num is None:
                 targets.append(param)
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
-                if match:
-                    gt_lt, eq, verstr = match.groups()
-                    prefix = gt_lt or ''
-                    prefix += eq or ''
-                    # If no prefix characters were supplied, use '='
-                    prefix = prefix or '='
-                    if '*' in verstr:
-                        if prefix == '=':
-                            wildcards.append((param, verstr))
-                        else:
-                            errors.append(
-                                'Invalid wildcard for {0}{1}{2}'.format(
-                                    param, prefix, verstr
-                                )
+                prefix, verstr = salt.utils.pkg.split_comparison(version_num)
+                if not prefix:
+                    prefix = '='
+                if '*' in verstr:
+                    if prefix == '=':
+                        wildcards.append((param, verstr))
+                    else:
+                        errors.append(
+                            'Invalid wildcard for {0}{1}{2}'.format(
+                                param, prefix, verstr
                             )
-                        continue
-                    targets.append('{0}{1}{2}'.format(param, prefix, verstr))
-                else:
-                    errors.append(
-                        'Invalid version string \'{0}\' for package '
-                        '\'{1}\''.format(version_num, name)
-                    )
+                        )
+                    continue
+                targets.append('{0}{1}{2}'.format(param, prefix, verstr))
 
     if wildcards:
         # Resolve wildcard matches
