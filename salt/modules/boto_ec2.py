@@ -742,6 +742,30 @@ def get_id(name=None, tags=None, region=None, key=None,
         log.warning('Could not find instance.')
         return None
 
+def get_tags(instance_id=None, keyid=None, key=None, profile=None,
+             region=None):
+    '''
+    Given an instance_id, return a list of tags associated with that instance.
+
+    returns
+        (list) - list of tags as key/value pairs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.get_tags instance_id
+    '''
+    tags = []
+    client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
+    result = client.get_all_tags(filters={"resource-id": instance_id})
+    if len(result) > 0:
+        for tag in result:
+            tags.append({tag.name: tag.value})
+    else:
+        log.info("No tags found for instance_id {}".format(instance_id))
+    return tags
+
 
 def exists(instance_id=None, name=None, tags=None, region=None, key=None,
            keyid=None, profile=None, in_states=None, filters=None):
