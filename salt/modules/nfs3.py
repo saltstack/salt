@@ -75,7 +75,7 @@ def del_export(exports='/etc/exports', path=None):
     _write_exports(exports, edict)
     return edict
 
-def add_export(exports='/etc/exports', path=None, hosts=None, options=['ro']):
+def add_export(exports='/etc/exports', path=None, hosts=None, options=None):
     '''
     Add an export
 
@@ -85,6 +85,8 @@ def add_export(exports='/etc/exports', path=None, hosts=None, options=['ro']):
 
         salt '*' nfs3.add_export path='/srv/test' hosts=['127.0.0.1'] options=['rw']
     '''
+    if options == None:
+        options = []
     edict = list_exports(exports)
     new = [{'hosts': hosts, 'options': options}]
     edict[path] = new
