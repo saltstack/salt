@@ -52,7 +52,10 @@ def list_exports(exports='/etc/exports'):
                     continue
                 permcomps = perm.split('(')
                 permcomps[1] = permcomps[1].replace(')', '')
-                hosts = permcomps[0].split(',')
+                hosts = permcomps[0]
+                if not type(hosts) is str:
+                    # Lists, etc would silently mangle /etc/exports
+                    raise TypeError('hosts argument must be a string')
                 options = permcomps[1].split(',')
                 ret[comps[0]].append({'hosts': hosts, 'options': options})
             for share in newshares:
@@ -75,7 +78,7 @@ def del_export(exports='/etc/exports', path=None):
     _write_exports(exports, edict)
     return edict
 
-def add_export(exports='/etc/exports', path=None, hosts=None, options=['ro']):
+def add_export(exports='/etc/exports', path=None, hosts=None, options=None):
     '''
     Add an export
 
@@ -83,8 +86,13 @@ def add_export(exports='/etc/exports', path=None, hosts=None, options=['ro']):
 
     .. code-block:: bash
 
-        salt '*' nfs3.add_export path='/srv/test' hosts=['127.0.0.1'] options=['rw']
+        salt '*' nfs3.add_export path='/srv/test' hosts='127.0.0.1' options=['rw']
     '''
+    if options == None:
+        options = []
+    if not type(hosts) is str:
+        # Lists, etc would silently mangle /etc/exports
+        raise TypeError('hosts argument must be a string')
     edict = list_exports(exports)
     new = [{'hosts': hosts, 'options': options}]
     edict[path] = new
@@ -109,7 +117,7 @@ def _write_exports(exports, edict):
         for export in edict:
             line = export
             for perms in edict[export]:
-                hosts = ','.join(perms['hosts'])
+                hosts = perms['hosts']
                 options = ','.join(perms['options'])
                 line += ' {0}({1})'.format(hosts, options)
             efh.write('{0}\n'.format(line))
