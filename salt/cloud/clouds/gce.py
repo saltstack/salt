@@ -54,7 +54,7 @@ import pprint
 import logging
 import msgpack
 from ast import literal_eval
-from distutils.version import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 # pylint: disable=import-error
