@@ -1271,9 +1271,11 @@ def installed(
                   - baz
 
         Additionally, :mod:`ebuild <salt.modules.ebuild>`, :mod:`pacman
-        <salt.modules.pacman>` and :mod:`zypper <salt.modules.zypper>` support
-        the ``<``, ``<=``, ``>=``, and ``>`` operators for more control over
-        what versions will be installed. For example:
+        <salt.modules.pacman>`, :mod:`zypper <salt.modules.zypper>`,
+        :mod:`yum/dnf <salt.modules.yumpkg>`, and :mod:`apt
+        <salt.modules.aptpkg>` support the ``<``, ``<=``, ``>=``, and ``>``
+        operators for more control over what versions will be installed. For
+        example:
 
         .. code-block:: yaml
 
