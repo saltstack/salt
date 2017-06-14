@@ -85,12 +85,6 @@ def keys(name, basepath='/etc/pki', **kwargs):
         .. versionadded:: Oxygen
 
     '''
-    # libvirt.serverkey.pem
-    # libvirt.servercert.pem
-    # libvirt.clientkey.pem
-    # libvirt.clientcert.pem
-    # libvirt.cacert.pem
-
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
     # Grab all kwargs to make them available as pillar values
