@@ -6,7 +6,7 @@ Module for Solaris 10's zoneadm
 :maturity:      new
 :platform:      OmniOS,OpenIndiana,SmartOS,OpenSolaris,Solaris 10
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 
 .. warning::
     Oracle Solaris 11's zoneadm is not supported by this module!
