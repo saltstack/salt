@@ -6,7 +6,7 @@ cache Module
 :maturity:      New
 :platform:      all
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 This module provides access to Salt's cache subsystem.
 
