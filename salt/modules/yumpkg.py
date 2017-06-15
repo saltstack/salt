@@ -1092,15 +1092,6 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version_num = kwargs.get('version')
-    if version_num:
-        if pkgs is None and sources is None:
-            # Allow "version" to work for single package target
-            pkg_params = {name: version_num}
-        else:
-            log.warning('"version" parameter will be ignored for multiple '
-                        'package targets')
-
     old = list_pkgs(versions_as_list=False)
     # Use of __context__ means no duplicate work here, just accessing
     # information already in __context__ from the previous call to list_pkgs()
