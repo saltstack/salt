@@ -804,7 +804,7 @@ def get_repo_teams(repo_name, profile='github'):
     '''
     Return teams belonging to a repository.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     repo_name
         The name of the repository from which to retrieve teams.
@@ -1385,7 +1385,7 @@ def add_team_repo(repo_name, team_name, profile="github", permission=None):
         'push' or 'admin'. If not specified, the default permission specified on
         the team will be used.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -1727,7 +1727,7 @@ def get_prs(repo_name=None,
     Returns information for all pull requests in a given repository, based on
     the search options provided.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     repo_name
         The name of the repository for which to list pull requests. This

@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon EFS
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :configuration: This module accepts explicit EFS credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles or

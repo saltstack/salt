@@ -28,7 +28,7 @@ nodegroups. Here's an example nodegroup configuration within
     group2 is matching specific grains. See the :ref:`compound matchers
     <targeting-compound>` documentation for more details.
 
-    As of the Nitrogen release of Salt, group names can also be prepended with
+    As of the 2017.7.0 release of Salt, group names can also be prepended with
     a dash. This brings the usage in line with many other areas of Salt. For
     example:
 

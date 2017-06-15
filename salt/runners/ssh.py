@@ -21,7 +21,7 @@ def cmd(tgt,
         expr_form=None):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 

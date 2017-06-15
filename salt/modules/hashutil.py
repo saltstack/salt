@@ -266,7 +266,7 @@ def github_signature(string, shared_secret, challenge_hmac):
     Verify a challenging hmac signature against a string / shared-secret for
     github webhooks.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Returns a boolean if the verification succeeded or failed.
 

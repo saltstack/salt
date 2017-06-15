@@ -1597,7 +1597,7 @@ def _consolidate_repo_sources(sources):
 
 def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Returns all available packages. Optionally, package names (and name globs)
     can be passed and the results will be filtered to packages matching those
@@ -1878,7 +1878,7 @@ def del_repo(repo, **kwargs):
 
 def _convert_if_int(value):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: 2017.7.0
 
     Convert to an int if necessary.
 
@@ -1896,7 +1896,7 @@ def _convert_if_int(value):
 
 def get_repo_keys():
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: 2017.7.0
 
     List known repo key details.
 
@@ -1968,7 +1968,7 @@ def get_repo_keys():
 
 def add_repo_key(path=None, text=None, keyserver=None, keyid=None, saltenv='base'):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: 2017.7.0
 
     Add a repo key using ``apt-key add``.
 
