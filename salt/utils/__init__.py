@@ -3517,13 +3517,23 @@ def expanduser(*paths):
     '''
     None-safe version of os.path.expanduser, that can also expand multiple
     arguments at the same time.
+
+    If one of the arguments is a list of strings, all those will be expanded
+    too.
     '''
     expanded_paths = []
     for path in paths:
         if not path:
             expanded_paths.append(path)
-        else:
+        elif isinstance(path, six.string_types):
             expanded_paths.append(os.path.expanduser(path))
+        elif isinstance(path, (list, tuple)):
+            nested_expanded = []
+            for nested_element in path:
+                nested_expanded.append(expanduser(nested_element))
+            expanded_paths.append(nested_expanded)
+        else:
+            expanded_paths.append(path)
 
     if len(expanded_paths) == 1:
         return expanded_paths[0]

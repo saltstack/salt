@@ -1092,6 +1092,9 @@ class UtilsTestCase(TestCase):
         self.assertEqual(utils.expanduser(None), None)
         self.assertEqual(utils.expanduser(''), '')
         self.assertEqual(utils.expanduser(0), 0)
-        with patch('os.path.expanduser', '/root/myfile'):
+        def mock_expanduser(path):
+            return path.replace('~root', '/root')
+        with patch('os.path.expanduser', mock_expanduser):
             self.assertEqual(utils.expanduser('~root/myfile'), '/root/myfile')
             self.assertEqual(utils.expanduser(None, '~root/myfile'), (None, '/root/myfile'))
+            self.assertEqual(utils.expanduser(['file', '~root/myfile']), ['file', '/root/myfile'])
