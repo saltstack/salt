@@ -108,6 +108,7 @@ _TERM_FIELDS = {
     'fragment_offset': None,
     'hop_limit': None,
     'icmp_type': [],
+    'icmp_code': None,
     'ether_type': [],
     'traffic_class_count': None,
     'traffic_type': [],
