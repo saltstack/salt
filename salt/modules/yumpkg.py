@@ -642,7 +642,7 @@ def list_repo_pkgs(*args, **kwargs):
         <salt.modules.yumpkg.hold>` will only show the currently-installed
         version, as locking a package will make other versions appear
         unavailable to yum/dnf.
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         By default, the versions for each package are no longer organized by
         repository. To get results organized by repository, use
         ``byrepo=True``.
@@ -714,26 +714,26 @@ def list_repo_pkgs(*args, **kwargs):
         Specify a disabled package repository (or repositories) to enable.
         (e.g., ``yum --enablerepo='somerepo'``)
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     disablerepo (ignored if ``fromrepo`` is specified)
         Specify an enabled package repository (or repositories) to disable.
         (e.g., ``yum --disablerepo='somerepo'``)
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     byrepo : False
         When ``True``, the return data for each package will be organized by
         repository.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     cacheonly : False
         When ``True``, the repo information will be retrieved from the cached
         repo metadata. This is equivalent to passing the ``-C`` option to
         yum/dnf.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     CLI Examples:
 

@@ -39,6 +39,14 @@ class UtilDictupdateTestCase(TestCase):
         mdict['A'] = [1, 2, 3, 4]
         self.assertEqual(res, mdict)
 
+        # level 1 value changes (list merge, remove duplicates, preserve order)
+        mdict = copy.deepcopy(self.dict1)
+        mdict['A'] = [1, 2]
+        res = dictupdate.update(copy.deepcopy(mdict), {'A': [4, 3, 2, 1]},
+                                merge_lists=True)
+        mdict['A'] = [1, 2, 4, 3]
+        self.assertEqual(res, mdict)
+
         # level 2 value changes
         mdict = copy.deepcopy(self.dict1)
         mdict['C']['D'] = 'Z'
@@ -59,6 +67,15 @@ class UtilDictupdateTestCase(TestCase):
         res = dictupdate.update(copy.deepcopy(mdict), {'C': {'D': ['c', 'd']}},
                                 merge_lists=True)
         mdict['C']['D'] = ['a', 'b', 'c', 'd']
+        self.assertEqual(res, mdict)
+
+        # level 2 value changes (list merge, remove duplicates, preserve order)
+        mdict = copy.deepcopy(self.dict1)
+        mdict['C']['D'] = ['a', 'b']
+        res = dictupdate.update(copy.deepcopy(mdict),
+                                {'C': {'D': ['d', 'c', 'b', 'a']}},
+                                merge_lists=True)
+        mdict['C']['D'] = ['a', 'b', 'd', 'c']
         self.assertEqual(res, mdict)
 
         # level 3 value changes
@@ -84,6 +101,14 @@ class UtilDictupdateTestCase(TestCase):
         res = dictupdate.update(copy.deepcopy(mdict),
             {'C': {'F': {'G': ['c', 'd']}}}, merge_lists=True)
         mdict['C']['F']['G'] = ['a', 'b', 'c', 'd']
+        self.assertEqual(res, mdict)
+
+        # level 3 value changes (list merge, remove duplicates, preserve order)
+        mdict = copy.deepcopy(self.dict1)
+        mdict['C']['F']['G'] = ['a', 'b']
+        res = dictupdate.update(copy.deepcopy(mdict),
+            {'C': {'F': {'G': ['d', 'c', 'b', 'a']}}}, merge_lists=True)
+        mdict['C']['F']['G'] = ['a', 'b', 'd', 'c']
         self.assertEqual(res, mdict)
 
         # replace a sub-dictionary

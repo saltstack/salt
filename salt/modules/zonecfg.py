@@ -7,7 +7,7 @@ Module for Solaris 10's zonecfg
 :platform:      OmniOS,OpenIndiana,SmartOS,OpenSolaris,Solaris 10
 :depend:        salt.modules.file
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 
 .. warning::
     Oracle Solaris 11's zonecfg is not supported by this module!

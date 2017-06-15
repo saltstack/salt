@@ -561,7 +561,7 @@ General Deprecations
   - If ``env`` (or ``__env__``) is supplied as a keyword argument to a function
     that also accepts arbitrary keyword arguments, then a new warning informs the
     user that ``env`` is no longer used if it is found.  This new warning will be
-    removed in Salt Nitrogen.
+    removed in Salt 2017.7.0.
 
     .. code-block:: python
 
