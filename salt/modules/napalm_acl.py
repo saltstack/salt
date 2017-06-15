@@ -5,7 +5,7 @@ NAPALM ACL
 
 Generate and load ACL (firewall) configuration on network devices.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :codeauthor: Mircea Ulinic <mircea@cloudflare.com>
 :maturity:   new

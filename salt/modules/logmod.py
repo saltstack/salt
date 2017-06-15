@@ -3,7 +3,7 @@
 On-demand logging
 =================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 The sole purpose of this module is logging messages in the (proxy) minion.
 It comes very handy when debugging complex Jinja templates, for example:

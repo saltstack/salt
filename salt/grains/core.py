@@ -517,7 +517,7 @@ def _virtual(osdata):
                 '\'virtual\' grain.'
             )
     # Check if enable_lspci is True or False
-    if __opts__.get('enable_lspci', True) is False:
+    if __opts__.get('enable_lspci', True) is True:
         # /proc/bus/pci does not exists, lspci will fail
         if os.path.exists('/proc/bus/pci'):
             _cmds += ['lspci']

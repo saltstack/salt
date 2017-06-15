@@ -136,7 +136,7 @@ Runner Events
         ``state`` and ``function`` types, also includes a ``tgt_type`` value
         which shows what kind of match (``glob``, ``pcre``, etc.) was used.
         This value was named ``expr_form`` in the 2016.11 release cycle but has
-        been renamed to ``tgt_type`` in Nitrogen for consistency with other
+        been renamed to ``tgt_type`` in 2017.7.0 for consistency with other
         events.
 
 .. _event-master_presence:

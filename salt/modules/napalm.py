@@ -5,7 +5,7 @@ NAPALM helpers
 
 Helpers for the NAPALM modules.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 '''
 
 from __future__ import absolute_import
