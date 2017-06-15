@@ -3352,6 +3352,7 @@ def eval_minion_id_func(opts):
     if '__minion_id_func_evaluated' in opts:
         return opts['id']
 
+    # Import 'salt.loader' here to avoid a circular dependency
     import salt.loader as loader
 
     # split module and function and try loading the module
@@ -3430,10 +3431,9 @@ def get_id(opts, cache_minion_id=False):
         newid = newid.lower()
         log.debug('Changed minion id {0} to lowercase.'.format(newid))
     if '__role' in opts and opts.get('__role') == 'minion':
-        if opts.get('minion_id_type', 'str') == 'func':
-            log.debug('Found minion id from eval_minion_id_func(): {0}'.format(newid))
-        else:
-            log.debug('Found minion id from generate_minion_id(): {0}'.format(newid))
+        log.debug('Found minion id from {0}(): {1}'.format(
+            opts.get('minion_id_type') == 'func' and 'eval_minion_id_func' or
+            'generate_minion_id', newid))
     if cache_minion_id and opts.get('minion_id_caching', True):
         _cache_id(newid, id_cache)
     is_ipv4 = salt.utils.network.is_ipv4(newid)
