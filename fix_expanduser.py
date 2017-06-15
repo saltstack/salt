@@ -38,6 +38,7 @@ def main():
                     for search_keyword in search_keywords:
                         if search_keyword in doc_words:
                             print('%s \t%s' % (parameter_id, docs))
+                            break
 
             if function_parameters:
                 start_line_to_function[find_function_first_line(function)] = (function, function_parameters)
