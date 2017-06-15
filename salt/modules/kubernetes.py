@@ -161,6 +161,36 @@ def node(name, **kwargs):
     return None
 
 
+def namespaces(**kwargs):
+    '''
+    Return the names of the available namespaces
+
+    CLI Examples::
+
+        salt '*' kubernetes.namespaces
+        salt '*' kubernetes.namespaces api_url=http://myhost:port api_user=my-user
+    '''
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.list_namespace()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling CoreV1Api->list_node: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+    ret = []
+
+    for namespace in api_response.items:
+        ret.append(namespace.metadata.name)
+
+    return ret
+
+
 def deployments(namespace="default", **kwargs):
     '''
     Return a list of kubernetes deployments defined in the namespace
@@ -345,6 +375,31 @@ def show_pod(name, namespace="default", **kwargs):
             raise CommandExecutionError(exc)
 
 
+def show_namespace(name, **kwargs):
+    '''
+    Return information for a given namespace defined by the specified name
+
+    CLI Examples::
+
+        salt '*' kubernetes.show_namespace kube-system
+    '''
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.read_namespace(name)
+
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling "
+                "CoreV1Api->read_namespaced_pod: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
 def show_secret(name, namespace="default", decode=False, **kwargs):
     '''
     Return the kubernetes secret defined by name and namespace.
@@ -467,6 +522,34 @@ def delete_pod(name, namespace="default", **kwargs):
             log.exception(
                 "Exception when calling "
                 "CoreV1Api->delete_namespaced_pod: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
+def delete_namespace(name, **kwargs):
+    '''
+    Deletes the kubernetes namespace defined by name
+
+    CLI Examples::
+
+        salt '*' kubernetes.delete_namespace salt
+        salt '*' kubernetes.delete_namespace name=salt
+    '''
+    _setup_conn(**kwargs)
+    body = kubernetes.client.V1DeleteOptions(orphan_dependents=True)
+
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.delete_namespace(name=name, body=body)
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling "
+                "CoreV1Api->delete_namespace: "
+                "{0}".format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -626,6 +709,40 @@ def create_secret(
             log.exception(
                 "Exception when calling "
                 "CoreV1Api->create_namespaced_secret: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
+def create_namespace(
+        name,
+        **kwargs):
+    '''
+    Creates a namespace with the specified name.
+
+    CLI Example:
+        salt '*' kubernetes.create_namespace salt
+        salt '*' kubernetes.create_namespace name=salt
+    '''
+
+    meta_obj = kubernetes.client.V1ObjectMeta(name=name)
+    body = kubernetes.client.V1Namespace(metadata=meta_obj)
+    body.metadata.name = name
+
+    _setup_conn(**kwargs)
+
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.create_namespace(body)
+
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling "
+                "CoreV1Api->create_namespace: "
+                "{0}".format(exc)
             )
             raise CommandExecutionError(exc)
 
