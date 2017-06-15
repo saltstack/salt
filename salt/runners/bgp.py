@@ -3,7 +3,7 @@
 BGP Finder
 ==========
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Runner to search BGP neighbors details.
 

@@ -6,7 +6,7 @@ connected for a certain period of time.
 
 Requires that the minion_data_cache option be enabled.
 
-.. versionadded: Nitrogen
+.. versionadded: 2017.7.0
 
 :configuration:
 
