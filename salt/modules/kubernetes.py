@@ -20,6 +20,7 @@ or `api_password` parameters when calling a function:
 
 # Import Python Futures
 from __future__ import absolute_import
+import base64
 import logging
 import yaml
 
@@ -211,6 +212,32 @@ def pods(namespace="default", **kwargs):
             raise CommandExecutionError(exc)
 
 
+def secrets(namespace="default", **kwargs):
+    '''
+    Return a list of kubernetes secrets defined in the namespace
+
+    CLI Examples::
+
+        salt '*' kubernetes.secrets
+        salt '*' kubernetes.secrets namespace=default
+    '''
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.list_namespaced_secret(namespace)
+
+        return [secret["metadata"]["name"] for secret in api_response.to_dict().get('items')]
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling "
+                "CoreV1Api->list_namespaced_secret: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
 def show_deployment(name, namespace="default", **kwargs):
     '''
     Return the kubernetes deployment defined by name and namespace
@@ -286,6 +313,41 @@ def show_pod(name, namespace="default", **kwargs):
             log.exception(
                 "Exception when calling "
                 "CoreV1Api->read_namespaced_pod: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
+def show_secret(name, namespace="default", decode=False, **kwargs):
+    '''
+    Return the kubernetes secret defined by name and namespace.
+    The secrets can be decoded if specified by the user. Warning: this has
+    security implications.
+
+    CLI Examples::
+
+        salt '*' kubernetes.show_secret confidential default
+        salt '*' kubernetes.show_secret name=confidential namespace=default
+        salt '*' kubernetes.show_secret name=confidential decode=True
+    '''
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.read_namespaced_secret(name, namespace)
+
+        if api_response.data and (decode or decode == "True"):
+            for key in api_response.data:
+                value = api_response.data[key]
+                api_response.data[key] = base64.b64decode(value)
+
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling "
+                "ExtensionsV1beta1Api->read_namespaced_deployment: "
+                "{0}".format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -381,6 +443,37 @@ def delete_pod(name, namespace="default", **kwargs):
             raise CommandExecutionError(exc)
 
 
+def delete_secret(name, namespace="default", **kwargs):
+    '''
+    Deletes the kubernetes secret rvice defined by name and namespace
+
+    CLI Examples::
+
+        salt '*' kubernetes.delete_secret confidential default
+        salt '*' kubernetes.delete_secret name=confidential namespace=default
+    '''
+    _setup_conn(**kwargs)
+    body = kubernetes.client.V1DeleteOptions(orphan_dependents=True)
+
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.delete_namespaced_secret(
+            name=name,
+            namespace=namespace,
+            body=body)
+
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling CoreV1Api->delete_namespaced_secret: "
+                "{0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
 def create_deployment(
         name,
         namespace,
@@ -464,6 +557,47 @@ def create_service(
             log.exception(
                 "Exception when calling "
                 "CoreV1Api->create_namespaced_service: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
+def create_secret(
+        name,
+        namespace,
+        data,
+        source,
+        template,
+        saltenv,
+        **kwargs):
+    '''
+    Creates the kubernetes secret as defined by the user.
+    '''
+    if source:
+        data = __read_and_render_yaml_file(source, template, saltenv)
+
+    # encode the secrets using base64 as required by kubernetes
+    for key in data:
+        data[key] = base64.b64encode(data[key])
+
+    body = kubernetes.client.V1Secret(
+        metadata=__dict_to_object_meta(name, namespace, {}),
+        data=data)
+
+    _setup_conn(**kwargs)
+
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.create_namespaced_secret(
+            namespace, body)
+
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling "
+                "CoreV1Api->create_namespaced_secret: {0}".format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -575,60 +709,70 @@ def __create_object_body(kind,
     Create a Kubernetes Object body instance.
     '''
     if source:
-        sfn = __salt__['cp.cache_file'](source, saltenv)
-        if not sfn:
+        src_obj = __read_and_render_yaml_file(source, template, saltenv)
+        if (
+                not isinstance(src_obj, dict) or
+                'kind' not in src_obj or
+                src_obj['kind'] != kind
+           ):
             raise CommandExecutionError(
-                'Source file \'{0}\' not found'.format(source))
+                'The source file should define only '
+                'a {0} object'.format(kind))
 
-        with salt.utils.fopen(sfn, 'r') as src:
-            contents = src.read()
-
-            if template:
-                if template in salt.utils.templates.TEMPLATE_REGISTRY:
-                    # TODO: should we allow user to set also `context` like  # pylint: disable=fixme
-                    # `file.managed` does?
-                    # Apply templating
-                    data = salt.utils.templates.TEMPLATE_REGISTRY[template](
-                        contents,
-                        from_str=True,
-                        to_str=True,
-                        saltenv=saltenv,
-                        grains=__grains__,
-                        pillar=__pillar__,
-                        salt=__salt__,
-                        opts=__opts__)
-
-                    if not data['result']:
-                        # Failed to render the template
-                        raise CommandExecutionError(
-                            'Failed to render file path with error: '
-                            '{0}'.format(data['data'])
-                        )
-
-                    contents = data['data'].encode('utf-8')
-                else:
-                    raise CommandExecutionError(
-                        'Unknown template specified: {0}'.format(
-                            template))
-
-            src_obj = yaml.load(contents)
-            if (
-                    not isinstance(src_obj, dict) or
-                    'kind' not in src_obj or
-                    src_obj['kind'] != kind
-               ):
-                raise CommandExecutionError(
-                    'The source file should define only '
-                    'a {0} object'.format(kind))
-
-            if 'metadata' in src_obj:
-                metadata = src_obj['metadata']
-            if 'spec' in src_obj:
-                spec = src_obj['spec']
+        if 'metadata' in src_obj:
+            metadata = src_obj['metadata']
+        if 'spec' in src_obj:
+            spec = src_obj['spec']
 
     return obj_class(
         metadata=__dict_to_object_meta(name, namespace, metadata),
         spec=spec_creator(spec))
+
+
+def __read_and_render_yaml_file(source,
+                                template,
+                                saltenv):
+    '''
+    Read a yaml file and, if needed, renders that using the specifieds
+    templating. Returns the python objects defined inside of the file.
+    '''
+    sfn = __salt__['cp.cache_file'](source, saltenv)
+    if not sfn:
+        raise CommandExecutionError(
+            'Source file \'{0}\' not found'.format(source))
+
+    with salt.utils.fopen(sfn, 'r') as src:
+        contents = src.read()
+
+        if template:
+            if template in salt.utils.templates.TEMPLATE_REGISTRY:
+                # TODO: should we allow user to set also `context` like  # pylint: disable=fixme
+                # `file.managed` does?
+                # Apply templating
+                data = salt.utils.templates.TEMPLATE_REGISTRY[template](
+                    contents,
+                    from_str=True,
+                    to_str=True,
+                    saltenv=saltenv,
+                    grains=__grains__,
+                    pillar=__pillar__,
+                    salt=__salt__,
+                    opts=__opts__)
+
+                if not data['result']:
+                    # Failed to render the template
+                    raise CommandExecutionError(
+                        'Failed to render file path with error: '
+                        '{0}'.format(data['data'])
+                    )
+
+                contents = data['data'].encode('utf-8')
+            else:
+                raise CommandExecutionError(
+                    'Unknown template specified: {0}'.format(
+                        template))
+
+        return yaml.load(contents)
 
 
 def __dict_to_object_meta(name, namespace, metadata):
