@@ -133,6 +133,34 @@ def nodes(**kwargs):
     return ret
 
 
+def node(name, **kwargs):
+    '''
+    Return the details of the node identified by the specified name
+
+    CLI Examples::
+
+        salt '*' kubernetes.node name="minikube"
+    '''
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.list_node()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling CoreV1Api->list_node: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+    for node in api_response.items:
+        if node.metadata.name == name:
+            return node
+
+    return None
+
+
 def deployments(namespace="default", **kwargs):
     '''
     Return a list of kubernetes deployments defined in the namespace
