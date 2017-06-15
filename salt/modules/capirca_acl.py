@@ -5,7 +5,7 @@ Capirca ACL
 
 Generate ACL (firewall) configuration for network devices.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Robert Ankeny <robankeny@google.com>
 :maturity:   new
@@ -108,6 +108,7 @@ _TERM_FIELDS = {
     'fragment_offset': None,
     'hop_limit': None,
     'icmp_type': [],
+    'icmp_code': None,
     'ether_type': [],
     'traffic_class_count': None,
     'traffic_type': [],
