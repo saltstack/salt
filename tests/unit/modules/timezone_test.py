@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -260,8 +261,11 @@ class TimezoneTestCase(TestCase):
         :return:
         '''
         # Incomplete
+        hwclock = 'localtime'
+        if not os.path.isfile('/etc/environment'):
+            hwclock = 'UTC'
         timezone.__grains__['os_family'] = ['AIX']
-        assert timezone.get_hwclock() == 'localtime'
+        assert timezone.get_hwclock() == hwclock
 
     @patch('salt.utils.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
