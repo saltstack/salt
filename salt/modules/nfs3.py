@@ -53,7 +53,7 @@ def list_exports(exports='/etc/exports'):
                 permcomps = perm.split('(')
                 permcomps[1] = permcomps[1].replace(')', '')
                 hosts = permcomps[0]
-                if not type(hosts) is str:
+                if type(hosts) is not str:
                     # Lists, etc would silently mangle /etc/exports
                     raise TypeError('hosts argument must be a string')
                 options = permcomps[1].split(',')
@@ -77,6 +77,7 @@ def del_export(exports='/etc/exports', path=None):
     del edict[path]
     _write_exports(exports, edict)
     return edict
+
 
 def add_export(exports='/etc/exports', path=None, hosts=None, options=None):
     '''
@@ -102,6 +103,7 @@ def add_export(exports='/etc/exports', path=None, hosts=None, options=None):
 
     return new
 
+
 def _write_exports(exports, edict):
     '''
     Write an exports file to disk
@@ -124,8 +126,7 @@ def _write_exports(exports, edict):
                 line += ' {0}({1})'.format(hosts, options)
             efh.write('{0}\n'.format(line))
 
-# exportfs doesn't take a file path argument
-# so we don't either
+
 def reload_exports():
     '''
     Trigger a reload of the exports file to apply changes
