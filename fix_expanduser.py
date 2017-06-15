@@ -27,7 +27,7 @@ def main():
         for function in get_global_functions(module):
             function_parameters = []
             for parameter, docs in get_function_parameter_docs(function):
-                parameter_id = '%s.%s:%s' % ('.'.join(module.__name__.split('.')[2:]),
+                parameter_id = '%s.%s:%s' % ('.'.join(module.__name__.split('.')[1:]),
                     function.__name__, parameter)
                 if args.load_whitelist:
                     if parameter_id in whitelist:
