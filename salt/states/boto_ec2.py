@@ -936,7 +936,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                 region=region, key=key, keyid=keyid, profile=profile).get(instance_id, {}))
         current = set(curr_tags.keys())
         desired = set(tags.keys())
-        remove = current - desired
+        remove = list(current - desired)  # Boto explicitly requires a list here and can't cope with a set...
         add = dict([(t, tags[t]) for t in desired - current])
         replace = dict([(t, tags[t]) for t in tags if tags.get(t) != curr_tags.get(t)])
         # Tag keys are unique despite the bizarre semantics uses which make it LOOK like they could be duplicative.
