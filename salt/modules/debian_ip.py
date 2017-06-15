@@ -1498,6 +1498,16 @@ def _write_file_routes(iface, data, folder, pattern):
     '''
     Writes a file to disk
     '''
+    # ifup / ifdown is executing given folder via run-parts.
+    # according to run-parts man-page, only filenames with this pattern are
+    # executed: (^[a-zA-Z0-9_-]+$)
+
+    # In order to make the routes file work for vlan interfaces
+    # (default would have been in example /etc/network/if-up.d/route-bond0.12)
+    # these dots in the iface name need to be replaced by underscores, so it
+    # can be executed by run-parts
+    iface = iface.replace('.', '_')
+
     filename = os.path.join(folder, pattern.format(iface))
     if not os.path.exists(folder):
         msg = '{0} cannot be written. {1} does not exist'
