@@ -6,7 +6,7 @@ tISM - the Immutalbe Secrets Manager SDB Module
 :maturity:      New
 :platform:      all
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 This module will decrypt PGP encrypted secrets against a tISM server.
 
