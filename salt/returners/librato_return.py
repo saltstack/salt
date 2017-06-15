@@ -54,11 +54,8 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     if not HAS_LIBRATO:
-        log.error("Could not import librato module.")
         return False, 'Could not import librato module; ' \
             'librato python client is not installed.'
-    else:
-        log.debug("Librato Module loaded.")
     return __virtualname__
 
 
