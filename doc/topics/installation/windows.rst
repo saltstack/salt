@@ -118,14 +118,14 @@ Here are some examples of using the silent installer:
     # Install the Salt Minion
     # Configure the minion and start the service
 
-    Salt-Minion-2017.5.1-Py2-AMD64-Setup.exe /S /master=yoursaltmaster /minion-name=yourminionname
+    Salt-Minion-2017.7.1-Py2-AMD64-Setup.exe /S /master=yoursaltmaster /minion-name=yourminionname
 
 .. code-block:: bat
 
     # Install the Salt Minion
     # Configure the minion but don't start the minion service
 
-    Salt-Minion-2017.5.1-Py3-AMD64-Setup.exe /S /master=yoursaltmaster /minion-name=yourminionname /start-minion=0
+    Salt-Minion-2017.7.1-Py3-AMD64-Setup.exe /S /master=yoursaltmaster /minion-name=yourminionname /start-minion=0
 
 
 Running the Salt Minion on Windows as an Unprivileged User
@@ -282,7 +282,7 @@ Go into the ``salt`` directory and checkout the version of salt to work with
 .. code-block:: bat
 
     cd salt
-    git checkout 2017.5.2
+    git checkout 2017.7.2
 
 2. Setup the Python Environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -334,7 +334,7 @@ with ``pip``
     updated path
 
 .. note::
-    if ``pip`` is still not recognized make sure that the Python Scripts folder
+    If ``pip`` is still not recognized make sure that the Python Scripts folder
     is in the System ``%PATH%``. (``C:\Python2\Scripts``)
 
 4. Setup Salt Configuration
@@ -384,12 +384,12 @@ Navigate to the root ``salt`` directory and install Salt.
 -------------------------------
 
 Navigate to the ``pkg\windows`` directory and run the ``build_pkg.bat``
-with the build version (2017.5.2) and the Python version as parameters.
+with the build version (2017.7.2) and the Python version as parameters.
 
 .. code-block:: bat
 
     cd pkg\windows
-    build_pkg.bat 2017.5.2 2
+    build_pkg.bat 2017.7.2 2
                   ^^^^^^^^ ^
                       |    |
     # build version --     |
@@ -420,7 +420,7 @@ build.
 .. code-block:: bat
 
     cd salt
-    git checkout 2017.5.2
+    git checkout 2017.7.2
 
 Then navigate to ``pkg\windows`` and run the ``build.bat`` script with the
 version you're building.
@@ -428,7 +428,7 @@ version you're building.
 .. code-block:: bat
 
     cd pkg\windows
-    build.bat 2017.5.2 3
+    build.bat 2017.7.2 3
               ^^^^^^^^ ^
                   |    |
     # build version    |
