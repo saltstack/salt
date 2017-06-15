@@ -72,9 +72,8 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         fun = low.pop('fun')
         verify_fun(self.functions, fun)
 
-        reserved_kwargs = dict([(i, low.pop(i)) for i in [
+        eauth_creds = dict([(i, low.pop(i)) for i in [
             'username', 'password', 'eauth', 'token', 'client', 'user', 'key',
-            '__current_eauth_groups', '__current_eauth_user',
         ] if i in low])
 
         # Separate the new-style args/kwargs.
@@ -97,7 +96,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             ignore_invalid=True)
 
         return dict(fun=fun, kwarg={'kwarg': kwarg, 'arg': arg},
-                **reserved_kwargs)
+                **eauth_creds)
 
     def cmd_async(self, low):
         '''
