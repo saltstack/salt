@@ -266,7 +266,7 @@ def username(proxy=None):
     '''
     Return the username.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example - select all devices using `foobar` as username for connection:
 
@@ -331,7 +331,7 @@ def host(proxy=None):
         while ``hostname`` provides the hostname as configured on the device.
         They are not necessarily the same.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -374,7 +374,7 @@ def host_dns(proxy=None):
 
             napalm_host_dns_grain: true
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -430,7 +430,7 @@ def optional_args(proxy=None):
 
         Sensible data will not be returned.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example - select all devices connecting via port 1234:
 

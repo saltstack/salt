@@ -396,7 +396,7 @@ Use the ``tgt_type`` argument to specify a matcher:
 
 .. note::
     The ``tgt_type`` argument was named ``expr_form`` in releases prior to
-    Nitrogen (2016.11.x and earlier).
+    2017.7.0 (2016.11.x and earlier).
 
 Any other parameters in the :py:meth:`LocalClient().cmd()
 <salt.client.LocalClient.cmd>` method can be specified as well.

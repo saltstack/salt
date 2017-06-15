@@ -6,7 +6,7 @@ Manage accounts in Samba's passdb using pdbedit
 :maturity:      new
 :platform:      posix
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 '''
 from __future__ import absolute_import
 

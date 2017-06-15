@@ -971,7 +971,7 @@ VALID_OPTS = {
     # dictionary.  Otherwise it is assumed that the module calls the grains
     # function in a custom way and returns the data elsewhere
     #
-    # Default to False for 2016.3 and 2016.11. Switch to True for Nitrogen
+    # Default to False for 2016.3 and 2016.11. Switch to True for 2017.7.0
     'proxy_merge_grains_in_module': bool,
 
     # Command to use to restart salt-minion

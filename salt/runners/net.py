@@ -3,7 +3,7 @@
 NET Finder
 ==========
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 A runner to find network details easily and fast.
 It's smart enough to know what you are looking for.

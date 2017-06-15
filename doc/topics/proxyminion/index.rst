@@ -36,7 +36,7 @@ or more minions.
 See :ref:`Proxyminion Beacon <proxy-minion-beacon>` to help
 with easy configuration and management of ``salt-proxy`` processes.
 
-New in Nitrogen
+New in 2017.7.0
 ---------------
 
 The :conf_proxy:`proxy_merge_grains_in_module` configuration variable
@@ -128,7 +128,7 @@ will be executed on proxy-minion startup and its contents will be merged with
 the rest of the proxy's grains.  Since older proxy-minions might have used other
 methods to call such a function and add its results to grains, this is config-gated
 by a new proxy configuration option called ``proxy_merge_grains_in_module``.  This
-defaults to ``True`` in the **Nitrogen** release.
+defaults to ``True`` in the **2017.7.0** release.
 
 
 New in 2015.8.2
@@ -377,7 +377,7 @@ the ``proxy_keep_alive_interval`` option, in minutes.
 the standard install directories for grains, grains can be computed and
 returned by this function.  This function will be called automatically
 if ``proxy_merge_grains_in_module`` is set to ``True`` in /etc/salt/proxy.
-This variable defaults to ``True`` in the release code-named *Nitrogen*.
+This variable defaults to ``True`` in the release code-named *2017.7.0*.
 
 Pre 2015.8 the proxymodule also must have an ``id()`` function.  2015.8 and following don't use
 this function because the proxy's id is required on the command line.
@@ -621,7 +621,7 @@ the proxy and grains directories.
 
 This function will only be called automatically if the configuration variable ``proxy_merge_grains_in_module``
 is set to True in the proxy configuration file (default ``/etc/salt/proxy``).  This
-variable defaults to ``True`` in the release code-named *Nitrogen*.
+variable defaults to ``True`` in the release code-named *2017.7.0*.
 
 
 .. code: python::
