@@ -354,3 +354,85 @@ def service_absent(name, namespace='default', **kwargs):
                 'new': 'absent', 'old': 'present'}}
     ret['comment'] = res['message']
     return ret
+
+
+def namespace_absent(name, **kwargs):
+    '''
+    Ensures that the named namespace is absent.
+
+    name
+        The name of the namespace
+    '''
+
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    namespace = __salt__['kubernetes.show_namespace'](name, **kwargs)
+
+    if namespace is None:
+        ret['result'] = True if not __opts__['test'] else None
+        ret['comment'] = 'The namespace does not exist'
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'The namespace is going to be deleted'
+        ret['result'] = None
+        return ret
+
+    res = __salt__['kubernetes.delete_namespace'](name, **kwargs)
+    if (
+            res['code'] == 200 or
+            (
+                isinstance(res['status'], str) and
+                'Terminating' in res['status']
+            ) or
+            (
+                isinstance(res['status'], dict) and
+                res['status']['phase'] == 'Terminating'
+            )
+       ):
+        ret['result'] = True
+        ret['changes'] = {
+            'kubernetes.namespace': {
+                'new': 'absent', 'old': 'present'}}
+        if res['message']:
+            ret['comment'] = res['message']
+        else:
+            ret['comment'] = 'Terminating'
+    else:
+        ret['comment'] = 'Unknown state: {}'.format(res)
+
+    return ret
+
+
+def namespace_present(name, **kwargs):
+    '''
+    Ensures that the named namespace is present.
+
+    name
+        The name of the deployment.
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    namespace = __salt__['kubernetes.show_namespace'](name, **kwargs)
+
+    if namespace is None:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'The namespace is going to be created'
+            return ret
+        res = __salt__['kubernetes.create_namespace'](name, **kwargs)
+        ret['changes']['namespace'] = {
+            'old': {},
+            'new': res}
+    else:
+        ret['result'] = True if not __opts__['test'] else None
+        ret['comment'] = 'The namespace already exists'
+
+    return ret
