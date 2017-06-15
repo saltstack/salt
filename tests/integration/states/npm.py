@@ -26,7 +26,7 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         Basic test to determine if NPM module was successfully installed and
         removed.
         '''
-        ret = self.run_state('npm.installed', name='pm2')
+        ret = self.run_state('npm.installed', name='pm2', force_reinstall=True)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('npm.removed', name='pm2')
         self.assertSaltTrueReturn(ret)
