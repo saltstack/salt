@@ -3,7 +3,7 @@
 Icinga2 state
 =============
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends:   - Icinga2 Python module
 :configuration: See :py:mod:`salt.modules.icinga2` for setup instructions.

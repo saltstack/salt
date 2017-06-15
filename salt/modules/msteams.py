@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Module for sending messages to MS Teams
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 :configuration: This module can be used by either passing a hook_url
     directly or by specifying it in a configuration profile in the salt
     master/minion config.
