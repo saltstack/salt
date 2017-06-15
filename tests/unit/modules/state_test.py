@@ -28,7 +28,9 @@ from salt.modules import state
 # Globals
 state.__salt__ = {}
 state.__context__ = {}
-state.__opts__ = {'cachedir': '/D'}
+state.__opts__ = {'cachedir': '/D',
+                  'environment': None,
+                  '__cli': 'salt'}
 state.__pillar__ = {}
 
 
@@ -45,7 +47,11 @@ class MockState(object):
         '''
         flag = None
 
-        def __init__(self, opts, pillar=False, pillar_enc=None):
+        def __init__(self,
+                     opts,
+                     pillar_override=False,
+                     pillar_enc=None,
+                     initial_pillar=None):
             pass
 
         def verify_data(self, data):
@@ -134,9 +140,9 @@ class MockState(object):
         opts = {'state_top': '',
                 'pillar': {}}
 
-        def __init__(self, opts, pillar=None, *args, **kwargs):
+        def __init__(self, opts, pillar_override=None, *args, **kwargs):
             self.state = MockState.State(opts,
-                                         pillar=pillar)
+                                         pillar_override=pillar_override)
 
         def render_state(self, sls, saltenv, mods, matches, local=False):
             '''
@@ -819,7 +825,8 @@ class StateTestCase(TestCase):
                                                            True), ret)
 
                     with patch.dict(state.__opts__, {"test": None}):
-                        mock = MagicMock(return_value={"test": ""})
+                        mock = MagicMock(return_value={"test": "",
+                                                       "environment": None})
                         with patch.object(state, '_get_opts', mock):
                             mock = MagicMock(return_value=True)
                             with patch.object(salt.utils,
