@@ -29,7 +29,7 @@ prefaced with a ``!``.
                        cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
 
     :configuration: Example configuration using groups
-    .. versionadded: Nitrogen
+    .. versionadded: 2017.7.0
 
         engines:
             slack:

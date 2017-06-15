@@ -1262,9 +1262,9 @@ below.
       service: systemd
 
 ``extmod_whitelist/extmod_blacklist``
---------------------
+-------------------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 By using this dictionary, the modules that are synced to the minion's extmod cache using `saltutil.sync_*` can be
 limited.  If nothing is set to a specific type, then all modules are accepted.  To block all modules of a specific type,
@@ -1733,7 +1733,7 @@ the pillar environments.
 ``on_demand_ext_pillar``
 ------------------------
 
-.. versionadded:: 2016.3.6,2016.11.3,Nitrogen
+.. versionadded:: 2016.3.6,2016.11.3,2017.7.0
 
 Default: ``['libvirt', 'virtkey']``
 
@@ -1762,7 +1762,7 @@ external pillars are permitted to be used on-demand using :py:func:`pillar.ext
 ``decrypt_pillar``
 ------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``[]``
 
@@ -1784,7 +1784,7 @@ specified by :conf_minion:`decrypt_pillar_default` will be used.
 ``decrypt_pillar_delimiter``
 ----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``:``
 
@@ -1803,7 +1803,7 @@ The delimiter used to distinguish nested data structures in the
 ``decrypt_pillar_default``
 --------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``gpg``
 
@@ -1819,7 +1819,7 @@ pillar key in :conf_minion:`decrypt_pillar`.
 ``decrypt_pillar_renderers``
 ----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``['gpg']``
 
@@ -1850,7 +1850,7 @@ the environment setting, but for pillar instead of states.
 ``pillarenv_from_saltenv``
 --------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``False``
 

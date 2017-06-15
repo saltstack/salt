@@ -3,7 +3,7 @@
 Management of Docker Containers
 
 .. versionadded:: 2015.8.0
-.. versionchanged:: Nitrogen
+.. versionchanged:: 2017.7.0
     This module has replaced the legacy docker execution module.
 
 :depends: docker_ Python module
@@ -56,7 +56,7 @@ For example:
         password: s3cr3t
 
 .. note::
-    As of the 2016.3.7, 2016.11.4, and Nitrogen releases of Salt, credentials
+    As of the 2016.3.7, 2016.11.4, and 2017.7.0 releases of Salt, credentials
     for the Docker Hub can be configured simply by specifying ``hub`` in place
     of the registry URL. In earlier releases, it is necessary to specify the
     actual registry URL for the Docker Hub (i.e.
@@ -119,7 +119,7 @@ Executing Commands Within a Running Container
 
 .. note::
     With the release of Docker 1.13.1, the Execution Driver has been removed.
-    Starting in versions 2016.3.6, 2016.11.4, and Nitrogen, Salt defaults to
+    Starting in versions 2016.3.6, 2016.11.4, and 2017.7.0, Salt defaults to
     using ``docker exec`` to run commands in containers, however for older Salt
     releases it will be necessary to set the ``docker.exec_driver`` config
     option to either ``docker-exec`` or ``nsenter`` for Docker versions 1.13.1
@@ -767,8 +767,8 @@ def _error_detail(data, item):
 # Functions to handle docker-py client args
 def get_client_args():
     '''
-    .. versionadded:: 2016.3.6,2016.11.4,Nitrogen
-    .. versionchanged:: Nitrogen
+    .. versionadded:: 2016.3.6,2016.11.4,2017.7.0
+    .. versionchanged:: 2017.7.0
         Replaced the container config args with the ones from the API's
         ``create_container`` function.
 
@@ -852,7 +852,7 @@ def _get_create_kwargs(image,
 
 def compare_container(first, second, ignore=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Compare two containers' Config and and HostConfig and return any
     differences between the two.
@@ -902,7 +902,7 @@ def compare_container(first, second, ignore=None):
 
 def login(*registries):
     '''
-    .. versionadded:: 2016.3.7,2016.11.4,Nitrogen
+    .. versionadded:: 2016.3.7,2016.11.4,2017.7.0
 
     Performs a ``docker login`` to authenticate to one or more configured
     repositories. See the documentation at the top of this page to configure
@@ -1283,7 +1283,7 @@ def info():
 
 def inspect(name):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         Volumes and networks are now checked, in addition to containers and
         images.
 
@@ -2888,7 +2888,7 @@ def rm_(name, force=False, volumes=False, **kwargs):
         option is set to ``False`` by default to prevent accidental removal of
         a running container.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     volumes : False
         Also remove volumes associated with container
@@ -2926,7 +2926,7 @@ def rm_(name, force=False, volumes=False, **kwargs):
 
 def rename(name, new_name):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Renames a container. Returns ``True`` if successful, and raises an error if
     the API returns one. If unsuccessful and the API returns no error (should
@@ -3923,7 +3923,7 @@ def tag_(name, image, force=False):
 # Network Management
 def networks(names=None, ids=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``names`` and ``ids`` can be passed as a comma-separated list now,
         as well as a Python list.
 
@@ -4031,7 +4031,7 @@ def connect_container_to_network(container, network_id, ipv4_address=None):
     ipv4_address
         The IPv4 address to connect to the container
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -4348,7 +4348,7 @@ def stop(name, timeout=None, **kwargs):
         Timeout in seconds after which the container will be killed (if it has
         not yet gracefully shut down)
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             If this argument is not passed, then the container's configuration
             will be checked. If the container was created using the
             ``stop_timeout`` argument, then the configured timeout will be

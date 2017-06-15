@@ -202,7 +202,7 @@ def install(name=None,
         Install a specific version of the package, e.g. 1.2.3~0ubuntu0. Ignored
         if "pkgs" or "sources" is passed.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     reinstall : False
         Specifying reinstall=True will use ``opkg install --force-reinstall``
@@ -213,7 +213,7 @@ def install(name=None,
         install --force-reinstall`` will only be used if the installed version
         matches the requested version.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
 
     Multiple Package Installation Options:
@@ -248,7 +248,7 @@ def install(name=None,
         Only upgrade the packages (disallow downgrades), if they are already
         installed. Default is False.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     Returns a dict containing the new package names and versions::
 
@@ -839,7 +839,7 @@ def info_installed(*names, **kwargs):
     '''
     Return the information of the named package(s), installed on the system.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     :param names:
         Names of the packages to get information about. If none are specified,

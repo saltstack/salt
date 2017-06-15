@@ -183,7 +183,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
             }
         }
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     region
         Region to connect to.
