@@ -15,7 +15,6 @@ from __future__ import absolute_import
 import copy
 import fnmatch
 import logging
-import re
 import os.path
 
 # Import salt libs
