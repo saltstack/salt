@@ -10,7 +10,6 @@
 from __future__ import absolute_import
 
 try:
-    import libcloud.security
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
@@ -27,14 +26,6 @@ from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch, __vers
 from tests.unit.cloud.clouds import _preferred_ip
 
 VM_NAME = 'winterfell'
-
-# Use certifi if installed
-try:
-    if HAS_LIBCLOUD:
-        import certifi
-        libcloud.security.CA_CERTS_PATH.append(certifi.where())
-except (ImportError, NameError):
-    pass
 
 
 class ExtendedTestCase(TestCase):

@@ -38,9 +38,6 @@ from salt.exceptions import SaltCloudSystemExit
 # pylint: disable=import-error
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
-    # See https://github.com/saltstack/salt/issues/32743
-    import libcloud.security
-    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
