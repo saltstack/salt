@@ -3988,9 +3988,9 @@ A group consists of a group name and a compound target.
       group2: 'G@os:Debian and foo.domain.com'
       group3: 'G@os:Debian and N@group1'
       group4:
-    - 'G@foo:bar'
-    - 'or'
-    - 'G@foo:baz'
+        - 'G@foo:bar'
+        - 'or'
+        - 'G@foo:baz'
 
 More information on using nodegroups can be found :ref:`here <targeting-nodegroups>`.
 
