@@ -418,7 +418,7 @@ def _memdata(osdata):
                 mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
             if osdata['kernel'] == 'NetBSD' and mem.startswith('-'):
                 mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
-            grains['mem_total'] = int(mem) / 1024 / 1024
+            grains['mem_total'] = int(mem) // 1024 // 1024
     elif osdata['kernel'] == 'SunOS':
         prtconf = '/usr/sbin/prtconf 2>/dev/null'
         for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
@@ -517,7 +517,7 @@ def _virtual(osdata):
                 '\'virtual\' grain.'
             )
     # Check if enable_lspci is True or False
-    if __opts__.get('enable_lspci', True) is False:
+    if __opts__.get('enable_lspci', True) is True:
         # /proc/bus/pci does not exists, lspci will fail
         if os.path.exists('/proc/bus/pci'):
             _cmds += ['lspci']

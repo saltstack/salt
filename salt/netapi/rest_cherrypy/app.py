@@ -121,7 +121,7 @@ A REST API for Salt
         Enable or disable all endpoints that rely on session cookies. This can
         be useful to enforce only header-based authentication.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     app : ``index.html``
         A filesystem path to an HTML file that will be served as a static file.
@@ -132,7 +132,7 @@ A REST API for Salt
         Send the custom ``X-Auth-Token`` header instead and consider disabling
         the ``enable_sessions`` setting.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
 
             Add a proof-of-concept JavaScript single-page app.
 
@@ -1617,6 +1617,10 @@ class Keys(LowDataAdapter):
         Accepts all the same parameters as the :py:func:`key.gen_accept
         <salt.wheel.key.gen_accept>`.
 
+        .. note:: A note about ``curl``
+           Avoid using the ``-i`` flag or HTTP headers will be written and
+           produce an invalid tar file.
+
         Example partial kickstart script to bootstrap a new minion:
 
         .. code-block:: text
@@ -1914,7 +1918,7 @@ class Token(LowDataAdapter):
 
     Wraps functionality in the :py:mod:`auth Runner <salt.runners.auth>`.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     '''
     @cherrypy.config(**{'tools.sessions.on': False})
     def POST(self, **kwargs):

@@ -988,7 +988,7 @@ def create_datacenter(service_instance, datacenter_name):
     '''
     Creates a datacenter.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     service_instance
         The Service Instance Object

@@ -365,7 +365,7 @@ def search_by(lookup, tgt_type='compound', minion_id=None):
     <salt.modules.match.filter_by>` and allows matching values instead of
     matching keys. A minion can be matched by multiple entries.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
