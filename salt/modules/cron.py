@@ -130,7 +130,7 @@ def _render_tab(lst):
             comment = '#'
             if cron['comment']:
                 comment += ' {0}'.format(
-                    cron['comment'].rstrip().replace('\n', '\n# '))
+                    cron['comment'].replace('\n', '\n# '))
             if cron['identifier']:
                 comment += ' {0}:{1}'.format(SALT_CRON_IDENTIFIER,
                                              cron['identifier'])

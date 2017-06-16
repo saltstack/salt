@@ -76,7 +76,7 @@ def show(destination, protocol=None, **kwargs):  # pylint: disable=unused-argume
     protocol (optional)
         protocol used to learn the routes to the destination.
 
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
 
     CLI Example:
 

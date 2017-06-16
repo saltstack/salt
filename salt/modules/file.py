@@ -3367,7 +3367,7 @@ def access(path, mode):
 
 def read(path, binary=False):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Return the content of the file.
 
@@ -4195,7 +4195,7 @@ def extract_hash(hash_fn,
                             hash_matched = True
                     except IndexError:
                         pass
-                elif re.match(source_hash_name.replace('.', r'\.') + r'\s+',
+                elif re.match(re.escape(source_hash_name) + r'\s+',
                               line):
                     _add_to_matches(found, line, 'source_hash_name',
                                     source_hash_name, matched)
@@ -4213,7 +4213,7 @@ def extract_hash(hash_fn,
                             hash_matched = True
                     except IndexError:
                         pass
-                elif re.match(file_name.replace('.', r'\.') + r'\s+', line):
+                elif re.match(re.escape(file_name) + r'\s+', line):
                     _add_to_matches(found, line, 'file_name',
                                     file_name, matched)
                     hash_matched = True
@@ -4227,7 +4227,7 @@ def extract_hash(hash_fn,
                             hash_matched = True
                     except IndexError:
                         pass
-                elif re.match(source.replace('.', r'\.') + r'\s+', line):
+                elif re.match(re.escape(source) + r'\s+', line):
                     _add_to_matches(found, line, 'source', source, matched)
                     hash_matched = True
 
@@ -4880,14 +4880,14 @@ def manage_file(name,
         See https://docs.python.org/3/library/codecs.html#standard-encodings
         for the list of available encodings.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     encoding_errors : 'strict'
         Default is ```'strict'```.
         See https://docs.python.org/2/library/codecs.html#codec-base-classes
         for the error handling schemes.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     CLI Example:
 

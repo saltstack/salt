@@ -524,7 +524,7 @@ def repo_present(
         The teams for which this repo should belong to, specified as a dict of
         team name to permission ('pull', 'push' or 'admin').
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     Example:
 

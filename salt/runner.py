@@ -175,12 +175,18 @@ class Runner(RunnerClient):
         else:
             low = {'fun': self.opts['fun']}
             try:
+                # Allocate a jid
+                async_pub = self._gen_async_pub()
+                self.jid = async_pub['jid']
+
+                fun_args = salt.utils.args.parse_input(
+                        self.opts['arg'],
+                        no_parse=self.opts.get('no_parse', []))
+
                 verify_fun(self.functions, low['fun'])
                 args, kwargs = salt.minion.load_args_and_kwargs(
                     self.functions[low['fun']],
-                    salt.utils.args.parse_input(
-                        self.opts['arg'],
-                        no_parse=self.opts.get('no_parse', [])),
+                    fun_args,
                     self.opts,
                 )
                 low['arg'] = args
@@ -215,10 +221,6 @@ class Runner(RunnerClient):
                         low['eauth'] = self.opts['eauth']
                 else:
                     user = salt.utils.get_specific_user()
-
-                # Allocate a jid
-                async_pub = self._gen_async_pub()
-                self.jid = async_pub['jid']
 
                 if low['fun'] == 'state.orchestrate':
                     low['kwarg']['orchestration_jid'] = async_pub['jid']
@@ -256,6 +258,14 @@ class Runner(RunnerClient):
                                               async_pub['jid'],
                                               daemonize=False)
             except salt.exceptions.SaltException as exc:
+                evt = salt.utils.event.get_event('master', opts=self.opts)
+                evt.fire_event({'success': False,
+                                'return':  "{0}".format(exc),
+                                'retcode': 254,
+                                'fun': self.opts['fun'],
+                                'fun_args': fun_args,
+                                'jid': self.jid},
+                               tag='salt/run/{0}/ret'.format(self.jid))
                 ret = '{0}'.format(exc)
                 if not self.opts.get('quiet', False):
                     display_output(ret, 'nested', self.opts)

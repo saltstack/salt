@@ -340,7 +340,7 @@ mind:
    order, with results merged together as each remote is evaluated.
 
    .. note::
-       Prior to the Nitrogen release, remotes would be evaluated in a
+       Prior to the 2017.7.0 release, remotes would be evaluated in a
        non-deterministic order.
 
 3. By default, when a repo is evaluated, other remotes' which share its pillar
@@ -386,11 +386,11 @@ and when the ``baz`` remote is processed, SLS files will be looked for in
 :conf_master:`file_roots` and :conf_minion`pillar_roots`. The ordering of which
 remote is checked for SLS files is determined by the order they are listed.
 First the remote being processed is checked, then the others that share the
-same environment are checked. However, before the Nitrogen release, since
+same environment are checked. However, before the 2017.7.0 release, since
 evaluation was unordered, the remote being processed would be checked, followed
 in no specific order by the other repos which share the same environment.
 
-Beginning with the Nitrogen release, this behavior of git_pillar remotes having
+Beginning with the 2017.7.0 release, this behavior of git_pillar remotes having
 access to files in other repos which share the same environment can be disabled
 by setting :conf_master:`git_pillar_includes` to ``False``. If this is done,
 then all git_pillar remotes will only have access to their own SLS files.
@@ -406,7 +406,7 @@ the example configuration above. In the second group of git_pillar remotes, the
 Mountpoints
 ~~~~~~~~~~~
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Assume the following pillar top file:
 
