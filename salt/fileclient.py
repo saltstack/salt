@@ -988,7 +988,7 @@ class LocalClient(Client):
             ret.append(saltenv)
         return ret
 
-    def ext_nodes(self):
+    def master_tops(self):
         '''
         Originally returned information via the external_nodes subsystem.
         External_nodes was deprecated and removed in
@@ -1306,12 +1306,11 @@ class RemoteClient(Client):
         load = {'cmd': '_master_opts'}
         return self.channel.send(load)
 
-    def ext_nodes(self):
+    def master_tops(self):
         '''
-        Return the metadata derived from the external nodes system on the
-        master.
+        Return the metadata derived from the master_tops system
         '''
-        load = {'cmd': '_ext_nodes',
+        load = {'cmd': '_master_tops',
                 'id': self.opts['id'],
                 'opts': self.opts}
         if self.auth:
