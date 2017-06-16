@@ -611,49 +611,61 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         Handle incoming messages from underylying tcp streams
         '''
         try:
-            payload = self._decode_payload(payload)
-        except Exception:
-            stream.write(salt.transport.frame.frame_msg('bad load', header=header))
-            raise tornado.gen.Return()
+            try:
+                payload = self._decode_payload(payload)
+            except Exception:
+                stream.write(salt.transport.frame.frame_msg('bad load', header=header))
+                raise tornado.gen.Return()
 
-        # TODO helper functions to normalize payload?
-        if not isinstance(payload, dict) or not isinstance(payload.get('load'), dict):
-            yield stream.write(salt.transport.frame.frame_msg(
-                'payload and load must be a dict', header=header))
-            raise tornado.gen.Return()
+            # TODO helper functions to normalize payload?
+            if not isinstance(payload, dict) or not isinstance(payload.get('load'), dict):
+                yield stream.write(salt.transport.frame.frame_msg(
+                    'payload and load must be a dict', header=header))
+                raise tornado.gen.Return()
 
-        # intercept the "_auth" commands, since the main daemon shouldn't know
-        # anything about our key auth
-        if payload['enc'] == 'clear' and payload.get('load', {}).get('cmd') == '_auth':
-            yield stream.write(salt.transport.frame.frame_msg(
-                self._auth(payload['load']), header=header))
-            raise tornado.gen.Return()
+            # intercept the "_auth" commands, since the main daemon shouldn't know
+            # anything about our key auth
+            if payload['enc'] == 'clear' and payload.get('load', {}).get('cmd') == '_auth':
+                yield stream.write(salt.transport.frame.frame_msg(
+                    self._auth(payload['load']), header=header))
+                raise tornado.gen.Return()
 
-        # TODO: test
-        try:
-            ret, req_opts = yield self.payload_handler(payload)
-        except Exception as e:
-            # always attempt to return an error to the minion
-            stream.write('Some exception handling minion payload')
-            log.error('Some exception handling a payload from minion', exc_info=True)
-            stream.close()
-            raise tornado.gen.Return()
+            # TODO: test
+            try:
+                ret, req_opts = yield self.payload_handler(payload)
+            except Exception as e:
+                # always attempt to return an error to the minion
+                stream.write('Some exception handling minion payload')
+                log.error('Some exception handling a payload from minion', exc_info=True)
+                stream.close()
+                raise tornado.gen.Return()
 
-        req_fun = req_opts.get('fun', 'send')
-        if req_fun == 'send_clear':
-            stream.write(salt.transport.frame.frame_msg(ret, header=header))
-        elif req_fun == 'send':
-            stream.write(salt.transport.frame.frame_msg(self.crypticle.dumps(ret), header=header))
-        elif req_fun == 'send_private':
-            stream.write(salt.transport.frame.frame_msg(self._encrypt_private(ret,
-                                                         req_opts['key'],
-                                                         req_opts['tgt'],
-                                                         ), header=header))
-        else:
-            log.error('Unknown req_fun {0}'.format(req_fun))
-            # always attempt to return an error to the minion
-            stream.write('Server-side exception handling payload')
-            stream.close()
+            req_fun = req_opts.get('fun', 'send')
+            if req_fun == 'send_clear':
+                stream.write(salt.transport.frame.frame_msg(ret, header=header))
+            elif req_fun == 'send':
+                stream.write(salt.transport.frame.frame_msg(self.crypticle.dumps(ret), header=header))
+            elif req_fun == 'send_private':
+                stream.write(salt.transport.frame.frame_msg(self._encrypt_private(ret,
+                                                             req_opts['key'],
+                                                             req_opts['tgt'],
+                                                             ), header=header))
+            else:
+                log.error('Unknown req_fun {0}'.format(req_fun))
+                # always attempt to return an error to the minion
+                stream.write('Server-side exception handling payload')
+                stream.close()
+        except tornado.gen.Return:
+            raise
+        except tornado.iostream.StreamClosedError:
+            # Stream was closed. This could happen if the remote side
+            # closed the connection on its end (eg in a timeout or shutdown
+            # situation).
+            log.error('Connection was unexpectedly closed', exc_info=True)
+        except Exception as exc:  # pylint: disable=broad-except
+            # Absorb any other exceptions
+            log.error('Unexpected exception occurred: {0}'.format(exc), exc_info=True)
+
         raise tornado.gen.Return()
 
 
