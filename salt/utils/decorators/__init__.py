@@ -682,4 +682,4 @@ class JinjaTest(object):
         return function
 
 
-jinja_test = JinjaFilter
+jinja_test = JinjaTest
