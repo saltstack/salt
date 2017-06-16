@@ -3046,9 +3046,6 @@ def create(image,
         pull(image, client_timeout=client_timeout)
 
     create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
-    if create_kwargs.get('hostname') is None \
-            and create_kwargs.get('name') is not None:
-        create_kwargs['hostname'] = create_kwargs['name']
 
     if create_kwargs.pop('validate_input', False):
         _validate_input(create_kwargs, validate_ip_addrs=validate_ip_addrs)
