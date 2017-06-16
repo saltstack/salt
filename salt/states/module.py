@@ -219,7 +219,8 @@ watch = salt.utils.alias_function(wait, 'watch')
 def run(**kwargs):
     '''
     Run a single module function or a range of module functions in a batch.
-    Supersedes `module.run` function, which requires `m_` prefix to function-specific parameters.
+    Supersedes ``module.run`` function, which requires ``m_`` prefix to
+    unction-specific parameters.
 
     :param returner:
         Specify a common returner for the whole batch to send the return data
@@ -230,7 +231,7 @@ def run(**kwargs):
     .. code-block:: yaml
 
       some_id_of_state:
-        module.xrun:
+        module.run:
           - network.ip_addrs:
             - interface: eth0
           - cloud.create:
