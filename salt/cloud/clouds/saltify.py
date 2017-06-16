@@ -10,6 +10,40 @@ are already installed, but not Salted.
 Use of this module requires some configuration in cloud profile and provider
 files as described in the
 :ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
+
+If you intend to use salt-cloud commands to query, reboot, or disconnect minions, it
+needs to do salt-api calls to your Salt master. Your configuration might be similar to:...
+
+.. code-block:: yaml
+
+    # file /etc/salt/cloud.providers.d/saltify_provider.conf
+    my-saltify-config:
+      driver: saltify
+      # The salt-api user password can be stored in your keyring
+      # don't forget to set the password by running something like:
+      # salt-call sdb.set 'sdb://salt-cloud-keyring/password' 'xyz1234'
+      eauth: pam
+      username: sdb://osenv/USER
+      password: sdb://salt-cloud-keyring/password
+
+Which in turn implies that you have enabled both sdb and pam.
+Your minion (and master) configuration might include something like:...
+
+.. code-block:: yaml
+
+    # file /etc/salt/minion.d/salt-api.conf
+    osenv:
+      driver: env
+    salt-cloud-keyring:
+      driver: keyring
+      service: system
+    external_auth:  # give full remote control to group "sudo"
+      pam:
+        sudo%:
+          - .*
+          - '@wheel'
+          - '@runner'
+          - '@jobs'
 '''
 
 # Import python libs
@@ -17,7 +51,10 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+import salt.utils
 import salt.config as config
+import salt.netapi
+import salt.ext.ipaddress as ipaddress
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Get logging started
@@ -47,20 +84,89 @@ def __virtual__():
     return True
 
 
+def get_configured_provider():
+    '''
+    Return the first configured instance.
+    '''
+    return config.is_provider_configured(
+        __opts__,
+        __active_provider_name__ or __virtualname__,
+        ('user',)
+    )
+
+def _get_connection_info():
+    '''
+    Return a connection information for the passed VM data
+    '''
+    vm_ = get_configured_provider()
+
+    try:
+        ret = {'username': vm_['username'],
+               'password': vm_['password'],
+               'eauth': vm_['eauth']
+               }
+    except IndexError:
+        raise SaltCloudException(
+            'Configuration must define salt-api "user", "password" and "eauth"')
+    return ret
+
+
 def list_nodes():
     '''
-    Because this module is not specific to any cloud providers, there will be
-    no nodes to list.
+    List the nodes as recorded in the cache.
     '''
-    return {}
+    nodes = list_nodes_full()
+    ret = {}
+    for name, grains in nodes.items():
+        if grains:
+            private_ips = []
+            public_ips = []
+            ips = grains['ipv4'] + grains['ipv6']
+            for adrs in ips:
+                ip_ = ipaddress.ip_address(adrs)
+                if not ip_.is_loopback:
+                    if ip_.is_private:
+                        private_ips.append(adrs)
+                    else:
+                        public_ips.append(adrs)
+
+            ret[name] = {
+                'id': grains['id'],
+                'name': grains['fqdn'],
+                'private_ips': private_ips,
+                'public_ips': public_ips,
+                'salt-cloud': grains['salt-cloud'],
+                'state': 'running'
+            }
+        else:
+            ret[name] = {  # according to the grain target selection, this node must have once been saltify-ed
+                'id': name,
+                'salt-cloud': {'profile': '', 'driver': 'saltify', 'provider': ''},
+                'state' : 'unknown'
+            }
+    return ret
 
 
 def list_nodes_full():
     '''
-    Because this module is not specific to any cloud providers, there will be
-    no nodes to list.
+    List the nodes, ask all 'saltify' minions.
     '''
-    return {}
+    opts = __opts__
+    local = salt.netapi.NetapiClient(opts)
+    cmd = {'client':'local',
+           'tgt': 'salt-cloud:driver:saltify',
+           'fun': 'grains.items',
+           'arg': '',
+           'tgt_type': 'grain'
+           }
+    cmd.update(_get_connection_info())
+    ret = local.run(cmd)
+    for grains in ret.values(): # clean up some hyperverbose junk -- everything is too much
+        try:
+            del grains['cpu_flags'], grains['disks'], grains['pythonpath'], grains['dns'], grains['gpus']
+        except (KeyError, TypeError):
+            pass
+    return ret
 
 
 def list_nodes_select():
@@ -194,7 +300,7 @@ def _verify(vm_):
 
 
 def destroy(name, call=None):
-    ''' Destroy a node. Will check termination protection and warn if enabled.
+    ''' Destroy a node.
 
     CLI Example:
     .. code-block:: bash
@@ -216,24 +322,19 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
-    # data = show_instance(name, call='action')
     # node = query(
     #     method='servers', server_id=data['id'], command='action',
     #     args={'action': 'terminate'}, http_method='post'
     # )
 
-    __utils__['cloud.fire_event'](
-        'event',
-        'destroyed instance',
-        'salt/cloud/{0}/destroyed'.format(name),
-        args={'name': name},
-        sock_dir=__opts__['sock_dir'],
-        transport=__opts__['transport']
-    )
+    # __utils__['cloud.fire_event'](
+    #     'event',
+    #     'destroyed instance',
+    #     'salt/cloud/{0}/destroyed'.format(name),
+    #     args={'name': name},
+    #     sock_dir=__opts__['sock_dir'],
+    #     transport=__opts__['transport']
+    # )
 
-    if __opts__.get('update_cachedir', False) is True:
-        __utils__['cloud.delete_minion_cachedir'](
-            name, __active_provider_name__.split(':')[0], __opts__
-        )
 
-    return node
+    return NotImplemented
