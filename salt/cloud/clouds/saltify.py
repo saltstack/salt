@@ -184,7 +184,7 @@ def reboot(name, call=None):
     '''
     if call != 'action':
         raise SaltCloudException(
-            'The show_instance action must be called with -a or --action.'
+            'The reboot action must be called with -a or --action.'
         )
 
     local = salt.netapi.NetapiClient(__opts__)
@@ -319,7 +319,6 @@ def _verify(vm_):
             return False
 
 
-
 def destroy(name, call=None):
     ''' Destroy a node.
 
@@ -343,19 +342,22 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
-    # node = query(
-    #     method='servers', server_id=data['id'], command='action',
-    #     args={'action': 'terminate'}, http_method='post'
-    # )
+    local = salt.netapi.NetapiClient(__opts__)
+    cmd = {'client':'local',
+           'tgt': name,
+           'fun': 'system.shutdown',
+           'arg': '',
+           }
+    cmd.update(_get_connection_info())
+    ret = local.run(cmd)
 
-    # __utils__['cloud.fire_event'](
-    #     'event',
-    #     'destroyed instance',
-    #     'salt/cloud/{0}/destroyed'.format(name),
-    #     args={'name': name},
-    #     sock_dir=__opts__['sock_dir'],
-    #     transport=__opts__['transport']
-    # )
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroyed instance',
+        'salt/cloud/{0}/destroyed'.format(name),
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
-
-    return NotImplemented
+    return ret
