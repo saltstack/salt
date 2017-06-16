@@ -755,9 +755,9 @@ def grains(opts, force_refresh=False, proxy=None):
                 except TypeError as e:
                     log.error('Failed to serialize grains cache: {0}'.format(e))
                     raise  # re-throw for cleanup
-        except:
-            msg = 'Unable to write to grains cache file {0}'
-            log.error(msg.format(cfn))
+        except Exception as e:
+            msg = 'Unable to write to grains cache file {0}: {1}'
+            log.error(msg.format(cfn, e))
             # Based on the original exception, the file may or may not have been
             # created. If it was, we will remove it now, as the exception means
             # the serialized data is not to be trusted, no matter what the
