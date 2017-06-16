@@ -377,7 +377,7 @@ def sync_utils(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
 
 def sync_sdb(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Sync utils modules from ``salt://_sdb`` to the master
 
@@ -403,7 +403,7 @@ def sync_sdb(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
 
 def sync_tops(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: 2016.3.7,2016.11.4,Nitrogen
+    .. versionadded:: 2016.3.7,2016.11.4,2017.7.0
 
     Sync master_tops modules from ``salt://_tops`` to the master
 
@@ -423,7 +423,7 @@ def sync_tops(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
 
 def sync_cache(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Sync utils modules from ``salt://_cache`` to the master
 
@@ -475,7 +475,7 @@ def sync_fileserver(saltenv='base', extmod_whitelist=None, extmod_blacklist=None
 
 def sync_clouds(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Sync utils modules from ``salt://_clouds`` to the master
 
@@ -501,7 +501,7 @@ def sync_clouds(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
 
 def sync_roster(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Sync utils modules from ``salt://_roster`` to the master
 

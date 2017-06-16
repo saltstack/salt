@@ -109,13 +109,10 @@ def get_invalid_docs():
             'missing_cli_example': sorted(noexample)}
 
 
-def modules_available(names):
+def modules_available(*names):
     '''
     Returns a list of modules not available. Empty list if modules are all available
     '''
-    if isinstance(names, six.string_types):
-        names = [names]
-
     not_found = []
     for name in names:
         if '.' not in name:

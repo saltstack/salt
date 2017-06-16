@@ -189,8 +189,8 @@ def ext_pillar(minion_id,
 
     client = get_conn(__opts__, opts['profile'])
 
-    role = __salt__['grains.get']('role')
-    environment = __salt__['grains.get']('environment')
+    role = __salt__['grains.get']('role', None)
+    environment = __salt__['grains.get']('environment', None)
     # put the minion's ID in the path if necessary
     opts['root'] %= {
         'minion_id': minion_id,

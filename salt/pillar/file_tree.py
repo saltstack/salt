@@ -56,7 +56,7 @@ intended to be used to deploy a file using ``contents_pillar`` with a
     files would not affected by the ``keep_newline`` configuration.  However,
     this module does not actually distinguish between binary and text files.
 
-.. versionchanged:: Nitrogen
+.. versionchanged:: 2017.7.0
     Templating/rendering has been added. You can now specify a default render
     pipeline and a black- and whitelist of (dis)allowed renderers.
 

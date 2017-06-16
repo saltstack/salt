@@ -450,7 +450,7 @@ def assign_private_ip_addresses(network_interface_name=None, network_interface_i
         salt myminion boto_ec2.assign_private_ip_addresses network_interface_name=my_eni private_ip_addresses=private_ip
         salt myminion boto_ec2.assign_private_ip_addresses network_interface_name=my_eni secondary_private_ip_address_count=2
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     '''
     if not salt.utils.exactly_one((network_interface_name,
                                    network_interface_id)):
@@ -504,7 +504,7 @@ def unassign_private_ip_addresses(network_interface_name=None, network_interface
 
         salt myminion boto_ec2.unassign_private_ip_addresses network_interface_name=my_eni private_ip_addresses=private_ip
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     '''
     if not salt.utils.exactly_one((network_interface_name,
                                    network_interface_id)):
@@ -741,6 +741,31 @@ def get_id(name=None, tags=None, region=None, key=None,
     else:
         log.warning('Could not find instance.')
         return None
+
+
+def get_tags(instance_id=None, keyid=None, key=None, profile=None,
+             region=None):
+    '''
+    Given an instance_id, return a list of tags associated with that instance.
+
+    returns
+        (list) - list of tags as key/value pairs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.get_tags instance_id
+    '''
+    tags = []
+    client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
+    result = client.get_all_tags(filters={"resource-id": instance_id})
+    if len(result) > 0:
+        for tag in result:
+            tags.append({tag.name: tag.value})
+    else:
+        log.info("No tags found for instance_id {}".format(instance_id))
+    return tags
 
 
 def exists(instance_id=None, name=None, tags=None, region=None, key=None,
@@ -1827,6 +1852,39 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
                         return ret
     ret['changes'].update(changes) if changes['old'] or changes['new'] else None  # pylint: disable=W0106
     return ret
+
+
+def get_all_tags(filters=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Describe all tags matching the filter criteria, or all tags in the account otherwise.
+
+    .. versionadded:: Nitrogen
+
+    filters
+        (dict) - Additional constraints on which volumes to return.  Note that valid filters vary
+        extensively depending on the resource type.  When in doubt, search first without a filter
+        and then use the returned data to help fine-tune your search.  You can generally garner the
+        resource type from its ID (e.g. `vol-XXXXX` is a volume, `i-XXXXX` is an instance, etc.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.get_all_tags '{"tag:Name": myInstanceNameTag, resource-type: instance}'
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        ret = conn.get_all_tags(filters)
+        tags = {}
+        for t in ret:
+            if t.res_id not in tags:
+                tags[t.res_id] = {}
+            tags[t.res_id][t.name] = t.value
+        return tags
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return {}
 
 
 def create_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=None):

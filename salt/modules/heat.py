@@ -2,7 +2,7 @@
 '''
 Module for handling OpenStack Heat calls
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends:   - heatclient Python module
 :configuration: This module is not usable until the user, password, tenant, and
