@@ -84,16 +84,6 @@ def __virtual__():
     return True
 
 
-def get_configured_provider():
-    '''
-    Return the first configured instance.
-    '''
-    return config.is_provider_configured(
-        __opts__,
-        __active_provider_name__ or __virtualname__,
-        ('user',)
-    )
-
 def _get_connection_info():
     '''
     Return a connection information for the passed VM data
