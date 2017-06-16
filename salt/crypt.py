@@ -166,7 +166,7 @@ def _get_rsa_key(path):
     retrieve the key from disk.
     '''
     log.debug('salt.crypt._get_rsa_key: Loading private key')
-    return _get_key_with_evict(path, os.path.getmtime(path))
+    return _get_key_with_evict(path, str(os.path.getmtime(path)))
 
 
 def sign_message(privkey_path, message):
