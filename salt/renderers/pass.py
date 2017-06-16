@@ -4,7 +4,7 @@ Pass Renderer for Salt
 
 [pass](https://www.passwordstore.org/)
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 # Setup
 __Note__: `<user>` needs to be replaced with the user salt-master will be

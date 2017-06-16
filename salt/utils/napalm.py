@@ -12,7 +12,7 @@ Utils for the NAPALM modules and proxy.
     - :mod:`SNMP configuration module <salt.modules.napalm_snmp>`
     - :mod:`Users configuration management <salt.modules.napalm_users>`
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 '''
 
 from __future__ import absolute_import
@@ -34,6 +34,15 @@ try:
     HAS_NAPALM = True
 except ImportError:
     HAS_NAPALM = False
+
+try:
+    # try importing ConnectionClosedException
+    # from napalm-base
+    # this exception has been introduced only in version 0.24.0
+    from napalm_base.exceptions import ConnectionClosedException
+    HAS_CONN_CLOSED_EXC_CLASS = True
+except ImportError:
+    HAS_CONN_CLOSED_EXC_CLASS = False
 
 from salt.ext import six as six
 
@@ -129,6 +138,7 @@ def call(napalm_device, method, *args, **kwargs):
     result = False
     out = None
     opts = napalm_device.get('__opts__', {})
+    retry = kwargs.pop('__retry', True)  # retry executing the task?
     try:
         if not napalm_device.get('UP', False):
             raise Exception('not connected')
@@ -146,12 +156,52 @@ def call(napalm_device, method, *args, **kwargs):
     except Exception as error:
         # either not connected
         # either unable to execute the command
+        hostname = napalm_device.get('HOSTNAME', '[unspecified hostname]')
         err_tb = traceback.format_exc()  # let's get the full traceback and display for debugging reasons.
         if isinstance(error, NotImplementedError):
             comment = '{method} is not implemented for the NAPALM {driver} driver!'.format(
                 method=method,
                 driver=napalm_device.get('DRIVER_NAME')
             )
+        elif retry and HAS_CONN_CLOSED_EXC_CLASS and isinstance(error, ConnectionClosedException):
+            # Received disconection whilst executing the operation.
+            # Instructed to retry (default behaviour)
+            #   thus trying to re-establish the connection
+            #   and re-execute the command
+            #   if any of the operations (close, open, call) will rise again ConnectionClosedException
+            #   it will fail loudly.
+            kwargs['__retry'] = False  # do not attempt re-executing
+            comment = 'Disconnected from {device}. Trying to reconnect.'.format(device=hostname)
+            log.error(err_tb)
+            log.error(comment)
+            log.debug('Clearing the connection with {device}'.format(device=hostname))
+            call(napalm_device, 'close', __retry=False)  # safely close the connection
+            # Make sure we don't leave any TCP connection open behind
+            #   if we fail to close properly, we might not be able to access the
+            log.debug('Re-opening the connection with {device}'.format(device=hostname))
+            call(napalm_device, 'open', __retry=False)
+            log.debug('Connection re-opened with {device}'.format(device=hostname))
+            log.debug('Re-executing {method}'.format(method=method))
+            return call(napalm_device, method, *args, **kwargs)
+            # If still not able to reconnect and execute the task,
+            #   the proxy keepalive feature (if enabled) will attempt
+            #   to reconnect.
+            # If the device is using a SSH-based connection, the failure
+            #   will also notify the paramiko transport and the `is_alive` flag
+            #   is going to be set correctly.
+            # More background: the network device may decide to disconnect,
+            #   although the SSH session itself is alive and usable, the reason
+            #   being the lack of activity on the CLI.
+            #   Paramiko's keepalive doesn't help in this case, as the ServerAliveInterval
+            #   are targeting the transport layer, whilst the device takes the decision
+            #   when there isn't any activity on the CLI, thus at the application layer.
+            #   Moreover, the disconnect is silent and paramiko's is_alive flag will
+            #   continue to return True, although the connection is already unusable.
+            #   For more info, see https://github.com/paramiko/paramiko/issues/813.
+            #   But after a command fails, the `is_alive` flag becomes aware of these
+            #   changes and will return False from there on. And this is how the
+            #   Salt proxy keepalive helps: immediately after the first failure, it
+            #   will know the state of the connection and will try reconnecting.
         else:
             comment = 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
                 device=napalm_device.get('HOSTNAME', '[unspecified hostname]'),
@@ -199,10 +249,18 @@ def get_device_opts(opts, salt_obj=None):
         # still not able to setup
         log.error('Incorrect minion config. Please specify at least the napalm driver name!')
     # either under the proxy hier, either under the napalm in the config file
-    network_device['HOSTNAME'] = device_dict.get('host') or device_dict.get('hostname')
-    network_device['USERNAME'] = device_dict.get('username') or device_dict.get('user')
-    network_device['DRIVER_NAME'] = device_dict.get('driver') or device_dict.get('os')
-    network_device['PASSWORD'] = device_dict.get('passwd') or device_dict.get('password') or device_dict.get('pass')
+    network_device['HOSTNAME'] = device_dict.get('host') or \
+                                 device_dict.get('hostname') or \
+                                 device_dict.get('fqdn') or \
+                                 device_dict.get('ip')
+    network_device['USERNAME'] = device_dict.get('username') or \
+                                 device_dict.get('user')
+    network_device['DRIVER_NAME'] = device_dict.get('driver') or \
+                                    device_dict.get('os')
+    network_device['PASSWORD'] = device_dict.get('passwd') or \
+                                 device_dict.get('password') or \
+                                 device_dict.get('pass') or \
+                                 ''
     network_device['TIMEOUT'] = device_dict.get('timeout', 60)
     network_device['OPTIONAL_ARGS'] = device_dict.get('optional_args', {})
     network_device['ALWAYS_ALIVE'] = device_dict.get('always_alive', True)

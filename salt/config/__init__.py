@@ -971,7 +971,7 @@ VALID_OPTS = {
     # dictionary.  Otherwise it is assumed that the module calls the grains
     # function in a custom way and returns the data elsewhere
     #
-    # Default to False for 2016.3 and 2016.11. Switch to True for Nitrogen
+    # Default to False for 2016.3 and 2016.11. Switch to True for 2017.7.0
     'proxy_merge_grains_in_module': bool,
 
     # Command to use to restart salt-minion
@@ -2058,7 +2058,9 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
                 else:
                     # Initialize default config if we wish to skip config errors
                     opts = {}
-
+            schedule = opts.get('schedule', {})
+            if schedule and 'schedule' in configuration:
+                configuration['schedule'].update(schedule)
             include = opts.get('include', [])
             if include:
                 opts.update(include_config(include, fn_, verbose))

@@ -176,7 +176,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     This example command should build the libnacl SOURCE package and place it in
     /var/www/html/ on the minion
 
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
 
     .. note::
 

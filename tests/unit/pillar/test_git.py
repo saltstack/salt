@@ -56,6 +56,8 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
                     'cachedir': cachedir,
                     'pillar_roots': {},
                     'hash_type': 'sha256',
+                    'file_ignore_regex': [],
+                    'file_ignore_glob': [],
                     'file_roots': {},
                     'state_top': 'top.sls',
                     'extension_modules': '',

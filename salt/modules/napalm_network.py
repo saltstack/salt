@@ -16,6 +16,7 @@ Dependencies
 - :mod:`napalm proxy minion <salt.proxy.napalm>`
 
 .. versionadded:: 2016.11.0
+.. versionchanged:: 2017.7.0
 '''
 
 from __future__ import absolute_import
@@ -816,7 +817,7 @@ def mac(address='', interface='', vlan=0, **kwargs):  # pylint: disable=unused-a
 @proxy_napalm_wrap
 def config(source=None, **kwargs):  # pylint: disable=unused-argument
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Return the whole configuration of the network device.
     By default, it will return all possible configuration
@@ -869,7 +870,7 @@ def config(source=None, **kwargs):  # pylint: disable=unused-argument
 @proxy_napalm_wrap
 def optics(**kwargs):  # pylint: disable=unused-argument
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Fetches the power usage on the various transceivers installed
     on the network device (in dBm), and returns a view that conforms with the
@@ -1037,7 +1038,7 @@ def load_template(template_name,
                   template_mode='755',
                   saltenv=None,
                   template_engine='jinja',
-                  skip_verify=True,
+                  skip_verify=False,
                   defaults=None,
                   test=False,
                   commit=True,

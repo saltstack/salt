@@ -6,7 +6,7 @@ NAPALM YANG state
 Manage the configuration of network devices according to
 the YANG models (OpenConfig/IETF).
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Dependencies
 ------------

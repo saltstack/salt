@@ -16,7 +16,7 @@ In the minion configuration file, the following block is required:
     api_key: <API_KEY>
     page_id: <PAGE_ID>
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 '''
 
 from __future__ import unicode_literals

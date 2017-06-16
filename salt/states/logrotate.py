@@ -2,7 +2,7 @@
 '''
 Module for managing logrotate.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 '''
 

@@ -2359,6 +2359,9 @@ def create(vm_):
     extra_config = config.get_cloud_config_value(
         'extra_config', vm_, __opts__, default=None
     )
+    annotation = config.get_cloud_config_value(
+        'annotation', vm_, __opts__, default=None
+    )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=True
     )
@@ -2569,6 +2572,9 @@ def create(vm_):
             option = vim.option.OptionValue(key=key, value=value)
             config_spec.extraConfig.append(option)
 
+    if annotation:
+        config_spec.annotation = str(annotation)
+
     if 'clonefrom' in vm_:
         clone_spec = handle_snapshot(
             config_spec,
@@ -2648,7 +2654,7 @@ def create(vm_):
             'event',
             'requesting instance',
             'salt/cloud/{0}/requesting'.format(vm_['name']),
-            args=__utils__['cloud.filter_event']('requesting', event_kwargs, event_kwargs.keys()),
+            args=__utils__['cloud.filter_event']('requesting', event_kwargs, list(event_kwargs)),
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )

@@ -672,8 +672,9 @@ class LocalClient(object):
             * ``nodegroup`` - Match on nodegroup
             * ``range`` - Use a Range server for matching
             * ``compound`` - Pass a compound match string
+            * ``ipcidr`` - Match based on Subnet (CIDR notation) or IPv4 address.
 
-            .. versionchanged:: Nitrogen
+            .. versionchanged:: 2017.7.0
                 Renamed from ``expr_form`` to ``tgt_type``
 
         :param ret: The returner to use. The value passed can be single
@@ -1584,6 +1585,7 @@ class LocalClient(object):
                                          expect_minions=(verbose or show_timeout),
                                          **kwargs
                                          ):
+            log.debug('return event: %s', ret)
             return_count = return_count + 1
             if progress:
                 for id_, min_ret in six.iteritems(ret):

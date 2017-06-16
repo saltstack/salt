@@ -3,7 +3,7 @@
 Junos Syslog Engine
 ==========================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 
 :depends: pyparsing, twisted
@@ -28,7 +28,7 @@ of the following fields:
 10.   raw (the raw event data forwarded from the device)
 
 The topic title can consist of any of the combination of above fields,
-but the topic has to start with ‘jnpr/syslog’.
+but the topic has to start with 'jnpr/syslog'.
 So, we can have different combinations:
  - jnpr/syslog/hostip/daemon/event
  - jnpr/syslog/daemon/severity
@@ -37,7 +37,7 @@ The corresponding dynamic topic sent on salt event bus would look something like
 
  - jnpr/syslog/1.1.1.1/mgd/UI_COMMIT_COMPLETED
  - jnpr/syslog/sshd/7
-The default topic title is ‘jnpr/syslog/hostname/event’.
+The default topic title is 'jnpr/syslog/hostname/event'.
 
 The user can choose the type of data he/she wants of the event bus.
 Like, if one wants only events pertaining to a particular daemon, he/she can
