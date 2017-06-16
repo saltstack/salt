@@ -2599,9 +2599,11 @@ class BaseHighState(object):
                 )
 
         if found == 0:
-            log.error('No contents found in top file. Please verify '
-                'that the \'file_roots\' specified in \'etc/master\' are '
-                'accessible: {0}'.format(repr(self.state.opts['file_roots']))
+            log.debug(
+                'No contents found in top file. If this is not expected, '
+                'verify that the \'file_roots\' specified in \'etc/master\' '
+                'are accessible. The \'file_roots\' configuration is: %s',
+                repr(self.state.opts['file_roots'])
             )
 
         # Search initial top files for includes
@@ -3415,7 +3417,7 @@ class BaseHighState(object):
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         if not matches:
-            msg = 'No Top file or external nodes data matches found.'
+            msg = 'No Top file or master_tops data matches found.'
             ret[tag_name]['comment'] = msg
             return ret
         matches = self.matches_whitelist(matches, whitelist)
