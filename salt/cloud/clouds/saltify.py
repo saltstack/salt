@@ -86,7 +86,7 @@ def __virtual__():
 
 def _get_connection_info():
     '''
-    Return a connection information for the passed VM data
+    Return connection information for the passed VM data
     '''
     vm_ = get_configured_provider()
 
@@ -97,13 +97,13 @@ def _get_connection_info():
                }
     except IndexError:
         raise SaltCloudException(
-            'Configuration must define salt-api "user", "password" and "eauth"')
+            'Configuration must define salt-api "username", "password" and "eauth"')
     return ret
 
 
 def list_nodes():
     '''
-    List the nodes as recorded in the cache.
+    List the nodes which have salt-cloud:driver:saltify grains.
     '''
     nodes = list_nodes_full()
     ret = {}
@@ -132,17 +132,16 @@ def list_nodes():
             ret[name] = {  # according to the grain target selection, this node must have once been saltify-ed
                 'id': name,
                 'salt-cloud': {'profile': '', 'driver': 'saltify', 'provider': ''},
-                'state' : 'unknown'
+                'state': 'unknown'
             }
     return ret
 
 
 def list_nodes_full():
     '''
-    List the nodes, ask all 'saltify' minions.
+    List the nodes, ask all 'saltify' minions, return dict of grains.
     '''
-    opts = __opts__
-    local = salt.netapi.NetapiClient(opts)
+    local = salt.netapi.NetapiClient(__opts__)
     cmd = {'client':'local',
            'tgt': 'salt-cloud:driver:saltify',
            'fun': 'grains.items',
@@ -151,7 +150,7 @@ def list_nodes_full():
            }
     cmd.update(_get_connection_info())
     ret = local.run(cmd)
-    for grains in ret.values(): # clean up some hyperverbose junk -- everything is too much
+    for grains in ret.values(): # clean up some hyperverbose grains -- everything is too much
         try:
             del grains['cpu_flags'], grains['disks'], grains['pythonpath'], grains['dns'], grains['gpus']
         except (KeyError, TypeError):
@@ -159,13 +158,45 @@ def list_nodes_full():
     return ret
 
 
-def list_nodes_select():
+def list_nodes_select(call=None):
+    ''' Return a list of the minions that have salt-cloud grains, with
+    select fields.
     '''
-    Because this module is not specific to any cloud providers, there will be
-    no nodes to list.
-    '''
-    return {}
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full('function'), __opts__['query.selection'], call,
+    )
 
+
+def reboot(name, call=None):
+    '''
+    Reboot a saltify minion.
+
+    .. versionadded:: xxx
+
+    name
+        The name of the VM to reboot.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a reboot vm_name
+    '''
+    if call != 'action':
+        raise SaltCloudException(
+            'The show_instance action must be called with -a or --action.'
+        )
+
+    local = salt.netapi.NetapiClient(__opts__)
+    cmd = {'client':'local',
+           'tgt': name,
+           'fun': 'system.reboot',
+           'arg': '',
+           }
+    cmd.update(_get_connection_info())
+    ret = local.run(cmd)
+
+    return ret
 
 def create(vm_):
     '''
