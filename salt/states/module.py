@@ -220,7 +220,7 @@ def run(**kwargs):
     '''
     Run a single module function or a range of module functions in a batch.
     Supersedes ``module.run`` function, which requires ``m_`` prefix to
-    unction-specific parameters.
+    function-specific parameters.
 
     :param returner:
         Specify a common returner for the whole batch to send the return data
