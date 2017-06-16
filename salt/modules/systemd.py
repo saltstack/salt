@@ -1055,7 +1055,6 @@ def status(name, sig=None):  # pylint: disable=unused-argument
     return results[name]
 
 
-
 # **kwargs is required to maintain consistency with the API established by
 # Salt's service management states.
 def enable(name, no_block=False, unmask=False, unmask_runtime=False, **kwargs):  # pylint: disable=unused-argument

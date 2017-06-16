@@ -468,12 +468,11 @@ def status(name, sig=None):
             # because there is no way to avoid logging at error lvl when
             # service is not running - retcode != 0 (which is totally relevant).
             results[service] = not bool(__salt__['cmd.retcode'](cmd, python_shell=False,
-                                                                ignore_retcode=True)
+                                                                ignore_retcode=True,
+                                                                quite=True))
     if contains_globbing:
         return results
     return results[name]
-
-                                            quite=True))
 
 
 def _get_service_exec():
