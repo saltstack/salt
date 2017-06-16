@@ -78,7 +78,7 @@ class SSHHighState(salt.state.BaseHighState):
         '''
         return
 
-    def _ext_nodes(self):
+    def _master_tops(self):
         '''
         Evaluate master_tops locally
         '''
