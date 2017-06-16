@@ -2,7 +2,7 @@
 '''
  Namecheap management
 
- .. versionadded:: Nitrogen
+ .. versionadded:: 2017.7.0
 
  General Notes
  -------------

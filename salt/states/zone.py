@@ -7,7 +7,7 @@ Management of Solaris Zones
 :depends:       salt.modules.zoneadm, salt.modules.zonecfg
 :platform:      solaris
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 
 Bellow are some examples of how to use this state.
 Lets start with creating a zone and installing it.

@@ -337,7 +337,7 @@ def _call_function(name, returner=None, **kwargs):
 
 def _run(name, **kwargs):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
        Function name stays the same, behaviour will change.
 
     Run a single module function

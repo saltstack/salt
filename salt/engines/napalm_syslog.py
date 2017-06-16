@@ -3,7 +3,7 @@
 NAPALM syslog engine
 ====================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 An engine that takes syslog messages structured in
 OpenConfig_ or IETF format

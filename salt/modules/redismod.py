@@ -248,7 +248,7 @@ def hdel(key, *fields, **options):
     '''
     Delete one of more hash fields.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -268,7 +268,7 @@ def hexists(key, field, host=None, port=None, db=None, password=None):
     '''
     Determine if a hash fields exists.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -312,7 +312,7 @@ def hincrby(key, field, increment=1, host=None, port=None, db=None, password=Non
     '''
     Increment the integer value of a hash field by the given number.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -328,7 +328,7 @@ def hincrbyfloat(key, field, increment=1.0, host=None, port=None, db=None, passw
     '''
     Increment the float value of a hash field by the given number.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -344,7 +344,7 @@ def hlen(key, host=None, port=None, db=None, password=None):
     '''
     Returns number of fields of a hash.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -360,7 +360,7 @@ def hmget(key, *fields, **options):
     '''
     Returns the values of all the given hash fields.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -380,7 +380,7 @@ def hmset(key, **fieldsvals):
     '''
     Sets multiple hash fields to multiple values.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -400,7 +400,7 @@ def hset(key, field, value, host=None, port=None, db=None, password=None):
     '''
     Set the value of a hash field.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -416,7 +416,7 @@ def hsetnx(key, field, value, host=None, port=None, db=None, password=None):
     '''
     Set the value of a hash field only if the field does not exist.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -432,7 +432,7 @@ def hvals(key, host=None, port=None, db=None, password=None):
     '''
     Return all the values in a hash.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -448,7 +448,7 @@ def hscan(key, cursor=0, match=None, count=None, host=None, port=None, db=None, 
     '''
     Incrementally iterate hash fields and associated values.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
