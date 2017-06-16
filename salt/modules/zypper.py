@@ -1085,13 +1085,6 @@ def install(name=None,
         return {}
 
     version_num = Wildcard(__zypper__)(name, version)
-    if version_num:
-        if pkgs is None and sources is None:
-            # Allow "version" to work for single package target
-            pkg_params = {name: version_num}
-        else:
-            log.warning("'version' parameter will be ignored for multiple package targets")
-
     if pkg_type == 'repository':
         targets = []
         problems = []
