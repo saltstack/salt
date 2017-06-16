@@ -582,7 +582,10 @@ class StateTestCase(TestCase):
             self.assertEqual(state.sls_id("apache", "http"), "A")
 
             with patch.dict(state.__opts__, {"test": "A"}):
-                mock = MagicMock(return_value={'test': True})
+                mock = MagicMock(
+                    return_value={'test': True,
+                                  'environment': None}
+                )
                 with patch.object(state, '_get_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
@@ -606,7 +609,10 @@ class StateTestCase(TestCase):
             self.assertEqual(state.show_low_sls("foo"), "A")
 
             with patch.dict(state.__opts__, {"test": "A"}):
-                mock = MagicMock(return_value={'test': True})
+                mock = MagicMock(
+                    return_value={'test': True,
+                                  'environment': None}
+                )
                 with patch.object(state, '_get_opts', mock):
                     MockState.State.flag = True
                     MockState.HighState.flag = True
@@ -625,7 +631,10 @@ class StateTestCase(TestCase):
             self.assertEqual(state.show_sls("foo"), "A")
 
             with patch.dict(state.__opts__, {"test": "A"}):
-                mock = MagicMock(return_value={'test': True})
+                mock = MagicMock(
+                    return_value={'test': True,
+                                  'environment': None}
+                )
                 with patch.object(state, '_get_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
@@ -806,7 +815,6 @@ class StateTestCase(TestCase):
                                      state.sls("core,edit.vim dev",
                                                None,
                                                None,
-                                               None,
                                                True),
                                      ["A"])
 
@@ -819,7 +827,6 @@ class StateTestCase(TestCase):
                     with patch.dict(state.__context__, {"retcode": 5}):
                         with patch.dict(state.__pillar__, {"_errors": "E1"}):
                             self.assertListEqual(state.sls("core,edit.vim dev",
-                                                           None,
                                                            None,
                                                            None,
                                                            True), ret)
@@ -836,7 +843,6 @@ class StateTestCase(TestCase):
                                                   SaltInvocationError,
                                                   state.sls,
                                                   "core,edit.vim dev",
-                                                  None,
                                                   None,
                                                   None,
                                                   True,
@@ -857,7 +863,6 @@ class StateTestCase(TestCase):
                                                             state.sls(arg,
                                                                       None,
                                                                       None,
-                                                                      None,
                                                                       True,
                                                                       cache
                                                                       =True
@@ -867,7 +872,6 @@ class StateTestCase(TestCase):
                                     MockState.HighState.flag = True
                                     self.assertTrue(state.sls("core,edit"
                                                               ".vim dev",
-                                                              None,
                                                               None,
                                                               None,
                                                               True)
@@ -904,7 +908,6 @@ class StateTestCase(TestCase):
                                 with patch('salt.utils.fopen', mock_open()):
                                     self.assertTrue(state.sls("core,edit"
                                                               ".vim dev",
-                                                              None,
                                                               None,
                                                               None,
                                                               True))

@@ -717,9 +717,7 @@ def run_request(name='default', **kwargs):
     return {}
 
 
-def highstate(test=None,
-              queue=False,
-              **kwargs):
+def highstate(test=None, queue=False, **kwargs):
     '''
     Retrieve the state data from the salt master for this minion and execute it
 
@@ -869,13 +867,7 @@ def highstate(test=None,
     return ret
 
 
-def sls(mods,
-        saltenv=None,
-        test=None,
-        exclude=None,
-        queue=False,
-        pillarenv=None,
-        **kwargs):
+def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     '''
     Execute the states in one or more SLS files
 
@@ -995,10 +987,12 @@ def sls(mods,
         return disabled
 
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(saltenv=saltenv, pillarenv=pillarenv, **kwargs)
+    opts = _get_opts(**kwargs)
 
     opts['test'] = _get_test_value(test, **kwargs)
 
+    # Since this is running a specific SLS file (or files), fall back to the
+    # 'base' saltenv if none is configured and none was passed.
     if opts['environment'] is None:
         opts['environment'] = 'base'
 
@@ -1106,11 +1100,7 @@ def sls(mods,
     return ret
 
 
-def top(topfn,
-        test=None,
-        queue=False,
-        saltenv=None,
-        **kwargs):
+def top(topfn, test=None, queue=False, **kwargs):
     '''
     Execute a specific top file instead of the default. This is useful to apply
     configurations from a different environment (for example, dev or prod), without
@@ -1128,7 +1118,7 @@ def top(topfn,
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(saltenv=saltenv, **kwargs)
+    opts = _get_opts(**kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
 
     pillar_override = kwargs.get('pillar')
@@ -1156,8 +1146,8 @@ def top(topfn,
     st_.opts['state_top'] = salt.utils.url.create(topfn)
     ret = {}
     orchestration_jid = kwargs.get('orchestration_jid')
-    if saltenv:
-        st_.opts['state_top_saltenv'] = saltenv
+    if 'saltenv' in kwargs:
+        st_.opts['state_top_saltenv'] = kwargs['saltenv']
     try:
         snapper_pre = _snapper_pre(opts, kwargs.get('__pub_jid', 'called localy'))
         ret = st_.call_highstate(
@@ -1255,13 +1245,7 @@ def show_lowstate(queue=False, **kwargs):
     return ret
 
 
-def sls_id(
-        id_,
-        mods,
-        saltenv='base',
-        test=None,
-        queue=False,
-        **kwargs):
+def sls_id(id_, mods, test=None, queue=False, **kwargs):
     '''
     Call a single ID from the named module(s) and handle all requisites
 
@@ -1282,6 +1266,11 @@ def sls_id(
     opts = _get_opts(**kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
 
+    # Since this is running a specific ID within a specific SLS file, fall back
+    # to the 'base' saltenv if none is configured and none was passed.
+    if opts['environment'] is None:
+        opts['environment'] = 'base'
+
     try:
         st_ = salt.state.HighState(opts,
                                    proxy=__proxy__,
@@ -1300,7 +1289,7 @@ def sls_id(
         split_mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({saltenv: split_mods})
+        high_, errors = st_.render_highstate({opts['environment']: split_mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -1320,16 +1309,12 @@ def sls_id(
     if not ret:
         raise SaltInvocationError(
             'No matches for ID \'{0}\' found in SLS \'{1}\' within saltenv '
-            '\'{2}\''.format(id_, mods, saltenv)
+            '\'{2}\''.format(id_, mods, opts['environment'])
         )
     return ret
 
 
-def show_low_sls(mods,
-                 saltenv='base',
-                 test=None,
-                 queue=False,
-                 **kwargs):
+def show_low_sls(mods, test=None, queue=False, **kwargs):
     '''
     Display the low data from a specific sls. The default environment is
     ``base``, use ``saltenv`` to specify a different environment.
@@ -1339,6 +1324,7 @@ def show_low_sls(mods,
     .. code-block:: bash
 
         salt '*' state.show_low_sls foo
+        salt '*' state.show_low_sls foo saltenv=dev
     '''
     if 'env' in kwargs:
         salt.utils.warn_until(
@@ -1356,6 +1342,11 @@ def show_low_sls(mods,
     opts = _get_opts(**kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
 
+    # Since this is dealing with a specific SLS file (or files), fall back to
+    # the 'base' saltenv if none is configured and none was passed.
+    if opts['environment'] is None:
+        opts['environment'] = 'base'
+
     st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
@@ -1367,7 +1358,7 @@ def show_low_sls(mods,
         mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({saltenv: mods})
+        high_, errors = st_.render_highstate({opts['environment']: mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -1381,7 +1372,7 @@ def show_low_sls(mods,
     return ret
 
 
-def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
+def show_sls(mods, test=None, queue=False, **kwargs):
     '''
     Display the state data from a specific sls or list of sls files on the
     master. The default environment is ``base``, use ``saltenv`` to specify a
@@ -1415,6 +1406,11 @@ def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
 
     opts['test'] = _get_test_value(test, **kwargs)
 
+    # Since this is dealing with a specific SLS file (or files), fall back to
+    # the 'base' saltenv if none is configured and none was passed.
+    if opts['environment'] is None:
+        opts['environment'] = 'base'
+
     pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
     if pillar_enc is None \
@@ -1439,7 +1435,7 @@ def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
         mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({saltenv: mods})
+        high_, errors = st_.render_highstate({opts['environment']: mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -1589,7 +1585,11 @@ def clear_cache():
     return ret
 
 
-def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
+def pkg(pkg_path,
+        pkg_sum,
+        hash_type,
+        test=None,
+        **kwargs):
     '''
     Execute a packaged state run, the packaged state run will exist in a
     tarball available locally. This packaged state
