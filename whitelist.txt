@@ -267,7 +267,7 @@ modules.win_certutil.add_store:source 	The source certificate file this can be i
 modules.win_certutil.del_store:source 	The source certificate file this can be in the formsalt://path/to/file
 modules.win_certutil.get_cert_serial:cert_file 	The certificate file to find the serial for
 # modules.apk.install:name 	The name of the package to be installed. Note that this parameter isignored if either "pkgs" or "sources" is passed. Additionally, pleasenote that this option can only be used to install packages from asoftware repository. To install a package file manually, use the"sources" option.
-# modules.apk.install:sources 	A list of IPK packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.  Dependencies are automatically resolvedand marked as auto-installed.
+modules.apk.install:sources 	A list of IPK packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.  Dependencies are automatically resolvedand marked as auto-installed.
 modules.debconfmod.set_template:path 	location of the file containing the package selections
 modules.dnsmasq.get_config:config_file 	The location of the config file from which to obtain contents.Defaults to ``/etc/dnsmasq.conf``.
 modules.hg.archive:cwd 	The path to the Mercurial repository
@@ -398,7 +398,7 @@ modules.tomcat.undeploy:app 	the webapp context path
 modules.acme.cert:webroot 	True or a full path to use to use webroot. Otherwise use standalone mode
 # modules.aptpkg.install:name 	The name of the package to be installed. Note that this parameter isignored if either "pkgs" or "sources" is passed. Additionally, pleasenote that this option can only be used to install packages from asoftware repository. To install a package file manually, use the"sources" option.
 modules.aptpkg.install:debconf 	Provide the path to a debconf answers file, processed beforeinstallation.
-# modules.aptpkg.install:sources 	A list of DEB packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.  Dependencies are automatically resolvedand marked as auto-installed.
+modules.aptpkg.install:sources 	A list of DEB packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.  Dependencies are automatically resolvedand marked as auto-installed.
 modules.archive.cmd_unzip:zip_file 	Path of zip file to be unpacked
 modules.archive.cmd_unzip:dest 	The destination directory into which the file should be unpacked
 modules.archive.cmd_zip:zip_file 	Path of zip file to be created
@@ -426,7 +426,7 @@ modules.dockermod.load:path 	Path to docker tar archive. Path can be a file on t
 modules.dockermod.save:path 	Absolute path on the Minion where the image will be exported
 modules.dockermod.script:source 	Path to the script. Can be a local path on the Minion or a remote filefrom the Salt fileserver.
 modules.dockermod.script_retcode:source 	Path to the script. Can be a local path on the Minion or a remote filefrom the Salt fileserver.
-# modules.ebuild.install:sources 	A list of tbz2 packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.ebuild.install:sources 	A list of tbz2 packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
 modules.file.append:path 	path to file
 modules.file.blockreplace:path 	Filesystem path to the file to be edited
 # modules.file.blockreplace:backup 	The file extension to use for a backup of the file if any edit is made.Set to ``False`` to skip making a backup.
@@ -490,7 +490,7 @@ modules.file.truncate:path 	path to file
 # modules.file.truncate:length 	offset into file to truncate
 modules.file.uncomment:path 	The full path to the file to be edited
 modules.file.write:path 	path to file
-# modules.freebsdpkg.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.freebsdpkg.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
 modules.git.add:cwd 	The path to the git checkout
 # modules.git.add:filename 	The location of the file/directory to add, relative to ``cwd``
 modules.git.archive:cwd 	The path to be archived
@@ -601,9 +601,9 @@ modules.lxc.unfreeze:path 	path to the container parent directorydefault: /var/l
 modules.lxc.update_lxc_conf:path 	path to the container parentdefault: /var/lib/lxc (system default)
 modules.lxc.wait_started:path 	path to the container parentdefault: /var/lib/lxc (system default)
 # modules.opkg.install:name 	The name of the package to be installed. Note that this parameter isignored if either "pkgs" or "sources" is passed. Additionally, pleasenote that this option can only be used to install packages from asoftware repository. To install a package file manually, use the"sources" option.
-# modules.opkg.install:sources 	A list of IPK packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.  Dependencies are automatically resolvedand marked as auto-installed.
+modules.opkg.install:sources 	A list of IPK packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.  Dependencies are automatically resolvedand marked as auto-installed.
 # modules.pacman.install:name 	The name of the package to be installed. Note that this parameter isignored if either ``pkgs`` or ``sources`` is passed. Additionally,please note that this option can only be used to install packages froma software repository. To install a package file manually, use the``sources`` option.
-# modules.pacman.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.pacman.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
 modules.pip.freeze:bin_env 	path to pip bin or path to virtualenv. If doing an uninstall fromthe system python and want to use a specific pip bin (pip-2.7,pip-2.6, etc..) just specify the pip bin you want.If uninstalling from a virtualenv, just use the path to the virtualenv(/home/code/path/to/virtualenv/)
 modules.pip.freeze:cwd 	Current working directory to run pip from
 modules.pip.install:bin_env 	Path to pip bin or path to virtualenv. If doing a system install,and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) justspecify the pip bin you want.
@@ -617,7 +617,7 @@ modules.pip.uninstall:requirements 	path to requirements.
 modules.pip.uninstall:bin_env 	path to pip bin or path to virtualenv. If doing an uninstall fromthe system python and want to use a specific pip bin (pip-2.7,pip-2.6, etc..) just specify the pip bin you want.If uninstalling from a virtualenv, just use the path to the virtualenv(/home/code/path/to/virtualenv/)
 modules.pip.uninstall:log 	Log file where a complete (maximum verbosity) record will be kept
 modules.pip.uninstall:cwd 	Current working directory to run pip from
-# modules.pkgin.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.pkgin.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
 modules.pkgng.backup:jail 	Backup packages from the specified jail. Note that this will run thecommand within the jail, and so the path to the backup file will berelative to the root of the jail
 modules.pkgng.backup:chroot 	Backup packages from the specified chroot (ignored if ``jail`` isspecified). Note that this will run the command within the chroot, andso the path to the backup file will be relative to the root of thechroot.
 modules.pkgng.backup:root 	Backup packages from the specified root (ignored if ``jail`` isspecified). Note that this will run the command within the root, andso the path to the backup file will be relative to the root of theroot.
@@ -706,10 +706,10 @@ modules.win_file.truncate:path 	path to file
 modules.win_file.uncomment:path 	The full path to the file to be edited
 modules.win_file.write:path 	path to file
 modules.xbpspkg.add_repo:conffile 	path to xbps conf file to add this repodefault: /usr/share/xbps.d/15-saltstack.conf
-# modules.xbpspkg.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.xbpspkg.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
 modules.yumpkg.diff:path 	Full path to the installed file
 # modules.yumpkg.install:name 	The name of the package to be installed. Note that this parameter isignored if either "pkgs" or "sources" is passed. Additionally, pleasenote that this option can only be used to install packages from asoftware repository. To install a package file manually, use the"sources" option.
-# modules.yumpkg.install:sources 	A list of RPM packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.yumpkg.install:sources 	A list of RPM packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
 modules.zabbix.mediatype_create:exec_path 	exec path
 modules.zabbix.mediatype_create:gsm_modem 	exec path
 # modules.zookeeper.create:path 	path of znode to create
@@ -722,7 +722,7 @@ modules.zabbix.mediatype_create:gsm_modem 	exec path
 # modules.zookeeper.set_acls:path 	path to znode
 modules.zypper.diff:path 	Full path to the installed file
 # modules.zypper.install:name 	The name of the package to be installed. Note that this parameter isignored if either ``pkgs`` or ``sources`` is passed. Additionally,please note that this option can only be used to install packages froma software repository. To install a package file manually, use the``sources`` option.
-# modules.zypper.install:sources 	A list of RPM packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.zypper.install:sources 	A list of RPM packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
 modules.apache.config:name 	File for the virtual host
 modules.composer.did_composer_install:dir 	Directory location of the composer.json file
 modules.composer.install:directory 	Directory location of the composer.json file.
