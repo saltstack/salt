@@ -606,7 +606,6 @@ Execution modules
 - :mod:`salt.modules.icinga2 <salt.modules.icinga2>`
 - :mod:`salt.modules.logmod <salt.modules.logmod>`
 - :mod:`salt.modules.mattermost <salt.modules.mattermost>`
-- :mod:`salt.modules.mattermost <salt.modules.mattermost>`
 - :mod:`salt.modules.namecheap_dns <salt.modules.namecheap_dns>`
 - :mod:`salt.modules.namecheap_domains <salt.modules.namecheap_domains>`
 - :mod:`salt.modules.namecheap_ns <salt.modules.namecheap_ns>`
