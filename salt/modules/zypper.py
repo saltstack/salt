@@ -1166,8 +1166,10 @@ def install(name=None,
 
     # Handle packages which report multiple new versions
     # (affects only kernel packages at this point)
-    for pkg in new:
-        new[pkg] = new[pkg].split(',')[-1]
+    for pkg_name in new:
+        pkg_data = new[pkg_name]
+        if isinstance(pkg_data, str):
+            new[pkg_name] = pkg_data.split(',')[-1]
 
     ret = salt.utils.compare_dicts(old, new)
 
