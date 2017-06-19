@@ -312,9 +312,10 @@ def start(transport='zmq',
         if not certificate:
             log.critical('Please use a certificate, or disable the security.')
             return
-        priv_key, verify_key = napalm_logs.utils.authenticate(certificate,
-                                                              address=auth_address,
-                                                              port=auth_port)
+        auth = napalm_logs.utils.ClientAuth(certificate,
+                                            address=auth_address,
+                                            port=auth_port)
+
     transport_recv_fun = _get_transport_recv(name=transport,
                                              address=address,
                                              port=port)
@@ -330,7 +331,7 @@ def start(transport='zmq',
         log.debug('Received from napalm-logs:')
         log.debug(raw_object)
         if not disable_security:
-            dict_object = napalm_logs.utils.decrypt(raw_object, verify_key, priv_key)
+            dict_object = auth.decrypt(raw_object)
         else:
             dict_object = napalm_logs.utils.unserialize(raw_object)
         try:
