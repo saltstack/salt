@@ -1098,3 +1098,5 @@ class UtilsTestCase(TestCase):
             self.assertEqual(utils.expanduser('~root/myfile'), '/root/myfile')
             self.assertEqual(utils.expanduser(None, '~root/myfile'), (None, '/root/myfile'))
             self.assertEqual(utils.expanduser(['file', '~root/myfile']), ['file', '/root/myfile'])
+
+            self.assertEqual(utils.expanduser([{'key': '~root/file'}]), [{'key': '/root/file'}])

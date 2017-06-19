@@ -3519,7 +3519,7 @@ def expanduser(*paths):
     arguments at the same time.
 
     If one of the arguments is a list of strings, all those will be expanded
-    too.
+    too. Values in dictionaries (potentially within lists) will also be expanded.
     '''
     expanded_paths = []
     for path in paths:
@@ -3532,6 +3532,10 @@ def expanduser(*paths):
             for nested_element in path:
                 nested_expanded.append(expanduser(nested_element))
             expanded_paths.append(nested_expanded)
+        elif isinstance(path, dict):
+            for key, value in path.items():
+                path[key] = expanduser(value)
+            expanded_paths.append(path)
         else:
             expanded_paths.append(path)
 
