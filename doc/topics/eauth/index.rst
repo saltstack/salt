@@ -294,15 +294,15 @@ the results are filtered against ``auth.ldap.groupclass``, default
     auth.ldap.groupou: Groups
 
 Note that as of 2017.7, auth.ldap.groupclass can refer to either a groupclass or an objectClass.
-For some LDAP servers (notably OpenLDAP without the `memberOf` overlay enabled) to determine group
-membership we to know both the `objectClass` and the `memberUid` attributes.  Usually for these
-servers you will want a `auth.ldap.groupclass` of `posixGroup` and an `auth.ldap.groupattribute` of
-`memberUid`.
+For some LDAP servers (notably OpenLDAP without the ``memberOf`` overlay enabled) to determine group
+membership we need to know both the ``objectClass`` and the ``memberUid`` attributes.  Usually for these
+servers you will want a ``auth.ldap.groupclass`` of ``posixGroup`` and an ``auth.ldap.groupattribute`` of
+``memberUid``.
 
-LDAP servers with the `memberOf` overlay will have entries similar to `auth.ldap.groupclass: person` and
-`auth.ldap.groupattribute: memberOf`.
+LDAP servers with the ``memberOf`` overlay will have entries similar to ``auth.ldap.groupclass: person`` and
+``auth.ldap.groupattribute: memberOf``.
 
-When using the `ldap('DC=domain,DC=com')` eauth operator, sometimes the records returned
+When using the ``ldap('DC=domain,DC=com')`` eauth operator, sometimes the records returned
 from LDAP or Active Directory have fully-qualified domain names attached, while minion IDs
 instead are simple hostnames.  The parameter below allows the administrator to strip
 off a certain set of domain names so the hostnames looked up in the directory service
@@ -379,5 +379,5 @@ be part of the eAuth definition, they can be specified like this:
           - ldap('DC=corp,DC=example,DC=com'):
             - test.echo
 
-The string inside `ldap()` above is any valid LDAP/AD tree limiter.  `OU=` in
+The string inside ``ldap()`` above is any valid LDAP/AD tree limiter.  ``OU=`` in
 particular is permitted as long as it would return a list of computer objects.
