@@ -293,7 +293,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         failed_minions = []
         for each_minion in ret:
             minion_ret = ret[each_minion]
-            if (isinstance(minion_ret, dict) and 'ret' in minion_ret):
+            if isinstance(minion_ret, dict) and 'ret' in minion_ret:
                 minion_ret = ret[each_minion].get('ret')
             if (
                     isinstance(minion_ret, string_types)
