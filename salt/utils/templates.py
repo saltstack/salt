@@ -32,7 +32,7 @@ from salt.exceptions import (
 import salt.utils.jinja
 import salt.utils.network
 from salt.utils.odict import OrderedDict
-from salt.utils.decorators import JinjaFilter
+from salt.utils.decorators import JinjaFilter, JinjaTest
 from salt import __path__ as saltpath
 
 log = logging.getLogger(__name__)
@@ -327,6 +327,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined,
                                        **env_args)
 
+    jinja_env.tests.update(JinjaTest.salt_jinja_tests)
     jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
 
     # globals
