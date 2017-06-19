@@ -246,9 +246,6 @@ def _fingerprint(public_key, fingerprint_hash_type=None):
     if fingerprint_hash_type:
         hash_type = fingerprint_hash_type.lower()
     else:
-        # Set fingerprint_hash_type to md5 as default
-        log.warning('Public Key hashing currently defaults to "md5". This will '
-                    'change to "sha256" in the 2017.7.0 release.')
         hash_type = 'sha256'
 
     try:
