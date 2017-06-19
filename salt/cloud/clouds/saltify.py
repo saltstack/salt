@@ -198,6 +198,7 @@ def reboot(name, call=None):
 
     return ret
 
+
 def create(vm_):
     '''
     Provision a single machine
