@@ -12,6 +12,7 @@ proxy modules
 
     chronos
     cisconso
+    dummy
     esxi
     fx2
     junos

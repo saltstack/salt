@@ -522,24 +522,36 @@ class TestCustomExtensions(TestCase):
         unique = set(dataset)
         env = Environment(extensions=[SerializerExtension])
         env.filters.update(JinjaFilter.salt_jinja_filters)
-        rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
-        self.assertEqual(rendered, u"{0}".format(unique))
+        if six.PY3:
+            rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'{}").split("', '")
+            self.assertEqual(rendered, list(unique))
+        else:
+            rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
+            self.assertEqual(rendered, u"{0}".format(unique))
 
     def test_unique_tuple(self):
         dataset = ('foo', 'foo', 'bar')
         unique = set(dataset)
         env = Environment(extensions=[SerializerExtension])
         env.filters.update(JinjaFilter.salt_jinja_filters)
-        rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
-        self.assertEqual(rendered, u"{0}".format(unique))
+        if six.PY3:
+            rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'{}").split("', '")
+            self.assertEqual(rendered, list(unique))
+        else:
+            rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
+            self.assertEqual(rendered, u"{0}".format(unique))
 
     def test_unique_list(self):
         dataset = ['foo', 'foo', 'bar']
         unique = ['foo', 'bar']
         env = Environment(extensions=[SerializerExtension])
         env.filters.update(JinjaFilter.salt_jinja_filters)
-        rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
-        self.assertEqual(rendered, u"{0}".format(unique))
+        if six.PY3:
+            rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'[]").split("', '")
+            self.assertEqual(rendered, unique)
+        else:
+            rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
+            self.assertEqual(rendered, u"{0}".format(unique))
 
     def test_serialize_json(self):
         dataset = {
