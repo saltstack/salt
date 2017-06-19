@@ -1966,7 +1966,7 @@ def _get_patches(installed_only=False):
 
 def list_patches(refresh=False):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: Nitrogen
 
     List all known advisory patches from available repos.
 
@@ -1989,7 +1989,7 @@ def list_patches(refresh=False):
 
 def list_installed_patches():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: Nitrogen
 
     List installed advisory patches on the system.
 
