@@ -592,9 +592,7 @@ def install(name=None,
     # Handle version kwarg for a single package target
     if pkgs is None and sources is None:
         version_num = kwargs.get('version')
-        if version_num:
-            pkg_params = {name: version_num}
-        else:
+        if not version_num:
             version_num = ''
             if slot is not None:
                 version_num += ':{0}'.format(slot)
