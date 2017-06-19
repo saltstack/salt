@@ -476,7 +476,8 @@ class Client(object):
                 url_data.netloc, url_data.path).rstrip(os.sep)
 
         # If dest is a directory, rewrite dest with filename
-        if os.path.isdir(dest) or dest.endswith(('/', '\\')):
+        if dest is not None \
+                and (os.path.isdir(dest) or dest.endswith(('/', '\\'))):
             if url_data.query or len(url_data.path) > 1 and not url_data.path.endswith('/'):
                 strpath = url.split('/')[-1]
             else:
@@ -1072,7 +1073,8 @@ class RemoteClient(Client):
             return False
 
         # If dest is a directory, rewrite dest with filename
-        if os.path.isdir(dest) or dest.endswith(('/', '\\')):
+        if dest is not None \
+                and (os.path.isdir(dest) or dest.endswith(('/', '\\'))):
             dest = os.path.join(dest, os.path.basename(path))
             log.debug(
                 'In saltenv \'%s\', \'%s\' is a directory. Changing dest to '
