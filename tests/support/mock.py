@@ -14,6 +14,9 @@
 from __future__ import absolute_import
 import sys
 
+# Import salt libs
+import salt.ext.six as six
+
 try:
     if sys.version_info >= (3,):
         # Python 3
@@ -115,7 +118,10 @@ def _iterate_read_data(read_data):
     # Helper for mock_open:
     # Retrieve lines from read_data via a generator so that separate calls to
     # readline, read, and readlines are properly interleaved
-    data_as_list = ['{0}\n'.format(l) for l in read_data.split('\n')]
+    if six.PY3 and isinstance(read_data, six.binary_type):
+        data_as_list = ['{0}\n'.format(l.decode(__salt_system_encoding__)) for l in read_data.split(six.b('\n'))]
+    else:
+        data_as_list = ['{0}\n'.format(l) for l in read_data.split('\n')]
 
     if data_as_list[-1] == '\n':
         # If the last line ended in a newline, the list comprehension will have an
@@ -162,7 +168,7 @@ def mock_open(mock=None, read_data=''):
 
     global file_spec
     if file_spec is None:
-        if sys.version_info >= (3,):
+        if six.PY3:
             import _io
             file_spec = list(set(dir(_io.TextIOWrapper)).union(set(dir(_io.BytesIO))))
         else:
