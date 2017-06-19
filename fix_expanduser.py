@@ -33,7 +33,7 @@ def main():
                     if parameter_id in whitelist:
                         function_parameters.append(parameter)
                 else:
-                    doc_words = set(docs.split())
+                    doc_words = set(word.lower() for word in docs.split())
                     # super inefficient search, whatever
                     for search_keyword in search_keywords:
                         if search_keyword in doc_words:

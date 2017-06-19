@@ -184,6 +184,34 @@ states.zcbuildout.installed:name 	directory to execute in
 # states.zookeeper.absent:name 	path to znode
 # states.zookeeper.acls:name 	path to znode
 # states.zookeeper.present:name 	path to znode
+states.kapacitor.task_present:tick_script 	Path to the TICK script for the task. Can be a salt:// source.
+# states.boto_rds.present:domain 	The identifier of the Active Directory Domain.
+# states.boto_rds.present:domain_iam_role_name 	Specify the name of the IAM role to be used when making API calls tothe Directory Service.
+states.heat.deployed:template 	File of template
+states.heat.deployed:enviroment 	File of enviroment
+states.virtualenv_mod.manage:name 	Path to the virtualenv.
+states.virtualenv_mod.managed:name 	Path to the virtualenv.
+states.composer.installed:composer 	Location of the composer.phar file. If not set composer willjust execute "composer" as if it is installed globally.(i.e. /path/to/composer.phar)
+states.composer.installed:php 	Location of the php executable to use with composer.(i.e. /usr/bin/php)
+states.composer.update:composer 	Location of the composer.phar file. If not set composer willjust execute "composer" as if it is installed globally.(i.e. /path/to/composer.phar)
+states.composer.update:php 	Location of the php executable to use with composer.(i.e. /usr/bin/php)
+states.dellchassis.firmware_update:directory 	Directory name where firmwarefilewill be downloaded
+states.archive.extracted:name 	Directory into which the archive should be extracted
+states.artifactory.downloaded:target_dir 	Directory where the artifact should be downloaded. By default it is downloaded to /tmp directory.
+states.docker_image.present:build 	Path to directory on the Minion containing a Dockerfile
+states.docker_image.present:dockerfile 	Allows for an alternative Dockerfile to be specified.  Path to alternativeDockefile is relative to the build path for the Docker container.
+states.esxi.ssh_configured:ssh_key_file 	File containing the public SSH key to be added to the authorized_keys file onthe ESXi host. You can use ``ssh_key_file`` or ``ssh_key``, but not both.
+# states.file.append:source 	A single source file to append. This source file can be hosted on eitherthe salt master server, or on an HTTP or FTP server. Both HTTPS andHTTP are supported as well as downloading directly from Amazon S3compatible URLs with both pre-configured and automatic IAM credentials(see s3.get state documentation). File retrieval from Openstack Swiftobject storage is supported via swift://container/object_path URLs(see swift.get documentation).
+states.file.decode:name 	Path of the file to be written.
+states.file.shortcut:icon_location 	Location of shortcut's icon
+states.git.config_set:repo 	Location of the git repository for which the config value should beset. Required unless ``global`` is set to ``True``.
+states.git.config_unset:repo 	Location of the git repository for which the config value should beset. Required unless ``global`` is set to ``True``.
+states.git.latest:identity 	Path to a private key to use for ssh URLs. This can be either a singlestring, or a list of strings. For example:
+states.git.present:name 	Path to the directory
+states.htpasswd.user_absent:htpasswd_file 	Path to the htpasswd file
+states.htpasswd.user_exists:htpasswd_file 	Path to the htpasswd file
+states.pip_state.installed:requirements 	Path to a pip requirements file. If the path begins with salt://the file will be transferred from the master file server.
+states.selinux.module_install:name 	Path to file with module to install
 modules.chef.client:logfile 	Set the log file location
 modules.chef.solo:logfile 	Set the log file location
 modules.composer.did_composer_install:dir 	Directory location of the composer.json file
@@ -695,3 +723,82 @@ modules.zabbix.mediatype_create:gsm_modem 	exec path
 modules.zypper.diff:path 	Full path to the installed file
 # modules.zypper.install:name 	The name of the package to be installed. Note that this parameter isignored if either ``pkgs`` or ``sources`` is passed. Additionally,please note that this option can only be used to install packages froma software repository. To install a package file manually, use the``sources`` option.
 # modules.zypper.install:sources 	A list of RPM packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.apache.config:name 	File for the virtual host
+modules.composer.did_composer_install:dir 	Directory location of the composer.json file
+modules.composer.install:directory 	Directory location of the composer.json file.
+modules.composer.install:composer 	Location of the composer.phar file. If not set composer willjust execute "composer" as if it is installed globally.(i.e. /path/to/composer.phar)
+modules.composer.install:php 	Location of the php executable to use with composer.(i.e. /usr/bin/php)
+modules.composer.selfupdate:composer 	Location of the composer.phar file. If not set composer willjust execute "composer" as if it is installed globally.(i.e. /path/to/composer.phar)
+modules.composer.selfupdate:php 	Location of the php executable to use with composer.(i.e. /usr/bin/php)
+modules.composer.update:directory 	Directory location of the composer.json file.
+modules.composer.update:composer 	Location of the composer.phar file. If not set composer willjust execute "composer" as if it is installed globally.(i.e. /path/to/composer.phar)
+modules.composer.update:php 	Location of the php executable to use with composer.(i.e. /usr/bin/php)
+modules.gentoolkitmod.eclean_dist:exclude_file 	Path to exclusion file. Default is /etc/eclean/distfiles.excludeThis is the same default eclean-dist uses. Use None if this fileexists and you want to ignore.
+modules.gentoolkitmod.eclean_pkg:exclude_file 	Path to exclusion file. Default is /etc/eclean/packages.excludeThis is the same default eclean-pkg uses. Use None if this fileexists and you want to ignore.
+modules.kapacitor.define_task:tick_script 	Path to the TICK script for the task. Can be a salt:// source.
+modules.htpasswd.useradd:pwfile 	Path to htpasswd file
+modules.htpasswd.userdel:pwfile 	Path to htpasswd file
+modules.dockercompose.build:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.create:path 	Path where the docker-compose file will be stored on the server
+modules.dockercompose.get:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.kill:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.pause:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.ps:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.pull:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.restart:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.rm:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.start:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.stop:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.unpause:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.up:path 	Path where the docker-compose file is stored on the server
+modules.dpkg.bin_pkg_info:path 	Path to the file. Can either be an absolute path to a file on theminion, or a salt fileserver URL (e.g. ``salt://path/to/file.rpm``).If a salt fileserver URL is passed, the file will be cached to theminion so that it can be examined.
+modules.heat.create_stack:template_file 	File of template
+modules.heat.create_stack:enviroment 	File of enviroment
+modules.heat.update_stack:template_file 	File of template
+modules.heat.update_stack:enviroment 	File of enviroment
+modules.namecheap_ssl.parse_csr:csr_file 	string  Certificate Signing Request File
+modules.napalm_snmp.remove_config:location 	Location
+modules.napalm_snmp.update_config:location 	Location
+modules.rpm.bin_pkg_info:path 	Path to the file. Can either be an absolute path to a file on theminion, or a salt fileserver URL (e.g. ``salt://path/to/file.rpm``).If a salt fileserver URL is passed, the file will be cached to theminion so that it can be examined.
+modules.archive.cmd_unzip:zip_file 	Path of zip file to be unpacked
+modules.archive.cmd_zip:zip_file 	Path of zip file to be created
+modules.archive.rar:rarfile 	Path of rar file to be created
+modules.archive.unzip:zip_file 	Path of zip file to be unpacked
+modules.archive.zip_:zip_file 	Path of zip file to be created
+modules.cmdmod.run_chroot:root 	Path to the root of the jail to use.
+modules.dockermod.build:path 	Path to directory on the Minion containing a Dockerfile
+modules.dockermod.build:dockerfile 	Allows for an alternative Dockerfile to be specified.  Path to alternativeDockefile is relative to the build path for the Docker container.
+modules.dockermod.load:path 	Path to docker tar archive. Path can be a file on the Minion, or theURL of a file on the Salt fileserver (i.e.``salt://path/to/docker/saved/image.tar``). To load a file from asaltenv other than ``base`` (e.g. ``dev``), pass it at the end of theURL (ex. ``salt://path/to/rootfs/tarball.tar.xz?saltenv=dev``).
+modules.dockermod.script:source 	Path to the script. Can be a local path on the Minion or a remote filefrom the Salt fileserver.
+modules.dockermod.script_retcode:source 	Path to the script. Can be a local path on the Minion or a remote filefrom the Salt fileserver.
+modules.file.check_file_meta:name 	Path to file destination
+# modules.file.check_file_meta:source_sum 	File checksum information as a dictionary
+# modules.file.check_file_meta:contents 	File contents
+modules.file.check_hash:path 	Path to a file local to the minion.
+modules.file.grep:path 	Path to the file to be searched
+modules.git.clone:cwd 	Location of git clone
+modules.git.clone:identity 	Path to a private key to use for ssh URLs
+modules.git.diff:paths 	File paths to pass to the ``git diff`` command. Can be passed as acomma-separated list or a Python list.
+modules.git.fetch:identity 	Path to a private key to use for ssh URLs
+modules.git.ls_remote:identity 	Path to a private key to use for ssh URLs
+modules.git.pull:identity 	Path to a private key to use for ssh URLs
+modules.git.push:identity 	Path to a private key to use for ssh URLs
+modules.git.remote_refs:identity 	Path to a private key to use for ssh URLs
+modules.git.submodule:identity 	Path to a private key to use for ssh URLs
+modules.git.worktree_add:worktree_path 	Path to the new worktree. Can be either absolute, or relative to``cwd``.
+modules.git.worktree_rm:cwd 	Path to the worktree to be removed
+modules.libcloud_storage.upload_object:file_path 	Path to the object on disk.
+modules.lxc.copy_to:source 	File to be copied to the container
+modules.lxc.cp:source 	File to be copied to the container
+modules.pip.install:requirements 	Path to requirements
+modules.pip.install:bin_env 	Path to pip bin or path to virtualenv. If doing a system install,and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) justspecify the pip bin you want.
+modules.snapper.create_config:subvolume 	Path to the related subvolume.
+modules.tls.revoke_cert:cert_path 	Path to the cert file.
+modules.virtualenv_mod.get_distribution_path:venv 	Path to the virtualenv.
+modules.virtualenv_mod.get_resource_content:venv 	Path to the virtualenv
+modules.virtualenv_mod.get_resource_path:venv 	Path to the virtualenv
+modules.virtualenv_mod.get_site_packages:venv 	Path to the virtualenv.
+modules.win_file.check_file_meta:name 	Path to file destination
+# modules.win_file.check_file_meta:source_sum 	File checksum information as a dictionary
+modules.win_file.check_file_meta:contents 	File contents
+modules.win_file.check_hash:path 	Path to a file local to the minion.
