@@ -188,7 +188,7 @@ def _extract_json(npm_output):
     # macOS with fsevents includes the following line in the return
     # when a new module is installed which is invalid JSON:
     #     [fsevents] Success: "..."
-    while lines and lines[0].startswith('[fsevents]'):
+    while lines and (lines[0].startswith('[fsevents]') or lines[0].startswith('Pass ')):
         lines = lines[1:]
     try:
         return json.loads(''.join(lines))
