@@ -47,6 +47,7 @@ if not CDOME:
 # Import salt libs
 import salt.defaults.exitcodes
 import salt.utils
+import salt.utils.decorators
 import salt.payload
 import salt.transport.client
 import salt.transport.frame
@@ -138,13 +139,41 @@ def gen_keys(keydir, keyname, keysize, user=None):
     return priv
 
 
+@salt.utils.decorators.memoize
+def _get_key_with_evict(path, timestamp):
+    '''
+    Load a key from disk.  `timestamp` above is intended to be the timestamp
+    of the file's last modification. This fn is memoized so if it is called with the
+    same path and timestamp (the file's last modified time) the second time
+    the result is returned from the memoiziation.  If the file gets modified
+    then the params are different and the key is loaded from disk.
+    '''
+    log.debug('salt.crypt._get_key_with_evict: Loading private key')
+    with salt.utils.fopen(path) as f:
+        key = RSA.importKey(f.read())
+    return key
+
+
+def _get_rsa_key(path):
+    '''
+    Read a key off the disk.  Poor man's simple cache in effect here,
+    we memoize the result of calling _get_rsa_with_evict.  This means
+    the first time _get_key_with_evict is called with a path and a timestamp
+    the result is cached.  If the file (the private key) does not change
+    then its timestamp will not change and the next time the result is returned
+    from the cache.  If the key DOES change the next time _get_rsa_with_evict
+    is called it is called with different parameters and the fn is run fully to
+    retrieve the key from disk.
+    '''
+    log.debug('salt.crypt._get_rsa_key: Loading private key')
+    return _get_key_with_evict(path, str(os.path.getmtime(path)))
+
+
 def sign_message(privkey_path, message):
     '''
     Use Crypto.Signature.PKCS1_v1_5 to sign a message. Returns the signature.
     '''
-    log.debug('salt.crypt.sign_message: Loading private key')
-    with salt.utils.fopen(privkey_path) as f:
-        key = RSA.importKey(f.read())
+    key = _get_rsa_key(privkey_path)
     log.debug('salt.crypt.sign_message: Signing message.')
     signer = PKCS1_v1_5.new(key)
     return signer.sign(SHA.new(message))
