@@ -1880,7 +1880,7 @@ def download(*packages, **kwargs):
 
 def list_downloaded():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: Nitrogen
 
     List prefetched packages downloaded by Zypper in the local disk.
 
