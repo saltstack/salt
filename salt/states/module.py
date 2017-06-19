@@ -163,10 +163,11 @@ functions at once the following way:
           - user: myuser
           - opts: '--all'
 
-By default this behaviour is not turned on. In ordder to do so, please add the following
+By default this behaviour is not turned on. In order to do so, please add the following
 configuration to the minion:
 
 .. code-block:: yaml
+
     use_superseded:
       - module.run
 
@@ -214,11 +215,12 @@ def wait(name, **kwargs):
 watch = salt.utils.alias_function(wait, 'watch')
 
 
-@with_deprecated(globals(), "Fluorine", policy=with_deprecated.OPT_IN)
+@with_deprecated(globals(), "Sodium", policy=with_deprecated.OPT_IN)
 def run(**kwargs):
     '''
     Run a single module function or a range of module functions in a batch.
-    Supersedes `module.run` function, which requires `m_` prefix to function-specific parameters.
+    Supersedes ``module.run`` function, which requires ``m_`` prefix to
+    function-specific parameters.
 
     :param returner:
         Specify a common returner for the whole batch to send the return data
@@ -227,8 +229,9 @@ def run(**kwargs):
         Pass any arguments needed to execute the function(s)
 
     .. code-block:: yaml
+
       some_id_of_state:
-        module.xrun:
+        module.run:
           - network.ip_addrs:
             - interface: eth0
           - cloud.create:
