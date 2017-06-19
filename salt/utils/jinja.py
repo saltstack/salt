@@ -185,11 +185,7 @@ class PrintableDict(OrderedDict):
 # Additional tests
 @jinja_test('match')
 def test_match(txt, rgx, ignorecase=False, multiline=False):
-    '''
-    Returns true if a sequence of chars matches a pattern.
-
-    Test name: 'match'
-    '''
+    '''Returns true if a sequence of chars matches a pattern.'''
     flag = 0
     if ignorecase:
         flag |= re.I
@@ -199,13 +195,9 @@ def test_match(txt, rgx, ignorecase=False, multiline=False):
     return True if compiled_rgx.match(txt) else False
 
 
-@jinja_test('equal')
-def test_equal(value, other):
-    '''
-    Returns true if two values are equal.
-
-    Test name: 'equal'
-    '''
+@jinja_test('equalto')
+def test_equalto(value, other):
+    '''Returns true if two values are equal.'''
     return value == other
 
 
