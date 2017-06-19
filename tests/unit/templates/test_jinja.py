@@ -509,7 +509,7 @@ class TestCustomExtensions(TestCase):
         if six.PY3:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'[]").split("', '")
             self.assertEqual(rendered, unique)
-        else
+        else:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
             self.assertEqual(rendered, u"{0}".format(unique))
 
