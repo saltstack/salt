@@ -895,7 +895,8 @@ class State(object):
                                 self.functions[f_key] = funcs[func]
         self.serializers = salt.loader.serializers(self.opts)
         self._load_states()
-        self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
+        self.rend = salt.loader.render(self.opts, self.functions,
+                                       states=self.states, proxy=self.proxy)
 
     def module_refresh(self):
         '''
