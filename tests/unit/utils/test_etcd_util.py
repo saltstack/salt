@@ -88,10 +88,10 @@ class EtcdUtilTestCase(TestCase):
                 self.assertEqual(client.get('salt', recurse=True), 'stack')
                 mock.assert_called_with('salt', recursive=True)
 
-                mock.side_effect = etcd.EtcdKeyNotFound()
+                mock.side_effect = [etcd.EtcdKeyNotFound()]
                 self.assertEqual(client.get('not-found'), None)
 
-                mock.side_effect = etcd.EtcdConnectionFailed()
+                mock.side_effect = [etcd.EtcdConnectionFailed()]
                 self.assertEqual(client.get('watching'), None)
 
                 # python 2.6 test
@@ -126,7 +126,7 @@ class EtcdUtilTestCase(TestCase):
                 mock.assert_any_call('/x')
                 mock.assert_any_call('/x/c')
 
-                mock.side_effect = etcd.EtcdKeyNotFound()
+                mock.side_effect = [etcd.EtcdKeyNotFound()]
                 self.assertEqual(client.tree('not-found'), None)
 
                 mock.side_effect = ValueError
@@ -149,7 +149,7 @@ class EtcdUtilTestCase(TestCase):
                 self.assertEqual(client.ls('/x'), {'/x': {'/x/a': '1', '/x/b': '2', '/x/c/': {}}})
                 mock.assert_called_with('/x')
 
-                mock.side_effect = etcd.EtcdKeyNotFound()
+                mock.side_effect = [etcd.EtcdKeyNotFound()]
                 self.assertEqual(client.ls('/not-found'), {})
 
                 mock.side_effect = Exception
@@ -327,11 +327,12 @@ class EtcdUtilTestCase(TestCase):
                                      {'value': 'stack', 'key': '/some-key', 'mIndex': 1, 'changed': True, 'dir': True})
                 mock.assert_called_with('/some-dir', wait=True, recursive=True, timeout=5, waitIndex=10)
 
-                mock.side_effect = MaxRetryError(None, None)
+                mock.side_effect = [MaxRetryError(None, None)]
                 self.assertEqual(client.watch('/some-key'), {})
 
-                mock.side_effect = etcd.EtcdConnectionFailed()
+                mock.side_effect = [etcd.EtcdConnectionFailed()]
                 self.assertEqual(client.watch('/some-key'), {})
 
+                mock.side_effect = None
                 mock.return_value = None
                 self.assertEqual(client.watch('/some-key'), {})
