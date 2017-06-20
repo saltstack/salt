@@ -1118,8 +1118,8 @@ _OS_NAME_MAP = {
     'manjaro': 'Manjaro',
     'antergos': 'Antergos',
     'sles': 'SUSE',
-    'slesexpand': 'RES',
     'void': 'Void',
+    'slesexpand': 'RES',
     'linuxmint': 'Mint',
 }
 
