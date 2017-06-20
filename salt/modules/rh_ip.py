@@ -301,7 +301,7 @@ def _parse_settings_bond_0(opts, iface, bond_def):
                 _raise_error_iface(iface, 'arp_ip_target', valid)
         else:
             _raise_error_iface(iface, 'arp_ip_target', valid)
-    elif not 'miimon' in opts:
+    elif 'miimon' not in opts:
         _raise_error_iface(iface, 'arp_ip_target', valid)
 
     if 'arp_interval' in opts:
