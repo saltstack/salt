@@ -179,8 +179,7 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
     '''
 
     module = module or service
-    module = 'boto.' + module
-    module, submodule = module.rsplit('.', 1)
+    module, submodule = ('boto.' + module).rsplit('.', 1)
 
     svc_mod = getattr(__import__(module, fromlist=[submodule]), submodule)
 
