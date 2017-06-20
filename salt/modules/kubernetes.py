@@ -75,9 +75,10 @@ def _setup_conn(**kwargs):
     if kwargs.get('api_password'):
         password = kwargs['api_password']
 
-    if (kubernetes.client.configuration.host != host or
-       kubernetes.client.configuration.user != username or
-       kubernetes.client.configuration.password != password):
+    if (
+            kubernetes.client.configuration.host != host or
+            kubernetes.client.configuration.user != username or
+            kubernetes.client.configuration.password != password):
         # Recreates API connection if settings are changed
         kubernetes.client.configuration.__init__()
 
@@ -127,8 +128,8 @@ def nodes(**kwargs):
 
     ret = []
 
-    for node in api_response.items:
-        ret.append(node.metadata.name)
+    for k8s_node in api_response.items:
+        ret.append(k8s_node.metadata.name)
 
     return ret
 
@@ -154,9 +155,9 @@ def node(name, **kwargs):
             )
             raise CommandExecutionError(exc)
 
-    for node in api_response.items:
-        if node.metadata.name == name:
-            return node
+    for k8s_node in api_response.items:
+        if k8s_node.metadata.name == name:
+            return k8s_node
 
     return None
 
@@ -429,7 +430,10 @@ def show_secret(name, namespace='default', decode=False, **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'ExtensionsV1beta1Api->read_namespaced_deployment: '
+                'ExtensionsV1beta1Api->read_namespaced_secret: '
+                '{0}'.format(exc)
+            )
+            raise CommandExecutionError(exc)
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
@@ -556,7 +560,7 @@ def delete_namespace(name, **kwargs):
 
 def delete_secret(name, namespace='default', **kwargs):
     '''
-    Deletes the kubernetes secret rvice defined by name and namespace
+    Deletes the kubernetes secret defined by name and namespace
 
     CLI Examples::
 
@@ -685,6 +689,8 @@ def create_secret(
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
+    elif data is None:
+        data = {}
 
     # encode the secrets using base64 as required by kubernetes
     for key in data:
@@ -853,6 +859,8 @@ def replace_secret(name,
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
+    elif data is None:
+        data = {}
 
     # encode the secrets using base64 as required by kubernetes
     for key in data:
@@ -899,8 +907,7 @@ def __create_object_body(kind,
         if (
                 not isinstance(src_obj, dict) or
                 'kind' not in src_obj or
-                src_obj['kind'] != kind
-           ):
+                src_obj['kind'] != kind):
             raise CommandExecutionError(
                 'The source file should define only '
                 'a {0} object'.format(kind))

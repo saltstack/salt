@@ -400,8 +400,7 @@ def namespace_absent(name, **kwargs):
             (
                 isinstance(res['status'], dict) and
                 res['status']['phase'] == 'Terminating'
-            )
-       ):
+            )):
         ret['result'] = True
         ret['changes'] = {
             'kubernetes.namespace': {
@@ -411,7 +410,7 @@ def namespace_absent(name, **kwargs):
         else:
             ret['comment'] = 'Terminating'
     else:
-        ret['comment'] = 'Unknown state: {}'.format(res)
+        ret['comment'] = 'Unknown state: {0}'.format(res)
 
     return ret
 
@@ -475,7 +474,7 @@ def secret_absent(name, namespace='default', **kwargs):
         ret['result'] = None
         return ret
 
-    res = __salt__['kubernetes.delete_secret'](name, namespace, **kwargs)
+    __salt__['kubernetes.delete_secret'](name, namespace, **kwargs)
 
     # As for kubernetes 1.6.4 doesn't set a code when deleting a secret
     # The kubernetes module will raise an exception if the kubernetes
@@ -491,7 +490,7 @@ def secret_absent(name, namespace='default', **kwargs):
 def secret_present(
         name,
         namespace='default',
-        data={},
+        data=None,
         source='',
         template='',
         **kwargs):
@@ -530,6 +529,9 @@ def secret_present(
     secret = __salt__['kubernetes.show_secret'](name, namespace, **kwargs)
 
     if secret is None:
+        if data is None:
+            data = {}
+
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'The secret is going to be created'
