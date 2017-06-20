@@ -770,12 +770,18 @@ def grains(opts, force_refresh=False, proxy=None):
                 try:
                     serial = salt.payload.Serial(opts)
                     serial.dump(grains_data, fp_)
-                except TypeError:
-                    # Can't serialize pydsl
-                    pass
-        except (IOError, OSError):
-            msg = 'Unable to write to grains cache file {0}'
-            log.error(msg.format(cfn))
+                except TypeError as e:
+                    log.error('Failed to serialize grains cache: {0}'.format(e))
+                    raise  # re-throw for cleanup
+        except Exception as e:
+            msg = 'Unable to write to grains cache file {0}: {1}'
+            log.error(msg.format(cfn, e))
+            # Based on the original exception, the file may or may not have been
+            # created. If it was, we will remove it now, as the exception means
+            # the serialized data is not to be trusted, no matter what the
+            # exception is.
+            if os.path.isfile(cfn):
+                os.unlink(cfn)
         os.umask(cumask)
 
     if grains_deep_merge:

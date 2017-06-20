@@ -25,7 +25,8 @@ __proxyenabled__ = ['*']
 # Don't shadow built-in's.
 __func_alias__ = {
     'true_': 'true',
-    'false_': 'false'
+    'false_': 'false',
+    'try_': 'try',
 }
 
 log = logging.getLogger(__name__)
