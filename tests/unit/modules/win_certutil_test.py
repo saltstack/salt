@@ -28,8 +28,8 @@ class CertUtilTestCase(TestCase):
         expected = '180720d39cd2db3244ba037417241e90'
         mock = MagicMock(return_value=(
             'CertInfo\r\n'
-            '================ Certificate 0 ================\r\n'
-            'Serial Number: 180720d39cd2db3244ba037417241e90\r\n'
+            'Cert Serial Number: 180720d39cd2db3244ba037417241e90\r\n'
+            '\r\n'
             'OtherStuff'))
         with patch.dict(certutil.__salt__, {'cmd.run': mock}):
             out = certutil.get_cert_serial('/path/to/cert.cer')
@@ -39,7 +39,7 @@ class CertUtilTestCase(TestCase):
 
     def test_get_serials(self):
         '''
-            Test getting the all the serial numbers from a store
+            Test getting all the serial numbers from a store
         '''
         expected = ['180720d39cd2db3244ba037417241e90',
                     '1768ac4e5b72bf1d0df0df118b34b959']
