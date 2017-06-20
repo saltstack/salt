@@ -164,7 +164,7 @@ class EtcdClient(object):
         except ValueError:
             return {}
 
-        if result == None:
+        if result is None:
             return {}
 
         if recurse:
