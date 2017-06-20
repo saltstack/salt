@@ -64,6 +64,15 @@ The kubernetes module is used to manage different kubernetes resources.
       require:
         - pip: kubernetes-python-module
 
+
+    # Kubernetes secret
+    k8s-secret:
+      kubernetes.secret_present:
+        - name: top-secret
+          data:
+            key1: value1
+            key2: value2
+            key3: value3
 '''
 from __future__ import absolute_import
 
@@ -436,3 +445,127 @@ def namespace_present(name, **kwargs):
         ret['comment'] = 'The namespace already exists'
 
     return ret
+
+
+def secret_absent(name, namespace='default', **kwargs):
+    '''
+    Ensures that the named secret is absent from the given namespace.
+
+    name
+        The name of the secret
+
+    namespace
+        The name of the namespace
+    '''
+
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    secret = __salt__['kubernetes.show_secret'](name, namespace, **kwargs)
+
+    if secret is None:
+        ret['result'] = True if not __opts__['test'] else None
+        ret['comment'] = 'The secret does not exist'
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'The secret is going to be deleted'
+        ret['result'] = None
+        return ret
+
+    res = __salt__['kubernetes.delete_secret'](name, namespace, **kwargs)
+
+    # As for kubernetes 1.6.4 doesn't set a code when deleting a secret
+    # The kubernetes module will raise an exception if the kubernetes
+    # server will return an error
+    ret['result'] = True
+    ret['changes'] = {
+        'kubernetes.secret': {
+            'new': 'absent', 'old': 'present'}}
+    ret['comment'] = 'Secret deleted'
+    return ret
+
+
+def secret_present(
+        name,
+        namespace='default',
+        data={},
+        source='',
+        template='',
+        **kwargs):
+    '''
+    Ensures that the named secret is present inside of the specified namespace
+    with the given data.
+    If the secret exists it will be replaced.
+
+    name
+        The name of the secret.
+
+    namespace
+        The namespace holding the secret. The 'default' one is going to be
+        used unless a different one is specified.
+
+    data
+        The dictionary holding the secrets.
+
+    source
+        A file containing the data of the secret in plain format.
+
+    template
+        Template engine to be used to render the source file.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    if data and source:
+        return _error(
+            ret,
+            '\'source\' cannot be used in combination with \'data\''
+        )
+
+    secret = __salt__['kubernetes.show_secret'](name, namespace, **kwargs)
+
+    if secret is None:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'The secret is going to be created'
+            return ret
+        res = __salt__['kubernetes.create_secret'](name=name,
+                                                   namespace=namespace,
+                                                   data=data,
+                                                   source=source,
+                                                   template=template,
+                                                   saltenv=__env__,
+                                                   **kwargs)
+        ret['changes']['{0}.{1}'.format(namespace, name)] = {
+            'old': {},
+            'new': res}
+    else:
+        if __opts__['test']:
+            ret['result'] = None
+            return ret
+
+        # TODO: improve checks  # pylint: disable=fixme
+        log.info('Forcing the recreation of the service')
+        res = __salt__['kubernetes.replace_secret'](
+            name=name,
+            namespace=namespace,
+            data=data,
+            source=source,
+            template=template,
+            saltenv=__env__,
+            **kwargs)
+
+    ret['changes'] = {
+        # Omit values from the return. They are unencrypted
+        # and can contain sensitive data.
+        'data': data.keys()
+    }
+    ret['comment'] = 'The secret is already present. Forcing recreation'
+    ret['result'] = True
+    return ret
+

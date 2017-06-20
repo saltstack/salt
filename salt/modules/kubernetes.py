@@ -840,6 +840,47 @@ def replace_service(name,
             raise CommandExecutionError(exc)
 
 
+def replace_secret(name,
+                   data,
+                   source,
+                   template,
+                   saltenv,
+                   namespace="default",
+                   **kwargs):
+    '''
+    Replaces an existing secret with a new one defined by name and namespace,
+    having the specificed data.
+    '''
+    if source:
+        data = __read_and_render_yaml_file(source, template, saltenv)
+
+    # encode the secrets using base64 as required by kubernetes
+    for key in data:
+        data[key] = base64.b64encode(data[key])
+
+    body = kubernetes.client.V1Secret(
+        metadata=__dict_to_object_meta(name, namespace, {}),
+        data=data)
+
+    _setup_conn(**kwargs)
+
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.replace_namespaced_secret(
+            name, namespace, body)
+
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                "Exception when calling "
+                "CoreV1Api->replace_namespaced_secret: {0}".format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
 def __create_object_body(kind,
                          obj_class,
                          spec_creator,
