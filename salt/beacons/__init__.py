@@ -69,6 +69,7 @@ class Beacon(object):
 
             log.trace('Beacon processing: {0}'.format(mod))
             fun_str = '{0}.beacon'.format(mod)
+            validate_str = '{0}.validate'.format(mod)
             if fun_str in self.beacons:
                 runonce = self._determine_beacon_config(current_beacon_config, 'run_once')
                 interval = self._determine_beacon_config(current_beacon_config, 'interval')
@@ -95,6 +96,16 @@ class Beacon(object):
                         continue
                 # Update __grains__ on the beacon
                 self.beacons[fun_str].__globals__['__grains__'] = grains
+
+                # Run the validate function
+                if validate_str in self.beacons:
+                    valid, vcomment = self.beacons[validate_str](b_config[mod])
+
+                    if not valid:
+                        log.info('Beacon {0} configuration invalid, '
+                                 'not running.\n{1}'.format(mod, vcomment))
+                        continue
+
                 # Fire the beacon!
                 raw = self.beacons[fun_str](b_config[mod])
                 for data in raw:

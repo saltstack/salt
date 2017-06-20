@@ -54,7 +54,7 @@ def __virtual__():
                   '\'python-avahi\' dependency is missing.'.format(__virtualname__)
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
@@ -151,12 +151,6 @@ def beacon(config):
     txt = {}
 
     global LAST_GRAINS
-
-    _validate = __validate__(config)
-    if not _validate[0]:
-        log.warning('Beacon {0} configuration invalid, '
-                    'not adding. {1}'.format(__virtualname__, _validate[1]))
-        return ret
 
     if 'servicename' in config:
         servicename = config['servicename']

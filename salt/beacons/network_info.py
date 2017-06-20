@@ -57,7 +57,7 @@ def __validate__(config):
     ]
 
     # Configuration for load beacon should be a list of dicts
-    if not isinstance(config, dict):
+    if not isinstance(config, list):
         return False, ('Configuration for load beacon must be a dictionary.')
     else:
         for item in config:

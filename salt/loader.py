@@ -513,7 +513,7 @@ def beacons(opts, functions, context=None, proxy=None):
         opts,
         tag=u'beacons',
         pack={u'__context__': context, u'__salt__': functions, u'__proxy__': proxy or {}},
-        virtual_funcs=[u'__validate__'],
+        virtual_funcs=[],
     )
 
 
@@ -1484,7 +1484,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             virtual_funcs_to_process = [u'__virtual__'] + self.virtual_funcs
             for virtual_func in virtual_funcs_to_process:
                 virtual_ret, module_name, virtual_err, virtual_aliases = \
-                    self.process_virtual(mod, module_name)
+                    self.process_virtual(mod, module_name, virtual_func)
                 if virtual_err is not None:
                     log.trace(
                         u'Error loading %s.%s: %s',

@@ -31,14 +31,14 @@ def __virtual__():
         return __virtualname__
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
     # Configuration for diskusage beacon should be a list of dicts
-    if not isinstance(config, dict):
+    if not isinstance(config, list):
         return False, ('Configuration for diskusage beacon '
-                       'must be a dictionary.')
+                       'must be a list.')
     return True, 'Valid beacon configuration'
 
 
