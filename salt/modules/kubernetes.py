@@ -121,7 +121,7 @@ def nodes(**kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling CoreV1Api->list_node: {0}".format(exc)
+                'Exception when calling CoreV1Api->list_node: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -139,7 +139,7 @@ def node(name, **kwargs):
 
     CLI Examples::
 
-        salt '*' kubernetes.node name="minikube"
+        salt '*' kubernetes.node name='minikube'
     '''
     _setup_conn(**kwargs)
     try:
@@ -150,7 +150,7 @@ def node(name, **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling CoreV1Api->list_node: {0}".format(exc)
+                'Exception when calling CoreV1Api->list_node: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -179,7 +179,7 @@ def namespaces(**kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling CoreV1Api->list_node: {0}".format(exc)
+                'Exception when calling CoreV1Api->list_node: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -191,7 +191,7 @@ def namespaces(**kwargs):
     return ret
 
 
-def deployments(namespace="default", **kwargs):
+def deployments(namespace='default', **kwargs):
     '''
     Return a list of kubernetes deployments defined in the namespace
 
@@ -211,14 +211,14 @@ def deployments(namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "ExtensionsV1beta1Api->list_namespaced_deployment: "
-                "{0}".format(exc)
+                'Exception when calling '
+                'ExtensionsV1beta1Api->list_namespaced_deployment: '
+                '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
 
-def services(namespace="default", **kwargs):
+def services(namespace='default', **kwargs):
     '''
     Return a list of kubernetes services defined in the namespace
 
@@ -238,13 +238,13 @@ def services(namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "CoreV1Api->list_namespaced_service: {0}".format(exc)
+                'Exception when calling '
+                'CoreV1Api->list_namespaced_service: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
 
-def pods(namespace="default", **kwargs):
+def pods(namespace='default', **kwargs):
     '''
     Return a list of kubernetes pods defined in the namespace
 
@@ -264,13 +264,13 @@ def pods(namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "CoreV1Api->list_namespaced_pod: {0}".format(exc)
+                'Exception when calling '
+                'CoreV1Api->list_namespaced_pod: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
 
-def secrets(namespace="default", **kwargs):
+def secrets(namespace='default', **kwargs):
     '''
     Return a list of kubernetes secrets defined in the namespace
 
@@ -284,19 +284,19 @@ def secrets(namespace="default", **kwargs):
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.list_namespaced_secret(namespace)
 
-        return [secret["metadata"]["name"] for secret in api_response.to_dict().get('items')]
+        return [secret['metadata']['name'] for secret in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "CoreV1Api->list_namespaced_secret: {0}".format(exc)
+                'Exception when calling '
+                'CoreV1Api->list_namespaced_secret: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
 
-def show_deployment(name, namespace="default", **kwargs):
+def show_deployment(name, namespace='default', **kwargs):
     '''
     Return the kubernetes deployment defined by name and namespace
 
@@ -316,14 +316,14 @@ def show_deployment(name, namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "ExtensionsV1beta1Api->read_namespaced_deployment: "
-                "{0}".format(exc)
+                'Exception when calling '
+                'ExtensionsV1beta1Api->read_namespaced_deployment: '
+                '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
 
-def show_service(name, namespace="default", **kwargs):
+def show_service(name, namespace='default', **kwargs):
     '''
     Return the kubernetes service defined by name and namespace
 
@@ -343,13 +343,13 @@ def show_service(name, namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "CoreV1Api->read_namespaced_service: {0}".format(exc)
+                'Exception when calling '
+                'CoreV1Api->read_namespaced_service: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
 
-def show_pod(name, namespace="default", **kwargs):
+def show_pod(name, namespace='default', **kwargs):
     '''
     Return POD information for a given pod name defined in the namespace
 
@@ -369,8 +369,8 @@ def show_pod(name, namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "CoreV1Api->read_namespaced_pod: {0}".format(exc)
+                'Exception when calling '
+                'CoreV1Api->read_namespaced_pod: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -394,13 +394,13 @@ def show_namespace(name, **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "CoreV1Api->read_namespaced_pod: {0}".format(exc)
+                'Exception when calling '
+                'CoreV1Api->read_namespaced_pod: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
 
-def show_secret(name, namespace="default", decode=False, **kwargs):
+def show_secret(name, namespace='default', decode=False, **kwargs):
     '''
     Return the kubernetes secret defined by name and namespace.
     The secrets can be decoded if specified by the user. Warning: this has
@@ -417,7 +417,7 @@ def show_secret(name, namespace="default", decode=False, **kwargs):
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.read_namespaced_secret(name, namespace)
 
-        if api_response.data and (decode or decode == "True"):
+        if api_response.data and (decode or decode == 'True'):
             for key in api_response.data:
                 value = api_response.data[key]
                 api_response.data[key] = base64.b64decode(value)
@@ -428,14 +428,14 @@ def show_secret(name, namespace="default", decode=False, **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "ExtensionsV1beta1Api->read_namespaced_deployment: "
-                "{0}".format(exc)
+                'Exception when calling '
+                'ExtensionsV1beta1Api->read_namespaced_deployment: '
+                '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
 
-def delete_deployment(name, namespace="default", **kwargs):
+def delete_deployment(name, namespace='default', **kwargs):
     '''
     Deletes the kubernetes deployment defined by name and namespace
 
@@ -459,14 +459,14 @@ def delete_deployment(name, namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "ExtensionsV1beta1Api->delete_namespaced_deployment: "
-                "{0}".format(exc)
+                'Exception when calling '
+                'ExtensionsV1beta1Api->delete_namespaced_deployment: '
+                '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
 
-def delete_service(name, namespace="default", **kwargs):
+def delete_service(name, namespace='default', **kwargs):
     '''
     Deletes the kubernetes service defined by name and namespace
 
@@ -489,13 +489,13 @@ def delete_service(name, namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling CoreV1Api->delete_namespaced_service: "
-                "{0}".format(exc)
+                'Exception when calling CoreV1Api->delete_namespaced_service: '
+                '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
 
-def delete_pod(name, namespace="default", **kwargs):
+def delete_pod(name, namespace='default', **kwargs):
     '''
     Deletes the kubernetes pod defined by name and namespace
 
@@ -520,8 +520,8 @@ def delete_pod(name, namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "CoreV1Api->delete_namespaced_pod: {0}".format(exc)
+                'Exception when calling '
+                'CoreV1Api->delete_namespaced_pod: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -547,14 +547,14 @@ def delete_namespace(name, **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "CoreV1Api->delete_namespace: "
-                "{0}".format(exc)
+                'Exception when calling '
+                'CoreV1Api->delete_namespace: '
+                '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
 
-def delete_secret(name, namespace="default", **kwargs):
+def delete_secret(name, namespace='default', **kwargs):
     '''
     Deletes the kubernetes secret rvice defined by name and namespace
 
@@ -579,8 +579,8 @@ def delete_secret(name, namespace="default", **kwargs):
             return None
         else:
             log.exception(
-                "Exception when calling CoreV1Api->delete_namespaced_secret: "
-                "{0}".format(exc)
+                'Exception when calling CoreV1Api->delete_namespaced_secret: '
+                '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -622,9 +622,9 @@ def create_deployment(
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "ExtensionsV1beta1Api->create_namespaced_deployment: "
-                "{0}".format(exc)
+                'Exception when calling '
+                'ExtensionsV1beta1Api->create_namespaced_deployment: '
+                '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -666,8 +666,8 @@ def create_service(
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "CoreV1Api->create_namespaced_service: {0}".format(exc)
+                'Exception when calling '
+                'CoreV1Api->create_namespaced_service: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -707,8 +707,8 @@ def create_secret(
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "CoreV1Api->create_namespaced_secret: {0}".format(exc)
+                'Exception when calling '
+                'CoreV1Api->create_namespaced_secret: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -740,9 +740,9 @@ def create_namespace(
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "CoreV1Api->create_namespace: "
-                "{0}".format(exc)
+                'Exception when calling '
+                'CoreV1Api->create_namespace: '
+                '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -753,7 +753,7 @@ def replace_deployment(name,
                        source,
                        template,
                        saltenv,
-                       namespace="default",
+                       namespace='default',
                        **kwargs):
     '''
     Replaces an existing deployment with a new one defined by name and
@@ -784,9 +784,9 @@ def replace_deployment(name,
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "ExtensionsV1beta1Api->replace_namespaced_deployment: "
-                "{0}".format(exc)
+                'Exception when calling '
+                'ExtensionsV1beta1Api->replace_namespaced_deployment: '
+                '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -798,7 +798,7 @@ def replace_service(name,
                     template,
                     old_service,
                     saltenv,
-                    namespace="default",
+                    namespace='default',
                     **kwargs):
     '''
     Replaces an existing service with a new one defined by name and namespace,
@@ -834,8 +834,8 @@ def replace_service(name,
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "CoreV1Api->replace_namespaced_service: {0}".format(exc)
+                'Exception when calling '
+                'CoreV1Api->replace_namespaced_service: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -845,7 +845,7 @@ def replace_secret(name,
                    source,
                    template,
                    saltenv,
-                   namespace="default",
+                   namespace='default',
                    **kwargs):
     '''
     Replaces an existing secret with a new one defined by name and namespace,
@@ -875,8 +875,8 @@ def replace_secret(name,
             return None
         else:
             log.exception(
-                "Exception when calling "
-                "CoreV1Api->replace_namespaced_secret: {0}".format(exc)
+                'Exception when calling '
+                'CoreV1Api->replace_namespaced_secret: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
