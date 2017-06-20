@@ -128,12 +128,7 @@ def list_nodes():
                 'salt-cloud': grains['salt-cloud'],
                 'state': 'running'
             }
-        else:
-            ret[name] = {  # according to the grain target selection, this node must have once been saltify-ed
-                'id': name,
-                'salt-cloud': {'profile': '', 'driver': 'saltify', 'provider': ''},
-                'state': 'unknown'
-            }
+
     return ret
 
 
@@ -150,11 +145,13 @@ def list_nodes_full():
            }
     cmd.update(_get_connection_info())
     ret = local.run(cmd)
-    for grains in ret.values(): # clean up some hyperverbose grains -- everything is too much
+    for key, grains in ret.items(): # clean up some hyperverbose grains -- everything is too much
         try:
             del grains['cpu_flags'], grains['disks'], grains['pythonpath'], grains['dns'], grains['gpus']
-        except (KeyError, TypeError):
-            pass
+        except KeyError:
+            pass  # ignore absence of things we are eliminating
+        except TypeError:
+            del ret[key]  # eliminate all reference to unexpected (None) values.
     return ret
 
 
