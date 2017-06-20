@@ -501,7 +501,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
 
     rule += after_jump
 
-    if full in ['True', 'true']:
+    if full:
         if not table:
             return 'Error: Table needs to be specified'
         if not chain:

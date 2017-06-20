@@ -2481,9 +2481,6 @@ def create(image,
     except Exception:
         pull(image, client_timeout=client_timeout)
 
-    if name is not None and kwargs.get('hostname') is None:
-        kwargs['hostname'] = name
-
     kwargs, unused_kwargs = _get_create_kwargs(
         image=image,
         skip_translate=skip_translate,

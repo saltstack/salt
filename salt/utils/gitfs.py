@@ -2213,8 +2213,7 @@ class GitBase(object):
         if refresh_env_cache:
             new_envs = self.envs(ignore_cache=True)
             serial = salt.payload.Serial(self.opts)
-            mode = 'wb+' if six.PY3 else 'w+'
-            with salt.utils.fopen(self.env_cache, mode) as fp_:
+            with salt.utils.fopen(self.env_cache, 'wb+') as fp_:
                 fp_.write(serial.dumps(new_envs))
                 log.trace('Wrote env cache data to {0}'.format(self.env_cache))
 
