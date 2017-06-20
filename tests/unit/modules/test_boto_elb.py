@@ -45,7 +45,6 @@ except ImportError:
 
 # Import Salt Libs
 import salt.config
-import salt.ext.six as six
 import salt.loader
 import salt.modules.boto_elb as boto_elb
 
