@@ -52,7 +52,7 @@ def _get_loc():
         return __context__[LOC_KEY]
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''

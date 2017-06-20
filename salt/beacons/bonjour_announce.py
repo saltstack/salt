@@ -47,13 +47,13 @@ def _register_callback(sdRef, flags, errorCode, name, regtype, domain):  # pylin
         log.error('Bonjour registration failed with error code {0}'.format(errorCode))
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
-    if not isinstance(config, dict):
+    if not isinstance(config, list):
         return False, ('Configuration for bonjour_announcement '
-                       'beacon must be a dictionary')
+                       'beacon must be a list of dictionaries')
     elif not all(x in list(config.keys()) for x in ('servicetype', 'port', 'txt')):
         return False, ('Configuration for bonjour_announce beacon '
                        'must contain servicetype, port and txt items')
@@ -145,12 +145,6 @@ def beacon(config):
 
     global LAST_GRAINS
     global SD_REF
-
-    _validate = __validate__(config)
-    if not _validate[0]:
-        log.warning('Beacon {0} configuration invalid, '
-                    'not adding. {1}'.format(__virtualname__, _validate[1]))
-        return ret
 
     if 'servicename' in config:
         servicename = config['servicename']

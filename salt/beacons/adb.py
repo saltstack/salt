@@ -29,7 +29,7 @@ def __virtual__():
         return __virtualname__
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
