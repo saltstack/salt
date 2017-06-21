@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 
 
 def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
-               pillar=None, pillarenv=None):
+               pillar_override=None, pillarenv=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
@@ -53,14 +53,14 @@ def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
         log.info('Compiling pillar from cache')
         log.debug('get_pillar using pillar cache with ext: {0}'.format(ext))
         return PillarCache(opts, grains, minion_id, saltenv, ext=ext, functions=funcs,
-                pillar=pillar, pillarenv=pillarenv)
+                pillar_override=pillar_override, pillarenv=pillarenv)
     return ptype(opts, grains, minion_id, saltenv, ext, functions=funcs,
-                 pillar=pillar, pillarenv=pillarenv)
+                 pillar_override=pillar_override, pillarenv=pillarenv)
 
 
 # TODO: migrate everyone to this one!
 def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
-               pillar=None, pillarenv=None):
+               pillar_override=None, pillarenv=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
@@ -72,7 +72,7 @@ def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None
         'local': AsyncPillar,
     }.get(file_client, AsyncPillar)
     return ptype(opts, grains, minion_id, saltenv, ext, functions=funcs,
-                 pillar=pillar, pillarenv=pillarenv)
+                 pillar_override=pillar_override, pillarenv=pillarenv)
 
 
 class AsyncRemotePillar(object):
@@ -80,7 +80,7 @@ class AsyncRemotePillar(object):
     Get the pillar from the master
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-                 pillar=None, pillarenv=None):
+                 pillar_override=None, pillarenv=None):
         self.opts = opts
         self.opts['environment'] = saltenv
         self.ext = ext
@@ -89,6 +89,7 @@ class AsyncRemotePillar(object):
         self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
         if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
+<<<<<<< HEAD
         elif self.opts.get('pillarenv_from_saltenv', False):
             self.opts['pillarenv'] = saltenv
         elif 'pillarenv' not in self.opts:
@@ -99,6 +100,12 @@ class AsyncRemotePillar(object):
                 self.pillar_override = pillar
             else:
                 log.error('Pillar data must be a dictionary')
+=======
+        self.pillar_override = pillar_override or {}
+        if not isinstance(self.pillar_override, dict):
+            self.pillar_override = {}
+            log.error('Pillar data must be a dictionary')
+>>>>>>> 2016.11
 
     @tornado.gen.coroutine
     def compile_pillar(self):
@@ -137,7 +144,7 @@ class RemotePillar(object):
     Get the pillar from the master
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-                 pillar=None, pillarenv=None):
+                 pillar_override=None, pillarenv=None):
         self.opts = opts
         self.opts['environment'] = saltenv
         self.ext = ext
@@ -146,6 +153,7 @@ class RemotePillar(object):
         self.channel = salt.transport.Channel.factory(opts)
         if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
+<<<<<<< HEAD
         elif self.opts.get('pillarenv_from_saltenv', False):
             self.opts['pillarenv'] = saltenv
         elif 'pillarenv' not in self.opts:
@@ -156,6 +164,12 @@ class RemotePillar(object):
                 self.pillar_override = pillar
             else:
                 log.error('Pillar data must be a dictionary')
+=======
+        self.pillar_override = pillar_override or {}
+        if not isinstance(self.pillar_override, dict):
+            self.pillar_override = {}
+            log.error('Pillar data must be a dictionary')
+>>>>>>> 2016.11
 
     def compile_pillar(self):
         '''
@@ -187,8 +201,8 @@ class PillarCache(object):
     '''
     Return a cached pillar if it exists, otherwise cache it.
 
-    Pillar caches are structed in two diminensions: minion_id with a dict of saltenvs.
-    Each saltenv contains a pillar dict
+    Pillar caches are structed in two diminensions: minion_id with a dict of
+    saltenvs. Each saltenv contains a pillar dict
 
     Example data structure:
 
@@ -199,7 +213,7 @@ class PillarCache(object):
     '''
     # TODO ABC?
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-            pillar=None, pillarenv=None):
+            pillar_override=None, pillarenv=None):
         # Yes, we need all of these because we need to route to the Pillar object
         # if we have no cache. This is another refactor target.
 
@@ -209,7 +223,7 @@ class PillarCache(object):
         self.minion_id = minion_id
         self.ext = ext
         self.functions = functions
-        self.pillar = pillar
+        self.pillar_override = pillar_override
         self.pillarenv = pillarenv
 
         if saltenv is None:
@@ -238,13 +252,13 @@ class PillarCache(object):
         '''
         log.debug('Pillar cache getting external pillar with ext: {0}'.format(self.ext))
         fresh_pillar = Pillar(self.opts,
-                                 self.grains,
-                                 self.minion_id,
-                                 self.saltenv,
-                                 ext=self.ext,
-                                 functions=self.functions,
-                                 pillar=self.pillar,
-                                 pillarenv=self.pillarenv)
+                              self.grains,
+                              self.minion_id,
+                              self.saltenv,
+                              ext=self.ext,
+                              functions=self.functions,
+                              pillar_override=self.pillar_override,
+                              pillarenv=self.pillarenv)
         return fresh_pillar.compile_pillar()  # FIXME We are not yet passing pillar_dirs in here
 
     def compile_pillar(self, *args, **kwargs):  # Will likely just be pillar_dirs
@@ -277,7 +291,7 @@ class Pillar(object):
     Read over the pillar top files and render the pillar data
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-                 pillar=None, pillarenv=None):
+                 pillar_override=None, pillarenv=None):
         self.minion_id = minion_id
         self.ext = ext
         if pillarenv is None:
@@ -318,12 +332,10 @@ class Pillar(object):
 
         self.ext_pillars = salt.loader.pillars(ext_pillar_opts, self.functions)
         self.ignored_pillars = {}
-        self.pillar_override = {}
-        if pillar is not None:
-            if isinstance(pillar, dict):
-                self.pillar_override = pillar
-            else:
-                log.error('Pillar data must be a dictionary')
+        self.pillar_override = pillar_override or {}
+        if not isinstance(self.pillar_override, dict):
+            self.pillar_override = {}
+            log.error('Pillar data must be a dictionary')
 
     def __valid_on_demand_ext_pillar(self, opts):
         '''
@@ -809,7 +821,7 @@ class Pillar(object):
             return pillar, errors
         ext = None
         # Bring in CLI pillar data
-        if self.pillar_override and isinstance(self.pillar_override, dict):
+        if self.pillar_override:
             pillar = merge(pillar,
                            self.pillar_override,
                            self.merge_strategy,
@@ -896,7 +908,7 @@ class Pillar(object):
                 log.critical('Pillar render error: {0}'.format(error))
             pillar['_errors'] = errors
 
-        if self.pillar_override and isinstance(self.pillar_override, dict):
+        if self.pillar_override:
             pillar = merge(pillar,
                            self.pillar_override,
                            self.merge_strategy,

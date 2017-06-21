@@ -133,3 +133,22 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
                 'quuz': 'on',
             },
         })
+<<<<<<< HEAD:tests/integration/client/test_runner.py
+=======
+
+    def test_invalid_kwargs_are_ignored(self):
+        low = {
+            'client': 'runner',
+            'fun': 'test.metasyntactic',
+            'thiskwargisbad': 'justpretendimnothere',
+        }
+        low.update(self.eauth_creds)
+
+        ret = self.runner.cmd_sync(low)
+        self.assertEqual(ret[0], 'foo')
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(RunnerModuleTest, needs_daemon=True)
+>>>>>>> 2016.11:tests/integration/client/runner.py

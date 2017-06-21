@@ -72,11 +72,11 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         fun = low.pop('fun')
         verify_fun(self.functions, fun)
 
-        reserved_kwargs = dict([(i, low.pop(i)) for i in [
+        eauth_creds = dict([(i, low.pop(i)) for i in [
             'username', 'password', 'eauth', 'token', 'client', 'user', 'key',
-            '__current_eauth_groups', '__current_eauth_user',
         ] if i in low])
 
+<<<<<<< HEAD
         # Run name=value args through parse_input. We don't need to run kwargs
         # through because there is no way to send name=value strings in the low
         # dict other than by including an `arg` array.
@@ -89,9 +89,29 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         # If anything hasn't been pop()'ed out of low by this point it must be
         # an old-style kwarg.
         kwarg.update(low)
+=======
+        # Separate the new-style args/kwargs.
+        pre_arg = low.pop('arg', [])
+        pre_kwarg = low.pop('kwarg', {})
+        # Anything not pop'ed from low should hopefully be an old-style kwarg.
+        low['__kwarg__'] = True
+        pre_kwarg.update(low)
+
+        # Normalize old- & new-style args in a format suitable for
+        # load_args_and_kwargs
+        old_new_normalized_input = []
+        old_new_normalized_input.extend(pre_arg)
+        old_new_normalized_input.append(pre_kwarg)
+
+        arg, kwarg = salt.minion.load_args_and_kwargs(
+            self.functions[fun],
+            old_new_normalized_input,
+            self.opts,
+            ignore_invalid=True)
+>>>>>>> 2016.11
 
         return dict(fun=fun, kwarg={'kwarg': kwarg, 'arg': arg},
-                **reserved_kwargs)
+                **eauth_creds)
 
     def cmd_async(self, low):
         '''

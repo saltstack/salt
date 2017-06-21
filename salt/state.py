@@ -657,26 +657,28 @@ class State(object):
     def __init__(
             self,
             opts,
-            pillar=None,
+            pillar_override=None,
             jid=None,
             pillar_enc=None,
             proxy=None,
             context=None,
             mocked=False,
-            loader='states'):
+            loader='states',
+            initial_pillar=None):
         self.states_loader = loader
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.proxy = proxy
-        self._pillar_override = pillar
+        self._pillar_override = pillar_override
         if pillar_enc is not None:
             try:
                 pillar_enc = pillar_enc.lower()
             except AttributeError:
                 pillar_enc = str(pillar_enc).lower()
         self._pillar_enc = pillar_enc
-        self.opts['pillar'] = self._gather_pillar()
+        self.opts['pillar'] = initial_pillar if initial_pillar is not None \
+            else self._gather_pillar()
         self.state_con = context or {}
         self.load_modules()
         self.active = set()
@@ -727,9 +729,49 @@ class State(object):
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['environment'],
+<<<<<<< HEAD
                 pillar=self._pillar_override,
                 pillarenv=self.opts.get('pillarenv'))
         return pillar.compile_pillar()
+=======
+                pillar_override=self._pillar_override,
+                pillarenv=self.opts.get('pillarenv')
+                )
+        ret = pillar.compile_pillar()
+        if self._pillar_override:
+            merge_strategy = self.opts.get(
+                'pillar_source_merging_strategy',
+                'smart'
+            )
+            merge_lists = self.opts.get(
+                'pillar_merge_lists',
+                False
+            )
+            if isinstance(self._pillar_override, dict):
+                ret = salt.utils.dictupdate.merge(
+                    ret,
+                    self._decrypt_pillar_override(),
+                    strategy=merge_strategy,
+                    merge_lists=merge_lists
+                )
+            else:
+                decrypted = yamlloader.load(
+                    self._decrypt_pillar_override(),
+                    Loader=yamlloader.SaltYamlSafeLoader
+                )
+                if not isinstance(decrypted, dict):
+                    log.error(
+                        'Decrypted pillar data did not render to a dictionary'
+                    )
+                else:
+                    ret = salt.utils.dictupdate.merge(
+                        ret,
+                        decrypted,
+                        strategy=merge_strategy,
+                        merge_lists=merge_lists
+                    )
+        return ret
+>>>>>>> 2016.11
 
     def _mod_init(self, low):
         '''
@@ -890,7 +932,8 @@ class State(object):
                                 self.functions[f_key] = funcs[func]
         self.serializers = salt.loader.serializers(self.opts)
         self._load_states()
-        self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
+        self.rend = salt.loader.render(self.opts, self.functions,
+                                       states=self.states, proxy=self.proxy)
 
     def module_refresh(self):
         '''
@@ -3760,24 +3803,30 @@ class HighState(BaseHighState):
     def __init__(
             self,
             opts,
-            pillar=None,
+            pillar_override=None,
             jid=None,
             pillar_enc=None,
             proxy=None,
             context=None,
             mocked=False,
-            loader='states'):
+            loader='states',
+            initial_pillar=None):
         self.opts = opts
         self.client = salt.fileclient.get_file_client(self.opts)
         BaseHighState.__init__(self, opts)
         self.state = State(self.opts,
+<<<<<<< HEAD
                            pillar,
+=======
+                           pillar_override,
+>>>>>>> 2016.11
                            jid,
                            pillar_enc,
                            proxy=proxy,
                            context=context,
                            mocked=mocked,
-                           loader=loader)
+                           loader=loader,
+                           initial_pillar=initial_pillar)
         self.matcher = salt.minion.Matcher(self.opts)
         self.proxy = proxy
 
