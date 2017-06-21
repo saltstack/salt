@@ -34,16 +34,27 @@ def validate(config):
     Validate the beacon configuration
     '''
     # Configuration for adb beacon should be a dictionary with states array
-    if not isinstance(config, dict):
-        log.info('Configuration for adb beacon must be a dict.')
-        return False, ('Configuration for adb beacon must be a dict.')
-    elif 'states' not in config.keys():
+    if not isinstance(config, list):
+        log.info('Configuration for adb beacon must be a list.')
+        return False, ('Configuration for adb beacon must be a list.')
+
+    # Configuration for adb beacon should contain states array
+    states_found = False
+    _states = []
+    for config_item in config:
+        if 'states' in config_item:
+            states_found = True
+            if isinstance(config_item['states'], list):
+                _states = config_item['states']
+
+    if not states_found:
         log.info('Configuration for adb beacon must include a states array.')
         return False, ('Configuration for adb beacon must include a states array.')
     else:
-        states = ['offline', 'bootloader', 'device', 'host', 'recovery', 'no permissions',
+        states = ['offline', 'bootloader', 'device', 'host',
+                  'recovery', 'no permissions',
                   'sideload', 'unauthorized', 'unknown', 'missing']
-        if any(s not in states for s in config['states']):
+        if any(s not in states for s in _states):
             log.info('Need a one of the following adb '
                      'states: {0}'.format(', '.join(states)))
             return False, ('Need a one of the following adb '
@@ -75,11 +86,18 @@ def beacon(config):
     log.trace('adb beacon starting')
     ret = []
 
-    _validate = __validate__(config)
-    if not _validate[0]:
-        return ret
+    _config = {}
+    for config_item in config:
+        if 'user' in config_item:
+            _config['user'] = config_item['user']
+        if 'battery_low' in config:
+            __config['battery_low'] = config_item['battery_low']
+        if 'states' in config:
+            __config['states'] = config_item['states']
+        if 'no_device_event' in config:
+            __config['no_device_event'] = config_item['no_device_event']
 
-    out = __salt__['cmd.run']('adb devices', runas=config.get('user', None))
+    out = __salt__['cmd.run']('adb devices', runas=_config.get('user', None))
 
     lines = out.split('\n')[1:]
     last_state_devices = list(last_state.keys())
@@ -91,21 +109,21 @@ def beacon(config):
             found_devices.append(device)
             if device not in last_state_devices or \
                     ('state' in last_state[device] and last_state[device]['state'] != state):
-                if state in config['states']:
+                if state in _config['states']:
                     ret.append({'device': device, 'state': state, 'tag': state})
                     last_state[device] = {'state': state}
 
-            if 'battery_low' in config:
+            if 'battery_low' in _config:
                 val = last_state.get(device, {})
                 cmd = 'adb -s {0} shell cat /sys/class/power_supply/*/capacity'.format(device)
-                battery_levels = __salt__['cmd.run'](cmd, runas=config.get('user', None)).split('\n')
+                battery_levels = __salt__['cmd.run'](cmd, runas=_config.get('user', None)).split('\n')
 
                 for l in battery_levels:
                     battery_level = int(l)
                     if 0 < battery_level < 100:
                         if 'battery' not in val or battery_level != val['battery']:
-                            if ('battery' not in val or val['battery'] > config['battery_low']) and \
-                                            battery_level <= config['battery_low']:
+                            if ('battery' not in val or val['battery'] > _config['battery_low']) and \
+                                            battery_level <= _config['battery_low']:
                                 ret.append({'device': device, 'battery_level': battery_level, 'tag': 'battery_low'})
 
                         if device not in last_state:
@@ -119,7 +137,7 @@ def beacon(config):
     # Find missing devices and remove them / send an event
     for device in last_state_devices:
         if device not in found_devices:
-            if 'missing' in config['states']:
+            if 'missing' in _config['states']:
                 ret.append({'device': device, 'state': 'missing', 'tag': 'missing'})
 
             del last_state[device]
