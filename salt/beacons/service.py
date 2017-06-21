@@ -92,10 +92,9 @@ def beacon(config):
 
         beacons:
           service:
-            nginx:
-              onchangeonly: True
-              delay: 30
-              uncleanshutdown: /run/nginx.pid
+            - nginx:
+                onchangeonly: True
+                uncleanshutdown: /run/nginx.pid
     '''
     ret = []
     for service_config in config:
