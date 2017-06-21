@@ -18,9 +18,6 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 # Import salt libs
 import salt.modules.mdadm as mdadm
 
-# Import 3rd-party libs
-import salt.ext.six as six
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class MdadmTestCase(TestCase, LoaderModuleMockMixin):
