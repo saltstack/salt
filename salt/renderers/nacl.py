@@ -50,12 +50,11 @@ data like so:
 
     #!yaml|nacl
 
-    a-secret: "NACLENC[MRN3cc+fmdxyQbz6WMF+jq1hKdU5X5BBI7OjK+atvHo1ll+w1gZ7XyWtZVfq9gK9rQaMfkDxmidJKwE0Mw==]"
+    a-secret: "NACL[MRN3cc+fmdxyQbz6WMF+jq1hKdU5X5BBI7OjK+atvHo1ll+w1gZ7XyWtZVfq9gK9rQaMfkDxmidJKwE0Mw==]"
 '''
 
 
 from __future__ import absolute_import
-import os
 import re
 import logging
 
@@ -63,13 +62,12 @@ import logging
 import salt.utils
 import salt.utils.stringio
 import salt.syspaths
-from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
 import salt.ext.six as six
 
 log = logging.getLogger(__name__)
-NACL_REGEX = '^NACLENC\[(.*)\]$'
+NACL_REGEX = r'^NACL\[(.*)\]$'
 
 
 def _decrypt_object(obj, **kwargs):
@@ -79,7 +77,7 @@ def _decrypt_object(obj, **kwargs):
     otherwise keep going until a string is found.
     '''
     if salt.utils.stringio.is_readable(obj):
-        return _decrypt_object(obj.getvalue())
+        return _decrypt_object(obj.getvalue(), **kwargs)
     if isinstance(obj, six.string_types):
         if re.search(NACL_REGEX, obj) is not None:
             return __salt__['nacl.dec_pub'](re.search(NACL_REGEX, obj).group(1), **kwargs)
@@ -87,11 +85,11 @@ def _decrypt_object(obj, **kwargs):
             return obj
     elif isinstance(obj, dict):
         for key, value in six.iteritems(obj):
-            obj[key] = _decrypt_object(value)
+            obj[key] = _decrypt_object(value, **kwargs)
         return obj
     elif isinstance(obj, list):
         for key, value in enumerate(obj):
-            obj[key] = _decrypt_object(value)
+            obj[key] = _decrypt_object(value, **kwargs)
         return obj
     else:
         return obj
