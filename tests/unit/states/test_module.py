@@ -73,9 +73,15 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                             keywords=None,
                             defaults=False)
 
+        cls.bspec = ArgSpec(args=[],
+                            varargs='names',
+                            keywords='kwargs',
+                            defaults=None)
+
     @classmethod
     def tearDownClass(cls):
         del cls.aspec
+        del cls.bspec
 
     def test_run_module_not_available(self):
         '''
@@ -87,6 +93,16 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 ret = module.run(**{CMD: None})
                 assert ret['comment'] == "Unavailable function: {0}.".format(CMD)
                 assert not ret['result']
+
+    def test_module_run_hidden_varargs(self):
+        '''
+        Tests the return of module.run state when hidden varargs are used with
+        wrong type.
+        '''
+        with patch('salt.utils.args.get_function_argspec', MagicMock(return_value=self.bspec)):
+            ret = module._run(CMD, m_names='anyname')
+            comment = "'names' must be a list."
+            self.assertEqual(ret['comment'], comment)
 
     def test_run_testmode(self):
         '''
