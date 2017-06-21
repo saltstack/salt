@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Related to zypp_plugins_test.py module.
 '''
