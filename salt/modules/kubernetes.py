@@ -297,6 +297,32 @@ def secrets(namespace='default', **kwargs):
             raise CommandExecutionError(exc)
 
 
+def configmaps(namespace='default', **kwargs):
+    '''
+    Return a list of kubernetes configmaps defined in the namespace
+
+    CLI Examples::
+
+        salt '*' kubernetes.configmaps
+        salt '*' kubernetes.configmaps namespace=default
+    '''
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.list_namespaced_config_map(namespace)
+
+        return [secret['metadata']['name'] for secret in api_response.to_dict().get('items')]
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                'Exception when calling '
+                'CoreV1Api->list_namespaced_config_map: {0}'.format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
 def show_deployment(name, namespace='default', **kwargs):
     '''
     Return the kubernetes deployment defined by name and namespace
@@ -434,6 +460,32 @@ def show_secret(name, namespace='default', decode=False, **kwargs):
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+
+
+def show_configmap(name, namespace='default', **kwargs):
+    '''
+    Return the kubernetes configmap defined by name and namespace.
+
+    CLI Examples::
+
+        salt '*' kubernetes.show_configmap game-config default
+        salt '*' kubernetes.show_configmap name=game-config namespace=default
+    '''
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.read_namespaced_config_map(
+            name,
+            namespace)
+
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                'Exception when calling '
+                'ExtensionsV1beta1Api->read_namespaced_config_map: '
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
@@ -589,6 +641,38 @@ def delete_secret(name, namespace='default', **kwargs):
             raise CommandExecutionError(exc)
 
 
+def delete_configmap(name, namespace='default', **kwargs):
+    '''
+    Deletes the kubernetes configmap defined by name and namespace
+
+    CLI Examples::
+
+        salt '*' kubernetes.delete_configmap settings default
+        salt '*' kubernetes.delete_configmap name=settings namespace=default
+    '''
+    _setup_conn(**kwargs)
+    body = kubernetes.client.V1DeleteOptions(orphan_dependents=True)
+
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.delete_namespaced_config_map(
+            name=name,
+            namespace=namespace,
+            body=body)
+
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                'Exception when calling '
+                'CoreV1Api->delete_namespaced_config_map: '
+                '{0}'.format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
 def create_deployment(
         name,
         namespace,
@@ -717,6 +801,47 @@ def create_secret(
             log.exception(
                 'Exception when calling '
                 'CoreV1Api->create_namespaced_secret: {0}'.format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
+def create_configmap(
+        name,
+        namespace,
+        data,
+        source,
+        template,
+        saltenv,
+        **kwargs):
+    '''
+    Creates the kubernetes configmap as defined by the user.
+    '''
+    if source:
+        data = __read_and_render_yaml_file(source, template, saltenv)
+    elif data is None:
+        data = {}
+
+    data = __enforce_only_strings_dict(data)
+
+    body = kubernetes.client.V1ConfigMap(
+        metadata=__dict_to_object_meta(name, namespace, {}),
+        data=data)
+
+    _setup_conn(**kwargs)
+
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.create_namespaced_config_map(
+            namespace, body)
+
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                'Exception when calling '
+                'CoreV1Api->create_namespaced_config_map: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -889,6 +1014,45 @@ def replace_secret(name,
             log.exception(
                 'Exception when calling '
                 'CoreV1Api->replace_namespaced_secret: {0}'.format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
+def replace_configmap(name,
+                      data,
+                      source,
+                      template,
+                      saltenv,
+                      namespace='default',
+                      **kwargs):
+    '''
+    Replaces an existing configmap with a new one defined by name and
+    namespace, having the specificed data.
+    '''
+    if source:
+        data = __read_and_render_yaml_file(source, template, saltenv)
+
+    data = __enforce_only_strings_dict(data)
+
+    body = kubernetes.client.V1ConfigMap(
+        metadata=__dict_to_object_meta(name, namespace, {}),
+        data=data)
+
+    _setup_conn(**kwargs)
+
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.replace_namespaced_config_map(
+            name, namespace, body)
+
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                'Exception when calling '
+                'CoreV1Api->replace_namespaced_configmap: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
