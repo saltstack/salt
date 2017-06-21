@@ -40,32 +40,26 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                     chunk=256
             )
             self.assertEqual('salt', ret)
-            if six.PY2:
-                expected_args = [
-                    'mdadm',
-                    '-C', '/dev/md0',
-                    '-R',
-                    '-v',
-                    '--chunk', '256',
-                    '--force',
-                     '-l', '5',
-                     '-e', 'default',
-                     '-n', '3',
-                     '/dev/sdb1', '/dev/sdc1', '/dev/sdd1']
-            else:
-                expected_args = [
-                    'mdadm',
-                    '-C', '/dev/md0',
-                    '-R',
-                    '-v',
-                    '--force',
-                    '--chunk', '256',
-                    '-l', '5',
-                    '-e', 'default',
-                    '-n', '3',
-                    '/dev/sdb1', '/dev/sdc1', '/dev/sdd1'
-                ]
-            mock.assert_called_once_with(expected_args, python_shell=False)
+            mock.assert_called_once()
+            args, kwargs = mock.call_args
+            # expected cmd is
+            # mdadm -C /dev/md0 -R -v --chunk 256 --force -l 5 -e default -n 3 /dev/sdb1 /dev/sdc1 /dev/sdd1
+            # where args between -v and -l could be in any order
+            self.assertEqual(len(args), 1)
+            self.assertEqual(len(args[0]), 17)
+            self.assertEqual(args[0][:5], [
+                'mdadm',
+                '-C', '/dev/md0',
+                '-R',
+                '-v'])
+            self.assertEqual(args[0][8:], [
+                 '-l', '5',
+                 '-e', 'default',
+                 '-n', '3',
+                 '/dev/sdb1', '/dev/sdc1', '/dev/sdd1'])
+            self.assertEqual(sorted(args[0][5:8]), sorted(['--chunk', '256', '--force']))
+            self.assertIn('--chunk 256', ' '.join(args[0][5:8]))
+            self.assertEqual(kwargs, {'python_shell': False})
 
     def test_create_test_mode(self):
         mock = MagicMock()
