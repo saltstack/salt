@@ -117,6 +117,8 @@ def nodes(**kwargs):
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.list_node()
+
+        return [k8s_node['metadata']['name'] for k8s_node in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
@@ -125,13 +127,6 @@ def nodes(**kwargs):
                 'Exception when calling CoreV1Api->list_node: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
-
-    ret = []
-
-    for k8s_node in api_response.items:
-        ret.append(k8s_node.metadata.name)
-
-    return ret
 
 
 def node(name, **kwargs):
@@ -175,6 +170,9 @@ def namespaces(**kwargs):
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.list_namespace()
+
+
+        return [nms['metadata']['name'] for nms in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
@@ -183,13 +181,6 @@ def namespaces(**kwargs):
                 'Exception when calling CoreV1Api->list_node: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
-
-    ret = []
-
-    for namespace in api_response.items:
-        ret.append(namespace.metadata.name)
-
-    return ret
 
 
 def deployments(namespace='default', **kwargs):
@@ -206,7 +197,7 @@ def deployments(namespace='default', **kwargs):
         api_instance = kubernetes.client.ExtensionsV1beta1Api()
         api_response = api_instance.list_namespaced_deployment(namespace)
 
-        return api_response.to_dict().get('items')
+        return [dep['metadata']['name'] for dep in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
@@ -233,7 +224,7 @@ def services(namespace='default', **kwargs):
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.list_namespaced_service(namespace)
 
-        return api_response.to_dict().get('items')
+        return [srv['metadata']['name'] for srv in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
@@ -259,7 +250,7 @@ def pods(namespace='default', **kwargs):
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.list_namespaced_pod(namespace)
 
-        return api_response.to_dict().get('items')
+        return [pod['metadata']['name'] for pod in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
