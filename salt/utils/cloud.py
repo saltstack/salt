@@ -405,10 +405,7 @@ def bootstrap(vm_, opts):
         'tmp_dir': salt.config.get_cloud_config_value(
             'tmp_dir', vm_, opts, default='/tmp/.saltcloud'
         ),
-        'deploy_command': salt.config.get_cloud_config_value(
-            'deploy_command', vm_, opts,
-            default='/tmp/.saltcloud/deploy.sh',
-        ),
+        'vm_': vm_,
         'start_action': opts['start_action'],
         'parallel': opts['parallel'],
         'sock_dir': opts['sock_dir'],
@@ -457,7 +454,7 @@ def bootstrap(vm_, opts):
                          }
     }
 
-    inline_script_kwargs = deploy_kwargs
+    inline_script_kwargs = dict(deploy_kwargs)  # make a copy at this point
 
     # forward any info about possible ssh gateway to deploy script
     # as some providers need also a 'gateway' configuration
@@ -1215,7 +1212,7 @@ def deploy_script(host,
                   sudo_password=None,
                   sudo=False,
                   tty=None,
-                  deploy_command='/tmp/.saltcloud/deploy.sh',
+                  vm_={},
                   opts=None,
                   tmp_dir='/tmp/.saltcloud',
                   file_map=None,
@@ -1229,7 +1226,9 @@ def deploy_script(host,
         opts = {}
 
     tmp_dir = '{0}-{1}'.format(tmp_dir.rstrip('/'), uuid.uuid4())
-    deploy_command = os.path.join(tmp_dir, 'deploy.sh')
+    deploy_command = salt.config.get_cloud_config_value(
+        'deploy_command', vm_, opts,
+        default=os.path.join(tmp_dir, 'deploy.sh'))
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined key_filename \'{0}\' does not exist'.format(
@@ -1241,9 +1240,11 @@ def deploy_script(host,
     if 'gateway' in kwargs:
         gateway = kwargs['gateway']
 
-    starttime = time.mktime(time.localtime())
-    log.debug('Deploying {0} at {1}'.format(host, starttime))
-
+    starttime = time.localtime()
+    log.debug('Deploying {0} at {1}'.format(
+        host,
+        time.strftime('%Y-%m-%d %H:%M:%S', starttime))
+    )
     known_hosts_file = kwargs.get('known_hosts_file', '/dev/null')
     hard_timeout = opts.get('hard_timeout', None)
 
@@ -1473,7 +1474,8 @@ def deploy_script(host,
                     raise SaltCloudSystemExit(
                         'Can\'t set perms on {0}/deploy.sh'.format(tmp_dir))
 
-            newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+            time_used = time.mktime(time.localtime()) - time.mktime(starttime)
+            newtimeout = timeout - time_used
             queue = None
             process = None
             # Consider this code experimental. It causes Salt Cloud to wait
@@ -1493,7 +1495,7 @@ def deploy_script(host,
             # Run the deploy script
             if script:
                 if 'bootstrap-salt' in script:
-                    deploy_command += ' -c \'{0}\''.format(tmp_dir)
+                    deploy_command += ' -F -c \'{0}\''.format(tmp_dir)
                     if make_syndic is True:
                         deploy_command += ' -S'
                     if make_master is True:
