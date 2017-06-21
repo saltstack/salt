@@ -351,14 +351,7 @@ def high(data, test=None, queue=False, **kwargs):
             'Pillar data must be formatted as a dictionary, unless pillar_enc '
             'is specified.'
         )
-
     try:
-<<<<<<< HEAD
-        st_ = salt.state.State(opts, pillar, pillar_enc=pillar_enc, proxy=__proxy__,
-                context=__context__)
-    except NameError:
-        st_ = salt.state.State(opts, pillar, pillar_enc=pillar_enc)
-=======
         st_ = salt.state.State(opts,
                                pillar_override,
                                pillar_enc=pillar_enc,
@@ -370,7 +363,6 @@ def high(data, test=None, queue=False, **kwargs):
                                pillar_override,
                                pillar_enc=pillar_enc,
                                initial_pillar=_get_initial_pillar(opts))
->>>>>>> 2016.11
 
     ret = st_.call_high(data)
     _set_retcode(ret, highstate=data)
@@ -836,7 +828,6 @@ def highstate(test=None, queue=False, **kwargs):
             )
         kwargs.pop('env')
 
-<<<<<<< HEAD
     if 'saltenv' in kwargs:
         opts['environment'] = kwargs['saltenv']
 
@@ -844,9 +835,7 @@ def highstate(test=None, queue=False, **kwargs):
         opts['pillarenv'] = kwargs['pillarenv']
 
     pillar = kwargs.get('pillar')
-=======
     pillar_override = kwargs.get('pillar')
->>>>>>> 2016.11
     pillar_enc = kwargs.get('pillar_enc')
     if pillar_enc is None \
             and pillar_override is not None \
@@ -1143,16 +1132,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     return ret
 
 
-<<<<<<< HEAD
-def top(topfn,
-        test=None,
-        queue=False,
-        saltenv=None,
-        pillarenv=None,
-        **kwargs):
-=======
 def top(topfn, test=None, queue=False, **kwargs):
->>>>>>> 2016.11
     '''
     Execute a specific top file instead of the default. This is useful to apply
     configurations from a different environment (for example, dev or prod), without
@@ -1192,17 +1172,7 @@ def top(topfn, test=None, queue=False, **kwargs):
     opts = _get_opts(**kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
 
-<<<<<<< HEAD
-    if saltenv is not None:
-        opts['environment'] = saltenv
-
-    if pillarenv is not None:
-        opts['pillarenv'] = pillarenv
-
-    pillar = kwargs.get('pillar')
-=======
     pillar_override = kwargs.get('pillar')
->>>>>>> 2016.11
     pillar_enc = kwargs.get('pillar_enc')
     if pillar_enc is None \
             and pillar_override is not None \
@@ -1326,7 +1296,6 @@ def show_lowstate(queue=False, **kwargs):
     return ret
 
 
-<<<<<<< HEAD
 def show_state_usage(queue=False, **kwargs):
     '''
     Retrieve the highstate data from the salt master to analyse used and unused states
@@ -1363,17 +1332,7 @@ def show_state_usage(queue=False, **kwargs):
     return ret
 
 
-def sls_id(
-        id_,
-        mods,
-        saltenv='base',
-        pillarenv=None,
-        test=None,
-        queue=False,
-        **kwargs):
-=======
 def sls_id(id_, mods, test=None, queue=False, **kwargs):
->>>>>>> 2016.11
     '''
     Call a single ID from the named module(s) and handle all requisites
 
@@ -1411,24 +1370,6 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     orig_test = __opts__.get('test', None)
     opts = _get_opts(**kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
-<<<<<<< HEAD
-    opts['environment'] = saltenv
-    if pillarenv is not None:
-        opts['pillarenv'] = pillarenv
-
-    pillar = kwargs.get('pillar')
-    pillar_enc = kwargs.get('pillar_enc')
-    if pillar_enc is None \
-            and pillar is not None \
-            and not isinstance(pillar, dict):
-        raise SaltInvocationError(
-            'Pillar data must be formatted as a dictionary, unless pillar_enc '
-            'is specified.'
-        )
-
-    try:
-        st_ = salt.state.HighState(opts, pillar=pillar, pillar_enc=pillar_enc, proxy=__proxy__)
-=======
 
     # Since this is running a specific ID within a specific SLS file, fall back
     # to the 'base' saltenv if none is configured and none was passed.
@@ -1439,7 +1380,6 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         st_ = salt.state.HighState(opts,
                                    proxy=__proxy__,
                                    initial_pillar=_get_initial_pillar(opts))
->>>>>>> 2016.11
     except NameError:
         st_ = salt.state.HighState(opts,
                                    initial_pillar=_get_initial_pillar(opts))
@@ -1479,16 +1419,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     return ret
 
 
-<<<<<<< HEAD
-def show_low_sls(mods,
-                 saltenv='base',
-                 pillarenv=None,
-                 test=None,
-                 queue=False,
-                 **kwargs):
-=======
 def show_low_sls(mods, test=None, queue=False, **kwargs):
->>>>>>> 2016.11
     '''
     Display the low data from a specific sls. The default environment is
     ``base``, use ``saltenv`` to specify a different environment.
@@ -1525,12 +1456,6 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
     orig_test = __opts__.get('test', None)
     opts = _get_opts(**kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
-<<<<<<< HEAD
-    opts['environment'] = saltenv
-    if pillarenv is not None:
-        opts['pillarenv'] = pillarenv
-    st_ = salt.state.HighState(opts)
-=======
 
     # Since this is dealing with a specific SLS file (or files), fall back to
     # the 'base' saltenv if none is configured and none was passed.
@@ -1538,7 +1463,6 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
         opts['environment'] = 'base'
 
     st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
->>>>>>> 2016.11
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5

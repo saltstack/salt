@@ -20,10 +20,8 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
-<<<<<<< HEAD:tests/unit/modules/test_state.py
 import salt.modules.state as state
 from salt.exceptions import SaltInvocationError
-=======
 from salt.modules import state
 
 # Globals
@@ -33,7 +31,6 @@ state.__opts__ = {'cachedir': '/D',
                   'environment': None,
                   '__cli': 'salt'}
 state.__pillar__ = {}
->>>>>>> 2016.11:tests/unit/modules/state_test.py
 
 
 class MockState(object):
@@ -151,12 +148,7 @@ class MockState(object):
         opts = {'state_top': '',
                 'pillar': {}}
 
-<<<<<<< HEAD:tests/unit/modules/test_state.py
-        def __init__(self, opts, pillar=None, *args, **kwargs):
-            self.building_highstate = {}
-=======
         def __init__(self, opts, pillar_override=None, *args, **kwargs):
->>>>>>> 2016.11:tests/unit/modules/state_test.py
             self.state = MockState.State(opts,
                                          pillar_override=pillar_override)
 

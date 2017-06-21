@@ -556,7 +556,7 @@ def ssh_wrapper(opts, functions=None, context=None):
     )
 
 
-def render(opts, functions, states=None):
+def render(opts, functions, states=None, proxy=None):
     '''
     Returns the render modules
     '''
@@ -564,6 +564,7 @@ def render(opts, functions, states=None):
             '__grains__': opts.get('grains', {})}
     if states:
         pack['__states__'] = states
+    pack['__proxy__'] = proxy or {}
     ret = LazyLoader(
         _module_dirs(
             opts,

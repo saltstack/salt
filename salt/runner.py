@@ -76,20 +76,6 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             'username', 'password', 'eauth', 'token', 'client', 'user', 'key',
         ] if i in low])
 
-<<<<<<< HEAD
-        # Run name=value args through parse_input. We don't need to run kwargs
-        # through because there is no way to send name=value strings in the low
-        # dict other than by including an `arg` array.
-        arg, kwarg = salt.utils.args.parse_input(
-            low.pop('arg', []),
-            condition=False,
-            no_parse=self.opts.get('no_parse', []))
-        kwarg.update(low.pop('kwarg', {}))
-
-        # If anything hasn't been pop()'ed out of low by this point it must be
-        # an old-style kwarg.
-        kwarg.update(low)
-=======
         # Separate the new-style args/kwargs.
         pre_arg = low.pop('arg', [])
         pre_kwarg = low.pop('kwarg', {})
@@ -108,7 +94,6 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             old_new_normalized_input,
             self.opts,
             ignore_invalid=True)
->>>>>>> 2016.11
 
         return dict(fun=fun, kwarg={'kwarg': kwarg, 'arg': arg},
                 **eauth_creds)

@@ -89,23 +89,10 @@ class AsyncRemotePillar(object):
         self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
         if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
-<<<<<<< HEAD
-        elif self.opts.get('pillarenv_from_saltenv', False):
-            self.opts['pillarenv'] = saltenv
-        elif 'pillarenv' not in self.opts:
-            self.opts['pillarenv'] = None
-        self.pillar_override = {}
-        if pillar is not None:
-            if isinstance(pillar, dict):
-                self.pillar_override = pillar
-            else:
-                log.error('Pillar data must be a dictionary')
-=======
         self.pillar_override = pillar_override or {}
         if not isinstance(self.pillar_override, dict):
             self.pillar_override = {}
             log.error('Pillar data must be a dictionary')
->>>>>>> 2016.11
 
     @tornado.gen.coroutine
     def compile_pillar(self):
@@ -153,23 +140,10 @@ class RemotePillar(object):
         self.channel = salt.transport.Channel.factory(opts)
         if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
-<<<<<<< HEAD
-        elif self.opts.get('pillarenv_from_saltenv', False):
-            self.opts['pillarenv'] = saltenv
-        elif 'pillarenv' not in self.opts:
-            self.opts['pillarenv'] = None
-        self.pillar_override = {}
-        if pillar is not None:
-            if isinstance(pillar, dict):
-                self.pillar_override = pillar
-            else:
-                log.error('Pillar data must be a dictionary')
-=======
         self.pillar_override = pillar_override or {}
         if not isinstance(self.pillar_override, dict):
             self.pillar_override = {}
             log.error('Pillar data must be a dictionary')
->>>>>>> 2016.11
 
     def compile_pillar(self):
         '''

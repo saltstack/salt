@@ -729,11 +729,6 @@ class State(object):
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['environment'],
-<<<<<<< HEAD
-                pillar=self._pillar_override,
-                pillarenv=self.opts.get('pillarenv'))
-        return pillar.compile_pillar()
-=======
                 pillar_override=self._pillar_override,
                 pillarenv=self.opts.get('pillarenv')
                 )
@@ -771,7 +766,6 @@ class State(object):
                         merge_lists=merge_lists
                     )
         return ret
->>>>>>> 2016.11
 
     def _mod_init(self, low):
         '''
@@ -3815,11 +3809,7 @@ class HighState(BaseHighState):
         self.client = salt.fileclient.get_file_client(self.opts)
         BaseHighState.__init__(self, opts)
         self.state = State(self.opts,
-<<<<<<< HEAD
-                           pillar,
-=======
                            pillar_override,
->>>>>>> 2016.11
                            jid,
                            pillar_enc,
                            proxy=proxy,
