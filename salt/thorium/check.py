@@ -10,8 +10,6 @@ from __future__ import absolute_import
 import logging
 
 import salt.utils
-from salt.ext import six
-
 
 log = logging.getLogger(__file__)
 
