@@ -76,6 +76,7 @@ The kubernetes module is used to manage different kubernetes resources.
 '''
 from __future__ import absolute_import
 
+import copy
 import logging
 log = logging.getLogger(__name__)
 
@@ -830,4 +831,108 @@ def pod_present(
         'spec': spec
     }
     ret['result'] = True
+    return ret
+
+
+def node_label_absent(name, node, **kwargs):
+    '''
+    Ensures that the named label is absent from the node.
+
+    name
+        The name of the label
+
+    node
+        The name of the node
+    '''
+
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    labels = __salt__['kubernetes.node_labels'](node, **kwargs)
+
+    if name not in labels:
+        ret['result'] = True if not __opts__['test'] else None
+        ret['comment'] = 'The label does not exist'
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'The label is going to be deleted'
+        ret['result'] = None
+        return ret
+
+    __salt__['kubernetes.node_remove_label'](
+        node_name=node,
+        label_name=name,
+        **kwargs)
+
+    ret['result'] = True
+    ret['changes'] = {
+        'kubernetes.node_label': {
+            'new': 'absent', 'old': 'present'}}
+    ret['comment'] = 'Label removed from node'
+
+    return ret
+
+
+def node_label_present(
+        name,
+        node,
+        value,
+        **kwargs):
+    '''
+    Ensures that the named label is set on the named node
+    with the given value.
+    If the label exists it will be replaced.
+
+    name
+        The name of the label.
+
+    value
+        Value of the label.
+
+    node
+        Node to change.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    labels = __salt__['kubernetes.node_labels'](node, **kwargs)
+
+    if name not in labels:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'The label is going to be set'
+            return ret
+        __salt__['kubernetes.node_add_label'](label_name=name,
+                                              label_value=value,
+                                              node_name=node,
+                                              **kwargs)
+    elif labels[name] == value:
+        ret['result'] = True
+        ret['comment'] = 'The label is already set and has the specified value'
+        return ret
+    else:
+        if __opts__['test']:
+            ret['result'] = None
+            return ret
+
+        ret['comment'] = 'The label is already set, changing the value'
+        __salt__['kubernetes.node_add_label'](
+            node_name=node,
+            label_name=name,
+            label_value=value,
+            **kwargs)
+
+    old_labels = copy.copy(labels)
+    labels[name] = value
+
+    ret['changes']['{0}.{1}'.format(node, name)] = {
+        'old': old_labels,
+        'new': labels}
+    ret['result'] = True
+
     return ret

@@ -157,6 +157,89 @@ def node(name, **kwargs):
     return None
 
 
+def node_labels(name, **kwargs):
+    '''
+    Return the labels of the node identified by the specified name
+
+    CLI Examples::
+
+        salt '*' kubernetes.node_labels name="minikube"
+    '''
+    match = node(name, **kwargs)
+
+    if match is not None:
+        return match.metadata.labels
+
+    return {}
+
+
+def node_add_label(node_name, label_name, label_value, **kwargs):
+    '''
+    Set the value of the label identified by `label_name` to `label_value` on
+    the node identified by the name `node_name`.
+    Creates the lable if not present.
+
+    CLI Examples::
+
+        salt '*' kubernetes.node_add_label node_name="minikube" \
+            label_name="foo" label_value="bar"
+    '''
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        body = {
+            'metadata': {
+                'labels': {
+                    label_name: label_value}
+                }
+        }
+        api_response = api_instance.patch_node(node_name, body)
+        return api_response
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                'Exception when calling CoreV1Api->patch_node: {0}'.format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+    return None
+
+
+def node_remove_label(node_name, label_name, **kwargs):
+    '''
+    Removes the label identified by `label_name` from
+    the node identified by the name `node_name`.
+
+    CLI Examples::
+
+        salt '*' kubernetes.node_remove_label node_name="minikube" \
+            label_name="foo"
+    '''
+    _setup_conn(**kwargs)
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        body = {
+            'metadata': {
+                'labels': {
+                    label_name: None}
+                }
+        }
+        api_response = api_instance.patch_node(node_name, body)
+        return api_response
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                'Exception when calling CoreV1Api->patch_node: {0}'.format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+    return None
+
+
 def namespaces(**kwargs):
     '''
     Return the names of the available namespaces
