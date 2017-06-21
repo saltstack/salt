@@ -3,18 +3,14 @@
 A REST API for Salt
 ===================
 
-.. versionadded:: 2014.7.0
-
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
 :depends:
-    - CherryPy Python module. Version 3.2.3 is currently recommended when
-      SSL is enabled, since this version worked the best with SSL in
-      internal testing. Versions 3.2.3 - 4.x can be used if SSL is not enabled.
-      Be aware that there is a known
-      `SSL error <https://github.com/cherrypy/cherrypy/issues/1298>`_
-      introduced in version 3.2.5. The issue was reportedly resolved with
-      CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
+    - CherryPy Python module.
+
+      Note: there is a `known SSL traceback for CherryPy versions 3.2.5 through
+      3.7.x <https://github.com/cherrypy/cherrypy/issues/1298>`_. Please use
+      version 3.2.3 or the latest 10.x version instead.
 :optdepends:    - ws4py Python module for websockets support.
 :client_libraries:
     - Java: https://github.com/SUSE/salt-netapi-client
@@ -121,7 +117,7 @@ A REST API for Salt
         Enable or disable all endpoints that rely on session cookies. This can
         be useful to enforce only header-based authentication.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     app : ``index.html``
         A filesystem path to an HTML file that will be served as a static file.
@@ -132,7 +128,7 @@ A REST API for Salt
         Send the custom ``X-Auth-Token`` header instead and consider disabling
         the ``enable_sessions`` setting.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
 
             Add a proof-of-concept JavaScript single-page app.
 
@@ -1617,6 +1613,10 @@ class Keys(LowDataAdapter):
         Accepts all the same parameters as the :py:func:`key.gen_accept
         <salt.wheel.key.gen_accept>`.
 
+        .. note:: A note about ``curl``
+           Avoid using the ``-i`` flag or HTTP headers will be written and
+           produce an invalid tar file.
+
         Example partial kickstart script to bootstrap a new minion:
 
         .. code-block:: text
@@ -1914,7 +1914,7 @@ class Token(LowDataAdapter):
 
     Wraps functionality in the :py:mod:`auth Runner <salt.runners.auth>`.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     '''
     @cherrypy.config(**{'tools.sessions.on': False})
     def POST(self, **kwargs):

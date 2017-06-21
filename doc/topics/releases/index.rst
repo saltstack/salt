@@ -20,6 +20,7 @@ Previous Releases
     :maxdepth: 1
     :glob:
 
+    2017.7.*
     2016.11.*
     2016.3.*
     2015.8.*

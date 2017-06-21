@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import errno
 import logging
 import os
+import re
 
 # Import Salt libs
 import salt.utils
@@ -62,3 +63,32 @@ def check_refresh(opts, refresh=None):
         salt.utils.is_true(refresh) or
         (os.path.isfile(rtag(opts)) and refresh is not False)
     )
+
+
+def split_comparison(version):
+    match = re.match(r'^([<>])?(=)?([^<>=]+)$', version)
+    if match:
+        comparison = match.group(1) or ''
+        comparison += match.group(2) or ''
+        version = match.group(3)
+    else:
+        comparison = ''
+    return comparison, version
+
+
+def match_version(desired, available, cmp_func=None, ignore_epoch=False):
+    '''
+    Returns the first version of the list of available versions which matches
+    the desired version comparison expression, or None if no match is found.
+    '''
+    oper, version = split_comparison(desired)
+    if not oper:
+        oper = '=='
+    for candidate in available:
+        if salt.utils.compare_versions(ver1=candidate,
+                                       oper=oper,
+                                       ver2=version,
+                                       cmp_func=cmp_func,
+                                       ignore_epoch=ignore_epoch):
+            return candidate
+    return None

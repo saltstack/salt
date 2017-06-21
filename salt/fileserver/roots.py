@@ -387,7 +387,7 @@ def _file_lists(load, form):
                         # Only count the link if it does not point
                         # outside of the root dir of the fileserver
                         # (i.e. the "path" variable)
-                        ret['links'][rel_path] = rel_dest
+                        ret['links'][rel_path] = link_dest
 
         for path in __opts__['file_roots'][load['saltenv']]:
             for root, dirs, files in os.walk(

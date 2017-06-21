@@ -222,6 +222,11 @@ def managed(name, ppa=None, **kwargs):
         the reverse will be passed as ``disabled``. For example, passing
         ``enabled=False`` will assume ``disabled=False``.
 
+    architectures
+        On apt-based systems, architectures can restrict the available
+        architectures that the repository provides (e.g. only amd64).
+        architectures should be a comma-separated list.
+
     comps
         On apt-based systems, comps dictate the types of packages to be
         installed from the repository (e.g. main, nonfree, ...).  For

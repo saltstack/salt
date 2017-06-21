@@ -3,7 +3,7 @@
 Management of Heat
 ==================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends:   - heat Python module
 :configuration: See :py:mod:`salt.modules.heat` for setup instructions.

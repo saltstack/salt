@@ -784,7 +784,7 @@ def set_app(name, site, settings=None):
     :                       userName: "connectAs" user
     :                       password: "connectAs" password for user
     :rtype: bool
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     Example of usage:
 
     .. code-block:: yaml

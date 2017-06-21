@@ -376,7 +376,7 @@ the ``testing`` environment, without modifying the in-memory pillar data.
     this case would still restrict the states' pillar data to just that of the
     ``testing`` pillar environment.
 
-Starting in the Nitrogen release, it is possible to pin the pillarenv to the
+Starting in the 2017.7.0 release, it is possible to pin the pillarenv to the
 effective saltenv, using the :conf_minion:`pillarenv_from_saltenv` minion
 config option. When this is set to ``True``, if a specific saltenv is specified
 when running states, the ``pillarenv`` will be the same. This essentially makes
@@ -497,7 +497,7 @@ compilation.
 Encrypted Pillar SLS
 --------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Consider the following pillar SLS file:
 

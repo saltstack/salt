@@ -261,7 +261,7 @@ use ``yaml_encode`` or ``yaml_dquote``).
 ``to_bool``
 -----------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Returns the logical value of an element.
 
@@ -289,7 +289,7 @@ Will be rendered as:
 ``exactly_n_true``
 ------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Tests that exactly N items in an iterable are "truthy" (neither None, False, nor 0).
 
@@ -309,9 +309,9 @@ Returns:
 .. jinja_ref:: exactly_one_true
 
 ``exactly_one_true``
-------------------
+--------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Tests that exactly one item in an iterable is "truthy" (neither None, False, nor 0).
 
@@ -333,7 +333,7 @@ Returns:
 ``quote``
 ---------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Wraps a text around quoutes.
 
@@ -343,7 +343,7 @@ Wraps a text around quoutes.
 ``regex_search``
 ----------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Scan through string looking for a location where this regular expression
 produces a match. Returns ``None`` in case there were no matches found
@@ -364,9 +364,9 @@ Returns:
 .. jinja_ref:: regex_match
 
 ``regex_match``
-----------------
+---------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 If zero or more characters at the beginning of string match this regular
 expression, otherwise returns ``None``.
@@ -389,7 +389,7 @@ Returns:
 ``uuid``
 --------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return a UUID.
 
@@ -411,7 +411,7 @@ Returns:
 ``is_list``
 -----------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return if an object is list.
 
@@ -433,7 +433,7 @@ Returns:
 ``is_iter``
 -----------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return if an object is iterable.
 
@@ -455,7 +455,7 @@ Returns:
 ``min``
 -------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return the minimum value from a list.
 
@@ -477,7 +477,7 @@ Returns:
 ``max``
 -------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Returns the maximum value from a list.
 
@@ -499,7 +499,7 @@ Returns:
 ``avg``
 -------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Returns the average value of the elements of a list
 
@@ -521,7 +521,7 @@ Returns:
 ``union``
 ---------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return the union of two lists.
 
@@ -543,7 +543,7 @@ Returns:
 ``intersect``
 -------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return the intersection of two lists.
 
@@ -565,7 +565,7 @@ Returns:
 ``difference``
 --------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return the difference of two lists.
 
@@ -588,7 +588,7 @@ Returns:
 ``symmetric_difference``
 ------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return the symmetric difference of two lists.
 
@@ -610,7 +610,7 @@ Returns:
 ``is_sorted``
 -------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return is an iterable object is already sorted.
 
@@ -632,7 +632,7 @@ Returns:
 ``compare_lists``
 -----------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Compare two lists and return a dictionary with the changes.
 
@@ -654,7 +654,7 @@ Returns:
 ``compare_dicts``
 -----------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Compare two dictionaries and return a dictionary with the changes.
 
@@ -676,7 +676,7 @@ Returns:
 ``is_hex``
 ----------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return True if the value is hexazecimal.
 
@@ -700,7 +700,7 @@ Returns:
 ``contains_whitespace``
 -----------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return True if a text contains whitespaces.
 
@@ -724,7 +724,7 @@ Returns:
 ``substring_in_list``
 ---------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return is a substring is found in a list of string values.
 
@@ -746,7 +746,7 @@ Returns:
 ``check_whitelist_blacklist``
 -----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Check a whitelist and/or blacklist to see if the value matches it.
 
@@ -769,7 +769,7 @@ Returns:
 ``date_format``
 ---------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Converts unix timestamp into human-readable string.
 
@@ -793,7 +793,7 @@ Returns:
 ``str_to_num``
 --------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Converts a string to its numerical value.
 
@@ -815,7 +815,7 @@ Returns:
 ``to_bytes``
 ------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Converts string-type object to bytes.
 
@@ -831,7 +831,7 @@ Example:
 ``json_decode_list``
 --------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 JSON decodes as unicode, Jinja needs bytes.
 
@@ -853,7 +853,7 @@ Returns:
 ``json_decode_dict``
 --------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 JSON decodes as unicode, Jinja needs bytes.
 
@@ -875,7 +875,7 @@ Returns:
 ``rand_str``
 ------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Generate a random string and applies a hash. Default hashing: md5.
 
@@ -900,7 +900,7 @@ Returns:
 ``md5``
 -------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return the md5 digest of a string.
 
@@ -922,7 +922,7 @@ Returns:
 ``sha256``
 ----------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return the sha256 digest of a string.
 
@@ -944,7 +944,7 @@ Returns:
 ``sha512``
 ----------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return the sha512 digest of a string.
 
@@ -966,7 +966,7 @@ Returns:
 ``base64_encode``
 -----------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Encode a string as base64.
 
@@ -988,7 +988,7 @@ Returns:
 ``base64_decode``
 -----------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Decode a base64-encoded string.
 
@@ -1008,7 +1008,7 @@ Returns:
 ``hmac``
 --------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Verify a challenging hmac signature against a string / shared-secret. Returns
 a boolean value.
@@ -1031,7 +1031,7 @@ Returns:
 ``http_query``
 --------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return the HTTP reply object from a URL.
 
@@ -1068,7 +1068,7 @@ The following networking-related filters are supported:
 ``is_ip``
 ---------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return if a string is a valid IP Address.
 
@@ -1101,7 +1101,7 @@ Example - test if a string is a valid loopback IP address.
 ``is_ipv4``
 -----------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Returns if a string is a valid IPv4 address. Supports the same options
 as ``is_ip``.
@@ -1116,7 +1116,7 @@ as ``is_ip``.
 ``is_ipv6``
 -----------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Returns if a string is a valid IPv6 address. Supports the same options
 as ``is_ip``.
@@ -1131,7 +1131,7 @@ as ``is_ip``.
 ``ipaddr``
 ----------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 From a list, returns only valid IP entries. Supports the same options
 as ``is_ip``. The list can contains also IP interfaces/networks.
@@ -1154,7 +1154,7 @@ Returns:
 ``ipv4``
 --------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 From a list, returns only valid IPv4 entries. Supports the same options
 as ``is_ip``. The list can contains also IP interfaces/networks.
@@ -1177,7 +1177,7 @@ Returns:
 ``ipv6``
 --------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 From a list, returns only valid IPv6 entries. Supports the same options
 as ``is_ip``. The list can contains also IP interfaces/networks.
@@ -1200,7 +1200,7 @@ Returns:
 ``network_hosts``
 -----------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return the list of hosts within a networks.
 
@@ -1222,7 +1222,7 @@ Returns:
 ``network_size``
 ----------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return the size of the network.
 
@@ -1244,7 +1244,7 @@ Returns:
 ``gen_mac``
 -----------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Generates a MAC address with the defined OUI prefix.
 
@@ -1274,7 +1274,7 @@ Returns:
 ``mac_str_to_bytes``
 --------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Converts a string representing a valid MAC address to bytes.
 
@@ -1290,7 +1290,7 @@ Example:
 ``dns_check``
 -------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return the ip resolved by dns, but do not exit on failure, only raise an
 exception. Obeys system preference for IPv4/6 address resolution.
@@ -1313,9 +1313,9 @@ File filters
 .. jinja_ref:: is_text_file
 
 ``is_text_file``
----------------
+----------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return if a file is text.
 
@@ -1342,7 +1342,7 @@ Returns:
 ``is_binary_file``
 ------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return if a file is binary.
 
@@ -1367,7 +1367,7 @@ Returns:
 ``is_empty_file``
 -----------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return if a file is empty.
 
@@ -1389,7 +1389,7 @@ Returns:
 ``file_hashsum``
 ----------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return the hashsum of a file.
 
@@ -1411,7 +1411,7 @@ Returns:
 ``list_files``
 --------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Return a recursive list of files under a specific path.
 
@@ -1437,7 +1437,7 @@ Returns:
 ``path_join``
 -------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Joins absolute paths.
 
@@ -1459,7 +1459,7 @@ Returns:
 ``which``
 ---------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Python clone of /usr/bin/which.
 
@@ -1475,7 +1475,75 @@ Returns:
 
   /usr/local/salt/virtualenv/bin/salt-master
 
-.. jinja_ref:: jinja-in-files
+
+Tests
+=====
+
+Saltstack extends `builtin tests`_ with these custom tests:
+
+.. _`builtin tests`: http://jinja.pocoo.org/docs/templates/#builtin-tests
+
+.. jinja_ref:: equalto
+
+``equalto``
+-----------
+
+Tests the equality between two values.
+
+Can be used in an ``if`` statement directly:
+
+.. code-block:: jinja
+
+    {% if 1 is equalto(1) %}
+        < statements >
+    {% endif %}
+
+If clause evaluates to ``True``
+
+or with the ``selectattr`` filter:
+
+.. code-block:: jinja
+
+    {{ [{'value': 1}, {'value': 2} , {'value': 3}] | selectattr('value', 'equalto', 3) | list }}
+
+Returns:
+
+.. code-block:: python
+
+    [{'value': 3}]
+
+.. jinja_ref:: match
+
+``match``
+---------
+
+Tests that a string matches the regex passed as an argument.
+
+Can be used in a ``if`` statement directly:
+
+.. code-block:: jinja
+
+    {% if 'a' is match('[a-b]') %}
+        < statements >
+    {% endif %}
+
+If clause evaluates to ``True``
+
+or with the ``selectattr`` filter:
+
+.. code-block:: jinja
+
+    {{ [{'value': 'a'}, {'value': 'b'}, {'value': 'c'}] | selectattr('value', 'match', '[b-e]') | list }}
+
+Returns:
+
+.. code-block:: python
+
+    [{'value': 'b'}, {'value': 'c'}]
+
+
+Test supports additional optional arguments: ``ignorecase``, ``multiline``
+
 
 Jinja in Files
 ==============
@@ -1599,7 +1667,7 @@ in the current Jinja context.
 Logs
 ----
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Yes, in Salt, one is able to debug a complex Jinja template using the logs.
 For example, making the call:

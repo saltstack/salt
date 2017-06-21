@@ -17,6 +17,7 @@ pillar modules
     confidant
     consul_pillar
     csvpillar
+    digicert
     django_orm
     ec2_pillar
     etcd_pillar

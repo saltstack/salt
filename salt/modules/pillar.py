@@ -30,6 +30,7 @@ log = logging.getLogger(__name__)
 def get(key,
         default=KeyError,
         merge=False,
+        merge_nested_lists=None,
         delimiter=DEFAULT_TARGET_DELIM,
         pillarenv=None,
         saltenv=None):
@@ -54,16 +55,28 @@ def get(key,
 
         pkg:apache
 
-    merge : False
+    merge : ``False``
         If ``True``, the retrieved values will be merged into the passed
         default. When the default and the retrieved value are both
         dictionaries, the dictionaries will be recursively merged.
 
         .. versionadded:: 2014.7.0
-        .. versionchanged:: 2016.3.7,2016.11.4,Nitrogen
+        .. versionchanged:: 2016.3.7,2016.11.4,2017.7.0
             If the default and the retrieved value are not of the same type,
             then merging will be skipped and the retrieved value will be
             returned. Earlier releases raised an error in these cases.
+
+    merge_nested_lists
+        If set to ``False``, lists nested within the retrieved pillar
+        dictionary will *overwrite* lists in ``default``. If set to ``True``,
+        nested lists will be *merged* into lists in ``default``. If unspecified
+        (the default), this option is inherited from the
+        :conf_minion:`pillar_merge_lists` minion config option.
+
+        .. note::
+            This option is ignored when ``merge`` is set to ``False``.
+
+        .. versionadded:: 2016.11.6
 
     delimiter
         Specify an alternate delimiter to use when traversing a nested dict.
@@ -86,13 +99,13 @@ def get(key,
         data. This tradeoff in performance however allows for the use case
         where pillar data is desired only from a single environment.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     saltenv
         Included only for compatibility with
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -104,7 +117,8 @@ def get(key,
     if not __opts__.get('pillar_raise_on_missing'):
         if default is KeyError:
             default = ''
-    opt_merge_lists = __opts__.get('pillar_merge_lists', False)
+    opt_merge_lists = __opts__.get('pillar_merge_lists', False) if \
+        merge_nested_lists is None else merge_nested_lists
     pillar_dict = __pillar__ \
         if all(x is None for x in (saltenv, pillarenv)) \
         else items(saltenv=saltenv, pillarenv=pillarenv)
@@ -191,7 +205,7 @@ def items(*args, **kwargs):
             will be necessary if the encrypted pillar data must be made
             available in an decrypted state pillar/ext_pillar rendering.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     pillarenv
         Pass a specific pillar environment from which to compile pillar data.
@@ -393,7 +407,7 @@ def raw(key=None):
 
 def ext(external, pillar=None):
     '''
-    .. versionchanged:: 2016.3.6,2016.11.3,Nitrogen
+    .. versionchanged:: 2016.3.6,2016.11.3,2017.7.0
         The supported ext_pillar types are now tunable using the
         :conf_master:`on_demand_ext_pillar` config option. Earlier releases
         used a hard-coded default.
@@ -546,7 +560,7 @@ def filter_by(lookup_dict,
               default='default',
               base=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Look up the given pillar in a given dictionary and return the result
 

@@ -983,9 +983,12 @@ class State(object):
             errors.append('Missing "name" data')
         if data['name'] and not isinstance(data['name'], six.string_types):
             errors.append(
-                'ID \'{0}\' in SLS \'{1}\' is not formed as a string, but is '
-                'a {2}'.format(
-                    data['name'], data['__sls__'], type(data['name']).__name__)
+                'ID \'{0}\' {1}is not formed as a string, but is a {2}'.format(
+                    data['name'],
+                    'in SLS \'{0}\' '.format(data['__sls__'])
+                        if '__sls__' in data else '',
+                    type(data['name']).__name__
+                )
             )
         if errors:
             return errors
@@ -3115,23 +3118,26 @@ class BaseHighState(object):
                                     matches[env_key] = []
                                 matches[env_key].append(inc_sls)
                 _filter_matches(match, data, self.opts['nodegroups'])
-        ext_matches = self._ext_nodes()
+        ext_matches = self._master_tops()
         for saltenv in ext_matches:
-            if saltenv in matches:
-                matches[saltenv] = list(
-                    set(ext_matches[saltenv]).union(matches[saltenv]))
+            top_file_matches = matches.get(saltenv, [])
+            if self.opts['master_tops_first']:
+                first = ext_matches[saltenv]
+                second = top_file_matches
             else:
-                matches[saltenv] = ext_matches[saltenv]
+                first = top_file_matches
+                second = ext_matches[saltenv]
+            matches[saltenv] = first + [x for x in second if x not in first]
+
         # pylint: enable=cell-var-from-loop
         return matches
 
-    def _ext_nodes(self):
+    def _master_tops(self):
         '''
-        Get results from an external node classifier.
-        Override it if the execution of the external node clasifier
-        needs customization.
+        Get results from the master_tops system. Override this function if the
+        execution of the master_tops needs customization.
         '''
-        return self.client.ext_nodes()
+        return self.client.master_tops()
 
     def load_dynamic(self, matches):
         '''
