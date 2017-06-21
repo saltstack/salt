@@ -212,6 +212,7 @@ def deployment_present(
 
         # TODO: improve checks  # pylint: disable=fixme
         log.info('Forcing the recreation of the deployment')
+        ret['comment'] = 'The deployment is already present. Forcing recreation'
         res = __salt__['kubernetes.replace_deployment'](
             name=name,
             namespace=namespace,
@@ -226,7 +227,6 @@ def deployment_present(
         'metadata': metadata,
         'spec': spec
     }
-    ret['comment'] = 'The deployment is already present. Forcing recreation'
     ret['result'] = True
     return ret
 
@@ -307,6 +307,7 @@ def service_present(
 
         # TODO: improve checks  # pylint: disable=fixme
         log.info('Forcing the recreation of the service')
+        ret['comment'] = 'The service is already present. Forcing recreation'
         res = __salt__['kubernetes.replace_service'](
             name=name,
             namespace=namespace,
@@ -322,7 +323,6 @@ def service_present(
         'metadata': metadata,
         'spec': spec
     }
-    ret['comment'] = 'The service is already present. Forcing recreation'
     ret['result'] = True
     return ret
 
@@ -553,6 +553,7 @@ def secret_present(
 
         # TODO: improve checks  # pylint: disable=fixme
         log.info('Forcing the recreation of the service')
+        ret['comment'] = 'The secret is already present. Forcing recreation'
         res = __salt__['kubernetes.replace_secret'](
             name=name,
             namespace=namespace,
@@ -567,7 +568,6 @@ def secret_present(
         # and can contain sensitive data.
         'data': data.keys()
     }
-    ret['comment'] = 'The secret is already present. Forcing recreation'
     ret['result'] = True
     return ret
 
