@@ -635,19 +635,20 @@ class State(object):
     def __init__(
             self,
             opts,
-            pillar=None,
+            pillar_override=None,
             jid=None,
             pillar_enc=None,
             proxy=None,
             context=None,
             mocked=False,
-            loader='states'):
+            loader='states',
+            initial_pillar=None):
         self.states_loader = loader
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.proxy = proxy
-        self._pillar_override = pillar
+        self._pillar_override = pillar_override
         if pillar_enc is not None:
             try:
                 pillar_enc = pillar_enc.lower()
@@ -659,7 +660,8 @@ class State(object):
                     .format(', '.join(VALID_PILLAR_ENC))
                 )
         self._pillar_enc = pillar_enc
-        self.opts['pillar'] = self._gather_pillar()
+        self.opts['pillar'] = initial_pillar if initial_pillar is not None \
+            else self._gather_pillar()
         self.state_con = context or {}
         self.load_modules()
         self.active = set()
@@ -698,7 +700,7 @@ class State(object):
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['environment'],
-                pillar=self._pillar_override,
+                pillar_override=self._pillar_override,
                 pillarenv=self.opts.get('pillarenv')
                 )
         ret = pillar.compile_pillar()
@@ -3514,25 +3516,26 @@ class HighState(BaseHighState):
     def __init__(
             self,
             opts,
-            pillar=None,
+            pillar_override=None,
             jid=None,
             pillar_enc=None,
             proxy=None,
             context=None,
             mocked=False,
-            loader='states'):
+            loader='states',
+            initial_pillar=None):
         self.opts = opts
         self.client = salt.fileclient.get_file_client(self.opts)
         BaseHighState.__init__(self, opts)
-        self.state = State(
-                           self.opts,
-                           pillar,
+        self.state = State(self.opts,
+                           pillar_override,
                            jid,
                            pillar_enc,
                            proxy=proxy,
                            context=context,
                            mocked=mocked,
-                           loader=loader)
+                           loader=loader,
+                           initial_pillar=initial_pillar)
         self.matcher = salt.minion.Matcher(self.opts)
         self.proxy = proxy
 

@@ -203,7 +203,7 @@ def items(*args, **kwargs):
         __opts__,
         __grains__,
         __opts__['id'],
-        pillar=kwargs.get('pillar'),
+        pillar_override=kwargs.get('pillar'),
         pillarenv=kwargs.get('pillarenv') or __opts__['pillarenv'])
 
     return pillar.compile_pillar()
@@ -411,7 +411,7 @@ def ext(external, pillar=None):
         __opts__['id'],
         __opts__['environment'],
         ext=external,
-        pillar=pillar)
+        pillar_override=pillar)
 
     ret = pillar_obj.compile_pillar()
 
