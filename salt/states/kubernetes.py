@@ -691,3 +691,136 @@ def configmap_present(
     }
     ret['result'] = True
     return ret
+
+
+def pod_absent(name, namespace='default', **kwargs):
+    '''
+    Ensures that the named pod is absent from the given namespace.
+
+    name
+        The name of the pod
+
+    namespace
+        The name of the namespace
+    '''
+
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    pod = __salt__['kubernetes.show_pod'](name, namespace, **kwargs)
+
+    if pod is None:
+        ret['result'] = True if not __opts__['test'] else None
+        ret['comment'] = 'The pod does not exist'
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'The pod is going to be deleted'
+        ret['result'] = None
+        return ret
+
+    res = __salt__['kubernetes.delete_pod'](name, namespace, **kwargs)
+    if res['code'] == 200 or res['code'] is None:
+        ret['result'] = True
+        ret['changes'] = {
+            'kubernetes.pod': {
+                'new': 'absent', 'old': 'present'}}
+        if res['code'] is None:
+            ret['comment'] = 'In progress'
+        else:
+            ret['comment'] = res['message']
+    else:
+        ret['comment'] = 'Something went wrong: {0}'.format(res)
+
+    return ret
+
+
+def pod_present(
+        name,
+        namespace='default',
+        metadata=None,
+        spec=None,
+        source='',
+        template='',
+        **kwargs):
+    '''
+    Ensures that the named pod is present inside of the specified
+    namespace with the given metadata and spec.
+    If the pod exists it will be replaced.
+
+    name
+        The name of the pod.
+
+    namespace
+        The namespace holding the pod. The 'default' one is going to be
+        used unless a different one is specified.
+
+    metadata
+        The metadata of the pod object.
+
+    spec
+        The spec of the pod object.
+
+    source
+        A file containing the definition of the pod (metadata and
+        spec) in the official kubernetes format.
+
+    template
+        Template engine to be used to render the source file.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    if (metadata or spec) and source:
+        return _error(
+            ret,
+            '\'source\' cannot be used in combination with \'metadata\' or '
+            '\'spec\''
+        )
+
+    if metadata is None:
+        metadata = {}
+
+    if spec is None:
+        spec = {}
+
+    pod = __salt__['kubernetes.show_pod'](name, namespace, **kwargs)
+
+    if pod is None:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'The pod is going to be created'
+            return ret
+        res = __salt__['kubernetes.create_pod'](name=name,
+                                                namespace=namespace,
+                                                metadata=metadata,
+                                                spec=spec,
+                                                source=source,
+                                                template=template,
+                                                saltenv=__env__,
+                                                **kwargs)
+        ret['changes']['{0}.{1}'.format(namespace, name)] = {
+            'old': {},
+            'new': res}
+    else:
+        if __opts__['test']:
+            ret['result'] = None
+            return ret
+
+        # TODO: fix replace_namespaced_pod validation issues
+        ret['comment'] = 'salt is currently unable to replace a pod without ' \
+            'deleting it. Please perform the removal of the pod requiring ' \
+            'the \'pod_absent\' state if this is the desired behaviour.'
+        ret['result'] = False
+        return ret
+
+    ret['changes'] = {
+        'metadata': metadata,
+        'spec': spec
+    }
+    ret['result'] = True
+    return ret

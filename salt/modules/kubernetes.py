@@ -171,7 +171,6 @@ def namespaces(**kwargs):
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.list_namespace()
 
-
         return [nms['metadata']['name'] for nms in api_response.to_dict().get('items')]
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
@@ -708,6 +707,50 @@ def create_deployment(
             raise CommandExecutionError(exc)
 
 
+def create_pod(
+        name,
+        namespace,
+        metadata,
+        spec,
+        source,
+        template,
+        saltenv,
+        **kwargs):
+    '''
+    Creates the kubernetes deployment as defined by the user.
+    '''
+    body = __create_object_body(
+        kind='Pod',
+        obj_class=kubernetes.client.V1Pod,
+        spec_creator=__dict_to_pod_spec,
+        name=name,
+        namespace=namespace,
+        metadata=metadata,
+        spec=spec,
+        source=source,
+        template=template,
+        saltenv=saltenv)
+
+    _setup_conn(**kwargs)
+
+    try:
+        api_instance = kubernetes.client.CoreV1Api()
+        api_response = api_instance.create_namespaced_pod(
+            namespace, body)
+
+        return api_response.to_dict()
+    except (ApiException, HTTPError) as exc:
+        if isinstance(exc, ApiException) and exc.status == 404:
+            return None
+        else:
+            log.exception(
+                'Exception when calling '
+                'CoreV1Api->create_namespaced_pod: '
+                '{0}'.format(exc)
+            )
+            raise CommandExecutionError(exc)
+
+
 def create_service(
         name,
         namespace,
@@ -1151,6 +1194,18 @@ def __dict_to_deployment_spec(spec):
     Converts a dictionary into kubernetes V1beta1DeploymentSpec instance.
     '''
     spec_obj = kubernetes.client.V1beta1DeploymentSpec()
+    for key, value in iteritems(spec):
+        if hasattr(spec_obj, key):
+            setattr(spec_obj, key, value)
+
+    return spec_obj
+
+
+def __dict_to_pod_spec(spec):
+    '''
+    Converts a dictionary into kubernetes V1PodSpec instance.
+    '''
+    spec_obj = kubernetes.client.V1PodSpec()
     for key, value in iteritems(spec):
         if hasattr(spec_obj, key):
             setattr(spec_obj, key, value)
