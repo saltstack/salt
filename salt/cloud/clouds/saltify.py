@@ -93,7 +93,8 @@ def _get_connection_info():
     try:
         ret = {'username': vm_['username'],
                'password': vm_['password'],
-               'eauth': vm_['eauth']
+               'eauth': vm_['eauth'],
+               'vm': vm_,
                }
     except IndexError:
         raise SaltCloudException(
@@ -141,10 +142,11 @@ def list_nodes_full():
            'tgt': 'salt-cloud:driver:saltify',
            'fun': 'grains.items',
            'arg': '',
-           'tgt_type': 'grain'
+           'tgt_type': 'grain',
            }
     cmd.update(_get_connection_info())
     ret = local.run(cmd)
+
     for key, grains in ret.items(): # clean up some hyperverbose grains -- everything is too much
         try:
             del grains['cpu_flags'], grains['disks'], grains['pythonpath'], grains['dns'], grains['gpus']
@@ -162,38 +164,6 @@ def list_nodes_select(call=None):
     return salt.utils.cloud.list_nodes_select(
         list_nodes_full('function'), __opts__['query.selection'], call,
     )
-
-
-def reboot(name, call=None):
-    '''
-    Reboot a saltify minion.
-
-    .. versionadded:: xxx
-
-    name
-        The name of the VM to reboot.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a reboot vm_name
-    '''
-    if call != 'action':
-        raise SaltCloudException(
-            'The reboot action must be called with -a or --action.'
-        )
-
-    local = salt.netapi.NetapiClient(__opts__)
-    cmd = {'client':'local',
-           'tgt': name,
-           'fun': 'system.reboot',
-           'arg': '',
-           }
-    cmd.update(_get_connection_info())
-    ret = local.run(cmd)
-
-    return ret
 
 
 def create(vm_):
@@ -320,6 +290,8 @@ def _verify(vm_):
 def destroy(name, call=None):
     ''' Destroy a node.
 
+    .. versionadded:: xxx
+
     CLI Example:
     .. code-block:: bash
 
@@ -328,34 +300,108 @@ def destroy(name, call=None):
     if call == 'function':
         raise SaltCloudSystemExit(
             'The destroy action must be called with -d, --destroy, '
-            '-a or --action.'
+            '-a, or --action.'
         )
+
+    opts = __opts__
 
     __utils__['cloud.fire_event'](
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         args={'name': name},
-        sock_dir=__opts__['sock_dir'],
-        transport=__opts__['transport']
+        sock_dir=opts['sock_dir'],
+        transport=opts['transport']
     )
 
-    local = salt.netapi.NetapiClient(__opts__)
+    local = salt.netapi.NetapiClient(opts)
     cmd = {'client':'local',
            'tgt': name,
-           'fun': 'system.shutdown',
-           'arg': '',
+           'fun': 'grains.get',
+           'arg': ['salt-cloud'],
            }
     cmd.update(_get_connection_info())
-    ret = local.run(cmd)
+    vm_ = cmd['vm']
+    my_info = local.run(cmd)
+    try:
+        vm_.update(my_info[name])  # get profile name to get config value
+    except (IndexError, TypeError):
+        pass
+    if config.get_cloud_config_value(
+           'remove_config_on_destroy', vm_, opts, default=True
+            ):
+        cmd.update({'fun': 'service.disable', 'arg': ['salt-minion']})
+        ret = local.run(cmd)  # prevent generating new keys on restart
+        if ret and ret[name]:
+            log.info('disabled salt-minion service on %s', name)
+        cmd.update({'fun': 'config.get', 'arg': ['conf_file']})
+        ret = local.run(cmd)
+        if ret and ret[name]:
+            confile = ret[name]
+            cmd.update({'fun': 'file.remove', 'arg': [confile]})
+            ret = local.run(cmd)
+            if ret and ret[name]:
+                log.info('removed minion %s configuration file %s',
+                         name, confile)
+        cmd.update({'fun': 'config.get', 'arg': ['pki_dir']})
+        ret = local.run(cmd)
+        if ret and ret[name]:
+            pki_dir = ret[name]
+            cmd.update({'fun': 'file.remove', 'arg': [pki_dir]})
+            ret = local.run(cmd)
+            if ret and ret[name]:
+                log.info(
+                    'removed minion %s key files in %s',
+                    name,
+                    pki_dir)
+
+    if config.get_cloud_config_value(
+        'shutdown_on_destroy', vm_, opts, default=False
+        ):
+        cmd.update({'fun': 'system.shutdown', 'arg': ''})
+        ret = local.run(cmd)
+        if ret and ret[name]:
+            log.info('system.shutdown for minion %s successful', name)
 
     __utils__['cloud.fire_event'](
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
         args={'name': name},
-        sock_dir=__opts__['sock_dir'],
-        transport=__opts__['transport']
+        sock_dir=opts['sock_dir'],
+        transport=opts['transport']
     )
+
+    return {'Destroyed': '{0} was destroyed.'.format(name)}
+
+
+def reboot(name, call=None):
+    '''
+    Reboot a saltify minion.
+
+    .. versionadded:: xxx
+
+    name
+        The name of the VM to reboot.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a reboot vm_name
+    '''
+    if call != 'action':
+        raise SaltCloudException(
+            'The reboot action must be called with -a or --action.'
+        )
+
+    local = salt.netapi.NetapiClient(__opts__)
+    cmd = {'client':'local',
+           'tgt': name,
+           'fun': 'system.reboot',
+           'arg': '',
+           }
+    cmd.update(_get_connection_info())
+    ret = local.run(cmd)
 
     return ret
