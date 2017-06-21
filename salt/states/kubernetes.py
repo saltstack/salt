@@ -566,7 +566,7 @@ def secret_present(
     ret['changes'] = {
         # Omit values from the return. They are unencrypted
         # and can contain sensitive data.
-        'data': data.keys()
+        'data': res['data'].keys()
     }
     ret['result'] = True
     return ret

@@ -692,6 +692,8 @@ def create_secret(
     elif data is None:
         data = {}
 
+    data = __enforce_only_strings_dict(data)
+
     # encode the secrets using base64 as required by kubernetes
     for key in data:
         data[key] = base64.b64encode(data[key])
@@ -862,6 +864,8 @@ def replace_secret(name,
     elif data is None:
         data = {}
 
+    data = __enforce_only_strings_dict(data)
+
     # encode the secrets using base64 as required by kubernetes
     for key in data:
         data[key] = base64.b64encode(data[key])
@@ -1020,3 +1024,15 @@ def __dict_to_service_spec(spec):
             setattr(spec_obj, key, value)
 
     return spec_obj
+
+
+def __enforce_only_strings_dict(dictionary):
+    '''
+    Returns a dictionary that has string keys and values.
+    '''
+    ret = {}
+
+    for key, value in iteritems(dictionary):
+        ret[str(key)] = str(value)
+
+    return ret
