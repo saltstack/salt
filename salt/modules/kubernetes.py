@@ -177,7 +177,8 @@ def namespaces(**kwargs):
             return None
         else:
             log.exception(
-                'Exception when calling CoreV1Api->list_node: {0}'.format(exc)
+                'Exception when calling CoreV1Api->list_namespace: '
+                '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -412,7 +413,7 @@ def show_namespace(name, **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->read_namespaced_pod: {0}'.format(exc)
+                'CoreV1Api->read_namespace: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
 
@@ -446,7 +447,7 @@ def show_secret(name, namespace='default', decode=False, **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'ExtensionsV1beta1Api->read_namespaced_secret: '
+                'CoreV1Api->read_namespaced_secret: '
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
@@ -475,7 +476,7 @@ def show_configmap(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'ExtensionsV1beta1Api->read_namespaced_config_map: '
+                'CoreV1Api->read_namespaced_config_map: '
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)

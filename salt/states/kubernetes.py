@@ -131,8 +131,10 @@ def deployment_absent(name, namespace='default', **kwargs):
         ret['changes'] = {
             'kubernetes.deployment': {
                 'new': 'absent', 'old': 'present'}}
+        ret['comment'] = res['message']
+    else:
+        ret['comment'] = 'Something went wrong, response: {0}'.format(res)
 
-    ret['comment'] = res['message']
     return ret
 
 
@@ -361,7 +363,10 @@ def service_absent(name, namespace='default', **kwargs):
         ret['changes'] = {
             'kubernetes.service': {
                 'new': 'absent', 'old': 'present'}}
-    ret['comment'] = res['message']
+        ret['comment'] = res['message']
+    else:
+        ret['comment'] = 'Something went wrong, response: {0}'.format(res)
+
     return ret
 
 
@@ -410,7 +415,7 @@ def namespace_absent(name, **kwargs):
         else:
             ret['comment'] = 'Terminating'
     else:
-        ret['comment'] = 'Unknown state: {0}'.format(res)
+        ret['comment'] = 'Something went wrong, response: {0}'.format(res)
 
     return ret
 
@@ -435,6 +440,7 @@ def namespace_present(name, **kwargs):
             ret['result'] = None
             ret['comment'] = 'The namespace is going to be created'
             return ret
+
         res = __salt__['kubernetes.create_namespace'](name, **kwargs)
         ret['changes']['namespace'] = {
             'old': {},
@@ -569,6 +575,7 @@ def secret_present(
         'data': res['data'].keys()
     }
     ret['result'] = True
+
     return ret
 
 
@@ -732,7 +739,7 @@ def pod_absent(name, namespace='default', **kwargs):
         else:
             ret['comment'] = res['message']
     else:
-        ret['comment'] = 'Something went wrong: {0}'.format(res)
+        ret['comment'] = 'Something went wrong, response: {0}'.format(res)
 
     return ret
 
