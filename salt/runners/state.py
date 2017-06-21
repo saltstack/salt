@@ -57,10 +57,10 @@ def orchestrate(mods,
     minion = salt.minion.MasterMinion(__opts__)
     running = minion.functions['state.sls'](
             mods,
-            saltenv,
             test,
             exclude,
             pillar=pillar,
+            saltenv=saltenv,
             pillarenv=pillarenv,
             orchestration_jid=orchestration_jid)
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
