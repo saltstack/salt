@@ -257,7 +257,7 @@ def list_(narrow=None,
             Display only packages that match ``narrow`` exactly. Default is
             False.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
     Returns:
         dict: A dictionary of results.
@@ -422,7 +422,7 @@ def install(name,
             Allow multiple versions of the package to be installed. Do not use
             with ``force``. Does not work with all packages. Default is False.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         no_progress
             Do not show download progress percentages. Defaults to False.
