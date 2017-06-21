@@ -1,10 +1,5 @@
-# Import python libs
-import time
-import pdb
-
 # Import salt libs
 import salt.exceptions
-import salt.utils.http
 
 # Import third party libs
 import requests
