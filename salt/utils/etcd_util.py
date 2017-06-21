@@ -164,6 +164,9 @@ class EtcdClient(object):
         except ValueError:
             return {}
 
+        if result is None:
+            return {}
+
         if recurse:
             ret['key'] = getattr(result, 'key', None)
         ret['value'] = getattr(result, 'value', None)
