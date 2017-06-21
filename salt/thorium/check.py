@@ -7,8 +7,11 @@ of having a command execution get gated by a check state via a requisite.
 '''
 # import python libs
 from __future__ import absolute_import
-import salt.utils
 import logging
+
+import salt.utils
+from salt.ext import six
+
 
 log = logging.getLogger(__file__)
 
@@ -211,7 +214,14 @@ def ne(name, value):
     return ret
 
 
-def contains(name, value):
+def contains(name,
+             value,
+             count_lt=None,
+             count_lte=None,
+             count_eq=None,
+             count_gte=None,
+             count_gt=None,
+             count_ne=None):
     '''
     Only succeed if the value in the given register location contains
     the given value
@@ -240,8 +250,27 @@ def contains(name, value):
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     try:
-        if value in __reg__[name]['val']:
+        count_compare = count_lt or count_lte or count_eq or\
+                        count_gte or count_gt or count_ne
+        if count_compare:
+            occurrences = __reg__[name]['val'].count(value)
+            log.debug('{} appears {} times'.format(value, occurrences))
             ret['result'] = True
+            if count_lt:
+                ret['result'] &= occurrences < count_lt
+            if count_lte:
+                ret['result'] &= occurrences <= count_lte
+            if count_eq:
+                ret['result'] &= occurrences == count_eq
+            if count_gte:
+                ret['result'] &= occurrences >= count_gte
+            if count_gt:
+                ret['result'] &= occurrences > count_gt
+            if count_ne:
+                ret['result'] &= occurrences != count_ne
+        else:
+            if value in __reg__[name]['val']:
+                ret['result'] = True
     except TypeError:
         pass
     return ret
