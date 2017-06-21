@@ -38,7 +38,7 @@ class ZyppPluginsTestCase(TestCase):
         drift._get_mtime = MagicMock(return_value=123)
         drift._get_checksum = MagicMock(return_value='deadbeef')
         bogus_io = BogusIO()
-        with patch('zyppnotify.open', bogus_io):
+        with patch('__builtin__.open', bogus_io):
             drift.PLUGINEND(None, None)
         self.assertEqual(str(bogus_io), 'deadbeef 123\n')
         self.assertEqual(bogus_io.mode, 'w')
