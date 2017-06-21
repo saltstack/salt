@@ -121,7 +121,8 @@ def label_folder_absent(
         apiserver=None):
     '''
     .. deprecated:: Nitrogen
-        This state is going to be dropped.
+        This state has been moved to :py:func:`kubernetes.node_label_folder_absent
+        <salt.states.kubernetes.node_label_folder_absent`.
 
     Ensure the label folder doesn't exist on the kube node.
 
@@ -139,9 +140,10 @@ def label_folder_absent(
     ret = __salt__['k8s.folder_absent'](name, node, apiserver)
 
     msg = (
-        'The k8s.folder_present state has been dropped. '
-        'Update your SLS to use the new '
+        'The k8s.label_folder_absent state has been replaced by '
+        'kubernetes.node_label_folder_absent. Update your SLS to use the new '
         'function name to get rid of this warning.'
+
     )
     salt.utils.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
