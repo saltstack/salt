@@ -16,6 +16,7 @@ import errno
 import glob
 import logging
 import os
+import fnmatch
 import re
 import shlex
 
@@ -1017,19 +1018,41 @@ def force_reload(name, no_block=True, unmask=False, unmask_runtime=False):
 # established by Salt's service management states.
 def status(name, sig=None):  # pylint: disable=unused-argument
     '''
-    Return the status for a service via systemd, returns ``True`` if the
-    service is running and ``False`` if it is not.
+    Return the status for a service via systemd.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
+
+    .. versionchanged:: Oxygen
+        The service name can now be a glob (e.g. ``salt*``)
+
+    Args:
+        name (str): The name of the service to check
+        sig (str): Not implemented
+
+    Returns:
+        bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status <service name>
+        salt '*' service.status <service name> [service signature]
     '''
-    _check_for_unit_changes(name)
-    return __salt__['cmd.retcode'](_systemctl_cmd('is-active', name),
-                                   python_shell=False,
-                                   ignore_retcode=True) == 0
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(get_all(), name)
+    else:
+        services = [name]
+    results = {}
+    for service in services:
+        _check_for_unit_changes(service)
+        results[service] = __salt__['cmd.retcode'](_systemctl_cmd('is-active', service),
+                                                   python_shell=False,
+                                                   ignore_retcode=True) == 0
+    if contains_globbing:
+        return results
+    return results[name]
 
 
 # **kwargs is required to maintain consistency with the API established by

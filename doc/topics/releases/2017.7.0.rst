@@ -579,6 +579,11 @@ Beacons
 
 - :mod:`salt.beacons.log <salt.beacons.log>`
 
+Cache
+-----
+
+- :mod:`salt.cache.redis_cache <salt.cache.redis_cache>`
+
 Engines
 -------
 
@@ -600,7 +605,6 @@ Execution modules
 - :mod:`salt.modules.heat <salt.modules.heat>`
 - :mod:`salt.modules.icinga2 <salt.modules.icinga2>`
 - :mod:`salt.modules.logmod <salt.modules.logmod>`
-- :mod:`salt.modules.mattermost <salt.modules.mattermost>`
 - :mod:`salt.modules.mattermost <salt.modules.mattermost>`
 - :mod:`salt.modules.namecheap_dns <salt.modules.namecheap_dns>`
 - :mod:`salt.modules.namecheap_domains <salt.modules.namecheap_domains>`

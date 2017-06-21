@@ -3120,11 +3120,15 @@ class BaseHighState(object):
                 _filter_matches(match, data, self.opts['nodegroups'])
         ext_matches = self._master_tops()
         for saltenv in ext_matches:
-            if saltenv in matches:
-                matches[saltenv] = list(
-                    set(ext_matches[saltenv]).union(matches[saltenv]))
+            top_file_matches = matches.get(saltenv, [])
+            if self.opts['master_tops_first']:
+                first = ext_matches[saltenv]
+                second = top_file_matches
             else:
-                matches[saltenv] = ext_matches[saltenv]
+                first = top_file_matches
+                second = ext_matches[saltenv]
+            matches[saltenv] = first + [x for x in second if x not in first]
+
         # pylint: enable=cell-var-from-loop
         return matches
 
