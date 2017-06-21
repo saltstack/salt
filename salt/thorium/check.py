@@ -253,3 +253,171 @@ def event(name):
             ret['result'] = True
 
     return ret
+
+
+def len_gt(name, value):
+    '''
+    Only succeed if length of the given register location is greater than
+    the given value.
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          check.len_gt:
+            - value: 42
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: foo
+    '''
+    ret = _get_ret(name)
+    if not ret['result']:
+        return ret
+    if len(__reg__[name]['val']) > value:
+        ret['result'] = True
+    return ret
+
+
+def len_gte(name, value):
+    '''
+    Only succeed if the length of the given register location is greater or equal
+    than the given value
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          check.len_gte:
+            - value: 42
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: foo
+    '''
+    ret = _get_ret(name)
+    if not ret['result']:
+        return ret
+    if len(__reg__[name]['val']) >= value:
+        ret['result'] = True
+    return ret
+
+
+def len_lt(name, value):
+    '''
+    Only succeed if the lenght of the given register location is less than
+    the given value.
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          check.len_lt:
+            - value: 42
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: foo
+    '''
+    ret = _get_ret(name)
+    if not ret['result']:
+        return ret
+    if len(__reg__[name]['val']) < value:
+        ret['result'] = True
+    return ret
+
+
+def len_lte(name, value):
+    '''
+    Only succeed if the length of the given register location is less than
+    or equal the given value
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          check.len_lte:
+            - value: 42
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: foo
+    '''
+    ret = _get_ret(name)
+    if not ret['result']:
+        return ret
+    if len(__reg__[name]['val']) <= value:
+        ret['result'] = True
+    return ret
+
+
+def len_eq(name, value):
+    '''
+    Only succeed if the length of the given register location is equal to
+    the given value.
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          check.len_eq:
+            - value: 42
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: foo
+    '''
+    ret = _get_ret(name)
+    if not ret['result']:
+        return ret
+    if __reg__[name]['val'] == value:
+        ret['result'] = True
+    return ret
+
+
+def len_ne(name, value):
+    '''
+    Only succeed if the length of the given register location is not equal to
+    the given value.
+
+    USAGE:
+
+    .. code-block:: yaml
+
+        foo:
+          check.len_ne:
+            - value: 42
+
+        run_remote_ex:
+          local.cmd:
+            - tgt: '*'
+            - func: test.ping
+            - require:
+              - check: foo
+    '''
+    ret = _get_ret(name)
+    if not ret['result']:
+        return ret
+    if len(__reg__[name]['val']) != value:
+        ret['result'] = True
+    return ret
