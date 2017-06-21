@@ -48,8 +48,8 @@ def beacon(config):
 
         beacons:
           service:
-            salt-master:
-            mysql:
+            - salt-master:
+            - mysql:
 
     The config above sets up beacons to check for
     the salt-master and mysql services.

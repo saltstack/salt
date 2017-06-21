@@ -43,18 +43,18 @@ def _get_journal():
     return __context__['systemd.journald']
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
     # Configuration for journald beacon should be a list of dicts
-    if not isinstance(config, dict):
+    if not isinstance(config, list):
         return False
     else:
-        for item in config:
-            if not isinstance(config[item], dict):
+        for config_item in config:
+            if not isinstance(config_item, dict):
                 return False, ('Configuration for journald beacon must '
-                               'be a dictionary of dictionaries.')
+                               'be a list of dictionaries.')
     return True, 'Valid beacon configuration'
 
 
@@ -69,9 +69,9 @@ def beacon(config):
 
         beacons:
           journald:
-            sshd:
-              SYSLOG_IDENTIFIER: sshd
-              PRIORITY: 6
+            - sshd:
+                SYSLOG_IDENTIFIER: sshd
+                PRIORITY: 6
     '''
     ret = []
     journal = _get_journal()
@@ -79,15 +79,18 @@ def beacon(config):
         cur = journal.get_next()
         if not cur:
             break
-        for name in config:
+        for name_config in config:
+
+            name = name_config.keys()[0]
+
             n_flag = 0
-            for key in config[name]:
+            for key in name_config[name]:
                 if isinstance(key, salt.ext.six.string_types):
                     key = salt.utils.locales.sdecode(key)
                 if key in cur:
-                    if config[name][key] == cur[key]:
+                    if name_config[name][key] == cur[key]:
                         n_flag += 1
-            if n_flag == len(config[name]):
+            if n_flag == len(name_config[name]):
                 # Match!
                 sub = salt.utils.simple_types_filter(cur)
                 sub.update({'tag': name})

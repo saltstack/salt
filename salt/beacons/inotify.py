@@ -79,7 +79,7 @@ def _get_notifier(config):
     return __context__['inotify.notifier']
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
@@ -105,34 +105,36 @@ def __validate__(config):
     ]
 
     # Configuration for inotify beacon should be a dict of dicts
-    log.debug('config {0}'.format(config))
-    if not isinstance(config, dict):
-        return False, 'Configuration for inotify beacon must be a dictionary.'
+    if not isinstance(config, list):
+        return False, 'Configuration for inotify beacon must be a list.'
     else:
         for config_item in config:
-            if not isinstance(config[config_item], dict):
+
+            path = config_item.keys()[0]
+
+            if not isinstance(config_item[path], dict):
                 return False, ('Configuration for inotify beacon must '
-                               'be a dictionary of dictionaries.')
+                               'be a list of dictionaries.')
             else:
-                if not any(j in ['mask', 'recurse', 'auto_add'] for j in config[config_item]):
+                if not any(j in ['mask', 'recurse', 'auto_add'] for j in config_item[path]):
                     return False, ('Configuration for inotify beacon must '
                                    'contain mask, recurse or auto_add items.')
 
-            if 'auto_add' in config[config_item]:
-                if not isinstance(config[config_item]['auto_add'], bool):
+            if 'auto_add' in config_item[path]:
+                if not isinstance(config_item[path]['auto_add'], bool):
                     return False, ('Configuration for inotify beacon '
                                    'auto_add must be boolean.')
 
-            if 'recurse' in config[config_item]:
-                if not isinstance(config[config_item]['recurse'], bool):
+            if 'recurse' in config_item[path]:
+                if not isinstance(config_item[path]['recurse'], bool):
                     return False, ('Configuration for inotify beacon '
                                    'recurse must be boolean.')
 
-            if 'mask' in config[config_item]:
-                if not isinstance(config[config_item]['mask'], list):
+            if 'mask' in config_item[path]:
+                if not isinstance(config_item[path]['mask'], list):
                     return False, ('Configuration for inotify beacon '
                                    'mask must be list.')
-                for mask in config[config_item]['mask']:
+                for mask in config_item[path]['mask']:
                     if mask not in VALID_MASK:
                         return False, ('Configuration for inotify beacon '
                                        'invalid mask option {0}.'.format(mask))
@@ -223,7 +225,10 @@ def beacon(config):
                     break
                 path = os.path.dirname(path)
 
-            excludes = config[path].get('exclude', '')
+            for path_config in config:
+                path = path_config.keys()[0]
+                excludes = path_config[path].get('exclude', '')
+
             if excludes and isinstance(excludes, list):
                 for exclude in excludes:
                     if isinstance(exclude, dict):
@@ -257,9 +262,12 @@ def beacon(config):
 
     # Update existing watches and add new ones
     # TODO: make the config handle more options
-    for path in config:
-        if isinstance(config[path], dict):
-            mask = config[path].get('mask', DEFAULT_MASK)
+    for path_config in config:
+
+        path = path_config.keys()[0]
+
+        if isinstance(path_config[path], dict):
+            mask = path_config[path].get('mask', DEFAULT_MASK)
             if isinstance(mask, list):
                 r_mask = 0
                 for sub in mask:
@@ -269,8 +277,8 @@ def beacon(config):
             else:
                 r_mask = mask
             mask = r_mask
-            rec = config[path].get('recurse', False)
-            auto_add = config[path].get('auto_add', False)
+            rec = path_config[path].get('recurse', False)
+            auto_add = path_config[path].get('auto_add', False)
         else:
             mask = DEFAULT_MASK
             rec = False
@@ -287,7 +295,7 @@ def beacon(config):
                     if update:
                         wm.update_watch(wd, mask=mask, rec=rec, auto_add=auto_add)
         elif os.path.exists(path):
-            excludes = config[path].get('exclude', '')
+            excludes = path_config[path].get('exclude', '')
             excl = None
             if isinstance(excludes, list):
                 excl = []
