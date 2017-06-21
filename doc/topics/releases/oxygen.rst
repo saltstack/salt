@@ -13,6 +13,18 @@ packages on minions which use :mod:`yum/dnf <salt.modules.yumpkg>` or :mod:`apt
 <salt.states.pkg.installed>` state and in the ``pkg.install`` remote execution
 function.
 
+:ref:`Master Tops <master-tops-system>` Changes
+-----------------------------------------------
+
+When both :ref:`Master Tops <master-tops-system>` and a :ref:`Top File
+<states-top>` produce SLS matches for a given minion, the matches were being
+merged in an unpredictable manner which did not preserve ordering. This has
+been changed. The top file matches now execute in the expected order, followed
+by any master tops matches that are not matched via a top file.
+
+To make master tops matches execute first, followed by top file matches, set
+the new :conf_minion:`master_tops_first` minion config option to ``True``.
+
 Configuration Option Deprecations
 ---------------------------------
 
