@@ -876,6 +876,57 @@ def node_label_absent(name, node, **kwargs):
     return ret
 
 
+def node_label_folder_absent(name, node, **kwargs):
+    '''
+    Ensures the label folder doesn't exist on the specified node.
+
+    name
+        The name of label folder
+
+    node
+        The name of the node
+    '''
+
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+    labels = __salt__['kubernetes.node_labels'](node, **kwargs)
+
+    folder = name.strip("/") + "/"
+    labels_to_drop = []
+    new_labels = []
+    for label in labels:
+        if label.startswith(folder):
+            labels_to_drop.append(label)
+        else:
+            new_labels.append(label)
+
+    if not labels_to_drop:
+        ret['result'] = True if not __opts__['test'] else None
+        ret['comment'] = 'The label folder does not exist'
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'The label folder is going to be deleted'
+        ret['result'] = None
+        return ret
+
+    for label in labels_to_drop:
+        __salt__['kubernetes.node_remove_label'](
+            node_name=node,
+            label_name=label,
+            **kwargs)
+
+    ret['result'] = True
+    ret['changes'] = {
+        'kubernetes.node_label_folder_absent': {
+            'new': new_labels, 'old': labels.keys()}}
+    ret['comment'] = 'Label folder removed from node'
+
+    return ret
+
+
 def node_label_present(
         name,
         node,
