@@ -453,7 +453,7 @@ def update():
             os.makedirs(env_cachedir)
         new_envs = envs(ignore_cache=True)
         serial = salt.payload.Serial(__opts__)
-        with salt.utils.fopen(env_cache, 'w+') as fp_:
+        with salt.utils.fopen(env_cache, 'wb+') as fp_:
             fp_.write(serial.dumps(new_envs))
             log.trace('Wrote env cache data to {0}'.format(env_cache))
 
