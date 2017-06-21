@@ -1088,7 +1088,7 @@ ARGS = {10}\n'''.format(self.minion_config,
         # Copy shim to target system, under $HOME/.<randomized name>
         target_shim_file = '.{0}.{1}'.format(binascii.hexlify(os.urandom(6)), extension)
         if self.winrm:
-            target_shim_file = saltwinshell.get_target_shim_file(self)
+            target_shim_file = saltwinshell.get_target_shim_file(self, target_shim_file)
         self.shell.send(shim_tmp_file.name, target_shim_file, makedirs=True)
 
         # Remove our shim file
