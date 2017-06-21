@@ -1104,7 +1104,7 @@ ARGS = {10}\n'''.format(self.minion_config,
             if not self.winrm:
                 ret = self.shell.exec_cmd('/bin/sh \'$HOME/{0}\''.format(target_shim_file))
             else:
-                ret = saltwinshell.call_python(self)
+                ret = saltwinshell.call_python(self, target_shim_file)
 
         # Remove shim from target system
         if not self.winrm:
