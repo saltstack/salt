@@ -571,3 +571,123 @@ def secret_present(
     ret['result'] = True
     return ret
 
+
+def configmap_absent(name, namespace='default', **kwargs):
+    '''
+    Ensures that the named configmap is absent from the given namespace.
+
+    name
+        The name of the configmap
+
+    namespace
+        The name of the namespace
+    '''
+
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    configmap = __salt__['kubernetes.show_configmap'](name, namespace, **kwargs)
+
+    if configmap is None:
+        ret['result'] = True if not __opts__['test'] else None
+        ret['comment'] = 'The configmap does not exist'
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'The configmap is going to be deleted'
+        ret['result'] = None
+        return ret
+
+    __salt__['kubernetes.delete_configmap'](name, namespace, **kwargs)
+    # As for kubernetes 1.6.4 doesn't set a code when deleting a configmap
+    # The kubernetes module will raise an exception if the kubernetes
+    # server will return an error
+    ret['result'] = True
+    ret['changes'] = {
+        'kubernetes.configmap': {
+            'new': 'absent', 'old': 'present'}}
+    ret['comment'] = 'ConfigMap deleted'
+
+    return ret
+
+
+def configmap_present(
+        name,
+        namespace='default',
+        data=None,
+        source='',
+        template='',
+        **kwargs):
+    '''
+    Ensures that the named configmap is present inside of the specified namespace
+    with the given data.
+    If the configmap exists it will be replaced.
+
+    name
+        The name of the configmap.
+
+    namespace
+        The namespace holding the configmap. The 'default' one is going to be
+        used unless a different one is specified.
+
+    data
+        The dictionary holding the configmaps.
+
+    source
+        A file containing the data of the configmap in plain format.
+
+    template
+        Template engine to be used to render the source file.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    if data and source:
+        return _error(
+            ret,
+            '\'source\' cannot be used in combination with \'data\''
+        )
+
+    configmap = __salt__['kubernetes.show_configmap'](name, namespace, **kwargs)
+
+    if configmap is None:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'The configmap is going to be created'
+            return ret
+        res = __salt__['kubernetes.create_configmap'](name=name,
+                                                      namespace=namespace,
+                                                      data=data,
+                                                      source=source,
+                                                      template=template,
+                                                      saltenv=__env__,
+                                                      **kwargs)
+        ret['changes']['{0}.{1}'.format(namespace, name)] = {
+            'old': {},
+            'new': res}
+    else:
+        if __opts__['test']:
+            ret['result'] = None
+            return ret
+
+        # TODO: improve checks  # pylint: disable=fixme
+        log.info('Forcing the recreation of the service')
+        ret['comment'] = 'The configmap is already present. Forcing recreation'
+        res = __salt__['kubernetes.replace_configmap'](
+            name=name,
+            namespace=namespace,
+            data=data,
+            source=source,
+            template=template,
+            saltenv=__env__,
+            **kwargs)
+
+    ret['changes'] = {
+        'data': res['data']
+    }
+    ret['result'] = True
+    return ret
