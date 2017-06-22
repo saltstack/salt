@@ -91,11 +91,11 @@ def beacon(config):
         if 'user' in config_item:
             _config['user'] = config_item['user']
         if 'battery_low' in config:
-            __config['battery_low'] = config_item['battery_low']
+            _config['battery_low'] = config_item['battery_low']
         if 'states' in config:
-            __config['states'] = config_item['states']
+            _config['states'] = config_item['states']
         if 'no_device_event' in config:
-            __config['no_device_event'] = config_item['no_device_event']
+            _config['no_device_event'] = config_item['no_device_event']
 
     out = __salt__['cmd.run']('adb devices', runas=_config.get('user', None))
 
