@@ -730,42 +730,8 @@ class State(object):
                 self.opts['id'],
                 self.opts['environment'],
                 pillar_override=self._pillar_override,
-                pillarenv=self.opts.get('pillarenv')
-                )
-        ret = pillar.compile_pillar()
-        if self._pillar_override:
-            merge_strategy = self.opts.get(
-                'pillar_source_merging_strategy',
-                'smart'
-            )
-            merge_lists = self.opts.get(
-                'pillar_merge_lists',
-                False
-            )
-            if isinstance(self._pillar_override, dict):
-                ret = salt.utils.dictupdate.merge(
-                    ret,
-                    self._decrypt_pillar_override(),
-                    strategy=merge_strategy,
-                    merge_lists=merge_lists
-                )
-            else:
-                decrypted = yamlloader.load(
-                    self._decrypt_pillar_override(),
-                    Loader=yamlloader.SaltYamlSafeLoader
-                )
-                if not isinstance(decrypted, dict):
-                    log.error(
-                        'Decrypted pillar data did not render to a dictionary'
-                    )
-                else:
-                    ret = salt.utils.dictupdate.merge(
-                        ret,
-                        decrypted,
-                        strategy=merge_strategy,
-                        merge_lists=merge_lists
-                    )
-        return ret
+                pillarenv=self.opts.get('pillarenv'))
+        return pillar.compile_pillar()
 
     def _mod_init(self, low):
         '''
