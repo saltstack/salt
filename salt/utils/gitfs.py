@@ -24,6 +24,7 @@ import salt.utils
 import salt.utils.itertools
 import salt.utils.url
 import salt.fileserver
+from salt.config import DEFAULT_MASTER_OPTS as __DEFAULT_MASTER_OPTS
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running as pid_exists
 from salt.exceptions import (
@@ -39,6 +40,8 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 import salt.ext.six as six
 
 VALID_PROVIDERS = ('pygit2', 'gitpython')
+VALID_REF_TYPES = __DEFAULT_MASTER_OPTS['gitfs_ref_types']
+
 # Optional per-remote params that can only be used on a per-remote basis, and
 # thus do not have defaults in salt/config.py.
 PER_REMOTE_ONLY = ('name',)
@@ -116,11 +119,13 @@ def enforce_types(key, val):
     non_string_params = {
         'ssl_verify': bool,
         'insecure_auth': bool,
+        'disable_saltenv_mapping': bool,
         'env_whitelist': 'stringlist',
         'env_blacklist': 'stringlist',
         'saltenv_whitelist': 'stringlist',
         'saltenv_blacklist': 'stringlist',
         'refspecs': 'stringlist',
+        'ref_types': 'stringlist',
     }
 
     def _find_global(key):
@@ -333,6 +338,23 @@ class GitProvider(object):
         # params as attributes
         delattr(self, 'conf')
 
+        # Normalize components of the ref_types configuration and check for
+        # invalid configuration.
+        if hasattr(self, 'ref_types'):
+            self.ref_types = [x.lower() for x in self.ref_types]
+            invalid_ref_types = [x for x in self.ref_types
+                                 if x not in VALID_REF_TYPES]
+            if invalid_ref_types:
+                log.critical(
+                    'The following ref_types for %s remote \'%s\' are '
+                    'invalid: %s. The supported values are: %s',
+                    self.role,
+                    self.id,
+                    ', '.join(invalid_ref_types),
+                    ', '.join(VALID_REF_TYPES),
+                )
+                failhard(self.role)
+
         if not isinstance(self.url, six.string_types):
             log.critical(
                 'Invalid %s remote \'%s\'. Remotes must be strings, you '
@@ -384,15 +406,18 @@ class GitProvider(object):
             else:
                 env_set.add('base' if rname == self.base else rname)
 
+        use_branches = 'branch' in self.ref_types
+        use_tags = 'tag' in self.ref_types
+
         ret = set()
         for ref in refs:
             ref = re.sub('^refs/', '', ref)
             rtype, rname = ref.split('/', 1)
-            if rtype == 'remotes':
+            if rtype == 'remotes' and use_branches:
                 parted = rname.partition('/')
                 rname = parted[2] if parted[2] else parted[0]
                 _check_ref(ret, rname)
-            elif rtype == 'tags':
+            elif rtype == 'tags' and use_tags:
                 _check_ref(ret, rname)
 
         return ret
@@ -424,9 +449,9 @@ class GitProvider(object):
                         return None
 
                 # Return the all_saltenvs branch/tag if it is configured
+                per_saltenv_ref = _get_per_saltenv(tgt_env)
                 try:
                     all_saltenvs_ref = self.all_saltenvs
-                    per_saltenv_ref = _get_per_saltenv(tgt_env)
                     if per_saltenv_ref and all_saltenvs_ref != per_saltenv_ref:
                         log.debug(
                             'The per-saltenv configuration has mapped the '
@@ -444,8 +469,16 @@ class GitProvider(object):
 
                 if tgt_env == 'base':
                     return self.base
+                elif self.disable_saltenv_mapping:
+                    if per_saltenv_ref is None:
+                        log.debug(
+                            'saltenv mapping is diabled for %s remote \'%s\' '
+                            'and saltenv \'%s\' is not explicitly mapped',
+                            self.role, self.id, tgt_env
+                        )
+                    return per_saltenv_ref
                 else:
-                    return _get_per_saltenv(tgt_env) or tgt_env
+                    return per_saltenv_ref or tgt_env
 
             if name in saltenv_conf:
                 return strip_sep(saltenv_conf[name])
@@ -833,7 +866,7 @@ class GitProvider(object):
         if tgt_ref is None:
             return None
 
-        for ref_type in ('branch', 'tag', 'sha'):
+        for ref_type in self.ref_types:
             try:
                 func_name = 'get_tree_from_{0}'.format(ref_type)
                 func = getattr(self, func_name)
@@ -1137,7 +1170,7 @@ class GitPython(GitProvider):
         '''
         tree = self.get_tree(tgt_env)
         if not tree:
-            # Branch/tag/SHA not found
+            # Branch/tag/SHA not found in repo
             return None, None, None
         blob = None
         depth = 0
@@ -1759,6 +1792,7 @@ class Pygit2(GitProvider):
 
     def setup_callbacks(self):
         '''
+        Assign attributes for pygit2 callbacks
         '''
         # pygit2 radically changed fetching in 0.23.2
         pygit2_version = pygit2.__version__
@@ -2490,7 +2524,8 @@ class GitFS(GitBase):
         ret = set()
         for repo in self.remotes:
             repo_envs = set()
-            repo_envs.update(repo.envs())
+            if not repo.disable_saltenv_mapping:
+                repo_envs.update(repo.envs())
             for env_list in six.itervalues(repo.saltenv_revmap):
                 repo_envs.update(env_list)
             ret.update([x for x in repo_envs if repo.env_is_exposed(x)])

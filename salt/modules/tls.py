@@ -575,7 +575,7 @@ def create_ca(ca_name,
               L='Salt Lake City',
               O='SaltStack',
               OU=None,
-              emailAddress='xyz@pdq.net',
+              emailAddress=None,
               fixmode=False,
               cacert_path=None,
               ca_filename=None,
@@ -605,7 +605,7 @@ def create_ca(ca_name,
     OU
         organizational unit, default is None
     emailAddress
-        email address for the CA owner, default is 'xyz@pdq.net'
+        email address for the CA owner, default is None
     cacert_path
         absolute path to ca certificates root directory
     ca_filename
@@ -698,7 +698,8 @@ def create_ca(ca_name,
     if OU:
         ca.get_subject().OU = OU
     ca.get_subject().CN = CN
-    ca.get_subject().emailAddress = emailAddress
+    if emailAddress:
+        ca.get_subject().emailAddress = emailAddress
 
     ca.gmtime_adj_notBefore(0)
     ca.gmtime_adj_notAfter(int(days) * 24 * 60 * 60)
@@ -854,7 +855,7 @@ def create_csr(ca_name,
                L='Salt Lake City',
                O='SaltStack',
                OU=None,
-               emailAddress='xyz@pdq.net',
+               emailAddress=None,
                subjectAltName=None,
                cacert_path=None,
                ca_filename=None,
@@ -886,7 +887,7 @@ def create_csr(ca_name,
     OU
         organizational unit, default is None
     emailAddress
-        email address for the request, default is 'xyz@pdq.net'
+        email address for the request, default is None
     subjectAltName
         valid subjectAltNames in full form, e.g. to add DNS entry you would call
         this function with this value:
@@ -998,7 +999,8 @@ def create_csr(ca_name,
     if OU:
         req.get_subject().OU = OU
     req.get_subject().CN = CN
-    req.get_subject().emailAddress = emailAddress
+    if emailAddress:
+        req.get_subject().emailAddress = emailAddress
 
     try:
         extensions = get_extensions(cert_type)['csr']
@@ -1074,7 +1076,7 @@ def create_self_signed_cert(tls_dir='tls',
                             L='Salt Lake City',
                             O='SaltStack',
                             OU=None,
-                            emailAddress='xyz@pdq.net',
+                            emailAddress=None,
                             cacert_path=None,
                             cert_filename=None,
                             digest='sha256',
@@ -1100,7 +1102,7 @@ def create_self_signed_cert(tls_dir='tls',
     OU
         organizational unit, default is None
     emailAddress
-        email address for the request, default is 'xyz@pdq.net'
+        email address for the request, default is None
     cacert_path
         absolute path to ca certificates root directory
     digest
@@ -1171,7 +1173,8 @@ def create_self_signed_cert(tls_dir='tls',
     if OU:
         cert.get_subject().OU = OU
     cert.get_subject().CN = CN
-    cert.get_subject().emailAddress = emailAddress
+    if emailAddress:
+        cert.get_subject().emailAddress = emailAddress
 
     cert.set_serial_number(_new_serial(tls_dir))
     cert.set_issuer(cert.get_subject())

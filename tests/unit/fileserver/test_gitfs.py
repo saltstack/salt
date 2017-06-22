@@ -43,31 +43,34 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
         self.tmp_sock_dir = tempfile.mkdtemp(dir=TMP)
         return {
             gitfs: {
-                '__opts__': {'cachedir': self.tmp_cachedir,
-                             'sock_dir': self.tmp_sock_dir,
-                             'gitfs_root': 'salt',
-                             'fileserver_backend': ['git'],
-                             'gitfs_base': 'master',
-                             'fileserver_events': True,
-                             'transport': 'zeromq',
-                             'gitfs_mountpoint': '',
-                             'gitfs_saltenv': [],
-                             'gitfs_env_whitelist': [],
-                             'gitfs_env_blacklist': [],
-                             'gitfs_saltenv_whitelist': [],
-                             'gitfs_saltenv_blacklist': [],
-                             'gitfs_user': '',
-                             'gitfs_password': '',
-                             'gitfs_insecure_auth': False,
-                             'gitfs_privkey': '',
-                             'gitfs_pubkey': '',
-                             'gitfs_passphrase': '',
-                             'gitfs_refspecs': [
-                                 '+refs/heads/*:refs/remotes/origin/*',
-                                 '+refs/tags/*:refs/tags/*'
-                             ],
-                             'gitfs_ssl_verify': True,
-                             '__role': 'master'
+                '__opts__': {
+                    'cachedir': self.tmp_cachedir,
+                    'sock_dir': self.tmp_sock_dir,
+                    'gitfs_root': 'salt',
+                    'fileserver_backend': ['git'],
+                    'gitfs_base': 'master',
+                    'fileserver_events': True,
+                    'transport': 'zeromq',
+                    'gitfs_mountpoint': '',
+                    'gitfs_saltenv': [],
+                    'gitfs_env_whitelist': [],
+                    'gitfs_env_blacklist': [],
+                    'gitfs_saltenv_whitelist': [],
+                    'gitfs_saltenv_blacklist': [],
+                    'gitfs_user': '',
+                    'gitfs_password': '',
+                    'gitfs_insecure_auth': False,
+                    'gitfs_privkey': '',
+                    'gitfs_pubkey': '',
+                    'gitfs_passphrase': '',
+                    'gitfs_refspecs': [
+                        '+refs/heads/*:refs/remotes/origin/*',
+                        '+refs/tags/*:refs/tags/*'
+                    ],
+                    'gitfs_ssl_verify': True,
+                    'gitfs_disable_saltenv_mapping': False,
+                    'gitfs_ref_types': ['branch', 'tag', 'sha'],
+                    '__role': 'master',
                 }
             }
         }
@@ -164,32 +167,35 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
         self.tmp_repo_dir = os.path.join(TMP, 'gitfs_root')
         return {
             gitfs: {
-                '__opts__': {'cachedir': self.tmp_cachedir,
-                             'sock_dir': self.tmp_sock_dir,
-                             'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                             'gitfs_root': '',
-                             'fileserver_backend': ['git'],
-                             'gitfs_base': 'master',
-                             'fileserver_events': True,
-                             'transport': 'zeromq',
-                             'gitfs_mountpoint': '',
-                             'gitfs_saltenv': [],
-                             'gitfs_env_whitelist': [],
-                             'gitfs_env_blacklist': [],
-                             'gitfs_saltenv_whitelist': [],
-                             'gitfs_saltenv_blacklist': [],
-                             'gitfs_user': '',
-                             'gitfs_password': '',
-                             'gitfs_insecure_auth': False,
-                             'gitfs_privkey': '',
-                             'gitfs_pubkey': '',
-                             'gitfs_passphrase': '',
-                             'gitfs_refspecs': [
-                                 '+refs/heads/*:refs/remotes/origin/*',
-                                 '+refs/tags/*:refs/tags/*'
-                             ],
-                             'gitfs_ssl_verify': True,
-                             '__role': 'master'
+                '__opts__': {
+                    'cachedir': self.tmp_cachedir,
+                    'sock_dir': self.tmp_sock_dir,
+                    'gitfs_remotes': ['file://' + self.tmp_repo_dir],
+                    'gitfs_root': '',
+                    'fileserver_backend': ['git'],
+                    'gitfs_base': 'master',
+                    'fileserver_events': True,
+                    'transport': 'zeromq',
+                    'gitfs_mountpoint': '',
+                    'gitfs_saltenv': [],
+                    'gitfs_env_whitelist': [],
+                    'gitfs_env_blacklist': [],
+                    'gitfs_saltenv_whitelist': [],
+                    'gitfs_saltenv_blacklist': [],
+                    'gitfs_user': '',
+                    'gitfs_password': '',
+                    'gitfs_insecure_auth': False,
+                    'gitfs_privkey': '',
+                    'gitfs_pubkey': '',
+                    'gitfs_passphrase': '',
+                    'gitfs_refspecs': [
+                        '+refs/heads/*:refs/remotes/origin/*',
+                        '+refs/tags/*:refs/tags/*'
+                    ],
+                    'gitfs_ssl_verify': True,
+                    'gitfs_disable_saltenv_mapping': False,
+                    'gitfs_ref_types': ['branch', 'tag', 'sha'],
+                    '__role': 'master',
                 }
             }
         }
