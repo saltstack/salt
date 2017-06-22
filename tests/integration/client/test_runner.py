@@ -133,8 +133,6 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
                 'quuz': 'on',
             },
         })
-<<<<<<< HEAD:tests/integration/client/test_runner.py
-=======
 
     def test_invalid_kwargs_are_ignored(self):
         low = {
