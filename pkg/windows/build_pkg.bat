@@ -560,12 +560,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\zfs.py"^
 If Exist "%BinDir%\Lib\site-packages\salt\states\zpool.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\zpool.*" 1>nul
 
-:: Remove Unneeded Components
-If Exist "%BinDir%\Lib\site-packages\salt\cloud"^
-    rd /S /Q "%BinDir%\Lib\site-packages\salt\cloud" 1>nul
-If Exist "%BinDir%\Scripts\salt-unity*"^
-    del /Q "%BinDir%\Scripts\salt-unity*" 1>nul
-
 @echo.
 
 @echo Building the installer...
