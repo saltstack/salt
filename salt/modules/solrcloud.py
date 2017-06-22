@@ -2,7 +2,7 @@
 '''
 Module for solrcloud configuration
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 For now, module is limited to http-exposed API. It doesn't implement config upload via Solr zkCli
 '''

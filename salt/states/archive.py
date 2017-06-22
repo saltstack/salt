@@ -572,7 +572,8 @@ def extracted(name,
 
         .. versionchanged:: 2016.11.0
             If omitted, the archive format will be guessed based on the value
-            of the ``source`` argument.
+            of the ``source`` argument. If the minion is running a release
+            older than 2016.11.0, this option is required.
 
     .. _tarfile: https://docs.python.org/2/library/tarfile.html
     .. _zipfile: https://docs.python.org/2/library/zipfile.html

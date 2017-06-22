@@ -7,6 +7,10 @@ Management of Mongodb users
     This module requires PyMongo to be installed.
 '''
 
+from __future__ import absolute_import
+
+import salt.utils
+
 # Define the module's virtual name
 __virtualname__ = 'mongodb_user'
 
@@ -27,6 +31,9 @@ def present(name,
             authdb=None,
             roles=None):
     '''
+    .. deprecated:: Fluorine
+        Use ``mongodb.user_present`` instead
+
     Ensure that the user is present with the specified properties
 
     name
@@ -77,6 +84,13 @@ def present(name,
               - dbOwner
 
     '''
+
+    salt.utils.warn_until(
+        'Fluorine',
+        'The \'mongodb_user.present\' function has been deprecated and will be removed in Salt '
+        '{version}. Please use \'mongodb.user_present\' instead.'
+    )
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -147,6 +161,9 @@ def absent(name,
            database="admin",
            authdb=None):
     '''
+    .. deprecated:: Fluorine
+        Use ``mongodb.user_absent`` instead
+
     Ensure that the named user is absent
 
     name
@@ -171,6 +188,13 @@ def absent(name,
     authdb
         The database in which to authenticate
     '''
+
+    salt.utils.warn_until(
+        'Fluorine',
+        'The \'mongodb_user.absent\' function has been deprecated and will be removed in Salt '
+        '{version}. Please use \'mongodb.user_absent\' instead.'
+    )
+
     ret = {'name': name,
            'changes': {},
            'result': True,

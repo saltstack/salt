@@ -2,7 +2,7 @@
 '''
 Pillar data from vCenter or an ESXi host
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends: - pyVmomi
 

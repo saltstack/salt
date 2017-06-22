@@ -339,7 +339,7 @@ def sync_states(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
 
 def refresh_grains(**kwargs):
     '''
-    .. versionadded:: 2016.3.6,2016.11.4,Nitrogen
+    .. versionadded:: 2016.3.6,2016.11.4,2017.7.0
 
     Refresh the minion's grains without syncing custom grains modules from
     ``salt://_grains``.
@@ -583,7 +583,7 @@ sync_outputters = salt.utils.alias_function(sync_output, 'sync_outputters')
 
 def sync_clouds(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Sync utility modules from ``salt://_cloud`` to the minion
 
@@ -653,7 +653,7 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackli
 
 def list_extmods():
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     List Salt modules which have been synced externally
 
@@ -1287,7 +1287,7 @@ def cmd(tgt,
         ssh=False,
         **kwargs):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -1337,7 +1337,7 @@ def cmd_iter(tgt,
              ssh=False,
              **kwargs):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 

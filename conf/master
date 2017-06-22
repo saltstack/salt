@@ -414,6 +414,20 @@
 # will cause minion to throw an exception and drop the message.
 # sign_pub_messages: False
 
+# Signature verification on messages published from minions
+# This requires that minions cryptographically sign the messages they
+# publish to the master.  If minions are not signing, then log this information
+# at loglevel 'INFO' and drop the message without acting on it.
+# require_minion_sign_messages: False
+
+# The below will drop messages when their signatures do not validate.
+# Note that when this option is False but `require_minion_sign_messages` is True
+# minions MUST sign their messages but the validity of their signatures
+# is ignored.
+# These two config options exist so a Salt infrastructure can be moved
+# to signing minion messages gradually.
+# drop_messages_signature_fail: False
+
 # Use TLS/SSL encrypted connection between master and minion.
 # Can be set to a dictionary containing keyword arguments corresponding to Python's
 # 'ssl.wrap_socket' method.

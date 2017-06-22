@@ -3,7 +3,7 @@
 Junos Syslog Engine
 ==========================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 
 :depends: pyparsing, twisted

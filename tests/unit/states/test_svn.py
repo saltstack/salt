@@ -53,7 +53,8 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
                 mock = MagicMock(side_effect=[False, True])
                 with patch.object(os.path, 'exists', mock):
                     mock = MagicMock(return_value=True)
-                    with patch.dict(svn.__salt__, {'svn.diff': mock}):
+                    info_mock = MagicMock(return_value=[{'Revision': 'mocked'}])
+                    with patch.dict(svn.__salt__, {'svn.diff': mock, 'svn.info': info_mock}):
                         mock = MagicMock(return_value=["Dude"])
                         with patch.object(svn, '_neutral_test', mock):
                             self.assertListEqual(svn.latest("salt",

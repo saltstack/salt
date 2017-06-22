@@ -102,15 +102,17 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_NOUSER',
-            message='unknown user not on system',
-            stdout=stdout, stderr=stderr
-        )
-        # Although the start-up should fail, call shutdown() to set the internal
-        # _shutdown flag and avoid the registered atexit calls to cause timeout
-        # exeptions and respective traceback
-        syndic.shutdown()
+        try:
+            self.assert_exit_status(
+                status, 'EX_NOUSER',
+                message='unknown user not on system',
+                stdout=stdout, stderr=stderr
+            )
+        finally:
+            # Although the start-up should fail, call shutdown() to set the
+            # internal _shutdown flag and avoid the registered atexit calls to
+            # cause timeout exeptions and respective traceback
+            syndic.shutdown()
 
     # pylint: disable=invalid-name
     def test_exit_status_unknown_argument(self):
@@ -129,15 +131,17 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_USAGE',
-            message='unknown argument',
-            stdout=stdout, stderr=stderr
-        )
-        # Although the start-up should fail, call shutdown() to set the internal
-        # _shutdown flag and avoid the registered atexit calls to cause timeout
-        # exeptions and respective traceback
-        syndic.shutdown()
+        try:
+            self.assert_exit_status(
+                status, 'EX_USAGE',
+                message='unknown argument',
+                stdout=stdout, stderr=stderr
+            )
+        finally:
+            # Although the start-up should fail, call shutdown() to set the
+            # internal _shutdown flag and avoid the registered atexit calls to
+            # cause timeout exeptions and respective traceback
+            syndic.shutdown()
 
     def test_exit_status_correct_usage(self):
         '''
@@ -155,9 +159,11 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_OK',
-            message='correct usage',
-            stdout=stdout, stderr=stderr
-        )
-        syndic.shutdown()
+        try:
+            self.assert_exit_status(
+                status, 'EX_OK',
+                message='correct usage',
+                stdout=stdout, stderr=stderr
+            )
+        finally:
+            syndic.shutdown(wait_for_orphans=3)

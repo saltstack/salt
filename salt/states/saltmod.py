@@ -102,7 +102,7 @@ def state(name,
         The target type to resolve, defaults to ``glob``
 
     expr_form
-        .. deprecated:: Nitrogen
+        .. deprecated:: 2017.7.0
             Use tgt_type instead
 
     ret
@@ -136,7 +136,7 @@ def state(name,
     pillarenv
         The pillar environment to grab pillars from
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     saltenv
         The default salt environment to pull sls files from
@@ -175,7 +175,7 @@ def state(name,
     subset
         Number of minions from the targeted set to randomly use
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     Examples:
 
@@ -422,7 +422,7 @@ def function(
         The target type, defaults to ``glob``
 
     expr_form
-        .. deprecated:: Nitrogen
+        .. deprecated:: 2017.7.0
             Use tgt_type instead
 
     arg
@@ -459,7 +459,7 @@ def function(
     subset
         Number of minions from the targeted set to randomly use
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     '''
     func_ret = {'name': name,
@@ -727,7 +727,7 @@ def runner(name, **kwargs):
     if __opts__.get('test', False):
         ret = {
             'name': name,
-            'result': True,
+            'result': None,
             'changes': {},
             'comment': "Runner function '{0}' would be executed.".format(name)
         }
@@ -792,7 +792,8 @@ def wheel(name, **kwargs):
         jid = None
 
     if __opts__.get('test', False):
-        ret['result'] = True,
+        ret['result'] = None,
+        ret['changes'] = {}
         ret['comment'] = "Wheel function '{0}' would be executed.".format(name)
         return ret
 

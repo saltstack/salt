@@ -303,7 +303,7 @@ def modify_site(name, sourcepath=None, apppool=None):
     '''
     Modify a basic website in IIS.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The IIS site name.
@@ -412,7 +412,7 @@ def stop_site(name):
     '''
     Stop a Web Site in IIS.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the website to stop.
@@ -437,7 +437,7 @@ def start_site(name):
     '''
     Start a Web Site in IIS.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the website to start.
@@ -462,7 +462,7 @@ def restart_site(name):
     '''
     Restart a Web Site in IIS.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the website to restart.
@@ -598,7 +598,7 @@ def modify_binding(site, binding, hostheader=None, ipaddress=None, port=None,
     Modify an IIS Web Binding. Use ``site`` and ``binding`` to target the
     binding.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         site (str): The IIS site name.
@@ -1085,7 +1085,7 @@ def stop_apppool(name):
     '''
     Stop an IIS application pool.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the App Pool to stop.
@@ -1110,7 +1110,7 @@ def start_apppool(name):
     '''
     Start an IIS application pool.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the App Pool to start.
@@ -1633,7 +1633,7 @@ def list_backups():
     r'''
     List the IIS Configuration Backups on the System.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     .. note::
         Backups are made when a configuration is edited. Manual backups are
@@ -1678,7 +1678,7 @@ def create_backup(name):
     r'''
     Backup an IIS Configuration on the System.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     .. note::
         Backups are stored in the ``$env:Windir\System32\inetsrv\backup``
@@ -1716,7 +1716,7 @@ def remove_backup(name):
     '''
     Remove an IIS Configuration backup from the System.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the backup to remove
@@ -1752,7 +1752,7 @@ def list_worker_processes(apppool):
     Returns a list of worker processes that correspond to the passed
     application pool.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         apppool (str): The application pool to query
@@ -1798,7 +1798,7 @@ def get_webapp_settings(name, site, settings):
         Available settings: physicalPath, applicationPool, userName, password
     Returns:
         dict: A dictionary of the provided settings and their values.
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     CLI Example:
     .. code-block:: bash
         salt '*' win_iis.get_webapp_settings name='app0' site='Default Web Site'
@@ -1871,7 +1871,7 @@ def set_webapp_settings(name, site, settings):
     :                       password: "connectAs" password for user
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     CLI Example:
     .. code-block:: bash
         salt '*' win_iis.set_webapp_settings name='app0' site='site0' settings="{'physicalPath': 'C:\site0', 'apppool': 'site0'}"

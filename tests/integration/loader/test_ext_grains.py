@@ -32,6 +32,8 @@ class LoaderGrainsTest(ModuleCase):
     #    self.opts['grains'] = grains(self.opts)
 
     def test_grains_overwrite(self):
+        # Force a grains sync
+        self.run_function('saltutil.sync_grains')
         # To avoid a race condition on Windows, we need to make sure the
         # `test_custom_grain2.py` file is present in the _grains directory
         # before trying to get the grains. This test may execute before the

@@ -3,7 +3,7 @@
 Return the results of a highstate (or any other state function that returns
 data in a compatible format) via an HTML email or HTML file.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Similar results can be achieved by using smtp returner with a custom template,
 except an attempt at writing such a template for the complex data structure

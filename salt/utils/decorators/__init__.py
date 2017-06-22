@@ -658,3 +658,28 @@ class JinjaFilter(object):
 
 
 jinja_filter = JinjaFilter
+
+
+class JinjaTest(object):
+    '''
+    This decorator is used to specify that a function is to be loaded as a
+    Jinja test.
+    '''
+    salt_jinja_tests = {}
+
+    def __init__(self, name=None):
+        '''
+        '''
+        self.name = name
+
+    def __call__(self, function):
+        '''
+        '''
+        name = self.name or function.__name__
+        if name not in self.salt_jinja_tests:
+            log.debug('Marking "{0}" as a jinja test'.format(name))
+            self.salt_jinja_tests[name] = function
+        return function
+
+
+jinja_test = JinjaTest

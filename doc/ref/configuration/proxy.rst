@@ -27,7 +27,7 @@ Proxy-specific Configuration Options
 .. conf_proxy:: add_proxymodule_to_opts
 
 ``add_proxymodule_to_opts``
---------------------------
+---------------------------
 
 .. versionadded:: 2015.8.2
 
@@ -49,7 +49,7 @@ Add the proxymodule LazyLoader object to opts.
 
 .. versionadded:: 2016.3.0
 
-.. versionchanged:: Nitrogen
+.. versionchanged:: 2017.7.0
 
 Default: ``True``
 
@@ -68,7 +68,7 @@ function in a custom way and returns the data elsewhere.
 ``proxy_keep_alive``
 --------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``True``
 
@@ -86,7 +86,7 @@ otherwise the connection is considered alive.
 ``proxy_keep_alive_interval``
 -----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``1``
 
@@ -104,7 +104,7 @@ The frequency of keepalive checks, in minutes. It requires the
 ``proxy_always_alive``
 ----------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``True``
 

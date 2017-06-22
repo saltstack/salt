@@ -20,7 +20,7 @@ import salt.exceptions
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import get_unused_localhost_port
+from tests.support.helpers import get_unused_localhost_port, flaky
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin
 
@@ -134,6 +134,7 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
+    @flaky
     def test_badload(self):
         '''
         Test a variety of bad requests, make sure that we get some sort of error

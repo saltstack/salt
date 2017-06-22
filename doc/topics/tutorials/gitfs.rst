@@ -329,7 +329,7 @@ configured gitfs remotes):
 * :conf_master:`gitfs_pubkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_privkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_passphrase` (**pygit2 only**, new in 2014.7.0)
-* :conf_master:`gitfs_refspecs` (new in Nitrogen)
+* :conf_master:`gitfs_refspecs` (new in 2017.7.0)
 
 .. note::
     pygit2 only supports disabling SSL verification in versions 0.23.2 and
@@ -471,7 +471,7 @@ Given the above configuration, the following is true:
 Custom Refspecs
 ===============
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 GitFS will by default fetch remote branches and tags. However, sometimes it can
 be useful to fetch custom refs (such as those created for `GitHub pull

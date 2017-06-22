@@ -5,7 +5,7 @@ Redis
 
 Redis plugin for the Salt caching subsystem.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 As Redis provides a simple mechanism for very fast key-value store,
 in order to privde the necessary features for the Salt

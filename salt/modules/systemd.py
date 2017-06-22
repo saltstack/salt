@@ -16,6 +16,7 @@ import errno
 import glob
 import logging
 import os
+import fnmatch
 import re
 import shlex
 
@@ -616,7 +617,7 @@ def unmask_(name, runtime=False):
     runtime : False
         Set to ``True`` to unmask this service only until the next reboot
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous versions, this function would remove whichever mask was
             identified by running ``systemctl is-enabled`` on the service.
             However, since it is possible to both have both indefinite and
@@ -701,7 +702,7 @@ def masked(name, runtime=False):
         is-enabled`` command (so that a persistent mask can be distinguished
         from a runtime mask). If the service is not masked, then ``False`` will
         be returned.
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         This function now returns a boolean telling the user whether a mask
         specified by the new ``runtime`` argument is set. If ``runtime`` is
         ``False``, this function will return ``True`` if an indefinite mask is
@@ -714,7 +715,7 @@ def masked(name, runtime=False):
     runtime : False
         Set to ``True`` to check for a runtime mask
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous versions, this function would simply return the output
             of ``systemctl is-enabled`` when the service was found to be
             masked. However, since it is possible to both have both indefinite
@@ -771,13 +772,13 @@ def start(name, no_block=False, unmask=False, unmask_runtime=False):
     no_block : False
         Set to ``True`` to start the service using ``--no-block``.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     unmask : False
         Set to ``True`` to remove an indefinite mask before attempting to start
         the service.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous releases, Salt would simply unmask a service before
             starting. This behavior is no longer the default.
 
@@ -785,7 +786,7 @@ def start(name, no_block=False, unmask=False, unmask_runtime=False):
         Set to ``True`` to remove a runtime mask before attempting to start the
         service.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous releases, Salt would simply unmask a service before
             starting. This behavior is no longer the default.
 
@@ -827,7 +828,7 @@ def stop(name, no_block=False):
     no_block : False
         Set to ``True`` to start the service using ``--no-block``.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -860,13 +861,13 @@ def restart(name, no_block=False, unmask=False, unmask_runtime=False):
     no_block : False
         Set to ``True`` to start the service using ``--no-block``.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     unmask : False
         Set to ``True`` to remove an indefinite mask before attempting to
         restart the service.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous releases, Salt would simply unmask a service before
             restarting. This behavior is no longer the default.
 
@@ -874,7 +875,7 @@ def restart(name, no_block=False, unmask=False, unmask_runtime=False):
         Set to ``True`` to remove a runtime mask before attempting to restart
         the service.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous releases, Salt would simply unmask a service before
             restarting. This behavior is no longer the default.
 
@@ -916,13 +917,13 @@ def reload_(name, no_block=False, unmask=False, unmask_runtime=False):
     no_block : False
         Set to ``True`` to reload the service using ``--no-block``.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     unmask : False
         Set to ``True`` to remove an indefinite mask before attempting to
         reload the service.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous releases, Salt would simply unmask a service before
             reloading. This behavior is no longer the default.
 
@@ -930,7 +931,7 @@ def reload_(name, no_block=False, unmask=False, unmask_runtime=False):
         Set to ``True`` to remove a runtime mask before attempting to reload
         the service.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous releases, Salt would simply unmask a service before
             reloading. This behavior is no longer the default.
 
@@ -974,13 +975,13 @@ def force_reload(name, no_block=True, unmask=False, unmask_runtime=False):
     no_block : False
         Set to ``True`` to start the service using ``--no-block``.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     unmask : False
         Set to ``True`` to remove an indefinite mask before attempting to
         force-reload the service.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous releases, Salt would simply unmask a service before
             force-reloading. This behavior is no longer the default.
 
@@ -988,7 +989,7 @@ def force_reload(name, no_block=True, unmask=False, unmask_runtime=False):
         Set to ``True`` to remove a runtime mask before attempting to
         force-reload the service.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous releases, Salt would simply unmask a service before
             force-reloading. This behavior is no longer the default.
 
@@ -1017,19 +1018,41 @@ def force_reload(name, no_block=True, unmask=False, unmask_runtime=False):
 # established by Salt's service management states.
 def status(name, sig=None):  # pylint: disable=unused-argument
     '''
-    Return the status for a service via systemd, returns ``True`` if the
-    service is running and ``False`` if it is not.
+    Return the status for a service via systemd.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
+
+    .. versionchanged:: Oxygen
+        The service name can now be a glob (e.g. ``salt*``)
+
+    Args:
+        name (str): The name of the service to check
+        sig (str): Not implemented
+
+    Returns:
+        bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status <service name>
+        salt '*' service.status <service name> [service signature]
     '''
-    _check_for_unit_changes(name)
-    return __salt__['cmd.retcode'](_systemctl_cmd('is-active', name),
-                                   python_shell=False,
-                                   ignore_retcode=True) == 0
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(get_all(), name)
+    else:
+        services = [name]
+    results = {}
+    for service in services:
+        _check_for_unit_changes(service)
+        results[service] = __salt__['cmd.retcode'](_systemctl_cmd('is-active', service),
+                                                   python_shell=False,
+                                                   ignore_retcode=True) == 0
+    if contains_globbing:
+        return results
+    return results[name]
 
 
 # **kwargs is required to maintain consistency with the API established by
@@ -1052,13 +1075,13 @@ def enable(name, no_block=False, unmask=False, unmask_runtime=False, **kwargs): 
     no_block : False
         Set to ``True`` to start the service using ``--no-block``.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     unmask : False
         Set to ``True`` to remove an indefinite mask before attempting to
         enable the service.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous releases, Salt would simply unmask a service before
             enabling. This behavior is no longer the default.
 
@@ -1066,7 +1089,7 @@ def enable(name, no_block=False, unmask=False, unmask_runtime=False, **kwargs): 
         Set to ``True`` to remove a runtime mask before attempting to enable
         the service.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous releases, Salt would simply unmask a service before
             enabling. This behavior is no longer the default.
 
@@ -1124,7 +1147,7 @@ def disable(name, no_block=False, **kwargs):  # pylint: disable=unused-argument
     no_block : False
         Set to ``True`` to start the service using ``--no-block``.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     CLI Example:
 

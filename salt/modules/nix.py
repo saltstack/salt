@@ -3,7 +3,7 @@
 Work with Nix packages
 ======================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Does not require the machine to be Nixos, just have Nix installed and available to use for the user running this command. Their profile must
 be located in their home, under ``$HOME/.nix-profile/``, and the nix store, unless specially set up, should be in ``/nix``. To easily use this

@@ -2,7 +2,7 @@
 '''
 Support for freebsd-update utility on FreeBSD.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :maintainer:    George Mamalakis <mamalos@gmail.com>
 :maturity:      new

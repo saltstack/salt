@@ -511,13 +511,13 @@ def latest(name,
         A glob expression defining which branches to retrieve when fetching.
         See `git-fetch(1)`_ for more information on how refspecs work.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     refspec_tag : *
         A glob expression defining which tags to retrieve when fetching. See
         `git-fetch(1)`_ for more information on how refspecs work.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     .. _`git-fetch(1)`: http://git-scm.com/docs/git-fetch
 
@@ -2036,7 +2036,7 @@ def detached(name,
         and checked out.
 
     ref
-        .. deprecated:: Nitrogen
+        .. deprecated:: 2017.7.0
             Use ``rev`` instead.
 
     target

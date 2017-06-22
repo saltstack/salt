@@ -68,7 +68,7 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
 
 def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -158,7 +158,7 @@ def key_regen():
 
 def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -184,7 +184,7 @@ def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
 
 def up(tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):  # pylint: disable=C0103
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -579,7 +579,7 @@ def lane_stats(estate=None):
 
 def safe_accept(target, tgt_type='glob', expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -712,7 +712,7 @@ def bootstrap(version='develop',
 
         .. versionchanged:: 2016.11.0
 
-        .. deprecated:: 2016.11.0
+        .. deprecated:: Oxygen
 
     script_args
         Any additional arguments that you want to pass to the script.
