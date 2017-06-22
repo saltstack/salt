@@ -61,9 +61,9 @@ def validate(config):
     if not isinstance(config, list):
         return False, ('Configuration for avahi_announcement '
                        'beacon must be a list')
-    if not all(x in sum((y.keys() for y in config), []) for x in ('servicetype',
-                                                                  'port',
-                                                                  'txt')):
+    elif not all(x in sum((y.keys() for y in config), []) for x in ('servicetype',
+                                                                    'port',
+                                                                    'txt')):
         return False, ('Configuration for avahi_announce beacon '
                        'must contain servicetype, port and txt items')
     return True, 'Valid beacon configuration'
