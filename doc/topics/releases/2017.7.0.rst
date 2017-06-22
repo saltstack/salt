@@ -27,7 +27,9 @@ Known Issues
 The following salt-cloud drivers have known issues running with Python 3. These drivers will not work with Python 3, and Python 2.7 should be used instead:
 
 - Joyent
+
 - Any driver that relies on the `apache-libcloud` library such as cloudstack, dimenstiondata, gce, nova, and openstack
+
 - When running under Python 3, users who require Unicode support should ensure that a locale is set on their machines.
   Users using the `C` locale are advised to switch to a UTF-aware locale to ensure proper functionality with Salt with Python 3.
 
