@@ -162,4 +162,3 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(RunnerModuleTest, needs_daemon=True)
->>>>>>> 2016.11:tests/integration/client/runner.py
