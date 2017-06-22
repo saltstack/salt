@@ -87,15 +87,16 @@ def beacon(config):
     ret = []
 
     _config = {}
+    log.info('=== config {} ==='.format(config))
     for config_item in config:
         if 'user' in config_item:
             _config['user'] = config_item['user']
-        if 'battery_low' in config:
+        if 'battery_low' in config_item:
             _config['battery_low'] = config_item['battery_low']
-        if 'states' in config:
+        if 'states' in config_item:
             _config['states'] = config_item['states']
-        if 'no_device_event' in config:
-            _config['no_device_event'] = config_item['no_device_event']
+        if 'no_devices_event' in config_item:
+            _config['no_devices_event'] = config_item['no_devices_event']
 
     out = __salt__['cmd.run']('adb devices', runas=_config.get('user', None))
 
@@ -143,7 +144,7 @@ def beacon(config):
             del last_state[device]
 
     # Maybe send an event if we don't have any devices
-    if 'no_devices_event' in config and config['no_devices_event'] is True:
+    if 'no_devices_event' in _config and _config['no_devices_event'] is True:
         if len(found_devices) == 0 and not last_state_extra['no_devices']:
             ret.append({'tag': 'no_devices'})
 
