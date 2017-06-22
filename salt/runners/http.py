@@ -35,7 +35,7 @@ def query(url, output=True, **kwargs):
         log.warning('Output option has been deprecated. Please use --quiet.')
     if 'node' not in kwargs:
         kwargs['node'] = 'master'
-    opts = __opts__
+    opts = __opts__.copy()
     if 'opts' in kwargs:
         opts.update(kwargs['opts'])
         del kwargs['opts']

@@ -30,7 +30,7 @@ def query(url, **kwargs):
         salt '*' http.query http://somelink.com/ method=POST \
             data='<xml>somecontent</xml>'
     '''
-    opts = __opts__
+    opts = __opts__.copy()
     if 'opts' in kwargs:
         opts.update(kwargs['opts'])
         del kwargs['opts']
