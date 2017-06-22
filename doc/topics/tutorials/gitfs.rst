@@ -330,6 +330,8 @@ configured gitfs remotes):
 * :conf_master:`gitfs_privkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_passphrase` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_refspecs` (new in 2017.7.0)
+* :conf_master:`gitfs_disable_saltenv_mapping` (new in Oxygen)
+* :conf_master:`gitfs_ref_types` (new in Oxygen)
 
 .. note::
     pygit2 only supports disabling SSL verification in versions 0.23.2 and
@@ -355,11 +357,17 @@ tremendous amount of customization. Here's some example usage:
         - root: other/salt
         - mountpoint: salt://other/bar
         - base: salt-base
+        - ref_types:
+          - branch
       - http://foo.com/baz.git:
         - root: salt/states
         - user: joe
         - password: mysupersecretpassword
         - insecure_auth: True
+        - disable_saltenv_mapping: True
+        - saltenv:
+          - foo:
+            - ref: foo
       - http://foo.com/quux.git:
         - all_saltenvs: master
 
@@ -391,18 +399,24 @@ In the example configuration above, the following is true:
    will only serve files from the ``salt/states`` directory (and its
    subdirectories).
 
-3. The first and fourth remotes will have files located under the root of the
+3. The third remote will only serve files from branches, and not from tags or
+   SHAs.
+
+4. The fourth remote will only have two saltenvs available: ``base`` (pointed
+   at ``develop``), and ``foo`` (pointed at ``foo``).
+
+5. The first and fourth remotes will have files located under the root of the
    Salt fileserver namespace (``salt://``). The files from the second remote
    will be located under ``salt://bar``, while the files from the third remote
    will be located under ``salt://other/bar``.
 
-4. The second and third remotes reference the same repository and unique names
+6. The second and third remotes reference the same repository and unique names
    need to be declared for duplicate gitfs remotes.
 
-5. The fourth remote overrides the default behavior of :ref:`not authenticating
+7. The fourth remote overrides the default behavior of :ref:`not authenticating
    to insecure (non-HTTPS) remotes <gitfs-insecure-auth>`.
 
-6. Because ``all_saltenvs`` is configured for the fifth remote, files from the
+8. Because ``all_saltenvs`` is configured for the fifth remote, files from the
    branch/tag ``master`` will appear in every fileserver environment.
 
    .. note::
