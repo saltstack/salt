@@ -117,4 +117,4 @@ def put_file(local_path, path, share='C$', conn=None, host=None, username=None, 
         return False
 
     with salt.utils.fopen(local_path, 'rb') as fh_:
-        conn.putFile(share, path, fh_.read) 
+        conn.putFile(share, path, fh_.read)
