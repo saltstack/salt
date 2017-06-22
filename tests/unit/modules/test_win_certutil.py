@@ -78,33 +78,22 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
         '''
             Test removing a certificate to a specific store
         '''
-<<<<<<< HEAD:tests/unit/modules/test_win_certutil.py
         with patch('salt.modules.win_certutil.get_cert_serial') as cert_serial_mock:
-            cmd_mock = MagicMock(return_value='CertInfo\r\nSerial: XYZABC\r\nOtherStuff')
+            cmd_mock = MagicMock(return_value=(
+                'CertInfo\r\n'
+                '================ Certificate 0 ================\r\n'
+                'Serial Number: 180720d39cd2db3244ba037417241e90\r\n'
+                'OtherStuff'))
             cache_mock = MagicMock(return_value='/tmp/cert.cer')
-            cert_serial_mock.return_value = "ABCDEF"
+            cert_serial_mock.return_value = 'ABCDEF'
             with patch.dict(certutil.__salt__, {'cmd.run': cmd_mock,
                                                 'cp.cache_file': cache_mock}):
                 certutil.del_store('salt://path/to/file', 'TrustedPublisher')
-                cmd_mock.assert_called_once_with('certutil.exe -delstore TrustedPublisher ABCDEF')
+                cmd_mock.assert_called_once_with(
+                    'certutil.exe -delstore TrustedPublisher ABCDEF')
                 cache_mock.assert_called_once_with('salt://path/to/file', 'base')
-=======
-        cmd_mock = MagicMock(return_value=(
-            'CertInfo\r\n'
-            '================ Certificate 0 ================\r\n'
-            'Serial Number: 180720d39cd2db3244ba037417241e90\r\n'
-            'OtherStuff'))
-        cache_mock = MagicMock(return_value='/tmp/cert.cer')
-        cert_serial_mock.return_value = 'ABCDEF'
-        with patch.dict(certutil.__salt__, {'cmd.run': cmd_mock,
-                                            'cp.cache_file': cache_mock}):
-            certutil.del_store('salt://path/to/file', 'TrustedPublisher')
-            cmd_mock.assert_called_once_with(
-                'certutil.exe -delstore TrustedPublisher ABCDEF')
-            cache_mock.assert_called_once_with('salt://path/to/file', 'base')
 
 
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(CertUtilTestCase, needs_daemon=False)
->>>>>>> 2016.11:tests/unit/modules/win_certutil_test.py
