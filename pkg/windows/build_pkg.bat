@@ -56,9 +56,9 @@ if %Python%==2 (
     Set "PyVerMajor=2"
     Set "PyVerMinor=7"
 ) else (
-    Set "PyDir=C:\Python35"
+    Set "PyDir=C:\Program Files\Python36"
     Set "PyVerMajor=3"
-    Set "PyVerMinor=5"
+    Set "PyVerMinor=6"
 )
 
 :: Verify the Python Installation
