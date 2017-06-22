@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Manage Windows features via the ServerManager powershell module
+Manage Windows features via the ServerManager powershell module. Can list
+available and installed roles/features. Can install and remove roles/features.
+
+:maintainer:    Shane Lee <slee@saltstack.com>
+:platform:      Windows Server 2008R2 or greater
+:depends:       PowerShell module ``ServerManager``
 '''
 
 # Import Python libs
@@ -45,7 +50,7 @@ def __virtual__():
 def _pshell_json(cmd, cwd=None):
     '''
     Execute the desired powershell command and ensure that it returns data
-    in json format and load that into python
+    in JSON format and load that into python
     '''
     cmd = 'Import-Module ServerManager; {0}'.format(cmd)
     if 'convertto-json' not in cmd.lower():
@@ -63,8 +68,9 @@ def list_available():
     '''
     List available features to install
 
-    :return: A list of available features
-    :rtype: list
+    Returns:
+        str: A list of available features as returned by the
+        ``Get-WindowsFeature`` PowerShell command
 
     CLI Example:
 
@@ -84,8 +90,8 @@ def list_installed():
     List installed features. Supported on Windows Server 2008 and Windows 8 and
     newer.
 
-    :return: A list of installed features
-    :rtype: list
+    Returns:
+        dict: A dictionary of installed features
 
     CLI Example:
 
@@ -121,29 +127,40 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
 
     Args:
 
-        feature (str, list): The name of the feature(s) to install. This can be
-            a single feature, a string of features in a comma delimited list (no
-            spaces), or a list of features.
+        feature (str, list):
+            The name of the feature(s) to install. This can be a single feature,
+            a string of features in a comma delimited list (no spaces), or a
+            list of features.
 
-        recurse (Options[bool]): Install all sub-features. Default is False
+            .. versionadded:: Oxygen
+                Added the ability to pass a list of features to be installed.
 
-        restart (Optional[bool]): Restarts the computer when installation is
-            complete, if required by the role/feature installed. Default is
+        recurse (Options[bool]):
+            Install all sub-features. Default is False
+
+        restart (Optional[bool]):
+            Restarts the computer when installation is complete, if required by
+            the role/feature installed. Will also trigger a reboot if an item
+            in ``exclude`` requires a reboot to be properly removed. Default is
             False
 
-        source (Optional[str]): Path to the source files if missing from the
-            target system. None means that the system will use windows update
-            services to find the required files. Default is None
+        source (Optional[str]):
+            Path to the source files if missing from the target system. None
+            means that the system will use windows update services to find the
+            required files. Default is None
 
-        exclude (Optional[str]): The name of the feature to exclude when
-            installing the named feature. This can be a single feature, a string
-            of features in a comma-delimited list (no spaces), or a list of
-            features.
+        exclude (Optional[str]):
+            The name of the feature to exclude when installing the named
+            feature. This can be a single feature, a string of features in a
+            comma-delimited list (no spaces), or a list of features.
 
-            .. note::
+            .. warning::
                 As there is no exclude option for the ``Add-WindowsFeature``
-                or ``Install-WindowsFeature`` commands, the feature will be
-                installed with other sub-features and will then be removed.
+                or ``Install-WindowsFeature`` PowerShell commands the features
+                named in ``exclude`` will be installed with other sub-features
+                and will then be removed. **If the feature named in ``exclude``
+                is not a sub-feature of one of the installed items it will still
+                be removed.**
 
     Returns:
         dict: A dictionary containing the results of the install
@@ -157,7 +174,7 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
 
         # Install the TFTP Client and the SNMP Service passing a comma-delimited
         # string. Install all sub-features
-        salt '*' win_servermanager.install TFTP-Client,SNMP-Service True
+        salt '*' win_servermanager.install TFTP-Client,SNMP-Service recurse=True
 
         # Install the TFTP Client from d:\side-by-side
         salt '*' win_servermanager.install TFTP-Client source=d:\\side-by-side
@@ -234,9 +251,9 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
                         'Success': removed['Features'][item]['Success']
                     }
 
-                # Exclude items might need a restart
-                if removed['Features'][item]['RestartNeeded']:
-                    ret['RestartNeeded'] = True
+                    # Exclude items might need a restart
+                    if removed['Features'][item]['RestartNeeded']:
+                        ret['RestartNeeded'] = True
 
         # Restart here if needed
         if restart:
@@ -274,16 +291,21 @@ def remove(feature, remove_payload=False, restart=False):
 
     Args:
 
-        feature (str, list): The name of the feature(s) to remove. This can be
-            a single feature, a string of features in a comma delimited list (no
-            spaces), or a list of features.
+        feature (str, list):
+            The name of the feature(s) to remove. This can be a single feature,
+            a string of features in a comma delimited list (no spaces), or a
+            list of features.
 
-        remove_payload (Optional[bool]): True will cause the feature to be
-            removed from the side-by-side store (``%SystemDrive%:\Windows\WinSxS``).
-            Default is False
+            .. versionadded:: Oxygen
+                Added the ability to pass a list of features to be removed.
 
-        restart (Optional[bool]): Restarts the computer when uninstall is
-            complete, if required by the role/feature removed. Default is False
+        remove_payload (Optional[bool]):
+            True will cause the feature to be removed from the side-by-side
+            store (``%SystemDrive%:\Windows\WinSxS``). Default is False
+
+        restart (Optional[bool]):
+            Restarts the computer when uninstall is complete, if required by the
+            role/feature removed. Default is False
 
     Returns:
         dict: A dictionary containing the results of the uninstall
@@ -314,7 +336,6 @@ def remove(feature, remove_payload=False, restart=False):
             _remove_payload = '-Remove'
 
     cmd = '{0} -Name {1} {2} {3} {4} ' \
-          '-ErrorAction SilentlyContinue ' \
           '-WarningAction SilentlyContinue'\
           .format(command, _cmd_quote(feature), management_tools,
                   _remove_payload,
@@ -338,20 +359,11 @@ def remove(feature, remove_payload=False, restart=False):
                 'Success': item['Success']
             }
 
-            if item['RestartNeeded']:
-                ret['RestartNeeded'] = True
-
         # Only items that installed are in the list of dictionaries
-        # Add 'Already installed' for features that aren't in the list of dicts
+        # Add 'Not installed' for features that aren't in the list of dicts
         for item in feature.split(','):
             if item not in ret['Features']:
                 ret['Features'][item] = {'Message': 'Not installed'}
-
-        # Restart here if needed
-        if restart:
-            if ret['RestartNeeded']:
-                if __salt__['system.restart'](in_seconds=True):
-                    ret['Restarted'] = True
 
         return ret
 
