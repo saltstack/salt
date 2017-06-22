@@ -22,15 +22,6 @@ from tests.support.mock import (
 import salt.utils
 import salt.modules.state as state
 from salt.exceptions import SaltInvocationError
-from salt.modules import state
-
-# Globals
-state.__salt__ = {}
-state.__context__ = {}
-state.__opts__ = {'cachedir': '/D',
-                  'environment': None,
-                  '__cli': 'salt'}
-state.__pillar__ = {}
 
 
 class MockState(object):
@@ -354,7 +345,15 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         patcher = patch('salt.modules.state.salt.state', MockState())
         patcher.start()
         self.addCleanup(patcher.stop)
-        return {state: {'__opts__': {'cachedir': '/D'}}}
+        return {
+            state: {
+                '__opts__': {
+                    'cachedir': '/D',
+                    'environment': None,
+                    '__cli': 'salt',
+                },
+            },
+        }
 
     def test_running(self):
         '''
