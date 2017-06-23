@@ -102,11 +102,44 @@ def _get_connection_info():
     return ret
 
 
-def list_nodes():
+def avail_locations(call=None):
+    '''
+    This function returns a list of locations available.
+    salt-cloud --list-locations my-cloud-provider
+    [ saltify will always returns an empty dictionary ]
+    '''
+
+    return {}
+
+
+def avail_images(call=None):
+    '''This function returns a list of images available for this cloud provider.
+     saltify will return a list of profiles.
+     salt-cloud --list-images my-cloud-provider
+    '''
+    vm_ = get_configured_provider()
+    return {'Profiles': [profile for profile in vm_['profiles']]}
+
+
+def avail_sizes(call=None):
+    '''
+    This function returns a list of sizes available for this cloud provider.
+    salt-cloud --list-sizes my-cloud-provider
+    [ saltify always returns an empty dictionary ]
+    '''
+    return {}
+
+
+def list_nodes(call=None):
     '''
     List the nodes which have salt-cloud:driver:saltify grains.
+    salt-cloud -Q
     '''
-    nodes = list_nodes_full()
+    nodes = _list_nodes_full(call)
+    return _build_required_items(nodes)
+
+
+def _build_required_items(nodes):
     ret = {}
     for name, grains in nodes.items():
         if grains:
@@ -123,17 +156,26 @@ def list_nodes():
 
             ret[name] = {
                 'id': grains['id'],
-                'name': grains['fqdn'],
+                'image': grains['salt-cloud:profile'],
                 'private_ips': private_ips,
                 'public_ips': public_ips,
-                'salt-cloud': grains['salt-cloud'],
+                'size': '',
                 'state': 'running'
             }
 
     return ret
 
 
-def list_nodes_full():
+def list_nodes_full(call=None):
+    '''
+    List the nodes, ask all 'saltify' minions, return dict of grains (enhanced).
+    '''
+    ret = _list_nodes_full(call)
+    ret.update(_build_required_items(ret))
+    return ret
+
+
+def _list_nodes_full(call=None):
     '''
     List the nodes, ask all 'saltify' minions, return dict of grains.
     '''
@@ -154,6 +196,7 @@ def list_nodes_full():
             pass  # ignore absence of things we are eliminating
         except TypeError:
             del ret[key]  # eliminate all reference to unexpected (None) values.
+
     return ret
 
 
@@ -165,6 +208,22 @@ def list_nodes_select(call=None):
         list_nodes_full('function'), __opts__['query.selection'], call,
     )
 
+
+def show_instance(name, call=None):
+    '''
+    List the a single node, return dict of grains.
+    '''
+    local = salt.netapi.NetapiClient(__opts__)
+    cmd = {'client':'local',
+           'tgt': 'name',
+           'fun': 'grains.items',
+           'arg': '',
+           'tgt_type': 'glob',
+           }
+    cmd.update(_get_connection_info())
+    ret = local.run(cmd)
+    ret.update(_build_required_items(ret))
+    return ret
 
 def create(vm_):
     '''
