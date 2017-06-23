@@ -92,8 +92,3 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
                 cmd_mock.assert_called_once_with(
                     'certutil.exe -delstore TrustedPublisher ABCDEF')
                 cache_mock.assert_called_once_with('salt://path/to/file', 'base')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CertUtilTestCase, needs_daemon=False)
