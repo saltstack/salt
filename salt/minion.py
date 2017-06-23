@@ -933,7 +933,7 @@ def _process_queue_loop(obj):
     :return:
     '''
     process_pool = CallbackProcessPool()  # This only points to the pool, does not create a new one
-    log.debug('{0}: Started process pool', process_pool._id)
+    log.debug('{0}: Started process pool'.format(process_pool._id))
     while True:
         process_pool.swipe()
         if not process_pool.is_full():

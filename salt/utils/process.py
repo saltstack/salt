@@ -853,7 +853,7 @@ class CallbackProcessPool(object):
             ref = self._finished_processes.get_nowait()
             if self._active_processes.get(ref):
                 self._active_processes.pop(ref)
-                log.debug('{0}: Process reference {1} has been removed', self._id, ref)
+                log.debug('{0}: Process reference {1} has been removed'.format(self._id, ref))
 
     def generate_name(self):
         '''
