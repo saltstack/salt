@@ -809,6 +809,13 @@ class CallbackProcessPool(object):
         '''
         return self._process_queue.get_nowait()
 
+    def is_data(self):
+        '''
+        Check for pending process data
+        :return:
+        '''
+        return self._process_queue.empty()
+
     def is_full(self):
         '''
         Check if the pool is full.
