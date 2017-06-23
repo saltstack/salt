@@ -26,14 +26,16 @@ def __virtual__():
         return False
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
-    if not isinstance(config, dict):
-        return False, ('Configuration for haproxy beacon must be a dictionary.')
+    if not isinstance(config, list):
+        return False, ('Configuration for haproxy beacon must '
+                       'be a list.')
     if 'haproxy' not in config:
-        return False, ('Configuration for haproxy beacon requires a list of backends and servers')
+        return False, ('Configuration for haproxy beacon requires a list '
+                       'of backends and servers')
     return True, 'Valid beacon configuration'
 
 
@@ -54,11 +56,8 @@ def beacon(config):
             - interval: 120
     '''
     log.debug('haproxy beacon starting')
+
     ret = []
-    _validate = __validate__(config)
-    if not _validate:
-        log.debug('haproxy beacon unable to validate')
-        return ret
     for backend in config:
         threshold = config[backend]['threshold']
         for server in config[backend]['servers']:
