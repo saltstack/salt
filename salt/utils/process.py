@@ -752,6 +752,12 @@ class CallbackProcessPool(object):
         :param limit:
         '''
         self._process_limit = limit
+        self._pcnt = 0
+
+    @property
+    def pcnt(self):
+        self._pcnt += 1
+        return str(self._pcnt)
 
     def add(self, process):
         '''
