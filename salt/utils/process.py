@@ -737,6 +737,7 @@ class CallbackProcessPool(object):
     _active_processes = {}
     _finished_processes = multiprocessing.Queue()
     _process_queue = queue.Queue()
+    _id = 'process pool'
 
     def __new__(cls, *args, **kwargs):
         '''
@@ -838,4 +839,4 @@ class CallbackProcessPool(object):
             ref = self._finished_processes.get_nowait()
             if self._active_processes.get(ref):
                 self._active_processes.pop(ref)
-                log.debug('process pool: Process reference {0} has been removed', ref)
+                log.debug('{0}: Process reference {1} has been removed', self._id, ref)
