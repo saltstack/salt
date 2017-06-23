@@ -39,18 +39,15 @@ def validate(config):
         return False, ('Configuration for adb beacon must be a list.')
 
     # Configuration for adb beacon should contain states array
-    states_found = False
-    _states = []
-    for config_item in config:
-        if 'states' in config_item:
-            states_found = True
-            if isinstance(config_item['states'], list):
-                _states = config_item['states']
-
-    if not states_found:
+    if not [True for config_item
+            in config
+            if 'states' in config_item
+               and isinstance(config_item['states'], list)]:
         log.info('Configuration for adb beacon must include a states array.')
         return False, ('Configuration for adb beacon must include a states array.')
     else:
+        _states = sum([config_item['states'] for config_item
+                       in config if 'states' in config_item], [])
         states = ['offline', 'bootloader', 'device', 'host',
                   'recovery', 'no permissions',
                   'sideload', 'unauthorized', 'unknown', 'missing']
@@ -87,16 +84,12 @@ def beacon(config):
     ret = []
 
     _config = {}
-    log.info('=== config {} ==='.format(config))
+    _valid_config_options = ['user', 'battery_low',
+                             'states', 'no_devices_event']
     for config_item in config:
-        if 'user' in config_item:
-            _config['user'] = config_item['user']
-        if 'battery_low' in config_item:
-            _config['battery_low'] = config_item['battery_low']
-        if 'states' in config_item:
-            _config['states'] = config_item['states']
-        if 'no_devices_event' in config_item:
-            _config['no_devices_event'] = config_item['no_devices_event']
+        for opt in _valid_config_options:
+            if opt in config_item:
+                _config[opt] = config_item[opt]
 
     out = __salt__['cmd.run']('adb devices', runas=_config.get('user', None))
 

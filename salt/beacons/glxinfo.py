@@ -28,14 +28,14 @@ def __virtual__():
         return __virtualname__
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
     # Configuration for glxinfo beacon should be a dictionary
-    if not isinstance(config, dict):
-        return False, ('Configuration for glxinfo beacon must be a dict.')
-    if 'user' not in config:
+    if not isinstance(config, list):
+        return False, ('Configuration for glxinfo beacon must be a list.')
+    if not [True for config_item in config if 'user' in config_item]:
         return False, ('Configuration for glxinfo beacon must '
                        'include a user as glxinfo is not available to root.')
     return True, 'Valid beacon configuration'
@@ -45,27 +45,31 @@ def beacon(config):
     '''
     Emit the status of a connected display to the minion
 
-    Mainly this is used to detect when the display fails to connect for whatever reason.
+    Mainly this is used to detect when the display fails to connect
+    for whatever reason.
 
     .. code-block:: yaml
 
         beacons:
           glxinfo:
-            user: frank
-            screen_event: True
+            - user: frank
+            - screen_event: True
 
     '''
 
     log.trace('glxinfo beacon starting')
     ret = []
 
-    _validate = __validate__(config)
-    if not _validate[0]:
-        return ret
+    _config = {}
+    _valid_config_options = ['user', 'screen_event']
+    for config_item in config:
+        for opt in _valid_config_options:
+            if opt in config_item:
+                _config[opt] = config_item[opt]
 
-    retcode = __salt__['cmd.retcode']('DISPLAY=:0 glxinfo', runas=config['user'], python_shell=True)
+    retcode = __salt__['cmd.retcode']('DISPLAY=:0 glxinfo', runas=_config['user'], python_shell=True)
 
-    if 'screen_event' in config and config['screen_event']:
+    if 'screen_event' in _config and _config['screen_event']:
         last_value = last_state.get('screen_available', False)
         screen_available = retcode == 0
         if last_value != screen_available or 'screen_available' not in last_state:
