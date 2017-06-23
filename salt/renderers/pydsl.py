@@ -336,7 +336,7 @@ For example:
 '''
 from __future__ import absolute_import
 
-import imp
+import types
 from salt.ext.six import exec_
 from salt.utils import pydsl
 from salt.utils.pydsl import PyDslError
@@ -346,7 +346,7 @@ __all__ = ['render']
 
 
 def render(template, saltenv='base', sls='', tmplpath=None, rendered_sls=None, **kws):
-    mod = imp.new_module(sls)
+    mod = types.ModuleType(sls)
     # Note: mod object is transient. It's existence only lasts as long as
     #       the lowstate data structure that the highstate in the sls file
     #       is compiled to.
