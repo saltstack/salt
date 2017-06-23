@@ -114,7 +114,7 @@ def list_installed():
 
 
 def install(feature, recurse=False, restart=False, source=None, exclude=None):
-    '''
+    r'''
     Install a feature
 
     .. note::
