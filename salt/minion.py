@@ -105,7 +105,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
-from salt.utils.process import default_signals, ProcessManager
+from salt.utils.process import default_signals, ProcessManager, CallbackProcessPool
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -907,6 +907,55 @@ class MinionManager(MinionBase):
             minion.destroy()
 
 
+
+
+def _process_queue_loop(obj):
+    '''
+    Process queue loop, controls pool queue and finished processes
+    of the current minion instance.
+
+    :param obj:
+    :return:
+    '''
+    process_pool = CallbackProcessPool()  # This only points to the pool, does not create a new one
+    log.debug('{0}: Started process pool', process_pool._id)
+    while True:
+        process_pool.swipe()
+        if not process_pool.is_full():
+            if not process_pool._process_queue.empty():
+                data = process_pool.get_data()
+                name = process_pool.generate_name()
+                process = multiprocessing.Process(target=obj._target, name=name,
+                                                  args=(obj, obj.opts, data, obj.connected, name))
+                process.start()
+                process.join()
+                process_pool.add(process)
+
+        time.sleep(0.1)  # This is needed to stop CPU consumption
+
+
+def _instance_spawner():
+    '''
+    Instance spawner that activates all registered minion instances
+    :return:
+    '''
+    pooler = CallbackProcessPool()
+    while True:
+        section = range(pooler.registered())
+        while section:  # Fire amount of minions
+            section.pop()
+            minion_process = threading.Thread(target=_process_queue_loop,
+                                              args=(pooler.get_registered(),))
+            minion_process.setDaemon(True)
+            minion_process.start()
+        time.sleep(0.1)
+
+# Start poller
+single_event_catcher = threading.Thread(target=_instance_spawner)
+single_event_catcher.setDaemon(True)
+single_event_catcher.start()
+
+
 class Minion(MinionBase):
     '''
     This class instantiates a minion, runs connections for a minion,
@@ -987,6 +1036,9 @@ class Minion(MinionBase):
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
+
+        self._target_name = None
+        CallbackProcessPool().register(self)
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self._running = False
@@ -1326,9 +1378,11 @@ class Minion(MinionBase):
                 # running on windows
                 instance = None
             with default_signals(signal.SIGINT, signal.SIGTERM):
-                process = SignalHandlingMultiprocessingProcess(
-                    target=self._target, args=(instance, self.opts, data, self.connected)
-                )
+                CallbackProcessPool().add_data(data)
+                #process = SignalHandlingMultiprocessingProcess(
+                #    target=self._target, args=(instance, self.opts, data, self.connected)
+                #)
+                process = None
         else:
             process = threading.Thread(
                 target=self._target,
@@ -1336,20 +1390,21 @@ class Minion(MinionBase):
                 name=data['jid']
             )
 
-        if multiprocessing_enabled:
-            with default_signals(signal.SIGINT, signal.SIGTERM):
-                # Reset current signals before starting the process in
-                # order not to inherit the current signal handlers
+        if process is not None:
+            if multiprocessing_enabled:
+                with default_signals(signal.SIGINT, signal.SIGTERM):
+                    # Reset current signals before starting the process in
+                    # order not to inherit the current signal handlers
+                    process.start()
+            else:
                 process.start()
-        else:
-            process.start()
 
-        # TODO: remove the windows specific check?
-        if multiprocessing_enabled and not salt.utils.is_windows():
-            # we only want to join() immediately if we are daemonizing a process
-            process.join()
-        else:
-            self.win_proc.append(process)
+            # TODO: remove the windows specific check?
+            if multiprocessing_enabled and not salt.utils.is_windows():
+                # we only want to join() immediately if we are daemonizing a process
+                process.join()
+            else:
+                self.win_proc.append(process)
 
     def ctx(self):
         '''Return a single context manager for the minion's data
@@ -1368,7 +1423,7 @@ class Minion(MinionBase):
             return exitstack
 
     @classmethod
-    def _target(cls, minion_instance, opts, data, connected):
+    def _target(cls, minion_instance, opts, data, connected, name):
         if not minion_instance:
             minion_instance = cls(opts)
             minion_instance.connected = connected
@@ -1388,6 +1443,7 @@ class Minion(MinionBase):
                     get_proc_dir(opts['cachedir'], uid=uid)
                     )
 
+        minion_instance._target_name = name
         with tornado.stack_context.StackContext(minion_instance.ctx):
             if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
                 Minion._thread_multi_return(minion_instance, opts, data)
@@ -1453,6 +1509,7 @@ class Minion(MinionBase):
                     return_data = minion_instance.executors[fname](opts, data, func, args, kwargs)
                     if return_data is not None:
                         break
+                CallbackProcessPool().finish(minion_instance._target_name)
 
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
