@@ -763,6 +763,14 @@ def ip_bracket(addr):
     return addr
 
 
+def refresh_dns():
+    '''
+    issue #21397: force glibc to re-read resolv.conf
+    '''
+    if HAS_RESINIT:
+        res_init()
+
+
 @jinja_filter('dns_check')
 def dns_check(addr, port, safe=False, ipv6=None):
     '''
@@ -775,9 +783,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
     lookup = addr
     seen_ipv6 = False
     try:
-        # issue #21397: force glibc to re-read resolv.conf
-        if HAS_RESINIT:
-            res_init()
+        refresh_dns()
         hostnames = socket.getaddrinfo(
             addr, None, socket.AF_UNSPEC, socket.SOCK_STREAM
         )
