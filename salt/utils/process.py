@@ -725,3 +725,50 @@ def default_signals(*signals):
         signal.signal(signum, old_signals[signum])
 
     del old_signals
+
+
+class CallbackProcessPool(object):
+    _instance = None
+    _minion_instances = []
+    _active_processes = {}
+    _finished_processes = multiprocessing.Queue()
+    _process_queue = queue.Queue()
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(CallbackProcessPool, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
+
+    def __init__(self, limit=2):
+        self._process_limit = limit
+
+    def add(self, process):
+        self._active_processes[process.name] = process
+
+    def add_data(self, data):
+        self._process_queue.put(data)
+
+    def register(self, minion):
+        self._minion_instances.append(minion)
+
+    def get_data(self):
+        return self._process_queue.get_nowait()
+
+    def is_full(self):
+        return len(self._active_processes) >= self._process_limit
+
+    def finish(self, name):
+        self._finished_processes.put(name)
+
+    def finished(self):
+        return self._finished_processes.qsize()
+
+    def ids(self):
+        return id(self), id(self._finished_processes)
+
+    def swipe(self):
+        while not self._finished_processes.empty():
+            ref = self._finished_processes.get_nowait()
+            if self._active_processes.get(ref):
+                self._active_processes.pop(ref)
+                log.debug('process pool: Process reference {0} has been removed', ref)
