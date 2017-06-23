@@ -12,7 +12,6 @@ import string
 # Import Salt Libs
 from salt.config import cloud_providers_config, cloud_config
 
-
 # Import Salt Testing LIbs
 from tests.support.case import ShellCase
 from tests.support.paths import FILES
@@ -108,7 +107,8 @@ class VMWareTest(ShellCase):
         # check if instance returned with salt installed
         try:
             self.assertIn(ret_str, instance)
-            self.assertIn(disk_datastore_str, instance, msg='Hard Disk 2 did not use the Datastore {0} '.format(disk_datastore))
+            self.assertIn(disk_datastore_str, instance,
+                          msg='Hard Disk 2 did not use the Datastore {0} '.format(disk_datastore))
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             raise
