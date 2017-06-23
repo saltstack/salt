@@ -20,6 +20,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.odict
 import salt.modules.state as state
 from salt.exceptions import SaltInvocationError
 
@@ -140,6 +141,7 @@ class MockState(object):
                 'pillar': {}}
 
         def __init__(self, opts, pillar_override=None, *args, **kwargs):
+            self.building_highstate = salt.utils.odict.OrderedDict
             self.state = MockState.State(opts,
                                          pillar_override=pillar_override)
 
