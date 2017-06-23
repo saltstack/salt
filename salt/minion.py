@@ -105,7 +105,8 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
-from salt.utils.process import default_signals, ProcessManager, CallbackProcessPool
+from salt.utils.process import (default_signals, ProcessManager,
+                                CallbackProcessPool, SignalHandlingMultiprocessingProcess)
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -922,7 +923,7 @@ def _process_queue_loop(obj):
     while True:
         process_pool.swipe()
         if not process_pool.is_full():
-            if not process_pool._process_queue.empty():
+            if not process_pool.is_data():
                 data = process_pool.get_data()
                 name = process_pool.generate_name()
                 process = multiprocessing.Process(target=obj._target, name=name,
@@ -1373,16 +1374,17 @@ class Minion(MinionBase):
         instance = self
         multiprocessing_enabled = self.opts.get('multiprocessing', True)
         if multiprocessing_enabled:
-            if sys.platform.startswith('win'):
-                # let python reconstruct the minion on the other side if we're
-                # running on windows
-                instance = None
             with default_signals(signal.SIGINT, signal.SIGTERM):
-                CallbackProcessPool().add_data(data)
-                #process = SignalHandlingMultiprocessingProcess(
-                #    target=self._target, args=(instance, self.opts, data, self.connected)
-                #)
-                process = None
+                if sys.platform.startswith('win'):
+                    # let python reconstruct the minion on the other side if we're
+                    # running on windows
+                    instance = None
+                    process = SignalHandlingMultiprocessingProcess(target=self._target,
+                                                                   args=(instance, self.opts, data, self.connected))
+                else:
+                    # Process pooling only on Unix at the moment
+                    CallbackProcessPool().add_data(data)
+                    process = None
         else:
             process = threading.Thread(
                 target=self._target,
