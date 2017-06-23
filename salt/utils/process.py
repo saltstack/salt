@@ -840,3 +840,10 @@ class CallbackProcessPool(object):
             if self._active_processes.get(ref):
                 self._active_processes.pop(ref)
                 log.debug('{0}: Process reference {1} has been removed', self._id, ref)
+
+    def generate_name(self):
+        '''
+        Generate name for the process.
+        :return:
+        '''
+        return '-'.join([self._id, self.pcnt, str(int(time.time()))])
