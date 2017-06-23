@@ -956,7 +956,7 @@ def _instance_spawner():
     '''
     pooler = CallbackProcessPool()
     while True:
-        section = range(pooler.registered())
+        section = list(range(pooler.registered()))
         while section:  # Fire amount of minions
             section.pop()
             minion_process = threading.Thread(target=_process_queue_loop,
