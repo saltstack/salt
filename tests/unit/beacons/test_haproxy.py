@@ -20,7 +20,7 @@ class HAProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        return {}
+        return {haproxy: {}}
 
     def test_non_list_config(self):
         config = {}
@@ -38,3 +38,32 @@ class HAProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, (False, 'Configuration for haproxy beacon '
                                       'requires a list of backends '
                                       'and servers'))
+
+    def test_threshold_reached(self):
+        config = [{'www-backend': {'threshold': 45,
+                                   'servers': ['web1']
+                                   }}]
+        ret = haproxy.validate(config)
+
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+
+        mock = MagicMock(return_value=46)
+        with patch.dict(haproxy.__salt__, {'haproxy.get_sessions': mock}):
+            ret = haproxy.beacon(config)
+            self.assertEqual(ret, [{'threshold': 45,
+                                    'scur': 46,
+                                    'server': 'web1'}])
+
+    def test_threshold_not_reached(self):
+        config = [{'www-backend': {'threshold': 100,
+                                   'servers': ['web1']
+                                   }}]
+        ret = haproxy.validate(config)
+
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+
+        mock = MagicMock(return_value=50)
+        with patch.dict(haproxy.__salt__, {'haproxy.get_sessions': mock}):
+            ret = haproxy.beacon(config)
+            self.assertEqual(ret, [])
+
