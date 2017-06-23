@@ -88,23 +88,22 @@ def beacon(config):
     for mounts in config:
         mount = mounts.keys()[0]
 
-        try:
-            _current_usage = psutil.disk_usage(mount)
-        except OSError:
-            # Ensure a valid mount point
-            log.warning('{0} is not a valid mount point, try regex.'.format(mount))
-            for part in parts:
-                if re.match(mount, part.mountpoint):
-                    row = {}
-                    row[part.mountpoint] = mounts[mount]
-                    config.append(row)
-            continue
+        for part in parts:
+            if re.match(mount, part.mountpoint):
+                _mount = part.mountpoint
 
-        current_usage = _current_usage.percent
-        monitor_usage = mounts[mount]
-        if '%' in monitor_usage:
-            monitor_usage = re.sub('%', '', monitor_usage)
-        monitor_usage = float(monitor_usage)
-        if current_usage >= monitor_usage:
-            ret.append({'diskusage': current_usage, 'mount': mount})
+                try:
+                    _current_usage = psutil.disk_usage(mount)
+                except OSError:
+                    log.warning('{0} is not a valid mount point.'.format(mount))
+                    continue
+
+                current_usage = _current_usage.percent
+                monitor_usage = mounts[mount]
+                log.info('current_usage {}'.format(current_usage))
+                if '%' in monitor_usage:
+                    monitor_usage = re.sub('%', '', monitor_usage)
+                monitor_usage = float(monitor_usage)
+                if current_usage >= monitor_usage:
+                    ret.append({'diskusage': current_usage, 'mount': _mount})
     return ret
