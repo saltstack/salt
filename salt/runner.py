@@ -72,26 +72,35 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         fun = low.pop('fun')
         verify_fun(self.functions, fun)
 
-        reserved_kwargs = dict([(i, low.pop(i)) for i in [
+        eauth_creds = dict([(i, low.pop(i)) for i in [
             'username', 'password', 'eauth', 'token', 'client', 'user', 'key',
-            '__current_eauth_groups', '__current_eauth_user',
         ] if i in low])
 
         # Run name=value args through parse_input. We don't need to run kwargs
         # through because there is no way to send name=value strings in the low
         # dict other than by including an `arg` array.
-        arg, kwarg = salt.utils.args.parse_input(
-            low.pop('arg', []),
-            condition=False,
-            no_parse=self.opts.get('no_parse', []))
-        kwarg.update(low.pop('kwarg', {}))
+        _arg, _kwarg = salt.utils.args.parse_input(
+                low.pop('arg', []), condition=False)
+        _kwarg.update(low.pop('kwarg', {}))
 
         # If anything hasn't been pop()'ed out of low by this point it must be
         # an old-style kwarg.
-        kwarg.update(low)
+        _kwarg.update(low)
+
+        # Finally, mung our kwargs to a format suitable for the byzantine
+        # load_args_and_kwargs so that we can introspect the function being
+        # called and fish for invalid kwargs.
+        munged = []
+        munged.extend(_arg)
+        munged.append(dict(__kwarg__=True, **_kwarg))
+        arg, kwarg = salt.minion.load_args_and_kwargs(
+            self.functions[fun],
+            munged,
+            self.opts,
+            ignore_invalid=True)
 
         return dict(fun=fun, kwarg={'kwarg': kwarg, 'arg': arg},
-                **reserved_kwargs)
+                **eauth_creds)
 
     def cmd_async(self, low):
         '''

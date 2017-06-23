@@ -5121,7 +5121,7 @@ def _gather_pillar(pillarenv, pillar_override, **grains):
         # Not sure if these two are correct
         __opts__['id'],
         __opts__['environment'],
-        pillar=pillar_override,
+        pillar_override=pillar_override,
         pillarenv=pillarenv
     )
     ret = pillar.compile_pillar()

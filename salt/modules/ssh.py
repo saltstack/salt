@@ -171,7 +171,7 @@ def _replace_auth_key(
         )
 
 
-def _validate_keys(key_file):
+def _validate_keys(key_file, fingerprint_hash_type):
     '''
     Return a dict containing validated keys in the passed file
     '''
@@ -207,7 +207,7 @@ def _validate_keys(key_file):
                 enc = comps[0]
                 key = comps[1]
                 comment = ' '.join(comps[2:])
-                fingerprint = _fingerprint(key)
+                fingerprint = _fingerprint(key, fingerprint_hash_type)
                 if fingerprint is None:
                     continue
 
@@ -223,7 +223,7 @@ def _validate_keys(key_file):
     return ret
 
 
-def _fingerprint(public_key, fingerprint_hash_type=None):
+def _fingerprint(public_key, fingerprint_hash_type):
     '''
     Return a public key fingerprint based on its base64-encoded representation
 
@@ -347,7 +347,9 @@ def host_keys(keydir=None, private=True):
     return keys
 
 
-def auth_keys(user=None, config='.ssh/authorized_keys'):
+def auth_keys(user=None,
+              config='.ssh/authorized_keys',
+              fingerprint_hash_type=None):
     '''
     Return the authorized keys for users
 
@@ -377,7 +379,7 @@ def auth_keys(user=None, config='.ssh/authorized_keys'):
             pass
 
         if full and os.path.isfile(full):
-            keys[u] = _validate_keys(full)
+            keys[u] = _validate_keys(full, fingerprint_hash_type)
 
     if old_output_when_one_user:
         if user[0] in keys:
@@ -391,7 +393,8 @@ def auth_keys(user=None, config='.ssh/authorized_keys'):
 def check_key_file(user,
                    source,
                    config='.ssh/authorized_keys',
-                   saltenv='base'):
+                   saltenv='base',
+                   fingerprint_hash_type=None):
     '''
     Check a keyfile from a source destination against the local keys and
     return the keys to change
@@ -405,7 +408,7 @@ def check_key_file(user,
     keyfile = __salt__['cp.cache_file'](source, saltenv)
     if not keyfile:
         return {}
-    s_keys = _validate_keys(keyfile)
+    s_keys = _validate_keys(keyfile, fingerprint_hash_type)
     if not s_keys:
         err = 'No keys detected in {0}. Is file properly ' \
               'formatted?'.format(source)
@@ -421,12 +424,19 @@ def check_key_file(user,
                 s_keys[key]['enc'],
                 s_keys[key]['comment'],
                 s_keys[key]['options'],
-                config)
+                config=config,
+                fingerprint_hash_type=fingerprint_hash_type)
         return ret
 
 
-def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
-              cache_keys=None):
+def check_key(user,
+              key,
+              enc,
+              comment,
+              options,
+              config='.ssh/authorized_keys',
+              cache_keys=None,
+              fingerprint_hash_type=None):
     '''
     Check to see if a key needs updating, returns "update", "add" or "exists"
 
@@ -439,7 +449,9 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
     if cache_keys is None:
         cache_keys = []
     enc = _refine_enc(enc)
-    current = auth_keys(user, config)
+    current = auth_keys(user,
+                        config=config,
+                        fingerprint_hash_type=fingerprint_hash_type)
     nline = _format_auth_line(key, enc, comment, options)
 
     # Removing existing keys from the auth_keys isn't really a good idea
@@ -468,9 +480,10 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
 
 
 def rm_auth_key_from_file(user,
-             source,
-             config='.ssh/authorized_keys',
-             saltenv='base'):
+                          source,
+                          config='.ssh/authorized_keys',
+                          saltenv='base',
+                          fingerprint_hash_type=None):
     '''
     Remove an authorized key from the specified user's authorized key file,
     using a file as source
@@ -487,7 +500,7 @@ def rm_auth_key_from_file(user,
             'Failed to pull key file from salt file server'
         )
 
-    s_keys = _validate_keys(lfile)
+    s_keys = _validate_keys(lfile, fingerprint_hash_type)
     if not s_keys:
         err = (
             'No keys detected in {0}. Is file properly formatted?'.format(
@@ -503,7 +516,8 @@ def rm_auth_key_from_file(user,
             rval += rm_auth_key(
                 user,
                 key,
-                config
+                config=config,
+                fingerprint_hash_type=fingerprint_hash_type
             )
         # Due to the ability for a single file to have multiple keys, it's
         # possible for a single call to this function to have both "replace"
@@ -517,7 +531,10 @@ def rm_auth_key_from_file(user,
             return 'Key not present'
 
 
-def rm_auth_key(user, key, config='.ssh/authorized_keys'):
+def rm_auth_key(user,
+                key,
+                config='.ssh/authorized_keys',
+                fingerprint_hash_type=None):
     '''
     Remove an authorized key from the specified user's authorized key file
 
@@ -527,7 +544,9 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
 
         salt '*' ssh.rm_auth_key <user> <key>
     '''
-    current = auth_keys(user, config)
+    current = auth_keys(user,
+                        config=config,
+                        fingerprint_hash_type=fingerprint_hash_type)
     linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
     if key in current:
         # Remove the key
@@ -585,7 +604,8 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
 def set_auth_key_from_file(user,
                            source,
                            config='.ssh/authorized_keys',
-                           saltenv='base'):
+                           saltenv='base',
+                           fingerprint_hash_type=None):
     '''
     Add a key to the authorized_keys file, using a file as the source.
 
@@ -602,7 +622,7 @@ def set_auth_key_from_file(user,
             'Failed to pull key file from salt file server'
         )
 
-    s_keys = _validate_keys(lfile)
+    s_keys = _validate_keys(lfile, fingerprint_hash_type)
     if not s_keys:
         err = (
             'No keys detected in {0}. Is file properly formatted?'.format(
@@ -618,11 +638,12 @@ def set_auth_key_from_file(user,
             rval += set_auth_key(
                 user,
                 key,
-                s_keys[key]['enc'],
-                s_keys[key]['comment'],
-                s_keys[key]['options'],
-                config,
-                list(s_keys.keys())
+                enc=s_keys[key]['enc'],
+                comment=s_keys[key]['comment'],
+                options=s_keys[key]['options'],
+                config=config,
+                cache_keys=list(s_keys.keys()),
+                fingerprint_hash_type=fingerprint_hash_type
             )
         # Due to the ability for a single file to have multiple keys, it's
         # possible for a single call to this function to have both "replace"
@@ -645,7 +666,8 @@ def set_auth_key(
         comment='',
         options=None,
         config='.ssh/authorized_keys',
-        cache_keys=None):
+        cache_keys=None,
+        fingerprint_hash_type=None):
     '''
     Add a key to the authorized_keys file. The "key" parameter must only be the
     string of text that is the encoded key. If the key begins with "ssh-rsa"
@@ -672,11 +694,18 @@ def set_auth_key(
     # the same filtering done when reading the authorized_keys file. Apply
     # the same check to ensure we don't insert anything that will not
     # subsequently be read)
-    key_is_valid = _fingerprint(key) is not None
+    key_is_valid = _fingerprint(key, fingerprint_hash_type) is not None
     if not key_is_valid:
         return 'Invalid public key'
 
-    status = check_key(user, key, enc, comment, options, config, cache_keys)
+    status = check_key(user,
+                       key,
+                       enc,
+                       comment,
+                       options,
+                       config=config,
+                       cache_keys=cache_keys,
+                       fingerprint_hash_type=fingerprint_hash_type)
     if status == 'update':
         _replace_auth_key(user, key, enc, comment, options or [], config)
         return 'replace'

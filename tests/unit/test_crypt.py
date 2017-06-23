@@ -14,10 +14,16 @@ from salt import crypt
 
 # third-party libs
 try:
-    import Crypto.PublicKey.RSA  # pylint: disable=unused-import
+    from Cryptodome.PublicKey import RSA  # pylint: disable=unused-import
     HAS_PYCRYPTO_RSA = True
 except ImportError:
     HAS_PYCRYPTO_RSA = False
+if not HAS_PYCRYPTO_RSA:
+    try:
+        from Crypto.PublicKey import RSA
+        HAS_PYCRYPTO_RSA = True
+    except ImportError:
+        HAS_PYCRYPTO_RSA = False
 
 
 PRIVKEY_DATA = (
@@ -97,7 +103,7 @@ class CryptTestCase(TestCase):
                         salt.utils.fopen.assert_has_calls([open_priv_wb, open_pub_wb], any_order=True)
 
     def test_sign_message(self):
-        key = Crypto.PublicKey.RSA.importKey(PRIVKEY_DATA)
+        key = RSA.importKey(PRIVKEY_DATA)
         with patch('salt.crypt._get_rsa_key', return_value=key):
             self.assertEqual(SIG, salt.crypt.sign_message('/keydir/keyname.pem', MSG))
 
