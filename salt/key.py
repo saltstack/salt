@@ -25,6 +25,7 @@ import salt.minion
 import salt.utils
 import salt.utils.event
 import salt.utils.kinds
+import salt.utils.sdb
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
@@ -374,6 +375,8 @@ class Key(object):
                 io_loop=io_loop
                 )
 
+        self.passphrase = salt.utils.sdb.sdb_get(self.opts['signing_key_pass'], self.opts)
+
     def _check_minions_directories(self):
         '''
         Return the minion keys directory paths
@@ -409,7 +412,7 @@ class Key(object):
         '''
         keydir, keyname, keysize, user = self._get_key_attrs(keydir, keyname,
                                                              keysize, user)
-        salt.crypt.gen_keys(keydir, keyname, keysize, user)
+        salt.crypt.gen_keys(keydir, keyname, keysize, user, self.passphrase)
         return salt.utils.pem_finger(os.path.join(keydir, keyname + '.pub'))
 
     def gen_signature(self, privkey, pubkey, sig_path):
@@ -418,7 +421,8 @@ class Key(object):
         '''
         return salt.crypt.gen_signature(privkey,
                                         pubkey,
-                                        sig_path)
+                                        sig_path,
+                                        self.passphrase)
 
     def gen_keys_signature(self, priv, pub, signature_path, auto_create=False, keysize=None):
         '''
@@ -452,7 +456,8 @@ class Key(object):
                 salt.crypt.gen_keys(self.opts['pki_dir'],
                                     self.opts['master_sign_key_name'],
                                     keysize or self.opts['keysize'],
-                                    self.opts.get('user'))
+                                    self.opts.get('user'),
+                                    self.passphrase)
 
                 priv = self.opts['pki_dir'] + '/' + self.opts['master_sign_key_name'] + '.pem'
             else:

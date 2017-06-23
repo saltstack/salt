@@ -51,10 +51,11 @@ import salt.payload
 import salt.transport.client
 import salt.transport.frame
 import salt.utils.rsax931
+import salt.utils.sdb
 import salt.utils.verify
 import salt.version
 from salt.exceptions import (
-    AuthenticationError, SaltClientError, SaltReqTimeoutError
+    AuthenticationError, SaltClientError, SaltReqTimeoutError, MasterExit
 )
 
 import tornado.gen
@@ -91,7 +92,7 @@ def dropfile(cachedir, user=None):
         os.umask(mask)  # restore original umask
 
 
-def gen_keys(keydir, keyname, keysize, user=None):
+def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     '''
     Generate a RSA public keypair for use with salt
 
@@ -99,6 +100,7 @@ def gen_keys(keydir, keyname, keysize, user=None):
     :param str keyname: The type of salt server for whom this key should be written. (i.e. 'master' or 'minion')
     :param int keysize: The number of bits in the key
     :param str user: The user on the system who should own this keypair
+    :param str passphrase: The passphrase which should be used to encrypt the private key
 
     :rtype: str
     :return: Path on the filesystem to the RSA private key
@@ -120,7 +122,7 @@ def gen_keys(keydir, keyname, keysize, user=None):
 
     cumask = os.umask(191)
     with salt.utils.fopen(priv, 'wb+') as f:
-        f.write(gen.exportKey('PEM'))
+        f.write(gen.exportKey('PEM', passphrase))
     os.umask(cumask)
     with salt.utils.fopen(pub, 'wb+') as f:
         f.write(gen.publickey().exportKey('PEM'))
@@ -138,13 +140,13 @@ def gen_keys(keydir, keyname, keysize, user=None):
     return priv
 
 
-def sign_message(privkey_path, message):
+def sign_message(privkey_path, message, passphrase=None):
     '''
     Use Crypto.Signature.PKCS1_v1_5 to sign a message. Returns the signature.
     '''
     log.debug('salt.crypt.sign_message: Loading private key')
     with salt.utils.fopen(privkey_path) as f:
-        key = RSA.importKey(f.read())
+        key = RSA.importKey(f.read(), passphrase)
     log.debug('salt.crypt.sign_message: Signing message.')
     signer = PKCS1_v1_5.new(key)
     return signer.sign(SHA.new(message))
@@ -163,7 +165,7 @@ def verify_signature(pubkey_path, message, signature):
     return verifier.verify(SHA.new(message), signature)
 
 
-def gen_signature(priv_path, pub_path, sign_path):
+def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
     '''
     creates a signature for the given public-key with
     the given private key and writes it to sign_path
@@ -172,7 +174,7 @@ def gen_signature(priv_path, pub_path, sign_path):
     with salt.utils.fopen(pub_path) as fp_:
         mpub_64 = fp_.read()
 
-    mpub_sig = sign_message(priv_path, mpub_64)
+    mpub_sig = sign_message(priv_path, mpub_64, passphrase)
     mpub_sig_64 = binascii.b2a_base64(mpub_sig)
     if os.path.isfile(sign_path):
         return False
@@ -230,7 +232,9 @@ class MasterKeys(dict):
         self.pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
 
-        self.key = self.__get_keys()
+        key_pass = salt.utils.sdb.sdb_get(self.opts['key_pass'], self.opts)
+        self.key = self.__get_keys(passphrase=key_pass)
+
         self.pub_signature = None
 
         # set names for the signing key-pairs
@@ -257,11 +261,15 @@ class MasterKeys(dict):
             # create a new signing key-pair to sign the masters
             # auth-replies when a minion tries to connect
             else:
+
+                key_pass = salt.utils.sdb.sdb_get(self.opts['signing_key_pass'], self.opts)
+
                 self.pub_sign_path = os.path.join(self.opts['pki_dir'],
                                                   opts['master_sign_key_name'] + '.pub')
                 self.rsa_sign_path = os.path.join(self.opts['pki_dir'],
                                                   opts['master_sign_key_name'] + '.pem')
-                self.sign_key = self.__get_keys(name=opts['master_sign_key_name'])
+                self.sign_key = self.__get_keys(name=opts['master_sign_key_name'],
+                                                passphrase=key_pass)
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # some of the member variables correspond to Cython objects which are
@@ -274,7 +282,7 @@ class MasterKeys(dict):
     def __getstate__(self):
         return {'opts': self.opts}
 
-    def __get_keys(self, name='master'):
+    def __get_keys(self, name='master', passphrase=None):
         '''
         Returns a key object for a key in the pki-dir
         '''
@@ -282,16 +290,22 @@ class MasterKeys(dict):
                             name + '.pem')
         if os.path.exists(path):
             with salt.utils.fopen(path) as f:
-                key = RSA.importKey(f.read())
+                try:
+                    key = RSA.importKey(f.read(), passphrase)
+                except ValueError as e:
+                    message = 'Unable to read key: {0}; passphrase may be incorrect'.format(path)
+                    log.error(message)
+                    raise MasterExit(message)
             log.debug('Loaded {0} key: {1}'.format(name, path))
         else:
             log.info('Generating {0} keys: {1}'.format(name, self.opts['pki_dir']))
             gen_keys(self.opts['pki_dir'],
                      name,
                      self.opts['keysize'],
-                     self.opts.get('user'))
-            with salt.utils.fopen(self.rsa_path) as f:
-                key = RSA.importKey(f.read())
+                     self.opts.get('user'),
+                     passphrase)
+            with salt.utils.fopen(path) as f:
+                key = RSA.importKey(f.read(), passphrase)
         return key
 
     def get_pub_str(self, name='master'):
