@@ -28,12 +28,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        return {
-            diskusage: {
-                'last_state': {},
-                'last_state_extra': {'no_devices': False}
-            }
-        }
+        return {}
 
     def test_non_list_config(self):
         config = {}
