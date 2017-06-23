@@ -923,8 +923,6 @@ class MinionManager(MinionBase):
             minion.destroy()
 
 
-
-
 def _process_queue_loop(obj):
     '''
     Process queue loop, controls pool queue and finished processes
