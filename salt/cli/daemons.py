@@ -134,32 +134,30 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
         try:
             if self.config['verify_env']:
                 v_dirs = [
-                        self.config['pki_dir'],
-                        os.path.join(self.config['pki_dir'], 'minions'),
-                        os.path.join(self.config['pki_dir'], 'minions_pre'),
-                        os.path.join(self.config['pki_dir'], 'minions_denied'),
-                        os.path.join(self.config['pki_dir'],
-                                     'minions_autosign'),
-                        os.path.join(self.config['pki_dir'],
-                                     'minions_rejected'),
-                        self.config['cachedir'],
-                        os.path.join(self.config['cachedir'], 'jobs'),
-                        os.path.join(self.config['cachedir'], 'proc'),
-                        self.config['sock_dir'],
-                        self.config['token_dir'],
-                        self.config['syndic_dir'],
-                        self.config['sqlite_queue_dir'],
-                    ]
+                        (self.config['pki_dir'], 0o700),
+                        (os.path.join(self.config['pki_dir'], 'minions'), None),
+                        (os.path.join(self.config['pki_dir'], 'minions_pre'), None),
+                        (os.path.join(self.config['pki_dir'], 'minions_denied'), None),
+                        (os.path.join(self.config['pki_dir'], 'minions_autosign'), None),
+                        (os.path.join(self.config['pki_dir'], 'minions_rejected'), None),
+                        (self.config['cachedir'], 0o700),
+                        (os.path.join(self.config['cachedir'], 'jobs'), 0o700),
+                        (os.path.join(self.config['cachedir'], 'proc'), 0o700),
+                        (self.config['sock_dir'], None),
+                        (self.config['token_dir'], 0o700),
+                        (self.config['syndic_dir'], 0o700),
+                        (self.config['sqlite_queue_dir'], 0o700)
+                ]
                 if self.config.get('transport') == 'raet':
-                    v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))
-                    v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'))
-                    v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'))
-                    v_dirs.append(os.path.join(self.config['cachedir'], 'raet'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'), None)
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'), None)
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'), None)
+                    v_dirs.append(os.path.join(self.config['cachedir'], 'raet'), None)
                 verify_env(
-                    v_dirs,
-                    self.config['user'],
-                    permissive=self.config['permissive_pki_access'],
-                    pki_dir=self.config['pki_dir'],
+                    dirs=v_dirs,
+                    user=self.config['user'],
+                    allow_nonprimary_gid=self.config['permissive_pki_access'],
+                    pki_dir=self.config['pki_dir']
                 )
                 # Clear out syndics from cachedir
                 for syndic_file in os.listdir(self.config['syndic_dir']):
@@ -262,23 +260,23 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     )
 
                 v_dirs = [
-                        self.config['pki_dir'],
-                        self.config['cachedir'],
-                        self.config['sock_dir'],
-                        self.config['extension_modules'],
-                        confd,
-                    ]
+                    (self.config['pki_dir'], 0o700),
+                    (self.config['cachedir'], 0o700),
+                    (self.config['sock_dir'], None),
+                    (self.config['extension_modules'], None),
+                    (confd, None),
+                ]
 
                 if self.config.get('transport') == 'raet':
-                    v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))
-                    v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'))
-                    v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'))
-                    v_dirs.append(os.path.join(self.config['cachedir'], 'raet'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'), None)
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'), None)
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'), None)
+                    v_dirs.append(os.path.join(self.config['cachedir'], 'raet'), None)
 
                 verify_env(
-                    v_dirs,
-                    self.config['user'],
-                    permissive=self.config['permissive_pki_access'],
+                    dirs=v_dirs,
+                    user=self.config['user'],
+                    allow_nonprimary_gid=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
         except OSError as error:
@@ -449,23 +447,23 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
                     )
 
                 v_dirs = [
-                    self.config['pki_dir'],
-                    self.config['cachedir'],
-                    self.config['sock_dir'],
-                    self.config['extension_modules'],
-                    confd,
+                    (self.config['pki_dir'], 0o700),
+                    (self.config['cachedir'], None),
+                    (self.config['sock_dir'], None),
+                    (self.config['extension_modules'], None),
+                    (confd, None)
                 ]
 
                 if self.config.get('transport') == 'raet':
-                    v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))
-                    v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'))
-                    v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'))
-                    v_dirs.append(os.path.join(self.config['cachedir'], 'raet'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'), None)
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'), None)
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'), None)
+                    v_dirs.append(os.path.join(self.config['cachedir'], 'raet'), None)
 
                 verify_env(
-                    v_dirs,
-                    self.config['user'],
-                    permissive=self.config['permissive_pki_access'],
+                    dirs=v_dirs,
+                    user=self.config['user'],
+                    allow_nonprimary_gid=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
         except OSError as error:
@@ -565,16 +563,17 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
         super(Syndic, self).prepare()
         try:
             if self.config['verify_env']:
+                v_dirs = [
+                    (self.config['pki_dir'], 0o700),
+                    (self.config['cachedir'], None),
+                    (self.config['sock_dir'], None),
+                    (self.config['extension_modules'], None)
+                ]
                 verify_env(
-                    [
-                        self.config['pki_dir'],
-                        self.config['cachedir'],
-                        self.config['sock_dir'],
-                        self.config['extension_modules'],
-                    ],
-                    self.config['user'],
-                    permissive=self.config['permissive_pki_access'],
-                    pki_dir=self.config['pki_dir'],
+                    dirs=v_dirs,
+                    user=self.config['user'],
+                    allow_nonprimary_gid=self.config['permissive_pki_access'],
+                    pki_dir=self.config['pki_dir']
                 )
         except OSError as error:
             self.environment_failure(error)
@@ -582,7 +581,6 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
         self.setup_logfile_logger()
         verify_log(self.config)
         self.action_log_info('Setting up "{0}"'.format(self.config['id']))
-
         # Late import so logging works correctly
         import salt.minion
         self.daemonize_if_required()

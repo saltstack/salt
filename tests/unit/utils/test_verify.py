@@ -89,17 +89,47 @@ class TestVerify(TestCase):
             # If there's a different error catch, write it to sys.stderr
             sys.stderr.write(writer.output)
 
+
     @skipIf(sys.platform.startswith('win'), 'No verify_env Windows')
     def test_verify_env(self):
+        default_mode = 0o750
+        current_user = getpass.getuser()
+
         root_dir = tempfile.mkdtemp(dir=TMP)
-        var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
-        verify_env([var_dir], getpass.getuser())
-        self.assertTrue(os.path.exists(var_dir))
-        dir_stat = os.stat(var_dir)
-        self.assertEqual(dir_stat.st_uid, os.getuid())
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
+        pki_dir = os.path.join(root_dir, 'salt', 'pki')
+        cache_dir = os.path.join(root_dir, 'var', 'cache', 'salt', 'master')
+        token_dir = os.path.join(root_dir, cache_dir, 'tokens')
+        log_dir = os.path.join(root_dir, 'var', 'log', 'salt')
+
+        v_dirs = [
+            (pki_dir, 0o750),
+            (os.path.join(pki_dir, 'minions'), None),
+            (os.path.join(pki_dir, 'minions_pre'), None),
+            (os.path.join(pki_dir, 'minions_denied'), None),
+            (os.path.join(pki_dir, 'minions_autosign'), None),
+            (os.path.join(pki_dir,  'minions_rejected'), None),
+            (cache_dir, 0o700),
+            (os.path.join(cache_dir, 'jobs'), 0o700),
+            (os.path.join(cache_dir, 'proc'), 0o700),
+            (token_dir, 0o700),
+            (log_dir, 0o755)
+        ]
+
+        verify_env(v_dirs, current_user)
+
+        self.assertTrue(os.path.exists(log_dir))
+        log_dir_stat = os.stat(log_dir)
+        self.assertEqual(log_dir_stat.st_uid, os.getuid())
+        self.assertEqual(log_dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
+        self.assertEqual(log_dir_stat.st_mode & stat.S_IRWXG, 40)
+        self.assertEqual(log_dir_stat.st_mode & stat.S_IRWXO, 5)
+
+        for directory, intended_mode in v_dirs:
+            if not intended_mode:
+                intended_mode = default_mode
+            actual_mode = stat.S_IMODE(os.stat(directory).st_mode)
+            self.assertEqual(actual_mode, intended_mode)
+
 
     @requires_network(only_local_network=True)
     def test_verify_socket(self):
