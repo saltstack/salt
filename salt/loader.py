@@ -67,9 +67,6 @@ LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     'parallels.avail_sizes',
     'parallels.avail_locations',
     'proxmox.avail_sizes',
-    'saltify.avail_sizes',
-    'saltify.avail_images',
-    'saltify.avail_locations',
     'rackspace.reboot',
     'openstack.list_locations',
     'rackspace.list_locations'
