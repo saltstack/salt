@@ -52,13 +52,13 @@ def validate(config):
     Validate the beacon configuration
     '''
     if not isinstance(config, list):
-        return False, ('Configuration for bonjour_announcement '
-                       'beacon must be a list of dictionaries')
+        return False, ('Configuration for bonjour_announce '
+                       'beacon must be a list.')
     elif not all(x in sum((y.keys() for y in config), []) for x in ('servicetype',
                                                                     'port',
                                                                     'txt')):
         return False, ('Configuration for bonjour_announce beacon '
-                       'must contain servicetype, port and txt items')
+                       'must contain servicetype, port and txt items.')
     return True, 'Valid beacon configuration'
 
 
