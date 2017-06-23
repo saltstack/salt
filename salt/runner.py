@@ -76,22 +76,26 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             'username', 'password', 'eauth', 'token', 'client', 'user', 'key',
         ] if i in low])
 
-        # Separate the new-style args/kwargs.
-        pre_arg = low.pop('arg', [])
-        pre_kwarg = low.pop('kwarg', {})
-        # Anything not pop'ed from low should hopefully be an old-style kwarg.
-        low['__kwarg__'] = True
-        pre_kwarg.update(low)
+        # Run name=value args through parse_input. We don't need to run kwargs
+        # through because there is no way to send name=value strings in the low
+        # dict other than by including an `arg` array.
+        _arg, _kwarg = salt.utils.args.parse_input(
+                low.pop('arg', []), condition=False)
+        _kwarg.update(low.pop('kwarg', {}))
 
-        # Normalize old- & new-style args in a format suitable for
-        # load_args_and_kwargs
-        old_new_normalized_input = []
-        old_new_normalized_input.extend(pre_arg)
-        old_new_normalized_input.append(pre_kwarg)
+        # If anything hasn't been pop()'ed out of low by this point it must be
+        # an old-style kwarg.
+        _kwarg.update(low)
 
+        # Finally, mung our kwargs to a format suitable for the byzantine
+        # load_args_and_kwargs so that we can introspect the function being
+        # called and fish for invalid kwargs.
+        munged = []
+        munged.extend(_arg)
+        munged.append(dict(__kwarg__=True, **_kwarg))
         arg, kwarg = salt.minion.load_args_and_kwargs(
             self.functions[fun],
-            old_new_normalized_input,
+            munged,
             self.opts,
             ignore_invalid=True)
 
