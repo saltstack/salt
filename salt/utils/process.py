@@ -793,6 +793,20 @@ class CallbackProcessPool(object):
         '''
         self._minion_instances.append(minion)
 
+    def registered(self):
+        '''
+        Return a number of registered instances
+        :return:
+        '''
+        return len(self._minion_instances)
+
+    def get_registered(self):
+        '''
+        Get oldest registered minion and remove from tracker.
+        :return:
+        '''
+        return self._minion_instances.pop(0)
+
     def get_data(self):
         '''
         Get process data.
