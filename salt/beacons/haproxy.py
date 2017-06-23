@@ -33,7 +33,17 @@ def validate(config):
     if not isinstance(config, list):
         return False, ('Configuration for haproxy beacon must '
                        'be a list.')
-    if 'haproxy' not in config:
+
+    # Look for servers list
+    _servers_found = False
+    for config_item in config:
+        for x in config_item.keys():
+            if isinstance(config_item[x], dict) and \
+               'servers' in config_item[x]:
+                if isinstance(config_item[x]['servers'], list):
+                    _servers_found = True
+
+    if not _servers_found:
         return False, ('Configuration for haproxy beacon requires a list '
                        'of backends and servers')
     return True, 'Valid beacon configuration'
@@ -58,9 +68,12 @@ def beacon(config):
     log.debug('haproxy beacon starting')
 
     ret = []
-    for backend in config:
-        threshold = config[backend]['threshold']
-        for server in config[backend]['servers']:
+    for backend_config in config:
+
+        backend = backend_config.keys()[0]
+
+        threshold = backend_config[backend]['threshold']
+        for server in backend_config[backend]['servers']:
             scur = __salt__['haproxy.get_sessions'](server, backend)
             if scur:
                 if int(scur) > int(threshold):
@@ -68,6 +81,10 @@ def beacon(config):
                                'scur': scur,
                                'threshold': threshold,
                                }
-                    log.debug('Emit because {0} > {1} for {2} in {3}'.format(scur, threshold, server, backend))
+                    log.debug('Emit because {0} > {1}'
+                              ' for {2} in {3}'.format(scur,
+                                                       threshold,
+                                                       server,
+                                                       backend))
                     ret.append(_server)
     return ret
