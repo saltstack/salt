@@ -200,6 +200,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     If a position is required (as with `-I` or `-D`), it may be specified as
     `position`. This will only be useful if `full` is True.
 
+    If `state` is passed, it will be ignored, use `connstate`.
     If `connstate` is passed in, it will automatically be changed to `state`.
 
     To pass in jump options that doesn't take arguments, pass in an empty
@@ -213,19 +214,19 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             connstate=RELATED,ESTABLISHED jump=ACCEPT
 
         salt '*' iptables.build_rule filter INPUT command=I position=3 \\
-            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
+            full=True match=state connstate=RELATED,ESTABLISHED jump=ACCEPT
 
         salt '*' iptables.build_rule filter INPUT command=A \\
-            full=True match=state state=RELATED,ESTABLISHED \\
+            full=True match=state connstate=RELATED,ESTABLISHED \\
             source='127.0.0.1' jump=ACCEPT
 
         .. Invert Rules
         salt '*' iptables.build_rule filter INPUT command=A \\
-            full=True match=state state=RELATED,ESTABLISHED \\
-            source='! 127.0.0.1' jump=ACCEPT
+            full=True match=state connstate=RELATED,ESTABLISHED \\
+            source='!127.0.0.1' jump=ACCEPT
 
         salt '*' iptables.build_rule filter INPUT command=A \\
-            full=True match=state state=RELATED,ESTABLISHED \\
+            full=True match=state connstate=RELATED,ESTABLISHED \\
             destination='not 127.0.0.1' jump=ACCEPT
 
         IPv6:
@@ -233,7 +234,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             connstate=RELATED,ESTABLISHED jump=ACCEPT \\
             family=ipv6
         salt '*' iptables.build_rule filter INPUT command=I position=3 \\
-            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT \\
+            full=True match=state connstate=RELATED,ESTABLISHED jump=ACCEPT \\
             family=ipv6
 
     '''
