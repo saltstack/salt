@@ -105,9 +105,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
-from salt.utils.process import (default_signals,
-                                SignalHandlingMultiprocessingProcess,
-                                ProcessManager)
+from salt.utils.process import default_signals, ProcessManager
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
