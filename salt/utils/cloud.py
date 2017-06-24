@@ -435,6 +435,9 @@ def bootstrap(vm_, opts):
             'script_env', vm_, opts
         ),
         'minion_conf': minion_conf,
+        'force_minion_config': salt.config.get_cloud_config_value(
+            'force_minion_config', vm_, opts, default=False
+        ),
         'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
         'display_ssh_output': salt.config.get_cloud_config_value(
             'display_ssh_output', vm_, opts, default=True
@@ -1218,6 +1221,7 @@ def deploy_script(host,
                   file_map=None,
                   master_sign_pub_file=None,
                   cloud_grains={},
+                  force_minion_config=False,
                   **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
@@ -1495,7 +1499,9 @@ def deploy_script(host,
             # Run the deploy script
             if script:
                 if 'bootstrap-salt' in script:
-                    deploy_command += ' -F -c \'{0}\''.format(tmp_dir)
+                    deploy_command += ' -c \'{0}\''.format(tmp_dir)
+                    if force_minion_config:
+                        deploy_command += ' -F'
                     if make_syndic is True:
                         deploy_command += ' -S'
                     if make_master is True:
@@ -1549,6 +1555,15 @@ def deploy_script(host,
                         )
                     )
                 log.debug('Executed command \'{0}\''.format(deploy_command))
+
+                if force_minion_config:
+                    # TODO: this entire code block should be unnecessary if they implement
+                    # https://github.com/saltstack/salt-bootstrap/issues/1105
+                    deploy_command += ' -C'  # try again with "configure_only"
+                    if root_cmd(deploy_command, tty, sudo, **ssh_kwargs) != 0:
+                        log.warning('Executing command \'{0}\' failed.'.format(deploy_command))
+                    else:
+                        log.debug('Executed command \'{0}\''.format(deploy_command))
 
                 # Remove the deploy script
                 if not keep_tmp:
