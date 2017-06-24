@@ -283,9 +283,11 @@ def running(name,
 
     binds
         Files/directories to bind mount. Each bind mount should be passed in
-        the format ``<host_path>:<container_path>:<read_only>``, where
-        ``<read_only>`` is one of ``rw`` (for read-write access) or ``ro`` (for
-        read-only access). Can be expressed as a comma-separated list or a YAML
+        the format ``<host_path>:<container_path>:<read_only>,<selinux_context>``, where
+        ``<read_only>`` is one of ``rw`` (for read-write access), ``ro`` (for
+        read-only access) and ``selinux_context``, which is optional and only needed when running
+        on a selinux-enabled host can be ``z`` if the volumne is shared between multiple containers
+        or ``Z`` if the volume should be private. Can be expressed as a comma-separated list or a YAML
         list. The below two examples are equivalent:
 
         .. code-block:: yaml
@@ -303,6 +305,14 @@ def running(name,
                 - binds:
                   - /srv/www:/var/www:ro
                   - /home/myuser/conf/foo.conf:/etc/foo.conf:rw
+
+        .. code-block:: yaml
+
+            foo:
+              docker_container.running:
+                - image: bar/baz:latest
+                - binds:
+                  - /etc/baz.conf:/etc/baz.conf:ro,Z
 
         Optionally, the read-only information can be left off the end and the
         bind mount will be assumed to be read-write. The example below is
