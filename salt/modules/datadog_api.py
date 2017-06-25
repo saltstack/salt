@@ -13,6 +13,11 @@ api_key
 app_key
     The datadog application key
 
+The following parameters are required for all functions:
+
+:param api_key:     The Datadog API key
+:param app_key:     The Datadog application key
+
 Full argument reference is available on the Datadog API reference page
 https://docs.datadoghq.com/api/
 '''
@@ -45,6 +50,10 @@ def _initialize_connection(api_key, app_key):
     '''
     Initialize Datadog connection
     '''
+    if api_key is None:
+        raise SaltInvocationError('api_key must be specified')
+    if app_key is None:
+        raise SaltInvocationError('app_key must be specified')
     options = {
         'api_key': api_key,
         'app_key': app_key
@@ -167,4 +176,76 @@ def cancel_downtime(api_key=None, app_key=None, scope=None, id=None):
     else:
         raise SaltInvocationError('One of id or scope must be specified')
 
+    return ret
+
+def post_event(api_key=None,
+               app_key=None,
+               title=None,
+               text=None,
+               date_happened=None,
+               priority=None,
+               host=None,
+               tags=None,
+               alert_type=None,
+               aggregation_key=None,
+               source_type_name=None):
+    '''
+    Post an event to the Datadog stream.
+
+    CLI Example
+
+    .. code-block:: yaml
+
+        salt-call datadog.post_event api_key='<api_key>' app_key='<app_key>'
+        title='Salt Highstate' text="Salt highstate was run on $(salt-call
+        grains.get id)"
+
+    Required arguments
+
+    :param title:   The event title. Limited to 100 characters.
+    :param text:    The body of the event. Limited to 4000 characters. The text
+                    supports markdown.
+
+    Optional arguments
+
+    :param date_happened:       POSIX timestamp of the event.
+    :param priority:            The priority of the event ('normal' or 'low').
+    :param host:                Host name to associate with the event.
+    :param tags:                A list of tags to apply to the event.
+    :param alert_type:          "error", "warning", "info" or "success".
+    :param aggregation_key:     An arbitrary string to use for aggregation,
+                                max length of 100 characters.
+    :param source_type_name:    The type of event being posted.
+    '''
+    _initialize_connection(api_key, app_key)
+    if title is None:
+        raise SaltInvocationError('title must be specified')
+    if text is None:
+        raise SaltInvocationError('text must be specified')
+
+    ret = {'result': False,
+           'response': None,
+           'comment': ''}
+
+    try:
+        response = datadog.api.Event.create(title=title,
+                                            text=text,
+                                            date_happened=date_happened,
+                                            priority=priority,
+                                            host=host,
+                                            tags=tags,
+                                            alert_type=alert_type,
+                                            aggregation_key=aggregation_key,
+                                            source_type_name=source_type_name
+                                            )
+    except ValueError:
+        comment = ('Unexpected exception in Datadog Post Event API '
+                   'call. Are your keys correct?')
+        ret['comment'] = comment
+        return ret
+    
+    ret['response'] = response
+    if response['status'] == 'ok':
+        ret['result'] = True
+        ret['comment'] = 'Successfully sent event'
     return ret
