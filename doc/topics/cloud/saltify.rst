@@ -16,7 +16,7 @@ The Saltify driver has no external dependencies.
 Configuration
 =============
 
-Because the Saltify driver does not use an actual cloud provider host, it has a
+Because the Saltify driver does not use an actual cloud provider host, it can have a
 simple provider configuration. The only thing that is required to be set is the
 driver name, and any other potentially useful information, like the location of
 the salt-master:
@@ -30,6 +30,12 @@ the salt-master:
       minion:
         master: 111.222.333.444
       provider: saltify
+
+However, if you wish to use the more advanced capabilities of salt-cloud, such as
+rebooting, listing, and disconnecting machines, then the salt master must fill
+the role usually performed by a vendor's cloud management system. In order to do
+that, you must configure your salt master as a salt-api server, and supply credentials
+to use it. (See ``salt-api setup`` below.)
 
 
 Profiles
@@ -72,6 +78,25 @@ to it can be verified with Salt:
     salt my-machine test.ping
 
 
+Destroy Options
+---------------
+
+For obvious reasons, the ``destroy`` action does not actually vaporize hardware.
+If the salt  master is connected using salt-api, it can tear down parts of
+the client machines.  It will remove the client's key from the salt master,
+and will attempt the following options:
+  - remove_config_on_destroy: true
+    # default: true
+    # Deactivate salt-minion on reboot and
+    # delete the minion config and key files from its ``/etc/salt`` directory,
+    #   NOTE: If deactivation is unsuccessful (older Ubuntu machines) then when
+    #   salt-minion restarts it will automatically create a new, unwanted, set
+    #   of key files. The ``force_minion_config`` option must be used in that case.
+  - shutdown_on_destroy: false
+    # default: false
+    # send a ``shutdown`` command to the client.
+
+
 Using Map Files
 ---------------
 The settings explained in the section above may also be set in a map file. An
@@ -107,7 +132,7 @@ following salt map command:
 
 .. code-block:: bash
 
-    salt-cloud -m /etc/salt/saltify-map
+    salt-cloud -m /etc/salt/saltif    # and deactivate salt-minion on reboot.y-map
 
 This command will install salt on the machines specified in the map and will
 give each machine their minion id of ``my-instance-0`` and ``my-instance-1``,
@@ -135,3 +160,89 @@ Return values:
   - ``True``: Credential verification succeeded
   - ``False``: Credential verification succeeded
   - ``None``: Credential verification was not attempted.
+
+Provisioning salt-api
+=====================
+
+In order to query or control minions it created, saltify needs to send commands
+to the salt master.  It does that using the network interface to salt-api.
+
+The salt-api is not enabled by default. The following example will provide a
+simple installation, with some minimal security enabled, using your own username
+and password.
+
+.. code-block:: yaml
+
+    # file /etc/salt/cloud.profiles.d/my_saltify_profiles.conf
+    hw_41:
+      ssh_host: 10.100.9.41  # the hard address of your target
+      ssh_username: vagrant  # a user name which has passwordless sudo
+      password: vagrant      # on your target machine
+      provider: my_saltify_provider
+
+.. code-block:: yaml
+
+    # file /etc/salt/cloud.providers.d/saltify_provider.conf
+    my_saltify_provider:
+      driver: saltify
+      # The salt-api user password can be stored in your keyring
+      # don't forget to set the password by running something like:
+      # salt-call sdb.set 'sdb://salt-cloud-keyring/password' 'xyz1234'
+      eauth: pam
+      username: sdb://osenv/USER
+      password: sdb://salt-cloud-keyring/password
+
+.. code-block:: yaml
+
+    # file /etc/salt/master.d/sdb.conf
+    # *and* /etc/salt/minion.d/sdb.confsalt-api:  {# the api server is located using the "master" grain #}
+  port: 8000   # TODO: consider using port 4507
+  eauth: pam
+  username: administrator
+  password: xlontestit
+    external_auth:
+      pam:
+        sudo%:
+          - .*
+          - '@wheel'
+          - '@runner'
+          - '@jobs'
+
+    osenv:  # allow Salt sdb to read OS environment variables
+      driver: env
+
+    salt-cloud-keyring: # allow Salt sdb to talk to the OS keyring
+      driver: keyring
+      service: system
+        # remember to write your values into the keystore using a command like:...
+        # salt-call sdb.set 'sdb://salt-cloud-keyring/password' 'YourPasswordHere'
+
+
+.. code-block:: yaml
+
+    # file /srv/pillar/saltify.sls
+    salt-api:  {# the api server is located using the "master" grain #}
+      port: 8000   # TODO: consider using port 4507
+      eauth: pam
+      {# username: administrator #}
+      {# password: secret123 #}
+
+.. code-block:: yaml
+
+    # file /etc/salt/master.d/api.conf
+    # see https://docs.saltstack.com/en/latest/ref/netapi/all/salt.netapi.rest_cherrypy.html
+    rest_cherrypy:
+      host: {{ salt['config.get']('master') }}
+      port: {{ salt['config.get']('salt-api:port') }}
+      ssl_crt: /etc/pki/tls/certs/localhost.crt
+      ssl_key: /etc/pki/tls/certs/localhost.key
+      thread_pool: 30
+      socket_queue_size: 10
+
+
+Start you target machine as a Salt minion named "node41" by:
+
+.. code-block:: bash
+
+    $ sudo salt-cloud -p hw_41 node41
+
