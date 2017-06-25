@@ -10,40 +10,6 @@ are already installed, but not Salted.
 Use of this module requires some configuration in cloud profile and provider
 files as described in the
 :ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
-
-If you intend to use salt-cloud commands to query, reboot, or disconnect minions, it
-needs to do salt-api calls to your Salt master. Your configuration might be similar to:...
-
-.. code-block:: yaml
-
-    # file /etc/salt/cloud.providers.d/saltify_provider.conf
-    my-saltify-config:
-      driver: saltify
-      # The salt-api user password can be stored in your keyring
-      # don't forget to set the password by running something like:
-      # salt-call sdb.set 'sdb://salt-cloud-keyring/password' 'xyz1234'
-      eauth: pam
-      username: sdb://osenv/USER
-      password: sdb://salt-cloud-keyring/password
-
-Which in turn implies that you have enabled both sdb and pam.
-Your minion (and master) configuration might include something like:...
-
-.. code-block:: yaml
-
-    # file /etc/salt/minion.d/salt-api.conf
-    osenv:
-      driver: env
-    salt-cloud-keyring:
-      driver: keyring
-      service: system
-    external_auth:  # give full remote control to group "sudo"
-      pam:
-        sudo%:
-          - .*
-          - '@wheel'
-          - '@runner'
-          - '@jobs'
 '''
 
 # Import python libs
