@@ -169,11 +169,15 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             # force it into a list
             identity = [identity]
 
+        # Override umask
+        if not salt.utils.is_windows():
+            _old_umask = os.umask(0o077)
+
         # try each of the identities, independently
         tmp_identity_file = None
         for id_file in identity:
             if 'salt://' in id_file:
-                tmp_identity_file = salt.utils.files.mkstemp()
+                tmp_identity_file = salt.utils.mkstemp()
                 _id_file = id_file
                 id_file = __salt__['cp.get_file'](id_file,
                                                   tmp_identity_file,
@@ -183,7 +187,6 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                     __salt__['file.remove'](tmp_identity_file)
                     continue
                 else:
-                    __salt__['file.set_mode'](id_file, '0600')
                     if user:
                         os.chown(id_file,
                                  __salt__['file.user_to_uid'](user),
@@ -255,13 +258,17 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                     redirect_stderr=redirect_stderr,
                     **kwargs)
             finally:
-                if not salt.utils.is_windows() and 'GIT_SSH' in env:
-                    os.remove(env['GIT_SSH'])
+                if not salt.utils.is_windows():
+                    # Reset the umask
+                    os.umask(_old_umask)
 
-            # Cleanup the temporary identify file
-            if tmp_identity_file and os.path.exists(tmp_identity_file):
-                log.debug('Removing identify file {0}'.format(tmp_identity_file))
-                __salt__['file.remove'](tmp_identity_file)
+                    if 'GIT_SSH' in env:
+                        os.remove(env['GIT_SSH'])
+
+                # Cleanup the temporary identify file
+                if tmp_identity_file and os.path.exists(tmp_identity_file):
+                    log.debug('Removing identify file {0}'.format(tmp_identity_file))
+                    __salt__['file.remove'](tmp_identity_file)
 
             # If the command was successful, no need to try additional IDs
             if result['retcode'] == 0:
