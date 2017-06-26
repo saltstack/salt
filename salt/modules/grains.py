@@ -11,6 +11,7 @@ import logging
 import operator
 import collections
 import json
+import math
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # Import 3rd-party libs
@@ -23,6 +24,7 @@ import salt.utils
 import salt.utils.yamldumper
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
+from salt.ext.six.moves import range
 
 __proxyenabled__ = ['*']
 
