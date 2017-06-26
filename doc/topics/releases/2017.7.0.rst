@@ -191,6 +191,7 @@ Wildcard Versions in :py:func:`pkg.installed <salt.states.pkg.installed>` States
 - The :py:func:`pkg.installed <salt.states.pkg.installed>` state now supports
   wildcards in package versions, for the following platforms:
 
+  - SUSE/openSUSE Leap/Thumbleweed
   - Debian/Ubuntu
   - RHEL/CentOS
   - Arch Linux
