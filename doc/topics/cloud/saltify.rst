@@ -132,7 +132,7 @@ following salt map command:
 
 .. code-block:: bash
 
-    salt-cloud -m /etc/salt/saltif    # and deactivate salt-minion on reboot.y-map
+    salt-cloud -m /etc/salt/saltify-map
 
 This command will install salt on the machines specified in the map and will
 give each machine their minion id of ``my-instance-0`` and ``my-instance-1``,
