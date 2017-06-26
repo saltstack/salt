@@ -1047,6 +1047,7 @@ _OS_NAME_MAP = {
     'synology': 'Synology',
     'nilrt': 'NILinuxRT',
     'manjaro': 'Manjaro',
+    'manjarolin': 'Manjaro',
     'antergos': 'Antergos',
     'sles': 'SUSE',
     'slesexpand': 'RES',
