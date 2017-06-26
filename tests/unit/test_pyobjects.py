@@ -402,6 +402,8 @@ class RendererTests(RendererMixin, StateTests):
 
 
 class MapTests(RendererMixin, TestCase):
+    maxDiff = None
+
     def test_map(self):
         def samba_with_grains(grains):
             return self.render(map_template, {'grains': grains})
