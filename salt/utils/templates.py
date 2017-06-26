@@ -8,7 +8,6 @@ from __future__ import absolute_import
 # Import python libs
 import codecs
 import os
-import imp
 import logging
 import tempfile
 import traceback
@@ -18,6 +17,12 @@ import sys
 import jinja2
 import jinja2.ext
 import salt.ext.six as six
+
+if six.PY3:
+    import importlib.machinery  # pylint: disable=no-name-in-module,import-error
+    import importlib.util  # pylint: disable=no-name-in-module,import-error
+else:
+    import imp
 
 # Import salt libs
 import salt.utils
@@ -550,10 +555,28 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
     if not os.path.isfile(sfn):
         return {}
 
-    mod = imp.load_source(
-            os.path.basename(sfn).split('.')[0],
-            sfn
-            )
+    base_fname = os.path.basename(sfn)
+    name = base_fname.split('.')[0]
+
+    if six.PY3:
+        # pylint: disable=no-member
+        if '.' in base_fname:
+            fname_ext = '.' + base_fname.split('.')[-1]
+        else:
+            fname_ext = ''
+        fpath_dirname = os.path.dirname(sfn)
+        loader_details = (importlib.machinery.SourceFileLoader, [fname_ext])
+        file_finder = importlib.machinery.FileFinder(fpath_dirname, loader_details)
+        spec = file_finder.find_spec(name)
+        if spec is None:
+            raise ImportError()
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        # pylint: enable=no-member
+        sys.modules[name] = mod
+    else:
+        mod = imp.load_source(name, sfn)
+
     # File templates need these set as __var__
     if '__env__' not in kwargs and 'saltenv' in kwargs:
         setattr(mod, '__env__', kwargs['saltenv'])
