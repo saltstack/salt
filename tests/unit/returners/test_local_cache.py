@@ -72,6 +72,12 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Make sure there are no files in the directory before continuing
         self.assertEqual(jid_file, None)
 
+        # Windows needs some time to release the file handles to the new temp
+        # dir before trying to clean the job cache to avoid a race condition
+        if salt.utils.is_windows():
+            import time
+            time.sleep(1)
+
         # Call clean_old_jobs function, patching the keep_jobs value with a
         # very small value to force the call to clean the job.
         with patch.dict(local_cache.__opts__, {'keep_jobs': 0.00000001}):
@@ -95,7 +101,10 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         local_cache.clean_old_jobs()
 
         # Get the name of the JID directory that was created to test against
-        jid_dir_name = jid_dir.rpartition('/')[2]
+        if salt.utils.is_windows():
+            jid_dir_name = jid_dir.rpartition('\\')[2]
+        else:
+            jid_dir_name = jid_dir.rpartition('/')[2]
 
         # Assert the JID directory is still present to be cleaned after keep_jobs interval
         self.assertEqual([jid_dir_name], os.listdir(TMP_JID_DIR))
