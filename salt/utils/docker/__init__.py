@@ -225,7 +225,7 @@ def translate_input(**kwargs):
         # format {'Type': log_driver, 'Config': log_opt}. So, we need to
         # construct this argument to be passed to the API from those two
         # arguments.
-        if log_driver is not NOTSET and log_opt is not NOTSET:
+        if log_driver is not NOTSET or log_opt is not NOTSET:
             kwargs['log_config'] = {
                 'Type': log_driver if log_driver is not NOTSET else 'none',
                 'Config': log_opt if log_opt is not NOTSET else {}

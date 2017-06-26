@@ -528,15 +528,6 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version_num = kwargs.get('version')
-    if version_num:
-        if pkgs is None and sources is None:
-            # Allow 'version' to work for single package target
-            pkg_params = {name: version_num}
-        else:
-            log.warning('\'version\' parameter will be ignored for multiple '
-                        'package targets')
-
     if 'root' in kwargs:
         pkg_params['-r'] = kwargs['root']
 

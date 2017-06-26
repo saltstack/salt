@@ -32,7 +32,7 @@ from salt.exceptions import (
 import salt.utils.jinja
 import salt.utils.network
 from salt.utils.odict import OrderedDict
-from salt.utils.decorators import JinjaFilter
+from salt.utils.decorators import JinjaFilter, JinjaTest
 from salt import __path__ as saltpath
 
 log = logging.getLogger(__name__)
@@ -289,14 +289,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     if not saltenv:
         if tmplpath:
-            # i.e., the template is from a file outside the state tree
-            #
-            # XXX: FileSystemLoader is not being properly instantiated here is
-            # it? At least it ain't according to:
-            #
-            #   http://jinja.pocoo.org/docs/api/#jinja2.FileSystemLoader
-            loader = jinja2.FileSystemLoader(
-                context, os.path.dirname(tmplpath))
+            loader = jinja2.FileSystemLoader(os.path.dirname(tmplpath))
     else:
         loader = salt.utils.jinja.SaltCacheLoader(opts, saltenv, pillar_rend=context.get('_pillar_rend', False))
 
@@ -327,6 +320,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined,
                                        **env_args)
 
+    jinja_env.tests.update(JinjaTest.salt_jinja_tests)
     jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
 
     # globals

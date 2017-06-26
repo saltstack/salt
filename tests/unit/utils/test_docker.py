@@ -984,6 +984,28 @@ class TranslateInputTestCase(TestCase):
             expected
         )
 
+        # Ensure passing either `log_driver` or `log_opt` works
+        self.assertEqual(
+            docker_utils.translate_input(
+                log_driver='foo'
+            ),
+            (
+                {'log_config': {'Type': 'foo',
+                                'Config': {}}},
+                {}, []
+            )
+        )
+        self.assertEqual(
+            docker_utils.translate_input(
+                log_opt={'foo': 'bar', 'baz': 'qux'}
+            ),
+            (
+                {'log_config': {'Type': 'none',
+                                'Config': {'foo': 'bar', 'baz': 'qux'}}},
+                {}, []
+            )
+        )
+
     @assert_key_equals_value
     def test_lxc_conf(self):
         '''

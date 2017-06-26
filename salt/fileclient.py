@@ -475,6 +475,19 @@ class Client(object):
         url_path = os.path.join(
                 url_data.netloc, url_data.path).rstrip(os.sep)
 
+        # If dest is a directory, rewrite dest with filename
+        if dest is not None \
+                and (os.path.isdir(dest) or dest.endswith(('/', '\\'))):
+            if url_data.query or len(url_data.path) > 1 and not url_data.path.endswith('/'):
+                strpath = url.split('/')[-1]
+            else:
+                strpath = 'index.html'
+
+            if salt.utils.is_windows():
+                strpath = salt.utils.sanitize_win_path_string(strpath)
+
+            dest = os.path.join(dest, strpath)
+
         if url_scheme and url_scheme.lower() in string.ascii_lowercase:
             url_path = ':'.join((url_scheme, url_path))
             url_scheme = 'file'
@@ -988,7 +1001,7 @@ class LocalClient(Client):
             ret.append(saltenv)
         return ret
 
-    def ext_nodes(self):
+    def master_tops(self):
         '''
         Originally returned information via the external_nodes subsystem.
         External_nodes was deprecated and removed in
@@ -1058,6 +1071,14 @@ class RemoteClient(Client):
                 path, saltenv
             )
             return False
+
+        # If dest is a directory, rewrite dest with filename
+        if dest is not None \
+                and (os.path.isdir(dest) or dest.endswith(('/', '\\'))):
+            dest = os.path.join(dest, os.path.basename(path))
+            log.debug(
+                'In saltenv \'%s\', \'%s\' is a directory. Changing dest to '
+                '\'%s\'', saltenv, os.path.dirname(dest), dest)
 
         # Hash compare local copy with master and skip download
         # if no difference found.
@@ -1306,12 +1327,11 @@ class RemoteClient(Client):
         load = {'cmd': '_master_opts'}
         return self.channel.send(load)
 
-    def ext_nodes(self):
+    def master_tops(self):
         '''
-        Return the metadata derived from the external nodes system on the
-        master.
+        Return the metadata derived from the master_tops system
         '''
-        load = {'cmd': '_ext_nodes',
+        load = {'cmd': '_master_tops',
                 'id': self.opts['id'],
                 'opts': self.opts}
         if self.auth:

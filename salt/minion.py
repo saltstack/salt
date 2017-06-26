@@ -20,6 +20,7 @@ import contextlib
 import multiprocessing
 from random import randint, shuffle
 from stat import S_IMODE
+import salt.serializers.msgpack
 
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -1224,11 +1225,25 @@ class Minion(MinionBase):
         return functions, returners, errors, executors
 
     def _send_req_sync(self, load, timeout):
+
+        if self.opts['minion_sign_messages']:
+            log.trace('Signing event to be published onto the bus.')
+            minion_privkey_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
+            sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
+            load['sig'] = sig
+
         channel = salt.transport.Channel.factory(self.opts)
         return channel.send(load, timeout=timeout)
 
     @tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
+
+        if self.opts['minion_sign_messages']:
+            log.trace('Signing event to be published onto the bus.')
+            minion_privkey_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
+            sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
+            load['sig'] = sig
+
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts)
         ret = yield channel.send(load, timeout=timeout)
         raise tornado.gen.Return(ret)

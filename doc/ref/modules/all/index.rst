@@ -117,6 +117,8 @@ execution modules
     drac
     dracr
     drbd
+    dummyproxy_package
+    dummyproxy_service
     ebuild
     eix
     elasticsearch

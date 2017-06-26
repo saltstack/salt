@@ -97,8 +97,9 @@ class CryptTestCase(TestCase):
                         salt.utils.fopen.assert_has_calls([open_priv_wb, open_pub_wb], any_order=True)
 
     def test_sign_message(self):
-        with patch('salt.utils.fopen', mock_open(read_data=PRIVKEY_DATA)):
-            self.assertEqual(SIG, crypt.sign_message('/keydir/keyname.pem', MSG))
+        key = Crypto.PublicKey.RSA.importKey(PRIVKEY_DATA)
+        with patch('salt.crypt._get_rsa_key', return_value=key):
+            self.assertEqual(SIG, salt.crypt.sign_message('/keydir/keyname.pem', MSG))
 
     def test_verify_signature(self):
         with patch('salt.utils.fopen', mock_open(read_data=PUBKEY_DATA)):

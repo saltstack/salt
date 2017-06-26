@@ -184,6 +184,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_service.__salt__, {'task.run': mock_true}):
             self.assertTrue(win_service.execute_salt_restart_task())
 
+    @skipIf(not WINAPI, 'win32serviceutil not available')
     def test_status(self):
         '''
             Test to return the status for a service

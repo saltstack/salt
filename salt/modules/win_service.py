@@ -10,6 +10,8 @@ from __future__ import absolute_import
 import salt.utils
 import time
 import logging
+import fnmatch
+import re
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd party libs
@@ -528,7 +530,12 @@ def execute_salt_restart_task():
 
 def status(name, sig=None):
     '''
-    Return the status for a service
+    Return the status for a service.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
+
+    .. versionchanged:: Oxygen
+        The service name can now be a glob (e.g. ``salt*``)
 
     Args:
         name (str): The name of the service to check
@@ -536,17 +543,27 @@ def status(name, sig=None):
 
     Returns:
         bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status <service name> [service signature]
+        salt '*' service.status <service name>
     '''
-    if info(name)['Status'] in ['Running', 'Stop Pending']:
-        return True
 
-    return False
+    results = {}
+    all_services = get_all()
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(all_services, name)
+    else:
+        services = [name]
+    for service in services:
+        results[service] = info(service)['Status'] in ['Running', 'Stop Pending']
+    if contains_globbing:
+        return results
+    return results[name]
 
 
 def getsid(name):
