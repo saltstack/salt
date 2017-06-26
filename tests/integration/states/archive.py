@@ -33,9 +33,12 @@ else:
     ARCHIVE_DIR = '/tmp/archive'
 
 PORT = 9999
-ARCHIVE_TAR_SOURCE = 'http://localhost:{0}/custom.tar.gz'.format(PORT)
+ARCHIVE_NAME = 'custom.tar.gz'
+ARCHIVE_TAR_SOURCE = 'http://localhost:{0}/{1}'.format(PORT, ARCHIVE_NAME)
+ARCHIVE_LOCAL_TAR_SOURCE = 'file://{0}'.format(os.path.join(STATE_DIR, ARCHIVE_NAME))
 UNTAR_FILE = os.path.join(ARCHIVE_DIR, 'custom/README')
 ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
+ARCHIVE_TAR_BAD_HASH = 'md5=d41d8cd98f00b204e9800998ecf8427e'
 
 REDHAT7 = False
 QUERY_OS = platform.dist()
@@ -221,6 +224,55 @@ class ArchiveTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
 
         self._check_extracted(UNTAR_FILE)
+
+    def test_local_archive_extracted(self):
+        '''
+        test archive.extracted with local file
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=ARCHIVE_LOCAL_TAR_SOURCE, archive_format='tar')
+        log.debug('ret = %s', ret)
+
+        self.assertSaltTrueReturn(ret)
+
+        self._check_extracted(UNTAR_FILE)
+
+    def test_local_archive_extracted_skip_verify(self):
+        '''
+        test archive.extracted with local file, bad hash and skip_verify
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=ARCHIVE_LOCAL_TAR_SOURCE, archive_format='tar',
+                             source_hash=ARCHIVE_TAR_BAD_HASH, skip_verify=True)
+        log.debug('ret = %s', ret)
+
+        self.assertSaltTrueReturn(ret)
+
+        self._check_extracted(UNTAR_FILE)
+
+    def test_local_archive_extracted_with_source_hash(self):
+        '''
+        test archive.extracted with local file and valid hash
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=ARCHIVE_LOCAL_TAR_SOURCE, archive_format='tar',
+                             source_hash=ARCHIVE_TAR_HASH)
+        log.debug('ret = %s', ret)
+
+        self.assertSaltTrueReturn(ret)
+
+        self._check_extracted(UNTAR_FILE)
+
+    def test_local_archive_extracted_with_bad_source_hash(self):
+        '''
+        test archive.extracted with local file and bad hash
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=ARCHIVE_LOCAL_TAR_SOURCE, archive_format='tar',
+                             source_hash=ARCHIVE_TAR_BAD_HASH)
+        log.debug('ret = %s', ret)
+
+        self.assertSaltFalseReturn(ret)
 
 
 if __name__ == '__main__':
