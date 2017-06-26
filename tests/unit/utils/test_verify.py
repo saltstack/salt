@@ -89,7 +89,6 @@ class TestVerify(TestCase):
             # If there's a different error catch, write it to sys.stderr
             sys.stderr.write(writer.output)
 
-
     @skipIf(sys.platform.startswith('win'), 'No verify_env Windows')
     def test_verify_env(self):
         default_mode = 0o750
@@ -107,7 +106,7 @@ class TestVerify(TestCase):
             (os.path.join(pki_dir, 'minions_pre'), None),
             (os.path.join(pki_dir, 'minions_denied'), None),
             (os.path.join(pki_dir, 'minions_autosign'), None),
-            (os.path.join(pki_dir,  'minions_rejected'), None),
+            (os.path.join(pki_dir, 'minions_rejected'), None),
             (cache_dir, 0o700),
             (os.path.join(cache_dir, 'jobs'), 0o700),
             (os.path.join(cache_dir, 'proc'), 0o700),
@@ -129,7 +128,6 @@ class TestVerify(TestCase):
                 intended_mode = default_mode
             actual_mode = stat.S_IMODE(os.stat(directory).st_mode)
             self.assertEqual(actual_mode, intended_mode)
-
 
     @requires_network(only_local_network=True)
     def test_verify_socket(self):
