@@ -6,7 +6,6 @@ Return/control aspects of the grains data
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
-import math
 import random
 import logging
 import operator
@@ -18,7 +17,6 @@ from functools import reduce  # pylint: disable=redefined-builtin
 import yaml
 import salt.utils.compat
 import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 import salt.utils
