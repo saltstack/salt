@@ -6,7 +6,6 @@ Return/control aspects of the grains data
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
-import copy
 import math
 import random
 import logging
@@ -18,12 +17,12 @@ from functools import reduce  # pylint: disable=redefined-builtin
 # Import 3rd-party libs
 import yaml
 import salt.utils.compat
-from salt.utils.odict import OrderedDict
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 import salt.utils
+import salt.utils.yamldumper
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 
@@ -252,23 +251,7 @@ def setvals(grains, destructive=False):
         else:
             grains[key] = val
             __grains__[key] = val
-    # Cast defaultdict to dict; is there a more central place to put this?
-    try:
-        yaml_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_representers)
-        yaml_multi_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_multi_representers)
-    except (TypeError, NameError):
-        # This likely means we are running under Python 2.6 which cannot deepcopy
-        # bound methods. Fallback to a modification of deepcopy which can support
-        # this behavior.
-        yaml_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_representers)
-        yaml_multi_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_multi_representers)
-    yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
-            yaml.representer.SafeRepresenter.represent_dict)
-    yaml.representer.SafeRepresenter.add_representer(OrderedDict,
-            yaml.representer.SafeRepresenter.represent_dict)
-    cstr = yaml.safe_dump(grains, default_flow_style=False)
-    yaml.representer.SafeRepresenter.yaml_representers = yaml_reps
-    yaml.representer.SafeRepresenter.yaml_multi_representers = yaml_multi_reps
+    cstr = salt.utils.yamldumper.safe_dump(grains, default_flow_style=False)
     try:
         with salt.utils.fopen(gfn, 'w+') as fp_:
             fp_.write(cstr)
