@@ -719,3 +719,152 @@ def default_signals(*signals):
         signal.signal(signum, old_signals[signum])
 
     del old_signals
+
+
+class CallbackProcessPool(object):
+    '''
+    Callback process pool is based on entity callbacks it is polling of.
+    The multiprocessing.Pool doesn't like many objects to be serialized.
+    '''
+    _instance = None
+    _minion_instances = []
+    _active_processes = {}
+    _finished_processes = multiprocessing.Queue()
+    _process_queue = queue.Queue()
+    _id = 'process pool'
+
+    def __new__(cls, *args, **kwargs):
+        '''
+        CallbackProcessPool is a singleton object.
+
+        :param args:
+        :param kwargs:
+        :return:
+        '''
+        if not cls._instance:
+            cls._instance = super(CallbackProcessPool, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
+
+    def __init__(self, limit=2):
+        '''
+        Constructor.
+
+        :param limit:
+        '''
+        self._process_limit = limit
+        self._pcnt = 0
+
+    @property
+    def pcnt(self):
+        self._pcnt += 1
+        return str(self._pcnt)
+
+    def add(self, process):
+        '''
+        Add a process to the Pool.
+
+        :param process:
+        :return:
+        '''
+        self._active_processes[process.name] = process
+
+    def add_data(self, data):
+        '''
+        Add process data.
+
+        :param data:
+        :return:
+        '''
+        self._process_queue.put(data)
+
+    def register(self, minion):
+        '''
+        Register minion process.
+        TODO: Master? Syndic? Proxy?
+
+        :param minion:
+        :return:
+        '''
+        self._minion_instances.append(minion)
+
+    def registered(self):
+        '''
+        Return a number of registered instances
+        :return:
+        '''
+        return len(self._minion_instances)
+
+    def get_registered(self):
+        '''
+        Get oldest registered minion and remove from tracker.
+        :return:
+        '''
+        return self._minion_instances.pop(0)
+
+    def get_data(self):
+        '''
+        Get process data.
+
+        :return:
+        '''
+        return self._process_queue.get_nowait()
+
+    def is_data(self):
+        '''
+        Check for pending process data
+        :return:
+        '''
+        return self._process_queue.empty()
+
+    def is_full(self):
+        '''
+        Check if the pool is full.
+
+        :return:
+        '''
+        return len(self._active_processes) >= self._process_limit
+
+    def finish(self, name):
+        '''
+        Mark process as finished.
+
+        :param name:
+        :return:
+        '''
+        self._finished_processes.put(name)
+
+    def finished(self):
+        '''
+        Check if pool has finished its limit.
+
+        :return:
+        '''
+        return self._finished_processes.qsize()
+
+    def ids(self):
+        '''
+        Return finished process IDs.
+        This method is for debugging purposes.
+
+        :return:
+        '''
+        return id(self), id(self._finished_processes)
+
+    def swipe(self):
+        '''
+        Cleanup finished procsses from the registry.
+
+        :return:
+        '''
+        while not self._finished_processes.empty():
+            ref = self._finished_processes.get_nowait()
+            if self._active_processes.get(ref):
+                self._active_processes.pop(ref)
+                log.debug('{0}: Process reference {1} has been removed'.format(self._id, ref))
+
+    def generate_name(self):
+        '''
+        Generate name for the process.
+        :return:
+        '''
+        return '-'.join([self._id, self.pcnt, str(int(time.time()))])
