@@ -1128,6 +1128,11 @@ def load_template(template_name,
 
         .. versionadded:: 2016.11.2
 
+    template_attrs: "--------------e----"
+        attributes of file. (see `man lsattr`)
+
+        .. versionadded: oxygen
+
     saltenv: base
         Specifies the template environment.
         This will influence the relative imports inside the templates.
