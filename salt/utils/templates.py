@@ -18,11 +18,13 @@ import jinja2
 import jinja2.ext
 import salt.ext.six as six
 
-if six.PY3:
+if sys.version_info[:2] >= (3, 5):
     import importlib.machinery  # pylint: disable=no-name-in-module,import-error
     import importlib.util  # pylint: disable=no-name-in-module,import-error
+    USE_IMPORTLIB = True
 else:
     import imp
+    USE_IMPORTLIB = False
 
 # Import salt libs
 import salt.utils
@@ -558,7 +560,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
     base_fname = os.path.basename(sfn)
     name = base_fname.split('.')[0]
 
-    if six.PY3:
+    if USE_IMPORTLIB:
         # pylint: disable=no-member
         loader = importlib.machinery.SourceFileLoader(name, sfn)
         spec = importlib.util.spec_from_file_location(name, sfn, loader=loader)

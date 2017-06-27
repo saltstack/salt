@@ -34,11 +34,13 @@ from salt.utils import is_proxy
 import salt.ext.six as six
 from salt.ext.six.moves import reload_module
 
-if six.PY3:
+if sys.version_info[:2] >= (3, 5):
     import importlib.machinery  # pylint: disable=no-name-in-module,import-error
     import importlib.util  # pylint: disable=no-name-in-module,import-error
+    USE_IMPORTLIB = True
 else:
     import imp
+    USE_IMPORTLIB = False
 
 try:
     import pkg_resources
@@ -51,7 +53,7 @@ log = logging.getLogger(__name__)
 SALT_BASE_PATH = os.path.abspath(salt.syspaths.INSTALL_DIR)
 LOADED_BASE_NAME = 'salt.loaded'
 
-if six.PY3:
+if USE_IMPORTLIB:
     # pylint: disable=no-member
     MODULE_KIND_SOURCE = 1
     MODULE_KIND_COMPILED = 2
@@ -1187,7 +1189,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         if self.opts.get('enable_zip_modules', True) is True:
             self.suffix_map['.zip'] = tuple()
         # allow for module dirs
-        if six.PY3:
+        if USE_IMPORTLIB:
             self.suffix_map[''] = ('', '', MODULE_KIND_PKG_DIRECTORY)
         else:
             self.suffix_map[''] = ('', '', imp.PKG_DIRECTORY)
@@ -1355,7 +1357,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         self.tag,
                         name)
                 if suffix == '':
-                    if six.PY3:
+                    if USE_IMPORTLIB:
                         # pylint: disable=no-member
                         # Package directory, look for __init__
                         loader_details = [
@@ -1377,7 +1379,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     if not self.initial_load:
                         self._reload_submodules(mod)
                 else:
-                    if six.PY3:
+                    if USE_IMPORTLIB:
                         # pylint: disable=no-member
                         loader = MODULE_KIND_MAP[desc[2]](mod_namespace, fpath)
                         spec = importlib.util.spec_from_file_location(
