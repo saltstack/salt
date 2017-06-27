@@ -177,6 +177,7 @@ class TestCase(_TestCase):
 
     def run(self, result=None):
         self._prerun_instance_attributes = dir(self)
+        self.maxDiff = None
         outcome = super(TestCase, self).run(result=result)
         for attr in dir(self):
             if attr == '_prerun_instance_attributes':
