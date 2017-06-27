@@ -10,6 +10,7 @@ import inspect
 import logging
 
 from salt.utils.odict import OrderedDict
+from salt.utils.schema import Prepareable
 import salt.ext.six as six
 
 REQUISITES = ('listen', 'onchanges', 'onfail', 'require', 'watch', 'use', 'listen_in', 'onchanges_in', 'onfail_in', 'require_in', 'watch_in', 'use_in')
@@ -288,11 +289,20 @@ class SaltObject(object):
         return __wrapper__()
 
 
-class MapMeta(type):
+class MapMeta(six.with_metaclass(Prepareable, type)):
     '''
     This is the metaclass for our Map class, used for building data maps based
     off of grain data.
     '''
+    @classmethod
+    def __prepare__(metacls, name, bases):
+        return OrderedDict()
+
+    def __new__(cls, name, bases, attrs):
+        c = type.__new__(cls, name, bases, attrs)
+        c.__ordered_attrs__ = attrs.keys()
+        return c
+
     def __init__(cls, name, bases, nmspc):
         cls.__set_attributes__()
         super(MapMeta, cls).__init__(name, bases, nmspc)
@@ -301,7 +311,7 @@ class MapMeta(type):
         match_groups = OrderedDict([])
 
         # find all of our filters
-        for item in cls.__dict__:
+        for item in cls.__ordered_attrs__:
             if item[0] == '_':
                 continue
 
