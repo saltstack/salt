@@ -146,7 +146,8 @@ def _list_nodes_full(call=None):
     List the nodes, ask all 'saltify' minions, return dict of grains.
     '''
     local = salt.netapi.NetapiClient(__opts__)
-    cmd = {'client':'local',
+
+    cmd = {'client': 'local',
            'tgt': 'salt-cloud:driver:saltify',
            'fun': 'grains.items',
            'arg': '',
@@ -155,7 +156,7 @@ def _list_nodes_full(call=None):
     cmd.update(_get_connection_info())
     ret = local.run(cmd)
 
-    for key, grains in ret.items(): # clean up some hyperverbose grains -- everything is too much
+    for key, grains in ret.items():  # clean up some hyperverbose grains -- everything is too much
         try:
             del grains['cpu_flags'], grains['disks'], grains['pythonpath'], grains['dns'], grains['gpus']
         except KeyError:
@@ -180,7 +181,8 @@ def show_instance(name, call=None):
     List the a single node, return dict of grains.
     '''
     local = salt.netapi.NetapiClient(__opts__)
-    cmd = {'client':'local',
+
+    cmd = {'client': 'local',
            'tgt': 'name',
            'fun': 'grains.items',
            'arg': '',
@@ -190,6 +192,7 @@ def show_instance(name, call=None):
     ret = local.run(cmd)
     ret.update(_build_required_items(ret))
     return ret
+
 
 def create(vm_):
     '''
@@ -340,7 +343,8 @@ def destroy(name, call=None):
     )
 
     local = salt.netapi.NetapiClient(opts)
-    cmd = {'client':'local',
+
+    cmd = {'client': 'local',
            'tgt': name,
            'fun': 'grains.get',
            'arg': ['salt-cloud'],
@@ -421,7 +425,8 @@ def reboot(name, call=None):
         )
 
     local = salt.netapi.NetapiClient(__opts__)
-    cmd = {'client':'local',
+
+    cmd = {'client': 'local',
            'tgt': name,
            'fun': 'system.reboot',
            'arg': '',
