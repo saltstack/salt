@@ -330,10 +330,7 @@ class MapMeta(six.with_metaclass(Prepareable, type)):
             # if so use it, otherwise use the name of the object
             # this is so that you can match complex values, which the python
             # class name syntax does not allow
-            if hasattr(filt, '__match__'):
-                match = filt.__match__
-            else:
-                match = item
+            match = getattr(filt, '__match__', item)
 
             match_attrs = {}
             for name in filt.__dict__:
@@ -341,6 +338,32 @@ class MapMeta(six.with_metaclass(Prepareable, type)):
                     match_attrs[name] = filt.__dict__[name]
 
             match_info.append((grain, match, match_attrs))
+
+        # Reorder based on priority
+        try:
+            if not hasattr(cls.priority, '__iter__'):
+                log.error('pyobjects: priority must be an iterable')
+            else:
+                new_match_info = []
+                for grain in cls.priority:
+                    # Using list() here because we will be modifying
+                    # match_info during iteration
+                    for index, item in list(enumerate(match_info)):
+                        try:
+                            if item[0] == grain:
+                                # Add item to new list
+                                new_match_info.append(item)
+                                # Clear item from old list
+                                match_info[index] = None
+                        except TypeError:
+                            # Already moved this item to new list
+                            pass
+                # Add in any remaining items not defined in priority
+                new_match_info.extend([x for x in match_info if x is not None])
+                # Save reordered list as the match_info list
+                match_info = new_match_info
+        except AttributeError:
+            pass
 
         # Check for matches and update the attrs dict accordingly
         attrs = {}

@@ -64,7 +64,7 @@ Service = StateFactory('service')
 
 
 class Samba(Map):
-    __merge__ = 'samba:lookup'
+    priority = ('os_family', 'os')
 
     class Debian:
         server = 'samba'
