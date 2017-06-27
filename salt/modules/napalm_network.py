@@ -1123,7 +1123,7 @@ def load_template(template_name,
 
         .. versionadded:: 2016.11.2
 
-    template_user: 755
+    template_mode: 755
         Permissions of file.
 
         .. versionadded:: 2016.11.2
@@ -1131,7 +1131,7 @@ def load_template(template_name,
     template_attrs: "--------------e----"
         attributes of file. (see `man lsattr`)
 
-        .. versionadded: oxygen
+        .. versionadded:: oxygen
 
     saltenv: base
         Specifies the template environment.
