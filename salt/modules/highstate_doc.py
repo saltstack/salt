@@ -505,7 +505,7 @@ def _state_data_to_yaml_string(data, whitelist=None, blacklist=None):
     y = {}
     if blacklist is None:
         # TODO: use salt defined STATE_REQUISITE_IN_KEYWORDS  STATE_RUNTIME_KEYWORDS  STATE_INTERNAL_KEYWORDS
-        blacklist=['__env__', '__id__', '__sls__', 'fun', 'name', 'context', 'order', 'state', 'require', 'require_in', 'watch', 'watch_in']
+        blacklist = ['__env__', '__id__', '__sls__', 'fun', 'name', 'context', 'order', 'state', 'require', 'require_in', 'watch', 'watch_in']
     kset = set(data.keys())
     if blacklist:
         kset -= set(blacklist)
