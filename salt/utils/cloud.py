@@ -1215,12 +1215,12 @@ def deploy_script(host,
                   sudo_password=None,
                   sudo=False,
                   tty=None,
-                  vm_={},
+                  vm_=None,
                   opts=None,
                   tmp_dir='/tmp/.saltcloud',
                   file_map=None,
                   master_sign_pub_file=None,
-                  cloud_grains={},
+                  cloud_grains=None,
                   force_minion_config=False,
                   **kwargs):
     '''
@@ -1228,6 +1228,8 @@ def deploy_script(host,
     '''
     if not isinstance(opts, dict):
         opts = {}
+    vm_ = vm_ or {}  # if None, default to empty dict
+    cloud_grains = cloud_grains or {}
 
     tmp_dir = '{0}-{1}'.format(tmp_dir.rstrip('/'), uuid.uuid4())
     deploy_command = salt.config.get_cloud_config_value(
