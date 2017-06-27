@@ -611,7 +611,9 @@ VALID_OPTS = {
     'gitfs_ssl_verify': bool,
     'gitfs_global_lock': bool,
     'gitfs_saltenv': list,
+    'gitfs_ref_types': list,
     'gitfs_refspecs': list,
+    'gitfs_disable_saltenv_mapping': bool,
     'hgfs_remotes': list,
     'hgfs_mountpoint': str,
     'hgfs_root': str,
@@ -722,6 +724,10 @@ VALID_OPTS = {
 
     # A mapping of external systems that can be used to generate topfile data.
     'master_tops': dict,
+
+    # Whether or not matches from master_tops should be executed before or
+    # after those from the top file(s).
+    'master_tops_first': bool,
 
     # A flag that should be set on a top-level master when it is ordering around subordinate masters
     # via the use of a salt syndic
@@ -1049,6 +1055,19 @@ VALID_OPTS = {
 
     # File chunk size for salt-cp
     'salt_cp_chunk_size': int,
+
+    # Require that the minion sign messages it posts to the master on the event
+    # bus
+    'minion_sign_messages': bool,
+
+    # Have master drop messages from minions for which their signatures do
+    # not verify
+    'drop_messages_signature_fail': bool,
+
+    # Require that payloads from minions have a 'sig' entry
+    # (in other words, require that minions have 'minion_sign_messages'
+    # turned on)
+    'require_minion_sign_messages': bool,
 }
 
 # default configurations
@@ -1163,7 +1182,9 @@ DEFAULT_MINION_OPTS = {
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'gitfs_saltenv': [],
+    'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_refspecs': _DFLT_REFSPECS,
+    'gitfs_disable_saltenv_mapping': False,
     'hash_type': 'sha256',
     'disable_modules': [],
     'disable_returners': [],
@@ -1270,6 +1291,7 @@ DEFAULT_MINION_OPTS = {
     'auth_timeout': 5,
     'auth_tries': 7,
     'master_tries': _MASTER_TRIES,
+    'master_tops_first': False,
     'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
@@ -1315,6 +1337,7 @@ DEFAULT_MINION_OPTS = {
     'salt_cp_chunk_size': 65536,
     'extmod_whitelist': {},
     'extmod_blacklist': {},
+    'minion_sign_messages': False,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1391,7 +1414,9 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'gitfs_saltenv': [],
+    'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_refspecs': _DFLT_REFSPECS,
+    'gitfs_disable_saltenv_mapping': False,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -1615,6 +1640,8 @@ DEFAULT_MASTER_OPTS = {
     'django_auth_settings': '',
     'allow_minion_key_revoke': True,
     'salt_cp_chunk_size': 98304,
+    'require_minion_sign_messages': False,
+    'drop_messages_signature_fail': False,
 }
 
 

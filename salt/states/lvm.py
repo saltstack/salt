@@ -211,6 +211,7 @@ def lv_present(name,
                pv='',
                thinvolume=False,
                thinpool=False,
+               force=False,
                **kwargs):
     '''
     Create a new logical volume
@@ -244,6 +245,12 @@ def lv_present(name,
 
     thinpool
         Logical volume is a thin pool
+
+    .. versionadded:: Oxygen
+
+    force
+        Assume yes to all prompts
+
     '''
     ret = {'changes': {},
            'comment': '',
@@ -276,6 +283,7 @@ def lv_present(name,
                                            pv=pv,
                                            thinvolume=thinvolume,
                                            thinpool=thinpool,
+                                           force=force,
                                            **kwargs)
 
         if __salt__['lvm.lvdisplay'](lvpath):

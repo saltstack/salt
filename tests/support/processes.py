@@ -24,6 +24,7 @@ from pytestsalt.fixtures.daemons import SaltCall as PytestSaltCall
 from pytestsalt.fixtures.daemons import SaltMaster as PytestSaltMaster
 from pytestsalt.fixtures.daemons import SaltMinion as PytestSaltMinion
 from pytestsalt.fixtures.daemons import SaltSyndic as PytestSaltSyndic
+from pytestsalt.fixtures.daemons import SaltProxy as PytestSaltProxy
 
 # Import tests support libs
 from tests.support.paths import ScriptPathMixin
@@ -85,6 +86,12 @@ class SaltRun(ScriptPathMixin, PytestSaltRun):
     '''
     def __init__(self, *args, **kwargs):
         super(SaltRun, self).__init__(None, *args, **kwargs)
+
+
+class SaltProxy(GetSaltRunFixtureMixin, PytestSaltProxy):
+    '''
+    Class which runs the salt-proxy daemon
+    '''
 
 
 class SaltMinion(GetSaltRunFixtureMixin, PytestSaltMinion):

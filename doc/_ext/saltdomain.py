@@ -309,3 +309,5 @@ def setup(app):
             indextemplate="pair: %s; conf/proxy")
     app.add_crossref_type(directivename="conf_log", rolename="conf_log",
             indextemplate="pair: %s; conf/logging")
+    app.add_crossref_type(directivename="jinja_ref", rolename="jinja_ref",
+            indextemplate="pair: %s; jinja filters")

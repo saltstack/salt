@@ -15,6 +15,7 @@ import os.path
 import pprint
 import socket
 import yaml
+import re
 
 import ssl
 try:
@@ -156,6 +157,10 @@ def query(url,
 
     if not backend:
         backend = opts.get('backend', 'tornado')
+
+    match = re.match(r'https?://((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)($|/)', url)
+    if not match:
+        salt.utils.refresh_dns()
 
     if backend == 'requests':
         if HAS_REQUESTS is False:

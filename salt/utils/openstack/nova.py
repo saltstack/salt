@@ -45,6 +45,7 @@ log = logging.getLogger(__name__)
 
 # Version added to novaclient.client.Client function
 NOVACLIENT_MINVER = '2.6.1'
+NOVACLIENT_MAXVER = '6.0.1'
 
 # dict for block_device_mapping_v2
 CLIENT_BDM2_KEYS = {
@@ -65,8 +66,12 @@ def check_nova():
     if HAS_NOVA:
         novaclient_ver = _LooseVersion(novaclient.__version__)
         min_ver = _LooseVersion(NOVACLIENT_MINVER)
-        if novaclient_ver >= min_ver:
+        max_ver = _LooseVersion(NOVACLIENT_MAXVER)
+        if novaclient_ver >= min_ver and novaclient_ver <= max_ver:
             return HAS_NOVA
+        elif novaclient_ver > max_ver:
+            log.debug('Older novaclient version required. Maximum: {0}'.format(NOVACLIENT_MAXVER))
+            return False
         log.debug('Newer novaclient version required.  Minimum: {0}'.format(NOVACLIENT_MINVER))
     return False
 

@@ -392,24 +392,24 @@ def present(name, listeners, availability_zones=None, subnets=None,
     _ret = _elb_present(name, availability_zones, listeners, subnets, subnet_names,
                         security_groups, scheme, region, key, keyid, profile)
     ret.update({'changes': _ret['changes'],
-                'comment': '  '.join([ret['comment'], _ret['comment']]),
-                'result': _ret['result']})
+                'comment': '  '.join([ret['comment'], _ret['comment']])})
+    ret['result'] = ret['result'] if _ret['result'] else _ret['result']
     if ret['result'] is False:
         return ret
 
     if attributes:
         _ret = _attributes_present(name, attributes, region, key, keyid, profile)
         ret.update({'changes': dictupdate.update(ret['changes'], _ret['changes']),
-                    'comment': '  '.join([ret['comment'], _ret['comment']]),
-                    'result': _ret['result']})
+                    'comment': '  '.join([ret['comment'], _ret['comment']])})
+        ret['result'] = ret['result'] if _ret['result'] else _ret['result']
         if ret['result'] is False:
             return ret
 
     _ret = _health_check_present(name, health_check, region, key, keyid,
                                  profile)
     ret.update({'changes': dictupdate.update(ret['changes'], _ret['changes']),
-                'comment': '  '.join([ret['comment'], _ret['comment']]),
-                'result': _ret['result']})
+                'comment': '  '.join([ret['comment'], _ret['comment']])})
+    ret['result'] = ret['result'] if _ret['result'] else _ret['result']
     if ret['result'] is False:
         return ret
 
@@ -428,30 +428,30 @@ def present(name, listeners, availability_zones=None, subnets=None,
                         cname[p] = locals().get(p) if p not in cname else cname[p]
                 _ret = __states__['boto_route53.present'](**cname)
                 ret.update({'changes': dictupdate.update(ret['changes'], _ret['changes']),
-                            'comment': '  '.join([ret['comment'], _ret['comment']]),
-                            'result': _ret['result']})
+                            'comment': '  '.join([ret['comment'], _ret['comment']])})
+                ret['result'] = ret['result'] if _ret['result'] else _ret['result']
                 if ret['result'] is False:
                     return ret
 
     _ret = _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile)
     ret.update({'changes': dictupdate.update(ret['changes'], _ret['changes']),
-                'comment': '  '.join([ret['comment'], _ret['comment']]),
-                'result': _ret['result']})
+                'comment': '  '.join([ret['comment'], _ret['comment']])})
+    ret['result'] = ret['result'] if _ret['result'] else _ret['result']
     if ret['result'] is False:
         return ret
 
     _ret = _policies_present(name, policies, policies_from_pillar, listeners,
                              backends, region, key, keyid, profile)
     ret.update({'changes': dictupdate.update(ret['changes'], _ret['changes']),
-                'comment': '  '.join([ret['comment'], _ret['comment']]),
-                'result': _ret['result']})
+                'comment': '  '.join([ret['comment'], _ret['comment']])})
+    ret['result'] = ret['result'] if _ret['result'] else _ret['result']
     if ret['result'] is False:
         return ret
 
     _ret = _tags_present(name, tags, region, key, keyid, profile)
     ret.update({'changes': dictupdate.update(ret['changes'], _ret['changes']),
-                'comment': '  '.join([ret['comment'], _ret['comment']]),
-                'result': _ret['result']})
+                'comment': '  '.join([ret['comment'], _ret['comment']])})
+    ret['result'] = ret['result'] if _ret['result'] else _ret['result']
     if ret['result'] is False:
         return ret
 
@@ -640,17 +640,14 @@ def _elb_present(name, availability_zones, listeners, subnets, subnet_names,
             ret['comment'] = 'Failed to create {0} ELB.'.format(name)
     else:
         ret['comment'] = 'ELB {0} present.'.format(name)
-        _ret = _security_groups_present(
-            name, _security_groups, region, key, keyid, profile
-        )
+        _ret = _security_groups_present(name, _security_groups, region, key, keyid, profile)
         ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
         ret['comment'] = '  '.join([ret['comment'], _ret['comment']])
         if not _ret['result']:
             ret['result'] = _ret['result']
             if ret['result'] is False:
                 return ret
-        _ret = _listeners_present(name, listeners, region, key, keyid,
-                                  profile)
+        _ret = _listeners_present(name, listeners, region, key, keyid, profile)
         ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
         ret['comment'] = '  '.join([ret['comment'], _ret['comment']])
         if not _ret['result']:
@@ -658,8 +655,7 @@ def _elb_present(name, availability_zones, listeners, subnets, subnet_names,
             if ret['result'] is False:
                 return ret
         if availability_zones:
-            _ret = _zones_present(name, availability_zones, region, key, keyid,
-                                  profile)
+            _ret = _zones_present(name, availability_zones, region, key, keyid, profile)
             ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
             ret['comment'] = '  '.join([ret['comment'], _ret['comment']])
             if not _ret['result']:
@@ -667,8 +663,7 @@ def _elb_present(name, availability_zones, listeners, subnets, subnet_names,
                 if ret['result'] is False:
                     return ret
         elif subnets:
-            _ret = _subnets_present(name, subnets, region, key, keyid,
-                                    profile)
+            _ret = _subnets_present(name, subnets, region, key, keyid, profile)
             ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
             ret['comment'] = '  '.join([ret['comment'], _ret['comment']])
             if not _ret['result']:
@@ -716,10 +711,10 @@ def _listeners_present(name, listeners, region, key, keyid, profile):
             for listener in to_delete:
                 msg.append('Listener {0} deleted.'.format(
                         __salt__['boto_elb.listener_dict_to_tuple'](listener)))
+            ret['result'] = None
         else:
             msg.append('Listeners already set on ELB {0}.'.format(name))
         ret['comment'] = '  '.join(msg)
-        ret['result'] = None
         return ret
 
     if to_delete:
@@ -1168,6 +1163,7 @@ def _policies_present(name, policies, policies_from_pillar, listeners, backends,
                 msg.append('Policy {0} added.'.format(policy))
             for policy in to_delete:
                 msg.append('Policy {0} deleted.'.format(policy))
+            ret['result'] = None
         else:
             msg.append('Policies already set on ELB {0}.'.format(name))
         for listener in listeners_to_update:
@@ -1175,7 +1171,6 @@ def _policies_present(name, policies, policies_from_pillar, listeners, backends,
         for backend in backends_to_update:
             msg.append('Backend {0} policies updated.'.format(backend))
         ret['comment'] = '  '.join(msg)
-        ret['result'] = None
         return ret
 
     if to_create:

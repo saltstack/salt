@@ -383,7 +383,7 @@ def mkfs(device, fs_type):
     if fs_type == 'NTFS':
         fs_type = 'ntfs'
 
-    if fs_type is 'linux-swap':
+    if fs_type == 'linux-swap':
         mkfs_cmd = 'mkswap'
     else:
         mkfs_cmd = 'mkfs.{0}'.format(fs_type)

@@ -31,7 +31,7 @@ import salt
 import salt.fileclient
 import salt.utils
 import salt.utils.url
-from salt.utils.decorators import jinja_filter
+from salt.utils.decorators import jinja_filter, jinja_test
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -182,6 +182,26 @@ class PrintableDict(OrderedDict):
         return '{' + ', '.join(output) + '}'
 
 
+# Additional tests
+@jinja_test('match')
+def test_match(txt, rgx, ignorecase=False, multiline=False):
+    '''Returns true if a sequence of chars matches a pattern.'''
+    flag = 0
+    if ignorecase:
+        flag |= re.I
+    if multiline:
+        flag |= re.M
+    compiled_rgx = re.compile(rgx, flag)
+    return True if compiled_rgx.match(txt) else False
+
+
+@jinja_test('equalto')
+def test_equalto(value, other):
+    '''Returns true if two values are equal.'''
+    return value == other
+
+
+# Additional filters
 @jinja_filter('skip')
 def skip_filter(data):
     '''

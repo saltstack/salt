@@ -133,6 +133,24 @@ name) is set in the :conf_minion:`master` configuration setting.
 
     master_uri_format: ip_only
 
+.. conf_minion:: master_tops_first
+
+``master_tops_first``
+---------------------
+
+.. versionadded:: Oxygen
+
+Default: ``False``
+
+SLS targets defined using the :ref:`Master Tops <master-tops-system>` system
+are normally executed *after* any matches defined in the :ref:`Top File
+<states-top>`. Set this option to ``True`` to have the minion execute the
+:ref:`Master Tops <master-tops-system>` states first.
+
+.. code-block:: yaml
+
+    master_tops_first: True
+
 .. conf_minion:: master_type
 
 ``master_type``

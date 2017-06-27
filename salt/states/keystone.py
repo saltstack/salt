@@ -656,6 +656,7 @@ def endpoint_present(name,
 
     endpoint = __salt__['keystone.endpoint_get'](name, region,
                                                  profile=profile,
+                                                 interface=interface,
                                                  **connection_args)
 
     def _changes(desc):
@@ -750,7 +751,7 @@ def endpoint_present(name,
                 ret['changes']['internalurl'] = internalurl
 
         if ret['comment']:  # changed
-            __salt__['keystone.endpoint_delete'](name, region, profile=profile, **connection_args)
+            __salt__['keystone.endpoint_delete'](name, region, profile=profile, interface=interface, **connection_args)
             _create_endpoint()
             ret['comment'] += 'Endpoint for service "{0}" has been updated'.format(name)
 
@@ -765,26 +766,34 @@ def endpoint_present(name,
         ret['comment'] = 'Endpoint for service "{0}" has been added'.format(name)
 
     if ret['comment'] == '':  # => no changes
-        ret['result'] = None
         ret['comment'] = 'Endpoint for service "{0}" already exists'.format(name)
     return ret
 
 
-def endpoint_absent(name, region=None, profile=None, **connection_args):
+def endpoint_absent(name, region=None, profile=None, interface=None, **connection_args):
     '''
     Ensure that the endpoint for a service doesn't exist in Keystone catalog
 
     name
         The name of the service whose endpoints should not exist
+
+    region (optional)
+        The region of the endpoint.  Defaults to ``RegionOne``.
+
+    interface
+        The interface type, which describes the visibility
+        of the endpoint. (for V3 API)
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Endpoint for service "{0}" is already absent'.format(name)}
+           'comment': 'Endpoint for service "{0}"{1} is already absent'.format(name,
+                      ', interface "{0}",'.format(interface) if interface is not None else '')}
 
     # Check if service is present
     endpoint = __salt__['keystone.endpoint_get'](name, region,
                                                  profile=profile,
+                                                 interface=interface,
                                                  **connection_args)
     if not endpoint:
         return ret
@@ -796,7 +805,9 @@ def endpoint_absent(name, region=None, profile=None, **connection_args):
         # Delete service
         __salt__['keystone.endpoint_delete'](name, region,
                                              profile=profile,
+                                             interface=interface,
                                              **connection_args)
-        ret['comment'] = 'Endpoint for service "{0}" has been deleted'.format(name)
+        ret['comment'] = 'Endpoint for service "{0}"{1} has been deleted'.format(name,
+                         ', interface "{0}",'.format(interface) if interface is not None else '')
         ret['changes']['endpoint'] = 'Deleted'
     return ret

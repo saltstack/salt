@@ -380,7 +380,11 @@ def template(tem, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.HighState(__opts__, context=__context__)
+    try:
+        st_ = salt.state.HighState(__opts__, context=__context__,
+                                   proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.HighState(__opts__, context=__context__)
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1172,8 +1176,13 @@ def top(topfn,
             'Pillar data must be formatted as a dictionary, unless pillar_enc '
             'is specified.'
         )
+    try:
+        st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc,
+                                   context=__context__, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc,
+                                   context=__context__)
 
-    st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc, context=__context__)
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
@@ -1229,7 +1238,11 @@ def show_highstate(queue=False, **kwargs):
             'is specified.'
         )
 
-    st_ = salt.state.HighState(__opts__, pillar, pillar_enc=pillar_enc)
+    try:
+        st_ = salt.state.HighState(__opts__, pillar, pillar_enc=pillar_enc,
+                                   proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.HighState(__opts__, pillar, pillar_enc=pillar_enc)
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1259,7 +1272,10 @@ def show_lowstate(queue=False, **kwargs):
     if conflict is not None:
         assert False
         return conflict
-    st_ = salt.state.HighState(__opts__)
+    try:
+        st_ = salt.state.HighState(__opts__, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.HighState(__opts__)
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1453,7 +1469,10 @@ def show_low_sls(mods,
     opts['environment'] = saltenv
     if pillarenv is not None:
         opts['pillarenv'] = pillarenv
-    st_ = salt.state.HighState(opts)
+    try:
+        st_ = salt.state.HighState(opts, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.HighState(opts)
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1535,7 +1554,11 @@ def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
 
-    st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc)
+    try:
+        st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc,
+                                   proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc)
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1585,7 +1608,10 @@ def show_top(queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.HighState(opts)
+    try:
+        st_ = salt.state.HighState(opts, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.HighState(opts)
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5

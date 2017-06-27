@@ -107,6 +107,11 @@ def _conf(family='ipv4'):
     elif __grains__['os_family'] == 'SUSE':
         # SuSE does not seem to use separate files for IPv4 and IPv6
         return '/etc/sysconfig/scripts/SuSEfirewall2-custom'
+    elif __grains__['os_family'] == 'Void':
+        if family == 'ipv6':
+            return '/etc/iptables/iptables.rules'
+        else:
+            return '/etc/iptables/ip6tables.rules'
     elif __grains__['os'] == 'Alpine':
         if family == 'ipv6':
             return '/etc/iptables/rules6-save'
@@ -200,6 +205,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     If a position is required (as with `-I` or `-D`), it may be specified as
     `position`. This will only be useful if `full` is True.
 
+    If `state` is passed, it will be ignored, use `connstate`.
     If `connstate` is passed in, it will automatically be changed to `state`.
 
     To pass in jump options that doesn't take arguments, pass in an empty
@@ -213,19 +219,19 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             connstate=RELATED,ESTABLISHED jump=ACCEPT
 
         salt '*' iptables.build_rule filter INPUT command=I position=3 \\
-            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
+            full=True match=state connstate=RELATED,ESTABLISHED jump=ACCEPT
 
         salt '*' iptables.build_rule filter INPUT command=A \\
-            full=True match=state state=RELATED,ESTABLISHED \\
+            full=True match=state connstate=RELATED,ESTABLISHED \\
             source='127.0.0.1' jump=ACCEPT
 
         .. Invert Rules
         salt '*' iptables.build_rule filter INPUT command=A \\
-            full=True match=state state=RELATED,ESTABLISHED \\
-            source='! 127.0.0.1' jump=ACCEPT
+            full=True match=state connstate=RELATED,ESTABLISHED \\
+            source='!127.0.0.1' jump=ACCEPT
 
         salt '*' iptables.build_rule filter INPUT command=A \\
-            full=True match=state state=RELATED,ESTABLISHED \\
+            full=True match=state connstate=RELATED,ESTABLISHED \\
             destination='not 127.0.0.1' jump=ACCEPT
 
         IPv6:
@@ -233,7 +239,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             connstate=RELATED,ESTABLISHED jump=ACCEPT \\
             family=ipv6
         salt '*' iptables.build_rule filter INPUT command=I position=3 \\
-            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT \\
+            full=True match=state connstate=RELATED,ESTABLISHED jump=ACCEPT \\
             family=ipv6
 
     '''
@@ -501,7 +507,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
 
     rule += after_jump
 
-    if full in ['True', 'true']:
+    if full:
         if not table:
             return 'Error: Table needs to be specified'
         if not chain:
