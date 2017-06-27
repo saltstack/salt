@@ -72,7 +72,7 @@ class KiwiExporter(object):
         self._set_packages(root)
 
         return '\n'.join([line for line in minidom.parseString(
-            etree.tostring(root, encoding='UTF-8', pretty_print=True)).toprettyxml(indent="  ").split("\n")
+            etree.tostring(root, encoding='UTF-8')).toprettyxml(indent="  ").split("\n")
                           if line.strip()])
 
     def _get_package_manager(self):
