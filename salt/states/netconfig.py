@@ -181,13 +181,13 @@ def managed(name,
     template_user: root
         Group owner of file.
 
-    template_user: 755
+    template_mode: 755
         Permissions of file
 
     template_attrs: "--------------e----"
         Attributes of file (see `man lsattr`)
 
-        .. versionadded: oxygen
+        .. versionadded:: oxygen
 
     saltenv: base
         Specifies the template environment. This will influence the relative imports inside the templates.
