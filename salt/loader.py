@@ -1364,7 +1364,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             (importlib.machinery.ExtensionFileLoader, importlib.machinery.EXTENSION_SUFFIXES),
                         ]
                         file_finder = importlib.machinery.FileFinder(fpath, *loader_details)
-                        spec = file_finder.find_spec('__init__')
+                        spec = file_finder.find_spec(mod_namespace)
                         if spec is None:
                             raise ImportError()
                         mod = importlib.util.module_from_spec(spec)
@@ -1379,12 +1379,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 else:
                     if six.PY3:
                         # pylint: disable=no-member
-                        loader_details = (
-                            MODULE_KIND_MAP[desc[2]],
-                            [desc[0]]
+                        loader = MODULE_KIND_MAP[desc[2]](mod_namespace, fpath)
+                        spec = importlib.util.spec_from_file_location(
+                            mod_namespace, fpath, loader=loader
                         )
-                        file_finder = importlib.machinery.FileFinder(fpath_dirname, loader_details)
-                        spec = file_finder.find_spec(name)
                         if spec is None:
                             raise ImportError()
                         mod = importlib.util.module_from_spec(spec)

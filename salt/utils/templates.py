@@ -560,14 +560,8 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
 
     if six.PY3:
         # pylint: disable=no-member
-        if '.' in base_fname:
-            fname_ext = '.' + base_fname.split('.')[-1]
-        else:
-            fname_ext = ''
-        fpath_dirname = os.path.dirname(sfn)
-        loader_details = (importlib.machinery.SourceFileLoader, [fname_ext])
-        file_finder = importlib.machinery.FileFinder(fpath_dirname, loader_details)
-        spec = file_finder.find_spec(name)
+        loader = importlib.machinery.SourceFileLoader(name, sfn)
+        spec = importlib.util.spec_from_file_location(name, sfn, loader=loader)
         if spec is None:
             raise ImportError()
         mod = importlib.util.module_from_spec(spec)
