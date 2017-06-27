@@ -409,16 +409,16 @@ class MapTests(RendererMixin, TestCase):
             return self.render(map_template, {'grains': grains})
 
         def assert_ret(ret, server, client, service):
-            self.assertEqual(ret, OrderedDict([
-                ('samba', {
-                    'pkg.installed': [
+            self.assertDictEqual(ret, OrderedDict([
+                ('samba', OrderedDict([
+                    ('pkg.installed', [
                         {'names': [server, client]}
-                    ],
-                    'service.running': [
+                    ]),
+                    ('service.running', [
                         {'name': service},
                         {'require': [{'pkg': 'samba'}]}
-                    ]
-                })
+                    ])
+                ]))
             ]))
 
         ret = samba_with_grains({'os_family': 'Debian', 'os': 'Debian'})
