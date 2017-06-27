@@ -17,7 +17,13 @@ from tests.support.mock import (
 
 import os
 import imp
+import sys
 from zypp_plugin import BogusIO
+
+if sys.version_info >= (3,):
+    BUILTINS_OPEN = 'builtins.open'
+else:
+    BUILTINS_OPEN = '__builtin__.open'
 
 zyppnotify = imp.load_source('zyppnotify', os.path.sep.join(os.path.dirname(__file__).split(
     os.path.sep)[:-2] + ['scripts', 'suse', 'zypper', 'plugins', 'commit', 'zyppnotify']))
@@ -38,7 +44,7 @@ class ZyppPluginsTestCase(TestCase):
         drift._get_mtime = MagicMock(return_value=123)
         drift._get_checksum = MagicMock(return_value='deadbeef')
         bogus_io = BogusIO()
-        with patch('__builtin__.open', bogus_io):
+        with patch(BUILTINS_OPEN, bogus_io):
             drift.PLUGINEND(None, None)
         self.assertEqual(str(bogus_io), 'deadbeef 123\n')
         self.assertEqual(bogus_io.mode, 'w')
