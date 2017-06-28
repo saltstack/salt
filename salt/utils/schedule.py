@@ -972,7 +972,6 @@ class Schedule(object):
             # Add up how many seconds between now and then
             when = 0
             seconds = 0
-            cron = 0
             now = int(time.time())
 
             if 'until' in data:
@@ -1183,11 +1182,23 @@ class Schedule(object):
 
                 now = int(time.mktime(datetime.datetime.now().timetuple()))
                 try:
-                    cron = int(croniter.croniter(data['cron'], now).get_next())
+                    cron = croniter.croniter(data['cron'], now)
+                    # Get first scheduled time from now on to be able to
+                    # calculate when it was intended to run before.
+                    cron.get_next()
                 except (ValueError, KeyError):
                     log.error('Invalid cron string. Ignoring')
                     continue
-                seconds = cron - now
+                # Calculate how many seconds passed from previous run...
+                data['_cron_prev'] = now - int(cron.get_prev())
+                # ...and need to wait till next scheduled job.
+                data['_cron_next'] = int(cron.get_next()) - now
+                # If less than one minute left till next job, this will
+                # increase loop interval to wait for next cycle.
+                # This prevents setting loop interval to low, which has
+                # negative performance impact, especially on Master side.
+                seconds = data['_cron_next'] if data['_cron_next'] >= 60 \
+                    else int(cron.get_next()) - now
             else:
                 continue
 
@@ -1200,6 +1211,7 @@ class Schedule(object):
             if 'when' not in data:
                 if seconds < self.loop_interval:
                     self.loop_interval = seconds
+
             run = False
 
             if 'splay' in data:
@@ -1223,7 +1235,11 @@ class Schedule(object):
                     data['_when_run'] = False
                     run = True
             elif 'cron' in data:
-                if seconds == 1:
+                # Run the job only if less than or just one second left till
+                # the scheduled time, or during the next loop interval right after that.
+                if data['_cron_next'] <= 1 or \
+                    (data['_cron_prev'] < self.option('loop_interval') and
+                        data['_cron_prev'] < self.loop_interval):
                     run = True
             else:
                 if job in self.intervals:
