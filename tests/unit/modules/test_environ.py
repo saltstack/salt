@@ -83,7 +83,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(os.environ, mock_environ):
             mock_setval = MagicMock(return_value=None)
             with patch.object(environ, 'setval', mock_setval):
-                self.assertEqual(environ.setenv({}, False, True, False)['key'],
+                self.assertEqual(environ.setenv({}, False, True, False)['KEY'],
                                  None)
 
     def test_get(self):
