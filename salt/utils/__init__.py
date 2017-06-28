@@ -12,7 +12,6 @@ import datetime
 import errno
 import fnmatch
 import hashlib
-import imp
 import json
 import logging
 import numbers
@@ -44,6 +43,10 @@ from salt.ext.six.moves import zip
 from stat import S_IMODE
 # pylint: enable=import-error,redefined-builtin
 
+if six.PY3:
+    import importlib.util  # pylint: disable=no-name-in-module,import-error
+else:
+    import imp
 
 try:
     import cProfile
@@ -808,8 +811,8 @@ def dns_check(addr, port, safe=False, ipv6=None):
                 if h[0] != socket.AF_INET6 or ipv6 is not None:
                     candidates.append(candidate_addr)
 
-                s = socket.socket(h[0], socket.SOCK_STREAM)
                 try:
+                    s = socket.socket(h[0], socket.SOCK_STREAM)
                     s.connect((candidate_addr.strip('[]'), port))
                     s.close()
 
@@ -852,7 +855,11 @@ def required_module_list(docstring=None):
     modules = parse_docstring(docstring).get('deps', [])
     for mod in modules:
         try:
-            imp.find_module(mod)
+            if six.PY3:
+                if importlib.util.find_spec(mod) is None:  # pylint: disable=no-member
+                    ret.append(mod)
+            else:
+                imp.find_module(mod)
         except ImportError:
             ret.append(mod)
     return ret

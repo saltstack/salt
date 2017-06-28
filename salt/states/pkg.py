@@ -1871,7 +1871,7 @@ def downloaded(name,
                ignore_epoch=None,
                **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     Ensure that the package is downloaded, and that it is the correct version
     (if specified).
@@ -2008,7 +2008,7 @@ def downloaded(name,
 
 def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     Ensure that packages related to certain advisory ids are installed.
 
@@ -2088,7 +2088,7 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
 
 def patch_downloaded(name, advisory_ids=None, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     Ensure that packages related to certain advisory ids are downloaded.
 

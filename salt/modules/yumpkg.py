@@ -927,7 +927,7 @@ list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
 
 def list_downloaded():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List prefetched packages downloaded by Yum in the local disk.
 
@@ -3029,7 +3029,7 @@ def _get_patches(installed_only=False):
 
 def list_patches(refresh=False):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List all known advisory patches from available repos.
 
@@ -3052,7 +3052,7 @@ def list_patches(refresh=False):
 
 def list_installed_patches():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List installed advisory patches on the system.
 

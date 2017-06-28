@@ -189,7 +189,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
             djangomod.createsuperuser(
                 'settings.py', 'testuser', 'user@example.com'
             )
-            mock.assert_called_once()
+            self.assertEqual(mock.call_count, 1)
             args, kwargs = mock.call_args
             # cmdline arguments are extracted from a kwargs dict so order isn't guaranteed.
             self.assertEqual(len(args), 1)

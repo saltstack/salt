@@ -151,7 +151,11 @@
 # Set the default outputter used by the salt-call command. The default is
 # "nested".
 #output: nested
-#
+
+# To set a list of additional directories to search for salt outputters, set the
+# outputter_dirs option.
+#outputter_dirs: []
+
 # By default output is colored. To disable colored output, set the color value
 # to False.
 #color: True
@@ -231,7 +235,7 @@
 # cause sub minion process to restart.
 #auth_safemode: False
 
-# Ping Master to ensure connection is alive (minutes).
+# Ping Master to ensure connection is alive (seconds).
 #ping_interval: 0
 
 # To auto recover minions if master changes IP address (DDNS)
@@ -368,6 +372,9 @@
 #  network.ip_addrs:
 #    interface: eth0
 #    cidr: '10.0.0.0/8'
+
+# The number of seconds a mine update runs.
+#mine_interval: 60
 
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
 # process communications. Set ipc_mode to 'tcp' on such systems
