@@ -1592,6 +1592,15 @@ def deploy_script(host,
                     )
                 log.debug('Executed command \'{0}\''.format(deploy_command))
 
+                if force_minion_config:
+                    # TODO: this entire code block should be unnecessary if they implement
+                    # https://github.com/saltstack/salt-bootstrap/issues/1105
+                    deploy_command += ' -C'  # try again with "configure_only"
+                    if root_cmd(deploy_command, tty, sudo, **ssh_kwargs) != 0:
+                        log.warning('Executing command \'{0}\' failed.'.format(deploy_command))
+                    else:
+                        log.debug('Executed command \'{0}\''.format(deploy_command))
+
                 # Remove the deploy script
                 if not keep_tmp:
                     root_cmd('rm -f \'{0}/deploy.sh\''.format(tmp_dir),
