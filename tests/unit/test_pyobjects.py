@@ -69,7 +69,9 @@ map_prefix = '''\
 from salt.utils.pyobjects import StateFactory
 Service = StateFactory('service')
 
-
+{% macro priority(value) %}
+    priority = {{ value }}
+{% endmacro %}
 class Samba(Map):
 '''
 
@@ -463,7 +465,9 @@ class MapTests(RendererMixin, TestCase, MapBuilder):
             raise AssertionError('both dicts are equal')
 
     def test_map(self):
-
+        '''
+        Test declarative ordering
+        '''
         # With declarative ordering, the ubuntu-specfic service name should
         # override the one inherited from debian.
         template = self.build_map(textwrap.dedent('''\
@@ -494,6 +498,28 @@ class MapTests(RendererMixin, TestCase, MapBuilder):
 
         ret = self.samba_with_grains(template, self.ubuntu_grains)
         self.assert_not_equal(ret, *self.ubuntu_attrs)
+
+    def test_map_with_priority(self):
+        '''
+        With declarative ordering, the debian service name would override the
+        ubuntu one since debian comes second. This will test overriding this
+        behavior using the priority attribute.
+        '''
+        template = self.build_map(textwrap.dedent('''\
+            {{ priority(('os_family', 'os')) }}
+            {{ ubuntu }}
+            {{ centos }}
+            {{ debian }}
+            '''))
+
+        ret = self.samba_with_grains(template, self.debian_grains)
+        self.assert_equal(ret, *self.debian_attrs)
+
+        ret = self.samba_with_grains(template, self.ubuntu_grains)
+        self.assert_equal(ret, *self.ubuntu_attrs)
+
+        ret = self.samba_with_grains(template, self.centos_grains)
+        self.assert_equal(ret, *self.centos_attrs)
 
 
 class SaltObjectTests(TestCase):
