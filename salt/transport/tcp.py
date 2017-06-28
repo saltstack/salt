@@ -267,9 +267,9 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         host, port = parse.netloc.rsplit(':', 1)
         self.master_addr = (host, int(port))
         self._closing = False
-        self.message_client = SaltMessageClient(
-            self.opts, host, int(port), io_loop=self.io_loop,
-            resolver=resolver)
+        self.message_client = SaltMessageClientPool(self.opts,
+                                                    args=(self.opts, host, int(port),),
+                                                    kwargs={'io_loop': self.io_loop, 'resolver': resolver})
 
     def close(self):
         if self._closing:
@@ -404,7 +404,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
         def _do_transfer():
             msg = self._package_load(self.auth.crypticle.dumps(load))
             package = salt.transport.frame.frame_msg(msg, header=None)
-            yield self.message_client._stream.write(package)
+            yield self.message_client.write_to_stream(package)
             raise tornado.gen.Return(True)
 
         if force_auth or not self.auth.authenticated:
@@ -494,13 +494,12 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
             if self.auth.authenticated:
-                self.message_client = SaltMessageClient(
+                self.message_client = SaltMessageClientPool(
                     self.opts,
-                    self.opts['master_ip'],
-                    int(self.auth.creds['publish_port']),
-                    io_loop=self.io_loop,
-                    connect_callback=self.connect_callback,
-                    disconnect_callback=self.disconnect_callback)
+                    args=(self.opts, self.opts['master_ip'], int(self.auth.creds['publish_port']),),
+                    kwargs={'io_loop': self.io_loop,
+                            'connect_callback': self.connect_callback,
+                            'disconnect_callback': self.disconnect_callback})
                 yield self.message_client.connect()  # wait for the client to be connected
                 self.connected = True
         # TODO: better exception handling...
@@ -774,6 +773,43 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
             io_loop=self.io_loop,
             max_buffer_size=max_buffer_size)
         return stream.connect(addr)
+
+
+class SaltMessageClientPool(salt.transport.MessageClientPool):
+    '''
+    Wrapper class of SaltMessageClient to avoid blocking waiting while writing data to socket.
+    '''
+    def __init__(self, opts, args=None, kwargs=None):
+        super(SaltMessageClientPool, self).__init__(SaltMessageClient, opts, args=args, kwargs=kwargs)
+
+    def __del__(self):
+        self.close()
+
+    def close(self):
+        for message_client in self.message_clients:
+            message_client.close()
+        self.message_clients = []
+
+    @tornado.gen.coroutine
+    def connect(self):
+        futures = []
+        for message_client in self.message_clients:
+            futures.append(message_client.connect())
+        for future in futures:
+            yield future
+        raise tornado.gen.Return(None)
+
+    def on_recv(self, *args, **kwargs):
+        for message_client in self.message_clients:
+            message_client.on_recv(*args, **kwargs)
+
+    def send(self, *args, **kwargs):
+        message_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
+        return message_clients[0].send(*args, **kwargs)
+
+    def write_to_stream(self, *args, **kwargs):
+        message_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
+        return message_clients[0]._stream.write(*args, **kwargs)
 
 
 # TODO consolidate with IPCClient

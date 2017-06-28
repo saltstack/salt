@@ -902,6 +902,8 @@ what you are doing! Transports are explained in :ref:`Salt Transports
 
     transport: zeromq
 
+.. conf_master:: transport_opts
+
 ``transport_opts``
 ------------------
 
@@ -919,6 +921,27 @@ what you are doing! Transports are explained in :ref:`Salt Transports
         publish_port: 4605
         ret_port: 4606
       zeromq: []
+
+.. conf_master:: sock_pool_size
+
+``sock_pool_size``
+------------------
+
+Default: 1
+
+To avoid blocking waiting while writing a data to a socket, we support
+socket pool for Salt applications. For example, a job with a large number
+of target host list can cause long period blocking waiting. The option
+is used by ZMQ and TCP transports, and the other transport methods don't
+need the socket pool by definition. Most of Salt tools, including CLI,
+are enough to use a single bucket of socket pool. On the other hands,
+it is highly recommended to set the size of socket pool larger than 1
+for other Salt applications, especially Salt API, which must write data
+to socket concurrently.
+
+.. code-block:: yaml
+
+    sock_pool_size: 15
 
 
 .. _salt-ssh-configuration:

@@ -77,6 +77,7 @@ MOCK_MODULES = [
     'yaml.nodes',
     'yaml.parser',
     'yaml.scanner',
+    'salt.utils.yamlloader',
     'zmq',
     'zmq.eventloop',
     'zmq.eventloop.ioloop',
@@ -125,6 +126,7 @@ MOCK_MODULES = [
     'ClusterShell',
     'ClusterShell.NodeSet',
     'django',
+    'docker',
     'libvirt',
     'MySQLdb',
     'MySQLdb.cursors',
@@ -174,7 +176,7 @@ MOCK_MODULES = [
 
 for mod_name in MOCK_MODULES:
     if mod_name == 'psutil':
-        mock = Mock(mapping={'total': 0})  # Otherwise it will crash Sphinx
+        mock = Mock(mapping={'total': 0, 'version_info': (0, 6,0)})  # Otherwise it will crash Sphinx
     else:
         mock = Mock()
     sys.modules[mod_name] = mock
@@ -244,7 +246,7 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2016.11.5'  # latest release
+latest_release = '2016.11.6'  # latest release
 previous_release = '2016.3.6'  # latest release from previous branch
 previous_release_dir = '2016.3'  # path on web server for previous branch
 next_release = ''  # next release
