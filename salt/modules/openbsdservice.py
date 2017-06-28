@@ -12,6 +12,8 @@ The service module for OpenBSD
 # Import python libs
 from __future__ import absolute_import
 import os
+import re
+import fnmatch
 import logging
 
 # Import 3rd-party libs
@@ -93,19 +95,42 @@ def restart(name):
 
 def status(name, sig=None):
     '''
-    Return the status for a service, returns a bool whether the service is
-    running.
+    Return the status for a service.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
+
+    .. versionchanged:: Oxygen
+        The service name can now be a glob (e.g. ``salt*``)
+
+    Args:
+        name (str): The name of the service to check
+        sig (str): Signature to use to find the service via ps
+
+    Returns:
+        bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status <service name>
+        salt '*' service.status <service name> [service signature]
     '''
     if sig:
         return bool(__salt__['status.pid'](sig))
-    cmd = '/etc/rc.d/{0} -f check'.format(name)
-    return not __salt__['cmd.retcode'](cmd, ignore_retcode=True)
+
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(get_all(), name)
+    else:
+        services = [name]
+    results = {}
+    for service in services:
+        cmd = '/etc/rc.d/{0} -f check'.format(service)
+        results[service] = not __salt__['cmd.retcode'](cmd, ignore_retcode=True)
+    if contains_globbing:
+        return results
+    return results[name]
 
 
 def reload_(name):

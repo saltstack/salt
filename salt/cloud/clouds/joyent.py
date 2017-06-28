@@ -205,7 +205,9 @@ def query_instance(vm_=None, call=None):
         log.debug('Returned query data: {0}'.format(data))
 
         if 'primaryIp' in data[1]:
-            return data[1]['primaryIp']
+            # Wait for SSH to be fully configured on the remote side
+            if data[1]['state'] == 'running':
+                return data[1]['primaryIp']
         return None
 
     try:
@@ -220,9 +222,8 @@ def query_instance(vm_=None, call=None):
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
-            # It might be already up, let's destroy it!
+            # destroy(vm_['name'])
             pass
-            #destroy(vm_['name'])
         except SaltCloudSystemExit:
             pass
         finally:
@@ -251,11 +252,6 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
@@ -264,11 +260,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -297,23 +289,16 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args={'kwargs': kwargs},
+        args={
+            'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, list(kwargs)),
+        },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
-    try:
-        data = create_node(**kwargs)
-    except Exception as exc:
-        log.error(
-            'Error creating {0} on JOYENT\n\n'
-            'The following exception was thrown when trying to '
-            'run the initial deployment: \n{1}'.format(
-                vm_['name'], str(exc)
-            ),
-            # Show the traceback if the debug logging level is enabled
-            exc_info_on_loglevel=logging.DEBUG
-        )
+    data = create_node(**kwargs)
+    if data == {}:
+        log.error('Error creating {0} on JOYENT'.format(vm_['name']))
         return False
 
     query_instance(vm_)
@@ -328,11 +313,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -349,6 +330,10 @@ def create_node(**kwargs):
     image = kwargs['image']
     location = kwargs['location']
     networks = kwargs.get('networks')
+    tag = kwargs.get('tag')
+    locality = kwargs.get('locality')
+    metadata = kwargs.get('metadata')
+    firewall_enabled = kwargs.get('firewall_enabled')
 
     create_data = {
         'name': name,
@@ -357,16 +342,30 @@ def create_node(**kwargs):
     }
     if networks is not None:
         create_data['networks'] = networks
+
+    if locality is not None:
+        create_data['locality'] = locality
+
+    if metadata is not None:
+        for key, value in six.iteritems(metadata):
+            create_data['metadata.{0}'.format(key)] = value
+
+    if tag is not None:
+        for key, value in six.iteritems(tag):
+            create_data['tag.{0}'.format(key)] = value
+
+    if firewall_enabled is not None:
+        create_data['firewall_enabled'] = firewall_enabled
+
     data = json.dumps(create_data)
 
-    try:
-        ret = query(command='/my/machines', data=data, method='POST',
-                     location=location)
-        if ret[0] in VALID_RESPONSE_CODES:
-            return ret[1]
-    except Exception as exc:
+    ret = query(command='/my/machines', data=data, method='POST',
+                location=location)
+    if ret[0] in VALID_RESPONSE_CODES:
+        return ret[1]
+    else:
         log.error(
-            'Failed to create node {0}: {1}'.format(name, exc)
+            'Failed to create node {0}: {1}'.format(name, ret[1])
         )
 
     return {}
@@ -405,7 +404,7 @@ def destroy(name, call=None):
 
     node = get_node(name)
     ret = query(command='my/machines/{0}'.format(node['id']),
-                 location=node['location'], method='DELETE')
+                location=node['location'], method='DELETE')
 
     __utils__['cloud.fire_event'](
         'event',
@@ -510,7 +509,7 @@ def take_action(name=None, call=None, command=None, data=None, method='GET',
     try:
 
         ret = query(command=command, data=data, method=method,
-                     location=location)
+                    location=location)
         log.info('Success {0} for node {1}'.format(caller, name))
     except Exception as exc:
         if 'InvalidState' in str(exc):
@@ -739,16 +738,19 @@ def list_nodes(full=False, call=None):
     if POLL_ALL_LOCATIONS:
         for location in JOYENT_LOCATIONS:
             result = query(command='my/machines', location=location,
-                            method='GET')
-            nodes = result[1]
-            for node in nodes:
-                if 'name' in node:
-                    node['location'] = location
-                    ret[node['name']] = reformat_node(item=node, full=full)
+                           method='GET')
+            if result[0] in VALID_RESPONSE_CODES:
+                nodes = result[1]
+                for node in nodes:
+                    if 'name' in node:
+                        node['location'] = location
+                        ret[node['name']] = reformat_node(item=node, full=full)
+            else:
+                log.error('Invalid response when listing Joyent nodes: {0}'.format(result[1]))
 
     else:
         result = query(command='my/machines', location=DEFAULT_LOCATION,
-                        method='GET')
+                       method='GET')
         nodes = result[1]
         for node in nodes:
             if 'name' in node:
@@ -1016,6 +1018,9 @@ def query(action=None,
         'user', get_configured_provider(), __opts__, search_global=False
     )
 
+    if not user:
+        log.error('username is required for Joyent API requests. Please set one in your provider configuration')
+
     password = config.get_cloud_config_value(
         'password', get_configured_provider(), __opts__,
         search_global=False
@@ -1031,10 +1036,16 @@ def query(action=None,
         search_global=False, default=True
     )
 
+    if not ssh_keyfile:
+        log.error('ssh_keyfile is required for Joyent API requests.  Please set one in your provider configuration')
+
     ssh_keyname = config.get_cloud_config_value(
         'keyname', get_configured_provider(), __opts__,
         search_global=False, default=True
     )
+
+    if not ssh_keyname:
+        log.error('ssh_keyname is required for Joyent API requests.  Please set one in your provider configuration')
 
     if not location:
         location = get_location()
@@ -1054,6 +1065,9 @@ def query(action=None,
 
     log.debug('User: \'{0}\' on PATH: {1}'.format(user, path))
 
+    if (not user) or (not ssh_keyfile) or (not ssh_keyname) or (not location):
+        return None
+
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%a, %d %b %Y %H:%M:%S %Z').strip()
     with salt.utils.fopen(ssh_keyfile, 'r') as kh_:
@@ -1062,7 +1076,7 @@ def query(action=None,
     hash_ = SHA256.new()
     hash_.update(timestamp)
     signed = base64.b64encode(rsa_.sign(hash_))
-    keyid = '/{0}/keys/{1}'.format(user, ssh_keyname)
+    keyid = '/{0}/keys/{1}'.format(user.split('/')[0], ssh_keyname)
 
     headers = {
         'Content-Type': 'application/json',
@@ -1101,6 +1115,9 @@ def query(action=None,
             result['status']
         )
     )
+    if 'headers' not in result:
+        return [result['status'], result['error']]
+
     if 'Content-Length' in result['headers']:
         content = result['text']
         return_content = yaml.safe_load(content)

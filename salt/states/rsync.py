@@ -43,7 +43,7 @@ def __virtual__():
 
 def _get_summary(rsync_out):
     '''
-    Get summary from the rsync successfull output.
+    Get summary from the rsync successful output.
     '''
 
     return "- " + "\n- ".join([elm for elm in rsync_out.split("\n\n")[-1].replace("  ", "\n").split("\n") if elm])
@@ -51,7 +51,7 @@ def _get_summary(rsync_out):
 
 def _get_changes(rsync_out):
     '''
-    Get changes from the rsync successfull output.
+    Get changes from the rsync successful output.
     '''
     copied = list()
     deleted = list()
@@ -62,10 +62,15 @@ def _get_changes(rsync_out):
         else:
             copied.append(line)
 
-    return {
+    ret = {
         'copied': os.linesep.join(sorted(copied)) or "N/A",
         'deleted': os.linesep.join(sorted(deleted)) or "N/A",
     }
+
+    # Return whether anything really changed
+    ret['changed'] = not ((ret['copied'] == 'N/A') and (ret['deleted'] == 'N/A'))
+
+    return ret
 
 
 def synchronized(name, source,
@@ -76,7 +81,8 @@ def synchronized(name, source,
                  exclude=None,
                  excludefrom=None,
                  prepare=False,
-                 dryrun=False):
+                 dryrun=False,
+                 additional_opts=None):
     '''
     Guarantees that the source directory is always copied to the target.
 
@@ -112,6 +118,11 @@ def synchronized(name, source,
         doing test=True
 
         .. versionadded:: 2016.3.1
+
+    additional_opts
+        Pass additional options to rsync, should be included as a list.
+
+        .. versionadded:: Oxygen
     '''
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
@@ -126,21 +137,31 @@ def synchronized(name, source,
         if __opts__['test']:
             dryrun = True
 
-        result = __salt__['rsync.rsync'](source, name, delete=delete, force=force, update=update,
-                                         passwordfile=passwordfile, exclude=exclude, excludefrom=excludefrom,
-                                         dryrun=dryrun)
+        result = __salt__['rsync.rsync'](source, name, delete=delete,
+                                         force=force, update=update,
+                                         passwordfile=passwordfile,
+                                         exclude=exclude,
+                                         excludefrom=excludefrom,
+                                         dryrun=dryrun,
+                                         additional_opts=additional_opts)
 
         if __opts__['test'] or dryrun:
             ret['result'] = None
             ret['comment'] = _get_summary(result['stdout'])
             return ret
 
+        # Failed
         if result.get('retcode'):
             ret['result'] = False
             ret['comment'] = result['stderr']
             ret['changes'] = result['stdout']
-        else:
+        # Changed
+        elif _get_changes(result['stdout'])['changed']:
             ret['comment'] = _get_summary(result['stdout'])
             ret['changes'] = _get_changes(result['stdout'])
-
+            del ret['changes']['changed']  # Don't need to print the boolean
+        # Clean
+        else:
+            ret['comment'] = _get_summary(result['stdout'])
+            ret['changes'] = {}
     return ret

@@ -85,18 +85,19 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
 
     try:
         fetch_result = __fetch_from_artifactory(artifact, target_dir, target_file)
-        log.debug("fetch_result=%s", str(fetch_result))
-
-        ret['result'] = fetch_result['status']
-        ret['comment'] = fetch_result['comment']
-        ret['changes'] = fetch_result['changes']
-        log.debug("ret=%s", str(ret))
-
-        return ret
     except Exception as exc:
         ret['result'] = False
-        ret['comment'] = exc
+        ret['comment'] = str(exc)
         return ret
+
+    log.debug("fetch_result=%s", str(fetch_result))
+
+    ret['result'] = fetch_result['status']
+    ret['comment'] = fetch_result['comment']
+    ret['changes'] = fetch_result['changes']
+    log.debug("ret=%s", str(ret))
+
+    return ret
 
 
 def __fetch_from_artifactory(artifact, target_dir, target_file):

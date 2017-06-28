@@ -3,6 +3,7 @@
 Configure Chronos jobs via a salt proxy.
 
 .. code-block:: yaml
+
     my_job:
       chronos_job.config:
         - config:

@@ -40,13 +40,20 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         boto_secgroup.present:
             - name: mysecgroup
             - description: My security group
+            - vpc_name: myvpc
             - rules:
                 - ip_protocol: tcp
                   from_port: 80
                   to_port: 80
                   cidr_ip:
-                    - 10.0.0.0/0
-                    - 192.168.0.0/0
+                    - 10.0.0.0/8
+                    - 192.168.0.0/16
+                - ip_protocol: tcp
+                  from_port: 8080
+                  to_port: 8090
+                  cidr_ip:
+                    - 10.0.0.0/8
+                    - 192.168.0.0/16
                 - ip_protocol: icmp
                   from_port: -1
                   to_port: -1
@@ -56,8 +63,8 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                   from_port: -1
                   to_port: -1
                   cidr_ip:
-                    - 10.0.0.0/0
-                    - 192.168.0.0/0
+                    - 10.0.0.0/8
+                    - 192.168.0.0/16
             - tags:
                 SomeTag: 'My Tag Value'
                 SomeOtherTag: 'Other Tag Value'
@@ -327,7 +334,7 @@ def _get_rule_changes(rules, _rules):
     # 2. determine if rule exists in existing security group rules
     for rule in rules:
         try:
-            ip_protocol = rule.get('ip_protocol')
+            ip_protocol = str(rule.get('ip_protocol'))
         except KeyError:
             raise SaltInvocationError('ip_protocol, to_port, and from_port are'
                                       ' required arguments for security group'
@@ -631,7 +638,7 @@ def _tags_present(name, tags, vpc_id=None, vpc_name=None, region=None,
         tags_to_update = {}
         tags_to_remove = []
         if sg.get('tags'):
-            for existing_tag in sg['tags'].keys():
+            for existing_tag in sg['tags']:
                 if existing_tag not in tags:
                     if existing_tag not in tags_to_remove:
                         tags_to_remove.append(existing_tag)

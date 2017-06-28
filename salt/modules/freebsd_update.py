@@ -2,6 +2,8 @@
 '''
 Support for freebsd-update utility on FreeBSD.
 
+.. versionadded:: 2017.7.0
+
 :maintainer:    George Mamalakis <mamalos@gmail.com>
 :maturity:      new
 :platform:      FreeBSD

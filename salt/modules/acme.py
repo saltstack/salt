@@ -5,7 +5,12 @@ ACME / Let's Encrypt module
 
 .. versionadded: 2016.3
 
-This module currently uses letsencrypt-auto, which needs to be available in the path or in /opt/letsencrypt/.
+This module currently looks for certbot script in the $PATH as
+- certbot,
+- lestsencrypt,
+- certbot-auto,
+- letsencrypt-auto
+eventually falls back to /opt/letsencrypt/letsencrypt-auto
 
 .. note::
 
@@ -95,7 +100,8 @@ def cert(name,
          keysize=None,
          server=None,
          owner='root',
-         group='root'):
+         group='root',
+         certname=None):
     '''
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
 
@@ -109,6 +115,7 @@ def cert(name,
     :param server: API endpoint to talk to
     :param owner: owner of private key
     :param group: group of private key
+    :param certname: Name of the certificate to save
     :return: dict with 'result' True/False/None, 'comment' and certificate's expiry date ('not_after')
 
     CLI example:
@@ -128,15 +135,11 @@ def cert(name,
         log.debug('Certificate {0} will be renewed'.format(cert_file))
         cmd.append('--renew-by-default')
         renew = True
-    else:
-        return {
-            'result': None,
-            'comment': 'Certificate {0} does not need renewal'.format(cert_file),
-            'not_after': expires(name)
-        }
-
     if server:
         cmd.append('--server {0}'.format(server))
+
+    if certname:
+        cmd.append('--cert-name {0}'.format(certname))
 
     if test_cert:
         if server:
@@ -165,6 +168,11 @@ def cert(name,
 
     if res['retcode'] != 0:
         return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
+
+    if 'no action taken' in res['stdout']:
+        return {'result': None,
+                'comment': 'No action taken on certificate {0}'.format(cert_file),
+                'not_after': expires(name)}
 
     if renew:
         comment = 'Certificate {0} renewed'.format(name)
@@ -273,7 +281,7 @@ def renew_by(name, window=None):
 
 def needs_renewal(name, window=None):
     '''
-    Check if a certicate needs renewal
+    Check if a certificate needs renewal
 
     :param name: CommonName of cert
     :param window: Window in days to renew earlier or True/force to just return True

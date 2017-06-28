@@ -116,13 +116,13 @@ def _check_rvm(ret, user=None):
     return ret
 
 
-def _check_and_install_ruby(ret, ruby, default=False, user=None):
+def _check_and_install_ruby(ret, ruby, default=False, user=None, opts=None, env=None):
     '''
     Verify that ruby is installed, install if unavailable
     '''
     ret = _check_ruby(ret, ruby, user=user)
     if not ret['result']:
-        if __salt__['rvm.install_ruby'](ruby, runas=user):
+        if __salt__['rvm.install_ruby'](ruby, runas=user, opts=opts, env=env):
             ret['result'] = True
             ret['changes'][ruby] = 'Installed'
             ret['comment'] = 'Successfully installed ruby.'
@@ -166,7 +166,7 @@ def _check_ruby(ret, ruby, user=None):
     return ret
 
 
-def installed(name, default=False, user=None):
+def installed(name, default=False, user=None, opts=None, env=None):
     '''
     Verify that the specified ruby is installed with RVM. RVM is
     installed when necessary.
@@ -179,6 +179,12 @@ def installed(name, default=False, user=None):
 
     user: None
         The user to run rvm as.
+
+    env: None
+        A list of environment variables to set (ie, RUBY_CONFIGURE_OPTS)
+
+    opts: None
+        A list of option flags to pass to RVM (ie -C, --patch)
 
         .. versionadded:: 0.17.0
     '''
@@ -194,9 +200,9 @@ def installed(name, default=False, user=None):
             ret['comment'] = 'RVM failed to install.'
             return ret
         else:
-            return _check_and_install_ruby(ret, name, default, user=user)
+            return _check_and_install_ruby(ret, name, default, user=user, opts=opts, env=env)
     else:
-        return _check_and_install_ruby(ret, name, default, user=user)
+        return _check_and_install_ruby(ret, name, default, user=user, opts=opts, env=env)
 
 
 def gemset_present(name, ruby='default', user=None):

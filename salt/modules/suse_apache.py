@@ -35,8 +35,10 @@ def check_mod_enabled(mod):
     This will only be functional on operating systems that support
     `a2enmod -l` to list the enabled mods.
 
-    CLI Examples:
+    CLI Example:
+
     .. code-block:: bash
+
         salt '*' apache.check_mod_enabled status
     '''
     if mod.endswith('.load') or mod.endswith('.conf'):
@@ -56,8 +58,11 @@ def check_mod_enabled(mod):
 def a2enmod(mod):
     '''
     Runs a2enmod for the given mod.
-    CLI Examples:
+
+    CLI Example:
+
     .. code-block:: bash
+
         salt '*' apache.a2enmod vhost_alias
     '''
     ret = {}
@@ -84,8 +89,11 @@ def a2enmod(mod):
 def a2dismod(mod):
     '''
     Runs a2dismod for the given mod.
-    CLI Examples:
+
+    CLI Example:
+
     .. code-block:: bash
+
         salt '*' apache.a2dismod vhost_alias
     '''
     ret = {}

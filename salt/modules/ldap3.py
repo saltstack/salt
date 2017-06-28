@@ -79,6 +79,20 @@ def _bind(l, bind=None):
                          + '"; supported bind methods: simple sasl')
 
 
+def _format_unicode_password(pwd):
+    '''Formats a string per Microsoft AD password specifications.
+    The string must be enclosed in double quotes and UTF-16 encoded.
+    See: https://msdn.microsoft.com/en-us/library/cc223248.aspx
+
+    :param pwd:
+       The desired password as a string
+
+    :returns:
+        A unicode string
+    '''
+    return '"{0}"'.format(pwd).encode('utf-16-le')
+
+
 class _connect_ctx(object):
     def __init__(self, c):
         self.c = c
@@ -390,6 +404,10 @@ def add(connect_spec, dn, attributes):
                        for attr, vals in six.iteritems(attributes)))
     log.info('adding entry: dn: {0} attributes: {1}'.format(
         repr(dn), repr(attributes)))
+
+    if 'unicodePwd' in attributes:
+        attributes['unicodePwd'] = [_format_unicode_password(x) for x in attributes['unicodePwd']]
+
     modlist = ldap.modlist.addModlist(attributes)
     try:
         l.c.add_s(dn, modlist)
@@ -484,6 +502,12 @@ def modify(connect_spec, dn, directives):
     # not modified)
     modlist = [(getattr(ldap, 'MOD_' + op.upper()), attr, list(vals))
                for op, attr, vals in directives]
+
+    for idx, mod in enumerate(modlist):
+        if mod[1] == 'unicodePwd':
+            modlist[idx] = (mod[0], mod[1],
+                [_format_unicode_password(x) for x in mod[2]])
+
     try:
         l.c.modify_s(dn, modlist)
     except ldap.LDAPError as e:
@@ -546,6 +570,10 @@ def change(connect_spec, dn, before, after):
                    for attr, vals in six.iteritems(before)))
     after = dict(((attr, list(vals))
                   for attr, vals in six.iteritems(after)))
+
+    if 'unicodePwd' in after:
+        after['unicodePwd'] = [_format_unicode_password(x) for x in after['unicodePwd']]
+
     modlist = ldap.modlist.modifyModlist(before, after)
     try:
         l.c.modify_s(dn, modlist)

@@ -142,10 +142,13 @@ class RosterMatcher(object):
         '''
         Return the configured ip
         '''
+        ret = __opts__.get('roster_defaults', {})
         if isinstance(self.raw[minion], string_types):
-            return {'host': self.raw[minion]}
-        if isinstance(self.raw[minion], dict):
-            return self.raw[minion]
+            ret.update({'host': self.raw[minion]})
+            return ret
+        elif isinstance(self.raw[minion], dict):
+            ret.update(self.raw[minion])
+            return ret
         return False
 
 

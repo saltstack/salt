@@ -2,10 +2,10 @@
 '''
 Grains for Cisco NX OS Switches Proxy minions
 
-.. versionadded: Carbon
+.. versionadded: 2016.11.0
 
 For documentation on setting up the nxos proxy minion look in the documentation
-for :doc:`salt.proxy.nxos</ref/proxy/all/salt.proxy.nxos>`.
+for :mod:`salt.proxy.nxos<salt.proxy.nxos>`.
 '''
 # Import Python Libs
 from __future__ import absolute_import

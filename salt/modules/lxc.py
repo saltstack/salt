@@ -23,7 +23,6 @@ import time
 import shutil
 import re
 import random
-import distutils.version  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt
@@ -34,6 +33,7 @@ import salt.utils.network
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils.cloud
 import salt.config
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -120,8 +120,8 @@ def version():
     if not __context__.get(k, None):
         cversion = __salt__['cmd.run_all']('lxc-info --version')
         if not cversion['retcode']:
-            ver = distutils.version.LooseVersion(cversion['stdout'])
-            if ver < distutils.version.LooseVersion('1.0'):
+            ver = _LooseVersion(cversion['stdout'])
+            if ver < _LooseVersion('1.0'):
                 raise CommandExecutionError('LXC should be at least 1.0')
             __context__[k] = "{0}".format(ver)
     return __context__.get(k, None)
@@ -287,7 +287,11 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     config
         any extra argument for the salt minion config
     dnsservers
-        dns servers to set inside the container
+        list of DNS servers to set inside the container
+        (Defaults to 8.8.8.8 and 4.4.4.4 until Oxygen release)
+    dns_via_dhcp
+        do not set the dns servers, let them be set by the dhcp.
+        (Defaults to False until Oxygen release)
     autostart
         autostart the container at boot time
     password
@@ -400,7 +404,12 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     snapshot = _cloud_get('snapshot', False)
     autostart = bool(_cloud_get('autostart', True))
     dnsservers = _cloud_get('dnsservers', [])
-    if not dnsservers:
+    dns_via_dhcp = _cloud_get('dns_via_dhcp', False)
+    if not dnsservers and not dns_via_dhcp:
+        salt.utils.warn_until('Oxygen', (
+            'dnsservers will stop defaulting to 8.8.8.8 and 4.4.4.4 '
+            'in Oxygen.  Please set your dnsservers.'
+        ))
         dnsservers = ['8.8.8.8', '4.4.4.4']
     password = _cloud_get('password', 's3cr3t')
     password_encrypted = _cloud_get('password_encrypted', False)
@@ -494,7 +503,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     # via the legacy salt cloud configuration style.
     # On other cases, we should rely on settings provided by the new
     # salt lxc network profile style configuration which can
-    # be also be overriden or a per interface basis via the nic_opts dict.
+    # be also be overridden or a per interface basis via the nic_opts dict.
     if bridge:
         eth0['link'] = bridge
     if gateway:
@@ -861,11 +870,9 @@ def _network_conf(conf_tuples=None, **kwargs):
     # on old versions of lxc, still support the gateway auto mode
     # if we didnt explicitly say no to
     # (lxc.network.ipv4.gateway: auto)
-    if (
-        distutils.version.LooseVersion(version()) <= '1.0.7' and
-        True not in ['lxc.network.ipv4.gateway' in a for a in ret] and
-        True in ['lxc.network.ipv4' in a for a in ret]
-    ):
+    if _LooseVersion(version()) <= '1.0.7' and \
+            True not in ['lxc.network.ipv4.gateway' in a for a in ret] and \
+            True in ['lxc.network.ipv4' in a for a in ret]:
         ret.append({'lxc.network.ipv4.gateway': 'auto'})
     return ret
 
@@ -1796,8 +1803,11 @@ def create(name,
     **Container Creation Arguments**
 
     template
-        The template to use. For example, ``ubuntu`` or ``fedora``. Conflicts
-        with the ``image`` argument.
+        The template to use. For example, ``ubuntu`` or ``fedora``.
+        For a full list of available templates, check out
+        the :mod:`lxc.templates <salt.modules.lxc.templates>` function.
+
+        Conflicts with the ``image`` argument.
 
         .. note::
 
@@ -1819,6 +1829,10 @@ def create(name,
         .. code-block:: bash
 
             options='{"dist": "centos", "release": "6", "arch": "amd64"}'
+
+        For available template options, refer to the lxc template scripts
+        which are ususally located under ``/usr/share/lxc/templates``,
+        or run ``lxc-create -t <template> -h``.
 
     image
         A tar archive to use as the rootfs for the container. Conflicts with
@@ -2065,7 +2079,7 @@ def clone(name,
     if backing in ('dir', 'overlayfs', 'btrfs'):
         size = None
     # LXC commands and options changed in 2.0 - CF issue #34086 for details
-    if version() >= distutils.version.LooseVersion('2.0'):
+    if version() >= _LooseVersion('2.0'):
         # https://linuxcontainers.org/lxc/manpages//man1/lxc-copy.1.html
         cmd = 'lxc-copy'
         cmd += ' {0} -n {1} -N {2}'.format(snapshot, orig, name)
@@ -2965,7 +2979,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
     ret = {'changes': changes, 'result': True, 'comment': ''}
 
     # do not use salt.utils.fopen !
-    with open(lxc_conf_p, 'r') as fic:
+    with salt.utils.fopen(lxc_conf_p, 'r') as fic:
         filtered_lxc_conf = []
         for row in lxc_conf:
             if not row:
@@ -3024,9 +3038,9 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
         if conf_changed:
             # DO NOT USE salt.utils.fopen here, i got (kiorky)
             # problems with lxc configs which were wiped !
-            with open('{0}.{1}'.format(lxc_conf_p, chrono), 'w') as wfic:
+            with salt.utils.fopen('{0}.{1}'.format(lxc_conf_p, chrono), 'w') as wfic:
                 wfic.write(conf)
-            with open(lxc_conf_p, 'w') as wfic:
+            with salt.utils.fopen(lxc_conf_p, 'w') as wfic:
                 wfic.write(conf)
             ret['comment'] = 'Updated'
             ret['result'] = True

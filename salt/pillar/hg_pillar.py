@@ -27,8 +27,10 @@ import os
 
 # Import Salt Libs
 import salt.pillar
+import salt.utils
 
 # Import Third Party Libs
+import salt.ext.six as six
 try:
     import hglib
 except ImportError:
@@ -100,7 +102,10 @@ class Repo(object):
         self.repo_uri = repo_uri
         cachedir = os.path.join(__opts__['cachedir'], 'hg_pillar')
         hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-        repo_hash = hash_type(repo_uri).hexdigest()
+        if six.PY2:
+            repo_hash = hash_type(repo_uri).hexdigest()
+        else:
+            repo_hash = hash_type(salt.utils.to_bytes(repo_uri)).hexdigest()
         self.working_dir = os.path.join(cachedir, repo_hash)
         if not os.path.isdir(self.working_dir):
             self.repo = hglib.clone(repo_uri, self.working_dir)

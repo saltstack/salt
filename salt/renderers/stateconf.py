@@ -382,7 +382,7 @@ def rename_state_ids(data, sls, is_extend=False):
             if sid.startswith('.'):
                 req[sname] = _local_to_abs_sid(sid, sls)
 
-    for sid in data:
+    for sid in list(data):
         if sid.startswith('.'):
             newsid = _local_to_abs_sid(sid, sls)
             if newsid in data:

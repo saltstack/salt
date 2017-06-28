@@ -8,17 +8,20 @@ returned by several different minions.
 Aggregated results are sorted by the size of the minion pools which returned
 matching results.
 
-Useful for playing the game: " some of these things are not like the others... "
+Useful for playing the game: *"some of these things are not like the others..."*
 when identifying discrepancies in a large infrastructure managed by salt.
 '''
 
-from __future__ import print_function
+# Import python libs
+from __future__ import absolute_import, print_function
 
-from __future__ import absolute_import
-
+# Import salt libs
 import salt.client
-from salt.ext.six.moves import range
 from salt.exceptions import SaltClientError
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 
 def hash(*args, **kwargs):
@@ -29,20 +32,20 @@ def hash(*args, **kwargs):
     .. versionadded:: 2014.7.0
 
     This command is submitted via a salt runner using the
-    general form:
+    general form::
 
         salt-run survey.hash [survey_sort=up/down] <target>
                   <salt-execution-module> <salt-execution-module parameters>
 
-    Optionally accept a "survey_sort=" parameter. Default: "survey_sort=down"
+    Optionally accept a ``survey_sort=`` parameter. Default: ``survey_sort=down``
 
-    CLI Example #1: ( functionally equivalent to "salt-run manage.up" )
+    CLI Example #1: (functionally equivalent to ``salt-run manage.up``)
 
     .. code-block:: bash
 
         salt-run survey.hash "*" test.ping
 
-    CLI Example #2: ( find an "outlier" minion config file )
+    CLI Example #2: (find an "outlier" minion config file)
 
     .. code-block:: bash
 
@@ -61,20 +64,23 @@ def diff(*args, **kwargs):
 
     These pools are determined from the aggregated and sorted results of
     a salt command.
-    This command displays the "diffs" as a series of 2-way differences-- namely
-    the difference between the FIRST displayed minion pool
-    (according to sort order) and EACH SUBSEQUENT minion pool result set.
-    Differences are displayed according to the Python "difflib.unified_diff()"
-    as in the case of the salt execution module "file.get_diff".
 
-    This command is submitted via a salt runner using the general form:
+    This command displays the "diffs" as a series of 2-way differences --
+    namely the difference between the FIRST displayed minion pool
+    (according to sort order) and EACH SUBSEQUENT minion pool result set.
+
+    Differences are displayed according to the Python ``difflib.unified_diff()``
+    as in the case of the salt execution module ``file.get_diff``.
+
+    This command is submitted via a salt runner using the general form::
 
         salt-run survey.diff [survey_sort=up/down] <target>
                      <salt-execution-module> <salt-execution-module parameters>
 
-    Optionally accept a "survey_sort=" parameter. Default: "survey_sort=down"
+    Optionally accept a ``survey_sort=`` parameter. Default:
+    ``survey_sort=down``
 
-    CLI Example #1: ( Example to display the "differences of files" )
+    CLI Example #1: (Example to display the "differences of files")
 
     .. code-block:: bash
 
@@ -150,15 +156,15 @@ def _get_pool_results(*args, **kwargs):
     sort = kwargs.pop('survey_sort', 'down')
     direction = sort != 'up'
 
-    expr_form = kwargs.pop('expr_form', 'compound')
-    if expr_form not in ['compound', 'pcre']:
-        expr_form = 'compound'
+    tgt_type = kwargs.pop('tgt_type', 'compound')
+    if tgt_type not in ['compound', 'pcre']:
+        tgt_type = 'compound'
 
-    kwargs_passthru = dict((k, kwargs[k]) for k in kwargs.iterkeys() if not k.startswith('_'))
+    kwargs_passthru = dict((k, kwargs[k]) for k in six.iterkeys(kwargs) if not k.startswith('_'))
 
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
-        minions = client.cmd(tgt, cmd, args[2:], timeout=__opts__['timeout'], expr_form=expr_form, kwarg=kwargs_passthru)
+        minions = client.cmd(tgt, cmd, args[2:], timeout=__opts__['timeout'], tgt_type=tgt_type, kwarg=kwargs_passthru)
     except SaltClientError as client_error:
         print(client_error)
         return ret

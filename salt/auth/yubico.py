@@ -78,13 +78,14 @@ def auth(username, password):
     client = Yubico(_cred['id'], _cred['key'])
 
     try:
-        if client.verify(password):
-            return True
-        else:
-            return False
+        return client.verify(password)
     except yubico_exceptions.StatusCodeError as e:
         log.info('Unable to verify YubiKey `{0}`'.format(e))
         return False
+
+
+def groups(username, *args, **kwargs):
+    return False
 
 
 if __name__ == '__main__':

@@ -2,10 +2,10 @@
 '''
 Execution module for Cisco Network Services Orchestrator Proxy minions
 
-.. versionadded: Carbon
+.. versionadded: 2016.11.0
 
 For documentation on setting up the cisconso proxy minion look in the documentation
-for :doc:`salt.proxy.cisconso</ref/proxy/all/salt.proxy.cisconso>`.
+for :mod:`salt.proxy.cisconso<salt.proxy.cisconso>`.
 '''
 from __future__ import absolute_import
 
@@ -43,7 +43,7 @@ def get_data(datastore, path):
     :type  datastore: :class:`DatastoreType` (``str`` enum).
 
     :param path: The device path to set the value at,
-        a list of element names in order, / seperated
+        a list of element names in order, / separated
     :type  path: ``list``, ``str`` OR ``tuple``
 
     :return: The network configuration at that tree
@@ -67,7 +67,7 @@ def set_data_value(datastore, path, data):
     :type  datastore: :class:`DatastoreType` (``str`` enum).
 
     :param path: The device path to set the value at,
-        a list of element names in order, / seperated
+        a list of element names in order, / separated
     :type  path: ``list``, ``str`` OR ``tuple``
 
     :param data: The new value at the given path
@@ -134,7 +134,7 @@ def apply_rollback(datastore, name):
 def _proxy_cmd(command, *args, **kwargs):
     '''
     run commands from __proxy__
-    :doc:`salt.proxy.cisconso</ref/proxy/all/salt.proxy.cisconso>`
+    :mod:`salt.proxy.cisconso<salt.proxy.cisconso>`
 
     command
         function from `salt.proxy.cisconso` to run
@@ -149,7 +149,7 @@ def _proxy_cmd(command, *args, **kwargs):
     proxy_cmd = '.'.join([proxy_prefix, command])
     if proxy_cmd not in __proxy__:
         return False
-    for k in kwargs.keys():
+    for k in kwargs:
         if k.startswith('__pub_'):
             kwargs.pop(k)
     return __proxy__[proxy_cmd](*args, **kwargs)

@@ -4,8 +4,8 @@ Control Modjk via the Apache Tomcat "Status" worker
 (http://tomcat.apache.org/connectors-doc/reference/status.html)
 
 Below is an example of the configuration needed for this module. This
-configuration data can be placed either in :doc:`grains
-</topics/targeting/grains>` or :doc:`pillar </topics/pillar/index>`.
+configuration data can be placed either in :ref:`grains
+<targeting-grains>` or :ref:`pillar <salt-pillars>`.
 
 If using grains, this can be accomplished :ref:`statically
 <static-custom-grains>` or via a :ref:`grain module <writing-grains>`.

@@ -18,7 +18,7 @@ import salt.utils
 
 __virtualname__ = 'btmp'
 BTMP = '/var/log/btmp'
-FMT = '<hI32s4s32s256siili4l20s'
+FMT = 'hi32s4s32s256shhiii4i20x'
 FIELDS = [
           'type',
           'PID',

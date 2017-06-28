@@ -81,7 +81,8 @@ __virtualname__ = 'influxdb'
 
 def __virtual__():
     if not HAS_INFLUXDB:
-        return False
+        return False, 'Could not import influxdb returner; ' \
+                      'influxdb python client is not installed.'
     return __virtualname__
 
 
@@ -109,7 +110,7 @@ def _get_version(host, port, user, password):
     # check the InfluxDB version via the HTTP API
     try:
         result = requests.get("http://{0}:{1}/ping".format(host, port), auth=(user, password))
-        if result.status_code == 200 and influxDBVersionHeader in result.headers:
+        if influxDBVersionHeader in result.headers:
             version = result.headers[influxDBVersionHeader]
     except Exception as ex:
         log.critical('Failed to query InfluxDB version from HTTP API within InfluxDB returner: {0}'.format(ex))
@@ -178,7 +179,7 @@ def returner(ret):
                 },
                 'fields': {
                     'return': json_return,
-                    'ful_ret': json_full_ret
+                    'full_ret': json_full_ret
                 }
             }
         ]
@@ -226,7 +227,7 @@ def save_load(jid, load, minions=None):
         log.critical('Failed to store load with InfluxDB returner: {0}'.format(ex))
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''

@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon Elasticsearch Service
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 :configuration: This module accepts explicit AWS credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
@@ -78,7 +78,6 @@ Connection module for Amazon Elasticsearch Service
 from __future__ import absolute_import
 import logging
 import json
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.ext.six as six
@@ -86,6 +85,7 @@ import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -465,7 +465,7 @@ def list_tags(DomainName=None, ARN=None,
             raise SaltInvocationError('One (but not both) of ARN or '
                          'domain must be specified.')
         ret = conn.list_tags(ARN=ARN)
-        log.warn(ret)
+        log.warning(ret)
         tlist = ret.get('TagList', [])
         tagdict = {}
         for tag in tlist:

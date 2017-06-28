@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Apigateway Rest APIs
-=================
+===========================
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Create and destroy rest apis depending on a swagger version 2 definition file.
 Be aware that this interacts with Amazon's services, and so may incur charges.
@@ -31,18 +31,18 @@ config:
 .. code-block:: yaml
 
     myprofile:
-        keyid: GKTADJGHEIQSXMKKRBJ08H
-        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
 
 .. code-block:: yaml
 
     Ensure Apigateway API exists:
-        boto_apigateway.present:
-            - name: myfunction
-            - region: us-east-1
-            - keyid: GKTADJGHEIQSXMKKRBJ08H
-            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      boto_apigateway.present:
+        - name: myfunction
+        - region: us-east-1
+        - keyid: GKTADJGHEIQSXMKKRBJ08H
+        - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
 '''
 
@@ -55,10 +55,10 @@ import hashlib
 import re
 import json
 import yaml
-
 # Import Salt Libs
 import salt.ext.six as six
 import salt.utils
+from salt.utils.yamlloader import SaltYamlSafeLoader
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
             lambda_integration_role, lambda_region=None, stage_variables=None,
             region=None, key=None, keyid=None, profile=None,
             lambda_funcname_format='{stage}_{api}_{resource}_{method}',
-            authorization_type='NONE'):
+            authorization_type='NONE', error_response_template=None, response_template=None):
     '''
     Ensure the spcified api_name with the corresponding swaggerfile is deployed to the
     given stage_name in AWS ApiGateway.
@@ -116,7 +116,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
         The canconicalization of these input parameters is done in the following order:
             1) lambda_funcname_format is formatted with the input parameters as passed,
             2) resulting string is stripped for leading/trailing spaces,
-            3) path paramter's curly braces are removed from the resource path,
+            3) path parameter's curly braces are removed from the resource path,
             4) consecutive spaces and forward slashes in the paths are replaced with '_'
             5) consecutive '_' are replaced with '_'
 
@@ -203,6 +203,35 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
     authorization_type
         This field can be either 'NONE', or 'AWS_IAM'.  This will be applied to all methods in the given
         swagger spec file.  Default is set to 'NONE'
+
+    error_response_template
+        String value that defines the response template mapping that should be applied in cases error occurs.
+        Refer to AWS documentation for details:
+            http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-mapping-template-reference.html
+        If set to None, the following default value is used:
+            '#set($inputRoot = $input.path(\'$\'))\n'
+            '{\n'
+            '  "errorMessage" : "$inputRoot.errorMessage",\n'
+            '  "errorType" : "$inputRoot.errorType",\n'
+            '  "stackTrace" : [\n'
+            '#foreach($stackTrace in $inputRoot.stackTrace)\n'
+            '    [\n'
+            '#foreach($elem in $stackTrace)\n'
+            '      "$elem"\n'
+            '#if($foreach.hasNext),#end\n'
+            '#end\n'
+            '    ]\n'
+            '#if($foreach.hasNext),#end\n'
+            '#end\n'
+            '  ]\n'
+
+        .. versionadded:: 2017.7.0
+
+    response_template
+        String value that defines the response template mapping applied in case of success (including OPTIONS method)
+        If set to None, empty ({}) template is assumed, which will transfer response from the lambda function as is.
+
+        .. versionadded:: 2017.7.0
     '''
     ret = {'name': name,
            'result': True,
@@ -219,7 +248,9 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
         # try to open the swagger file and basic validation
         swagger = _Swagger(api_name, stage_name,
                            lambda_funcname_format,
-                           swagger_file, common_args)
+                           swagger_file,
+                           error_response_template, response_template,
+                           common_args)
 
         # retrieve stage variables
         stage_vars = _get_stage_variables(stage_variables)
@@ -362,7 +393,7 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
                             ('keyid', keyid),
                             ('profile', profile)])
 
-        swagger = _Swagger(api_name, stage_name, '', None, common_args)
+        swagger = _Swagger(api_name, stage_name, '', None, None, None, common_args)
 
         if not swagger.restApiId:
             ret['comment'] = '[Rest API: {0}] does not exist.'.format(api_name)
@@ -394,14 +425,19 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
 
 
 # Helper Swagger Class for swagger version 2.0 API specification
-def _gen_md5_filehash(fname):
+def _gen_md5_filehash(fname, *args):
     '''
     helper function to generate a md5 hash of the swagger definition file
+    any extra argument passed to the function is converted to a string
+    and participates in the hash calculation
     '''
     _hash = hashlib.md5()
     with salt.utils.fopen(fname, 'rb') as f:
         for chunk in iter(lambda: f.read(4096), b''):
             _hash.update(chunk)
+
+    for extra_arg in args:
+        _hash.update(six.b(str(extra_arg)))
     return _hash.hexdigest()
 
 
@@ -421,7 +457,7 @@ def _name_matches(name, matches):
     for m in matches:
         if name.endswith(m):
             return True
-        if name.lower().endswith('_'+m.lower()):
+        if name.lower().endswith('_' + m.lower()):
             return True
         if name.lower() == m.lower():
             return True
@@ -502,79 +538,77 @@ class _Swagger(object):
     JSON_SCHEMA_DRAFT_4 = 'http://json-schema.org/draft-04/schema#'
 
     # AWS integration templates for normal and options methods
-    REQUEST_TEMPLATE = {'application/json':
-                        '#set($inputRoot = $input.path(\'$\'))\n'
-                        '{\n'
-                        '"header_params" : {\n'
-                        '#set ($map = $input.params().header)\n'
-                        '#foreach( $param in $map.entrySet() )\n'
-                        '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
-                        '#end\n'
-                        '},\n'
-                        '"query_params" : {\n'
-                        '#set ($map = $input.params().querystring)\n'
-                        '#foreach( $param in $map.entrySet() )\n'
-                        '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
-                        '#end\n'
-                        '},\n'
-                        '"path_params" : {\n'
-                        '#set ($map = $input.params().path)\n'
-                        '#foreach( $param in $map.entrySet() )\n'
-                        '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
-                        '#end\n'
-                        '},\n'
-                        '"apigw_context" : {\n'
-                        '"apiId": "$context.apiId",\n'
-                        '"httpMethod": "$context.httpMethod",\n'
-                        '"requestId": "$context.requestId",\n'
-                        '"resourceId": "$context.resourceId",\n'
-                        '"resourcePath": "$context.resourcePath",\n'
-                        '"stage": "$context.stage",\n'
-                        '"identity": {\n'
-                        '  "user":"$context.identity.user",\n'
-                        '  "userArn":"$context.identity.userArn",\n'
-                        '  "userAgent":"$context.identity.userAgent",\n'
-                        '  "sourceIp":"$context.identity.sourceIp",\n'
-                        '  "cognitoIdentityId":"$context.identity.cognitoIdentityId",\n'
-                        '  "cognitoIdentityPoolId":"$context.identity.cognitoIdentityPoolId",\n'
-                        '  "cognitoAuthenticationType":"$context.identity.cognitoAuthenticationType",\n'
-                        '  "cognitoAuthenticationProvider":["$util.escapeJavaScript($context.identity.cognitoAuthenticationProvider)"],\n'
-                        '  "caller":"$context.identity.caller",\n'
-                        '  "apiKey":"$context.identity.apiKey",\n'
-                        '  "accountId":"$context.identity.accountId"\n'
-                        '}\n'
-                        '},\n'
-                        '"body_params" : $input.json(\'$\'),\n'
-                        '"stage_variables": {\n'
-                        '#foreach($variable in $stageVariables.keySet())\n'
-                        '"$variable": "$util.escapeJavaScript($stageVariables.get($variable))"\n'
-                        '#if($foreach.hasNext), #end\n'
-                        '#end\n'
-                        '}\n'
-                        '}'}
+    REQUEST_TEMPLATE = {'application/json': '#set($inputRoot = $input.path(\'$\'))\n'
+                                            '{\n'
+                                            '"header_params" : {\n'
+                                            '#set ($map = $input.params().header)\n'
+                                            '#foreach( $param in $map.entrySet() )\n'
+                                            '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
+                                            '#end\n'
+                                            '},\n'
+                                            '"query_params" : {\n'
+                                            '#set ($map = $input.params().querystring)\n'
+                                            '#foreach( $param in $map.entrySet() )\n'
+                                            '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
+                                            '#end\n'
+                                            '},\n'
+                                            '"path_params" : {\n'
+                                            '#set ($map = $input.params().path)\n'
+                                            '#foreach( $param in $map.entrySet() )\n'
+                                            '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
+                                            '#end\n'
+                                            '},\n'
+                                            '"apigw_context" : {\n'
+                                            '"apiId": "$context.apiId",\n'
+                                            '"httpMethod": "$context.httpMethod",\n'
+                                            '"requestId": "$context.requestId",\n'
+                                            '"resourceId": "$context.resourceId",\n'
+                                            '"resourcePath": "$context.resourcePath",\n'
+                                            '"stage": "$context.stage",\n'
+                                            '"identity": {\n'
+                                            '  "user":"$context.identity.user",\n'
+                                            '  "userArn":"$context.identity.userArn",\n'
+                                            '  "userAgent":"$context.identity.userAgent",\n'
+                                            '  "sourceIp":"$context.identity.sourceIp",\n'
+                                            '  "cognitoIdentityId":"$context.identity.cognitoIdentityId",\n'
+                                            '  "cognitoIdentityPoolId":"$context.identity.cognitoIdentityPoolId",\n'
+                                            '  "cognitoAuthenticationType":"$context.identity.cognitoAuthenticationType",\n'
+                                            '  "cognitoAuthenticationProvider":["$util.escapeJavaScript($context.identity.cognitoAuthenticationProvider)"],\n'
+                                            '  "caller":"$context.identity.caller",\n'
+                                            '  "apiKey":"$context.identity.apiKey",\n'
+                                            '  "accountId":"$context.identity.accountId"\n'
+                                            '}\n'
+                                            '},\n'
+                                            '"body_params" : $input.json(\'$\'),\n'
+                                            '"stage_variables": {\n'
+                                            '#foreach($variable in $stageVariables.keySet())\n'
+                                            '"$variable": "$util.escapeJavaScript($stageVariables.get($variable))"\n'
+                                            '#if($foreach.hasNext), #end\n'
+                                            '#end\n'
+                                            '}\n'
+                                            '}'}
     REQUEST_OPTION_TEMPLATE = {'application/json': '{"statusCode": 200}'}
 
     # AWS integration response template mapping to convert stackTrace part or the error
     # to a uniform format containing strings only. Swagger does not seem to allow defining
     # an array of non-uniform types, to it is not possible to create error model to match
     # exactly what comes out of lambda functions in case of error.
-    RESPONSE_TEMPLATE = {'application/json':
-                         '#set($inputRoot = $input.path(\'$\'))\n'
-                         '{\n'
-                         '  "errorMessage" : "$inputRoot.errorMessage",\n'
-                         '  "errorType" : "$inputRoot.errorType",\n'
-                         '  "stackTrace" : [\n'
-                         '#foreach($stackTrace in $inputRoot.stackTrace)\n'
-                         '    [\n'
-                         '#foreach($elem in $stackTrace)\n'
-                         '      "$elem"\n'
-                         '#if($foreach.hasNext),#end\n'
-                         '#end\n'
-                         '    ]\n'
-                         '#if($foreach.hasNext),#end\n'
-                         '#end\n'
-                         '  ]\n'
-                         '}'}
+    RESPONSE_TEMPLATE = {'application/json': '#set($inputRoot = $input.path(\'$\'))\n'
+                                             '{\n'
+                                             '  "errorMessage" : "$inputRoot.errorMessage",\n'
+                                             '  "errorType" : "$inputRoot.errorType",\n'
+                                             '  "stackTrace" : [\n'
+                                             '#foreach($stackTrace in $inputRoot.stackTrace)\n'
+                                             '    [\n'
+                                             '#foreach($elem in $stackTrace)\n'
+                                             '      "$elem"\n'
+                                             '#if($foreach.hasNext),#end\n'
+                                             '#end\n'
+                                             '    ]\n'
+                                             '#if($foreach.hasNext),#end\n'
+                                             '#end\n'
+                                             '  ]\n'
+                                             '}'}
     RESPONSE_OPTION_TEMPLATE = {}
 
     # This string should not be modified, every API created by this state will carry the description
@@ -637,6 +671,7 @@ class _Swagger(object):
         '''
         Helper class for Swagger Method Response Object
         '''
+
         def __init__(self, r):
             self._r = r
 
@@ -662,20 +697,27 @@ class _Swagger(object):
             return _headers
 
     def __init__(self, api_name, stage_name, lambda_funcname_format,
-                 swagger_file_path, common_aws_args):
+                 swagger_file_path, error_response_template, response_template, common_aws_args):
         self._api_name = api_name
         self._stage_name = stage_name
         self._lambda_funcname_format = lambda_funcname_format
         self._common_aws_args = common_aws_args
         self._restApiId = ''
         self._deploymentId = ''
+        self._error_response_template = error_response_template
+        self._response_template = response_template
 
         if swagger_file_path is not None:
             if os.path.exists(swagger_file_path) and os.path.isfile(swagger_file_path):
                 self._swagger_file = swagger_file_path
-                self._md5_filehash = _gen_md5_filehash(self._swagger_file)
+                self._md5_filehash = _gen_md5_filehash(self._swagger_file,
+                                                       error_response_template,
+                                                       response_template)
                 with salt.utils.fopen(self._swagger_file, 'rb') as sf:
-                    self._cfg = yaml.load(sf)
+                    self._cfg = yaml.load(
+                        sf,
+                        Loader=SaltYamlSafeLoader
+                    )
                 self._swagger_version = ''
             else:
                 raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
@@ -738,6 +780,10 @@ class _Swagger(object):
                                          'be used'.format(modelname))
 
     def _validate_lambda_funcname_format(self):
+        '''
+        Checks if the lambda function name format contains only known elements
+        :return: True on success, ValueError raised on error
+        '''
         try:
             if self._lambda_funcname_format:
                 known_kwargs = dict(stage='',
@@ -1436,6 +1482,15 @@ class _Swagger(object):
         patterns = self._find_patterns(model)
         return patterns[0] if patterns else defaultPattern
 
+    def _get_response_template(self, method_name, http_status):
+        if method_name == 'options' or not self._is_http_error_rescode(http_status):
+            response_templates = {'application/json': self._response_template} \
+                if self._response_template else self.RESPONSE_OPTION_TEMPLATE
+        else:
+            response_templates = {'application/json': self._error_response_template} \
+                if self._error_response_template else self.RESPONSE_TEMPLATE
+        return response_templates
+
     def _parse_method_response(self, method_name, method_response, httpStatus):
         '''
         Helper function to construct the method response params, models, and integration_params
@@ -1456,10 +1511,7 @@ class _Swagger(object):
             method_integration_response_params[response_header] = (
                 "'{0}'".format(header_data.get('default')) if 'default' in header_data else "'*'")
 
-        if method_name == 'options' or not self._is_http_error_rescode(httpStatus):
-            response_templates = _Swagger.RESPONSE_OPTION_TEMPLATE
-        else:
-            response_templates = _Swagger.RESPONSE_TEMPLATE
+        response_templates = self._get_response_template(method_name, httpStatus)
 
         return {'params': method_response_params,
                 'models': method_response_models,
@@ -1551,27 +1603,27 @@ class _Swagger(object):
                                                               _Swagger.SwaggerMethodResponse(response_data), httpStatus)
 
                 mr = __salt__['boto_apigateway.create_api_method_response'](
-                                                                restApiId=self.restApiId,
-                                                                resourcePath=resource_path,
-                                                                httpMethod=method_name.upper(),
-                                                                statusCode=httpStatus,
-                                                                responseParameters=method_response.get('params'),
-                                                                responseModels=method_response.get('models'),
-                                                                **self._common_aws_args)
+                    restApiId=self.restApiId,
+                    resourcePath=resource_path,
+                    httpMethod=method_name.upper(),
+                    statusCode=httpStatus,
+                    responseParameters=method_response.get('params'),
+                    responseModels=method_response.get('models'),
+                    **self._common_aws_args)
                 if not mr.get('created'):
                     ret = _log_error_and_abort(ret, mr)
                     return ret
                 ret = _log_changes(ret, '_deploy_method.create_api_method_response', mr)
 
                 mir = __salt__['boto_apigateway.create_api_integration_response'](
-                                                restApiId=self.restApiId,
-                                                resourcePath=resource_path,
-                                                httpMethod=method_name.upper(),
-                                                statusCode=httpStatus,
-                                                selectionPattern=method_response.get('pattern'),
-                                                responseParameters=method_response.get('integration_params'),
-                                                responseTemplates=method_response.get('response_templates'),
-                                                **self._common_aws_args)
+                    restApiId=self.restApiId,
+                    resourcePath=resource_path,
+                    httpMethod=method_name.upper(),
+                    statusCode=httpStatus,
+                    selectionPattern=method_response.get('pattern'),
+                    responseParameters=method_response.get('integration_params'),
+                    responseTemplates=method_response.get('response_templates'),
+                    **self._common_aws_args)
                 if not mir.get('created'):
                     ret = _log_error_and_abort(ret, mir)
                     return ret
@@ -1617,9 +1669,12 @@ class _Swagger(object):
         return ret
 
 
-def usage_plan_present(name, plan_name, description=None, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
+def usage_plan_present(name, plan_name, description=None, throttle=None, quota=None, region=None, key=None, keyid=None,
+                       profile=None):
     '''
     Ensure the spcifieda usage plan with the corresponding metrics is deployed
+
+    .. versionadded:: 2017.7.0
 
     name
         name of the state
@@ -1651,19 +1706,18 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
             [Required] period to which quota applies. Must be DAY, WEEK or MONTH
 
     .. code-block:: yaml
-        UsagePlanPresent:
-            boto_apigateway.usage_plan_present:
-                - plan_name: my_usage_plan
-                - throttle:
-                    rateLimit: 70
-                    burstLimit: 100
-                - quota:
-                    limit: 1000
-                    offset: 0
-                    period: DAY
-                - profile: my_profile
 
-    .. versionadded:: Carbon
+        UsagePlanPresent:
+          boto_apigateway.usage_plan_present:
+            - plan_name: my_usage_plan
+            - throttle:
+                rateLimit: 70
+                burstLimit: 100
+            - quota:
+                limit: 1000
+                offset: 0
+                period: DAY
+            - profile: my_profile
 
     '''
     func_params = locals()
@@ -1760,6 +1814,8 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
     '''
     Ensures usage plan identified by name is no longer present
 
+    .. versionadded:: 2017.7.0
+
     name
         name of the state
 
@@ -1767,12 +1823,11 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
         name of the plan to remove
 
     .. code-block:: yaml
-        usage plan absent:
-            boto_apigateway.usage_plan_absent:
-                - plan_name: my_usage_plan
-                - profile: my_profile
 
-    .. versionadded:: Carbon
+        usage plan absent:
+          boto_apigateway.usage_plan_absent:
+            - plan_name: my_usage_plan
+            - profile: my_profile
 
     '''
     ret = {'name': name,
@@ -1825,6 +1880,8 @@ def usage_plan_association_present(name, plan_name, api_stages, region=None, key
     '''
     Ensures usage plan identified by name is added to provided api_stages
 
+    .. versionadded:: 2017.7.0
+
     name
         name of the state
 
@@ -1841,6 +1898,7 @@ def usage_plan_association_present(name, plan_name, api_stages, region=None, key
             stage name of the api to attach usage plan to
 
     .. code-block:: yaml
+
         UsagePlanAssociationPresent:
           boto_apigateway.usage_plan_association_present:
             - plan_name: my_plan
@@ -1850,8 +1908,6 @@ def usage_plan_association_present(name, plan_name, api_stages, region=None, key
               - apiId: l9v7o2aj90
                 stage: my_stage
             - profile: my_profile
-
-    .. versionadded:: Carbon
 
     '''
     ret = {'name': name,
@@ -1896,7 +1952,9 @@ def usage_plan_association_present(name, plan_name, api_stages, region=None, key
 
         result = __salt__['boto_apigateway.attach_usage_plan_to_apis'](plan_id, stages_to_add, **common_args)
         if 'error' in result:
-            ret['comment'] = 'Failed to associate a usage plan {0} to the apis {1}, {2}'.format(plan_name, stages_to_add, result['error'])
+            ret['comment'] = 'Failed to associate a usage plan {0} to the apis {1}, {2}'.format(plan_name,
+                                                                                                stages_to_add,
+                                                                                                result['error'])
             ret['result'] = False
             return ret
 
@@ -1915,7 +1973,9 @@ def usage_plan_association_absent(name, plan_name, api_stages, region=None, key=
     '''
     Ensures usage plan identified by name is removed from provided api_stages
     If a plan is associated to stages not listed in api_stages parameter,
-    those associations remain intact
+    those associations remain intact.
+
+    .. versionadded:: 2017.7.0
 
     name
         name of the state
@@ -1933,6 +1993,7 @@ def usage_plan_association_absent(name, plan_name, api_stages, region=None, key=
             stage name of the api to detach usage plan from
 
     .. code-block:: yaml
+
         UsagePlanAssociationAbsent:
           boto_apigateway.usage_plan_association_absent:
             - plan_name: my_plan
@@ -1942,8 +2003,6 @@ def usage_plan_association_absent(name, plan_name, api_stages, region=None, key=
               - apiId: l9v7o2aj90
                 stage: my_stage
             - profile: my_profile
-
-    .. versionadded:: Carbon
 
     '''
     ret = {'name': name,
@@ -1992,7 +2051,9 @@ def usage_plan_association_absent(name, plan_name, api_stages, region=None, key=
 
         result = __salt__['boto_apigateway.detach_usage_plan_from_apis'](plan_id, stages_to_remove, **common_args)
         if 'error' in result:
-            ret['comment'] = 'Failed to disassociate a usage plan {0} from the apis {1}, {2}'.format(plan_name, stages_to_remove, result['error'])
+            ret['comment'] = 'Failed to disassociate a usage plan {0} from the apis {1}, {2}'.format(plan_name,
+                                                                                                     stages_to_remove,
+                                                                                                     result['error'])
             ret['result'] = False
             return ret
 

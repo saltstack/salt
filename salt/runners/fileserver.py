@@ -36,12 +36,12 @@ def envs(backend=None, sources=False):
         salt-run fileserver.envs git
     '''
     fileserver = salt.fileserver.Fileserver(__opts__)
-    return fileserver.envs(back=backend, sources=sources)
+    return sorted(fileserver.envs(back=backend, sources=sources))
 
 
 def clear_file_list_cache(saltenv=None, backend=None):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     The Salt fileserver caches the files/directories/symlinks for each
     fileserver backend and environment as they are requested. This is done to

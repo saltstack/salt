@@ -11,6 +11,7 @@ To use this commit parser script pipe git log into the stdin:
 
     git log | committer_parser.py -c -
 '''
+# pylint: disable=resource-leakage
 
 # Import python libs
 from __future__ import absolute_import

@@ -4,6 +4,12 @@ Connection module for Amazon IoT
 
 .. versionadded:: 2016.3.0
 
+:depends:
+    - boto
+    - boto3
+
+The dependencies listed above can be installed via package or pip.
+
 :configuration: This module accepts explicit Lambda credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
@@ -39,8 +45,6 @@ Connection module for Amazon IoT
           key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
           region: us-east-1
 
-:depends: boto3
-
 '''
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
@@ -50,18 +54,17 @@ from __future__ import absolute_import
 import logging
 import json
 import datetime
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
-from salt.ext.six import string_types
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
-
+from salt.ext.six import string_types
 # pylint: disable=import-error
 try:
     #pylint: disable=unused-import
@@ -114,13 +117,13 @@ def thing_type_exists(thingTypeName,
     Returns True if the given thing type exists and returns False if the
     given thing type does not exist.
 
+    .. versionadded:: 2016.11.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_iot.thing_type_exists mythingtype
-
-    .. versionadded:: Carbon
 
     '''
 
@@ -145,13 +148,13 @@ def describe_thing_type(thingTypeName,
 
     Returns a dictionary of interesting properties.
 
+    .. versionadded:: 2016.11.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_iot.describe_thing_type mythingtype
-
-    .. versionadded:: Carbon
 
     '''
     try:
@@ -184,14 +187,14 @@ def create_thing_type(thingTypeName, thingTypeDescription,
     Returns {created: true} if the thing type was created and returns
     {created: False} if the thing type was not created.
 
+    .. versionadded:: 2016.11.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_iot.create_thing_type mythingtype \\
               thingtype_description_string '["searchable_attr_1", "searchable_attr_2"]'
-
-    .. versionadded:: Carbon
 
     '''
 
@@ -226,13 +229,13 @@ def deprecate_thing_type(thingTypeName, undoDeprecate=False,
     Returns {deprecated: true} if the thing type was deprecated and returns
     {deprecated: false} if the thing type was not deprecated.
 
+    .. versionadded:: 2016.11.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_iot.deprecate_thing_type mythingtype
-
-    .. versionadded:: Carbon
 
     '''
 
@@ -256,13 +259,13 @@ def delete_thing_type(thingTypeName,
     Returns {deleted: true} if the thing type was deleted and returns
     {deleted: false} if the thing type was not deleted.
 
+    .. versionadded:: 2016.11.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_iot.delete_thing_type mythingtype
-
-    .. versionadded:: Carbon
 
     '''
 

@@ -113,11 +113,10 @@ two examples `ls -la` is the `name` argument.
 
 Finally, a :ref:`requisite-declaration` object with its
 :ref:`requisite-reference`'s can be created by invoking one of the
-requisite methods (see :doc:`State Requisites
-</ref/states/requisites>`) on either a :ref:`function-declaration`
-object or a :ref:`state-declaration` object. The return value of a
-requisite call is also a :ref:`function-declaration` object, so you
-can chain several requisite calls together.
+requisite methods (see :ref:`State Requisites <requisites>`) on either a
+:ref:`function-declaration` object or a :ref:`state-declaration` object.
+The return value of a requisite call is also a :ref:`function-declaration`
+object, so you can chain several requisite calls together.
 
 Arguments to a requisite call can be a list of :ref:`state-declaration` objects
 and/or a set of keyword arguments whose names are state modules and values are
@@ -286,7 +285,7 @@ sls module as if it was never defined.
 
 Integration with the stateconf renderer
 -----------------------------------------
-The :doc:`salt.renderers.stateconf` renderer offers a few interesting features that
+The :mod:`salt.renderers.stateconf` renderer offers a few interesting features that
 can be leveraged by the `pydsl` renderer. In particular, when using with the `pydsl`
 renderer, we are interested in `stateconf`'s sls namespacing feature (via dot-prefixed
 id declarations), as well as, the automatic `start` and `goal` states generation.

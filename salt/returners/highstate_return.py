@@ -3,6 +3,8 @@
 Return the results of a highstate (or any other state function that returns
 data in a compatible format) via an HTML email or HTML file.
 
+.. versionadded:: 2017.7.0
+
 Similar results can be achieved by using smtp returner with a custom template,
 except an attempt at writing such a template for the complex data structure
 returned by highstate function had proven to be a challenge, not to mention
@@ -79,14 +81,15 @@ from __future__ import absolute_import, print_function
 
 import logging
 import json
-import StringIO
 import smtplib
 import cgi
 from email.mime.text import MIMEText
 
 import yaml
 from salt.ext.six.moves import range
+from salt.ext.six.moves import StringIO
 
+import salt.utils
 import salt.returners
 
 log = logging.getLogger(__name__)
@@ -421,12 +424,12 @@ def _produce_output(report, failed, setup):
     if report_format == 'json':
         report_text = json.dumps(report)
     elif report_format == 'yaml':
-        string_file = StringIO.StringIO()
+        string_file = StringIO()
         yaml.safe_dump(report, string_file, default_flow_style=False)
         string_file.seek(0)
         report_text = string_file.read()
     else:
-        string_file = StringIO.StringIO()
+        string_file = StringIO()
         _generate_html(report, string_file)
         string_file.seek(0)
         report_text = string_file.read()
@@ -437,7 +440,7 @@ def _produce_output(report, failed, setup):
 
     if report_delivery == 'file':
         output_file = _sprinkle(setup.get('file_output', '/tmp/test.rpt'))
-        with open(output_file, 'w') as out:
+        with salt.utils.fopen(output_file, 'w') as out:
             out.write(report_text)
     else:
         msg = MIMEText(report_text, report_format)
@@ -487,16 +490,16 @@ def __test_html():
         report_delivery: file
         file_output: '/srv/salt/_returners/test.rpt'
     '''
-    with open('test.rpt', 'r') as input_file:
+    with salt.utils.fopen('test.rpt', 'r') as input_file:
         data_text = input_file.read()
     data = yaml.safe_load(data_text)
 
-    string_file = StringIO.StringIO()
+    string_file = StringIO()
     _generate_html(data, string_file)
     string_file.seek(0)
     result = string_file.read()
 
-    with open('test.html', 'w') as output:
+    with salt.utils.fopen('test.html', 'w') as output:
         output.write(result)
 
 
