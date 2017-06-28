@@ -205,6 +205,9 @@ VALID_OPTS = {
     # The directory containing unix sockets for things like the event bus
     'sock_dir': str,
 
+    # The pool size of unix sockets, it is necessary to avoid blocking waiting for zeromq and tcp communications.
+    'sock_pool_size': int,
+
     # Specifies how the file server should backup files, if enabled. The backups
     # live in the cache dir.
     'backup_mode': str,
@@ -1088,6 +1091,7 @@ DEFAULT_MINION_OPTS = {
     'grains_deep_merge': False,
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'minion'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
+    'sock_pool_size': 1,
     'backup_mode': '',
     'renderer': 'yaml_jinja',
     'renderer_whitelist': [],
@@ -1332,6 +1336,7 @@ DEFAULT_MASTER_OPTS = {
     'user': _MASTER_USER,
     'worker_threads': 5,
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'master'),
+    'sock_pool_size': 1,
     'ret_port': 4506,
     'timeout': 5,
     'keep_jobs': 24,
@@ -2268,6 +2273,7 @@ def syndic_config(master_config_path,
         'sock_dir': os.path.join(
             opts['cachedir'], opts.get('syndic_sock_dir', opts['sock_dir'])
         ),
+        'sock_pool_size': master_opts['sock_pool_size'],
         'cachedir': master_opts['cachedir'],
     }
     opts.update(syndic_opts)
