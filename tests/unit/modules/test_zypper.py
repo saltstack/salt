@@ -617,7 +617,6 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                                                                    'creation_date_time': '2009-02-13T23:31:30'}},
                                                    'old': ''}})
 
-
     @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))
     @patch('salt.modules.zypper.list_downloaded',
            MagicMock(return_value={'vim': {'1.1': {'path': '/foo/bar/test.rpm',
