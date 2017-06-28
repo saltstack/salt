@@ -72,6 +72,7 @@ import logging
 
 # Import 3rd-party libs
 # pylint: disable=no-name-in-module,import-error
+from salt.ext.six import string_types as _string_types
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext.six.moves.urllib.request import (
     urlopen as _urlopen,
@@ -176,7 +177,7 @@ def _auth(uri):
     return _build_opener(basic, digest)
 
 
-def _extract_war_version(war):
+def extract_war_version(war):
     '''
     Extract the version from the war file name.  There does not seem to be a
     standard for encoding the version into the `war file name
@@ -526,7 +527,7 @@ def deploy_war(war,
                saltenv='base',
                timeout=180,
                temp_war_location=None,
-               version=''):
+               version=True):
     '''
     Deploy a WAR file
 
@@ -607,11 +608,11 @@ def deploy_war(war,
     }
 
     # If parallel versions are desired or not disabled
-    if version is True:
+    if version:
         # Set it to defined version or attempt extract
-        version = version or _extract_war_version(war)
+        version = extract_war_version(war) if version is True else version
 
-        if version != ('' or None):
+        if isinstance(version, _string_types):
             # Only pass version to Tomcat if not undefined
             opts['version'] = version
 

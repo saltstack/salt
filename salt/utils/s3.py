@@ -30,7 +30,8 @@ def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
           path='', return_bin=False, action=None, local_file=None,
           verify_ssl=True, full_headers=False, kms_keyid=None,
-          location=None, role_arn=None, chunk_size=16384):
+          location=None, role_arn=None, chunk_size=16384, path_style=False,
+          https_enable=True):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -54,9 +55,19 @@ def query(key, keyid, method='GET', params=None, headers=None,
     The service_url will form the basis for the final endpoint that is used to
     query the service.
 
+    Path style can be enabled:
+
+        s3.path_style: True
+
+    This can be useful if you need to use salt with a proxy for an s3 compatible storage
+
+    You can use either https protocol or http protocol:
+
+        s3.https_enable: True
+
     SSL verification may also be turned off in the configuration:
 
-    s3.verify_ssl: False
+        s3.verify_ssl: False
 
     This is required if using S3 bucket names that contain a period, as
     these will not match Amazon's S3 wildcard certificates. Certificate
@@ -81,10 +92,13 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not service_url:
         service_url = 's3.amazonaws.com'
 
-    if bucket:
-        endpoint = '{0}.{1}'.format(bucket, service_url)
-    else:
+    if not bucket or path_style:
         endpoint = service_url
+    else:
+        endpoint = '{0}.{1}'.format(bucket, service_url)
+
+    if path_style and bucket:
+        path = '{0}/{1}'.format(bucket, path)
 
     # Try grabbing the credentials from the EC2 instance IAM metadata if available
     if not key:
@@ -98,7 +112,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         headers['x-amz-server-side-encryption-aws-kms-key-id'] = kms_keyid
 
     if not location:
-        location = __utils__['aws.get_location']()
+        location = salt.utils.aws.get_location()
 
     data = ''
     payload_hash = None
@@ -110,7 +124,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         path = ''
 
     if not requesturl:
-        requesturl = 'https://{0}/{1}'.format(endpoint, path)
+        requesturl = (('https' if https_enable else 'http')+'://{0}/{1}').format(endpoint, path)
         headers, requesturl = salt.utils.aws.sig4(
             method,
             endpoint,
@@ -133,37 +147,38 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not data:
         data = None
 
-    response = None
-    if method == 'PUT':
-        if local_file:
-            data = salt.utils.fopen(local_file, 'r')
-        result = requests.request(method,
-                                  requesturl,
-                                  headers=headers,
-                                  data=data,
-                                  verify=verify_ssl,
-                                  stream=True)
-        response = result.content
-    elif method == 'GET' and local_file and not return_bin:
-        result = requests.request(method,
-                                  requesturl,
-                                  headers=headers,
-                                  data=data,
-                                  verify=verify_ssl,
-                                  stream=True)
-    else:
-        result = requests.request(method,
-                                  requesturl,
-                                  headers=headers,
-                                  data=data,
-                                  verify=verify_ssl)
-        response = result.content
+    try:
+        if method == 'PUT':
+            if local_file:
+                data = salt.utils.fopen(local_file, 'r')  # pylint: disable=resource-leakage
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl,
+                                      stream=True)
+        elif method == 'GET' and local_file and not return_bin:
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl,
+                                      stream=True)
+        else:
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl)
+    finally:
+        if data is not None:
+            data.close()
 
     err_code = None
     err_msg = None
     if result.status_code >= 400:
         # On error the S3 API response should contain error message
-        err_text = response or result.content or 'Unknown error'
+        err_text = result.content or 'Unknown error'
         log.debug('    Response content: {0}'.format(err_text))
 
         # Try to get err info from response xml
@@ -229,10 +244,10 @@ def query(key, keyid, method='GET', params=None, headers=None,
 
     # This can be used to return a binary object wholesale
     if return_bin:
-        return response
+        return result.content
 
-    if response:
-        items = ET.fromstring(response)
+    if result.content:
+        items = ET.fromstring(result.content)
 
         ret = []
         for item in items:

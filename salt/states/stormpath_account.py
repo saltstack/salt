@@ -54,10 +54,16 @@ def present(name, **kwargs):
         Optional. Must be specified as a dict.
     '''
     # Because __opts__ is not available outside of functions
-    if __opts__.get('requests_lib', False):
+    backend = __opts__.get('backend', False)
+    if not backend:
+        backend = 'requests'
+
+    if backend == 'requests':
         from requests.exceptions import HTTPError
-    else:
+    elif backend == 'urrlib2':
         from urllib2 import HTTPError
+    else:
+        from tornado.httpclient import HTTPError
 
     ret = {'name': name,
            'changes': {},
@@ -72,7 +78,7 @@ def present(name, **kwargs):
         pass
     needs_update = {}
     if info.get('email', False):
-        for field in kwargs.keys():
+        for field in kwargs:
             if info.get(field, None) != kwargs[field]:
                 needs_update[field] = kwargs[field]
         del needs_update['directory_id']
@@ -136,10 +142,16 @@ def absent(name, directory_id=None):
         performance of this state.
     '''
     # Because __opts__ is not available outside of functions
-    if __opts__.get('requests_lib', False):
+    backend = __opts__.get('backend', False)
+    if not backend:
+        backend = 'requests'
+
+    if backend == 'requests':
         from requests.exceptions import HTTPError
-    else:
+    elif backend == 'urrlib2':
         from urllib2 import HTTPError
+    else:
+        from tornado.httpclient import HTTPError
 
     ret = {'name': name,
            'changes': {},

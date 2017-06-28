@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Installing of certificates to the Windows Certificate Manager
-=======================
+=============================================================
 
 Install certificates to the Windows Certificate Manager
 

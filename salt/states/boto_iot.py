@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 '''
 Manage IoT Objects
-=================
+==================
 
 .. versionadded:: 2016.3.0
 
 Create and destroy IoT objects. Be aware that this interacts with Amazon's services,
 and so may incur charges.
 
-This module uses ``boto3``, which can be installed via package, or pip.
+:depends:
+    - boto
+    - boto3
+
+The dependencies listed above can be installed via package or pip.
 
 This module accepts explicit vpc credentials but can also utilize
 IAM roles assigned to the instance through Instance Profiles. Dynamic
@@ -96,6 +100,8 @@ def thing_type_present(name, thingTypeName, thingTypeDescription,
     '''
     Ensure thing type exists.
 
+    .. versionadded:: 2016.11.0
+
     name
         The name of the state definition
 
@@ -121,8 +127,6 @@ def thing_type_present(name, thingTypeName, thingTypeDescription,
     profile
         A dict with region, key, keyid, or a pillar key (string) that
         contains a dict with region, key, and keyid
-
-    .. versionadded:: Carbon
 
     '''
     ret = {
@@ -179,6 +183,8 @@ def thing_type_absent(name, thingTypeName,
     '''
     Ensure thing type with passed properties is absent.
 
+    .. versionadded:: 2016.11.0
+
     name
         The name of the state definition.
 
@@ -197,8 +203,6 @@ def thing_type_absent(name, thingTypeName,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-
-    .. versionadded:: Carbon
 
     '''
 

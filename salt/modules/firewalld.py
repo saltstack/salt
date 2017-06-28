@@ -73,7 +73,7 @@ def reload_rules():
     Reload the firewall rules, which makes the permanent configuration the new
     runtime configuration without losing state information.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -438,7 +438,7 @@ def add_service_port(service, port):
     '''
     Add a new port to the specified service.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -457,7 +457,7 @@ def remove_service_port(service, port):
     '''
     Remove a port from the specified service.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -476,7 +476,7 @@ def get_service_ports(service):
     '''
     List ports of a service.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -492,7 +492,7 @@ def add_service_protocol(service, protocol):
     '''
     Add a new protocol to the specified service.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -509,7 +509,7 @@ def remove_service_protocol(service, protocol):
     '''
     Remove a protocol from the specified service.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -526,7 +526,7 @@ def get_service_protocols(service):
     '''
     List protocols of a service.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -994,7 +994,7 @@ def get_rich_rules(zone, permanent=True):
     '''
     List rich rules bound to a zone
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -1014,7 +1014,7 @@ def add_rich_rule(zone, rule, permanent=True):
     '''
     Add a rich rule to a zone
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -1034,7 +1034,7 @@ def remove_rich_rule(zone, rule, permanent=True):
     '''
     Add a rich rule to a zone
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 

@@ -79,6 +79,8 @@ def _create_rpmmacros():
     with salt.utils.fopen(rpmmacros, 'w') as afile:
         afile.write('%_topdir {0}\n'.format(rpmbuilddir))
         afile.write('%signature gpg\n')
+        afile.write('%_source_filedigest_algorithm 8\n')
+        afile.write('%_binary_filedigest_algorithm 8\n')
         afile.write('%_gpg_name packaging@saltstack.com\n')
 
 
@@ -123,10 +125,12 @@ def _get_distset(tgt):
     '''
     Get the distribution string for use with rpmbuild and mock
     '''
-    # Centos adds that string to rpm names, removing that to have
-    # consistent naming on Centos and Redhat
+    # Centos adds 'centos' string to rpm names, removing that to have
+    # consistent naming on Centos and Redhat, and allow for Amazon naming
     tgtattrs = tgt.split('-')
-    if tgtattrs[1] in ['5', '6', '7']:
+    if tgtattrs[0] == 'amzn':
+        distset = '--define "dist .{0}1"'.format(tgtattrs[0])
+    elif tgtattrs[1] in ['6', '7']:
         distset = '--define "dist .el{0}"'.format(tgtattrs[1])
     else:
         distset = ''
@@ -154,7 +158,7 @@ def _get_deps(deps, tree_base, saltenv='base'):
         else:
             shutil.copy(deprpm, dest)
 
-        deps_list += ' --install {0}'.format(dest)
+        deps_list += ' {0}'.format(dest)
 
     return deps_list
 
@@ -171,6 +175,13 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
 
     This example command should build the libnacl SOURCE package and place it in
     /var/www/html/ on the minion
+
+    .. versionchanged:: 2017.7.0
+
+    .. note::
+
+        using SHA256 as digest and minimum level dist el6
+
     '''
     _create_rpmmacros()
     tree_base = _mk_tree()
@@ -180,8 +191,8 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     for src in sources:
         _get_src(tree_base, src, saltenv)
 
-    # make source rpms for dist el5, usable with mock on other dists
-    cmd = 'rpmbuild --define "_topdir {0}" -bs --define "_source_filedigest_algorithm md5" --define "_binary_filedigest_algorithm md5" --define "dist .el5" {1}'.format(tree_base, spec_path)
+    # make source rpms for dist el6 with SHA256, usable with mock on other dists
+    cmd = 'rpmbuild --verbose --define "_topdir {0}" -bs --define "dist .el6" {1}'.format(tree_base, spec_path)
     __salt__['cmd.run'](cmd)
     srpms = os.path.join(tree_base, 'SRPMS')
     ret = []
@@ -239,10 +250,6 @@ def build(runas,
     noclean = ''
     deps_dir = tempfile.mkdtemp()
     deps_list = _get_deps(deps, deps_dir, saltenv)
-    if deps_list and not deps_list.isspace():
-        cmd = 'mock --root={0} {1}'.format(tgt, deps_list)
-        __salt__['cmd.run'](cmd, runas=runas)
-        noclean += ' --no-clean'
 
     for srpm in srpms:
         dbase = os.path.dirname(srpm)
@@ -250,6 +257,13 @@ def build(runas,
         try:
             __salt__['cmd.run']('chown {0} -R {1}'.format(runas, dbase))
             __salt__['cmd.run']('chown {0} -R {1}'.format(runas, results_dir))
+            cmd = 'mock --root={0} --resultdir={1} --init'.format(tgt, results_dir)
+            __salt__['cmd.run'](cmd, runas=runas)
+            if deps_list and not deps_list.isspace():
+                cmd = 'mock --root={0} --resultdir={1} --install {2} {3}'.format(tgt, results_dir, deps_list, noclean)
+                __salt__['cmd.run'](cmd, runas=runas)
+                noclean += ' --no-clean'
+
             cmd = 'mock --root={0} --resultdir={1} {2} {3} {4}'.format(
                 tgt,
                 results_dir,
@@ -425,7 +439,8 @@ def make_repo(repodir,
 
         except SaltInvocationError:
             raise SaltInvocationError(
-                'Public and Private key files associated with Pillar data and \'keyid\' {0} could not be found'
+                'Public and Private key files associated with Pillar data and \'keyid\' '
+                '{0} could not be found'
                 .format(keyid)
             )
 
@@ -440,14 +455,17 @@ def make_repo(repodir,
 
         if local_keyid is None:
             raise SaltInvocationError(
-                '\'keyid\' was not found in gpg keyring'
+                'The key ID \'{0}\' was not found in GnuPG keyring at \'{1}\''
+                .format(keyid, gnupghome)
             )
 
         if use_passphrase:
             phrase = __salt__['pillar.get']('gpg_passphrase')
 
         if local_uids:
-            define_gpg_name = '--define=\'%_signature gpg\' --define=\'%_gpg_name {0}\''.format(local_uids[0])
+            define_gpg_name = '--define=\'%_signature gpg\' --define=\'%_gpg_name {0}\''.format(
+                local_uids[0]
+            )
 
         # need to update rpm with public key
         cmd = 'rpm --import {0}'.format(pkg_pub_key_file)

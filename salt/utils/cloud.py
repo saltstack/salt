@@ -55,6 +55,8 @@ except ImportError:
 import salt.crypt
 import salt.client
 import salt.config
+import salt.loader
+import salt.template
 import salt.utils
 import salt.utils.event
 from salt.utils import vt
@@ -497,6 +499,9 @@ def bootstrap(vm_, opts):
         deploy_kwargs['winrm_port'] = salt.config.get_cloud_config_value(
             'winrm_port', vm_, opts, default=5986
         )
+        deploy_kwargs['winrm_use_ssl'] = salt.config.get_cloud_config_value(
+        'winrm_use_ssl', vm_, opts, default=True
+        )
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
@@ -821,7 +826,7 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
             )
 
 
-def wait_for_winrm(host, port, username, password, timeout=900):
+def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
     '''
     Wait until WinRM connection can be established.
     '''
@@ -835,7 +840,10 @@ def wait_for_winrm(host, port, username, password, timeout=900):
     while True:
         trycount += 1
         try:
-            s = winrm.Session(host, auth=(username, password), transport='ssl')
+            transport = 'ssl'
+            if not use_ssl:
+                transport = 'plaintext'
+            s = winrm.Session(host, auth=(username, password), transport=transport)
             if hasattr(s.protocol, 'set_timeout'):
                 s.protocol.set_timeout(15)
             log.trace('WinRM endpoint url: {0}'.format(s.url))
@@ -982,6 +990,7 @@ def deploy_windows(host,
                    master_sign_pub_file=None,
                    use_winrm=False,
                    winrm_port=5986,
+                   winrm_use_ssl=True,
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
@@ -1007,8 +1016,8 @@ def deploy_windows(host,
 
     if HAS_WINRM and use_winrm:
         winrm_session = wait_for_winrm(host=host, port=winrm_port,
-                                           username=username, password=password,
-                                           timeout=port_timeout * 60)
+                                       username=username, password=password,
+                                       timeout=port_timeout * 60, use_ssl=winrm_use_ssl)
         if winrm_session is not None:
             service_available = True
     else:
@@ -1127,8 +1136,11 @@ def deploy_windows(host,
         # Delete C:\salttmp\ and installer file
         # Unless keep_tmp is True
         if not keep_tmp:
-            smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
-            smb_conn.deleteDirectory('C$', 'salttemp')
+            if use_winrm:
+                winrm_cmd(winrm_session, 'rmdir', ['/Q', '/S', 'C:\\salttemp\\'])
+            else:
+                smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
+                smb_conn.deleteDirectory('C$', 'salttemp')
         # Shell out to winexe to ensure salt-minion service started
         if use_winrm:
             winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
@@ -1726,8 +1738,43 @@ def run_inline_script(host,
     return True
 
 
+def filter_event(tag, data, defaults):
+    '''
+    Accept a tag, a dict and a list of default keys to return from the dict, and
+    check them against the cloud configuration for that tag
+    '''
+    ret = {}
+    keys = []
+    use_defaults = True
+
+    for ktag in __opts__.get('filter_events', {}):
+        if tag != ktag:
+            continue
+        keys = __opts__['filter_events'][ktag]['keys']
+        use_defaults = __opts__['filter_events'][ktag].get('use_defaults', True)
+
+    if use_defaults is False:
+        defaults = []
+
+    # For PY3, if something like ".keys()" or ".values()" is used on a dictionary,
+    # it returns a dict_view and not a list like in PY2. "defaults" should be passed
+    # in with the correct data type, but don't stack-trace in case it wasn't.
+    if not isinstance(defaults, list):
+        defaults = list(defaults)
+
+    defaults = list(set(defaults + keys))
+
+    for key in defaults:
+        if key in data:
+            ret[key] = data[key]
+
+    return ret
+
+
 def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
-    # Fire deploy action
+    '''
+    Fire deploy action
+    '''
     if sock_dir is None:
         salt.utils.warn_until(
             'Oxygen',
@@ -1780,7 +1827,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
                 if ('key_filename' in kwargs and kwargs['key_filename']
                     and SSH_PASSWORD_PROMP_SUDO_RE.search(stdout)
                 ):
-                    proc.sendline(kwargs['sudo_password', None])
+                    proc.sendline(kwargs['sudo_password'])
                 # elif authenticating via password and haven't exhausted our
                 # password_retires
                 elif (
@@ -1954,7 +2001,10 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         if contents is not None:
             try:
                 tmpfd, file_to_upload = tempfile.mkstemp()
-                os.write(tmpfd, contents)
+                if isinstance(contents, str):
+                    os.write(tmpfd, contents.encode(__salt_system_encoding__))
+                else:
+                    os.write(tmpfd, contents)
             finally:
                 try:
                     os.close(tmpfd)
@@ -2268,13 +2318,16 @@ def is_public_ip(ip):
         return True
     addr = ip_to_int(ip)
     if addr > 167772160 and addr < 184549375:
-        # 10.0.0.0/24
+        # 10.0.0.0/8
         return False
     elif addr > 3232235520 and addr < 3232301055:
         # 192.168.0.0/16
         return False
     elif addr > 2886729728 and addr < 2887778303:
         # 172.16.0.0/12
+        return False
+    elif addr > 2130706432 and addr < 2147483647:
+        # 127.0.0.0/8
         return False
     return True
 
@@ -2489,7 +2542,8 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     lock_file(index_file)
 
     if os.path.exists(index_file):
-        with salt.utils.fopen(index_file, 'r') as fh_:
+        mode = 'rb' if six.PY3 else 'r'
+        with salt.utils.fopen(index_file, mode) as fh_:
             index = msgpack.load(fh_)
     else:
         index = {}
@@ -2505,7 +2559,8 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
         }
     })
 
-    with salt.utils.fopen(index_file, 'w') as fh_:
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.fopen(index_file, mode) as fh_:
         msgpack.dump(index, fh_)
 
     unlock_file(index_file)
@@ -2521,7 +2576,8 @@ def cachedir_index_del(minion_id, base=None):
     lock_file(index_file)
 
     if os.path.exists(index_file):
-        with salt.utils.fopen(index_file, 'r') as fh_:
+        mode = 'rb' if six.PY3 else 'r'
+        with salt.utils.fopen(index_file, mode) as fh_:
             index = msgpack.load(fh_)
     else:
         return
@@ -2529,7 +2585,8 @@ def cachedir_index_del(minion_id, base=None):
     if minion_id in index:
         del index[minion_id]
 
-    with salt.utils.fopen(index_file, 'w') as fh_:
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.fopen(index_file, mode) as fh_:
         msgpack.dump(index, fh_)
 
     unlock_file(index_file)
@@ -2666,16 +2723,18 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
             os.remove(path)
 
 
-def list_cache_nodes_full(opts, provider=None, base=None):
+def list_cache_nodes_full(opts=None, provider=None, base=None):
     '''
     Return a list of minion data from the cloud cache, rather from the cloud
     providers themselves. This is the cloud cache version of list_nodes_full().
     '''
+    if opts is None:
+        opts = __opts__
     if opts.get('update_cachedir', False) is False:
         return
 
     if base is None:
-        base = os.path.join(__opts__['cachedir'], 'active')
+        base = os.path.join(opts['cachedir'], 'active')
 
     minions = {}
     # First, get a list of all drivers in use
@@ -2690,10 +2749,10 @@ def list_cache_nodes_full(opts, provider=None, base=None):
             minions[driver][prov] = {}
             min_dir = os.path.join(prov_dir, prov)
             # Get a list of all nodes per provider
-            for minion_id in os.listdir(min_dir):
+            for fname in os.listdir(min_dir):
                 # Finally, get a list of full minion data
-                fname = '{0}.p'.format(minion_id)
                 fpath = os.path.join(min_dir, fname)
+                minion_id = fname[:-2]  # strip '.p' from end of msgpack filename
                 with salt.utils.fopen(fpath, 'r') as fh_:
                     minions[driver][prov][minion_id] = msgpack.load(fh_)
 
@@ -2706,7 +2765,7 @@ def cache_nodes_ip(opts, base=None):
     addresses. Returns a dict.
     '''
     if base is None:
-        base = __opts__['cachedir']
+        base = opts['cachedir']
 
     minions = list_cache_nodes_full(opts, base=base)
 
@@ -3189,8 +3248,8 @@ def check_key_path_and_mode(provider, key_path):
         )
         return False
 
-    key_mode = str(oct(stat.S_IMODE(os.stat(key_path).st_mode)))
-    if key_mode not in ('0400', '0600'):
+    key_mode = stat.S_IMODE(os.stat(key_path).st_mode)
+    if key_mode not in (0o400, 0o600):
         log.error(
             'The key file \'{0}\' used in the \'{1}\' provider configuration '
             'needs to be set to mode 0400 or 0600.\n'.format(
@@ -3201,3 +3260,51 @@ def check_key_path_and_mode(provider, key_path):
         return False
 
     return True
+
+
+def userdata_template(opts, vm_, userdata):
+    '''
+    Use the configured templating engine to template the userdata file
+    '''
+    # No userdata, no need to template anything
+    if userdata is None:
+        return userdata
+
+    userdata_template = salt.config.get_cloud_config_value(
+        'userdata_template', vm_, opts, search_global=False, default=None
+    )
+    if userdata_template is False:
+        return userdata
+    # Use the cloud profile's userdata_template, otherwise get it from the
+    # master configuration file.
+    renderer = opts.get('userdata_template') \
+        if userdata_template is None \
+        else userdata_template
+    if renderer is None:
+        return userdata
+    else:
+        render_opts = opts.copy()
+        render_opts.update(vm_)
+        rend = salt.loader.render(render_opts, {})
+        blacklist = opts['renderer_blacklist']
+        whitelist = opts['renderer_whitelist']
+        templated = salt.template.compile_template(
+            ':string:',
+            rend,
+            renderer,
+            blacklist,
+            whitelist,
+            input_data=userdata,
+        )
+        if not isinstance(templated, six.string_types):
+            # template renderers like "jinja" should return a StringIO
+            try:
+                templated = ''.join(templated.readlines())
+            except AttributeError:
+                log.warning(
+                    'Templated userdata resulted in non-string result (%s), '
+                    'converting to string', templated
+                )
+                templated = str(templated)
+
+        return templated

@@ -34,12 +34,17 @@ FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 log = logging.getLogger(__name__)
 
 
-def _ping(tgt, expr_form, timeout):
+def _ping(tgt, tgt_type, timeout, gather_job_timeout):
     client = salt.client.get_local_client(__opts__['conf_file'])
-    pub_data = client.run_job(tgt, 'test.ping', (), expr_form, '', timeout, '')
+    pub_data = client.run_job(tgt, 'test.ping', (), tgt_type, '', timeout, '')
 
     if not pub_data:
         return pub_data
+
+    log.debug(
+        'manage runner will ping the following minion(s): %s',
+        ', '.join(sorted(pub_data['minions']))
+    )
 
     returned = set()
     for fn_ret in client.get_cli_event_returns(
@@ -47,19 +52,26 @@ def _ping(tgt, expr_form, timeout):
             pub_data['minions'],
             client._get_timeout(timeout),
             tgt,
-            expr_form):
+            tgt_type,
+            gather_job_timeout=gather_job_timeout):
 
         if fn_ret:
             for mid, _ in six.iteritems(fn_ret):
+                log.debug('minion \'%s\' returned from ping', mid)
                 returned.add(mid)
 
-    not_returned = set(pub_data['minions']) - returned
+    not_returned = sorted(set(pub_data['minions']) - returned)
+    returned = sorted(returned)
 
-    return list(returned), list(not_returned)
+    return returned, not_returned
 
 
-def status(output=True, tgt='*', expr_form='glob'):
+def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Print the status of all known salt minions
 
     CLI Example:
@@ -67,10 +79,28 @@ def status(output=True, tgt='*', expr_form='glob'):
     .. code-block:: bash
 
         salt-run manage.status
-        salt-run manage.status tgt="webservers" expr_form="nodegroup"
+        salt-run manage.status tgt="webservers" tgt_type="nodegroup"
+        salt-run manage.status timeout=5 gather_job_timeout=10
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
     ret = {}
-    ret['up'], ret['down'] = _ping(tgt, expr_form, __opts__['timeout'])
+
+    if not timeout:
+        timeout = __opts__['timeout']
+    if not gather_job_timeout:
+        gather_job_timeout = __opts__['gather_job_timeout']
+
+    ret['up'], ret['down'] = _ping(tgt, tgt_type, timeout, gather_job_timeout)
     return ret
 
 
@@ -126,8 +156,12 @@ def key_regen():
     return msg
 
 
-def down(removekeys=False, tgt='*', expr_form='glob'):
+def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Print a list of all the down or unresponsive salt minions
     Optionally remove keys of down minions
 
@@ -137,10 +171,10 @@ def down(removekeys=False, tgt='*', expr_form='glob'):
 
         salt-run manage.down
         salt-run manage.down removekeys=True
-        salt-run manage.down tgt="webservers" expr_form="nodegroup"
+        salt-run manage.down tgt="webservers" tgt_type="nodegroup"
 
     '''
-    ret = status(output=False, tgt=tgt, expr_form=expr_form).get('down', [])
+    ret = status(output=False, tgt=tgt, tgt_type=tgt_type).get('down', [])
     for minion in ret:
         if removekeys:
             wheel = salt.wheel.Wheel(__opts__)
@@ -148,8 +182,12 @@ def down(removekeys=False, tgt='*', expr_form='glob'):
     return ret
 
 
-def up(tgt='*', expr_form='glob'):  # pylint: disable=C0103
+def up(tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):  # pylint: disable=C0103
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Print a list of all of the minions that are up
 
     CLI Example:
@@ -157,9 +195,16 @@ def up(tgt='*', expr_form='glob'):  # pylint: disable=C0103
     .. code-block:: bash
 
         salt-run manage.up
-        salt-run manage.up tgt="webservers" expr_form="nodegroup"
+        salt-run manage.up tgt="webservers" tgt_type="nodegroup"
+        salt-run manage.up timeout=5 gather_job_timeout=10
     '''
-    ret = status(output=False, tgt=tgt, expr_form=expr_form).get('up', [])
+    ret = status(
+        output=False,
+        tgt=tgt,
+        tgt_type=tgt_type,
+        timeout=timeout,
+        gather_job_timeout=gather_job_timeout
+    ).get('up', [])
     return ret
 
 
@@ -532,8 +577,12 @@ def lane_stats(estate=None):
     return get_stats(estate=estate, stack='lane')
 
 
-def safe_accept(target, expr_form='glob'):
+def safe_accept(target, tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Accept a minion's public key after checking the fingerprint over salt-ssh
 
     CLI Example:
@@ -541,12 +590,12 @@ def safe_accept(target, expr_form='glob'):
     .. code-block:: bash
 
         salt-run manage.safe_accept my_minion
-        salt-run manage.safe_accept minion1,minion2 expr_form=list
+        salt-run manage.safe_accept minion1,minion2 tgt_type=list
     '''
     salt_key = salt.key.Key(__opts__)
     ssh_client = salt.client.ssh.client.SSHClient()
 
-    ret = ssh_client.cmd(target, 'key.finger', expr_form=expr_form)
+    ret = ssh_client.cmd(target, 'key.finger', tgt_type=tgt_type)
 
     failures = {}
     for minion, finger in six.iteritems(ret):
@@ -658,17 +707,17 @@ def bootstrap(version='develop',
         hosts need to exist in the specified roster.
 
     root_user : False
-        Prepend ``root@`` to each host. Default changed in Salt Carbon from ``True``
+        Prepend ``root@`` to each host. Default changed in Salt 2016.11.0 from ``True``
         to ``False``.
 
-        .. versionchanged:: Carbon
+        .. versionchanged:: 2016.11.0
 
-        .. deprecated:: Carbon
+        .. deprecated:: Oxygen
 
     script_args
         Any additional arguments that you want to pass to the script.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     roster : flat
         The roster to use for Salt SSH. More information about roster files can
@@ -677,41 +726,41 @@ def bootstrap(version='develop',
         A full list of roster types, see the :ref:`builtin roster modules <all-salt.roster>`
         documentation.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     ssh_user
         If ``user`` isn't found in the ``roster``, a default SSH user can be set here.
         Keep in mind that ``ssh_user`` will not override the roster ``user`` value if
         it is already defined.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     ssh_password
         If ``passwd`` isn't found in the ``roster``, a default SSH password can be set
         here. Keep in mind that ``ssh_password`` will not override the roster ``passwd``
         value if it is already defined.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     ssh_privkey
         If ``priv`` isn't found in the ``roster``, a default SSH private key can be set
         here. Keep in mind that ``ssh_password`` will not override the roster ``passwd``
         value if it is already defined.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     tmp_dir : /tmp/.bootstrap
         The temporary directory to download the bootstrap script in. This
         directory will have ``-<uuid4>`` appended to it. For example:
         ``/tmp/.bootstrap-a19a728e-d40a-4801-aba9-d00655c143a7/``
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     http_backend : tornado
         The backend library to use to download the script. If you need to use
         a ``file:///`` URL, then you should set this to ``urllib2``.
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
 
     CLI Example:
@@ -727,7 +776,7 @@ def bootstrap(version='develop',
 
     '''
     dep_warning = (
-        'Starting with Salt Carbon, manage.bootstrap now uses Salt SSH to '
+        'Starting with Salt 2016.11.0, manage.bootstrap now uses Salt SSH to '
         'connect, and requires a roster entry. Please ensure that a roster '
         'entry exists for this host. Non-roster hosts will no longer be '
         'supported starting with Salt Oxygen.'
@@ -776,8 +825,8 @@ def bootstrap(version='develop',
             salt.client.ssh.SSH(client_opts).run()
         except SaltSystemExit as exc:
             if 'No hosts found with target' in str(exc):
-                log.warn('The host {0} was not found in the Salt SSH roster '
-                         'system. Attempting to log in without Salt SSH.')
+                log.warning('The host {0} was not found in the Salt SSH roster '
+                            'system. Attempting to log in without Salt SSH.')
                 salt.utils.warn_until('Oxygen', dep_warning)
                 ret = subprocess.call([
                     'ssh',

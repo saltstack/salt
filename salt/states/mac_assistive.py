@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Allows you to manage assistive access on OS X minions with 10.9+
-=======================
+Allows you to manage assistive access on macOS minions with 10.9+
+=================================================================
 
-Install, enable and disable assitive access on OS X minions
+Install, enable and disable assistive access on macOS minions
 
 .. code-block:: yaml
 
@@ -14,11 +14,11 @@ Install, enable and disable assitive access on OS X minions
 
 # Import python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion
 import logging
 
 # Import salt libs
 import salt.utils
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin() and LooseVersion(__grains__['osrelease']) >= LooseVersion('10.9'):
+    if salt.utils.is_darwin() and _LooseVersion(__grains__['osrelease']) >= _LooseVersion('10.9'):
         return True
     return False
 

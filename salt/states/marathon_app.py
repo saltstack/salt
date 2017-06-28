@@ -3,6 +3,7 @@
 Configure Marathon apps via a salt proxy.
 
 .. code-block:: yaml
+
     my_app:
       marathon_app.config:
         - config:

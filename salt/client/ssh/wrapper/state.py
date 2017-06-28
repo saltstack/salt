@@ -85,13 +85,19 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
                 __opts__.get('extra_filerefs', '')
                 )
             )
+
+    roster = salt.roster.Roster(__opts__, __opts__.get('roster', 'flat'))
+    roster_grains = roster.opts['grains']
+
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'],
+            roster_grains)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__['thin_dir'],
@@ -157,13 +163,18 @@ def low(data, **kwargs):
                 __opts__.get('extra_filerefs', '')
                 )
             )
+    roster = salt.roster.Roster(__opts__, __opts__.get('roster', 'flat'))
+    roster_grains = roster.opts['grains']
+
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'],
+            roster_grains)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
             __opts__['thin_dir'],
@@ -224,13 +235,19 @@ def high(data, **kwargs):
                 __opts__.get('extra_filerefs', '')
                 )
             )
+
+    roster = salt.roster.Roster(__opts__, __opts__.get('roster', 'flat'))
+    roster_grains = roster.opts['grains']
+
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'],
+            roster_grains)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
             __opts__['thin_dir'],
@@ -302,6 +319,7 @@ def highstate(test=None, **kwargs):
     __pillar__.update(kwargs.get('pillar', {}))
     st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
+
     st_ = salt.client.ssh.state.SSHHighState(
             __opts__,
             __pillar__,
@@ -320,13 +338,19 @@ def highstate(test=None, **kwargs):
         if not isinstance(chunk, dict):
             __context__['retcode'] = 1
             return chunks
+
+    roster = salt.roster.Roster(__opts__, __opts__.get('roster', 'flat'))
+    roster_grains = roster.opts['grains']
+
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'],
+            roster_grains)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__['thin_dir'],
@@ -394,13 +418,19 @@ def top(topfn, test=None, **kwargs):
                 __opts__.get('extra_filerefs', '')
                 )
             )
+
+    roster = salt.roster.Roster(__opts__, __opts__.get('roster', 'flat'))
+    roster_grains = roster.opts['grains']
+
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'],
+            roster_grains)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__['thin_dir'],
@@ -649,13 +679,18 @@ def single(fun, name, test=None, **kwargs):
                 )
             )
 
+    roster = salt.roster.Roster(__opts__, __opts__.get('roster', 'flat'))
+    roster_grains = roster.opts['grains']
+
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'],
+            roster_grains)
 
     # Create a hash so we can verify the tar on the target system
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])

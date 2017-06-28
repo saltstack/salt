@@ -6,12 +6,13 @@ from __future__ import absolute_import
 
 # Import python libs
 import contextlib
+import errno
 import logging
 import os
 import string
 import shutil
 import ftplib
-from tornado.httputil import parse_response_start_line, HTTPInputError
+from tornado.httputil import parse_response_start_line, HTTPHeaders, HTTPInputError
 
 # Import salt libs
 from salt.exceptions import (
@@ -131,25 +132,35 @@ class Client(object):
         '''
         Return the local location to cache the file, cache dirs will be made
         '''
-        if cachedir is None:
-            cachedir = self.opts['cachedir']
-        elif not os.path.isabs(cachedir):
-            cachedir = os.path.join(self.opts['cachedir'], cachedir)
-
+        cachedir = self.get_cachedir(cachedir)
         dest = salt.utils.path_join(cachedir,
                                     'files',
                                     saltenv,
                                     path)
         destdir = os.path.dirname(dest)
         cumask = os.umask(63)
-        if not os.path.isdir(destdir):
-            # remove destdir if it is a regular file to avoid an OSError when
-            # running os.makedirs below
-            if os.path.isfile(destdir):
-                os.remove(destdir)
+
+        # remove destdir if it is a regular file to avoid an OSError when
+        # running os.makedirs below
+        if os.path.isfile(destdir):
+            os.remove(destdir)
+
+        # ensure destdir exists
+        try:
             os.makedirs(destdir)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:  # ignore if it was there already
+                raise
+
         yield dest
         os.umask(cumask)
+
+    def get_cachedir(self, cachedir=None):
+        if cachedir is None:
+            cachedir = self.opts['cachedir']
+        elif not os.path.isabs(cachedir):
+            cachedir = os.path.join(self.opts['cachedir'], cachedir)
+        return cachedir
 
     def get_file(self,
                  path,
@@ -242,10 +253,7 @@ class Client(object):
             #     prefix = ''
             # else:
             #     prefix = separated[0]
-            if cachedir is None:
-                cachedir = self.opts['cachedir']
-            elif not os.path.isabs(cachedir):
-                cachedir = os.path.join(self.opts['cachedir'], cachedir)
+            cachedir = self.get_cachedir(cachedir)
 
             dest = salt.utils.path_join(cachedir, 'files', saltenv)
             for fn_ in self.file_list_emptydirs(saltenv):
@@ -356,9 +364,10 @@ class Client(object):
                         del dirs[:]
                     else:
                         for found_file in files:
-                            stripped_root = os.path.relpath(root, path).replace('/', '.')
+                            stripped_root = os.path.relpath(root, path)
                             if salt.utils.is_windows():
                                 stripped_root = stripped_root.replace('\\', '/')
+                            stripped_root = stripped_root.replace('/', '.')
                             if found_file.endswith(('.sls')):
                                 if found_file.endswith('init.sls'):
                                     if stripped_root.endswith('.'):
@@ -466,6 +475,19 @@ class Client(object):
         url_path = os.path.join(
                 url_data.netloc, url_data.path).rstrip(os.sep)
 
+        # If dest is a directory, rewrite dest with filename
+        if dest is not None \
+                and (os.path.isdir(dest) or dest.endswith(('/', '\\'))):
+            if url_data.query or len(url_data.path) > 1 and not url_data.path.endswith('/'):
+                strpath = url.split('/')[-1]
+            else:
+                strpath = 'index.html'
+
+            if salt.utils.is_windows():
+                strpath = salt.utils.sanitize_win_path_string(strpath)
+
+            dest = os.path.join(dest, strpath)
+
         if url_scheme and url_scheme.lower() in string.ascii_lowercase:
             url_path = ':'.join((url_scheme, url_path))
             url_scheme = 'file'
@@ -477,7 +499,7 @@ class Client(object):
                     'Path \'{0}\' is not absolute'.format(url_path)
                 )
             if dest is None:
-                with salt.utils.fopen(url_data.path, 'r') as fp_:
+                with salt.utils.fopen(url_path, 'r') as fp_:
                     data = fp_.read()
                 return data
             return url_path
@@ -523,7 +545,9 @@ class Client(object):
                                        keyid=s3_opt('keyid'),
                                        service_url=s3_opt('service_url'),
                                        verify_ssl=s3_opt('verify_ssl', True),
-                                       location=s3_opt('location'))
+                                       location=s3_opt('location'),
+                                       path_style=s3_opt('path_style', False),
+                                       https_enable=s3_opt('https_enable', True))
                 return dest
             except Exception as exc:
                 raise MinionError(
@@ -531,10 +555,12 @@ class Client(object):
                 )
         if url_data.scheme == 'ftp':
             try:
-                ftp = ftplib.FTP(url_data.hostname)
-                ftp.login()
+                ftp = ftplib.FTP()
+                ftp.connect(url_data.hostname, url_data.port)
+                ftp.login(url_data.username, url_data.password)
                 with salt.utils.fopen(dest, 'wb') as fp_:
                     ftp.retrbinary('RETR {0}'.format(url_data.path), fp_.write)
+                ftp.quit()
                 return dest
             except Exception as exc:
                 raise MinionError('Could not retrieve {0} from FTP server. Exception: {1}'.format(url, exc))
@@ -579,36 +605,82 @@ class Client(object):
         destfp = None
         try:
             # Tornado calls streaming_callback on redirect response bodies.
-            # But we need streaming to support fetching large files (> RAM avail).
-            # Here we working this around by disabling recording the body for redirections.
-            # The issue is fixed in Tornado 4.3.0 so on_header callback could be removed
-            # when we'll deprecate Tornado<4.3.0.
-            # See #27093 and #30431 for details.
+            # But we need streaming to support fetching large files (> RAM
+            # avail). Here we are working around this by disabling recording
+            # the body for redirections. The issue is fixed in Tornado 4.3.0
+            # so on_header callback could be removed when we'll deprecate
+            # Tornado<4.3.0. See #27093 and #30431 for details.
 
-            # Use list here to make it writable inside the on_header callback. Simple bool doesn't
-            # work here: on_header creates a new local variable instead. This could be avoided in
-            # Py3 with 'nonlocal' statement. There is no Py2 alternative for this.
-            write_body = [False]
+            # Use list here to make it writable inside the on_header callback.
+            # Simple bool doesn't work here: on_header creates a new local
+            # variable instead. This could be avoided in Py3 with 'nonlocal'
+            # statement. There is no Py2 alternative for this.
+            #
+            # write_body[0] is used by the on_chunk callback to tell it whether
+            #   or not we need to write the body of the request to disk. For
+            #   30x redirects we set this to False because we don't want to
+            #   write the contents to disk, as we will need to wait until we
+            #   get to the redirected URL.
+            #
+            # write_body[1] will contain a tornado.httputil.HTTPHeaders
+            #   instance that we will use to parse each header line. We
+            #   initialize this to False, and after we parse the status line we
+            #   will replace it with the HTTPHeaders instance. If/when we have
+            #   found the encoding used in the request, we set this value to
+            #   False to signify that we are done parsing.
+            #
+            # write_body[2] is where the encoding will be stored
+            write_body = [None, False, None]
 
             def on_header(hdr):
-                try:
-                    hdr = parse_response_start_line(hdr)
-                except HTTPInputError:
-                    # Not the first line, do nothing
-                    return
-                write_body[0] = hdr.code not in [301, 302, 303, 307]
+                if write_body[1] is not False and write_body[2] is None:
+                    # Try to find out what content type encoding is used if
+                    # this is a text file
+                    write_body[1].parse_line(hdr)  # pylint: disable=no-member
+                    if 'Content-Type' in write_body[1]:
+                        content_type = write_body[1].get('Content-Type')  # pylint: disable=no-member
+                        if not content_type.startswith('text'):
+                            write_body[1] = write_body[2] = False
+                        else:
+                            encoding = 'utf-8'
+                            fields = content_type.split(';')
+                            for field in fields:
+                                if 'encoding' in field:
+                                    encoding = field.split('encoding=')[-1]
+                            write_body[2] = encoding
+                            # We have found our encoding. Stop processing headers.
+                            write_body[1] = False
+
+                        # If write_body[0] is False, this means that this
+                        # header is a 30x redirect, so we need to reset
+                        # write_body[0] to None so that we parse the HTTP
+                        # status code from the redirect target.
+                        if write_body[0] is write_body[1] is False:
+                            write_body[0] = None
+
+                # Check the status line of the HTTP request
+                if write_body[0] is None:
+                    try:
+                        hdr = parse_response_start_line(hdr)
+                    except HTTPInputError:
+                        # Not the first line, do nothing
+                        return
+                    write_body[0] = hdr.code not in [301, 302, 303, 307]
+                    write_body[1] = HTTPHeaders()
 
             if no_cache:
                 result = []
 
                 def on_chunk(chunk):
                     if write_body[0]:
+                        if write_body[2]:
+                            chunk = chunk.decode(write_body[2])
                         result.append(chunk)
             else:
                 dest_tmp = "{0}.part".format(dest)
                 # We need an open filehandle to use in the on_chunk callback,
                 # that's why we're not using a with clause here.
-                destfp = salt.utils.fopen(dest_tmp, 'wb')
+                destfp = salt.utils.fopen(dest_tmp, 'wb')  # pylint: disable=resource-leakage
 
                 def on_chunk(chunk):
                     if write_body[0]:
@@ -627,7 +699,9 @@ class Client(object):
             if 'handle' not in query:
                 raise MinionError('Error: {0} reading {1}'.format(query['error'], url))
             if no_cache:
-                return ''.join(result)
+                if write_body[2]:
+                    return six.u('').join(result)
+                return six.b('').join(result)
             else:
                 destfp.close()
                 destfp = None
@@ -661,7 +735,7 @@ class Client(object):
                 'Oxygen',
                 'Parameter \'env\' has been detected in the argument list.  This '
                 'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
                 )
             kwargs.pop('env')
 
@@ -712,6 +786,9 @@ class Client(object):
             netloc = salt.utils.sanitize_win_path_string(url_data.netloc)
         else:
             netloc = url_data.netloc
+
+        # Strip user:pass from URLs
+        netloc = netloc.split('@')[-1]
 
         if cachedir is None:
             cachedir = self.opts['cachedir']
@@ -775,22 +852,6 @@ class LocalClient(Client):
         fnd_path = fnd.get('path')
         if not fnd_path:
             return ''
-
-        try:
-            fnd_mode = fnd.get('stat', [])[0]
-        except (IndexError, TypeError):
-            fnd_mode = None
-
-        if not salt.utils.is_windows():
-            if fnd_mode is not None:
-                try:
-                    if os.stat(dest).st_mode != fnd_mode:
-                        try:
-                            os.chmod(dest, fnd_mode)
-                        except OSError as exc:
-                            log.warning('Failed to chmod %s: %s', dest, exc)
-                except Exception:
-                    pass
 
         return fnd_path
 
@@ -940,7 +1001,7 @@ class LocalClient(Client):
             ret.append(saltenv)
         return ret
 
-    def ext_nodes(self):
+    def master_tops(self):
         '''
         Originally returned information via the external_nodes subsystem.
         External_nodes was deprecated and removed in
@@ -1011,6 +1072,14 @@ class RemoteClient(Client):
             )
             return False
 
+        # If dest is a directory, rewrite dest with filename
+        if dest is not None \
+                and (os.path.isdir(dest) or dest.endswith(('/', '\\'))):
+            dest = os.path.join(dest, os.path.basename(path))
+            log.debug(
+                'In saltenv \'%s\', \'%s\' is a directory. Changing dest to '
+                '\'%s\'', saltenv, os.path.dirname(dest), dest)
+
         # Hash compare local copy with master and skip download
         # if no difference found.
         dest2check = dest
@@ -1043,47 +1112,7 @@ class RemoteClient(Client):
                 mode_local = None
 
             if hash_local == hash_server:
-                if not salt.utils.is_windows():
-                    if mode_server is None:
-                        log.debug('No file mode available for \'%s\'', path)
-                    elif mode_local is None:
-                        log.debug(
-                            'No file mode available for \'%s\'',
-                            dest2check
-                        )
-                    else:
-                        if mode_server == mode_local:
-                            log.info(
-                                'Fetching file from saltenv \'%s\', '
-                                '** skipped ** latest already in cache '
-                                '\'%s\', mode up-to-date', saltenv, path
-                            )
-                        else:
-                            try:
-                                os.chmod(dest2check, mode_server)
-                                log.info(
-                                    'Fetching file from saltenv \'%s\', '
-                                    '** updated ** latest already in cache, '
-                                    '\'%s\', mode updated from %s to %s',
-                                    saltenv,
-                                    path,
-                                    salt.utils.st_mode_to_octal(mode_local),
-                                    salt.utils.st_mode_to_octal(mode_server)
-                                )
-                            except OSError as exc:
-                                log.warning(
-                                    'Failed to chmod %s: %s', dest2check, exc
-                                )
-                    # We may not have been able to check/set the mode, but we
-                    # don't want to re-download the file because of a failure
-                    # in mode checking. Return the cached path.
-                    return dest2check
-                else:
-                    log.info(
-                        'Fetching file from saltenv \'%s\', ** skipped ** '
-                        'latest already in cache \'%s\'', saltenv, path
-                    )
-                    return dest2check
+                return dest2check
 
         log.debug(
             'Fetching file from saltenv \'%s\', ** attempting ** \'%s\'',
@@ -1109,7 +1138,7 @@ class RemoteClient(Client):
                     return False
             # We need an open filehandle here, that's why we're not using a
             # with clause:
-            fn_ = salt.utils.fopen(dest, 'wb+')
+            fn_ = salt.utils.fopen(dest, 'wb+')  # pylint: disable=resource-leakage
         else:
             log.debug('No dest file found')
 
@@ -1121,7 +1150,7 @@ class RemoteClient(Client):
             data = self.channel.send(load, raw=True)
             if six.PY3:
                 # Sometimes the source is local (eg when using
-                # 'salt.filesystem.FSChan'), in which case the keys are
+                # 'salt.fileserver.FSChan'), in which case the keys are
                 # already strings. Sometimes the source is remote, in which
                 # case the keys are bytes due to raw mode. Standardize on
                 # strings for the top-level keys to simplify things.
@@ -1200,23 +1229,6 @@ class RemoteClient(Client):
                 saltenv, path
             )
 
-        if not salt.utils.is_windows():
-            if mode_server is not None:
-                try:
-                    if os.stat(dest).st_mode != mode_server:
-                        try:
-                            os.chmod(dest, mode_server)
-                            log.info(
-                                'Fetching file from saltenv \'%s\', '
-                                '** done ** \'%s\', mode set to %s',
-                                saltenv,
-                                path,
-                                salt.utils.st_mode_to_octal(mode_server)
-                            )
-                        except OSError:
-                            log.warning('Failed to chmod %s: %s', dest, exc)
-                except OSError:
-                    pass
         return dest
 
     def file_list(self, saltenv='base', prefix=''):
@@ -1272,10 +1284,10 @@ class RemoteClient(Client):
                 hash_type = self.opts.get('hash_type', 'md5')
                 ret['hsum'] = salt.utils.get_hash(path, form=hash_type)
                 ret['hash_type'] = hash_type
-                return ret
+                return ret, list(os.stat(path))
         load = {'path': path,
                 'saltenv': saltenv,
-                'cmd': '_file_hash'}
+                'cmd': '_file_hash_and_stat'}
         return self.channel.send(load)
 
     def hash_file(self, path, saltenv='base'):
@@ -1284,33 +1296,14 @@ class RemoteClient(Client):
         master file server prepend the path with salt://<file on server>
         otherwise, prepend the file with / for a local file.
         '''
-        return self.__hash_and_stat_file(path, saltenv)
+        return self.__hash_and_stat_file(path, saltenv)[0]
 
     def hash_and_stat_file(self, path, saltenv='base'):
         '''
         The same as hash_file, but also return the file's mode, or None if no
         mode data is present.
         '''
-        hash_result = self.hash_file(path, saltenv)
-        try:
-            path = self._check_proto(path)
-        except MinionError as err:
-            if not os.path.isfile(path):
-                return hash_result, None
-            else:
-                try:
-                    return hash_result, list(os.stat(path))
-                except Exception:
-                    return hash_result, None
-        load = {'path': path,
-                'saltenv': saltenv,
-                'cmd': '_file_find'}
-        fnd = self.channel.send(load)
-        try:
-            stat_result = fnd.get('stat')
-        except AttributeError:
-            stat_result = None
-        return hash_result, stat_result
+        return self.__hash_and_stat_file(path, saltenv)
 
     def list_env(self, saltenv='base'):
         '''
@@ -1334,12 +1327,11 @@ class RemoteClient(Client):
         load = {'cmd': '_master_opts'}
         return self.channel.send(load)
 
-    def ext_nodes(self):
+    def master_tops(self):
         '''
-        Return the metadata derived from the external nodes system on the
-        master.
+        Return the metadata derived from the master_tops system
         '''
-        load = {'cmd': '_ext_nodes',
+        load = {'cmd': '_master_tops',
                 'id': self.opts['id'],
                 'opts': self.opts}
         if self.auth:
@@ -1353,7 +1345,7 @@ class FSClient(RemoteClient):
     the FSChan object
     '''
     def __init__(self, opts):  # pylint: disable=W0231
-        self.opts = opts
+        Client.__init__(self, opts)  # pylint: disable=W0233
         self.channel = salt.fileserver.FSChan(opts)
         self.auth = DumbAuth()
 

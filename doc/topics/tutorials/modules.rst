@@ -1,3 +1,5 @@
+.. _tutorial-remote-execution-modules:
+
 =========================
 Remote execution tutorial
 =========================
@@ -15,7 +17,7 @@ communicating with each other you can perform commands on the minion via the
 
     salt '<target>' <function> [arguments]
 
-.. seealso:: :doc:`salt manpage </ref/cli/salt>`
+.. seealso:: :ref:`salt manpage <ref-cli-salt>`
 
 target
 ------
@@ -34,7 +36,7 @@ Targets can be based on minion system information using the Grains system:
 
     salt -G 'os:Ubuntu' test.ping
 
-.. seealso:: :doc:`Grains system </topics/targeting/grains>`
+.. seealso:: :ref:`Grains system <targeting-grains>`
 
 Targets can be filtered by regular expression:
 
@@ -80,7 +82,7 @@ Run an arbitrary shell command:
 
     salt '*' cmd.run 'uname -a'
 
-.. seealso:: :doc:`the full list of modules </ref/modules/index>`
+.. seealso:: :ref:`the full list of modules <all-salt.modules>`
 
 arguments
 ---------

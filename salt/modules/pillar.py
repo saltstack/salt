@@ -8,20 +8,32 @@ from __future__ import absolute_import
 import collections
 
 # Import third party libs
+import copy
 import os
+import copy
+import logging
 import yaml
 import salt.ext.six as six
 
 # Import salt libs
 import salt.pillar
 import salt.utils
+import salt.utils.crypt
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
 
 __proxyenabled__ = ['*']
 
+log = logging.getLogger(__name__)
 
-def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
+
+def get(key,
+        default=KeyError,
+        merge=False,
+        merge_nested_lists=None,
+        delimiter=DEFAULT_TARGET_DELIM,
+        pillarenv=None,
+        saltenv=None):
     '''
     .. versionadded:: 0.14
 
@@ -43,39 +55,122 @@ def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
 
         pkg:apache
 
-    merge
-        Specify whether or not the retrieved values should be recursively
-        merged into the passed default.
+    merge : ``False``
+        If ``True``, the retrieved values will be merged into the passed
+        default. When the default and the retrieved value are both
+        dictionaries, the dictionaries will be recursively merged.
 
         .. versionadded:: 2014.7.0
+        .. versionchanged:: 2016.3.7,2016.11.4,2017.7.0
+            If the default and the retrieved value are not of the same type,
+            then merging will be skipped and the retrieved value will be
+            returned. Earlier releases raised an error in these cases.
+
+    merge_nested_lists
+        If set to ``False``, lists nested within the retrieved pillar
+        dictionary will *overwrite* lists in ``default``. If set to ``True``,
+        nested lists will be *merged* into lists in ``default``. If unspecified
+        (the default), this option is inherited from the
+        :conf_minion:`pillar_merge_lists` minion config option.
+
+        .. note::
+            This option is ignored when ``merge`` is set to ``False``.
+
+        .. versionadded:: 2016.11.6
 
     delimiter
-        Specify an alternate delimiter to use when traversing a nested dict
+        Specify an alternate delimiter to use when traversing a nested dict.
+        This is useful for when the desired key contains a colon. See CLI
+        example below for usage.
 
         .. versionadded:: 2014.7.0
+
+    pillarenv
+        If specified, this function will query the master to generate fresh
+        pillar data on the fly, specifically from the requested pillar
+        environment. Note that this can produce different pillar data than
+        executing this function without an environment, as its normal behavior
+        is just to return a value from minion's pillar data in memory (which
+        can be sourced from more than one pillar environment).
+
+        Using this argument will not affect the pillar data in memory. It will
+        however be slightly slower and use more resources on the master due to
+        the need for the master to generate and send the minion fresh pillar
+        data. This tradeoff in performance however allows for the use case
+        where pillar data is desired only from a single environment.
+
+        .. versionadded:: 2017.7.0
+
+    saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
+
+        .. versionadded:: 2017.7.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pillar.get pkg:apache
+        salt '*' pillar.get abc::def|ghi delimiter='|'
     '''
     if not __opts__.get('pillar_raise_on_missing'):
         if default is KeyError:
             default = ''
-    opt_merge_lists = __opts__.get('pillar_merge_lists', False)
-    if merge:
-        ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delimiter)
-        if isinstance(ret, collections.Mapping) and \
-                isinstance(default, collections.Mapping):
-            return salt.utils.dictupdate.update(default, ret, merge_lists=opt_merge_lists)
+    opt_merge_lists = __opts__.get('pillar_merge_lists', False) if \
+        merge_nested_lists is None else merge_nested_lists
+    pillar_dict = __pillar__ \
+        if all(x is None for x in (saltenv, pillarenv)) \
+        else items(saltenv=saltenv, pillarenv=pillarenv)
 
-    ret = salt.utils.traverse_dict_and_list(__pillar__,
+    if merge:
+        if isinstance(default, dict):
+            ret = salt.utils.traverse_dict_and_list(
+                pillar_dict,
+                key,
+                {},
+                delimiter)
+            if isinstance(ret, collections.Mapping):
+                default = copy.deepcopy(default)
+                return salt.utils.dictupdate.update(
+                    default,
+                    ret,
+                    merge_lists=opt_merge_lists)
+            else:
+                log.error(
+                    'pillar.get: Default (%s) is a dict, but the returned '
+                    'pillar value (%s) is of type \'%s\'. Merge will be '
+                    'skipped.', default, ret, type(ret).__name__
+                )
+        elif isinstance(default, list):
+            ret = salt.utils.traverse_dict_and_list(
+                pillar_dict,
+                key,
+                [],
+                delimiter)
+            if isinstance(ret, list):
+                default = copy.deepcopy(default)
+                default.extend([x for x in ret if x not in default])
+                return default
+            else:
+                log.error(
+                    'pillar.get: Default (%s) is a list, but the returned '
+                    'pillar value (%s) is of type \'%s\'. Merge will be '
+                    'skipped.', default, ret, type(ret).__name__
+                )
+        else:
+            log.error(
+                'pillar.get: Default (%s) is of type \'%s\', must be a dict '
+                'or list to merge. Merge will be skipped.',
+                default, type(default).__name__
+            )
+
+    ret = salt.utils.traverse_dict_and_list(pillar_dict,
                                             key,
                                             default,
                                             delimiter)
     if ret is KeyError:
-        raise KeyError("Pillar key not found: {0}".format(key))
+        raise KeyError('Pillar key not found: {0}'.format(key))
 
     return ret
 
@@ -88,13 +183,42 @@ def items(*args, **kwargs):
     Contrast with :py:func:`raw` which returns the pillar data that is
     currently loaded into the minion.
 
-    pillar : none
-        if specified, allows for a dictionary of pillar data to be made
+    pillar
+        If specified, allows for a dictionary of pillar data to be made
         available to pillar and ext_pillar rendering. these pillar variables
         will also override any variables of the same name in pillar or
         ext_pillar.
 
         .. versionadded:: 2015.5.0
+
+    pillar_enc
+        If specified, the data passed in the ``pillar`` argument will be passed
+        through this renderer to decrypt it.
+
+        .. note::
+            This will decrypt on the minion side, so the specified renderer
+            must be set up on the minion for this to work. Alternatively,
+            pillar data can be decrypted master-side. For more information, see
+            the :ref:`Pillar Encryption <pillar-encryption>` documentation.
+            Pillar data that is decrypted master-side, is not decrypted until
+            the end of pillar compilation though, so minion-side decryption
+            will be necessary if the encrypted pillar data must be made
+            available in an decrypted state pillar/ext_pillar rendering.
+
+        .. versionadded:: 2017.7.0
+
+    pillarenv
+        Pass a specific pillar environment from which to compile pillar data.
+        If not specified, then the minion's :conf_minion:`pillarenv` option is
+        not used, and if that also is not specified then all configured pillar
+        environments will be merged into a single pillar dictionary and
+        returned.
+
+        .. versionadded:: 2016.11.2
+
+    saltenv
+        Included only for compatibility with
+        :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
     CLI Example:
 
@@ -106,12 +230,35 @@ def items(*args, **kwargs):
     if args:
         return item(*args)
 
+    pillarenv = kwargs.get('pillarenv')
+    if pillarenv is None:
+        if __opts__.get('pillarenv_from_saltenv', False):
+            pillarenv = kwargs.get('saltenv') or __opts__['environment']
+        else:
+            pillarenv = __opts__['pillarenv']
+
+    pillar_override = kwargs.get('pillar')
+    pillar_enc = kwargs.get('pillar_enc')
+
+    if pillar_override and pillar_enc:
+        try:
+            pillar_override = salt.utils.crypt.decrypt(
+                pillar_override,
+                pillar_enc,
+                translate_newlines=True,
+                opts=__opts__,
+                valid_rend=__opts__['decrypt_pillar_renderers'])
+        except Exception as exc:
+            raise CommandExecutionError(
+                'Failed to decrypt pillar override: {0}'.format(exc)
+            )
+
     pillar = salt.pillar.get_pillar(
         __opts__,
         __grains__,
         __opts__['id'],
-        __opts__['environment'],
-        pillar=kwargs.get('pillar'))
+        pillar=pillar_override,
+        pillarenv=pillarenv)
 
     return pillar.compile_pillar()
 
@@ -189,33 +336,43 @@ def item(*args, **kwargs):
     '''
     .. versionadded:: 0.16.2
 
-    Return one or more pillar entries
+    Return one or more pillar entries from the :ref:`in-memory pillar data
+    <pillar-in-memory>`.
 
-    pillar : none
-        if specified, allows for a dictionary of pillar data to be made
-        available to pillar and ext_pillar rendering. these pillar variables
-        will also override any variables of the same name in pillar or
-        ext_pillar.
+    delimiter
+        Delimiter used to traverse nested dictionaries.
 
-        .. versionadded:: 2015.5.0
+        .. note::
+            This is different from :py:func:`pillar.get
+            <salt.modules.pillar.get>` in that no default value can be
+            specified. :py:func:`pillar.get <salt.modules.pillar.get>` should
+            probably still be used in most cases to retrieve nested pillar
+            values, as it is a bit more flexible. One reason to use this
+            function instead of :py:func:`pillar.get <salt.modules.pillar.get>`
+            however is when it is desirable to retrieve the values of more than
+            one key, since :py:func:`pillar.get <salt.modules.pillar.get>` can
+            only retrieve one key at a time.
+
+        .. versionadded:: 2015.8.0
 
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' pillar.item foo
+        salt '*' pillar.item foo:bar
         salt '*' pillar.item foo bar baz
     '''
     ret = {}
     default = kwargs.get('default', '')
-    delimiter = kwargs.get('delimiter', ':')
+    delimiter = kwargs.get('delimiter', DEFAULT_TARGET_DELIM)
 
     try:
         for arg in args:
             ret[arg] = salt.utils.traverse_dict_and_list(__pillar__,
-                                                        arg,
-                                                        default,
-                                                        delimiter)
+                                                         arg,
+                                                         default,
+                                                         delimiter)
     except KeyError:
         pass
 
@@ -250,9 +407,39 @@ def raw(key=None):
 
 def ext(external, pillar=None):
     '''
+    .. versionchanged:: 2016.3.6,2016.11.3,2017.7.0
+        The supported ext_pillar types are now tunable using the
+        :conf_master:`on_demand_ext_pillar` config option. Earlier releases
+        used a hard-coded default.
+
     Generate the pillar and apply an explicit external pillar
 
-    CLI Example:
+
+    external
+        A single ext_pillar to add to the ext_pillar configuration. This must
+        be passed as a single section from the ext_pillar configuration (see
+        CLI examples below). For more complicated ``ext_pillar``
+        configurations, it can be helpful to use the Python shell to load YAML
+        configuration into a dictionary, and figure out
+
+        .. code-block:: python
+
+            >>> import yaml
+            >>> ext_pillar = yaml.safe_load("""
+            ... ext_pillar:
+            ...   - git:
+            ...     - issue38440 https://github.com/terminalmage/git_pillar:
+            ...       - env: base
+            ... """)
+            >>> ext_pillar
+            {'ext_pillar': [{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}]}
+            >>> ext_pillar['ext_pillar'][0]
+            {'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}
+
+        In the above example, the value to pass would be
+        ``{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}``.
+        Note that this would need to be quoted when passing on the CLI (as in
+        the CLI examples below).
 
     pillar : None
         If specified, allows for a dictionary of pillar data to be made
@@ -262,9 +449,13 @@ def ext(external, pillar=None):
 
         .. versionadded:: 2015.5.0
 
+    CLI Examples:
+
     .. code-block:: bash
 
         salt '*' pillar.ext '{libvirt: _}'
+        salt '*' pillar.ext "{'git': ['master https://github.com/myuser/myrepo']}"
+        salt '*' pillar.ext "{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}"
     '''
     if isinstance(external, six.string_types):
         external = yaml.safe_load(external)
@@ -361,3 +552,63 @@ def file_exists(path, saltenv=None):
 
 # Provide a jinja function call compatible get aliased as fetch
 fetch = get
+
+
+def filter_by(lookup_dict,
+              pillar,
+              merge=None,
+              default='default',
+              base=None):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Look up the given pillar in a given dictionary and return the result
+
+    :param lookup_dict: A dictionary, keyed by a pillar, containing a value or
+        values relevant to systems matching that pillar. For example, a key
+        could be a pillar for a role and the value could the name of a package
+        on that particular OS.
+
+        The dictionary key can be a globbing pattern. The function will return
+        the corresponding ``lookup_dict`` value where the pilalr value matches
+        the  pattern. For example:
+
+        .. code-block:: bash
+
+            # this will render 'got some salt' if ``role`` begins with 'salt'
+            salt '*' pillar.filter_by '{salt*: got some salt, default: salt is not here}' role
+
+    :param pillar: The name of a pillar to match with the system's pillar. For
+        example, the value of the "role" pillar could be used to pull values
+        from the ``lookup_dict`` dictionary.
+
+        The pillar value can be a list. The function will return the
+        ``lookup_dict`` value for a first found item in the list matching
+        one of the ``lookup_dict`` keys.
+
+    :param merge: A dictionary to merge with the results of the pillar
+        selection from ``lookup_dict``. This allows another dictionary to
+        override the values in the ``lookup_dict``.
+
+    :param default: default lookup_dict's key used if the pillar does not exist
+        or if the pillar value has no match on lookup_dict.  If unspecified
+        the value is "default".
+
+    :param base: A lookup_dict key to use for a base dictionary.  The
+        pillar-selected ``lookup_dict`` is merged over this and then finally
+        the ``merge`` dictionary is merged.  This allows common values for
+        each case to be collected in the base and overridden by the pillar
+        selection dictionary and the merge dictionary.  Default is unset.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pillar.filter_by '{web: Serve it up, db: I query, default: x_x}' role
+    '''
+    return salt.utils.filter_by(lookup_dict=lookup_dict,
+                                lookup=pillar,
+                                traverse=__pillar__,
+                                merge=merge,
+                                default=default,
+                                base=base)

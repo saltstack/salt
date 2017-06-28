@@ -10,8 +10,8 @@ Salt 2014.1.10 Release Notes
     detection, and thus was never packaged for general release.  This version
     contains the version detection fix, but is otherwise identical to 2014.1.9.
 
-Version 2014.1.10 is another bugfix release for :doc:`2014.1.0
-</topics/releases/2014.1.0>`.  Changes include:
+Version 2014.1.10 is another bugfix release for :ref:`2014.1.0
+<release-2014-1-0>`.  Changes include:
 
 - Ensure salt-ssh will not continue if permissions on a temporary directory are
   not correct.

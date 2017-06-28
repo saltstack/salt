@@ -10,14 +10,19 @@ import time
 import logging
 
 # Import Salt libs
-from raet import raeting, nacling
-from raet.lane.stacking import LaneStack
-from raet.lane.yarding import RemoteYard
 import salt.config
 import salt.client
 import salt.utils
 import salt.syspaths as syspaths
 from salt.utils import kinds
+
+try:
+    from raet import raeting, nacling
+    from raet.lane.stacking import LaneStack
+    from raet.lane.yarding import RemoteYard
+    HAS_RAET_LIBS = True
+except ImportError:
+    HAS_RAET_LIBS = False
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +41,7 @@ class LocalClient(salt.client.LocalClient):
             tgt,
             fun,
             arg=(),
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             jid='',
             timeout=5,
@@ -44,11 +49,20 @@ class LocalClient(salt.client.LocalClient):
         '''
         Publish the command!
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         payload_kwargs = self._prep_pub(
                 tgt,
                 fun,
                 arg=arg,
-                expr_form=expr_form,
+                tgt_type=tgt_type,
                 ret=ret,
                 jid=jid,
                 timeout=timeout,

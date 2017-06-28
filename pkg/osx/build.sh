@@ -1,12 +1,12 @@
 #!/bin/bash
 ############################################################################
 #
-# Title: Build Salt Script for OSX
+# Title: Build Salt Script for macOS
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
 # Description: This script downloads and installs all dependencies and build
-#              tools required to create a .pkg file for installation on OSX.
+#              tools required to create a .pkg file for installation on macOS.
 #              Salt and all dependencies will be installed to /opt/salt. A
 #              .pkg file will then be created based on the contents of
 #              /opt/salt
@@ -57,7 +57,7 @@ PKGRESOURCES=$SRCDIR/pkg/osx
 ############################################################################
 if [[ ! -e "$SRCDIR/.git" ]] && [[ ! -e "$SRCDIR/scripts/salt" ]]; then
     echo "This directory doesn't appear to be a git repository."
-    echo "The OS X build process needs some files from a Git checkout of Salt."
+    echo "The macOS build process needs some files from a Git checkout of Salt."
     echo "Run this script from the root of the Git checkout."
     exit -1
 fi

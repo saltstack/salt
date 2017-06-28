@@ -5,10 +5,9 @@ Nova class
 
 # Import Python libs
 from __future__ import absolute_import, with_statement
-from distutils.version import LooseVersion
-import time
 import inspect
 import logging
+import time
 
 # Import third party libs
 import salt.ext.six as six
@@ -26,17 +25,27 @@ try:
     HAS_NOVA = True
 except ImportError:
     pass
+
+HAS_KEYSTONEAUTH = False
+try:
+    import keystoneauth1.loading
+    import keystoneauth1.session
+    HAS_KEYSTONEAUTH = True
+except ImportError:
+    pass
 # pylint: enable=import-error
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltCloudSystemExit
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Get logging started
 log = logging.getLogger(__name__)
 
 # Version added to novaclient.client.Client function
 NOVACLIENT_MINVER = '2.6.1'
+NOVACLIENT_MAXVER = '6.0.1'
 
 # dict for block_device_mapping_v2
 CLIENT_BDM2_KEYS = {
@@ -55,10 +64,14 @@ CLIENT_BDM2_KEYS = {
 
 def check_nova():
     if HAS_NOVA:
-        novaclient_ver = LooseVersion(novaclient.__version__)
-        min_ver = LooseVersion(NOVACLIENT_MINVER)
-        if novaclient_ver >= min_ver:
+        novaclient_ver = _LooseVersion(novaclient.__version__)
+        min_ver = _LooseVersion(NOVACLIENT_MINVER)
+        max_ver = _LooseVersion(NOVACLIENT_MAXVER)
+        if novaclient_ver >= min_ver and novaclient_ver <= max_ver:
             return HAS_NOVA
+        elif novaclient_ver > max_ver:
+            log.debug('Older novaclient version required. Maximum: {0}'.format(NOVACLIENT_MAXVER))
+            return False
         log.debug('Newer novaclient version required.  Minimum: {0}'.format(NOVACLIENT_MINVER))
     return False
 
@@ -169,6 +182,15 @@ def get_entry(dict_, key, value, raise_error=True):
     return {}
 
 
+def get_entry_multi(dict_, pairs, raise_error=True):
+    for entry in dict_:
+        if all([entry[key] == value for key, value in pairs]):
+            return entry
+    if raise_error is True:
+        raise SaltCloudSystemExit('Unable to find {0} in {1}.'.format(pairs, dict_))
+    return {}
+
+
 def sanatize_novaclient(kwargs):
     variables = (
         'username', 'api_key', 'project_id', 'auth_url', 'insecure',
@@ -201,11 +223,79 @@ class SaltNova(object):
         region_name=None,
         password=None,
         os_auth_plugin=None,
+        use_keystoneauth=False,
         **kwargs
     ):
         '''
         Set up nova credentials
         '''
+        if all([use_keystoneauth, HAS_KEYSTONEAUTH]):
+            self._new_init(username=username,
+                           project_id=project_id,
+                           auth_url=auth_url,
+                           region_name=region_name,
+                           password=password,
+                           os_auth_plugin=os_auth_plugin,
+                           **kwargs)
+        else:
+            self._old_init(username=username,
+                           project_id=project_id,
+                           auth_url=auth_url,
+                           region_name=region_name,
+                           password=password,
+                           os_auth_plugin=os_auth_plugin,
+                           **kwargs)
+
+    def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, verify=True, **kwargs):
+        if auth is None:
+            auth = {}
+
+        loader = keystoneauth1.loading.get_plugin_loader(os_auth_plugin or 'password')
+
+        self.client_kwargs = kwargs.copy()
+        self.kwargs = auth.copy()
+        if not self.extensions:
+            if hasattr(OpenStackComputeShell, '_discover_extensions'):
+                self.extensions = OpenStackComputeShell()._discover_extensions('2.0')
+            else:
+                self.extensions = client.discover_extensions('2.0')
+            for extension in self.extensions:
+                extension.run_hooks('__pre_parse_args__')
+            self.client_kwargs['extensions'] = self.extensions
+
+        self.kwargs['username'] = username
+        self.kwargs['project_name'] = project_id
+        self.kwargs['auth_url'] = auth_url
+        self.kwargs['password'] = password
+        if auth_url.endswith('3'):
+            self.kwargs['user_domain_name'] = kwargs.get('user_domain_name', 'default')
+            self.kwargs['project_domain_name'] = kwargs.get('project_domain_name', 'default')
+
+        self.client_kwargs['region_name'] = region_name
+        self.client_kwargs['service_type'] = 'compute'
+
+        if hasattr(self, 'extensions'):
+            # needs an object, not a dictionary
+            self.kwargstruct = KwargsStruct(**self.client_kwargs)
+            for extension in self.extensions:
+                extension.run_hooks('__post_parse_args__', self.kwargstruct)
+            self.client_kwargs = self.kwargstruct.__dict__
+
+        # Requires novaclient version >= 2.6.1
+        self.version = str(kwargs.get('version', 2))
+
+        self.client_kwargs = sanatize_novaclient(self.client_kwargs)
+        options = loader.load_from_options(**self.kwargs)
+        self.session = keystoneauth1.session.Session(auth=options, verify=verify)
+        conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
+        self.kwargs['auth_token'] = conn.client.session.get_token()
+        self.catalog = conn.client.session.get('/auth/catalog', endpoint_filter={'service_type': 'identity'}).json().get('catalog', [])
+        if conn.client.get_endpoint(service_type='identity').endswith('v3'):
+            self._v3_setup(region_name)
+        else:
+            self._v2_setup(region_name)
+
+    def _old_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, **kwargs):
         self.kwargs = kwargs.copy()
         if not self.extensions:
             if hasattr(OpenStackComputeShell, '_discover_extensions'):
@@ -259,6 +349,33 @@ class SaltNova(object):
         self.kwargs['auth_token'] = conn.client.auth_token
         self.catalog = conn.client.service_catalog.catalog['access']['serviceCatalog']
 
+        self._v2_setup(region_name)
+
+    def _v3_setup(self, region_name):
+        if region_name is not None:
+            servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
+            self.kwargs['bypass_url'] = get_entry_multi(
+                servers_endpoints,
+                [('region', region_name), ('interface', 'public')]
+            )['url']
+
+        self.compute_conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
+
+        volume_endpoints = get_entry(self.catalog, 'type', 'volume', raise_error=False).get('endpoints', {})
+        if volume_endpoints:
+            if region_name is not None:
+                self.kwargs['bypass_url'] = get_entry_multi(
+                    volume_endpoints,
+                    [('region', region_name), ('interface', 'public')]
+                )['url']
+
+            self.volume_conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
+            if hasattr(self, 'extensions'):
+                self.expand_extensions()
+        else:
+            self.volume_conn = None
+
+    def _v2_setup(self, region_name):
         if region_name is not None:
             servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
             self.kwargs['bypass_url'] = get_entry(
@@ -776,6 +893,22 @@ class SaltNova(object):
                 pass
         return ret
 
+    def server_list_min(self):
+        '''
+        List minimal information about servers
+        '''
+        nt_ks = self.compute_conn
+        ret = {}
+        for item in nt_ks.servers.list(detailed=False):
+            try:
+                ret[item.name] = {
+                    'id': item.id,
+                    'status': 'Running'
+                }
+            except TypeError:
+                pass
+        return ret
+
     def server_list_detailed(self):
         '''
         Detailed list of servers
@@ -1017,7 +1150,14 @@ class SaltNova(object):
         floating_ips = nt_ks.floating_ips.list()
         for floating_ip in floating_ips:
             if floating_ip.ip == ip:
-                return floating_ip
+                response = {
+                    'ip': floating_ip.ip,
+                    'fixed_ip': floating_ip.fixed_ip,
+                    'id': floating_ip.id,
+                    'instance_id': floating_ip.instance_id,
+                    'pool': floating_ip.pool
+                }
+                return response
         return {}
 
     def floating_ip_create(self, pool=None):

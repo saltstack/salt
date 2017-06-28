@@ -161,7 +161,7 @@
 # strip_colors: False
 
 # Backup files that are replaced by file.managed and file.recurse under
-# 'cachedir'/file_backups relative to their original location and appended
+# 'cachedir'/file_backup relative to their original location and appended
 # with a timestamp. The only valid setting is "minion". Disabled by default.
 #
 # Alternatively this can be specified for each file in state files:
@@ -192,6 +192,15 @@
 # have a minion wait for a random amount of time, use this optional parameter.
 # The wait-time will be a random number of seconds between 0 and the defined value.
 #random_reauth_delay: 60
+
+
+# To avoid overloading a master when many minions startup at once, a randomized
+# delay may be set to tell the minions to wait before connecting to the master.
+# This value is the number of seconds to choose from for a random number. For
+# example, setting this value to 60 will choose a random number of seconds to delay
+# on startup between zero seconds and sixty seconds. Setting to '0' will disable
+# this feature.
+#random_startup_delay: 0
 
 # When waiting for a master to accept the minion's public key, salt will
 # continuously attempt to reconnect until successful. This is the timeout value,
@@ -484,6 +493,11 @@
 # as the environment setting, but for pillar instead of states.
 #pillarenv: None
 #
+# Set this option to True to force the pillarenv to be the same as the
+# effective saltenv when running states. Note that if pillarenv is specified,
+# this option will be ignored.
+#pillarenv_from_saltenv: False
+#
 # Set this option to 'True' to force a 'KeyError' to be raised whenever an
 # attempt to retrieve a named value from pillar fails. When this option is set
 # to 'False', the failed attempt returns an empty string. Default is 'False'.
@@ -569,14 +583,11 @@
 #fileserver_limit_traversal: False
 
 # The hash_type is the hash to use when discovering the hash of a file on
-# the local fileserver. The default is md5, but sha1, sha224, sha256, sha384
+# the local fileserver. The default is sha256, but md5, sha1, sha224, sha384
 # and sha512 are also supported.
 #
-# WARNING: While md5 and sha1 are also supported, do not use it due to the high chance
-# of possible collisions and thus security breach.
-#
-# WARNING: While md5 is also supported, do not use it due to the high chance
-# of possible collisions and thus security breach.
+# WARNING: While md5 and sha1 are also supported, do not use them due to the
+# high chance of possible collisions and thus security breach.
 #
 # Warning: Prior to changing this value, the minion should be stopped and all
 # Salt caches should be cleared.
@@ -633,11 +644,24 @@
 # "salt-key -f master.pub" on the Salt master.
 #master_finger: ''
 
+# Use TLS/SSL encrypted connection between master and minion.
+# Can be set to a dictionary containing keyword arguments corresponding to Python's
+# 'ssl.wrap_socket' method.
+# Default is None.
+#ssl:
+#    keyfile: <path_to_keyfile>
+#    certfile: <path_to_certfile>
+#    ssl_version: PROTOCOL_TLSv1_2
+
 
 ######         Thread settings        #####
 ###########################################
 # Disable multiprocessing support, by default when a minion receives a
 # publication a new process is spawned and the command is executed therein.
+#
+# WARNING: Disabling multiprocessing may result in substantial slowdowns
+# when processing large pillars. See https://github.com/saltstack/salt/issues/38758
+# for a full explanation.
 #multiprocessing: True
 
 
@@ -722,6 +746,10 @@
 #
 #zmq_monitor: False
 
+# Number of times to try to authenticate with the salt master when reconnecting
+# to the master
+#tcp_authentication_retries: 5
+
 ######      Module configuration      #####
 ###########################################
 # Salt allows for modules to be passed arbitrary configuration data, any data
@@ -792,8 +820,16 @@
 
 ######      Returner  settings        ######
 ############################################
-# Which returner(s) will be used for minion's result:
+# Default Minion returners. Can be a comma delimited string or a list:
+#
 #return: mysql
+#
+#return: mysql,slack,redis
+#
+#return:
+#  - mysql
+#  - hipchat
+#  - slack
 
 
 ######    Miscellaneous  settings     ######

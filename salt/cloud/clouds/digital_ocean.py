@@ -281,20 +281,11 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -346,17 +337,13 @@ def create(vm_):
         'ssh_interface', vm_, __opts__, search_global=False, default='public'
     )
 
-    if ssh_interface == 'private':
-        log.info("ssh_interafce: Setting interface for ssh to 'private'.")
+    if ssh_interface in ['private', 'public']:
+        log.info("ssh_interface: Setting interface for ssh to {}".format(ssh_interface))
         kwargs['ssh_interface'] = ssh_interface
     else:
-        if ssh_interface != 'public':
-            raise SaltCloudConfigError(
-                "The DigitalOcean driver requires ssh_interface to be defined as 'public' or 'private'."
-            )
-        else:
-            log.info("ssh_interafce: Setting interface for ssh to 'public'.")
-            kwargs['ssh_interface'] = ssh_interface
+        raise SaltCloudConfigError(
+            "The DigitalOcean driver requires ssh_interface to be defined as 'public' or 'private'."
+        )
 
     private_networking = config.get_cloud_config_value(
         'private_networking', vm_, __opts__, search_global=False, default=None,
@@ -390,6 +377,19 @@ def create(vm_):
         if not isinstance(ipv6, bool):
             raise SaltCloudConfigError("'ipv6' should be a boolean value.")
         kwargs['ipv6'] = ipv6
+
+    userdata_file = config.get_cloud_config_value(
+        'userdata_file', vm_, __opts__, search_global=False, default=None
+    )
+    if userdata_file is not None:
+        try:
+            with salt.utils.fopen(userdata_file, 'r') as fp_:
+                kwargs['user_data'] = salt.utils.cloud.userdata_template(
+                    __opts__, vm_, fp_.read()
+                )
+        except Exception as exc:
+            log.exception(
+                'Failed to read userdata from %s: %s', userdata_file, exc)
 
     create_dns_record = config.get_cloud_config_value(
         'create_dns_record', vm_, __opts__, search_global=False, default=None,
@@ -432,7 +432,7 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args={'kwargs': kwargs},
+        args=__utils__['cloud.filter_event']('requesting', kwargs, list(kwargs)),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -521,11 +521,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -648,22 +644,34 @@ def list_keypairs(call=None):
         )
         return False
 
-    items = query(method='account/keys')
+    fetch = True
+    page = 1
     ret = {}
-    for key_pair in items['ssh_keys']:
-        name = key_pair['name']
-        if name in ret:
-            raise SaltCloudSystemExit(
-                'A duplicate key pair name, \'{0}\', was found in DigitalOcean\'s '
-                'key pair list. Please change the key name stored by DigitalOcean. '
-                'Be sure to adjust the value of \'ssh_key_file\' in your cloud '
-                'profile or provider configuration, if necessary.'.format(
-                    name
+
+    while fetch:
+        items = query(method='account/keys', command='?page=' + str(page) +
+                      '&per_page=100')
+
+        for key_pair in items['ssh_keys']:
+            name = key_pair['name']
+            if name in ret:
+                raise SaltCloudSystemExit(
+                    'A duplicate key pair name, \'{0}\', was found in DigitalOcean\'s '
+                    'key pair list. Please change the key name stored by DigitalOcean. '
+                    'Be sure to adjust the value of \'ssh_key_file\' in your cloud '
+                    'profile or provider configuration, if necessary.'.format(
+                        name
+                    )
                 )
-            )
-        ret[name] = {}
-        for item in six.iterkeys(key_pair):
-            ret[name][item] = str(key_pair[item])
+            ret[name] = {}
+            for item in six.iterkeys(key_pair):
+                ret[name][item] = str(key_pair[item])
+
+        page += 1
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
 
     return ret
 
@@ -699,7 +707,7 @@ def import_keypair(kwargs=None, call=None):
     Upload public key to cloud provider.
     Similar to EC2 import_keypair.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     kwargs
         file(mandatory): public key file-name

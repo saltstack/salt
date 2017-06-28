@@ -1,3 +1,5 @@
+.. _troubleshooting-salt-master:
+
 ===============================
 Troubleshooting the Salt Master
 ===============================
@@ -27,8 +29,8 @@ What Ports does the Master Need Open?
 For the master, TCP ports 4505 and 4506 need to be open. If you've put both
 your Salt master and minion in debug mode and don't see an acknowledgment
 that your minion has connected, it could very well be a firewall interfering
-with the connection. See our :doc:`firewall configuration
-</topics/tutorials/firewall>` page for help opening the firewall on various
+with the connection. See our :ref:`firewall configuration
+<firewall>` page for help opening the firewall on various
 platforms.
 
 If you've opened the correct TCP ports and still aren't seeing connections,
@@ -248,9 +250,8 @@ service.
         of the number of attempts.
 
 
-=====================
-Running state locally
-=====================
+Running states locally
+======================
 
 To debug the states, you can use call locally.
 

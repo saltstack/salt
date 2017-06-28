@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Management of Heat
-=======================================
+==================
+
+.. versionadded:: 2017.7.0
 
 :depends:   - heat Python module
 :configuration: See :py:mod:`salt.modules.heat` for setup instructions.

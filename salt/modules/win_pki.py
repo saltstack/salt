@@ -4,9 +4,8 @@ Microsoft certificate management via the Pki PowerShell module.
 
 :platform:      Windows
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 '''
-
 # Import python libs
 from __future__ import absolute_import
 import json
@@ -17,6 +16,7 @@ from salt.exceptions import SaltInvocationError
 import ast
 import os
 import salt.utils
+import salt.utils.powershell
 
 _DEFAULT_CONTEXT = 'LocalMachine'
 _DEFAULT_FORMAT = 'cer'
@@ -31,47 +31,44 @@ def __virtual__():
     '''
     Only works on Windows systems with the PKI PowerShell module installed.
     '''
+    if not salt.utils.is_windows():
+        return False, 'Only available on Windows Systems'
 
-    def _module_present():
-        '''
-        Check for the presence of the PKI module.
-        '''
-        cmd = r"[Bool] (Get-Module -ListAvailable | Where-Object { $_.Name -eq 'PKI' })"
-        cmd_ret = __salt__['cmd.run_all'](cmd, shell='powershell', python_shell=True)
+    if not __salt__['cmd.shell_info']('powershell')['installed']:
+        return False, 'Powershell not available'
 
-        if cmd_ret['retcode'] == 0:
-            return ast.literal_eval(cmd_ret['stdout'])
-        return False
+    if not salt.utils.powershell.module_exists('PKI'):
+        return False, 'PowerShell PKI module not available'
 
-    if salt.utils.is_windows():
-        if _module_present():
-            return __virtualname__
-        else:
-            _LOG.debug('PowerShell PKI module not available.')
-    return False
+    return __virtualname__
 
 
 def _cmd_run(cmd, as_json=False):
     '''
-    Ensure that the Pki module is loaded, and convert to and extract data from Json as needed.
+    Ensure that the Pki module is loaded, and convert to and extract data from
+    Json as needed.
     '''
     cmd_full = ['Import-Module -Name PKI; ']
 
     if as_json:
-        cmd_full.append(r'ConvertTo-Json -Compress -Depth 4 -InputObject @({0})'.format(cmd))
+        cmd_full.append(r'ConvertTo-Json -Compress -Depth 4 -InputObject '
+                        r'@({0})'.format(cmd))
     else:
         cmd_full.append(cmd)
-    cmd_ret = __salt__['cmd.run_all'](str().join(cmd_full), shell='powershell', python_shell=True)
+    cmd_ret = __salt__['cmd.run_all'](
+        str().join(cmd_full), shell='powershell', python_shell=True)
 
     if cmd_ret['retcode'] != 0:
-        _LOG.error('Unable to execute command: %s\nError: %s', cmd, cmd_ret['stderr'])
+        _LOG.error('Unable to execute command: %s\nError: %s', cmd,
+                   cmd_ret['stderr'])
 
     if as_json:
         try:
             items = json.loads(cmd_ret['stdout'], strict=False)
+            return items
         except ValueError:
             _LOG.error('Unable to parse return data as Json.')
-        return items
+
     return cmd_ret['stdout']
 
 
@@ -111,7 +108,8 @@ def get_stores():
         salt '*' win_pki.get_stores
     '''
     ret = dict()
-    cmd = r"Get-ChildItem -Path 'Cert:\' | Select-Object LocationName, StoreNames"
+    cmd = r"Get-ChildItem -Path 'Cert:\' | " \
+          r"Select-Object LocationName, StoreNames"
 
     items = _cmd_run(cmd=cmd, as_json=True)
 
@@ -162,12 +160,16 @@ def get_certs(context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
     return ret
 
 
-def get_cert_file(name, cert_format=_DEFAULT_FORMAT):
+def get_cert_file(name, cert_format=_DEFAULT_FORMAT, password=''):
     '''
     Get the details of the certificate file.
 
     :param str name: The filesystem path of the certificate file.
-    :param str cert_format: The certificate format. Specify 'cer' for X.509, or 'pfx' for PKCS #12.
+    :param str cert_format: The certificate format. Specify 'cer' for X.509, or
+        'pfx' for PKCS #12.
+    :param str password: The password of the certificate. Only applicable to pfx
+        format. Note that if used interactively, the password will be seen by all minions.
+        To protect the password, use a state and get the password from pillar.
 
     :return: A dictionary of the certificate thumbprints and properties.
     :rtype: dict
@@ -190,13 +192,24 @@ def get_cert_file(name, cert_format=_DEFAULT_FORMAT):
         return ret
 
     if cert_format == 'pfx':
-        cmd.append(r"Get-PfxCertificate -FilePath '{0}'".format(name))
-        cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, Thumbprint, Version')
+        if password:
+            cmd.append('$CertObject = New-Object')
+            cmd.append(' System.Security.Cryptography.X509Certificates.X509Certificate2;')
+            cmd.append(r" $CertObject.Import('{0}'".format(name))
+            cmd.append(",'{0}'".format(password))
+            cmd.append(",'DefaultKeySet') ; $CertObject")
+            cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
+                    'Thumbprint, Version')
+        else:
+            cmd.append(r"Get-PfxCertificate -FilePath '{0}'".format(name))
+            cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
+                    'Thumbprint, Version')
     else:
         cmd.append('$CertObject = New-Object')
         cmd.append(' System.Security.Cryptography.X509Certificates.X509Certificate2;')
         cmd.append(r" $CertObject.Import('{0}'); $CertObject".format(name))
-        cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, Thumbprint, Version')
+        cmd.append(' | Select-Object DnsNameList, SerialNumber, Subject, '
+                   'Thumbprint, Version')
 
     items = _cmd_run(cmd=str().join(cmd), as_json=True)
 
@@ -214,17 +227,26 @@ def get_cert_file(name, cert_format=_DEFAULT_FORMAT):
     return ret
 
 
-def import_cert(name, cert_format=_DEFAULT_FORMAT, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE,
-                exportable=True, password='', saltenv='base'):
+def import_cert(name,
+                cert_format=_DEFAULT_FORMAT,
+                context=_DEFAULT_CONTEXT,
+                store=_DEFAULT_STORE,
+                exportable=True,
+                password='',
+                saltenv='base'):
     '''
     Import the certificate file into the given certificate store.
 
     :param str name: The path of the certificate file to import.
-    :param str cert_format: The certificate format. Specify 'cer' for X.509, or 'pfx' for PKCS #12.
+    :param str cert_format: The certificate format. Specify 'cer' for X.509, or
+        'pfx' for PKCS #12.
     :param str context: The name of the certificate store location context.
     :param str store: The name of the certificate store.
-    :param bool exportable: Mark the certificate as exportable. Only applicable to pfx format.
-    :param str password: The password of the certificate. Only applicable to pfx format.
+    :param bool exportable: Mark the certificate as exportable. Only applicable
+        to pfx format.
+    :param str password: The password of the certificate. Only applicable to pfx
+        format. Note that if used interactively, the password will be seen by all minions.
+        To protect the password, use a state and get the password from pillar.
     :param str saltenv: The environment the file resides in.
 
     :return: A boolean representing whether all changes succeeded.
@@ -249,7 +271,10 @@ def import_cert(name, cert_format=_DEFAULT_FORMAT, context=_DEFAULT_CONTEXT, sto
         _LOG.error('Unable to get cached copy of file: %s', name)
         return False
 
-    cert_props = get_cert_file(name=cached_source_path)
+    if password:
+        cert_props = get_cert_file(name=cached_source_path, cert_format=cert_format, password=password)
+    else:
+        cert_props = get_cert_file(name=cached_source_path, cert_format=cert_format)
 
     current_certs = get_certs(context=context, store=store)
 
@@ -259,21 +284,26 @@ def import_cert(name, cert_format=_DEFAULT_FORMAT, context=_DEFAULT_CONTEXT, sto
         return True
 
     if cert_format == 'pfx':
-        # In instances where an empty password is needed, we use a System.Security.SecureString
-        # object since ConvertTo-SecureString will not convert an empty string.
+        # In instances where an empty password is needed, we use a
+        # System.Security.SecureString object since ConvertTo-SecureString will
+        # not convert an empty string.
         if password:
-            cmd.append(r"$Password = ConvertTo-SecureString -String '{0}'".format(password))
+            cmd.append(r"$Password = ConvertTo-SecureString "
+                       r"-String '{0}'".format(password))
             cmd.append(' -AsPlainText -Force; ')
         else:
             cmd.append('$Password = New-Object System.Security.SecureString; ')
 
-        cmd.append(r"Import-PfxCertificate -FilePath '{0}'".format(cached_source_path))
-        cmd.append(r" -CertStoreLocation '{0}' -Password $Password".format(store_path))
+        cmd.append(r"Import-PfxCertificate "
+                   r"-FilePath '{0}'".format(cached_source_path))
+        cmd.append(r" -CertStoreLocation '{0}'".format(store_path))
+        cmd.append(r" -Password $Password")
 
         if exportable:
             cmd.append(' -Exportable')
     else:
-        cmd.append(r"Import-Certificate -FilePath '{0}'".format(cached_source_path))
+        cmd.append(r"Import-Certificate "
+                   r"-FilePath '{0}'".format(cached_source_path))
         cmd.append(r" -CertStoreLocation '{0}'".format(store_path))
 
     _cmd_run(cmd=str().join(cmd))
@@ -291,17 +321,24 @@ def import_cert(name, cert_format=_DEFAULT_FORMAT, context=_DEFAULT_CONTEXT, sto
     return False
 
 
-def export_cert(name, thumbprint, cert_format=_DEFAULT_FORMAT, context=_DEFAULT_CONTEXT,
-                store=_DEFAULT_STORE, password=''):
+def export_cert(name,
+                thumbprint,
+                cert_format=_DEFAULT_FORMAT,
+                context=_DEFAULT_CONTEXT,
+                store=_DEFAULT_STORE,
+                password=''):
     '''
     Export the certificate to a file from the given certificate store.
 
     :param str name: The destination path for the exported certificate file.
     :param str thumbprint: The thumbprint value of the target certificate.
-    :param str cert_format: The certificate format. Specify 'cer' for X.509, or 'pfx' for PKCS #12.
+    :param str cert_format: The certificate format. Specify 'cer' for X.509, or
+        'pfx' for PKCS #12.
     :param str context: The name of the certificate store location context.
     :param str store: The name of the certificate store.
-    :param str password: The password of the certificate. Only applicable to pfx format.
+    :param str password: The password of the certificate. Only applicable to pfx
+        format. Note that if used interactively, the password will be seen by all minions.
+        To protect the password, use a state and get the password from pillar.
 
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
@@ -321,18 +358,22 @@ def export_cert(name, thumbprint, cert_format=_DEFAULT_FORMAT, context=_DEFAULT_
     _validate_cert_format(name=cert_format)
 
     if cert_format == 'pfx':
-        # In instances where an empty password is needed, we use a System.Security.SecureString
-        # object since ConvertTo-SecureString will not convert an empty string.
+        # In instances where an empty password is needed, we use a
+        # System.Security.SecureString object since ConvertTo-SecureString will
+        # not convert an empty string.
         if password:
-            cmd.append(r"$Password = ConvertTo-SecureString -String '{0}'".format(password))
+            cmd.append(r"$Password = ConvertTo-SecureString "
+                       r"-String '{0}'".format(password))
             cmd.append(' -AsPlainText -Force; ')
         else:
             cmd.append('$Password = New-Object System.Security.SecureString; ')
 
-        cmd.append(r"Export-PfxCertificate -Cert '{0}' -FilePath '{1}'".format(cert_path, name))
+        cmd.append(r"Export-PfxCertificate "
+                   r"-Cert '{0}' -FilePath '{1}'".format(cert_path, name))
         cmd.append(r" -Password $Password")
     else:
-        cmd.append(r"Export-Certificate -Cert '{0}' -FilePath '{1}'".format(cert_path, name))
+        cmd.append(r"Export-Certificate "
+                   r"-Cert '{0}' -FilePath '{1}'".format(cert_path, name))
 
     cmd.append(r" | Out-Null; Test-Path -Path '{0}'".format(name))
 
@@ -345,19 +386,26 @@ def export_cert(name, thumbprint, cert_format=_DEFAULT_FORMAT, context=_DEFAULT_
     return ret
 
 
-def test_cert(thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE, untrusted_root=False,
-              dns_name='', eku=''):
+def test_cert(thumbprint,
+              context=_DEFAULT_CONTEXT,
+              store=_DEFAULT_STORE,
+              untrusted_root=False,
+              dns_name='',
+              eku=''):
     '''
     Check the certificate for validity.
 
     :param str thumbprint: The thumbprint value of the target certificate.
     :param str context: The name of the certificate store location context.
     :param str store: The name of the certificate store.
-    :param bool untrusted_root: Whether the root certificate is required to be trusted in chain building.
+    :param bool untrusted_root: Whether the root certificate is required to be
+        trusted in chain building.
     :param str dns_name: The DNS name to verify as valid for the certificate.
-    :param str eku: The enhanced key usage object identifiers to verify for the certificate chain.
+    :param str eku: The enhanced key usage object identifiers to verify for the
+        certificate chain.
 
-    :return: A boolean representing whether the certificate was considered valid.
+    :return: A boolean representing whether the certificate was considered
+        valid.
     :rtype: bool
 
     CLI Example:
@@ -410,7 +458,8 @@ def remove_cert(thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
     current_certs = get_certs(context=context, store=store)
 
     if thumbprint not in current_certs:
-        _LOG.debug("Certificate '%s' already absent in store: %s", thumbprint, store_path)
+        _LOG.debug("Certificate '%s' already absent in store: %s", thumbprint,
+                   store_path)
         return True
 
     _validate_cert_path(name=cert_path)

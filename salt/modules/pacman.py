@@ -13,15 +13,17 @@ A module to wrap pacman calls, since Arch is the best
 # Import python libs
 from __future__ import absolute_import
 import copy
+import fnmatch
 import logging
-import re
 import os.path
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 import salt.utils.itertools
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -238,7 +240,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
 def group_list():
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Lists all groups known by pacman on this system
 
@@ -312,7 +314,7 @@ def group_list():
 
 def group_info(name):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Lists all packages in the specified group
 
@@ -351,7 +353,7 @@ def group_info(name):
 def group_diff(name):
 
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Lists which of a group's packages are installed and which are not
     installed
@@ -397,6 +399,8 @@ def refresh_db(root=None):
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     cmd = ['pacman', '-Sy']
 
     if root is not None:
@@ -438,7 +442,7 @@ def install(name=None,
             sources=None,
             **kwargs):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -511,6 +515,9 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
+    refresh = salt.utils.is_true(refresh)
+    sysupgrade = salt.utils.is_true(sysupgrade)
+
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
             name, pkgs, sources, **kwargs
@@ -521,15 +528,6 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version_num = kwargs.get('version')
-    if version_num:
-        if pkgs is None and sources is None:
-            # Allow 'version' to work for single package target
-            pkg_params = {name: version_num}
-        else:
-            log.warning('\'version\' parameter will be ignored for multiple '
-                        'package targets')
-
     if 'root' in kwargs:
         pkg_params['-r'] = kwargs['root']
 
@@ -539,61 +537,94 @@ def install(name=None,
         cmd.extend(['systemd-run', '--scope'])
     cmd.append('pacman')
 
+    errors = []
     if pkg_type == 'file':
         cmd.extend(['-U', '--noprogressbar', '--noconfirm'])
         cmd.extend(pkg_params)
     elif pkg_type == 'repository':
         cmd.append('-S')
-        if salt.utils.is_true(refresh):
+        if refresh:
             cmd.append('-y')
-        if salt.utils.is_true(sysupgrade):
+        if sysupgrade:
             cmd.append('-u')
         cmd.extend(['--noprogressbar', '--noconfirm', '--needed'])
         targets = []
-        problems = []
+        wildcards = []
         for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
                 targets.append(param)
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
-                if match:
-                    gt_lt, eq, verstr = match.groups()
-                    prefix = gt_lt or ''
-                    prefix += eq or ''
-                    # If no prefix characters were supplied, use '='
-                    prefix = prefix or '='
-                    targets.append('{0}{1}{2}'.format(param, prefix, verstr))
-                else:
-                    msg = ('Invalid version string \'{0}\' for package '
-                           '\'{1}\''.format(version_num, name))
-                    problems.append(msg)
-        if problems:
-            for problem in problems:
-                log.error(problem)
-            return {}
+                prefix, verstr = salt.utils.pkg.split_comparison(version_num)
+                if not prefix:
+                    prefix = '='
+                if '*' in verstr:
+                    if prefix == '=':
+                        wildcards.append((param, verstr))
+                    else:
+                        errors.append(
+                            'Invalid wildcard for {0}{1}{2}'.format(
+                                param, prefix, verstr
+                            )
+                        )
+                    continue
+                targets.append('{0}{1}{2}'.format(param, prefix, verstr))
 
+    if wildcards:
+        # Resolve wildcard matches
+        _available = list_repo_pkgs(*[x[0] for x in wildcards], refresh=refresh)
+        for pkgname, verstr in wildcards:
+            candidates = _available.get(pkgname, [])
+            match = salt.utils.fnmatch_multiple(candidates, verstr)
+            if match is not None:
+                targets.append('='.join((pkgname, match)))
+            else:
+                errors.append(
+                    'No version matching \'{0}\' found for package \'{1}\' '
+                    '(available: {2})'.format(
+                        verstr,
+                        pkgname,
+                        ', '.join(candidates) if candidates else 'none'
+                    )
+                )
+
+        if refresh:
+            try:
+                # Prevent a second refresh when we run the install command
+                cmd.remove('-y')
+            except ValueError:
+                # Shouldn't happen since we only add -y when refresh is True,
+                # but just in case that code above is inadvertently changed,
+                # don't let this result in a traceback.
+                pass
+
+    if not errors:
         cmd.extend(targets)
+        old = list_pkgs()
+        out = __salt__['cmd.run_all'](
+            cmd,
+            output_loglevel='trace',
+            python_shell=False
+        )
 
-    old = list_pkgs()
-    out = __salt__['cmd.run_all'](
-        cmd,
-        output_loglevel='trace',
-        python_shell=False
-    )
+        if out['retcode'] != 0 and out['stderr']:
+            errors = [out['stderr']]
+        else:
+            errors = []
 
-    if out['retcode'] != 0 and out['stderr']:
-        errors = [out['stderr']]
-    else:
-        errors = []
-
-    __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret = salt.utils.compare_dicts(old, new)
 
     if errors:
+        try:
+            changes = ret
+        except UnboundLocalError:
+            # We ran into errors before we attempted to install anything, so
+            # there are no changes.
+            changes = {}
         raise CommandExecutionError(
             'Problem encountered installing package(s)',
-            info={'errors': errors, 'changes': ret}
+            info={'errors': errors, 'changes': changes}
         )
 
     return ret
@@ -601,7 +632,7 @@ def install(name=None,
 
 def upgrade(refresh=False, root=None, **kwargs):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -720,7 +751,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
 
 def remove(name=None, pkgs=None, **kwargs):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -764,7 +795,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
 def purge(name=None, pkgs=None, **kwargs):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -905,3 +936,126 @@ def owner(*paths):
     if len(ret) == 1:
         return next(six.itervalues(ret))
     return ret
+
+
+def list_repo_pkgs(*args, **kwargs):
+    '''
+    Returns all available packages. Optionally, package names (and name globs)
+    can be passed and the results will be filtered to packages matching those
+    names.
+
+    This function can be helpful in discovering the version or repo to specify
+    in a :mod:`pkg.installed <salt.states.pkg.installed>` state.
+
+    The return data will be a dictionary mapping package names to a list of
+    version numbers, ordered from newest to oldest. If ``byrepo`` is set to
+    ``True``, then the return dictionary will contain repository names at the
+    top level, and each repository will map packages to lists of version
+    numbers. For example:
+
+    .. code-block:: python
+
+        # With byrepo=False (default)
+        {
+            'bash': ['4.4.005-2'],
+            'nginx': ['1.10.2-2']
+        }
+        # With byrepo=True
+        {
+            'core': {
+                'bash': ['4.4.005-2']
+            },
+            'extra': {
+                'nginx': ['1.10.2-2']
+            }
+        }
+
+    fromrepo : None
+        Only include results from the specified repo(s). Multiple repos can be
+        specified, comma-separated.
+
+    byrepo : False
+        When ``True``, the return data for each package will be organized by
+        repository.
+
+    refresh : False
+        When ``True``, the package database will be refreshed (i.e. ``pacman
+        -Sy``) before checking for available versions.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_repo_pkgs
+        salt '*' pkg.list_repo_pkgs foo bar baz
+        salt '*' pkg.list_repo_pkgs 'samba4*' fromrepo=base,updates
+        salt '*' pkg.list_repo_pkgs 'python2-*' byrepo=True
+    '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    fromrepo = kwargs.pop('fromrepo', '') or ''
+    byrepo = kwargs.pop('byrepo', False)
+    refresh = kwargs.pop('refresh', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
+    if fromrepo:
+        try:
+            repos = [x.strip() for x in fromrepo.split(',')]
+        except AttributeError:
+            repos = [x.strip() for x in str(fromrepo).split(',')]
+    else:
+        repos = []
+
+    if refresh:
+        refresh_db()
+
+    out = __salt__['cmd.run_all'](
+        ['pacman', '-Sl'],
+        output_loglevel='trace',
+        ignore_retcode=True,
+        python_shell=False
+    )
+
+    ret = {}
+    for line in salt.utils.itertools.split(out['stdout'], '\n'):
+        try:
+            repo, pkg_name, pkg_ver = line.strip().split()[:3]
+        except ValueError:
+            continue
+
+        if repos and repo not in repos:
+            continue
+
+        if args:
+            for arg in args:
+                if fnmatch.fnmatch(pkg_name, arg):
+                    skip_pkg = False
+                    break
+            else:
+                # Package doesn't match any of the passed args, skip it
+                continue
+
+        ret.setdefault(repo, {}).setdefault(pkg_name, []).append(pkg_ver)
+
+    if byrepo:
+        for reponame in ret:
+            # Sort versions newest to oldest
+            for pkgname in ret[reponame]:
+                sorted_versions = sorted(
+                    [_LooseVersion(x) for x in ret[reponame][pkgname]],
+                    reverse=True
+                )
+                ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
+        return ret
+    else:
+        byrepo_ret = {}
+        for reponame in ret:
+            for pkgname in ret[reponame]:
+                byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
+        for pkgname in byrepo_ret:
+            sorted_versions = sorted(
+                [_LooseVersion(x) for x in byrepo_ret[pkgname]],
+                reverse=True
+            )
+            byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
+        return byrepo_ret

@@ -15,6 +15,7 @@ import copy
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
 
@@ -42,6 +43,8 @@ def refresh_db():
 
         salt '*' pkgutil.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     return __salt__['cmd.retcode']('/opt/csw/bin/pkgutil -U') == 0
 
 

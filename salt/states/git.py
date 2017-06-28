@@ -14,17 +14,20 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import errno
 import logging
 import os
 import re
 import string
-from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
 import salt.utils
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
+from salt.utils.versions import LooseVersion as _LooseVersion
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -261,7 +264,33 @@ def latest(name,
     up-to-date.
 
     name
-        Address of the remote repository as passed to "git clone"
+        Address of the remote repository, as passed to ``git clone``
+
+        .. note::
+             From the `Git documentation`_, there are two URL formats
+             supported for SSH authentication. The below two examples are
+             equivalent:
+
+             .. code-block:: text
+
+                 # ssh:// URL
+                 ssh://user@server/project.git
+
+                 # SCP-like syntax
+                 user@server:project.git
+
+             A common mistake is to use an ``ssh://`` URL, but with a colon
+             after the domain instead of a slash. This is invalid syntax in
+             Git, and will therefore not work in Salt. When in doubt, confirm
+             that a ``git clone`` works for the URL before using it in Salt.
+
+             It has been reported by some users that SCP-like syntax is
+             incompatible with git repos hosted on `Atlassian Stash/BitBucket
+             Server`_. In these cases, it may be necessary to use ``ssh://``
+             URLs for SSH authentication.
+
+        .. _`Git documentation`: https://git-scm.com/book/en/v2/Git-on-the-Server-The-Protocols#The-SSH-Protocol
+        .. _`Atlassian Stash/BitBucket Server`: https://www.atlassian.com/software/bitbucket/server
 
     rev : HEAD
         The remote branch, tag, or revision ID to checkout after clone / before
@@ -280,19 +309,73 @@ def latest(name,
         Name of the target directory where repository is about to be cloned
 
     branch
-        Name of the branch into which to checkout the specified rev. If not
-        specified, then Salt will not care what branch is being used locally
-        and will just use whatever branch is currently there.
-
-        .. note::
-            If not specified, this means that the local branch name will not be
-            changed if the repository is reset to another branch/tag/SHA1.
+        Name of the local branch into which to checkout the specified rev. If
+        not specified, then Salt will not care what branch is being used
+        locally and will just use whatever branch is currently there.
 
         .. versionadded:: 2015.8.0
 
+        .. note::
+            If this argument is not specified, this means that Salt will not
+            change the local branch if the repository is reset to another
+            branch/tag/SHA1. For example, assume that the following state was
+            run initially:
+
+            .. code-block:: yaml
+
+                foo_app:
+                  git.latest:
+                    - name: https://mydomain.tld/apps/foo.git
+                    - target: /var/www/foo
+                    - user: www
+
+            This would have cloned the HEAD of that repo (since a ``rev``
+            wasn't specified), and because ``branch`` is not specified, the
+            branch in the local clone at ``/var/www/foo`` would be whatever the
+            default branch is on the remote repository (usually ``master``, but
+            not always). Now, assume that it becomes necessary to switch this
+            checkout to the ``dev`` branch. This would require ``rev`` to be
+            set, and probably would also require ``force_reset`` to be enabled:
+
+            .. code-block:: yaml
+
+                foo_app:
+                  git.latest:
+                    - name: https://mydomain.tld/apps/foo.git
+                    - target: /var/www/foo
+                    - user: www
+                    - rev: dev
+                    - force_reset: True
+
+            The result of this state would be to perform a hard-reset to
+            ``origin/dev``. Since ``branch`` was not specified though, while
+            ``/var/www/foo`` would reflect the contents of the remote repo's
+            ``dev`` branch, the local branch would still remain whatever it was
+            when it was cloned. To make the local branch match the remote one,
+            set ``branch`` as well, like so:
+
+            .. code-block:: yaml
+
+                foo_app:
+                  git.latest:
+                    - name: https://mydomain.tld/apps/foo.git
+                    - target: /var/www/foo
+                    - user: www
+                    - rev: dev
+                    - branch: dev
+                    - force_reset: True
+
+            This may seem redundant, but Salt tries to support a wide variety
+            of use cases, and doing it this way allows for the use case where
+            the local branch doesn't need to be strictly managed.
+
     user
-        User under which to run git commands. By default, commands are run by
-        the user under which the minion is running.
+        Local system user under which to run git commands. By default, commands
+        are run by the user under which the minion is running.
+
+        .. note::
+            This is not to be confused with the username for http(s)/SSH
+            authentication.
 
         .. versionadded:: 0.17.0
 
@@ -300,7 +383,7 @@ def latest(name,
         Windows only. Required when specifying ``user``. This parameter will be
         ignored on non-Windows platforms.
 
-      .. versionadded:: 2016.3.4
+        .. versionadded:: 2016.3.4
 
     update_head : True
         If set to ``False``, then the remote repository will be fetched (if
@@ -308,11 +391,6 @@ def latest(name,
         the local checkout, but no changes will be made to the local HEAD.
 
         .. versionadded:: 2015.8.3
-
-    force : False
-        .. deprecated:: 2015.8.0
-            Use ``force_clone`` instead. For earlier Salt versions, ``force``
-            must be used.
 
     force_checkout : False
         When checking out the local branch, the state will fail if there are
@@ -358,11 +436,6 @@ def latest(name,
         it using this value as the initial remote name. If the repository
         already exists, and a remote by this name is not present, one will be
         added.
-
-    remote_name
-        .. deprecated:: 2015.8.0
-            Use ``remote`` instead. For earlier Salt versions, ``remote_name``
-            must be used.
 
     fetch_tags : True
         If ``True``, then when a fetch is performed all tags will be fetched,
@@ -412,9 +485,9 @@ def latest(name,
             invoked from the minion using ``salt-call``, to prevent blocking
             waiting for user input.
 
-        Key can be specified as a SaltStack file server URL, eg. salt://location/identity_file
-
-        .. versionadded:: 2016.3.0
+        .. versionchanged:: 2016.3.0
+            Key can now be specified as a SaltStack fileserver URL (e.g.
+            ``salt://path/to/identity_file``).
 
     https_user
         HTTP Basic Auth username for HTTPS (only) clones
@@ -438,97 +511,73 @@ def latest(name,
         A glob expression defining which branches to retrieve when fetching.
         See `git-fetch(1)`_ for more information on how refspecs work.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     refspec_tag : *
         A glob expression defining which tags to retrieve when fetching. See
         `git-fetch(1)`_ for more information on how refspecs work.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     .. _`git-fetch(1)`: http://git-scm.com/docs/git-fetch
 
     .. note::
         Clashing ID declarations can be avoided when including different
-        branches from the same git repository in the same sls file by using the
-        ``name`` declaration.  The example below checks out the ``gh-pages``
-        and ``gh-pages-prod`` branches from the same repository into separate
-        directories.  The example also sets up the ``ssh_known_hosts`` ssh key
+        branches from the same git repository in the same SLS file by using the
+        ``name`` argument. The example below checks out the ``gh-pages`` and
+        ``gh-pages-prod`` branches from the same repository into separate
+        directories. The example also sets up the ``ssh_known_hosts`` ssh key
         required to perform the git checkout.
 
-    .. code-block:: yaml
+        Also, it has been reported that the SCP-like syntax for
 
-        gitlab.example.com:
-          ssh_known_hosts:
-            - present
-            - user: root
-            - enc: ecdsa
-            - fingerprint: 4e:94:b0:54:c1:5b:29:a2:70:0e:e1:a3:51:ee:ee:e3
+        .. code-block:: yaml
 
-        git-website-staging:
-          git.latest:
-            - name: ssh://git@gitlab.example.com:user/website.git
-            - rev: gh-pages
-            - target: /usr/share/nginx/staging
-            - identity: /root/.ssh/website_id_rsa
-            - require:
-              - pkg: git
-              - ssh_known_hosts: gitlab.example.com
+            gitlab.example.com:
+              ssh_known_hosts:
+                - present
+                - user: root
+                - enc: ecdsa
+                - fingerprint: 4e:94:b0:54:c1:5b:29:a2:70:0e:e1:a3:51:ee:ee:e3
 
-        git-website-staging:
-          git.latest:
-            - name: ssh://git@gitlab.example.com:user/website.git
-            - rev: gh-pages
-            - target: /usr/share/nginx/staging
-            - identity: salt://website/id_rsa
-            - require:
-              - pkg: git
-              - ssh_known_hosts: gitlab.example.com
+            git-website-staging:
+              git.latest:
+                - name: git@gitlab.example.com:user/website.git
+                - rev: gh-pages
+                - target: /usr/share/nginx/staging
+                - identity: /root/.ssh/website_id_rsa
+                - require:
+                  - pkg: git
+                  - ssh_known_hosts: gitlab.example.com
 
-            .. versionadded:: 2016.3.0
+            git-website-staging:
+              git.latest:
+                - name: git@gitlab.example.com:user/website.git
+                - rev: gh-pages
+                - target: /usr/share/nginx/staging
+                - identity: salt://website/id_rsa
+                - require:
+                  - pkg: git
+                  - ssh_known_hosts: gitlab.example.com
 
-        git-website-prod:
-          git.latest:
-            - name: ssh://git@gitlab.example.com:user/website.git
-            - rev: gh-pages-prod
-            - target: /usr/share/nginx/prod
-            - identity: /root/.ssh/website_id_rsa
-            - require:
-              - pkg: git
-              - ssh_known_hosts: gitlab.example.com
+            git-website-prod:
+              git.latest:
+                - name: git@gitlab.example.com:user/website.git
+                - rev: gh-pages-prod
+                - target: /usr/share/nginx/prod
+                - identity: /root/.ssh/website_id_rsa
+                - require:
+                  - pkg: git
+                  - ssh_known_hosts: gitlab.example.com
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     kwargs = salt.utils.clean_kwargs(**kwargs)
-    always_fetch = kwargs.pop('always_fetch', False)
-    force = kwargs.pop('force', False)
-    remote_name = kwargs.pop('remote_name', False)
     if kwargs:
         return _fail(
             ret,
             salt.utils.invalid_kwargs(kwargs, raise_exc=False)
         )
-
-    if always_fetch:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'always_fetch\' argument to the git.latest state no longer '
-            'has any effect, see the 2015.8.0 release notes for details.'
-        )
-    if force:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'force\' argument to the git.latest state has been '
-            'deprecated, please use \'force_clone\' instead.'
-        )
-        force_clone = force
-    if remote_name:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'remote_name\' argument to the git.latest state has been '
-            'deprecated, please use \'remote\' instead.'
-        )
-        remote = remote_name
 
     if not remote:
         return _fail(ret, '\'remote\' argument is required')
@@ -666,7 +715,7 @@ def latest(name,
         else:
             default_branch = None
     else:
-        head_ref = None
+        head_rev = None
         default_branch = None
 
     desired_upstream = False
@@ -815,7 +864,11 @@ def latest(name,
 
             revs_match = _revs_equal(local_rev, remote_rev, remote_rev_type)
             try:
+                # If not a bare repo, check `git diff HEAD` to determine if
+                # there are local changes.
                 local_changes = bool(
+                    not bare
+                    and
                     __salt__['git.diff'](target,
                                          'HEAD',
                                          user=user,
@@ -1521,6 +1574,7 @@ def latest(name,
             return _uptodate(ret, target, _format_comments(comments))
     else:
         if os.path.isdir(target):
+            target_contents = os.listdir(target)
             if force_clone:
                 # Clone is required, and target directory exists, but the
                 # ``force`` option is enabled, so we need to clear out its
@@ -1539,22 +1593,28 @@ def latest(name,
                     'place (force_clone=True set in git.latest state)'
                     .format(target, name)
                 )
-                try:
-                    if os.path.islink(target):
-                        os.unlink(target)
-                    else:
-                        salt.utils.rm_rf(target)
-                except OSError as exc:
+                removal_errors = {}
+                for target_object in target_contents:
+                    target_path = os.path.join(target, target_object)
+                    try:
+                        salt.utils.rm_rf(target_path)
+                    except OSError as exc:
+                        if exc.errno != errno.ENOENT:
+                            removal_errors[target_path] = exc
+                if removal_errors:
+                    err_strings = [
+                        '  {0}\n    {1}'.format(k, v)
+                        for k, v in six.iteritems(removal_errors)
+                    ]
                     return _fail(
                         ret,
-                        'Unable to remove {0}: {1}'.format(target, exc),
+                        'Unable to remove\n{0}'.format('\n'.join(err_strings)),
                         comments
                     )
-                else:
-                    ret['changes']['forced clone'] = True
+                ret['changes']['forced clone'] = True
             # Clone is required, but target dir exists and is non-empty. We
             # can't proceed.
-            elif os.listdir(target):
+            elif target_contents:
                 return _fail(
                     ret,
                     'Target \'{0}\' exists, is non-empty and is not a git '
@@ -1945,7 +2005,7 @@ def present(name,
 
 
 def detached(name,
-           ref,
+           rev,
            target=None,
            remote='origin',
            user=None,
@@ -1970,10 +2030,14 @@ def detached(name,
     name
         Address of the remote repository.
 
-    ref
+    rev
         The branch, tag, or commit ID to checkout after clone.
         If a branch or tag is specified it will be resolved to a commit ID
         and checked out.
+
+    ref
+        .. deprecated:: 2017.7.0
+            Use ``rev`` instead.
 
     target
         Name of the target directory where repository is about to be cloned.
@@ -2020,9 +2084,9 @@ def detached(name,
         Update submodules
 
     identity
-        A path on the minion server to a private key to use over SSH
-        Key can be specified as a SaltStack file server URL
-        eg. salt://location/identity_file
+        A path on the minion (or a SaltStack fileserver URL, e.g.
+        ``salt://path/to/identity_file``) to a private key to use for SSH
+        authentication.
 
     https_user
         HTTP Basic Auth username for HTTPS (only) clones
@@ -2042,6 +2106,7 @@ def detached(name,
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
+    ref = kwargs.pop('ref', None)
     kwargs = salt.utils.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
@@ -2049,21 +2114,30 @@ def detached(name,
             salt.utils.invalid_kwargs(kwargs, raise_exc=False)
         )
 
-    if not ref:
+    if ref is not None:
+        rev = ref
+        deprecation_msg = (
+            'The \'ref\' argument has been renamed to \'rev\' for '
+            'consistency. Please update your SLS to reflect this.'
+        )
+        ret.setdefault('warnings', []).append(deprecation_msg)
+        salt.utils.warn_until('Fluorine', deprecation_msg)
+
+    if not rev:
         return _fail(
             ret,
-            '\'{0}\' is not a valid value for the \'ref\' argument'.format(ref)
+            '\'{0}\' is not a valid value for the \'rev\' argument'.format(rev)
         )
 
     if not target:
         return _fail(
             ret,
-            '\'{0}\' is not a valid value for the \'target\' argument'.format(ref)
+            '\'{0}\' is not a valid value for the \'target\' argument'.format(rev)
         )
 
     # Ensure that certain arguments are strings to ensure that comparisons work
-    if not isinstance(ref, six.string_types):
-        ref = str(ref)
+    if not isinstance(rev, six.string_types):
+        rev = str(rev)
     if target is not None:
         if not isinstance(target, six.string_types):
             target = str(target)
@@ -2138,11 +2212,11 @@ def detached(name,
         return ret
 
     # Determine if supplied ref is a hash
-    remote_ref_type = 'ref'
+    remote_rev_type = 'ref'
     if len(ref) <= 40 \
-            and all(x in string.hexdigits for x in ref):
-        ref = ref.lower()
-        remote_ref_type = 'hash'
+            and all(x in string.hexdigits for x in rev):
+        rev = rev.lower()
+        remote_rev_type = 'hash'
 
     comments = []
     hash_exists_locally = False
@@ -2155,12 +2229,12 @@ def detached(name,
 
         local_commit_id = _get_local_rev_and_branch(target, user, password)[0]
 
-        if remote_ref_type is 'hash' \
+        if remote_rev_type is 'hash' \
                 and __salt__['git.describe'](target,
-                                             ref,
+                                             rev,
                                              user=user,
                                              password=password):
-            # The ref is a hash and it exists locally so skip to checkout
+            # The rev is a hash and it exists locally so skip to checkout
             hash_exists_locally = True
         else:
             # Check that remote is present and set to correct url
@@ -2326,13 +2400,13 @@ def detached(name,
 
     #get refs and checkout
     checkout_commit_id = ''
-    if remote_ref_type is 'hash':
-        if __salt__['git.describe'](target, ref, user=user, password=password):
-            checkout_commit_id = ref
+    if remote_rev_type is 'hash':
+        if __salt__['git.describe'](target, rev, user=user, password=password):
+            checkout_commit_id = rev
         else:
             return _fail(
                 ret,
-                'Ref does not exist: {0}'.format(ref)
+                'Revision \'{0}\' does not exist'.format(rev)
             )
     else:
         try:
@@ -2346,13 +2420,13 @@ def detached(name,
                 ignore_retcode=False)
 
             if 'refs/remotes/'+remote+'/'+ref in all_remote_refs:
-                checkout_commit_id = all_remote_refs['refs/remotes/'+remote+'/'+ref]
-            elif 'refs/tags/'+ref in all_remote_refs:
-                checkout_commit_id = all_remote_refs['refs/tags/'+ref]
+                checkout_commit_id = all_remote_refs['refs/remotes/' + remote + '/' + rev]
+            elif 'refs/tags/' + rev in all_remote_refs:
+                checkout_commit_id = all_remote_refs['refs/tags/' + rev]
             else:
                 return _fail(
                     ret,
-                    'Ref {0} does not exist'.format(ref)
+                    'Revision \'{0}\' does not exist'.format(rev)
                 )
 
         except CommandExecutionError as exc:
@@ -2375,7 +2449,7 @@ def detached(name,
             user=user,
             password=password)
         comments.append(
-            'Repository was reset to HEAD before checking out ref'
+            'Repository was reset to HEAD before checking out revision'
         )
 
     # TODO: implement clean function for git module and add clean flag
@@ -2726,11 +2800,6 @@ def config_set(name,
     global : False
         If ``True``, this will set a global git config option
 
-        .. versionchanged:: 2015.8.0
-            Option renamed from ``is_global`` to ``global``. For earlier
-            versions, use ``is_global``.
-
-
     **Local Config Example:**
 
     .. code-block:: yaml
@@ -2780,20 +2849,11 @@ def config_set(name,
     # passed.
     kwargs = salt.utils.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
-    is_global = kwargs.pop('is_global', False)
     if kwargs:
         return _fail(
             ret,
             salt.utils.invalid_kwargs(kwargs, raise_exc=False)
         )
-
-    if is_global:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'is_global\' argument to the git.config_set state has been '
-            'deprecated, please use \'global\' instead.'
-        )
-        global_ = is_global
 
     if not global_ and not repo:
         return _fail(
@@ -2896,30 +2956,6 @@ def config_set(name,
         value_comment
     )
     return ret
-
-
-def config(name,
-           value=None,
-           multivar=None,
-           repo=None,
-           user=None,
-           password=None,
-           **kwargs):
-    '''
-    Pass through to git.config_set and display a deprecation warning
-    '''
-    salt.utils.warn_until(
-        'Nitrogen',
-        'The \'git.config\' state has been renamed to \'git.config_set\', '
-        'please update your SLS files'
-    )
-    return config_set(name=name,
-                      value=value,
-                      multivar=multivar,
-                      repo=repo,
-                      user=user,
-                      password=password,
-                      **kwargs)
 
 
 def mod_run_check(cmd_kwargs, onlyif, unless):

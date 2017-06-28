@@ -1,3 +1,5 @@
+.. _deprecations:
+
 ================
 Deprecating Code
 ================

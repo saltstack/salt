@@ -1,11 +1,11 @@
 #!/bin/bash
 ############################################################################
 #
-# Title: Build Package Script for OSX
+# Title: Build Package Script for macOS
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
-# Description: This creates an OSX package for Salt from the contents of
+# Description: This creates an macOS package for Salt from the contents of
 #              /opt/salt
 #
 # Requirements:
@@ -67,7 +67,7 @@ PKGRESOURCES=$SRCDIR/pkg/osx
 ############################################################################
 if [[ ! -e "$SRCDIR/.git" ]] && [[ ! -e "$SRCDIR/scripts/salt" ]]; then
     echo "This directory doesn't appear to be a git repository."
-    echo "The OS X build process needs some files from a Git checkout of Salt."
+    echo "The macOS build process needs some files from a Git checkout of Salt."
     echo "Run this script from the 'pkg/osx' directory of the Git checkout."
     exit -1
 fi

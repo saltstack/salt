@@ -2,7 +2,10 @@
 '''
 Module for viewing and modifying sysctl parameters
 '''
+
+# Import Python libs
 from __future__ import absolute_import
+import logging
 
 # Import salt libs
 import salt.utils
@@ -13,6 +16,9 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'sysctl'
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 
 def __virtual__():

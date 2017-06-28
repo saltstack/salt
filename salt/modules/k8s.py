@@ -535,13 +535,13 @@ def _is_valid_secret_file(filename):
     if os.path.exists(filename) and os.path.isfile(filename):
         log.debug("File: {0} is valid secret file".format(filename))
         return True
-    log.warn("File: {0} does not exists or not file".format(filename))
+    log.warning("File: {0} does not exists or not file".format(filename))
     return False
 
 
 def _file_encode(filename):
     log.trace("Encoding secret file: {0}".format(filename))
-    with open(filename, "rb") as f:
+    with salt.utils.fopen(filename, "rb") as f:
         data = f.read()
         return base64.b64encode(data)
 
@@ -607,7 +607,7 @@ def _source_encode(source, saltenv):
             # The source is a file on a server
             filename = __salt__['cp.cache_file'](source, saltenv)
             if not filename:
-                log.warn("Source file: {0} can not be retrieved".format(source))
+                log.warning("Source file: {0} can not be retrieved".format(source))
                 return "", ""
             return os.path.basename(filename), _file_encode(filename)
     return "", ""

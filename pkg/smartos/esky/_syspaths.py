@@ -11,6 +11,7 @@ elif __file__:
 ROOT_DIR=application_path.split("bin/appdata")[0]
 
 # Copied from syspaths.py
+SHARE_DIR = os.path.join(ROOT_DIR, 'usr', 'share', 'salt')
 CONFIG_DIR = os.path.join(ROOT_DIR, 'etc')
 CACHE_DIR = os.path.join(ROOT_DIR, 'var', 'cache', 'salt')
 SOCK_DIR = os.path.join(ROOT_DIR, 'var', 'run', 'salt')

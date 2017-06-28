@@ -92,6 +92,94 @@ globally available or passed in through function arguments, file data, etc.
   a function's logic.
 
 
+Mocking Loader Modules
+----------------------
+
+Salt loader modules use a series of globally available dunder variables, 
+``__salt__``, ``__opts__``, ``__pillar__``, etc. To facilitate testing these 
+modules a mixin class was created, ``LoaderModuleMockMixin`` which can be found 
+in ``tests/support/mixins.py``. The reason for the exitance of this class is 
+because, historycally, and because it was easier, one would add these dunder 
+variables directly on the imported module. This however, introduces unexpected 
+behavior when running the full test suite since those attributes would not be 
+removed once we were done testing the module and would therefor leak to other 
+modules being tested with unpredictable results. This is the kind of work that 
+should be defered to mock, and that's exactly what this mixin class does.
+
+As an example, if one needs to specify some options which should be available 
+to the module being tests one should do:
+
+.. code-block:: python
+
+   import salt.modules.somemodule as somemodule
+
+   class SomeModuleTest(TestCase, LoaderModuleMockMixin):
+
+       def setup_loader_modules(self):
+           return {
+               somemodule: {
+                   '__opts__': {'test': True}
+               }
+           }
+
+Consider this more extensive example from 
+``tests/unit/modules/test_libcloud_dns.py``::
+
+.. code-block:: python
+
+   # Import Python Libs
+   from __future__ import absolute_import
+
+   # Import Salt Testing Libs
+   from tests.support.mixins import LoaderModuleMockMixin
+   from tests.support.unit import TestCase, skipIf
+   from tests.support.mock import (
+       patch,
+       MagicMock,
+       NO_MOCK,
+       NO_MOCK_REASON
+   )
+   import salt.modules.libcloud_dns as libcloud_dns
+
+
+   class MockDNSDriver(object):
+       def __init__(self):
+           pass
+
+
+   def get_mock_driver():
+       return MockDNSDriver()
+
+
+   @skipIf(NO_MOCK, NO_MOCK_REASON)
+   @patch('salt.modules.libcloud_dns._get_driver',
+          MagicMock(return_value=MockDNSDriver()))
+   class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
+
+       def setup_loader_modules(self):
+           module_globals = {
+               '__salt__': {
+                   'config.option': MagicMock(return_value={
+                       'test': {
+                           'driver': 'test',
+                           'key': '2orgk34kgk34g'
+                       }
+                   })
+               }
+           }
+           if libcloud_dns.HAS_LIBCLOUD is False:
+               module_globals['sys.modules'] = {'libcloud': MagicMock()}
+
+           return {libcloud_dns: module_globals}
+
+
+What happens on the above example is that, we mock a call to 
+`__salt__['config.option']` to return the configuration needed for the 
+execution of the tests. Additionally, if the ``libcloud`` library is not 
+available, since that's not actually part of whats being tested, we mocked that 
+import by patching ``sys.modules`` when tests are running.
+
+
 Naming Conventions
 ------------------
 
@@ -100,18 +188,18 @@ Test functions are named ``test_<fcn>_<test-name>`` where ``<fcn>`` is the funct
 being tested and ``<test-name>`` describes the ``raise`` or ``return`` being tested.
 
 Unit tests for ``salt/.../<module>.py`` are contained in a file called
-``tests/unit/.../<module>_test.py``, e.g. the tests for ``salt/modules/fib.py``
-are in ``tests/unit/modules/fib_test.py``.
+``tests/unit/.../test_<module>.py``, e.g. the tests for ``salt/modules/fib.py``
+are in ``tests/unit/modules/test_fib.py``.
 
 In order for unit tests to get picked up during a run of the unit test suite, each
-unit test file must be appended with ``_test.py`` and each individual test must be
+unit test file must be prefixed with ``test_`` and each individual test must be
 prepended with the ``test_`` naming syntax, as described above.
 
 If a function does not start with ``test_``, then the function acts as a "normal"
 function and is not considered a testing function. It will not be included in the
 test run or testing output. The same principle applies to unit test files that
-do not have the ``_test.py`` naming syntax. This test file naming convention is
-how the test runner recognizes that a test file contains unit tests.
+do not have the ``test_*.py`` naming syntax. This test file naming convention 
+is how the test runner recognizes that a test file contains unit tests.
 
 
 Imports
@@ -122,14 +210,13 @@ Most commonly, the following imports are necessary to create a unit test:
 .. code-block:: python
 
     # Import Salt Testing libs
-    from salttesting import skipIf, TestCase
-    from salttesting.helpers import ensure_in_syspath
+    from tests.support.unit import skipIf, TestCase
 
 If you need mock support to your tests, please also import:
 
 .. code-block:: python
 
-    from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+    from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
 
 Evaluating Truth
@@ -183,13 +270,13 @@ additional imports for MagicMock:
 .. code-block:: python
 
     # Import Salt Testing libs
-    from salttesting import TestCase
+    from tests.support.unit import TestCase
 
     # Import Salt execution module to test
     from salt.modules import db
 
     # Import Mock libraries
-    from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+    from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
     # Create test case class and inherit from Salt's customized TestCase
     # Skip this test case if we don't have access to mock!
@@ -197,23 +284,23 @@ additional imports for MagicMock:
     class DbTestCase(TestCase):
         def test_create_user(self):
             # First, we replace 'execute_query' with our own mock function
-            db.execute_query = MagicMock()
+            with patch.object(db, 'execute_query', MagicMock()) as db_exq:
 
-            # Now that the exits are blocked, we can run the function under test.
-            db.create_user('testuser')
+                # Now that the exits are blocked, we can run the function under test.
+                db.create_user('testuser')
 
-            # We could now query our mock object to see which calls were made
-            # to it.
-            ## print db.execute_query.mock_calls
+                # We could now query our mock object to see which calls were made
+                # to it.
+                ## print db_exq.mock_calls
 
-            # Construct a call object that simulates the way we expected
-            # execute_query to have been called.
-            expected_call = call('CREATE USER testuser')
+                # Construct a call object that simulates the way we expected
+                # execute_query to have been called.
+                expected_call = call('CREATE USER testuser')
 
-            # Compare the expected call with the list of actual calls.  The
-            # test will succeed or fail depending on the output of this
-            # assertion.
-            db.execute_query.assert_has_calls(expected_call)
+                # Compare the expected call with the list of actual calls.  The
+                # test will succeed or fail depending on the output of this
+                # assertion.
+                db_exq.assert_has_calls(expected_call)
 
 .. __: http://www.voidspace.org.uk/python/mock/index.html
 
@@ -247,9 +334,9 @@ execution module. Given a module called ``fib.py`` that has a function called
 sequential Fibonacci numbers of that length.
 
 A unit test to test this function might be commonly placed in a file called
-``tests/unit/modules/fib_test.py``. The convention is to place unit tests for
+``tests/unit/modules/test_fib.py``. The convention is to place unit tests for
 Salt execution modules in ``test/unit/modules/`` and to name the tests module
-suffixed with ``_test.py``.
+prefixed with ``test_*.py``.
 
 Tests are grouped around test cases, which are logically grouped sets of tests
 against a piece of functionality in the tested software. Test cases are created
@@ -259,10 +346,10 @@ we might write the skeleton for testing ``fib.py``:
 .. code-block:: python
 
     # Import Salt Testing libs
-    from salttesting import TestCase
+    from tests.support.unit import TestCase
 
     # Import Salt execution module to test
-    from salt.modules import fib
+    import salt.modules.fib as fib
 
     # Create test case class and inherit from Salt's customized TestCase
     class FibTestCase(TestCase):
@@ -283,14 +370,14 @@ executed:
 
 .. code-block:: bash
 
-    tests/runtests.py -v -n unit.modules.fib_test
+    tests/runtests.py -v -n unit.modules.test_fib
 
 This will report the status of the test: success, failure, or error.  The
 ``-v`` flag increases output verbosity.
 
 .. code-block:: bash
 
-    tests/runtests.py -n unit.modules.fib_test -v
+    tests/runtests.py -n unit.modules.test_fib -v
 
 To review the results of a particular run, take a note of the log location
 given in the output for each test:
@@ -336,26 +423,21 @@ will also redefine the ``__salt__`` dictionary such that it only contains
 .. code-block:: python
 
     # Import Salt Libs
-    from salt.modules import linux_sysctl
+    import salt.modules.linux_sysictl as linux_sysctl
 
     # Import Salt Testing Libs
-    from salttesting import skipIf, TestCase
-    from salttesting.helpers import ensure_in_syspath
-    from salttesting.mock import (
+    from tests.support.mixins import LoaderModuleMockMixin
+    from tests.support.unit import skipIf, TestCase
+    from tests.support.mock import (
         MagicMock,
         patch,
         NO_MOCK,
         NO_MOCK_REASON
     )
 
-    ensure_in_syspath('../../')
-
-    # Globals
-    linux_sysctl.__salt__ = {}
-
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    class LinuxSysctlTestCase(TestCase):
+    class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         TestCase for salt.modules.linux_sysctl module
         '''
@@ -367,11 +449,6 @@ will also redefine the ``__salt__`` dictionary such that it only contains
             mock_cmd = MagicMock(return_value=1)
             with patch.dict(linux_sysctl.__salt__, {'cmd.run': mock_cmd}):
                 self.assertEqual(linux_sysctl.get('net.ipv4.ip_forward'), 1)
-
-
-    if __name__ == '__main__':
-        from integration import run_tests
-        run_tests(LinuxSysctlTestCase, needs_daemon=False)
 
 Since ``get()`` has only one raise or return statement and that statement is a
 success condition, the test function is simply named ``test_get()``.  As
@@ -436,7 +513,8 @@ This function contains two raise statements and one return statement, so we
 know that we will need (at least) three tests.  It has two function arguments
 and many references to non-builtin functions.  In the tests below you will see
 that MagicMock's ``patch()`` method may be used as a context manager or as a
-decorator.
+decorator. When patching the salt dunders however, please use the context 
+manager approach.
 
 There are three test functions, one for each raise and return statement in the
 source function.  Each function is self-contained and contains all and only the
@@ -446,27 +524,22 @@ with.
 .. code-block:: python
 
     # Import Salt Libs
-    from salt.modules import linux_sysctl
+    import salt.modules.linux_sysctl as linux_sysctl
     from salt.exceptions import CommandExecutionError
 
     # Import Salt Testing Libs
-    from salttesting import skipIf, TestCase
-    from salttesting.helpers import ensure_in_syspath
-    from salttesting.mock import (
+    from tests.support.mixins import LoaderModuleMockMixin
+    from tests.support.unit import skipIf, TestCase
+    from tests.support.mock import (
         MagicMock,
         patch,
         NO_MOCK,
         NO_MOCK_REASON
     )
 
-    ensure_in_syspath('../../')
-
-    # Globals
-    linux_sysctl.__salt__ = {}
-
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    class LinuxSysctlTestCase(TestCase):
+    class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         TestCase for salt.modules.linux_sysctl module
         '''
@@ -510,7 +583,3 @@ with.
             with patch.dict(linux_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
                 self.assertEqual(linux_sysctl.assign(
                     'net.ipv4.ip_forward', 1), ret)
-
-    if __name__ == '__main__':
-        from integration import run_tests
-        run_tests(LinuxSysctlTestCase, needs_daemon=False)

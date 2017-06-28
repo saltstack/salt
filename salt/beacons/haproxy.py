@@ -3,7 +3,7 @@
 Watch current connections of haproxy server backends.
 Fire an event when over a specified threshold.
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 '''
 
 # Import Python libs

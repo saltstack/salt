@@ -367,7 +367,7 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''

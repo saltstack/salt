@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Install pkg, dmg and .app applications on Mac OS X minions.
+Install pkg, dmg and .app applications on macOS minions.
 
 '''
 
@@ -99,8 +99,6 @@ def install_app(app, target='/Applications/'):
 
         salt '*' macpackage.install_app /tmp/tmp.app /Applications/
     '''
-    app = _quote(app)
-    target = _quote(target)
 
     if not target[-4:] == '.app':
         if app[-1:] == '/':
@@ -113,7 +111,7 @@ def install_app(app, target='/Applications/'):
     if not app[-1] == '/':
         app += '/'
 
-    cmd = 'rsync -a --no-compress --delete {0} {1}'.format(app, target)
+    cmd = 'rsync -a --delete "{0}" "{1}"'.format(app, target)
     return __salt__['cmd.run'](cmd)
 
 

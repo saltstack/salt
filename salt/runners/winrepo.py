@@ -29,7 +29,7 @@ import salt.template
 log = logging.getLogger(__name__)
 
 # Global parameters which can be overridden on a per-remote basis
-PER_REMOTE_OVERRIDES = ('ssl_verify',)
+PER_REMOTE_OVERRIDES = ('ssl_verify', 'refspecs')
 
 
 def genrepo(opts=None, fire_event=True):
@@ -52,25 +52,8 @@ def genrepo(opts=None, fire_event=True):
     if opts is None:
         opts = __opts__
 
-    if 'win_repo' in opts:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_repo\' config option is deprecated, please use '
-            '\'winrepo_dir\' instead.'
-        )
-        winrepo_dir = opts['win_repo']
-    else:
-        winrepo_dir = opts['winrepo_dir']
-
-    if 'win_repo_mastercachefile' in opts:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_repo_mastercachefile\' config option is deprecated, '
-            'please use \'winrepo_cachefile\' instead.'
-        )
-        winrepo_cachefile = opts['win_repo_mastercachefile']
-    else:
-        winrepo_cachefile = opts['winrepo_cachefile']
+    winrepo_dir = opts['winrepo_dir']
+    winrepo_cachefile = opts['winrepo_cachefile']
 
     ret = {}
     if not os.path.exists(winrepo_dir):
@@ -171,25 +154,8 @@ def update_git_repos(opts=None, clean=False, masterless=False):
     if opts is None:
         opts = __opts__
 
-    if 'win_repo' in opts:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_repo\' config option is deprecated, please use '
-            '\'winrepo_dir\' instead.'
-        )
-        winrepo_dir = opts['win_repo']
-    else:
-        winrepo_dir = opts['winrepo_dir']
-
-    if 'win_gitrepos' in opts:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_gitrepos\' config option is deprecated, please use '
-            '\'winrepo_remotes\' instead.'
-        )
-        winrepo_remotes = opts['win_gitrepos']
-    else:
-        winrepo_remotes = opts['winrepo_remotes']
+    winrepo_dir = opts['winrepo_dir']
+    winrepo_remotes = opts['winrepo_remotes']
 
     winrepo_cfg = [(winrepo_remotes, winrepo_dir),
                    (opts['winrepo_remotes_ng'], opts['winrepo_dir_ng'])]
@@ -198,21 +164,6 @@ def update_git_repos(opts=None, clean=False, masterless=False):
     for remotes, base_dir in winrepo_cfg:
         if not any((salt.utils.gitfs.HAS_GITPYTHON, salt.utils.gitfs.HAS_PYGIT2)):
             # Use legacy code
-            if not salt.utils.is_windows():
-                # Don't warn on Windows, because Windows can't do cool things like
-                # use pygit2. It has to fall back to git.latest.
-                salt.utils.warn_until(
-                    'Nitrogen',
-                    'winrepo git support now requires either GitPython or pygit2. '
-                    'Please install either GitPython >= {0} (or pygit2 >= {1} with '
-                    'libgit2 >= {2}), clear out {3}, and restart the salt-master '
-                    'service.'.format(
-                        salt.utils.gitfs.GITPYTHON_MINVER,
-                        salt.utils.gitfs.PYGIT2_MINVER,
-                        salt.utils.gitfs.LIBGIT2_MINVER,
-                        base_dir
-                    )
-                )
             winrepo_result = {}
             for remote_info in remotes:
                 if '/' in remote_info:

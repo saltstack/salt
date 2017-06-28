@@ -66,12 +66,15 @@ class ContextDict(collections.MutableMapping):
     then allow any children to override the values of the parent.
     '''
 
-    def __init__(self, **data):
+    def __init__(self, threadsafe=False, **data):
         # state should be thread local, so this object can be threadsafe
         self._state = threading.local()
         # variable for the overridden data
         self._state.data = None
         self.global_data = {}
+        # Threadsafety indicates whether or not we should protect data stored
+        # in child context dicts from being leaked
+        self._threadsafe = threadsafe
 
     @property
     def active(self):
@@ -89,7 +92,7 @@ class ContextDict(collections.MutableMapping):
         '''
         Clone this context, and return the ChildContextDict
         '''
-        child = ChildContextDict(parent=self, overrides=kwargs)
+        child = ChildContextDict(parent=self, threadsafe=self._threadsafe, overrides=kwargs)
         return child
 
     def __setitem__(self, key, val):
@@ -127,14 +130,24 @@ class ChildContextDict(collections.MutableMapping):
     '''An overrideable child of ContextDict
 
     '''
-    def __init__(self, parent, overrides=None):
+    def __init__(self, parent, overrides=None, threadsafe=False):
         self.parent = parent
         self._data = {} if overrides is None else overrides
+        self._old_data = None
 
         # merge self.global_data into self._data
-        for k, v in six.iteritems(self.parent.global_data):
-            if k not in self._data:
-                self._data[k] = v
+        if threadsafe:
+            for k, v in six.iteritems(self.parent.global_data):
+                if k not in self._data:
+                    # A deepcopy is necessary to avoid using the same
+                    # objects in globals as we do in thread local storage.
+                    # Otherwise, changing one would automatically affect
+                    # the other.
+                    self._data[k] = copy.deepcopy(v)
+        else:
+            for k, v in six.iteritems(self.parent.global_data):
+                if k not in self._data:
+                    self._data[k] = v
 
     def __setitem__(self, key, val):
         self._data[key] = val
@@ -152,10 +165,13 @@ class ChildContextDict(collections.MutableMapping):
         return iter(self._data)
 
     def __enter__(self):
+        if hasattr(self.parent._state, 'data'):
+            # Save old data to support nested calls
+            self._old_data = self.parent._state.data
         self.parent._state.data = self._data
 
     def __exit__(self, *exc):
-        self.parent._state.data = None
+        self.parent._state.data = self._old_data
 
 
 class NamespacedDictWrapper(collections.MutableMapping, dict):
@@ -174,6 +190,7 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
         if override_name:
             self.__class__.__module__ = 'salt'
             self.__class__.__name__ = override_name
+        super(NamespacedDictWrapper, self).__init__(self._dict())
 
     def _dict(self):
         r = self.__dict

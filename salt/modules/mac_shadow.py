@@ -2,7 +2,7 @@
 '''
 .. versionadded:: 2016.3.0
 
-Manage Mac OSX local directory passwords and policies.
+Manage macOS local directory passwords and policies.
 
 Note that it is usually better to apply password policies through the creation
 of a configuration profile.
@@ -32,9 +32,9 @@ __virtualname__ = 'shadow'
 
 
 def __virtual__():
-    # Is this os x?
+    # Is this macOS?
     if not salt.utils.is_darwin():
-        return False, 'Not Darwin'
+        return False, 'Not macOS'
 
     if HAS_PWD:
         return __virtualname__
@@ -339,13 +339,13 @@ def get_maxdays(name):
 
 def set_mindays(name, days):
     '''
-    Set the minimum password age in days. Not available in OS X.
+    Set the minimum password age in days. Not available in macOS.
 
     :param str name: The user name
 
     :param int days: The number of days
 
-    :return: Will always return False until OSX supports this feature.
+    :return: Will always return False until macOS supports this feature.
     :rtype: bool
 
     CLI Example:
@@ -360,13 +360,13 @@ def set_mindays(name, days):
 def set_inactdays(name, days):
     '''
     Set the number if inactive days before the account is locked. Not available
-    in OS X
+    in macOS
 
     :param str name: The user name
 
     :param int days: The number of days
 
-    :return: Will always return False until OSX supports this feature.
+    :return: Will always return False until macOS supports this feature.
     :rtype: bool
 
     CLI Example:
@@ -381,13 +381,13 @@ def set_inactdays(name, days):
 def set_warndays(name, days):
     '''
     Set the number of days before the password expires that the user will start
-    to see a warning. Not available in OS X
+    to see a warning. Not available in macOS
 
     :param str name: The user name
 
     :param int days: The number of days
 
-    :return: Will always return False until OSX supports this feature.
+    :return: Will always return False until macOS supports this feature.
     :rtype: bool
 
     CLI Example:

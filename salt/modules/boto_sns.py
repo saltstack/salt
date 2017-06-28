@@ -188,7 +188,7 @@ def unsubscribe(topic, subscription_arn, region=None, key=None, keyid=None, prof
 
         salt myminion boto_sns.unsubscribe my_topic my_subscription_arn region=us-east-1
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 

@@ -7,7 +7,7 @@ see the `Parallels Desktop Reference Guide
 <http://download.parallels.com/desktop/v9/ga/docs/en_US/Parallels%20Command%20Line%20Reference%20Guide.pdf>`_.
 
 What has not been implemented yet can be accessed through ``parallels.prlctl``
-and ``parallels.prlsrvctl`` (note the preceeding double dash ``--`` as
+and ``parallels.prlsrvctl`` (note the preceding double dash ``--`` as
 necessary):
 
 .. code-block::
@@ -94,7 +94,7 @@ def prlsrvctl(sub_cmd, args=None, runas=None):
     '''
     Execute a prlsrvctl command
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     :param str sub_cmd:
         prlsrvctl subcommand to execute
@@ -159,7 +159,7 @@ def list_vms(name=None, info=False, all=False, args=None, runas=None, template=F
     :param str name:
         Name/ID of VM to list
 
-        .. versionchanged:: Carbon
+        .. versionchanged:: 2016.11.0
 
             No longer implies ``info=True``
 
@@ -179,7 +179,7 @@ def list_vms(name=None, info=False, all=False, args=None, runas=None, template=F
         List the available virtual machine templates.  The real virtual
         machines will not be included in the output
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     Example:
 
@@ -213,7 +213,7 @@ def clone(name, new_name, linked=False, template=False, runas=None):
     '''
     Clone a VM
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     :param str name:
         Name/ID of VM to clone
@@ -249,7 +249,7 @@ def delete(name, runas=None):
     '''
     Delete a VM
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     :param str name:
         Name/ID of VM to clone
@@ -270,7 +270,7 @@ def exists(name, runas=None):
     '''
     Query whether a VM exists
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     :param str name:
         Name/ID of VM
@@ -711,7 +711,7 @@ def delete_snapshot(name, snap_name, runas=None, all=False):
     :param bool all:
         Delete all snapshots having the name given
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     Example:
 

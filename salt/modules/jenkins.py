@@ -2,7 +2,14 @@
 '''
 Module for controlling Jenkins
 
+:depends: python-jenkins
+
 .. versionadded:: 2016.3.0
+
+:depends: python-jenkins_ Python module (not to be confused with jenkins_)
+
+.. _python-jenkins: https://pypi.python.org/pypi/python-jenkins
+.. _jenkins: https://pypi.python.org/pypi/jenkins
 
 :configuration: This module can be used by either passing an api key and version
     directly or by specifying both in a configuration profile in the salt
@@ -45,9 +52,15 @@ def __virtual__():
     :return: The virtual name of the module.
     '''
     if HAS_JENKINS:
-        return __virtualname__
+        if hasattr(jenkins, 'Jenkins'):
+            return __virtualname__
+        else:
+            return (False,
+                    'The wrong Python module appears to be installed. Please '
+                    'make sure that \'python-jenkins\' is installed, not '
+                    '\'jenkins\'.')
     return (False, 'The jenkins execution module cannot be loaded: '
-            'python jenkins library is not installed.')
+                   'python-jenkins is not installed.')
 
 
 def _connect():
@@ -74,6 +87,26 @@ def _connect():
     return jenkins.Jenkins(jenkins_url,
                            username=jenkins_user,
                            password=jenkins_password)
+
+
+def run(script):
+    '''
+    .. versionadded:: Carbon
+
+    Execute a groovy script on the jenkins master
+
+    :param script: The groovy script
+
+    CLI Example:
+
+    .. code-block::
+
+        salt '*' jenkins.run 'Jenkins.instance.doSafeRestart()'
+
+    '''
+
+    server = _connect()
+    return server.run_script(script)
 
 
 def get_version():
@@ -424,7 +457,7 @@ def get_job_config(name=None):
 
 def plugin_installed(name):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Return if the plugin is installed for the provided plugin name.
 

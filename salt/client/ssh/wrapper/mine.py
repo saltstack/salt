@@ -14,9 +14,9 @@ import copy
 import salt.client.ssh
 
 
-def get(tgt, fun, expr_form='glob', roster='flat'):
+def get(tgt, fun, tgt_type='glob', roster='flat'):
     '''
-    Get data from the mine based on the target, function and expr_form
+    Get data from the mine based on the target, function and tgt_type
 
     This will actually run the function on all targeted minions (like
     publish.publish), as salt-ssh clients can't update the mine themselves.
@@ -42,7 +42,7 @@ def get(tgt, fun, expr_form='glob', roster='flat'):
     if roster:
         opts['roster'] = roster
     opts['argv'] = [fun]
-    opts['selected_target_option'] = expr_form
+    opts['selected_target_option'] = tgt_type
     opts['tgt'] = tgt
     opts['arg'] = []
 

@@ -2,8 +2,7 @@
 Salt 2015.8.10 Release Notes
 ============================
 
-Version 2015.8.10 is a bugfix release for :doc:`2015.8.0
-</topics/releases/2015.8.0>`.
+Version 2015.8.10 is a bugfix release for :ref:`2015.8.0<release-2015-8-0>`.
 
 **Final Release of Debian 7 Packages**
 

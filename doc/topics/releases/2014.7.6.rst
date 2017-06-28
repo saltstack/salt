@@ -4,8 +4,7 @@ Salt 2014.7.6 Release Notes
 
 :release: 2015-05-18
 
-Version 2014.7.6 is a bugfix release for :doc:`2014.7.0
-</topics/releases/2014.7.0>`.
+Version 2014.7.6 is a bugfix release for :ref:`2014.7.0<release-2014-7-0>`.
 
 This release is a security release. A minor issue was found, as cited below:
 
@@ -761,7 +760,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
   - **PR** `#22925`_: (*rallytime*) Backport `#22895`_ to 2014.7
     | refs: `#23113`_
-  - **PR** `#22895`_: (*aletourneau*) pam_tally counter was not reset to 0 after a succesfull login
+  - **PR** `#22895`_: (*aletourneau*) pam_tally counter was not reset to 0 after a successful login
     | refs: `#22925`_
   * dfe2066 Merge pull request `#23113`_ from saltstack/revert-22925-`bp-22895`_
   * b957ea8 Revert "Backport `#22895`_ to 2014.7"
@@ -922,7 +921,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
   | refs: `#23113`_
   @ *2015-04-22T02:30:26Z*
 
-  - **PR** `#22895`_: (*aletourneau*) pam_tally counter was not reset to 0 after a succesfull login
+  - **PR** `#22895`_: (*aletourneau*) pam_tally counter was not reset to 0 after a successful login
     | refs: `#22925`_
   * 6890752 Merge pull request `#22925`_ from rallytime/`bp-22895`_
   * 3852d96 Pylint fix
@@ -931,7 +930,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
   * 5ebf159 Cleaned up pull request
 
-  * a08ac47 pam_tally counter was not reset to 0 after a succesfull login
+  * a08ac47 pam_tally counter was not reset to 0 after a successful login
 
 - **PR** `#22914`_: (*cachedout*) Call proper returner function in jobs.list_jobs
   @ *2015-04-22T00:49:01Z*

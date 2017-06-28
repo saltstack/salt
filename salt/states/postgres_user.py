@@ -28,7 +28,9 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres.user_exists' in __salt__
+    if 'postgres.user_exists' not in __salt__:
+        return (False, 'Unable to load postgres module.  Make sure `postgres.bins_dir` is set.')
+    return True
 
 
 def present(name,
@@ -93,7 +95,7 @@ def present(name,
         encrypted to the previous
         format if it is not already done.
 
-    default_passwoord
+    default_password
         The password used only when creating the user, unless password is set.
 
         .. versionadded:: 2016.3.0

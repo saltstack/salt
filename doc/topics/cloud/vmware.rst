@@ -1,3 +1,5 @@
+.. _cloud-getting-started-vmware:
+
 ===========================
 Getting Started With VMware
 ===========================
@@ -36,6 +38,14 @@ This package can be installed using `pip` or `easy_install`:
 
 .. _Issue #29537: https://github.com/saltstack/salt/issues/29537
 
+.. note::
+
+    pyVmomi doesn't expose the ability to specify the locale when connecting to
+    VMware. This causes parsing issues when connecting to an instance of VMware
+    running under a non-English locale. Until this feature is added upstream
+    `Issue #38402`_ contains a workaround.
+
+.. _Issue #38402: https://github.com/saltstack/salt/issues/38402
 
 Configuration
 =============
@@ -142,6 +152,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             name: 10.30.40-500-Dev-DHCP
             adapter_type: e1000
             switch_type: distributed
+            mac: '00:16:3e:e8:19:0f'
           Network adapter 3:
             name: 10.40.50-600-Prod
             adapter_type: vmxnet3
@@ -183,6 +194,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         guestinfo.foo: bar
         guestinfo.domain: foobar.com
         guestinfo.customVariable: customValue
+      annotation: Created by Salt-Cloud
 
       deploy: True
       customization: True
@@ -220,7 +232,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     the current VM/template\'s vCPU count is used.
 
 ``cores_per_socket``
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
     Enter the number of cores per vCPU that you want the VM/template to have. If not specified,
     this will default to 1. 
     
@@ -315,6 +327,10 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         domain
             Enter the domain to be used with the network adapter. If the network
             specified is DHCP enabled, you do not have to specify this.
+
+        mac
+            Enter the MAC for this network adapter. If not specified an address
+            will be selected automatically.
 
     scsi
         Enter the SCSI controller specification here. If the SCSI controller doesn\'t exist,
@@ -436,10 +452,23 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     present, it will be reset with the new value provided. Otherwise, a new option is
     added. Keys with empty values will be removed.
 
+``annotation``
+    User-provided description of the virtual machine. This will store a message in the
+    vSphere interface, under the annotations section in the Summary view of the virtual
+    machine.
+
 ``deploy``
     Specifies if salt should be installed on the newly created VM. Default is ``True``
     so salt will be installed using the bootstrap script. If ``template: True`` or
     ``power_on: False`` is set, this field is ignored and salt will not be installed.
+
+``wait_for_ip_timeout``
+    When ``deploy: True``, this timeout determines the maximum time to wait for
+    VMware tools to be installed on the virtual machine. If this timeout is
+    reached, an attempt to determine the client's IP will be made by resolving
+    the VM's name.  By lowering this value a salt bootstrap can be fully
+    automated for systems that are not built with VMware tools.  Default is
+    ``wait_for_ip_timeout: 1200``.
 
 ``customization``
     Specify whether the new virtual machine should be customized or not. If
@@ -588,27 +617,29 @@ Example of a minimal profile:
 Cloning from a Snapshot
 =======================
 
-.. versionadded:: 2016.3.4
 
-Cloning a template works similar to cloning a VM except for the fact that
-a snapshot number must be provided.
+.. versionadded:: 2016.3.5
+
+Cloning from a snapshot requires that one of the
+supported options be set in the cloud profile.
+
+Supported options are ``createNewChildDiskBacking``,
+``moveChildMostDiskBacking``, ``moveAllDiskBackingsAndAllowSharing``
+and ``moveAllDiskBackingsAndDisallowSharing``.
 
 Example of a minimal profile:
 
 .. code-block:: yaml
 
   my-template-clone:
-     provider: vcenter01
-     clonefrom: 'salt_vm'
-     snapshot: 3
-
-.. image:: /_static/snapshot_manager.png
-    :align: center
-    :scale: 70%
-
-.. note::
-    The previous diagram shows how to identify the snapshot number. Selected
-    (third snapshot) is number 3.
+    provider: vcenter01
+    clonefrom: 'salt_vm'
+    snapshot:
+      disk_move_type: createNewChildDiskBacking
+      # these types are also supported
+      # disk_move_type: moveChildMostDiskBacking
+      # disk_move_type: moveAllDiskBackingsAndAllowSharing
+      # disk_move_type: moveAllDiskBackingsAndDisallowSharing
 
 
 Creating a VM
@@ -661,8 +692,8 @@ Example of a complete profile:
           SCSI controller 0:
             type: lsilogic_sas
         ide:
-          IDE 0
-          IDE 1
+          IDE 0: {}
+          IDE 1: {}
         disk:
           Hard disk 0:
             controller: 'SCSI controller 0'
@@ -689,7 +720,7 @@ Example of a complete profile:
 Specifying disk backing mode
 ============================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2016.3.5
 
 Disk backing mode can now be specified when cloning a VM. This option
 can be set in the cloud profile as shown in example below:
@@ -701,10 +732,12 @@ can be set in the cloud profile as shown in example below:
       datastore: esx01-datastore
       resourcepool: Resources
       folder: vm
+
+
       devices:
         disk:
           Hard disk 1:
             mode: 'independent_nonpersistent'
+            size: 42
           Hard disk 2:
-            size: 15
             mode: 'independent_nonpersistent'

@@ -1,3 +1,5 @@
+.. _logging:
+
 =======
 Logging
 =======
@@ -6,8 +8,8 @@ The salt project tries to get the logging to work for you and help us solve any
 issues you might find along the way.
 
 If you want to get some more information on the nitty-gritty of salt's logging
-system, please head over to the :doc:`logging development
-document</topics/development/logging>`, if all you're after is salt's logging
+system, please head over to the :ref:`logging development
+document<logging-internals>`, if all you're after is salt's logging
 configurations, please continue reading.
 
 
@@ -237,5 +239,5 @@ External Logging Handlers
 -------------------------
 
 Besides the internal logging handlers used by salt, there are some external
-which can be used, see the :doc:`external logging handlers<handlers/index>`
+which can be used, see the :ref:`external logging handlers<external-logging-handlers>`
 document.

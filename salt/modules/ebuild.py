@@ -22,6 +22,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
@@ -59,13 +60,13 @@ def __virtual__():
 
 
 def _vartree():
-    import portage
+    import portage  # pylint: disable=3rd-party-module-not-gated
     portage = reload(portage)
     return portage.db[portage.root]['vartree']
 
 
 def _porttree():
-    import portage
+    import portage  # pylint: disable=3rd-party-module-not-gated
     portage = reload(portage)
     return portage.db[portage.root]['porttree']
 
@@ -233,7 +234,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
         installed = _cpv_to_version(_vartree().dep_bestmatch(name))
         avail = _cpv_to_version(_porttree().dep_bestmatch(name))
-        if avail:
+        if avail and (not installed or salt.utils.compare_versions(ver1=installed, oper='<', ver2=avail, cmp_func=version_cmp)):
             ret[name] = avail
 
     # Return a string if only one package name passed
@@ -412,6 +413,8 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     if 'eix.sync' in __salt__:
         return __salt__['eix.sync']()
 
@@ -463,7 +466,7 @@ def install(name=None,
             binhost=None,
             **kwargs):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -589,9 +592,7 @@ def install(name=None,
     # Handle version kwarg for a single package target
     if pkgs is None and sources is None:
         version_num = kwargs.get('version')
-        if version_num:
-            pkg_params = {name: version_num}
-        else:
+        if not version_num:
             version_num = ''
             if slot is not None:
                 version_num += ':{0}'.format(slot)
@@ -706,7 +707,7 @@ def install(name=None,
 
 def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -799,7 +800,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
 
 def upgrade(refresh=True, binhost=None, backtrack=3):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -889,7 +890,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
 
 def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -988,7 +989,7 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
 
 def purge(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     '''
-    .. versionchanged:: 2015.8.12,2016.3.3,Carbon
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd

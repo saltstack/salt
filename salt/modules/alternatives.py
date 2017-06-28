@@ -13,6 +13,9 @@ import logging
 # Import Salt libs
 import salt.utils
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 __outputter__ = {
     'display': 'txt',
@@ -67,7 +70,7 @@ def show_link(name):
     '''
     Display master link for the alternative
 
-    .. versionadded:: 2015.8.13,2016.3.4,Carbon
+    .. versionadded:: 2015.8.13,2016.3.4,2016.11.0
 
     CLI Example:
 
@@ -87,7 +90,10 @@ def show_link(name):
 
     try:
         with salt.utils.fopen(path, 'rb') as r_file:
-            return r_file.readlines()[1].rstrip('\n')
+            contents = r_file.read()
+            if six.PY3:
+                contents = contents.decode(__salt_system_encoding__)
+            return contents.splitlines(True)[1].rstrip('\n')
     except OSError:
         log.error(
             'alternatives: {0} does not exist'.format(name)
@@ -112,12 +118,11 @@ def show_current(name):
 
         salt '*' alternatives.show_current editor
     '''
-    alt_link_path = '/etc/alternatives/{0}'.format(name)
     try:
-        return os.readlink(alt_link_path)
+        return _read_link(name)
     except OSError:
         log.error(
-            'alternatives: path {0} does not exist'.format(alt_link_path)
+            'alternative: {0} does not exist'.format(name)
         )
     return False
 
@@ -154,7 +159,10 @@ def check_installed(name, path):
 
         salt '*' alternatives.check_installed name path
     '''
-    return show_current(name) == path
+    try:
+        return _read_link(name) == path
+    except OSError:
+        return False
 
 
 def install(name, link, path, priority):
@@ -224,3 +232,13 @@ def set_(name, path):
     if out['retcode'] > 0:
         return out['stderr']
     return out['stdout']
+
+
+def _read_link(name):
+    '''
+    Read the link from /etc/alternatives
+
+    Throws an OSError if the link does not exist
+    '''
+    alt_link_path = '/etc/alternatives/{0}'.format(name)
+    return os.readlink(alt_link_path)

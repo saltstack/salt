@@ -4,8 +4,7 @@ Salt 2015.5.2 Release Notes
 
 :release: 2015-06-10
 
-Version 2015.5.2 is a bugfix release for :doc:`2015.5.0
-</topics/releases/2015.5.0>`.
+Version 2015.5.2 is a bugfix release for :ref:`2015.5.0<release-2015-5-0>`.
 
 Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 

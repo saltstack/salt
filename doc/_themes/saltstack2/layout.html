@@ -164,6 +164,9 @@
                     <!--start navbar-->
                     <div class="row">
                         <div class="col-sm-12 col-md-11 col-md-offset-1 col-lg-10 col-lg-offset-1">
+                            <nav class="pull-left text-muted">
+                                <a href="https://github.com/saltstack/salt/edit/develop/doc/{{pagename}}.rst">Edit on GitHub</a>
+                            </nav>
                             <nav id="localnav">
                                 <ul class="nav navbar-nav">
                                     {%- block relbar_small %}{{ relbar() }}{% endblock %}
@@ -252,7 +255,8 @@
 
                             <div class="col-sm-6">
 
-                                 <a href="http://saltstack.com/support" target="_blank"><img class="nolightbox footer-banner center" src="{{ pathto('_static/images/footer-support.png', 1) }}"/></a>
+                                 <a href="https://saltstack.com/support" target="_blank"><img class="nolightbox footer-banner center" src="{{ pathto('_static/images/footer-support.png', 1) }}"/></a>
+                                 <a href="https://saltstack.com/saltstack-enterprise/" target="_blank"><img class="nolightbox footer-banner center" src="{{ pathto('_static/images/enterprise_ad.jpg', 1) }}"/></a>
 
 
                             </div>

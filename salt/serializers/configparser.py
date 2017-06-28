@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
     salt.serializers.configparser
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     .. versionadded:: 2016.3.0
 

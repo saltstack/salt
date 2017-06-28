@@ -4,6 +4,7 @@ Manage events
 
 This module is used to manage events via RAET
 '''
+# pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
 from __future__ import absolute_import
@@ -46,6 +47,7 @@ class RAETEvent(object):
         self.stack = None
         self.ryn = 'manor'  # remote yard name
         self.connected = False
+        self.cpub = False
         self.__prep_stack(listen)
 
     def __prep_stack(self, listen):
@@ -132,6 +134,7 @@ class RAETEvent(object):
             self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
             self.stack.serviceAll()
             self.connected = True
+            self.cpub = True
         except Exception:
             pass
 
@@ -148,7 +151,8 @@ class RAETEvent(object):
         '''
         return raw
 
-    def get_event(self, wait=5, tag='', match_type=None, full=False, no_block=None):
+    def get_event(self, wait=5, tag='', match_type=None, full=False, no_block=None,
+                  auto_reconnect=False):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
@@ -191,12 +195,12 @@ class RAETEvent(object):
                 return None
             return msg
 
-    def iter_events(self, tag='', full=False):
+    def iter_events(self, tag='', full=False, auto_reconnect=False):
         '''
         Creates a generator that continuously listens for events
         '''
         while True:
-            data = self.get_event(tag=tag, full=full)
+            data = self.get_event(tag=tag, full=full, auto_reconnect=auto_reconnect)
             if data is None:
                 continue
             yield data
@@ -249,6 +253,12 @@ class RAETEvent(object):
                                        'job'))
                 except Exception:
                     pass
+
+    def close_pub(self):
+        '''
+        Here for compatability
+        '''
+        return
 
     def destroy(self):
         if hasattr(self, 'stack'):

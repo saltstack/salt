@@ -20,9 +20,11 @@ Follow one of the below links for further information and examples
     no_out
     no_return
     overstatestage
+    pony
     pprint_out
     progress
     raw
+    table_out
     txt
     virt_query
     yaml_out

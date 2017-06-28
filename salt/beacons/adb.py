@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'adb'
 
 last_state = {}
-last_state_extra = {'value': False}
+last_state_extra = {'value': False, 'no_devices': False}
 
 
 def __virtual__():
@@ -125,11 +125,11 @@ def beacon(config):
 
     # Maybe send an event if we don't have any devices
     if 'no_devices_event' in config and config['no_devices_event'] is True:
-        if len(lines) == 0 and not last_state_extra['no_devices']:
+        if len(found_devices) == 0 and not last_state_extra['no_devices']:
             ret.append({'tag': 'no_devices'})
 
     # Did we have no devices listed this time around?
 
-    last_state_extra['no_devices'] = len(lines) == 0
+    last_state_extra['no_devices'] = len(found_devices) == 0
 
     return ret

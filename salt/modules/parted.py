@@ -377,16 +377,19 @@ def mkfs(device, fs_type):
     _validate_device(device)
 
     if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
+                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ntfs', 'ufs']):
         raise CommandExecutionError('Invalid fs_type passed to partition.mkfs')
 
-    if fs_type is 'linux-swap':
+    if fs_type == 'NTFS':
+        fs_type = 'ntfs'
+
+    if fs_type == 'linux-swap':
         mkfs_cmd = 'mkswap'
     else:
         mkfs_cmd = 'mkfs.{0}'.format(fs_type)
 
     if not salt.utils.which(mkfs_cmd):
-        return 'Error: {0} is unavailable.'
+        return 'Error: {0} is unavailable.'.format(mkfs_cmd)
     cmd = '{0} {1}'.format(mkfs_cmd, device)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
@@ -614,10 +617,9 @@ def set_(device, minor, flag, state):
     '''
     Changes a flag on the partition with number <minor>.
 
-    A flag can be either "on" or "off" (make sure to use proper quoting, see `YAML Idiosyncrasies`_). Some or all of these flags will be
-    available, depending on what disk label you are using.
-
-    .. _`YAML Idiosyncrasies`: https://docs.saltstack.com/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#true-false-yes-no-on-off
+    A flag can be either "on" or "off" (make sure to use proper quoting, see
+    :ref:`YAML Idiosyncrasies <yaml-idiosyncrasies>`). Some or all of these
+    flags will be available, depending on what disk label you are using.
 
     Valid flags are: bios_grub, legacy_boot, boot, lba, root, swap, hidden, raid,
         LVM, PALO, PREP, DIAG

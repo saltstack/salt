@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Allows you to manage proxy settings on minions
-=======================
+==============================================
 
 Setup proxy settings on minions
 
@@ -59,7 +59,8 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
         An array of the domains that should bypass the proxy
 
     network_service
-        The network service to apply the changes to, this only necessary on OSX
+        The network service to apply the changes to, this only necessary on
+        macOS
     '''
     ret = {'name': name,
            'result': True,

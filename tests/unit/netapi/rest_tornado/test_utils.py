@@ -5,10 +5,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from salttesting.unit import skipIf
-from salttesting.case import TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../..')
+from tests.support.unit import skipIf
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -34,18 +31,7 @@ except ImportError:
     HAS_TORNADO = False
 
 # Import utility lib from tests
-from unit.utils.event_test import eventpublisher_process, event, SOCK_DIR  # pylint: disable=import-error
-
-
-@skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
-class TestUtils(TestCase):
-    def test_batching(self):
-        self.assertEqual(1, saltnado.get_batch_size('1', 10))
-        self.assertEqual(2, saltnado.get_batch_size('2', 10))
-
-        self.assertEqual(1, saltnado.get_batch_size('10%', 10))
-        # TODO: exception in this case? The core doesn't so we shouldn't
-        self.assertEqual(11, saltnado.get_batch_size('110%', 10))
+from tests.unit.utils.test_event import eventpublisher_process, event, SOCK_DIR  # pylint: disable=import-error
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
@@ -153,7 +139,3 @@ class TestEventListener(AsyncTestCase):
             self.assertTrue(event_future.done())
             with self.assertRaises(saltnado.TimeoutException):
                 event_future.result()
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(TestUtils, needs_daemon=False)

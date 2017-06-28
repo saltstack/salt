@@ -31,7 +31,9 @@ the instance.
 from __future__ import absolute_import
 import re
 import logging
-from distutils.version import StrictVersion  # pylint: disable=no-name-in-module
+
+# Import salt libs
+from salt.utils.versions import StrictVersion as _StrictVersion
 
 # Import AWS Boto libs
 try:
@@ -53,8 +55,8 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
-    boto_version = StrictVersion(boto.__version__)
-    required_boto_version = StrictVersion('2.8.0')
+    boto_version = _StrictVersion(boto.__version__)
+    required_boto_version = _StrictVersion('2.8.0')
     if boto_version < required_boto_version:
         log.error("%s: installed boto version %s < %s, can't retrieve instance data",
                 __name__, boto_version, required_boto_version)

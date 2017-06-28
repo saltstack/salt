@@ -45,6 +45,9 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
             self.add_constructor(
                 u'tag:yaml.org,2002:omap',
                 type(self).construct_yaml_map)
+            self.add_constructor(
+                u'tag:yaml.org,2002:python/unicode',
+                type(self).construct_unicode)
         self.dictclass = dictclass
 
     def construct_yaml_map(self, node):
@@ -52,6 +55,9 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
         yield data
         value = self.construct_mapping(node)
         data.update(value)
+
+    def construct_unicode(self, node):
+        return node.value
 
     def construct_mapping(self, node, deep=False):
         '''

@@ -26,6 +26,16 @@ the name of the repository, and the link to the repository:
     my_repo:
       url: https://spm.example.com/
 
+For HTTP/HTTPS Basic authorization you can define credentials:
+
+.. code-block:: yaml
+    my_repo:
+      url: https://spm.example.com/
+      username: user
+      password: pass
+
+Beware of unauthorized access to this file, please set at least 0640 permissions for this configuration file:
+
 The URL can use ``http``, ``https``, ``ftp``, or ``file``.
 
 .. code-block:: yaml

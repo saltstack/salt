@@ -4,6 +4,8 @@ Module for working with the Zenoss API
 
 .. versionadded:: 2016.3.0
 
+:depends: requests
+
 :configuration: This module requires a 'zenoss' entry in the master/minion config.
 
     For example:
@@ -36,13 +38,18 @@ urllib3_logger.setLevel(logging.WARNING)
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'zenoss'
+
 
 def __virtual__():
     '''
     Only load if requests is installed
     '''
     if HAS_LIBS:
-        return 'zenoss'
+        return __virtualname__
+    else:
+        return False, 'The \'{0}\' module could not be loaded: ' \
+                      '\'requests\' is not installed.'.format(__virtualname__)
 
 ROUTERS = {'MessagingRouter': 'messaging',
            'EventsRouter': 'evconsole',

@@ -46,7 +46,7 @@ Supported devices:
   -  Allied Telesys
   -  Open vSwitch
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 :codeauthor: `Anthony Shaw <anthony.shaw@dimensiondata.com>`
 
@@ -55,7 +55,7 @@ the configuration of network devices via a NETCONF-compliant control plane.
 Cisco Network Services Orchestrator.
 
 More in-depth conceptual reading on Proxy Minions can be found in the
-:doc:`Proxy Minion </topics/proxyminion/index>` section of Salt's
+:ref:`Proxy Minion <proxy-minion>` section of Salt's
 documentation.
 
 
@@ -270,7 +270,7 @@ def get_data(datastore, path):
     :type  datastore: :class:`DatastoreType` (``str`` enum).
 
     :param path: The device path, a list of element names in order,
-        comma seperated
+        comma separated
     :type  path: ``list`` of ``str`` OR ``tuple``
 
     :return: The network configuration at that tree
@@ -293,7 +293,7 @@ def set_data_value(datastore, path, data):
     :type  datastore: :class:`DatastoreType` (``str`` enum).
 
     :param path: The device path to set the value at,
-        a list of element names in order, comma seperated
+        a list of element names in order, comma separated
     :type  path: ``list`` of ``str`` OR ``tuple``
 
     :param data: The new value at the given path

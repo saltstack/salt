@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Load up the libvirt keys into Pillar for a given minion if said keys have been generated using the libvirt key runner
+Load up the libvirt keys into Pillar for a given minion if said keys have been
+generated using the libvirt key runner
+
+:depends: certtool
 '''
 from __future__ import absolute_import
 
@@ -30,11 +33,18 @@ def ext_pillar(minion_id,
             'libvirt',
             minion_id)
     cacert = os.path.join(__opts__['pki_dir'],
-            'libvirt',
-            'cacert.pem')
+                          'libvirt',
+                          'cacert.pem')
     if not os.path.isdir(key_dir):
         # No keys have been generated
-        gen_hyper_keys(minion_id)
+        gen_hyper_keys(minion_id,
+                       pillar.get('ext_pillar_virt.country', 'US'),
+                       pillar.get('ext_pillar_virt.st', 'Utah'),
+                       pillar.get('ext_pillar_virt.locality',
+                                  'Salt Lake City'),
+                       pillar.get('ext_pillar_virt.organization', 'Salted'),
+                       pillar.get('ext_pillar_virt.expiration_days', '365')
+                       )
     ret = {}
     for key in os.listdir(key_dir):
         if not key.endswith('.pem'):
@@ -48,10 +58,11 @@ def ext_pillar(minion_id,
 
 
 def gen_hyper_keys(minion_id,
-        country='US',
-        state='Utah',
-        locality='Salt Lake City',
-        organization='Salted'):
+                   country='US',
+                   state='Utah',
+                   locality='Salt Lake City',
+                   organization='Salted',
+                   expiration_days='365'):
     '''
     Generate the keys to be used by libvirt hypervisors, this routine gens
     the keys and applies them to the pillar for the hypervisor minions
@@ -88,8 +99,9 @@ def gen_hyper_keys(minion_id,
         with salt.utils.fopen(srvinfo, 'w+') as fp_:
             infodat = ('organization = salted\ncn = {0}\ntls_www_server'
                        '\nencryption_key\nsigning_key'
-                       '\ndigitalSignature').format(
-                               __grains__['fqdn'])
+                       '\ndigitalSignature\nexpiration_days = {1}'
+                       ).format(
+                               __grains__['fqdn'], expiration_days)
             fp_.write(infodat)
     if not os.path.isfile(priv):
         subprocess.call(

@@ -341,6 +341,26 @@ def groups(username, **kwargs):
                 if 'cn' in entry:
                     group_list.append(entry['cn'][0])
             log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
+
+        elif _config('freeipa'):
+            escaped_username = ldap.filter.escape_filter_chars(username)
+            search_base = _config('group_basedn')
+            search_string = _render_template(_config('group_filter'), escaped_username)
+            search_results = bind.search_s(search_base,
+                                           ldap.SCOPE_SUBTREE,
+                                           search_string,
+                                           [_config('accountattributename'), 'cn'])
+
+            for entry, result in search_results:
+                for user in result[_config('accountattributename')]:
+                    if username == user.split(',')[0].split('=')[-1]:
+                        group_list.append(entry.split(',')[0].split('=')[-1])
+
+            log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
+
+            if not auth(username, kwargs['password']):
+                log.error('LDAP username and password do not match')
+                return []
         else:
             if _config('groupou'):
                 search_base = 'ou={0},{1}'.format(_config('groupou'), _config('basedn'))
@@ -352,6 +372,9 @@ def groups(username, **kwargs):
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
                                            [_config('accountattributename'), 'cn'])
+            for _, entry in search_results:
+                if username in entry[_config('accountattributename')]:
+                    group_list.append(entry['cn'][0])
             for user, entry in search_results:
                 if username == user.split(',')[0].split('=')[-1]:
                     for group in entry[_config('groupattribute')]:
@@ -367,7 +390,7 @@ def groups(username, **kwargs):
     return group_list
 
 
-def expand_ldap_entries(entries, opts=None):
+def __expand_ldap_entries(entries, opts=None):
     '''
 
     :param entries: ldap subtree in external_auth config option
@@ -433,5 +456,24 @@ def expand_ldap_entries(entries, opts=None):
             else:
                 acl_tree.append({minion_or_ou: matchers})
 
-    log.trace('expand_ldap_entries: {0}'.format(acl_tree))
+    log.trace('__expand_ldap_entries: {0}'.format(acl_tree))
     return acl_tree
+
+
+def process_acl(auth_list, opts=None):
+    '''
+    Query LDAP, retrieve list of minion_ids from an OU or other search.
+    For each minion_id returned from the LDAP search, copy the perms
+    matchers into the auth dictionary
+    :param auth_list:
+    :param opts: __opts__ for when __opts__ is not injected
+    :return: Modified auth list.
+    '''
+    ou_names = []
+    for item in auth_list:
+        if isinstance(item, six.string_types):
+            continue
+        ou_names.extend([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
+    if ou_names:
+        auth_list = __expand_ldap_entries(auth_list, opts)
+    return auth_list

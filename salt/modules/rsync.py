@@ -4,7 +4,7 @@ Wrapper for rsync
 
 .. versionadded:: 2014.1.0
 
-This data can also be passed into :doc:`pillar </topics/tutorials/pillar>`.
+This data can also be passed into :ref:`pillar <pillar-walk-through>`.
 Options passed into opts will overwrite options passed into pillar.
 '''
 from __future__ import absolute_import
@@ -68,7 +68,8 @@ def rsync(src,
           exclude=None,
           excludefrom=None,
           dryrun=False,
-          rsh=None):
+          rsh=None,
+          additional_opts=None):
     '''
     .. versionchanged:: 2016.3.0
         Return data now contains just the output of the rsync command, instead
@@ -77,12 +78,58 @@ def rsync(src,
 
     Rsync files from src to dst
 
+    src
+        The source location where files will be rsynced from.
+
+    dst
+        The destination location where files will be rsynced to.
+
+    delete : False
+        Whether to enable the rsync `--delete` flag, which
+        will delete extraneous files from dest dirs
+
+    force : False
+        Whether to enable the rsync `--force` flag, which
+        will force deletion of dirs even if not empty.
+
+    update : False
+        Whether to enable the rsync `--update` flag, which
+        forces rsync to skip any files which exist on the
+        destination and have a modified time that is newer
+        than the source file.
+
+    passwordfile
+        A file that contains a password for accessing an
+        rsync daemon.  The file should contain just the
+        password.
+
+    exclude
+        Whether to enable the rsync `--exclude` flag, which
+        will exclude files matching a PATTERN.
+
+    excludefrom
+        Whether to enable the rsync `--excludefrom` flag, which
+        will read exclude patterns from a file.
+
+    dryrun : False
+        Whether to enable the rsync `--dry-run` flag, which
+        will perform a trial run with no changes made.
+
+    rsh
+        Whether to enable the rsync `--rsh` flag, to
+        specify the remote shell to use.
+
+    additional_opts
+        Any additional rsync options, should be specified as a list.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' rsync.rsync {src} {dst} {delete=True} {update=True} {passwordfile=/etc/pass.crt} {exclude=xx} {rsh}
         salt '*' rsync.rsync {src} {dst} {delete=True} {excludefrom=/xx.ini} {rsh}
+
+        salt '*' rsync.rsync {src} {dst} {delete=True} {excludefrom=/xx.ini} additional_opts='["--partial", "--bwlimit=5000"]'
     '''
     if not src:
         src = __salt__['config.option']('rsync.src')
@@ -107,7 +154,18 @@ def rsync(src,
     if not src or not dst:
         raise SaltInvocationError('src and dst cannot be empty')
 
-    option = _check(delete, force, update, passwordfile, exclude, excludefrom, dryrun, rsh)
+    option = _check(delete,
+                    force,
+                    update,
+                    passwordfile,
+                    exclude,
+                    excludefrom,
+                    dryrun,
+                    rsh)
+
+    if additional_opts and isinstance(additional_opts, list):
+        option = option + additional_opts
+
     cmd = ['rsync'] + option + [src, dst]
     log.debug('Running rsync command: {0}'.format(cmd))
     try:

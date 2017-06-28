@@ -6,11 +6,17 @@ Utility functions for minions
 # Import Python Libs
 from __future__ import absolute_import
 import os
+import logging
 import threading
 
 # Import Salt Libs
 import salt.utils
 import salt.payload
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
+log = logging.getLogger(__name__)
 
 
 def running(opts):
@@ -81,7 +87,7 @@ def _read_proc_file(path, opts):
         except IOError:
             pass
         return None
-    if opts['multiprocessing']:
+    if opts.get('multiprocessing'):
         if data.get('pid') == pid:
             return None
     else:
@@ -101,6 +107,11 @@ def _read_proc_file(path, opts):
             return None
 
     if not _check_cmdline(data):
+        pid = data.get('pid')
+        if pid:
+            log.warning(
+                'PID {0} exists but does not appear to be a salt process.'.format(pid)
+            )
         try:
             os.remove(path)
         except IOError:
@@ -113,34 +124,24 @@ def _check_cmdline(data):
     '''
     In some cases where there are an insane number of processes being created
     on a system a PID can get recycled or assigned to a non-Salt process.
-    This fn checks to make sure the PID we are checking on is actually
+    On Linux this fn checks to make sure the PID we are checking on is actually
     a Salt process.
 
-    For non-Linux systems with no procfs style /proc mounted
-    we punt and just return True (assuming that the data has a PID in it)
+    For non-Linux systems we punt and just return True
     '''
+    if not salt.utils.is_linux():
+        return True
     pid = data.get('pid')
     if not pid:
         return False
-    if not os.path.isdir('/proc') or salt.utils.is_windows():
-        return True
-    # Some BSDs have a /proc dir, but procfs is not mounted there.  Since
-    # processes are represented by directories in /proc, if there are no
-    # dirs in proc, this is a non-procfs supporting OS.  In this case
-    # like the one above we just return True
-    dirs_in_proc = False
-    for dirpath, dirnames, files in os.walk('/proc'):
-        if dirnames:
-            dirs_in_proc = True
-            break
-    if not dirs_in_proc:
+    if not os.path.isdir('/proc'):
         return True
     path = os.path.join('/proc/{0}/cmdline'.format(pid))
     if not os.path.isfile(path):
         return False
     try:
         with salt.utils.fopen(path, 'rb') as fp_:
-            if 'salt' in fp_.read():
+            if six.b('salt') in fp_.read():
                 return True
     except (OSError, IOError):
         return False

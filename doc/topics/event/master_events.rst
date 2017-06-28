@@ -43,10 +43,10 @@ Key events
 .. salt:event:: salt/key
 
     Fired when accepting and rejecting minions keys on the Salt master.
+    These happen as a result of actions undertaken by the `salt-key` command.
 
     :var id: The minion ID.
-    :var act: The new status of the minion key: ``accept``, ``pend``,
-              ``reject``, ``delete``.
+    :var act: The new status of the minion key: ``accept``, ``delete``,
 
 .. warning:: If a master is in :conf_master:`auto_accept mode`, ``salt/key`` events
              will not be fired when the keys are accepted.  In addition, pre-seeding
@@ -122,7 +122,7 @@ Runner Events
 
 .. salt:event:: salt/run/<JID>/args
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     Fired by the :mod:`state.orchestrate <salt.runners.state.orchestrate>`
     runner
@@ -133,8 +133,11 @@ Runner Events
     :var tgt: The target expression (e.g. ``*``). Included for ``state`` and
         ``function`` types only.
     :var args: The args passed to the orchestration job. **Note:** for
-        ``state`` and ``function`` types, also includes an ``expr_form`` which
-        shows what kind of match (``glob``, ``pcre``, etc.) was used.
+        ``state`` and ``function`` types, also includes a ``tgt_type`` value
+        which shows what kind of match (``glob``, ``pcre``, etc.) was used.
+        This value was named ``expr_form`` in the 2016.11 release cycle but has
+        been renamed to ``tgt_type`` in 2017.7.0 for consistency with other
+        events.
 
 .. _event-master_presence:
 

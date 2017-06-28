@@ -6,12 +6,8 @@ missing functions in other modules
 from __future__ import absolute_import
 from salt.exceptions import CommandExecutionError
 
-# Import Salt Libs
-import salt.utils
-
 # Import 3rd Party Libs
 try:
-    import ntsecuritycon
     import psutil
     import pywintypes
     import win32api
@@ -22,12 +18,12 @@ except ImportError:
     HAS_WIN32 = False
 
 
+# Although utils are often directly imported, it is also possible to use the
+# loader.
 def __virtual__():
     '''
-    Load only on Windows with necessary modules
+    Only load if Win32 Libraries are installed
     '''
-    if not salt.utils.is_windows():
-        return False, 'This utility only works on Windows'
     if not HAS_WIN32:
         return False, 'This utility requires pywin32'
 
@@ -104,33 +100,17 @@ def get_sid_from_name(name):
     Returns:
         str: The corresponding SID
     '''
+    # If None is passed, use the Universal Well-known SID "Null SID"
+    if name is None:
+        name = 'NULL SID'
+
     try:
         sid = win32security.LookupAccountName(None, name)[0]
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'User {0} found: {1}'.format(name, exc[2]))
+            'User {0} found: {1}'.format(name, exc.strerror))
 
     return win32security.ConvertSidToStringSid(sid)
-
-
-def get_name_from_sid(sid):
-    '''
-    This gets the name from the specified SID. Opposite of get_sid_from_name
-
-    Args:
-        sid (str): The SID for which to find the name
-
-    Returns:
-        str: The name that corresponds to the passed SID
-    '''
-    try:
-        sid_obj = win32security.ConvertStringSidToSid(sid)
-        name = win32security.LookupAccountSid(None, sid_obj)[0]
-    except pywintypes.error as exc:
-        raise CommandExecutionError(
-            'User {0} found: {1}'.format(sid, exc[2]))
-
-    return name
 
 
 def get_current_user():
@@ -142,105 +122,19 @@ def get_current_user():
     '''
     try:
         user_name = win32api.GetUserNameEx(win32api.NameSamCompatible)
-        if user_name[-1] == '$' and win32api.GetUserName() == 'SYSTEM':
+        if user_name[-1] == '$':
             # Make the system account easier to identify.
-            user_name = 'SYSTEM'
+            # Fetch sid so as to handle other language than english
+            test_user = win32api.GetUserName()
+            if test_user == 'SYSTEM':
+                user_name = 'SYSTEM'
+            elif get_sid_from_name(test_user) == 'S-1-5-18':
+                user_name = 'SYSTEM'
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'Failed to get current user: {0}'.format(exc[2]))
+            'Failed to get current user: {0}'.format(exc.strerror))
 
     if not user_name:
         return False
 
     return user_name
-
-
-def get_path_owner(path):
-    '''
-    Gets the owner of the file or directory passed
-
-    Args:
-        path (str): The path for which to obtain owner information
-
-    Returns:
-        str: The owner (group or user)
-    '''
-    # Return owner
-    security_descriptor = win32security.GetFileSecurity(
-        path, win32security.OWNER_SECURITY_INFORMATION)
-    owner_sid = security_descriptor.GetSecurityDescriptorOwner()
-
-    return get_name_from_sid(win32security.ConvertSidToStringSid(owner_sid))
-
-
-def set_path_owner(path):
-    '''
-    Sets the owner of a file or directory to be Administrator
-
-    Args:
-        path (str): The path to the file or directory
-
-    Returns:
-        bool: True if successful, Otherwise CommandExecutionError
-    '''
-    # Must use the SID here to be locale agnostic
-    admins = win32security.ConvertStringSidToSid('S-1-5-32-544')
-    try:
-        win32security.SetNamedSecurityInfo(
-            path,
-            win32security.SE_FILE_OBJECT,
-            win32security.OWNER_SECURITY_INFORMATION |
-            win32security.PROTECTED_DACL_SECURITY_INFORMATION,
-            admins,
-            None, None, None)
-    except pywintypes.error as exc:
-        raise CommandExecutionError(
-            'Failed to set owner: {0}'.format(exc[2]))
-
-    return True
-
-
-def set_path_permissions(path):
-    '''
-    Gives Administrators, System, and Owner full control over the specified
-    directory
-
-    Args:
-        path (str): The path to the file or directory
-
-    Returns:
-        bool: True if successful, Otherwise CommandExecutionError
-    '''
-    # TODO: Need to make this more generic, maybe a win_dacl utility
-    admins = win32security.ConvertStringSidToSid('S-1-5-32-544')
-    user = win32security.ConvertStringSidToSid('S-1-5-32-545')
-    system = win32security.ConvertStringSidToSid('S-1-5-18')
-    owner = win32security.ConvertStringSidToSid('S-1-3-4')
-
-    dacl = win32security.ACL()
-
-    revision = win32security.ACL_REVISION_DS
-    inheritance = win32security.CONTAINER_INHERIT_ACE |\
-        win32security.OBJECT_INHERIT_ACE
-    full_access = ntsecuritycon.GENERIC_ALL
-    user_access = ntsecuritycon.GENERIC_READ | \
-        ntsecuritycon.GENERIC_EXECUTE
-
-    dacl.AddAccessAllowedAceEx(revision, inheritance, full_access, admins)
-    dacl.AddAccessAllowedAceEx(revision, inheritance, full_access, system)
-    dacl.AddAccessAllowedAceEx(revision, inheritance, full_access, owner)
-    if 'pki' not in path:
-        dacl.AddAccessAllowedAceEx(revision, inheritance, user_access, user)
-
-    try:
-        win32security.SetNamedSecurityInfo(
-            path,
-            win32security.SE_FILE_OBJECT,
-            win32security.DACL_SECURITY_INFORMATION |
-            win32security.PROTECTED_DACL_SECURITY_INFORMATION,
-            None, None, dacl, None)
-    except pywintypes.error as exc:
-        raise CommandExecutionError(
-            'Failed to set permissions: {0}'.format(exc[2]))
-
-    return True

@@ -70,7 +70,8 @@ __virtualname__ = 'memcache'
 
 def __virtual__():
     if not HAS_MEMCACHE:
-        return False
+        return False, 'Could not import memcache returner; ' \
+                      'memcache python client is not installed.'
     return __virtualname__
 
 
@@ -163,7 +164,7 @@ def save_load(jid, load, minions=None):
     _append_list(serv, 'jids', jid)
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''

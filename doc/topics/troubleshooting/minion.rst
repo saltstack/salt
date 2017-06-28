@@ -28,8 +28,8 @@ What Ports does the Minion Need Open?
 No ports need to be opened on the minion, as it makes outbound connections to
 the master. If you've put both your Salt master and minion in debug mode and
 don't see an acknowledgment that your minion has connected, it could very well
-be a firewall interfering with the connection. See our :doc:`firewall
-configuration </topics/tutorials/firewall>` page for help opening the firewall
+be a firewall interfering with the connection. See our :ref:`firewall
+configuration <firewall>` page for help opening the firewall
 on various platforms.
 
 If you have netcat installed, you can check port connectivity from the minion
@@ -93,8 +93,8 @@ even more verbosity, increase the loglevel using the ``-l`` argument:
 The main difference between using ``salt`` and using ``salt-call`` is that
 ``salt-call`` is run from the minion, and it only runs the selected function on
 that minion. By contrast, ``salt`` is run from the master, and requires you to
-specify the minions on which to run the command using salt's :doc:`targeting
-system </topics/targeting/index>`.
+specify the minions on which to run the command using salt's :ref:`targeting
+system <targeting>`.
 
 Live Python Debug Output
 ========================

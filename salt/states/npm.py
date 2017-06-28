@@ -96,7 +96,7 @@ def installed(name,
     pkg_list = pkgs if pkgs else [name]
 
     try:
-        installed_pkgs = __salt__['npm.list'](dir=dir, runas=user, env=env)
+        installed_pkgs = __salt__['npm.list'](dir=dir, runas=user, env=env, depth=0)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error looking up \'{0}\': {1}'.format(name, err)
@@ -127,12 +127,16 @@ def installed(name,
             for pkg_details in installed_pkgs.values():
                 try:
                     pkg_from = pkg_details.get('from', '').split('://')[1]
+                    # Catch condition where we may have specified package as
+                    # git://github.com/foo/bar but packager describes it as
+                    # git://github.com/foo/bar.git in the package
+                    if not pkg_from.endswith('.git') and pkg_name.startswith('git://'):
+                        pkg_from += '.git'
                     if pkg_name.split('://')[1] == pkg_from:
                         return True
                 except IndexError:
                     pass
         return False
-
     for pkg in pkg_list:
         pkg_name, _, pkg_ver = pkg.partition('@')
         pkg_name = pkg_name.strip()
@@ -228,7 +232,7 @@ def removed(name, dir=None, user=None):
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     try:
-        installed_pkgs = __salt__['npm.list'](dir=dir)
+        installed_pkgs = __salt__['npm.list'](dir=dir, depth=0)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
         ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
@@ -305,7 +309,8 @@ def bootstrap(name, user=None, silent=True):
 
 
 def cache_cleaned(name=None,
-                  user=None):
+                  user=None,
+                  force=False):
     '''
     Ensure that the given package is not cached.
 
@@ -316,6 +321,11 @@ def cache_cleaned(name=None,
 
     user
         The user to run NPM with
+
+    force
+        Force cleaning of cache.  Required for npm@5 and greater
+
+        .. versionadded:: 2016.11.6
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     specific_pkg = None

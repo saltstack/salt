@@ -107,6 +107,144 @@ A comma-separated list of optional packages that are recommended to be
 installed with the package. This list is displayed in an informational message
 when the package is installed to SPM.
 
+files
+~~~~~
+A files section can be added, to specify a list of files to add to the SPM.
+Such a section might look like:
+
+.. code-block:: yaml
+
+    files:
+      - _pillar
+      - FORMULA
+      - _runners
+      - d|mymodule/index.rst
+      - r|README.rst
+
+When ``files`` are specified, then only those files will be added to the SPM,
+regardless of what other files exist in the directory. They will also be added
+in the order specified, which is useful if you have a need to lay down files in
+a specific order.
+
+As can be seen in the example above, you may also tag files as being a specific
+type. This is done by pre-pending a filename with its type, followed by a pipe
+(``|``) character. The above example contains a document file and a readme. The
+available file types are:
+
+* ``c``: config file
+* ``d``: documentation file
+* ``g``: ghost file (i.e. the file contents are not included in the package payload)
+* ``l``: license file
+* ``r``: readme file
+* ``s``: SLS file
+* ``m``: Salt module
+
+The first 5 of these types (``c``, ``d``, ``g``, ``l``, ``r``) will be placed in
+``/usr/share/salt/spm/`` by default. This can be changed by setting an
+``spm_share_dir`` value in your ``/etc/salt/spm`` configuration file.
+
+The last two types (``s`` and ``m``) are currently ignored, but they are
+reserved for future use.
+
+Pre and Post States
+-------------------
+It is possible to run Salt states before and after installing a package by
+using pre and post states. The following sections may be declared in a
+``FORMULA``:
+
+* ``pre_local_state``
+* ``pre_tgt_state``
+* ``post_local_state``
+* ``post_tgt_state``
+
+Sections with ``pre`` in their name are evaluated before a package is installed
+and sections with ``post`` are evaluated after a package is installed. ``local``
+states are evaluated before ``tgt`` states.
+
+Each of these sections needs to be evaluated as text, rather than as YAML. 
+Consider the following block:
+
+.. code-block::
+
+    pre_local_state: >
+      echo test > /tmp/spmtest:
+        cmd:
+          - run
+
+Note that this declaration uses ``>`` after ``pre_local_state``. This is a YAML
+marker that marks the next multi-line block as text, including newlines. It is
+important to use this marker whenever declaring ``pre`` or ``post`` states, so
+that the text following it can be evaluated properly.
+
+local States
+~~~~~~~~~~~~
+``local`` states are evaluated locally; this is analagous to issuing a state
+run using a ``salt-call --local`` command. These commands will be issued on the
+local machine running the ``spm`` command, whether that machine is a master or
+a minion.
+
+``local`` states do not require any special arguments, but they must still use
+the ``>`` marker to denote that the state is evaluated as text, not a data
+structure.
+
+.. code-block::
+
+    pre_local_state: >
+      echo test > /tmp/spmtest:
+        cmd:
+          - run
+
+tgt States
+~~~~~~~~~~
+``tgt`` states are issued against a remote target. This is analogous to issuing
+a state using the ``salt`` command. As such it requires that the machine that
+the ``spm`` command is running on is a master.
+
+Because ``tgt`` states require that a target be specified, their code blocks
+are a little different. Consider the following state:
+
+.. code-block::
+
+    pre_tgt_state:
+      tgt: '*'
+      data: >
+        echo test > /tmp/spmtest:
+          cmd:
+            - run
+
+With ``tgt`` states, the state data is placed under a ``data`` section, inside
+the ``*_tgt_state`` code block. The target is of course specified as a ``tgt``
+and you may also optionally specify a ``tgt_type`` (the default is ``glob``).
+
+You still need to use the ``>`` marker, but this time it follows the ``data``
+line, rather than the ``*_tgt_state`` line.
+
+Templating States
+~~~~~~~~~~~~~~~~~
+The reason that state data must be evaluated as text rather than a data
+structure is because that state data is first processed through the rendering
+engine, as it would be with a standard state run.
+
+This means that you can use Jinja or any other supported renderer inside of
+Salt. All formula variables are available to the renderer, so you can reference
+``FORMULA`` data inside your state if you need to:
+
+.. code-block::
+
+    pre_tgt_state:
+      tgt: '*'
+      data: >
+         echo {{ name }} > /tmp/spmtest:
+          cmd:
+            - run
+
+You may also declare your own variables inside the ``FORMULA``. If SPM doesn't
+recognize them then it will ignore them, so there are no restrictions on
+variable names, outside of avoiding reserved words.
+
+By default the renderer is set to ``yaml_jinja``. You may change this by
+changing the ``renderer`` setting in the ``FORMULA`` itself.
+
 Building a Package
 ------------------
 Once a ``FORMULA`` file has been created, it is placed into the root of the

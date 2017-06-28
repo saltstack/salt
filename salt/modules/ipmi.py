@@ -64,7 +64,7 @@ def _get_config(**kwargs):
     if '__salt__' in globals():
         config_key = '{0}.config'.format(__virtualname__)
         config.update(__salt__['config.get'](config_key, {}))
-    for k in set(config.keys()) & set(kwargs.keys()):
+    for k in set(config) & set(kwargs):
         config[k] = kwargs[k]
     return config
 
@@ -704,7 +704,7 @@ def set_bootdev(bootdev='default', persist=False, uefiboot=False, **kwargs):
                     this
 
     :param uefiboot: If true, request UEFI boot explicitly.  Strictly
-                    speaking, the spec sugests that if not set, the system
+                    speaking, the spec suggests that if not set, the system
                     should BIOS boot and offers no "don't care" option.
                     In practice, this flag not being set does not preclude
                     UEFI boot on any system I've encountered.

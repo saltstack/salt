@@ -72,7 +72,7 @@ Optionally, a root may be specified.
       - consul: my_consul_config
 
     ext_pillar:
-      - consul: my_consul_config root=/salt
+      - consul: my_consul_config root=salt
 
 Using these configuration profiles, multiple consul sources may also be used:
 
@@ -88,9 +88,9 @@ path to expose minion-specific information stored in consul.
 .. code-block:: yaml
 
     ext_pillar:
-      - consul: my_consul_config root=/salt/%(minion_id)s
-      - consul: my_consul_config root=/salt/%(role)s
-      - consul: my_consul_config root=/salt/%(environment)s
+      - consul: my_consul_config root=salt/%(minion_id)s
+      - consul: my_consul_config root=salt/%(role)s
+      - consul: my_consul_config root=salt/%(environment)s
 
 Minion-specific values may override shared values when the minion-specific root
 appears after the shared root:
@@ -98,8 +98,8 @@ appears after the shared root:
 .. code-block:: yaml
 
     ext_pillar:
-      - consul: my_consul_config root=/salt-shared
-      - consul: my_other_consul_config root=/salt-private/%(minion_id)s
+      - consul: my_consul_config root=salt-shared
+      - consul: my_other_consul_config root=salt-private/%(minion_id)s
 
 If using the ``role`` or ``environment`` grain in the consul key path, be sure to define it using
 `/etc/salt/grains`, or similar:
@@ -108,6 +108,16 @@ If using the ``role`` or ``environment`` grain in the consul key path, be sure t
 
     role: my-minion-role
     environment: dev
+
+It's possible to lock down where the pillar values are shared through minion
+targeting. Note that double quotes ``"`` are required around the target value
+and cannot be used inside the matching statement. See the section on Compound
+Matchers for more examples.
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - consul: my_consul_config root=salt target="L@salt.example.com and G@osarch:x86_64"
 
 '''
 from __future__ import absolute_import
@@ -119,6 +129,8 @@ import yaml
 
 from salt.exceptions import CommandExecutionError
 from salt.utils.dictupdate import update as dict_merge
+import salt.utils.minions
+from salt.utils.yamlloader import SaltYamlSafeLoader
 
 # Import third party libs
 try:
@@ -147,30 +159,49 @@ def ext_pillar(minion_id,
     '''
     Check consul for all data
     '''
-    comps = conf.split()
+    opts = {}
+    temp = conf
+    target_re = re.compile('target="(.*?)"')
+    match = target_re.search(temp)
+    if match:
+        opts['target'] = match.group(1)
+        temp = temp.replace(match.group(0), '')
+        checker = salt.utils.minions.CkMinions(__opts__)
+        minions = checker.check_minions(opts['target'], 'compound')
+        if minion_id not in minions:
+            return {}
 
-    profile = None
-    if comps[0]:
-        profile = comps[0]
-    client = get_conn(__opts__, profile)
+    root_re = re.compile('root=(\S*)')  # pylint: disable=W1401
+    match = root_re.search(temp)
+    if match:
+        opts['root'] = match.group(1)
+        temp = temp.replace(match.group(0), '')
+    else:
+        opts['root'] = ""
 
-    path = ''
-    if len(comps) > 1 and comps[1].startswith('root='):
-        path = comps[1].replace('root=', '')
+    profile_re = re.compile('(?:profile=)?(\S+)')  # pylint: disable=W1401
+    match = profile_re.search(temp)
+    if match:
+        opts['profile'] = match.group(1)
+        temp = temp.replace(match.group(0), '')
+    else:
+        opts['profile'] = None
 
-    role = __salt__['grains.get']('role')
-    environment = __salt__['grains.get']('environment')
+    client = get_conn(__opts__, opts['profile'])
+
+    role = __salt__['grains.get']('role', None)
+    environment = __salt__['grains.get']('environment', None)
     # put the minion's ID in the path if necessary
-    path %= {
+    opts['root'] %= {
         'minion_id': minion_id,
         'role': role,
         'environment': environment
     }
 
     try:
-        pillar = fetch_tree(client, path)
+        pillar = fetch_tree(client, opts['root'])
     except KeyError:
-        log.error('No such key in consul profile %s: %s', profile, path)
+        log.error('No such key in consul profile %s: %s', opts['profile'], opts['root'])
         pillar = {}
 
     return pillar
@@ -221,7 +252,10 @@ def pillar_format(ret, keys, value):
     # If value is not None then it's a string
     # Use YAML to parse the data
     # YAML strips whitespaces unless they're surrounded by quotes
-    pillar_value = yaml.load(value)
+    pillar_value = yaml.load(
+        value,
+        Loader=SaltYamlSafeLoader
+    )
 
     keyvalue = keys.pop()
     pil = {keyvalue: pillar_value}

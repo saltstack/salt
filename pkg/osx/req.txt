@@ -11,7 +11,7 @@ GitPython==1.0.1
 idna==2.0
 ioflo==1.5.0
 ipaddress==1.0.16
-Jinja2==2.8
+Jinja2==2.9.4
 libnacl==1.4.4
 linode-python==1.1.1
 Mako==1.0.3

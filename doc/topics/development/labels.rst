@@ -37,7 +37,7 @@ coordinate with the assignee via the GitHub issue tracker to create the best pos
     The issue is being actively worked on by a SaltStack engineer.  Sprint milestones names are constructed from the
     chemical symbol of the next release's codename and the number of sprints until that release is made.  For example,
     if the next release codename is ``Neon`` and there are five sprints until that release, the corresponding sprint
-    milestone will be called ``Ne 5``.  See :doc:`<topics/releases/version_numbers>` for a discussion of Salt's release
+    milestone will be called ``Ne 5``.  See :ref:`<version-numbers>` for a discussion of Salt's release
     codenames.
 
 Labels
@@ -295,5 +295,5 @@ with labels.
     The issue is related to a Zendesk customer support ticket.
 
 ``<Release>``
-    The issue is scheduled to be implemented by ``<Release>``.  See :doc:`<topics/releases/version_numbers>` for a
+    The issue is scheduled to be implemented by ``<Release>``.  See :ref:`<version-numbers>` for a
     discussion of Salt's release codenames.

@@ -73,7 +73,6 @@ import salt.utils.jid
 import salt.returners
 import salt.ext.six as six
 
-
 # Import third party libs
 try:
     import pymongo
@@ -91,7 +90,7 @@ __virtualname__ = 'mongo'
 
 def __virtual__():
     if not HAS_PYMONGO:
-        return False
+        return False, 'Could not import mongo returner; pymongo is not installed.'
     return __virtualname__
 
 
@@ -201,19 +200,57 @@ def returner(ret):
         mdb.saltReturns.insert(sdata.copy())
 
 
+def _safe_copy(dat):
+    ''' mongodb doesn't allow '.' in keys, but does allow unicode equivs.
+        Apparently the docs suggest using escaped unicode full-width
+        encodings.  *sigh*
+
+            \\  -->  \\\\
+            $  -->  \\\\u0024
+            .  -->  \\\\u002e
+
+        Personally, I prefer URL encodings,
+
+        \\  -->  %5c
+        $  -->  %24
+        .  -->  %2e
+
+
+        Which means also escaping '%':
+
+        % -> %25
+    '''
+
+    if isinstance(dat, dict):
+        ret = {}
+        for k in dat:
+            r = k.replace('%', '%25').replace('\\', '%5c').replace('$', '%24').replace('.', '%2e')
+            if r != k:
+                log.debug('converting dict key from {0} to {1} for mongodb'.format(k, r))
+            ret[r] = _safe_copy(dat[k])
+        return ret
+
+    if isinstance(dat, (list, tuple)):
+        return [_safe_copy(i) for i in dat]
+
+    return dat
+
+
 def save_load(jid, load, minions=None):
     '''
     Save the load for a given job id
     '''
     conn, mdb = _get_conn(ret=None)
+    to_save = _safe_copy(load)
+
     if float(version) > 2.3:
         #using .copy() to ensure original data for load is unchanged
-        mdb.jobs.insert_one(load.copy())
+        mdb.jobs.insert_one(to_save)
     else:
-        mdb.jobs.insert(load.copy())
+        mdb.jobs.insert(to_save)
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''

@@ -1,3 +1,5 @@
+.. _tutorial-cron-with-salt:
+
 Using cron with Salt
 ====================
 

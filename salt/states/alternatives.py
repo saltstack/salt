@@ -224,7 +224,7 @@ def set_(name, path):
         if __opts__['test']:
             ret['comment'] = (
                 'Alternative for {0} will be set to path {1}'
-            ).format(name, current)
+            ).format(name, path)
             ret['result'] = None
             return ret
         __salt__['alternatives.set'](name, path)

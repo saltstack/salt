@@ -144,7 +144,7 @@ def get_all_queues(prefix=None, region=None, key=None, keyid=None, profile=None)
     '''
     Return a list of Queue() objects describing all visible queues.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 
@@ -164,7 +164,7 @@ def list(prefix=None, region=None, key=None, keyid=None, profile=None):
     '''
     Return a list of the names of all visible queues.
 
-    .. versionadded:: Carbon
+    .. versionadded:: 2016.11.0
 
     CLI Example:
 

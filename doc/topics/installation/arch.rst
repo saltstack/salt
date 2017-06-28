@@ -16,18 +16,7 @@ Install Salt stable releases from the Arch Linux Official repositories as follow
 
 .. code-block:: bash
 
-    pacman -S salt-zmq
-
-To install Salt stable releases using the :doc:`RAET protocol<topics/development/raet/index>`,
-use the following:
-
-.. code-block:: bash
-
-    pacman -S salt-raet
-
-.. note:: transports
-
-    Unlike other linux distributions, please be aware that Arch Linux's package manager pacman defaults to RAET as the Salt transport. If you want to use ZeroMQ instead, make sure to enter the associated number for the salt-zmq repository when prompted.
+    pacman -S salt
 
 Tracking develop
 ----------------
@@ -77,4 +66,4 @@ seen here:
 
     systemctl start salt-master
 
-Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
+Now go to the :ref:`Configuring Salt<configuring-salt>` page.

@@ -4,13 +4,18 @@ Return cached data from minions
 '''
 from __future__ import absolute_import
 # Import python libs
+import fnmatch
 import logging
+import os
 
 # Import salt libs
+import salt.config
+import salt.ext.six as six
 import salt.log
 import salt.utils
 import salt.utils.master
 import salt.payload
+import salt.cache
 from salt.exceptions import SaltInvocationError
 from salt.fileserver import clear_lock as _clear_lock
 from salt.fileserver.gitfs import PER_REMOTE_OVERRIDES as __GITFS_OVERRIDES
@@ -20,9 +25,17 @@ from salt.runners.winrepo import PER_REMOTE_OVERRIDES as __WINREPO_OVERRIDES
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'list_': 'list',
+}
 
-def grains(tgt=None, expr_form='glob', **kwargs):
+
+def grains(tgt=None, tgt_type='glob', **kwargs):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Return cached grains of the targeted minions
 
     CLI Example:
@@ -31,7 +44,16 @@ def grains(tgt=None, expr_form='glob', **kwargs):
 
         salt-run cache.grains
     '''
-    pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
+    if 'expr_form' in kwargs:
+        salt.utils.warn_until(
+            'Fluorine',
+            'The target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = kwargs.pop('expr_form')
+
+    pillar_util = salt.utils.master.MasterPillarUtil(tgt, tgt_type,
                                                      use_cached_grains=True,
                                                      grains_fallback=False,
                                                      opts=__opts__)
@@ -39,8 +61,12 @@ def grains(tgt=None, expr_form='glob', **kwargs):
     return cached_grains
 
 
-def pillar(tgt=None, expr_form='glob', **kwargs):
+def pillar(tgt=None, tgt_type='glob', **kwargs):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Return cached pillars of the targeted minions
 
     CLI Example:
@@ -49,7 +75,16 @@ def pillar(tgt=None, expr_form='glob', **kwargs):
 
         salt-run cache.pillar
     '''
-    pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
+    if 'expr_form' in kwargs:
+        salt.utils.warn_until(
+            'Fluorine',
+            'The target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = kwargs.pop('expr_form')
+
+    pillar_util = salt.utils.master.MasterPillarUtil(tgt, tgt_type,
                                                      use_cached_grains=True,
                                                      grains_fallback=False,
                                                      use_cached_pillar=True,
@@ -59,8 +94,12 @@ def pillar(tgt=None, expr_form='glob', **kwargs):
     return cached_pillar
 
 
-def mine(tgt=None, expr_form='glob', **kwargs):
+def mine(tgt=None, tgt_type='glob', **kwargs):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Return cached mine data of the targeted minions
 
     CLI Example:
@@ -69,7 +108,16 @@ def mine(tgt=None, expr_form='glob', **kwargs):
 
         salt-run cache.mine
     '''
-    pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
+    if 'expr_form' in kwargs:
+        salt.utils.warn_until(
+            'Fluorine',
+            'The target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = kwargs.pop('expr_form')
+
+    pillar_util = salt.utils.master.MasterPillarUtil(tgt, tgt_type,
                                                      use_cached_grains=False,
                                                      grains_fallback=False,
                                                      use_cached_pillar=False,
@@ -80,7 +128,7 @@ def mine(tgt=None, expr_form='glob', **kwargs):
 
 
 def _clear_cache(tgt=None,
-                 expr_form='glob',
+                 tgt_type='glob',
                  clear_pillar_flag=False,
                  clear_grains_flag=False,
                  clear_mine_flag=False,
@@ -90,7 +138,7 @@ def _clear_cache(tgt=None,
     '''
     if tgt is None:
         return False
-    pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
+    pillar_util = salt.utils.master.MasterPillarUtil(tgt, tgt_type,
                                                      use_cached_grains=True,
                                                      grains_fallback=False,
                                                      use_cached_pillar=True,
@@ -102,8 +150,12 @@ def _clear_cache(tgt=None,
                                                 clear_mine_func=clear_mine_func_flag)
 
 
-def clear_pillar(tgt=None, expr_form='glob'):
+def clear_pillar(tgt=None, tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Clear the cached pillar data of the targeted minions
 
     CLI Example:
@@ -112,11 +164,26 @@ def clear_pillar(tgt=None, expr_form='glob'):
 
         salt-run cache.clear_pillar
     '''
-    return _clear_cache(tgt, expr_form, clear_pillar_flag=True)
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
+    return _clear_cache(tgt, tgt_type, clear_pillar_flag=True)
 
 
-def clear_grains(tgt=None, expr_form='glob'):
+def clear_grains(tgt=None, tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Clear the cached grains data of the targeted minions
 
     CLI Example:
@@ -125,11 +192,26 @@ def clear_grains(tgt=None, expr_form='glob'):
 
         salt-run cache.clear_grains
     '''
-    return _clear_cache(tgt, expr_form, clear_grains_flag=True)
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
+    return _clear_cache(tgt, tgt_type, clear_grains_flag=True)
 
 
-def clear_mine(tgt=None, expr_form='glob'):
+def clear_mine(tgt=None, tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Clear the cached mine data of the targeted minions
 
     CLI Example:
@@ -138,11 +220,29 @@ def clear_mine(tgt=None, expr_form='glob'):
 
         salt-run cache.clear_mine
     '''
-    return _clear_cache(tgt, expr_form, clear_mine_flag=True)
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
+    return _clear_cache(tgt, tgt_type, clear_mine_flag=True)
 
 
-def clear_mine_func(tgt=None, expr_form='glob', clear_mine_func_flag=None):
+def clear_mine_func(tgt=None,
+                    tgt_type='glob',
+                    clear_mine_func_flag=None,
+                    expr_form=None):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Clear the cached mine function data of the targeted minions
 
     CLI Example:
@@ -151,11 +251,15 @@ def clear_mine_func(tgt=None, expr_form='glob', clear_mine_func_flag=None):
 
         salt-run cache.clear_mine_func tgt='*' clear_mine_func_flag='network.interfaces'
     '''
-    return _clear_cache(tgt, expr_form, clear_mine_func_flag=clear_mine_func_flag)
+    return _clear_cache(tgt, tgt_type, clear_mine_func_flag=clear_mine_func_flag)
 
 
-def clear_all(tgt=None, expr_form='glob'):
+def clear_all(tgt=None, tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Clear the cached pillar, grains, and mine data of the targeted minions
 
     CLI Example:
@@ -164,8 +268,19 @@ def clear_all(tgt=None, expr_form='glob'):
 
         salt-run cache.clear_all
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
     return _clear_cache(tgt,
-                        expr_form,
+                        tgt_type,
                         clear_pillar_flag=True,
                         clear_grains_flag=True,
                         clear_mine_flag=True)
@@ -226,25 +341,8 @@ def clear_git_lock(role, remote=None, **kwargs):
                 obj.init_remotes(ext_pillar['git'], __GIT_PILLAR_OVERRIDES)
                 git_objects.append(obj)
     elif role == 'winrepo':
-        if 'win_repo' in __opts__:
-            salt.utils.warn_until(
-                'Nitrogen',
-                'The \'win_repo\' config option is deprecated, please use '
-                '\'winrepo_dir\' instead.'
-            )
-            winrepo_dir = __opts__['win_repo']
-        else:
-            winrepo_dir = __opts__['winrepo_dir']
-
-        if 'win_gitrepos' in __opts__:
-            salt.utils.warn_until(
-                'Nitrogen',
-                'The \'win_gitrepos\' config option is deprecated, please use '
-                '\'winrepo_remotes\' instead.'
-            )
-            winrepo_remotes = __opts__['win_gitrepos']
-        else:
-            winrepo_remotes = __opts__['winrepo_remotes']
+        winrepo_dir = __opts__['winrepo_dir']
+        winrepo_remotes = __opts__['winrepo_remotes']
 
         git_objects = []
         for remotes, base_dir in (
@@ -271,3 +369,127 @@ def clear_git_lock(role, remote=None, **kwargs):
     if not ret:
         return 'No locks were removed'
     return ret
+
+
+def cloud(tgt, provider=None):
+    '''
+    Return cloud cache data for target.
+
+    .. note:: Only works with glob matching
+
+    tgt
+      Glob Target to match minion ids
+
+    provider
+      Cloud Provider
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.cloud 'salt*'
+        salt-run cache.cloud glance.example.org provider=openstack
+    '''
+    if not isinstance(tgt, six.string_types):
+        return {}
+
+    opts = salt.config.cloud_config(
+        os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
+    )
+    if not opts.get('update_cachedir'):
+        return {}
+
+    cloud_cache = __utils__['cloud.list_cache_nodes_full'](opts=opts, provider=provider)
+    if cloud_cache is None:
+        return {}
+
+    ret = {}
+    for driver, providers in six.iteritems(cloud_cache):
+        for provider, servers in six.iteritems(providers):
+            for name, data in six.iteritems(servers):
+                if fnmatch.fnmatch(name, tgt):
+                    ret[name] = data
+                    ret[name]['provider'] = provider
+    return ret
+
+
+def store(bank, key, data, cachedir=None):
+    '''
+    Lists entries stored in the specified bank.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.store mycache mykey 'The time has come the walrus said'
+    '''
+    if cachedir is None:
+        cachedir = __opts__['cachedir']
+
+    try:
+        cache = salt.cache.Cache(__opts__, cachedir=cachedir)
+    except TypeError:
+        cache = salt.cache.Cache(__opts__)
+    return cache.store(bank, key, data)
+
+
+def list_(bank, cachedir=None):
+    '''
+    Lists entries stored in the specified bank.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.list cloud/active/ec2/myec2 cachedir=/var/cache/salt/
+    '''
+    if cachedir is None:
+        cachedir = __opts__['cachedir']
+
+    try:
+        cache = salt.cache.Cache(__opts__, cachedir=cachedir)
+    except TypeError:
+        cache = salt.cache.Cache(__opts__)
+    return cache.list(bank)
+
+
+def fetch(bank, key, cachedir=None):
+    '''
+    Fetch data from a salt.cache bank.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.fetch cloud/active/ec2/myec2 myminion cachedir=/var/cache/salt/
+    '''
+    if cachedir is None:
+        cachedir = __opts__['cachedir']
+
+    try:
+        cache = salt.cache.Cache(__opts__, cachedir=cachedir)
+    except TypeError:
+        cache = salt.cache.Cache(__opts__)
+    return cache.fetch(bank, key)
+
+
+def flush(bank, key=None, cachedir=None):
+    '''
+    Remove the key from the cache bank with all the key content. If no key is
+    specified remove the entire bank with all keys and sub-banks inside.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-run cache.flush cloud/active/ec2/myec2 cachedir=/var/cache/salt/
+        salt-run cache.flush cloud/active/ec2/myec2 myminion cachedir=/var/cache/salt/
+    '''
+    if cachedir is None:
+        cachedir = __opts__['cachedir']
+
+    try:
+        cache = salt.cache.Cache(__opts__, cachedir=cachedir)
+    except TypeError:
+        cache = salt.cache.Cache(__opts__)
+    return cache.flush(bank, key)

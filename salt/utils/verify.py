@@ -16,9 +16,9 @@ import socket
 import logging
 
 # Import third party libs
-if sys.platform.startswith('win'):
+try:
     import win32file
-else:
+except ImportError:
     import resource
 
 # Import salt libs
@@ -160,11 +160,12 @@ def verify_files(files, user):
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         try:
-            try:
-                os.makedirs(dirname)
-            except OSError as err:
-                if err.errno != errno.EEXIST:
-                    raise
+            if dirname:
+                try:
+                    os.makedirs(dirname)
+                except OSError as err:
+                    if err.errno != errno.EEXIST:
+                        raise
             if not os.path.isfile(fn_):
                 with salt.utils.fopen(fn_, 'w+') as fp_:
                     fp_.write('')
@@ -197,9 +198,7 @@ def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
     can shake the salt
     '''
     if salt.utils.is_windows():
-        from salt.utils.win_functions import get_current_user
-        return win_verify_env(
-            dirs, get_current_user(), permissive, pki_dir, skip_extra)
+        return win_verify_env(dirs, permissive, pki_dir, skip_extra)
     import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
@@ -487,7 +486,7 @@ def valid_id(opts, id_):
     '''
     try:
         return bool(clean_path(opts['pki_dir'], id_))
-    except (AttributeError, KeyError) as e:
+    except (AttributeError, KeyError, TypeError) as e:
         return False
 
 
@@ -519,15 +518,16 @@ def verify_log(opts):
     level = LOG_LEVELS.get(str(opts.get('log_level')).lower(), logging.NOTSET)
 
     if level < logging.INFO:
-        log.warn('Insecure logging configuration detected! Sensitive data may be logged.')
+        log.warning('Insecure logging configuration detected! Sensitive data may be logged.')
 
 
-def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
+def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
     import salt.utils.win_functions
+    import salt.utils.win_dacl
 
     # Get the root path directory where salt is installed
     path = dirs[0]
@@ -542,10 +542,12 @@ def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
     current_user = salt.utils.win_functions.get_current_user()
     if salt.utils.win_functions.is_admin(current_user):
         try:
-            salt.utils.win_functions.set_path_owner(path)
+            # Make the Administrators group owner
+            # Use the SID to be locale agnostic
+            salt.utils.win_dacl.set_owner(path, 'S-1-5-32-544')
+
         except CommandExecutionError:
-            msg = 'Unable to securely set the owner of "{0}".'
-            msg = msg.format(path)
+            msg = 'Unable to securely set the owner of "{0}".'.format(path)
             if is_console_configured():
                 log.critical(msg)
             else:
@@ -553,10 +555,26 @@ def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
 
         if not permissive:
             try:
-                salt.utils.win_functions.set_path_permissions(path)
+                # Get a clean dacl by not passing an obj_name
+                dacl = salt.utils.win_dacl.dacl()
+
+                # Add aces to the dacl, use the GUID (locale non-specific)
+                # Administrators Group
+                dacl.add_ace('S-1-5-32-544', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # System
+                dacl.add_ace('S-1-5-18', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # Owner
+                dacl.add_ace('S-1-3-4', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+
+                # Save the dacl to the object
+                dacl.save(path, True)
+
             except CommandExecutionError:
-                msg = 'Unable to securely set the permissions of "{0}".'
-                msg = msg.format(path)
+                msg = 'Unable to securely set the permissions of ' \
+                      '"{0}".'.format(path)
                 if is_console_configured():
                     log.critical(msg)
                 else:
@@ -574,10 +592,30 @@ def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
                 sys.stderr.write(msg.format(dir_, err))
                 sys.exit(err.errno)
 
+        # The PKI dir gets its own permissions
         if dir_ == pki_dir:
             try:
-                salt.utils.win_functions.set_path_owner(dir_)
-                salt.utils.win_functions.set_path_permissions(dir_)
+                # Make Administrators group the owner
+                salt.utils.win_dacl.set_owner(path, 'S-1-5-32-544')
+
+                # Give Admins, System and Owner permissions
+                # Get a clean dacl by not passing an obj_name
+                dacl = salt.utils.win_dacl.dacl()
+
+                # Add aces to the dacl, use the GUID (locale non-specific)
+                # Administrators Group
+                dacl.add_ace('S-1-5-32-544', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # System
+                dacl.add_ace('S-1-5-18', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+                # Owner
+                dacl.add_ace('S-1-3-4', 'grant', 'full_control',
+                             'this_folder_subfolders_files')
+
+                # Save the dacl to the object
+                dacl.save(dir_, True)
+
             except CommandExecutionError:
                 msg = 'Unable to securely set the permissions of "{0}".'
                 msg = msg.format(dir_)

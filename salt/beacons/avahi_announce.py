@@ -2,7 +2,7 @@
 '''
 Beacon to announce via avahi (zeroconf)
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Dependencies
 ============
@@ -25,8 +25,16 @@ except ImportError:
 
 try:
     import dbus
+    from dbus import DBusException
+    BUS = dbus.SystemBus()
+    SERVER = dbus.Interface(BUS.get_object(avahi.DBUS_NAME, avahi.DBUS_PATH_SERVER),
+                            avahi.DBUS_INTERFACE_SERVER)
+    GROUP = dbus.Interface(BUS.get_object(avahi.DBUS_NAME, SERVER.EntryGroupNew()),
+                           avahi.DBUS_INTERFACE_ENTRY_GROUP)
     HAS_DBUS = True
-except ImportError:
+except (ImportError, NameError):
+    HAS_DBUS = False
+except DBusException:
     HAS_DBUS = False
 
 log = logging.getLogger(__name__)
@@ -34,11 +42,6 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'avahi_announce'
 
 LAST_GRAINS = {}
-BUS = dbus.SystemBus()
-SERVER = dbus.Interface(BUS.get_object(avahi.DBUS_NAME, avahi.DBUS_PATH_SERVER),
-                        avahi.DBUS_INTERFACE_SERVER)
-GROUP = dbus.Interface(BUS.get_object(avahi.DBUS_NAME, SERVER.EntryGroupNew()),
-                       avahi.DBUS_INTERFACE_ENTRY_GROUP)
 
 
 def __virtual__():
@@ -64,11 +67,31 @@ def __validate__(config):
     return True, 'Valid beacon configuration'
 
 
+def _enforce_txt_record_maxlen(key, value):
+    '''
+    Enforces the TXT record maximum length of 255 characters.
+    TXT record length includes key, value, and '='.
+
+    :param str key: Key of the TXT record
+    :param str value: Value of the TXT record
+
+    :rtype: str
+    :return: The value of the TXT record. It may be truncated if it exceeds
+             the maximum permitted length. In case of truncation, '...' is
+             appended to indicate that the entire value is not present.
+    '''
+    # Add 1 for '=' seperator between key and value
+    if len(key) + len(value) + 1 > 255:
+        # 255 - 3 ('...') - 1 ('=') = 251
+        return value[:251 - len(key)] + '...'
+    return value
+
+
 def beacon(config):
     '''
     Broadcast values via zeroconf
 
-    If the announced values are static, it is adviced to set run_once: True
+    If the announced values are static, it is advised to set run_once: True
     (do not poll) on the beacon configuration.
 
     The following are required configuration settings:
@@ -139,6 +162,16 @@ def beacon(config):
         servicename = config['servicename']
     else:
         servicename = __grains__['host']
+        # Check for hostname change
+        if LAST_GRAINS and LAST_GRAINS['host'] != servicename:
+            changes['servicename'] = servicename
+
+    if LAST_GRAINS and config.get('reset_on_change', False):
+        # Check for IP address change in the case when we reset on change
+        if LAST_GRAINS.get('ipv4', []) != __grains__.get('ipv4', []):
+            changes['ipv4'] = __grains__.get('ipv4', [])
+        if LAST_GRAINS.get('ipv6', []) != __grains__.get('ipv6', []):
+            changes['ipv6'] = __grains__.get('ipv6', [])
 
     for item in config['txt']:
         if config['txt'][item].startswith('grains.'):
@@ -155,11 +188,11 @@ def beacon(config):
                     grain_value = grain_value[grain_index]
                 else:
                     grain_value = ','.join(grain_value)
-            txt[item] = grain_value
+            txt[item] = _enforce_txt_record_maxlen(item, grain_value)
             if LAST_GRAINS and (LAST_GRAINS.get(grain, '') != __grains__.get(grain, '')):
                 changes[str('txt.' + item)] = txt[item]
         else:
-            txt[item] = config['txt'][item]
+            txt[item] = _enforce_txt_record_maxlen(item, config['txt'][item])
 
         if not LAST_GRAINS:
             changes[str('txt.' + item)] = txt[item]
@@ -169,11 +202,15 @@ def beacon(config):
             changes['servicename'] = servicename
             changes['servicetype'] = config['servicetype']
             changes['port'] = config['port']
+            changes['ipv4'] = __grains__.get('ipv4', [])
+            changes['ipv6'] = __grains__.get('ipv6', [])
             GROUP.AddService(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC, dbus.UInt32(0),
                              servicename, config['servicetype'], '', '',
                              dbus.UInt16(config['port']), avahi.dict_to_txt_array(txt))
             GROUP.Commit()
-        elif config.get('reset_on_change', False):
+        elif config.get('reset_on_change', False) or 'servicename' in changes:
+            # A change in 'servicename' requires a reset because we can only
+            # directly update TXT records
             GROUP.Reset()
             reset_wait = config.get('reset_wait', 0)
             if reset_wait > 0:

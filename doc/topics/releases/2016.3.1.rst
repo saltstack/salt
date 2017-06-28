@@ -2,8 +2,7 @@
 Salt 2016.3.1 Release Notes
 ===========================
 
-Version 2016.3.1 is a bugfix release for :doc:`2016.3.0
-</topics/releases/2016.3.0>`.
+Version 2016.3.1 is a bugfix release for :ref:`2016.3.0 <release-2016-3-0>`.
 
 **Final Release of Debian 7 Packages**
 
@@ -156,14 +155,18 @@ Changes:
 .. _`#33519`: https://github.com/saltstack/salt/pull/33519
 .. _`#33520`: https://github.com/saltstack/salt/pull/33520
 .. _`#33522`: https://github.com/saltstack/salt/pull/33522
+.. _`#33530`: https://github.com/saltstack/salt/issues/33530
 .. _`#33538`: https://github.com/saltstack/salt/pull/33538
 .. _`#33549`: https://github.com/saltstack/salt/pull/33549
 .. _`#33550`: https://github.com/saltstack/salt/pull/33550
 .. _`#33555`: https://github.com/saltstack/salt/pull/33555
 .. _`#33558`: https://github.com/saltstack/salt/pull/33558
 .. _`#33562`: https://github.com/saltstack/salt/pull/33562
+.. _`#33565`: https://github.com/saltstack/salt/issues/33565
 .. _`#33576`: https://github.com/saltstack/salt/pull/33576
+.. _`#33578`: https://github.com/saltstack/salt/issues/33578
 .. _`#33581`: https://github.com/saltstack/salt/pull/33581
+.. _`#33590`: https://github.com/saltstack/salt/issues/33590
 .. _`#33599`: https://github.com/saltstack/salt/pull/33599
 .. _`#33603`: https://github.com/saltstack/salt/pull/33603
 .. _`#33604`: https://github.com/saltstack/salt/pull/33604
@@ -171,6 +174,7 @@ Changes:
 .. _`#33613`: https://github.com/saltstack/salt/pull/33613
 .. _`#33615`: https://github.com/saltstack/salt/pull/33615
 .. _`#33631`: https://github.com/saltstack/salt/pull/33631
+.. _`#33632`: https://github.com/saltstack/salt/issues/33632
 .. _`#33637`: https://github.com/saltstack/salt/pull/33637
 .. _`#33638`: https://github.com/saltstack/salt/pull/33638
 .. _`#33641`: https://github.com/saltstack/salt/pull/33641
@@ -206,6 +210,7 @@ Changes:
 .. _`#33743`: https://github.com/saltstack/salt/pull/33743
 .. _`#33745`: https://github.com/saltstack/salt/pull/33745
 .. _`#33748`: https://github.com/saltstack/salt/pull/33748
+.. _`#33754`: https://github.com/saltstack/salt/issues/33754
 .. _`#33757`: https://github.com/saltstack/salt/pull/33757
 .. _`#33759`: https://github.com/saltstack/salt/pull/33759
 .. _`#33763`: https://github.com/saltstack/salt/pull/33763

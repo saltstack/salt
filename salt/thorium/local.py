@@ -9,8 +9,7 @@ from __future__ import absolute_import
 import salt.client
 
 
-def cmd(
-        name,
+def cmd(name,
         tgt,
         func,
         arg=(),
@@ -49,14 +48,12 @@ def cmd(
            'comment': '',
            'result': True}
     local = salt.client.get_local_client(mopts=__opts__)
-    jid = local.cmd_async(
-                          tgt,
+    jid = local.cmd_async(tgt,
                           func,
                           arg,
-                          expr_form=tgt_type,
+                          tgt_type=tgt_type,
                           ret=ret,
                           kwarg=kwarg,
-                          **kwargs
-                          )
+                          **kwargs)
     ret['changes']['jid'] = jid
     return ret

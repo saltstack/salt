@@ -1,3 +1,5 @@
+.. _release-0-16-0:
+
 =========================
 Salt 0.16.0 Release Notes
 =========================
@@ -18,7 +20,7 @@ salt masters at the same time. This allows for multiple masters to send out comm
 to minions and for minions to automatically reconnect to masters that have gone
 down. A tutorial is available to help get started here:
 
-:doc:`Multi Master Tutorial </topics/tutorials/multimaster>`
+:ref:`Multi Master Tutorial <tutorial-multi-master>`
 
 Prereq, the New Requisite
 -------------------------
@@ -46,7 +48,7 @@ Relative Includes
 The ability to include an sls relative to the defined sls has been added, the
 new syntax id documented here:
 
-:doc:`Includes </ref/states/include>`
+:ref:`Includes <states-include>`
 
 More State Output Options
 -------------------------
@@ -61,7 +63,7 @@ Improved Windows Support
 Support for Salt on Windows continues to improve. Software management on
 Windows has become more seamless with Linux/UNIX/BSD software management.
 Installed software is now recognized by the short names defined in the
-:doc:`repository SLS </topics/windows/windows-package-manager>`. This makes it
+:ref:`repository SLS <windows-package-manager>`. This makes it
 possible to run ``salt '*' pkg.version firefox`` and get back results from
 Windows and non-Windows minions alike.
 

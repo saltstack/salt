@@ -7,9 +7,11 @@ Common functions for working with RPM packages
 from __future__ import absolute_import
 import collections
 import logging
+import subprocess
 
-# Import salt libs
-from salt._compat import subprocess
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -100,3 +102,20 @@ def parse_pkginfo(line, osarch=None):
         version = ':'.join((epoch, version))
 
     return pkginfo(name, version, arch, repoid)
+
+
+def combine_comments(comments):
+    '''
+    Given a list of comments, strings, a single comment or a single string,
+    return a single string of text containing all of the comments, prepending
+    the '#' and joining with newlines as necessary.
+    '''
+    if not isinstance(comments, list):
+        comments = [comments]
+    for idx in range(len(comments)):
+        if not isinstance(comments[idx], six.string_types):
+            comments[idx] = str(comments[idx])
+        comments[idx] = comments[idx].strip()
+        if not comments[idx].startswith('#'):
+            comments[idx] = '#' + comments[idx]
+    return '\n'.join(comments)

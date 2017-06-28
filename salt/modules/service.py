@@ -6,6 +6,8 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import fnmatch
+import re
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -45,7 +47,8 @@ def __virtual__():
         'Void',
         'Mint',
         'Raspbian',
-        'XenServer'
+        'XenServer',
+        'Cumulus'
     ))
     if __grains__.get('os', '') in disable:
         return (False, 'Your OS is on the disabled list')
@@ -53,7 +56,7 @@ def __virtual__():
     if __grains__['kernel'] != 'Linux':
         return (False, 'Non Linux OSes are not supported')
     # SUSE >=12.0 uses systemd
-    if __grains__.get('os_family', '') == 'SUSE':
+    if __grains__.get('os_family', '') == 'Suse':
         try:
             # osrelease might be in decimal format (e.g. "12.1"), or for
             # SLES might include service pack (e.g. "11 SP3"), so split on
@@ -134,9 +137,20 @@ def restart(name):
 
 def status(name, sig=None):
     '''
-    Return the status for a service, returns the PID or an empty string if the
-    service is running or not, pass a signature to use to find the service via
-    ps
+    Return the status for a service.
+    If the name contains globbing, a dict mapping service name to PID or empty
+    string is returned.
+
+    .. versionchanged:: Oxygen
+        The service name can now be a glob (e.g. ``salt*``)
+
+    Args:
+        name (str): The name of the service to check
+        sig (str): Signature to use to find the service via ps
+
+    Returns:
+        string: PID if running, empty otherwise
+        dict: Maps service name to PID if running, empty string otherwise
 
     CLI Example:
 
@@ -144,7 +158,20 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    return __salt__['status.pid'](sig if sig else name)
+    if sig:
+        return __salt__['status.pid'](sig)
+
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(get_all(), name)
+    else:
+        services = [name]
+    results = {}
+    for service in services:
+        results[service] = __salt__['status.pid'](service)
+    if contains_globbing:
+        return results
+    return results[name]
 
 
 def reload_(name):

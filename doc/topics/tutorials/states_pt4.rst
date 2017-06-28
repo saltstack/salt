@@ -1,12 +1,14 @@
+.. _tutorial-states-part-4:
+
 =======================
 States tutorial, part 4
 =======================
 
 .. note::
 
-  This tutorial builds on topics covered in :doc:`part 1 <states_pt1>`,
-  :doc:`part 2 <states_pt2>` and :doc:`part 3 <states_pt3>`. It is recommended
-  that you begin there.
+  This tutorial builds on topics covered in :ref:`part 1 <states-tutorial>`,
+  :ref:`part 2 <tutorial-states-part-2>`, and :ref:`part 3 <tutorial-states-part-3>`.
+  It is recommended that you begin there.
 
 This part of the tutorial will show how to use salt's :conf_master:`file_roots`
 to set up a workflow in which states can be "promoted" from dev, to QA, to
@@ -142,7 +144,7 @@ And finally, the SLS to deploy the website:
 
 ``/srv/salt/prod/webserver/foobarcom.sls:``
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if pillar.get('webserver_role', '') %}
     /var/www/foobarcom:
@@ -200,7 +202,7 @@ Continue Learning
 =================
 
 The best way to continue learning about Salt States is to read through the
-:doc:`reference documentation </ref/states/index>` and to look through examples
+:ref:`reference documentation <state-system-reference>` and to look through examples
 of existing state trees. Many pre-configured state trees
 can be found on GitHub in the `saltstack-formulas`_ collection of repositories.
 
@@ -210,5 +212,5 @@ If you have any questions, suggestions, or just want to chat with other people
 who are using Salt, we have a very :ref:`active community <salt-community>`
 and we'd love to hear from you.
 
-In addition, by continuing to :doc:`part 5 <states_pt5>`, you can learn about
-the powerful orchestration of which Salt is capable.
+In addition, by continuing to the :ref:`Orchestrate Runner <orchestrate-runner>` docs,
+you can learn about the powerful orchestration of which Salt is capable.

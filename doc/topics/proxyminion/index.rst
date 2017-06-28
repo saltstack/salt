@@ -21,23 +21,38 @@ your typical housecat would be excellent source material for a PhD thesis.
 Salt proxy-minions provide the 'plumbing' that allows device enumeration
 and discovery, control, status, remote execution, and state management.
 
-See the :doc:`Proxy Minion Walkthrough </topics/proxyminion/demo>` for an end-to-end
+See the :ref:`Proxy Minion Walkthrough <proxy-minion-end-to-end-example>` for an end-to-end
 demonstration of a working REST-based proxy minion.
 
-See the :doc:`Proxy Minion SSH Walkthrough </topics/proxyminion/ssh>` for an end-to-end
+See the :ref:`Proxy Minion SSH Walkthrough <proxy-minion-ssh-end-to-end-example>` for an end-to-end
 demonstration of a working SSH proxy minion.
 
 
-See :doc:`Proxyminion States </topics/proxyminion/state>` to configure and
+See :ref:`Proxyminion States <proxy-minion-states>` to configure and
 run ``salt-proxy`` on a remote minion. Specify all your master side
 proxy (pillar) configuration and use this state to remotely configure proxies on one
 or more minions.
 
-See :doc:`Proxyminion Beacon </topics/proxyminion/beacon>` to help
+See :ref:`Proxyminion Beacon <proxy-minion-beacon>` to help
 with easy configuration and management of ``salt-proxy`` processes.
 
-New in Carbon
--------------
+New in 2017.7.0
+---------------
+
+The :conf_proxy:`proxy_merge_grains_in_module` configuration variable
+introduced in 2016.3, has been changed, defaulting to ``True``.
+
+The connection with the remote device is kept alive by default, when the
+module implements the ``alive`` function and :conf_proxy:`proxy_keep_alive`
+is set to ``True``. The polling interval is set using the
+:conf_proxy:`proxy_keep_alive_interval` option which defaults to 1 minute.
+
+The developers are also able to use the :conf_proxy:`proxy_always_alive`,
+when designing a proxy module flexible enough to open the
+connection with the remote device only when required.
+
+New in 2016.11.0
+----------------
 
 Proxy minions now support configuration files with names ending in '*.conf'
 and placed in /etc/salt/proxy.d.
@@ -113,9 +128,7 @@ will be executed on proxy-minion startup and its contents will be merged with
 the rest of the proxy's grains.  Since older proxy-minions might have used other
 methods to call such a function and add its results to grains, this is config-gated
 by a new proxy configuration option called ``proxy_merge_grains_in_module``.  This
-defaults to ``False`` in this release.  It will default to True in the release after
-next.  The next release is codenamed **Carbon**, the following is **Nitrogen**.
-
+defaults to ``True`` in the **2017.7.0** release.
 
 
 New in 2015.8.2
@@ -311,7 +324,7 @@ proxy minions will only see the keys specific to the proxies it will be
 handling.
 
 Proxies can be configured in /etc/salt/proxy or with files in /etc/salt/proxy.d as of
-Salt's Carbon release.
+Salt's 2016.11.0 release.
 
 Also, in general, proxy-minions are lightweight, so the machines that run them
 could conceivably control a large number of devices.  To run more than one proxy from
@@ -353,18 +366,25 @@ the keyword ``pass`` if there is no shutdown logic required.
 be defined in the proxymodule. The code for ``ping`` should contact the
 controlled device and make sure it is really available.
 
+``alive(opts)``: Another optional function, it is used together with the
+``proxy_keep_alive`` option (default: ``True``). This function should
+return a boolean value corresponding to the state of the connection.
+If the connection is down, will try to restart (``shutdown``
+followed by ``init``). The polling frequency is controlled using
+the ``proxy_keep_alive_interval`` option, in minutes.
+
 ``grains()``: Rather than including grains in /srv/salt/_grains or in
 the standard install directories for grains, grains can be computed and
 returned by this function.  This function will be called automatically
 if ``proxy_merge_grains_in_module`` is set to ``True`` in /etc/salt/proxy.
-This variable defaults to ``False`` in 2016.3 but will default to ``True`` in
-the release code-named *Nitrogen*.
+This variable defaults to ``True`` in the release code-named *2017.7.0*.
 
 Pre 2015.8 the proxymodule also must have an ``id()`` function.  2015.8 and following don't use
 this function because the proxy's id is required on the command line.
 
 Here is an example proxymodule used to interface to a *very* simple REST
-server.  Code for the server is in the `salt-contrib GitHub repository <https://github.com/saltstack/salt-contrib/proxyminion_rest_example>`_
+server.  Code for the server is in the `salt-contrib GitHub repository
+<https://github.com/saltstack/salt-contrib/tree/master/proxyminion_rest_example>`_
 
 This proxymodule enables "service" enumeration, starting, stopping, restarting,
 and status; "package" installation, and a ping.
@@ -407,6 +427,9 @@ and status; "package" installation, and a ping.
         return True
 
 
+    def _complicated_function_that_determines_if_alive():
+        return True
+
     # Every proxy module needs an 'init', though you can
     # just put DETAILS['initialized'] = True here if nothing
     # else needs to be done.
@@ -421,6 +444,16 @@ and status; "package" installation, and a ping.
         # Make sure the REST URL ends with a '/'
         if not DETAILS['url'].endswith('/'):
             DETAILS['url'] += '/'
+
+    def alive(opts):
+        '''
+        This function returns a flag with the connection state.
+        It is very useful when the proxy minion establishes the communication
+        via a channel that requires a more elaborated keep-alive mechanism, e.g.
+        NETCONF over SSH.
+        '''
+        log.debug('rest_sample proxy alive() called...')
+        return _complicated_function_that_determines_if_alive()
 
 
     def initialized():
@@ -588,7 +621,7 @@ the proxy and grains directories.
 
 This function will only be called automatically if the configuration variable ``proxy_merge_grains_in_module``
 is set to True in the proxy configuration file (default ``/etc/salt/proxy``).  This
-variable will default to True in the release code-named *Nitrogen*.
+variable defaults to ``True`` in the release code-named *2017.7.0*.
 
 
 .. code: python::

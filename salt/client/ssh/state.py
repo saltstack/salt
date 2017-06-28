@@ -4,6 +4,7 @@ Create ssh executor system
 '''
 from __future__ import absolute_import
 # Import python libs
+import logging
 import os
 import tarfile
 import tempfile
@@ -22,6 +23,8 @@ import salt.roster
 import salt.state
 import salt.loader
 import salt.minion
+
+log = logging.getLogger(__name__)
 
 
 class SSHState(salt.state.State):
@@ -67,12 +70,44 @@ class SSHHighState(salt.state.BaseHighState):
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(opts, pillar, wrapper)
         self.matcher = salt.minion.Matcher(self.opts)
+        self.tops = salt.loader.tops(self.opts)
 
     def load_dynamic(self, matches):
         '''
         Stub out load_dynamic
         '''
         return
+
+    def _master_tops(self):
+        '''
+        Evaluate master_tops locally
+        '''
+        if 'id' not in self.opts:
+            log.error('Received call for external nodes without an id')
+            return {}
+        if not salt.utils.verify.valid_id(self.opts, self.opts['id']):
+            return {}
+        # Evaluate all configured master_tops interfaces
+
+        grains = {}
+        ret = {}
+
+        if 'grains' in self.opts:
+            grains = self.opts['grains']
+        for fun in self.tops:
+            if fun not in self.opts.get('master_tops', {}):
+                continue
+            try:
+                ret.update(self.tops[fun](opts=self.opts, grains=grains))
+            except Exception as exc:
+                # If anything happens in the top generation, log it and move on
+                log.error(
+                    'Top function {0} failed with error {1} for minion '
+                    '{2}'.format(
+                        fun, exc, self.opts['id']
+                    )
+                )
+        return ret
 
 
 def lowstate_file_refs(chunks, extras=''):
@@ -123,7 +158,7 @@ def salt_refs(data, ret=None):
     return ret
 
 
-def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
+def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, roster_grains=None):
     '''
     Generate the execution package from the saltenv file refs and a low state
     data structure
@@ -132,6 +167,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
     trans_tar = salt.utils.files.mkstemp()
     lowfn = os.path.join(gendir, 'lowstate.json')
     pillarfn = os.path.join(gendir, 'pillar.json')
+    roster_grainsfn = os.path.join(gendir, 'roster_grains.json')
     sync_refs = [
             [salt.utils.url.create('_modules')],
             [salt.utils.url.create('_states')],
@@ -146,8 +182,21 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
     if pillar:
         with salt.utils.fopen(pillarfn, 'w+') as fp_:
             fp_.write(json.dumps(pillar))
-    cachedir = os.path.join('salt-ssh', id_)
+    if roster_grains:
+        with salt.utils.fopen(roster_grainsfn, 'w+') as fp_:
+            fp_.write(json.dumps(roster_grains))
+
+    if id_ is None:
+        id_ = ''
+    try:
+        cachedir = os.path.join('salt-ssh', id_).rstrip(os.sep)
+    except AttributeError:
+        # Minion ID should always be a str, but don't let an int break this
+        cachedir = os.path.join('salt-ssh', str(id_)).rstrip(os.sep)
+
     for saltenv in file_refs:
+        # Location where files in this saltenv will be cached
+        cache_dest_root = os.path.join(cachedir, 'files', saltenv)
         file_refs[saltenv].extend(sync_refs)
         env_root = os.path.join(gendir, saltenv)
         if not os.path.isdir(env_root):
@@ -155,6 +204,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
         for ref in file_refs[saltenv]:
             for name in ref:
                 short = salt.utils.url.parse(name)[0]
+                cache_dest = os.path.join(cache_dest_root, short)
                 try:
                     path = file_client.cache_file(name, saltenv, cachedir=cachedir)
                 except IOError:
@@ -172,9 +222,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
                     files = ''
                 if files:
                     for filename in files:
-                        fn = filename[filename.find(short) + len(short):]
-                        if fn.startswith('/'):
-                            fn = fn.strip('/')
+                        fn = filename[len(file_client.get_cachedir(cache_dest)):].strip('/')
                         tgt = os.path.join(
                                 env_root,
                                 short,

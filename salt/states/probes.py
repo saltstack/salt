@@ -8,14 +8,14 @@ Configure RPM (JunOS)/SLA (Cisco) probes on the device via NAPALM proxy.
 :codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
-:platform:   linux
+:platform:   unix
 
 Dependencies
 ------------
 
 - :mod:`napalm probes management module <salt.modules.napalm_probes>`
 
-.. versionadded: Carbon
+.. versionadded: 2016.11.0
 '''
 
 from __future__ import absolute_import
@@ -29,7 +29,8 @@ from json import loads, dumps
 
 # salt modules
 from salt.ext import six
-
+# import NAPALM utils
+import salt.utils.napalm
 
 # ----------------------------------------------------------------------------------------------------------------------
 # state properties
@@ -47,12 +48,10 @@ __virtualname__ = 'probes'
 
 
 def __virtual__():
-
     '''
-    This is a virtual state module called "probes".
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
     '''
-
-    return True
+    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -76,7 +75,7 @@ def _default_ret(name):
 def _retrieve_rpm_probes():
 
     '''
-    Will retrive the probes from the network device using salt module "probes" throught NAPALM proxy.
+    Will retrieve the probes from the network device using salt module "probes" throught NAPALM proxy.
     '''
 
     return __salt__['probes.config']()
@@ -88,11 +87,11 @@ def _expand_probes(probes, defaults):
     Updates the probes dictionary with different levels of default values.
     '''
 
-    expected_probes = dict()
+    expected_probes = {}
 
     for probe_name, probe_test in six.iteritems(probes):
         if probe_name not in expected_probes.keys():
-            expected_probes[probe_name] = dict()
+            expected_probes[probe_name] = {}
         probe_defaults = probe_test.pop('defaults', {})
         for test_name, test_details in six.iteritems(probe_test):
             test_defaults = test_details.pop('defaults', {})
@@ -130,12 +129,12 @@ def _clean_probes(probes):
 def _compare_probes(configured_probes, expected_probes):
 
     '''
-    Compares configured probes on the device with the expected configuration and returns the differences.nap
+    Compares configured probes on the device with the expected configuration and returns the differences.
     '''
 
-    new_probes = dict()
-    update_probes = dict()
-    remove_probes = dict()
+    new_probes = {}
+    update_probes = {}
+    remove_probes = {}
 
     # noth configured => configure with expected probes
     if not configured_probes:
@@ -173,14 +172,14 @@ def _compare_probes(configured_probes, expected_probes):
         # new tests for common probes
         for test_name in new_tests_keys_set:
             if probe_name not in new_probes.keys():
-                new_probes[probe_name] = dict()
+                new_probes[probe_name] = {}
             new_probes[probe_name].update({
                 test_name: probe_tests.pop(test_name)
             })
         # old tests for common probes
         for test_name in remove_tests_keys_set:
             if probe_name not in remove_probes.keys():
-                remove_probes[probe_name] = dict()
+                remove_probes[probe_name] = {}
             remove_probes[probe_name].update({
                 test_name: configured_probe_tests.pop(test_name)
             })
@@ -190,7 +189,7 @@ def _compare_probes(configured_probes, expected_probes):
             # if test params are different, probe goes to update probes dict!
             if test_params != configured_test_params:
                 if probe_name not in update_probes.keys():
-                    update_probes[probe_name] = dict()
+                    update_probes[probe_name] = {}
                 update_probes[probe_name].update({
                     test_name: test_params
                 })
@@ -216,7 +215,8 @@ def _set_rpm_probes(probes):
     '''
 
     return __salt__['probes.set_probes'](
-        _ordered_dict_to_dict(probes)  # make sure this does not contain ordered dicts
+        _ordered_dict_to_dict(probes),  # make sure this does not contain ordered dicts
+        commit=False
     )
 
 
@@ -227,7 +227,8 @@ def _schedule_probes(probes):
     '''
 
     return __salt__['probes.schedule_probes'](
-        _ordered_dict_to_dict(probes)  # make sure this does not contain ordered dicts
+        _ordered_dict_to_dict(probes),  # make sure this does not contain ordered dicts
+        commit=False
     )
 
 
@@ -238,7 +239,8 @@ def _delete_rpm_probes(probes):
     '''
 
     return __salt__['probes.delete_probes'](
-        _ordered_dict_to_dict(probes)  # not mandatory, but let's make sure we catch all cases
+        _ordered_dict_to_dict(probes),  # not mandatory, but let's make sure we catch all cases
+        commit=False
     )
 
 
@@ -351,8 +353,8 @@ def managed(name, probes, defaults=None):
         defaults = {}
     expected_probes = _expand_probes(probes, defaults)
 
-    _clean_probes(configured_probes)  # let's remove the unnecessary data
-    _clean_probes(expected_probes)  # and here
+    _clean_probes(configured_probes)  # let's remove the unnecessary data from the configured probes
+    _clean_probes(expected_probes)  # also from the expected data
 
     # ----- Compare expected config with the existing config ---------------------------------------------------------->
 
@@ -378,21 +380,20 @@ def managed(name, probes, defaults=None):
 
     if __opts__['test'] is True:
         ret.update({
-            'result': None,
-            'comment': 'Testing mode: the device configuration was not changed!'
+            'comment': 'Testing mode: configuration was not changed!',
+            'result': None
         })
         return ret
 
     config_change_expected = False  # to check if something changed and a commit would be needed
-    successfully_changed = True  # if the configuration was successfully changed in all cases (add/update/delete)
 
     if add_probes:
         added = _set_rpm_probes(add_probes)
         if added.get('result'):
             config_change_expected = True
         else:
-            successfully_changed = False
-            comment += '\nCannot define new probes: {reason}\n'.format(
+            result = False
+            comment += 'Cannot define new probes: {reason}\n'.format(
                 reason=added.get('comment')
             )
 
@@ -401,8 +402,8 @@ def managed(name, probes, defaults=None):
         if updated.get('result'):
             config_change_expected = True
         else:
-            successfully_changed = False
-            comment += '\nCannot update probes: {reason}\n'.format(
+            result = False
+            comment += 'Cannot update probes: {reason}\n'.format(
                 reason=updated.get('comment')
             )
 
@@ -411,8 +412,8 @@ def managed(name, probes, defaults=None):
         if removed.get('result'):
             config_change_expected = True
         else:
-            successfully_changed = False
-            comment += '\nCannot remove probes! {reason}\n'.format(
+            result = False
+            comment += 'Cannot remove probes! {reason}\n'.format(
                 reason=removed.get('comment')
             )
 
@@ -421,20 +422,24 @@ def managed(name, probes, defaults=None):
     # ----- Try to save changes --------------------------------------------------------------------------------------->
 
     if config_change_expected:
-        config_result, config_comment = __salt__['net.config_control']()
-        result = config_result and successfully_changed
-        # must also be able to commit & make sure we have applied all necessary changes
-        comment += ('\n' + config_comment)
+        # if any changes expected, try to commit
+        result, comment = __salt__['net.config_control']()
 
     # <---- Try to save changes ----------------------------------------------------------------------------------------
 
     # ----- Try to schedule the probes -------------------------------------------------------------------------------->
 
-    schedule = _schedule_probes(add_probes)
-    if schedule.get('result'):
-        schedule_result, schedule_comment = __salt__['net.config_control']()
-        result = result and schedule_result
-        comment += ('\n' + schedule_comment)
+    add_scheduled = _schedule_probes(add_probes)
+    if add_scheduled.get('result'):
+        # if able to load the template to schedule the probes, try to commit the scheduling data
+        # (yes, a second commit is needed)
+        # on devices such as Juniper, RPM probes do not need to be scheduled
+        # therefore the template is empty and won't try to commit empty changes
+        result, comment = __salt__['net.config_control']()
+
+    if config_change_expected:
+        if result and comment == '':  # if any changes and was able to apply them
+            comment = 'Probes updated successfully!'
 
     ret.update({
         'result': result,

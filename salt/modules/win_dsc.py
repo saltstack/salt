@@ -1,17 +1,26 @@
 # -*- coding: utf-8 -*-
 '''
-Module for working with DSC (Alpha)
+This module is Alpha
+
+Module for working with Windows PowerShell DSC (Desired State Configuration)
+
+This module applies DSC Configurations in the form of PowerShell scripts or
+MOF (Managed Object Format) schema files.
+
+Use the ``psget`` module to manage PowerShell resources.
+
+The idea is to leverage Salt to push DSC configuration scripts or MOF files to
+the Minion.
 
 :depends:
     - PowerShell 5.0
 '''
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import
 
 # Import python libs
 import logging
 import json
 import os
-import distutils.version
 
 # Import salt libs
 import salt.utils
@@ -30,76 +39,109 @@ def __virtual__():
     '''
     # Verify Windows
     if not salt.utils.is_windows():
-        return False, 'Module DSC: Module only works on Windows systems'
+        log.debug('Module DSC: Only available on Windows systems')
+        return False, 'Module DSC: Only available on Windows systems'
 
-    # Verify PowerShell 5.0
+    # Verify PowerShell
     powershell_info = __salt__['cmd.shell_info']('powershell')
-    if not powershell_info['installed'] or \
-        distutils.version.StrictVersion(
-            powershell_info['version']) >= distutils.version.StrictVersion('5.0'):
-        return False, 'Module DSC: Module only works with PowerShell 5 or ' \
-                      'newer.'
+    if not powershell_info['installed']:
+        log.debug('Module DSC: Requires PowerShell')
+        return False, 'Module DSC: Requires PowerShell'
+
+    # Verify PowerShell 5.0 or greater
+    if salt.utils.compare_versions(powershell_info['version'], '<', '5.0'):
+        log.debug('Module DSC: Requires PowerShell 5 or later')
+        return False, 'Module DSC: Requires PowerShell 5 or later'
 
     return __virtualname__
 
 
 def _pshell(cmd, cwd=None, json_depth=2):
     '''
-    Execute the desired powershell command and ensure that it returns data
+    Execute the desired PowerShell command and ensure that it returns data
     in json format and load that into python
     '''
     if 'convertto-json' not in cmd.lower():
         cmd = '{0} | ConvertTo-Json -Depth {1}'.format(cmd, json_depth)
     log.debug('DSC: {0}'.format(cmd))
-    results = __salt__['cmd.run_all'](cmd, shell='powershell', cwd=cwd, python_shell=True)
+    results = __salt__['cmd.run_all'](
+        cmd, shell='powershell', cwd=cwd, python_shell=True)
 
     if 'pid' in results:
         del results['pid']
 
     if 'retcode' not in results or results['retcode'] != 0:
         # run_all logs an error to log.error, fail hard back to the user
-        raise CommandExecutionError('Issue executing powershell {0}'.format(cmd), info=results)
+        raise CommandExecutionError(
+            'Issue executing PowerShell {0}'.format(cmd), info=results)
 
     try:
         ret = json.loads(results['stdout'], strict=False)
     except ValueError:
-        raise CommandExecutionError('No JSON results from powershell', info=results)
+        raise CommandExecutionError(
+            'No JSON results from PowerShell', info=results)
 
     return ret
 
 
-def run_config(path, source=None, config=None, salt_env='base'):
+def run_config(path,
+               source=None,
+               config_name=None,
+               config_data=None,
+               config_data_source=None,
+               script_parameters=None,
+               salt_env='base'):
     r'''
-    Compile a DSC Configuration in the form of a powershell script (.ps1) and
-    apply it. The powershell script can be cached from the master using the
-    ``source`` option. If there is more than one config within the powershell
+    Compile a DSC Configuration in the form of a PowerShell script (.ps1) and
+    apply it. The PowerShell script can be cached from the master using the
+    ``source`` option. If there is more than one config within the PowerShell
     script, the desired configuration can be applied by passing the name in the
     ``config`` option.
 
     This command would be the equivalent of running ``dsc.compile_config`` and
     ``dsc.apply_config`` separately.
 
-    :param str path: The local path to the powershell script that contains the
-    DSC Configuration.
-    Required.
+    Args:
 
-    :param str source: The path to the script on ``file_roots`` to cache at the
-    location specified by ``path``. The source file will be cached locally and
-    then executed. If source is not passed, the config script located at
-    ``path`` will be compiled.
-    Optional.
+        path (str): The local path to the PowerShell script that contains the
+            DSC Configuration. Required.
 
-    :param str config: The name of the Configuration within the script to apply.
-    If the script contains multiple configurations within the file a config
-    must be specified. If the config is not specified, the name of the file will
-    be used as the config to run.
-    Optional.
+        source (str): The path to the script on ``file_roots`` to cache at the
+            location specified by ``path``. The source file will be cached
+            locally and then executed. If source is not passed, the config
+            script located at ``path`` will be compiled. Optional.
 
-    :param str salt_env: The salt environment to use when copying the source.
-    Default is 'base'
+        config_name (str): The name of the Configuration within the script to
+            apply. If the script contains multiple configurations within the
+            file a ``config_name`` must be specified. If the ``config_name`` is
+            not specified, the name of the file will be used as the
+            ``config_name`` to run. Optional.
 
-    :return: True if successfully compiled and applied, False if not
-    :rtype: bool
+        config_data (str): Configuration data in the form of a hash table that
+            will be passed to the ``ConfigurationData`` parameter when the
+            ``config_name`` is compiled. This can be the path to a ``.psd1``
+            file containing the proper hash table or the PowerShell code to
+            create the hash table.
+
+            .. versionadded:: 2017.7.0
+
+        config_data_source (str): The path to the ``.psd1`` file on
+            ``file_roots`` to cache at the location specified by
+            ``config_data``. If this is specified, ``config_data`` must be a
+            local path instead of a hash table.
+
+            .. versionadded:: 2017.7.0
+
+        script_parameters (str): Any additional parameters expected by the
+            configuration script. These must be defined in the script itself.
+
+            .. versionadded:: 2017.7.0
+
+        salt_env (str): The salt environment to use when copying the source.
+            Default is 'base'
+
+    Returns:
+        bool: True if successfully compiled and applied, False if not
 
     CLI Example:
 
@@ -115,7 +157,13 @@ def run_config(path, source=None, config=None, salt_env='base'):
 
         salt '*' dsc.compile_apply_config C:\\DSC\\WebsiteConfig.ps1 salt://dsc/configs/WebsiteConfig.ps1
     '''
-    ret = compile_config(path, source, config, salt_env)
+    ret = compile_config(path=path,
+                         source=source,
+                         config_name=config_name,
+                         config_data=config_data,
+                         config_data_source=config_data_source,
+                         script_parameters=script_parameters,
+                         salt_env=salt_env)
 
     if ret.get('Exists'):
         config_path = os.path.dirname(ret['FullName'])
@@ -124,31 +172,58 @@ def run_config(path, source=None, config=None, salt_env='base'):
         return False
 
 
-def compile_config(path, source=None, config=None, salt_env='base'):
+def compile_config(path,
+                   source=None,
+                   config_name=None,
+                   config_data=None,
+                   config_data_source=None,
+                   script_parameters=None,
+                   salt_env='base'):
     r'''
-    Compile a config from a powershell script (``.ps1``)
+    Compile a config from a PowerShell script (``.ps1``)
 
-    :param str path: Path (local) to the script that will create the ``.mof``
-    configuration file. If no source is passed, the file must exist locally.
-    Required.
+    Args:
 
-    :param str source: Path to the script on ``file_roots`` to cache at the
-    location specified by ``path``. The source file will be cached locally and
-    then executed. If source is not passed, the config script located at
-    ``path`` will be compiled.
-    Optional.
+        path (str): Path (local) to the script that will create the ``.mof``
+            configuration file. If no source is passed, the file must exist
+            locally. Required.
 
-    :param str config: The name of the Configuration within the script to apply.
-    If the script contains multiple configurations within the file a config
-    must be specified. If the config is not specified, the name of the file will
-    be used as the config to run.
-    Optional.
+        source (str): Path to the script on ``file_roots`` to cache at the
+            location specified by ``path``. The source file will be cached
+            locally and then executed. If source is not passed, the config
+            script located at ``path`` will be compiled. Optional.
 
-    :param str salt_env: The salt environment to use when copying the source.
-    Default is 'base'
+        config_name (str): The name of the Configuration within the script to
+            apply. If the script contains multiple configurations within the
+            file a ``config_name`` must be specified. If the ``config_name`` is
+            not specified, the name of the file will be used as the
+            ``config_name`` to run. Optional.
 
-    :return: A dictionary containing the results of the compilation
-    :rtype: dict
+        config_data (str): Configuration data in the form of a hash table that
+            will be passed to the ``ConfigurationData`` parameter when the
+            ``config_name`` is compiled. This can be the path to a ``.psd1``
+            file containing the proper hash table or the PowerShell code to
+            create the hash table.
+
+            .. versionadded:: 2017.7.0
+
+        config_data_source (str): The path to the ``.psd1`` file on
+            ``file_roots`` to cache at the location specified by
+            ``config_data``. If this is specified, ``config_data`` must be a
+            local path instead of a hash table.
+
+            .. versionadded:: 2017.7.0
+
+        script_parameters (str): Any additional parameters expected by the
+            configuration script. These must be defined in the script itself.
+
+            .. versionadded:: 2017.7.0
+
+        salt_env (str): The salt environment to use when copying the source.
+            Default is 'base'
+
+    Returns:
+        dict: A dictionary containing the results of the compilation
 
     CLI Example:
 
@@ -175,22 +250,40 @@ def compile_config(path, source=None, config=None, salt_env='base'):
             log.error(error)
             raise CommandExecutionError(error)
 
+    if config_data_source:
+        log.info('Caching {0}'.format(config_data_source))
+        cached_files = __salt__['cp.get_file'](path=config_data_source,
+                                               dest=config_data,
+                                               saltenv=salt_env,
+                                               makedirs=True)
+        if not cached_files:
+            error = 'Failed to cache {0}'.format(config_data_source)
+            log.error(error)
+            raise CommandExecutionError(error)
+
     # Make sure the path exists
     if not os.path.exists(path):
         error = '"{0} not found.'.format(path)
         log.error(error)
         raise CommandExecutionError(error)
 
-    if config is None:
+    if config_name is None:
         # If the name of the config isn't passed, make it the name of the .ps1
-        config = os.path.splitext(os.path.basename(path))[0]
+        config_name = os.path.splitext(os.path.basename(path))[0]
 
     cwd = os.path.dirname(path)
 
     # Run the script and see if the compile command is in the script
-    cmd = '{0} '.format(path)
-    cmd += '| Select-Object -Property FullName, Extension, Exists, ' \
-           '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) -Format g}}'
+    cmd = [path]
+    # Add any script parameters
+    if script_parameters:
+        cmd.append(script_parameters)
+    # Select fields to return
+    cmd.append('| Select-Object -Property FullName, Extension, Exists, '
+               '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
+               '-Format g}}')
+
+    cmd = ' '.join(cmd)
 
     ret = _pshell(cmd, cwd)
 
@@ -201,9 +294,17 @@ def compile_config(path, source=None, config=None, salt_env='base'):
             return ret
 
     # Run the script and run the compile command
-    cmd = '. {0} ; {1} '.format(path, config)
-    cmd += '| Select-Object -Property FullName, Extension, Exists, ' \
-           '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) -Format g}}'
+    cmd = ['.', path]
+    if script_parameters:
+        cmd.append(script_parameters)
+    cmd.extend([';', config_name])
+    if config_data:
+        cmd.append(config_data)
+    cmd.append('| Select-Object -Property FullName, Extension, Exists, '
+               '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
+               '-Format g}}')
+
+    cmd = ' '.join(cmd)
 
     ret = _pshell(cmd, cwd)
 
@@ -224,22 +325,22 @@ def apply_config(path, source=None, salt_env='base'):
     Run an compiled DSC configuration (a folder containing a .mof file). The
     folder can be cached from the salt master using the ``source`` option.
 
-    :param str path: Local path to the directory that contains the .mof
-    configuration file to apply.
-    Required.
+    Args:
 
-    :param str source: Path to the directory that contains the .mof file on the
-    ``file_roots``. The source directory will be copied to the path directory
-    and then executed. If the path and source directories differ, the source
-    directory will be applied. If source is not passed, the config located at
-    ``path`` will be applied.
-    Optional.
+        path (str): Local path to the directory that contains the .mof
+            configuration file to apply. Required.
 
-    :param str salt_env: The salt environment to use when copying your source.
-    Default is 'base'
+        source (str): Path to the directory that contains the .mof file on the
+            ``file_roots``. The source directory will be copied to the path
+            directory and then executed. If the path and source directories
+            differ, the source directory will be applied. If source is not
+            passed, the config located at ``path`` will be applied. Optional.
 
-    :return: True if successful, otherwise False
-    :rtype: bool
+        salt_env (str): The salt environment to use when copying your source.
+            Default is 'base'
+
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -256,6 +357,9 @@ def apply_config(path, source=None, salt_env='base'):
         salt '*' dsc.run_config C:\\DSC\\WebSiteConfiguration salt://dsc/configs/WebSiteConfiguration
 
     '''
+    # If you're getting an error along the lines of "The client cannot connect
+    # to the destination specified in the request.", try the following:
+    # Enable-PSRemoting -SkipNetworkProfileCheck
     config = path
     if source:
         # Make sure the folder names match
@@ -285,24 +389,25 @@ def apply_config(path, source=None, salt_env='base'):
 
     # Run the DSC Configuration
     # Putting quotes around the parameter protects against command injection
-    cmd = '$job = Start-DscConfiguration -Path "{0}"; '.format(config)
-    cmd += 'Do{ } While ($job.State -notin \'Completed\', \'Failed\'); ' \
-           'return $job.State'
+    cmd = 'Start-DscConfiguration -Path "{0}" -Wait -Force'.format(config)
+    ret = _pshell(cmd)
+
+    if ret is False:
+        raise CommandExecutionError('Apply Config Failed: {0}'.format(path))
+
+    cmd = '$status = Get-DscConfigurationStatus; $status.Status'
     ret = _pshell(cmd)
     log.info('DSC Apply Config: {0}'.format(ret))
 
-    if ret == 'Completed':
-        return True
-    else:
-        return False
+    return ret == 'Success'
 
 
 def get_config():
     '''
     Get the current DSC Configuration
 
-    :return: A dictionary representing the DSC Configuration on the machine
-    :rtype: dict
+    Returns:
+        dict: A dictionary representing the DSC Configuration on the machine
 
     CLI Example:
 
@@ -319,8 +424,8 @@ def test_config():
     '''
     Tests the current applied DSC Configuration
 
-    :return: True if successfully applied, otherwise False
-    :rtype: bool
+    Returns:
+        bool: True if successfully applied, otherwise False
 
     CLI Example:
 
@@ -330,19 +435,16 @@ def test_config():
     '''
     cmd = 'Test-DscConfiguration *>&1'
     ret = _pshell(cmd)
-    if ret == 'True':
-        return True
-    else:
-        return False
+    return ret == 'True'
 
 
 def get_config_status():
     '''
     Get the status of the current DSC Configuration
 
-    :return: A dictionary representing the status of the current DSC
-    Configuration on the machine
-    :rtype: dict
+    Returns:
+        dict: A dictionary representing the status of the current DSC
+            Configuration on the machine
 
     CLI Example:
 
@@ -361,9 +463,9 @@ def get_lcm_config():
     '''
     Get the current Local Configuration Manager settings
 
-    :return: A dictionary representing the Local Configuration Manager settings
-     on the machine
-    :rtype: dict
+    Returns:
+        dict: A dictionary representing the Local Configuration Manager settings
+            on the machine
 
     CLI Example:
 
@@ -391,57 +493,63 @@ def set_lcm_config(config_mode=None,
                    debug_mode=False,
                    status_retention_days=None):
     '''
-
     For detailed descriptions of the parameters see:
     https://msdn.microsoft.com/en-us/PowerShell/DSC/metaConfig
 
-    :param str config_mode: How the LCM applies the configuration. Valid values
-    are:
-    - ApplyOnly
-    - ApplyAndMonitor
-    - ApplyAndAutoCorrect
+    Args:
 
-    :param int config_mode_freq: How often, in minutes, the current
-    configuration is checked and applied. Ignored if config_mode is set to
-    ApplyOnly. Default is 15.
+        config_mode (str): How the LCM applies the configuration. Valid values
+            are:
 
-    :param str refresh_mode: How the LCM gets configurations. Valid values are:
-    - Disabled
-    - Push
-    - Pull
+            - ApplyOnly
+            - ApplyAndMonitor
+            - ApplyAndAutoCorrect
 
-    :param int refresh_freq: How often, in minutes, the LCM checks for updated
-    configurations. (pull mode only) Default is 30.
+        config_mode_freq (int): How often, in minutes, the current configuration
+            is checked and applied. Ignored if config_mode is set to ApplyOnly.
+            Default is 15.
 
-    .. note:: Either `config_mode_freq` or `refresh_freq` needs to be a multiple
-    of the other. See documentation on MSDN for more details.
+        refresh_mode (str): How the LCM gets configurations. Valid values are:
 
-    :param bool reboot_if_needed: Reboot the machine if needed after a
-    configuration is applied. Default is False.
+            - Disabled
+            - Push
+            - Pull
 
-    :param str action_after_reboot: Action to take after reboot. Valid values
-    are:
-    - ContinueConfiguration
-    - StopConfiguration
+        refresh_freq (int): How often, in minutes, the LCM checks for updated
+            configurations. (pull mode only) Default is 30.
 
-    :param guid certificate_id: A GUID that specifies a certificate used to
-    access the configuration: (pull mode)
+        .. note:: Either `config_mode_freq` or `refresh_freq` needs to be a
+            multiple of the other. See documentation on MSDN for more details.
 
-    :param guid configuration_id: A GUID that identifies the config file to get
-    from a pull server. (pull mode)
+        reboot_if_needed (bool): Reboot the machine if needed after a
+            configuration is applied. Default is False.
 
-    :param bool allow_module_overwrite: New configs are allowed to overwrite old
-    ones on the target node.
+        action_after_reboot (str): Action to take after reboot. Valid values
+            are:
 
-    :param str debug_mode: Sets the debug level. Valid values are:
-    - None
-    - ForceModuleImport
-    - All
+            - ContinueConfiguration
+            - StopConfiguration
 
-    :param int status_retention_days: Number of days to keep status of the
-    current config.
+        certificate_id (guid): A GUID that specifies a certificate used to
+            access the configuration: (pull mode)
 
-    Returns (bool): True if successful, otherwise False
+        configuration_id (guid): A GUID that identifies the config file to get
+            from a pull server. (pull mode)
+
+        allow_module_overwrite (bool): New configs are allowed to overwrite old
+            ones on the target node.
+
+        debug_mode (str): Sets the debug level. Valid values are:
+
+            - None
+            - ForceModuleImport
+            - All
+
+        status_retention_days (int): Number of days to keep status of the
+            current config.
+
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -449,18 +557,20 @@ def set_lcm_config(config_mode=None,
 
         salt '*' dsc.set_lcm_config ApplyOnly
     '''
+    temp_dir = os.getenv('TEMP', '{0}\\temp'.format(os.getenv('WINDIR')))
     cmd = 'Configuration SaltConfig {'
     cmd += '    Node localhost {'
     cmd += '        LocalConfigurationManager {'
     if config_mode:
-        if config_mode not in ('ApplyOnly', 'ApplyAndMonitor', 'ApplyAndAutoCorrect'):
+        if config_mode not in ('ApplyOnly', 'ApplyAndMonitor',
+                               'ApplyAndAutoCorrect'):
             error = 'config_mode must be one of ApplyOnly, ApplyAndMonitor, ' \
                     'or ApplyAndAutoCorrect. Passed {0}'.format(config_mode)
             SaltInvocationError(error)
             return error
         cmd += '            ConfigurationMode = "{0}";'.format(config_mode)
     if config_mode_freq:
-        if isinstance(config_mode_freq, int):
+        if not isinstance(config_mode_freq, int):
             SaltInvocationError('config_mode_freq must be an integer')
             return 'config_mode_freq must be an integer. Passed {0}'.\
                 format(config_mode_freq)
@@ -471,7 +581,7 @@ def set_lcm_config(config_mode=None,
                                 'or Pull')
         cmd += '            RefreshMode = "{0}";'.format(refresh_mode)
     if refresh_freq:
-        if isinstance(refresh_freq, int):
+        if not isinstance(refresh_freq, int):
             SaltInvocationError('refresh_freq must be an integer')
         cmd += '            RefreshFrequencyMins = {0};'.format(refresh_freq)
     if reboot_if_needed is not None:
@@ -483,7 +593,8 @@ def set_lcm_config(config_mode=None,
             reboot_if_needed = '$false'
         cmd += '            RebootNodeIfNeeded = {0};'.format(reboot_if_needed)
     if action_after_reboot:
-        if action_after_reboot not in ('ContinueConfiguration', 'StopConfiguration'):
+        if action_after_reboot not in ('ContinueConfiguration',
+                                       'StopConfiguration'):
             SaltInvocationError('action_after_reboot must be one of '
                                 'ContinueConfiguration or StopConfiguration')
         cmd += '            ActionAfterReboot = "{0}"'.format(action_after_reboot)
@@ -507,23 +618,26 @@ def set_lcm_config(config_mode=None,
         if debug_mode is None:
             debug_mode = 'None'
         if debug_mode not in ('None', 'ForceModuleImport', 'All'):
-            SaltInvocationError('debug_mode must be one of None, ForceModuleImport, '
-                                'ResourceScriptBreakAll, or All')
+            SaltInvocationError('debug_mode must be one of None, '
+                                'ForceModuleImport, ResourceScriptBreakAll, or '
+                                'All')
         cmd += '            DebugMode = "{0}";'.format(debug_mode)
     if status_retention_days:
-        if isinstance(status_retention_days, int):
+        if not isinstance(status_retention_days, int):
             SaltInvocationError('status_retention_days must be an integer')
         cmd += '            StatusRetentionTimeInDays = {0};'.format(status_retention_days)
     cmd += '        }}};'
-    cmd += r'SaltConfig -OutputPath "C:\DSC\SaltConfig"'
+    cmd += r'SaltConfig -OutputPath "{0}\SaltConfig"'.format(temp_dir)
 
     # Execute Config to create the .mof
     _pshell(cmd)
 
     # Apply the config
-    cmd = r'Set-DscLocalConfigurationManager -Path "C:\DSC\SaltConfig"'
-    ret = _pshell(cmd)
-    if not ret:
+    cmd = r'Set-DscLocalConfigurationManager -Path "{0}\SaltConfig"' \
+          r''.format(temp_dir)
+    ret = __salt__['cmd.run_all'](cmd, shell='powershell', python_shell=True)
+    __salt__['file.remove'](r'{0}\SaltConfig'.format(temp_dir))
+    if not ret['retcode']:
         log.info('LCM config applied successfully')
         return True
     else:

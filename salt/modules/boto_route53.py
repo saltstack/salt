@@ -49,13 +49,13 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import time
 
 # Import salt libs
 import salt.utils.compat
 import salt.utils.odict as odict
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -141,7 +141,7 @@ def describe_hosted_zones(zone_id=None, domain_name=None, region=None,
     .. code-block:: bash
 
         salt myminion boto_route53.describe_hosted_zones domain_name=foo.bar.com. \
-                profile='{"region": "us-east-1", "keyd": "A12345678AB", "key": "xblahblahblah"}'
+                profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if zone_id and domain_name:

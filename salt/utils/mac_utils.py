@@ -9,8 +9,7 @@ from __future__ import absolute_import
 import logging
 import subprocess
 import os
-
-# Import Third Party Libs
+import time
 
 # Import Salt Libs
 import salt.utils
@@ -19,6 +18,9 @@ import salt.grains.extra
 from salt.ext import six
 from salt.exceptions import CommandExecutionError, SaltInvocationError,\
     TimedProcTimeoutError
+
+# Import Third Party Libs
+from salt.ext.six.moves import range
 
 DEFAULT_SHELL = salt.grains.extra.shell()['shell']
 
@@ -198,3 +200,27 @@ def validate_enabled(enabled):
         return 'on' if enabled.lower() in ['on', 'yes'] else 'off'
 
     return 'on' if bool(enabled) else 'off'
+
+
+def confirm_updated(value, check_fun, normalize_ret=False, wait=5):
+    '''
+    Wait up to ``wait`` seconds for a system parameter to be changed before
+    deciding it hasn't changed.
+
+    :param str value: The value indicating a successful change
+
+    :param function check_fun: The function whose return is compared with
+        ``value``
+
+    :param bool normalize_ret: Whether to normalize the return from
+        ``check_fun`` with ``validate_enabled``
+
+    :param int wait: The maximum amount of seconds to wait for a system
+        parameter to change
+    '''
+    for i in range(wait):
+        state = validate_enabled(check_fun()) if normalize_ret else check_fun()
+        if value in state:
+            return True
+        time.sleep(1)
+    return False

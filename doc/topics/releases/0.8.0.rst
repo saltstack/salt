@@ -84,7 +84,7 @@ configuration file can be accessed inside of the minion modules via the __opt__
 dict.
 
 Information on how to use this simple addition has been added to the wiki:
-:doc:`Writing modules </ref/states/writing>`
+:ref:`Writing modules <state-modules>`
 
 The test module has an example of using the __opts__ dict, and how to set
 default options:

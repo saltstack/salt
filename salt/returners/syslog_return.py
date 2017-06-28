@@ -168,7 +168,7 @@ def _verify_options(options):
 
 def __virtual__():
     if not HAS_SYSLOG:
-        return False
+        return False, 'Could not import syslog returner; syslog is not installed.'
     return __virtualname__
 
 
@@ -192,10 +192,14 @@ def returner(ret):
         logoption = logoption | getattr(syslog, opt)
 
     # Open syslog correctly based on options and tag
-    if 'tag' in _options:
-        syslog.openlog(ident=_options['tag'], logoption=logoption)
-    else:
-        syslog.openlog(logoption=logoption)
+    try:
+        if 'tag' in _options:
+            syslog.openlog(ident=_options['tag'], logoption=logoption)
+        else:
+            syslog.openlog(logoption=logoption)
+    except TypeError:
+        # Python 2.6 syslog.openlog does not accept keyword args
+        syslog.openlog(_options.get('tag', 'salt-minion'), logoption)
 
     # Send log of given level and facility
     syslog.syslog(facility | level, '{0}'.format(json.dumps(ret)))

@@ -14,7 +14,6 @@ from __future__ import absolute_import, unicode_literals
 import copy
 import logging
 import json
-import distutils.version
 
 # Import salt libs
 import salt.utils
@@ -31,16 +30,21 @@ def __virtual__():
     '''
     Set the system module of the kernel is Windows
     '''
+    # Verify Windows
     if not salt.utils.is_windows():
-        return False, 'Module PSGet: Module only works on Windows systems'
+        log.debug('Module PSGet: Only available on Windows systems')
+        return False, 'Module PSGet: Only available on Windows systems'
 
-    # Verify PowerShell 5.0
+    # Verify PowerShell
     powershell_info = __salt__['cmd.shell_info']('powershell')
-    if not powershell_info['installed'] or \
-            distutils.version.StrictVersion(
-                powershell_info['version']) >= distutils.version.StrictVersion('5.0'):
-        return False, 'Module DSC: Module only works with PowerShell 5 or ' \
-                      'newer.'
+    if not powershell_info['installed']:
+        log.debug('Module PSGet: Requires PowerShell')
+        return False, 'Module PSGet: Requires PowerShell'
+
+    # Verify PowerShell 5.0 or greater
+    if salt.utils.compare_versions(powershell_info['version'], '<', '5.0'):
+        log.debug('Module PSGet: Requires PowerShell 5 or newer')
+        return False, 'Module PSGet: Requires PowerShell 5 or newer.'
 
     return __virtualname__
 
@@ -68,33 +72,6 @@ def _pshell(cmd, cwd=None, json_depth=2):
         raise CommandExecutionError('No JSON results from powershell', info=results)
 
     return ret
-
-
-def psversion():
-    '''
-    Returns the Powershell version
-
-    This has been deprecated and has been replaced by ``cmd.shell_info`` Note
-    the minimum version return is 5 as ``dsc`` is not available for version
-    less than 5.  This function will be removed in 'Nitrogen' release.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt 'win01' dsc.psversion
-    '''
-    salt.utils.warn_until('Nitrogen',
-        'The \'psversion\' has been deprecated and has been '
-        'replaced by \'cmd.shell_info\'.'
-    )
-    powershell_info = __salt__['cmd.shell_info']('powershell')
-    if powershell_info['installed']:
-        try:
-            return int(powershell_info['version'].split('.')[0])
-        except ValueError:
-            pass
-    return 0
 
 
 def bootstrap():

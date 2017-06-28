@@ -13,7 +13,6 @@ import logging
 import operator
 import collections
 import json
-import fnmatch
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # Import 3rd-party libs
@@ -25,7 +24,6 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-
 
 # Import salt libs
 import salt.utils
-import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 
@@ -91,20 +89,23 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
 
 
     :param delimiter:
-        Specify an alternate delimiter to use when traversing a nested dict
+        Specify an alternate delimiter to use when traversing a nested dict.
+        This is useful for when the desired key contains a colon. See CLI
+        example below for usage.
 
         .. versionadded:: 2014.7.0
 
     :param ordered:
         Outputs an ordered dict if applicable (default: True)
 
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' grains.get pkg:apache
+        salt '*' grains.get abc::def|ghi delimiter='|'
     '''
     if ordered is True:
         grains = __grains__
@@ -282,8 +283,8 @@ def setvals(grains, destructive=False):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
     if not __opts__.get('local', False):
-        # Sync the grains
-        __salt__['saltutil.sync_grains']()
+        # Refresh the grains
+        __salt__['saltutil.refresh_grains']()
     # Return the grains we just set to confirm everything was OK
     return new_grains
 
@@ -414,7 +415,7 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
 
 def delkey(key):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: 2017.7.0
 
     Remove a grain completely from the grain system, this will remove the
     grain key and value
@@ -515,7 +516,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         could be the grain for an OS and the value could the name of a package
         on that particular OS.
 
-        .. versionchanged:: Carbon
+        .. versionchanged:: 2016.11.0
 
             The dictionary key could be a globbing pattern. The function will
             return the corresponding ``lookup_dict`` value where grain value
@@ -531,7 +532,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         system could be used to pull values from the ``lookup_dict``
         dictionary.
 
-        .. versionchanged:: Carbon
+        .. versionchanged:: 2016.11.0
 
             The grain value could be a list. The function will return the
             ``lookup_dict`` value for a first found item in the list matching
@@ -569,44 +570,12 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         salt '*' grains.filter_by '{default: {A: {B: C}, D: E}, F: {A: {B: G}}, H: {D: I}}' 'xxx' '{D: J}' 'F' 'default'
         # next same as above when default='H' instead of 'F' renders {A: {B: C}, D: J}
     '''
-
-    ret = None
-    # Default value would be an empty list if grain not found
-    val = salt.utils.traverse_dict_and_list(__grains__, grain, [])
-
-    # Iterate over the list of grain values to match against patterns in the lookup_dict keys
-    for each in val if isinstance(val, list) else [val]:
-        for key in sorted(lookup_dict):
-            if fnmatch.fnmatchcase(each, key):
-                ret = lookup_dict[key]
-                break
-        if ret is not None:
-            break
-
-    if ret is None:
-        ret = lookup_dict.get(default, None)
-
-    if base and base in lookup_dict:
-        base_values = lookup_dict[base]
-        if ret is None:
-            ret = base_values
-
-        elif isinstance(base_values, collections.Mapping):
-            if not isinstance(ret, collections.Mapping):
-                raise SaltException(
-                    'filter_by default and look-up values must both be dictionaries.')
-            ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
-
-    if merge:
-        if not isinstance(merge, collections.Mapping):
-            raise SaltException('filter_by merge argument must be a dictionary.')
-
-        if ret is None:
-            ret = merge
-        else:
-            salt.utils.dictupdate.update(ret, copy.deepcopy(merge))
-
-    return ret
+    return salt.utils.filter_by(lookup_dict=lookup_dict,
+                                lookup=grain,
+                                traverse=__grains__,
+                                merge=merge,
+                                default=default,
+                                base=base)
 
 
 def _dict_from_path(path, val, delimiter=DEFAULT_TARGET_DELIM):
@@ -788,6 +757,24 @@ def set(key,
         ret['comment'] = _setval_ret
         ret['result'] = False
     return ret
+
+
+def equals(key, value):
+    '''
+    Used to make sure the minion's grain key/value matches.
+
+    Returns ``True`` if matches otherwise ``False``.
+
+    .. versionadded:: 2017.7.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grains.equals fqdn <expected_fqdn>
+        salt '*' grains.equals systemd:version 219
+    '''
+    return str(value) == str(get(key))
 
 
 # Provide a jinja function call compatible get aliased as fetch

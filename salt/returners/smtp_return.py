@@ -76,7 +76,7 @@ that prints any email it receives to the console.
 
     python -m smtpd -n -c DebuggingServer localhost:1025
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 It is possible to send emails with selected Salt events by configuring ``event_return`` option
 for Salt Master. For example:
@@ -217,18 +217,20 @@ def returner(ret):
                                    input_data=template,
                                    **ret)
 
-    if HAS_GNUPG and gpgowner:
-        gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
-                        options=['--trust-model always'])
-        encrypted_data = gpg.encrypt(content, to_addrs)
-        if encrypted_data.ok:
-            log.debug('smtp_return: Encryption successful')
-            content = str(encrypted_data)
+    if gpgowner:
+        if HAS_GNUPG:
+            gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
+                            options=['--trust-model always'])
+            encrypted_data = gpg.encrypt(content, to_addrs)
+            if encrypted_data.ok:
+                log.debug('smtp_return: Encryption successful')
+                content = str(encrypted_data)
+            else:
+                log.error('smtp_return: Encryption failed, only an error message will be sent')
+                content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
+                    encrypted_data.status, encrypted_data.stderr)
         else:
-            log.error('smtp_return: Encryption failed, only an error message will be sent')
-            content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
-                encrypted_data.status, encrypted_data.stderr)
-
+            log.error("gnupg python module is required in order to user gpgowner in smtp returner ; ignoring gpgowner configuration for now")
     if isinstance(content, six.moves.StringIO):
         content = content.read()
 

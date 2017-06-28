@@ -86,7 +86,7 @@ About
 This state module was written to be used in conjunction with Salt's
 :mod:`ESXi Proxy Minion <salt.proxy.esxi>`. For a tutorial on how to use Salt's
 ESXi Proxy Minion, please refer to the
-:doc:`ESXi Proxy Minion Tutorial </topics/tutorials/esxi_proxy_minion>` for
+:ref:`ESXi Proxy Minion Tutorial <tutorial-esxi-proxy>` for
 configuration examples, dependency installation instructions, how to run remote
 execution functions against ESXi hosts via a Salt Proxy Minion, and a larger state
 example.

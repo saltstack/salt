@@ -3,7 +3,7 @@ Salt Cloud basic usage
 
 Salt Cloud needs, at least, one configured
 :ref:`Provider <cloud-provider-specifics>`
-and :doc:`Profile <profiles>` to be functional.
+and :ref:`Profile <salt-cloud-profiles>` to be functional.
 
 Creating a VM
 -------------

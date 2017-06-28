@@ -57,7 +57,7 @@ parameters are discussed in more detail below.
       id: 'use-instance-role-credentials'
       key: 'use-instance-role-credentials'
 
-      # Make sure this key is owned by root with permissions 0400.
+      # Make sure this key is owned by corresponding user (default 'salt') with permissions 0400.
       #
       private_key: /etc/salt/my_test_key.pem
       keyname: my_test_key
@@ -354,6 +354,35 @@ functionality was added to Salt in the 2015.5.0 release.
       # Pass userdata to the instance to be created
       userdata_file: /etc/salt/my-userdata-file
 
+.. note::
+    From versions 2016.11.0 and 2016.11.3, this file was passed through the
+    master's :conf_master:`renderer` to template it. However, this caused
+    issues with non-YAML data, so templating is no longer performed by default.
+    To template the userdata_file, add a ``userdata_template`` option to the
+    cloud profile:
+
+    .. code-block:: yaml
+
+        my-ec2-config:
+          # Pass userdata to the instance to be created
+          userdata_file: /etc/salt/my-userdata-file
+          userdata_template: jinja
+
+    If no ``userdata_template`` is set in the cloud profile, then the master
+    configuration will be checked for a :conf_master:`userdata_template` value.
+    If this is not set, then no templating will be performed on the
+    userdata_file.
+
+    To disable templating in a cloud profile when a
+    :conf_master:`userdata_template` has been set in the master configuration
+    file, simply set ``userdata_template`` to ``False`` in the cloud profile:
+
+    .. code-block:: yaml
+
+        my-ec2-config:
+          # Pass userdata to the instance to be created
+          userdata_file: /etc/salt/my-userdata-file
+          userdata_template: False
 
 EC2 allows a location to be set for servers to be deployed in. Availability
 zones exist inside regions, and may be added to increase specificity.
@@ -414,6 +443,16 @@ Multiple security groups can also be specified in the same fashion:
       securitygroup:
         - default
         - extra
+
+EC2 instances can be added to an `AWS Placement Group`_ by specifying the
+``placementgroup`` option:
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      placementgroup: my-aws-placement-group
+
+.. _`AWS Placement Group`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-groups.html
 
 Your instances may optionally make use of EC2 Spot Instances. The
 following example will request that spot instances be used and your
@@ -570,7 +609,7 @@ just instances:
 
     salt-cloud -f get_tags my_ec2 resource_id=af5467ba
     salt-cloud -f set_tags my_ec2 resource_id=af5467ba tag1=somestuff
-    salt-cloud -f del_tags my_ec2 resource_id=af5467ba tag1,tag2,tag3
+    salt-cloud -f del_tags my_ec2 resource_id=af5467ba tags=tag1,tag2,tag3
 
 
 Rename EC2 Instances
@@ -1037,6 +1076,12 @@ the network interfaces of your virtual machines, for example:-
           # Uncomment this if you're creating NAT instances. Allows an instance
           # to accept IP packets with destinations other than itself.
           # SourceDestCheck: False
+
+        - DeviceIndex: 1
+          subnetname: XXXXXXXX-Subnet
+          securitygroupname:
+            - XXXXXXXX-SecurityGroup
+            - YYYYYYYY-SecurityGroup
 
 Note that it is an error to assign a 'subnetid', 'subnetname', 'securitygroupid'
 or 'securitygroupname' to a profile where the interfaces are manually configured

@@ -14,7 +14,7 @@ The Azure cloud module is used to control access to Microsoft Azure
     * ``apikey``
     * ``certificate_path``
     * ``subscription_id``
-    * ``requests_lib``
+    * ``backend``
 
     A Management Certificate (.pem and .crt files) must be created and the .pem
     file placed on the same machine that salt-cloud is run from. Information on
@@ -23,7 +23,7 @@ The Azure cloud module is used to control access to Microsoft Azure
 
     http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-management/
 
-    For users with Python < 2.7.9, requests_lib must currently be set to True.
+    For users with Python < 2.7.9, ``backend`` must currently be set to ``requests``.
 
 Example ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/azure.conf`` configuration:
@@ -404,7 +404,7 @@ def show_instance(name, call=None):
     try:
         __utils__['cloud.cache_node'](nodes[name], __active_provider_name__, __opts__)
     except TypeError:
-        log.warn('Unable to show cache node data; this may be because the node has been deleted')
+        log.warning('Unable to show cache node data; this may be because the node has been deleted')
     return nodes[name]
 
 
@@ -422,20 +422,11 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -547,7 +538,7 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args=event_kwargs,
+        args=__utils__['cloud.filter_event']('requesting', event_kwargs, list(event_kwargs)),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -663,7 +654,7 @@ def create(vm_):
             'event',
             'attaching volumes',
             'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
-            args={'volumes': volumes},
+            args=__utils__['cloud.filter_event']('attaching_volumes', vm_, ['volumes']),
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
@@ -697,11 +688,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1600,7 +1587,7 @@ def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
     for disk in disks:
         if disks[disk]['attached_to'] is None:
             del_kwargs = {
-                'name': disks[disk]['name'][0],
+                'name': disks[disk]['name'],
                 'delete_vhd': kwargs.get('delete_vhd', False)
             }
             log.info('Deleting disk {name}, deleting VHD: {delete_vhd}'.format(**del_kwargs))
@@ -3397,8 +3384,8 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         search_global=False,
         default='management.core.windows.net'
     )
-    requests_lib = config.get_cloud_config_value(
-        'requests_lib',
+    backend = config.get_cloud_config_value(
+        'backend',
         get_configured_provider(), __opts__, search_global=False
     )
     url = 'https://{management_host}/{subscription_id}/{path}'.format(
@@ -3421,7 +3408,7 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         port=443,
         text=True,
         cert=certificate_path,
-        requests_lib=requests_lib,
+        backend=backend,
         decode=decode,
         decode_type='xml',
     )

@@ -4,6 +4,8 @@ Pass Renderer for Salt
 
 [pass](https://www.passwordstore.org/)
 
+.. versionadded:: 2017.7.0
+
 # Setup
 __Note__: `<user>` needs to be replaced with the user salt-master will be
 running as
@@ -71,7 +73,7 @@ def _fetch_secret(pass_path):
     Fetch secret from pass based on pass_path. If there is
     any error, return back the original pass_path value
     """
-    cmd = "pass show {0}".format(pass_path.strip('\n'))
+    cmd = "pass show {0}".format(pass_path.strip())
     log.debug('Fetching secret: {0}'.format(cmd))
 
     proc = Popen(cmd.split(' '), stdout=PIPE, stderr=PIPE)
@@ -80,11 +82,24 @@ def _fetch_secret(pass_path):
     # The version of pass used during development sent output to
     # stdout instead of stderr even though its returncode was non zero.
     if proc.returncode or not pass_data:
-        msg = 'Could not fetch secret: {0} {1}'.format(pass_data, pass_error)
-        log.warn(msg)
+        log.warning('Could not fetch secret: %s %s', pass_data, pass_error)
         pass_data = pass_path
+    return pass_data.strip()
 
-    return pass_data
+
+def _decrypt_object(obj):
+    """
+    Recursively try to find a pass path (string) that can be handed off to pass
+    """
+    if isinstance(obj, six.string_types):
+        return _fetch_secret(obj)
+    elif isinstance(obj, dict):
+        for pass_key, pass_path in six.iteritems(obj):
+            obj[pass_key] = _decrypt_object(pass_path)
+    elif isinstance(obj, list):
+        for pass_key, pass_path in enumerate(obj):
+            obj[pass_key] = _decrypt_object(pass_path)
+    return obj
 
 
 def render(pass_info, saltenv='base', sls='', argline='', **kwargs):
@@ -99,9 +114,4 @@ def render(pass_info, saltenv='base', sls='', argline='', **kwargs):
     # Make sure environment variable HOME is set, since Pass looks for the
     # password-store under ~/.password-store.
     os.environ['HOME'] = expanduser('~')
-
-    for pass_key, pass_path in six.iteritems(pass_info):
-        secret = _fetch_secret(pass_path)
-        pass_info[pass_key] = secret
-
-    return pass_info
+    return _decrypt_object(pass_info)

@@ -2,7 +2,7 @@
 '''
 Module for execution of ServiceNow CI (configuration items)
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 :depends: servicenow_rest python module
 

@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 import re
 import os
+import sys
 import json
 import time
 import logging
@@ -46,6 +47,22 @@ def gen_key(path):
     subprocess.call(cmd, shell=True)
 
 
+def gen_shell(opts, **kwargs):
+    '''
+    Return the correct shell interface for the target system
+    '''
+    if kwargs['winrm']:
+        try:
+            import saltwinshell
+            shell = saltwinshell.Shell(opts, **kwargs)
+        except ImportError:
+            log.error('The saltwinshell library is not available')
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+    else:
+        shell = Shell(opts, **kwargs)
+    return shell
+
+
 class Shell(object):
     '''
     Create a shell connection object to encapsulate ssh executions
@@ -64,9 +81,12 @@ class Shell(object):
             mods=None,
             identities_only=False,
             sudo_user=None,
-            remote_port_forwards=None):
+            remote_port_forwards=None,
+            winrm=False,
+            ssh_options=None):
         self.opts = opts
-        self.host = host
+        # ssh <ipv6>, but scp [<ipv6]:/path
+        self.host = host.strip('[]')
         self.user = user
         self.port = port
         self.passwd = str(passwd) if passwd else passwd
@@ -77,6 +97,7 @@ class Shell(object):
         self.mods = mods
         self.identities_only = identities_only
         self.remote_port_forwards = remote_port_forwards
+        self.ssh_options = '' if ssh_options is None else ssh_options
 
     def get_error(self, errstr):
         '''
@@ -168,6 +189,10 @@ class Shell(object):
             ret.append('-o {0} '.format(option))
         return ''.join(ret)
 
+    def _ssh_opts(self):
+        return ' '.join(['-o {0}'.format(opt)
+                        for opt in self.ssh_options])
+
     def _copy_id_str_old(self):
         '''
         Return the string to execute ssh-copy-id
@@ -175,11 +200,12 @@ class Shell(object):
         if self.passwd:
             # Using single quotes prevents shell expansion and
             # passwords containing '$'
-            return "{0} {1} '{2} -p {3} {4}@{5}'".format(
+            return "{0} {1} '{2} -p {3} {4} {5}@{6}'".format(
                     'ssh-copy-id',
                     '-i {0}.pub'.format(self.priv),
                     self._passwd_opts(),
                     self.port,
+                    self._ssh_opts(),
                     self.user,
                     self.host)
         return None
@@ -192,11 +218,12 @@ class Shell(object):
         if self.passwd:
             # Using single quotes prevents shell expansion and
             # passwords containing '$'
-            return "{0} {1} {2} -p {3} {4}@{5}".format(
+            return "{0} {1} {2} -p {3} {4} {5}@{6}".format(
                     'ssh-copy-id',
                     '-i {0}.pub'.format(self.priv),
                     self._passwd_opts(),
                     self.port,
+                    self._ssh_opts(),
                     self.user,
                     self.host)
         return None
@@ -228,6 +255,9 @@ class Shell(object):
         if ssh != 'scp' and self.remote_port_forwards:
             command.append(' '.join(['-R {0}'.format(item)
                                      for item in self.remote_port_forwards.split(',')]))
+        if self.ssh_options:
+            command.append(self._ssh_opts())
+
         command.append(cmd)
 
         return ' '.join(command)
@@ -320,7 +350,12 @@ class Shell(object):
         if makedirs:
             self.exec_cmd('mkdir -p {0}'.format(os.path.dirname(remote)))
 
-        cmd = '{0} {1}:{2}'.format(local, self.host, remote)
+        # scp needs [<ipv6}
+        host = self.host
+        if ':' in host:
+            host = '[{0}]'.format(host)
+
+        cmd = '{0} {1}:{2}'.format(local, host, remote)
         cmd = self._cmd_str(cmd, ssh='scp')
 
         logmsg = 'Executing command: {0}'.format(cmd)

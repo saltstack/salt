@@ -2,6 +2,7 @@
 '''
 Start the reactor!
 '''
+# pylint: disable=3rd-party-module-not-gated
 from __future__ import absolute_import
 # Import salt libs
 import salt.utils.reactor

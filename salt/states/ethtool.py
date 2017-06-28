@@ -2,7 +2,7 @@
 '''
 Configuration of network device
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 :codeauthor:    Krzysztof Pawlowski <msciciel@msciciel.eu>
 :maturity:      new

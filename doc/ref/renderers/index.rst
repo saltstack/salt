@@ -114,7 +114,7 @@ module implement the ``render`` function.
 
 The ``render`` function will be passed the path of the SLS file as an argument.
 
-The purpose of of ``render`` function is to  parse the passed file and to return
+The purpose of the ``render`` function is to parse the passed file and to return
 the Python data structure derived from the file.
 
 Custom renderers must be placed in a ``_renderers`` directory within the
@@ -145,10 +145,14 @@ Here is a simple YAML renderer example:
 .. code-block:: python
 
     import yaml
+    from salt.utils.yamlloader import SaltYamlSafeLoader
     def render(yaml_data, saltenv='', sls='', **kws):
         if not isinstance(yaml_data, basestring):
             yaml_data = yaml_data.read()
-        data = yaml.load(yaml_data)
+        data = yaml.load(
+            yaml_data,
+            Loader=SaltYamlSafeLoader
+        )
         return data if data else {}
 
 Full List of Renderers

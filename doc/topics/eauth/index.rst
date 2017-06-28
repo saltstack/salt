@@ -121,12 +121,12 @@ Positional arguments or keyword arguments to functions can also be whitelisted.
         my_user:
           - '*':
             - 'my_mod.*':
-              args:
+                args:
                 - 'a.*'
                 - 'b.*'
-              kwargs:
-                'kwa': 'kwa.*'
-                'kwb': 'kwb'
+                kwargs:
+                  'kwa': 'kwa.*'
+                  'kwb': 'kwb'
 
 The rules:
 
@@ -242,6 +242,9 @@ Server configuration values and their defaults:
     auth.ldap.persontype: 'person'
 
     auth.ldap.minion_stripdomains: []
+    
+    # Redhat Identity Policy Audit
+    auth.ldap.freeipa: False
 
 There are two phases to LDAP authentication.  First, Salt authenticates to search for a users' Distinguished Name
 and group membership.  The user it authenticates as in this phase is often a special LDAP system user with
