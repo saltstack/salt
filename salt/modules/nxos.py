@@ -2,7 +2,7 @@
 '''
 Execution module for Cisco NX OS Switches Proxy minions
 
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 For documentation on setting up the nxos proxy minion look in the documentation
 for :mod:`salt.proxy.nxos <salt.proxy.nxos>`.
@@ -36,7 +36,7 @@ def system_info():
 def cmd(command, *args, **kwargs):
     '''
     run commands from __proxy__
-    :doc:`salt.proxy.nxos</ref/proxy/all/salt.proxy.nxos>`
+    :mod:`salt.proxy.nxos<salt.proxy.nxos>`
 
     command
         function from `salt.proxy.nxos` to run
@@ -57,7 +57,7 @@ def cmd(command, *args, **kwargs):
     proxy_cmd = '.'.join([proxy_prefix, command])
     if proxy_cmd not in __proxy__:
         return False
-    for k in kwargs.keys():
+    for k in kwargs:
         if k.startswith('__pub_'):
             kwargs.pop(k)
     return __proxy__[proxy_cmd](*args, **kwargs)

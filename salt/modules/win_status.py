@@ -12,47 +12,66 @@ or for problem solving if your minion is having problems.
 
 # Import Python Libs
 from __future__ import absolute_import
+import datetime
 import logging
+import subprocess
+log = logging.getLogger(__name__)
 
 # Import Salt Libs
 import salt.utils
-import salt.ext.six as six
 import salt.utils.event
-from salt._compat import subprocess
 from salt.utils.network import host_to_ips as _host_to_ips
+from salt.utils import namespaced_function as _namespaced_function
 
-import os
-import ctypes
-import sys
-import time
-import datetime
-from subprocess import list2cmdline
+# These imports needed for namespaced functions
+# pylint: disable=W0611
+from salt.modules.status import ping_master, time_
+import copy
+# pylint: enable=W0611
 
-log = logging.getLogger(__name__)
-
+# Import 3rd Party Libs
 try:
-    import wmi
-    import salt.utils.winapi
-    has_required_packages = True
-except ImportError:
     if salt.utils.is_windows():
-        log.exception('pywin32 and wmi python packages are required '
-                      'in order to use the status module.')
-    has_required_packages = False
+        import wmi
+        import salt.utils.winapi
+        HAS_WMI = True
+    else:
+        HAS_WMI = False
+except ImportError:
+    HAS_WMI = False
+
+HAS_PSUTIL = False
+if salt.utils.is_windows():
+    import psutil
+    HAS_PSUTIL = True
 
 __opts__ = {}
-
-# Define the module's virtual name
 __virtualname__ = 'status'
 
 
 def __virtual__():
     '''
-    Only works on Windows systems
+    Only works on Windows systems with WMI and WinAPI
     '''
-    if salt.utils.is_windows() and has_required_packages:
-        return __virtualname__
-    return (False, 'Cannot load win_status module on non-windows')
+    if not salt.utils.is_windows():
+        return False, 'win_status.py: Requires Windows'
+
+    if not HAS_WMI:
+        return False, 'win_status.py: Requires WMI and WinAPI'
+
+    if not HAS_PSUTIL:
+        return False, 'win_status.py: Requires psutil'
+
+    # Namespace modules from `status.py`
+    global ping_master, time_
+    ping_master = _namespaced_function(ping_master, globals())
+    time_ = _namespaced_function(time_, globals())
+
+    return __virtualname__
+
+__func_alias__ = {
+    'time_': 'time'
+}
 
 
 def cpuload():
@@ -67,19 +86,7 @@ def cpuload():
 
        salt '*' status.cpuload
     '''
-
-    # Pull in the information from WMIC
-    cmd = list2cmdline(['wmic', 'cpu'])
-    info = __salt__['cmd.run'](cmd).split('\r\n')
-
-    # Find the location of LoadPercentage
-    column = info[0].index('LoadPercentage')
-
-    # Get the end of the number.
-    end = info[1].index(' ', column+1)
-
-    # Return pull it out of the informatin and cast it to an int
-    return int(info[1][column:end])
+    return psutil.cpu_percent()
 
 
 def diskusage(human_readable=False, path=None):
@@ -100,29 +107,22 @@ def diskusage(human_readable=False, path=None):
     if not path:
         path = 'c:/'
 
-    # Credit for the source and ideas for this function:
-    # http://code.activestate.com/recipes/577972-disk-usage/?in=user-4178764
-    _, total, free = \
-        ctypes.c_ulonglong(), ctypes.c_ulonglong(), ctypes.c_longlong()
-    if sys.version_info >= (3, ) or isinstance(path, six.text_type):
-        fun = ctypes.windll.kernel32.GetDiskFreeSpaceExw
-    else:
-        fun = ctypes.windll.kernel32.GetDiskFreeSpaceExA
-    ret = fun(path, ctypes.byref(_), ctypes.byref(total), ctypes.byref(free))
-    if ret == 0:
-        raise ctypes.WinError()
-    used = total.value - free.value
+    disk_stats = psutil.disk_usage(path)
 
-    total_val = total.value
-    used_val = used
-    free_val = free.value
+    total_val = disk_stats.total
+    used_val = disk_stats.used
+    free_val = disk_stats.free
+    percent = disk_stats.percent
 
     if human_readable:
         total_val = _byte_calc(total_val)
         used_val = _byte_calc(used_val)
         free_val = _byte_calc(free_val)
 
-    return {'total': total_val, 'used': used_val, 'free': free_val}
+    return {'total': total_val,
+            'used': used_val,
+            'free': free_val,
+            'percent': percent}
 
 
 def procs(count=False):
@@ -173,16 +173,17 @@ def saltmem(human_readable=False):
         salt '*' status.saltmem
         salt '*' status.saltmem human_readable=True
     '''
-    with salt.utils.winapi.Com():
-        wmi_obj = wmi.WMI()
-        result = wmi_obj.query(
-            'SELECT WorkingSet FROM Win32_PerfRawData_PerfProc_Process '
-            'WHERE IDProcess={0}'.format(os.getpid())
-        )
-        mem = int(result[0].wmi_property('WorkingSet').value)
-        if human_readable:
-            return _byte_calc(mem)
-        return mem
+    # psutil.Process defaults to current process (`os.getpid()`)
+    p = psutil.Process()
+
+    # Use oneshot to get a snapshot
+    with p.oneshot():
+        mem = p.memory_info().rss
+
+    if human_readable:
+        return _byte_calc(mem)
+
+    return mem
 
 
 def uptime(human_readable=False):
@@ -201,24 +202,8 @@ def uptime(human_readable=False):
        salt '*' status.uptime
        salt '*' status.uptime human_readable=True
     '''
-
-    # Open up a subprocess to get information from WMIC
-    cmd = list2cmdline(['wmic', 'os', 'get', 'lastbootuptime'])
-    outs = __salt__['cmd.run'](cmd)
-
-    # Get the line that has when the computer started in it:
-    stats_line = ''
-    # use second line from output
-    stats_line = outs.split('\r\n')[1]
-
-    # Extract the time string from the line and parse
-    #
-    # Get string, just use the leading 14 characters
-    startup_time = stats_line[:14]
-    # Convert to time struct
-    startup_time = time.strptime(startup_time, '%Y%m%d%H%M%S')
-    # Convert to datetime object
-    startup_time = datetime.datetime(*startup_time[:6])
+    # Get startup time
+    startup_time = datetime.datetime.fromtimestamp(psutil.boot_time())
 
     # Subtract startup time from current time to get the uptime of the system
     uptime = datetime.datetime.now() - startup_time
@@ -333,23 +318,25 @@ def master(master=None, connected=True):
     port = 4505
     master_ips = None
 
+    if master:
+        master_ips = _host_to_ips(master)
+
+    if not master_ips:
+        return
+
     if __salt__['config.get']('publish_port') != '':
         port = int(__salt__['config.get']('publish_port'))
 
-    # Check if we have FQDN/hostname defined as master
-    # address and try resolving it first. _remote_port_tcp
-    # only works with IP-addresses.
-    if master is not None:
-        master_ips = _host_to_ips(master)
-
     master_connection_status = False
-    if master_ips:
-        ips = _win_remotes_on(port)
-        for master_ip in master_ips:
-            if master_ip in ips:
-                master_connection_status = True
-                break
+    connected_ips = _win_remotes_on(port)
 
+    # Get connection status for master
+    for master_ip in master_ips:
+        if master_ip in connected_ips:
+            master_connection_status = True
+            break
+
+    # Connection to master is not as expected
     if master_connection_status is not connected:
         event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
         if master_connection_status:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Installation and activation of windows licenses
-=======================
+===============================================
 
 Install and activate windows licenses
 

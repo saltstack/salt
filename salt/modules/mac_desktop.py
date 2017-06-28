@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Mac OS X implementations of various commands in the "desktop" interface
+macOS implementations of various commands in the "desktop" interface
 '''
 from __future__ import absolute_import
 
@@ -18,7 +18,7 @@ def __virtual__():
     '''
     if salt.utils.is_darwin():
         return __virtualname__
-    return False, 'Cannot load OSX desktop module: This is not an OSX host.'
+    return False, 'Cannot load macOS desktop module: This is not a macOS host.'
 
 
 def get_output_volume():

@@ -149,7 +149,7 @@ def delete(name, remove=False, force=False):
 
     # force is added for compatibility with user.absent state function
     if force:
-        log.warn('force option is unsupported on MacOS, ignoring')
+        log.warning('force option is unsupported on MacOS, ignoring')
 
     # remove home directory from filesystem
     if remove:
@@ -440,11 +440,11 @@ def list_groups(name):
 
     name
 
-        The name of the user for which to list groups. Starting in Salt Carbon,
+        The name of the user for which to list groups. Starting in Salt 2016.11.0,
         all groups for the user, including groups beginning with an underscore
         will be listed.
 
-        .. versionchanged:: Carbon
+        .. versionchanged:: 2016.11.0
 
     CLI Example:
 
