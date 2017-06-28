@@ -1378,7 +1378,8 @@ class Minion(MinionBase):
                     # running on windows
                     instance = None
                     process = SignalHandlingMultiprocessingProcess(target=self._target,
-                                                                   args=(instance, self.opts, data, self.connected))
+                                                                   args=(instance, self.opts,
+                                                                         data, self.connected, None))
                 else:
                     # Process pooling only on Unix at the moment
                     CallbackProcessPool().add_data(data)
@@ -1386,7 +1387,7 @@ class Minion(MinionBase):
         else:
             process = threading.Thread(
                 target=self._target,
-                args=(instance, self.opts, data, self.connected),
+                args=(instance, self.opts, data, self.connected, None),
                 name=data['jid']
             )
 
@@ -3318,7 +3319,7 @@ class ProxyMinion(Minion):
         self.ready = True
 
     @classmethod
-    def _target(cls, minion_instance, opts, data, connected):
+    def _target(cls, minion_instance, opts, data, connected, name):
         if not minion_instance:
             minion_instance = cls(opts)
             minion_instance.connected = connected
