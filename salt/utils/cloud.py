@@ -405,10 +405,7 @@ def bootstrap(vm_, opts):
         'tmp_dir': salt.config.get_cloud_config_value(
             'tmp_dir', vm_, opts, default='/tmp/.saltcloud'
         ),
-        'deploy_command': salt.config.get_cloud_config_value(
-            'deploy_command', vm_, opts,
-            default='/tmp/.saltcloud/deploy.sh',
-        ),
+        'vm_': vm_,
         'start_action': opts['start_action'],
         'parallel': opts['parallel'],
         'sock_dir': opts['sock_dir'],
@@ -438,6 +435,9 @@ def bootstrap(vm_, opts):
             'script_env', vm_, opts
         ),
         'minion_conf': minion_conf,
+        'force_minion_config': salt.config.get_cloud_config_value(
+            'force_minion_config', vm_, opts, default=False
+        ),
         'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
         'display_ssh_output': salt.config.get_cloud_config_value(
             'display_ssh_output', vm_, opts, default=True
@@ -451,9 +451,13 @@ def bootstrap(vm_, opts):
         'maxtries': salt.config.get_cloud_config_value(
             'wait_for_passwd_maxtries', vm_, opts, default=15
         ),
+        'cloud_grains': {'driver': vm_['driver'],
+                         'provider': vm_['provider'],
+                         'profile': vm_['profile']
+                         }
     }
 
-    inline_script_kwargs = deploy_kwargs
+    inline_script_kwargs = dict(deploy_kwargs)  # make a copy at this point
 
     # forward any info about possible ssh gateway to deploy script
     # as some providers need also a 'gateway' configuration
@@ -885,7 +889,7 @@ def validate_windows_cred(host,
         host
     )
 
-    for i in xrange(retries):
+    for i in range(retries):
         ret_code = win_cmd(
             cmd,
             logging_command=logging_cmd
@@ -1211,20 +1215,26 @@ def deploy_script(host,
                   sudo_password=None,
                   sudo=False,
                   tty=None,
-                  deploy_command='/tmp/.saltcloud/deploy.sh',
+                  vm_=None,
                   opts=None,
                   tmp_dir='/tmp/.saltcloud',
                   file_map=None,
                   master_sign_pub_file=None,
+                  cloud_grains=None,
+                  force_minion_config=False,
                   **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
     if not isinstance(opts, dict):
         opts = {}
+    vm_ = vm_ or {}  # if None, default to empty dict
+    cloud_grains = cloud_grains or {}
 
     tmp_dir = '{0}-{1}'.format(tmp_dir.rstrip('/'), uuid.uuid4())
-    deploy_command = os.path.join(tmp_dir, 'deploy.sh')
+    deploy_command = salt.config.get_cloud_config_value(
+        'deploy_command', vm_, opts,
+        default=os.path.join(tmp_dir, 'deploy.sh'))
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined key_filename \'{0}\' does not exist'.format(
@@ -1236,9 +1246,11 @@ def deploy_script(host,
     if 'gateway' in kwargs:
         gateway = kwargs['gateway']
 
-    starttime = time.mktime(time.localtime())
-    log.debug('Deploying {0} at {1}'.format(host, starttime))
-
+    starttime = time.localtime()
+    log.debug('Deploying {0} at {1}'.format(
+        host,
+        time.strftime('%Y-%m-%d %H:%M:%S', starttime))
+    )
     known_hosts_file = kwargs.get('known_hosts_file', '/dev/null')
     hard_timeout = opts.get('hard_timeout', None)
 
@@ -1370,6 +1382,8 @@ def deploy_script(host,
                         salt_config_to_yaml(minion_grains),
                         ssh_kwargs
                     )
+                if cloud_grains and opts.get('enable_cloud_grains', True):
+                    minion_conf['grains'] = {'salt-cloud': cloud_grains}
                 ssh_file(
                     opts,
                     '{0}/minion'.format(tmp_dir),
@@ -1466,7 +1480,8 @@ def deploy_script(host,
                     raise SaltCloudSystemExit(
                         'Can\'t set perms on {0}/deploy.sh'.format(tmp_dir))
 
-            newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+            time_used = time.mktime(time.localtime()) - time.mktime(starttime)
+            newtimeout = timeout - time_used
             queue = None
             process = None
             # Consider this code experimental. It causes Salt Cloud to wait
@@ -1487,6 +1502,8 @@ def deploy_script(host,
             if script:
                 if 'bootstrap-salt' in script:
                     deploy_command += ' -c \'{0}\''.format(tmp_dir)
+                    if force_minion_config:
+                        deploy_command += ' -F'
                     if make_syndic is True:
                         deploy_command += ' -S'
                     if make_master is True:
@@ -1540,6 +1557,15 @@ def deploy_script(host,
                         )
                     )
                 log.debug('Executed command \'{0}\''.format(deploy_command))
+
+                if force_minion_config:
+                    # TODO: this entire code block should be unnecessary if they implement
+                    # https://github.com/saltstack/salt-bootstrap/issues/1105
+                    deploy_command += ' -C'  # try again with "configure_only"
+                    if root_cmd(deploy_command, tty, sudo, **ssh_kwargs) != 0:
+                        log.warning('Executing command \'{0}\' failed.'.format(deploy_command))
+                    else:
+                        log.debug('Executed command \'{0}\''.format(deploy_command))
 
                 # Remove the deploy script
                 if not keep_tmp:
@@ -2759,15 +2785,25 @@ def list_cache_nodes_full(opts=None, provider=None, base=None):
     return minions
 
 
-def cache_nodes_ip(opts, base=None):
+def get_cache_node(minion_id, base=None):
     '''
-    Retrieve a list of all nodes from Salt Cloud cache, and any associated IP
-    addresses. Returns a dict.
+    Retrieve cache data from a single node from Salt Cloud cache.
+    Returns a dict.
     '''
     if base is None:
-        base = opts['cachedir']
+        base = __opts__['cachedir']
 
-    minions = list_cache_nodes_full(opts, base=base)
+    path = os.path.join(base, 'active', '{0}.p'.format(minion_id))
+    cache_data = {}
+    try:
+        with salt.utils.fopen(path, 'r') as fh_:
+            try:
+                cache_data = msgpack.load(fh_)
+            except ValueError:
+                log.warning('Cache for {0} was corrupt: Ignoring'.format(minion_id))
+    except OSError:
+        log.debug('Cache file not found for {0}'.format(minion_id))
+    return cache_data
 
 
 def update_bootstrap(config, url=None):
