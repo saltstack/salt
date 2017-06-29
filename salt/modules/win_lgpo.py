@@ -2833,9 +2833,8 @@ def _findOptionValueInSeceditFile(option):
                                    'salt-secedit-dump-{0}.txt'.format(_d))
         _ret = __salt__['cmd.run']('secedit /export /cfg {0}'.format(_tfile))
         if _ret:
-            _reader = codecs.open(_tfile, 'r', encoding='utf-16')
-            _secdata = _reader.readlines()
-            _reader.close()
+            with codecs.open(_tfile, 'r', encoding='utf-16') as _reader:
+                _secdata = _reader.readlines()
             _ret = __salt__['file.remove'](_tfile)
             for _line in _secdata:
                 if _line.startswith(option):
