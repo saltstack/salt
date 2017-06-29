@@ -152,6 +152,8 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(disk.__salt__, {'cmd.retcode': mock}):
             self.assertEqual(disk.format_(device), True)
 
+    @skipIf(not salt.utils.which('lsblk') or not salt.utils.which('df'),
+            'lsblk or df not found')
     def test_fstype(self):
         '''
         unit tests for disk.fstype
