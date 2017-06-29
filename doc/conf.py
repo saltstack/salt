@@ -77,7 +77,6 @@ MOCK_MODULES = [
     'yaml.nodes',
     'yaml.parser',
     'yaml.scanner',
-    'salt.utils.yamlloader',
     'zmq',
     'zmq.eventloop',
     'zmq.eventloop.ioloop',
@@ -126,7 +125,6 @@ MOCK_MODULES = [
     'ClusterShell',
     'ClusterShell.NodeSet',
     'django',
-    'docker',
     'libvirt',
     'MySQLdb',
     'MySQLdb.cursors',
@@ -176,7 +174,7 @@ MOCK_MODULES = [
 
 for mod_name in MOCK_MODULES:
     if mod_name == 'psutil':
-        mock = Mock(mapping={'total': 0, 'version_info': (0, 6,0)})  # Otherwise it will crash Sphinx
+        mock = Mock(mapping={'total': 0})  # Otherwise it will crash Sphinx
     else:
         mock = Mock()
     sys.modules[mod_name] = mock
