@@ -132,7 +132,6 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
         # not appending if matches
         with tempfile.NamedTemporaryFile('w+b', delete=False) as tfile:
-            base = 'foo=1\n#baz=42\nbar=2\n'
             base = os.linesep.join(['foo=1', 'baz=42', 'bar=2'])
             tfile.write(base)
             tfile.flush()
