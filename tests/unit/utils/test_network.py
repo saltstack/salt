@@ -104,8 +104,13 @@ class NetworkTestCase(TestCase):
         self.assertEqual(ret, '10.1.2.3')
 
     def test_host_to_ips(self):
+        '''
+        NOTE: When this test fails it's usually because the IP address has
+        changed. In these cases, we just need to update the IP address in the
+        assertion.
+        '''
         ret = network.host_to_ips('www.saltstack.com')
-        self.assertEqual(ret, ['104.199.122.13'])
+        self.assertEqual(ret, ['104.197.168.128'])
 
     def test_generate_minion_id(self):
         self.assertTrue(network.generate_minion_id())
