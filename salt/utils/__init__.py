@@ -3453,3 +3453,21 @@ def dequote(val):
     if is_quoted(val):
         return val[1:-1]
     return val
+
+
+def mkstemp(*args, **kwargs):
+    '''
+    Helper function which does exactly what `tempfile.mkstemp()` does but
+    accepts another argument, `close_fd`, which, by default, is true and closes
+    the fd before returning the file path. Something commonly done throughout
+    Salt's code.
+    '''
+    if 'prefix' not in kwargs:
+        kwargs['prefix'] = '__salt.tmp.'
+    close_fd = kwargs.pop('close_fd', True)
+    fd_, fpath = tempfile.mkstemp(*args, **kwargs)
+    if close_fd is False:
+        return (fd_, fpath)
+    os.close(fd_)
+    del fd_
+    return fpath
