@@ -258,7 +258,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             keys = ret.keys()
             self.assertIn('rpm', keys)
             self.assertIn('yum', keys)
-        elif os_family == 'SUSE':
+        elif os_family == 'Suse':
             ret = self.run_function(func, ['less', 'zypper'])
             keys = ret.keys()
             self.assertIn('less', keys)

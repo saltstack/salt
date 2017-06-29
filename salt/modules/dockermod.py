@@ -2481,9 +2481,6 @@ def create(image,
     except Exception:
         pull(image, client_timeout=client_timeout)
 
-    if name is not None and kwargs.get('hostname') is None:
-        kwargs['hostname'] = name
-
     kwargs, unused_kwargs = _get_create_kwargs(
         image=image,
         skip_translate=skip_translate,
@@ -5138,7 +5135,7 @@ def _gather_pillar(pillarenv, pillar_override, **grains):
         # Not sure if these two are correct
         __opts__['id'],
         __opts__['environment'],
-        pillar=pillar_override,
+        pillar_override=pillar_override,
         pillarenv=pillarenv
     )
     ret = pillar.compile_pillar()

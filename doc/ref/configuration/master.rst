@@ -17,6 +17,9 @@ The configuration file for the salt-master is located at
 configuration file is located at :file:`/usr/local/etc/salt`.  The available
 options are as follows:
 
+
+.. _primary-master-configuration:
+
 Primary Master Configuration
 ============================
 
@@ -390,6 +393,19 @@ Default: ``nested``
 
 Set the default outputter used by the salt command.
 
+.. conf_master:: outputter_dirs
+
+``outputter_dirs``
+------------------
+
+Default: ``[]``
+
+A list of additional directories to search for salt outputters in.
+
+.. code-block:: yaml
+
+    outputter_dirs: []
+
 .. conf_master:: output_file
 
 ``output_file``
@@ -404,6 +420,32 @@ CLI option, only sets this to a single file for all salt commands.
 .. code-block:: yaml
 
     output_file: /path/output/file
+
+.. conf_master:: show_timeout
+
+``show_timeout``
+----------------
+
+Default: ``True``
+
+Tell the client to show minions that have timed out.
+
+.. code-block:: yaml
+
+    show_timeout: True
+
+.. conf_master:: show_jid
+
+``show_jid``
+------------
+
+Default: ``False``
+
+Tell the client to display the jid when a job is published.
+
+.. code-block:: yaml
+
+    show_jid: False
 
 .. conf_master:: color
 
@@ -816,6 +858,32 @@ that connect to a master via localhost.
 
     presence_events: False
 
+.. conf_master:: ping_on_rotate
+
+``ping_on_rotate``
+------------------
+
+Default: ``False``
+
+By default, the master AES key rotates every 24 hours. The next command
+following a key rotation will trigger a key refresh from the minion which may
+result in minions which do not respond to the first command after a key refresh.
+
+To tell the master to ping all minions immediately after an AES key refresh,
+set ``ping_on_rotate`` to ``True``. This should mitigate the issue where a
+minion does not appear to initially respond after a key is rotated.
+
+Note that ping_on_rotate may cause high load on the master immediately after
+the key rotation event as minions reconnect. Consider this carefully if this
+salt master is managing a large number of minions.
+
+If disabled, it is recommended to handle this event by listening for the
+``aes_key_rotate`` event with the ``key`` tag and acting appropriately.
+
+.. code-block:: yaml
+
+    ping_on_rotate: False
+
 .. conf_master:: transport
 
 ``transport``
@@ -833,6 +901,8 @@ what you are doing! Transports are explained in :ref:`Salt Transports
 .. code-block:: yaml
 
     transport: zeromq
+
+.. conf_master:: transport_opts
 
 ``transport_opts``
 ------------------
@@ -852,6 +922,30 @@ what you are doing! Transports are explained in :ref:`Salt Transports
         ret_port: 4606
       zeromq: []
 
+.. conf_master:: sock_pool_size
+
+``sock_pool_size``
+------------------
+
+Default: 1
+
+To avoid blocking waiting while writing a data to a socket, we support
+socket pool for Salt applications. For example, a job with a large number
+of target host list can cause long period blocking waiting. The option
+is used by ZMQ and TCP transports, and the other transport methods don't
+need the socket pool by definition. Most of Salt tools, including CLI,
+are enough to use a single bucket of socket pool. On the other hands,
+it is highly recommended to set the size of socket pool larger than 1
+for other Salt applications, especially Salt API, which must write data
+to socket concurrently.
+
+.. code-block:: yaml
+
+    sock_pool_size: 15
+
+
+.. _salt-ssh-configuration:
+
 Salt-SSH Configuration
 ======================
 
@@ -867,6 +961,97 @@ Pass in an alternative location for the salt-ssh roster file.
 .. code-block:: yaml
 
     roster_file: /root/roster
+
+.. conf_master:: ssh_passwd
+
+``ssh_passwd``
+--------------
+
+Default: ``''``
+
+The ssh password to log in with.
+
+.. code-block:: yaml
+
+    ssh_passwd: ''
+
+.. conf_master:: ssh_port
+
+``ssh_port``
+------------
+
+Default: ``22``
+
+The target system's ssh port number.
+
+.. code-block:: yaml
+
+    ssh_port: 22
+
+.. conf_master:: ssh_scan_ports
+
+``ssh_scan_ports``
+------------------
+
+Default: ``22``
+
+Comma-separated list of ports to scan.
+
+.. code-block:: yaml
+
+    ssh_scan_ports: 22
+
+.. conf_master:: ssh_scan_timeout
+
+``ssh_scan_timeout``
+--------------------
+
+Default: ``0.01``
+
+Scanning socket timeout for salt-ssh.
+
+.. code-block:: yaml
+
+    ssh_scan_timeout: 0.01
+
+.. conf_master:: ssh_sudo
+
+``ssh_sudo``
+------------
+
+Default: ``False``
+
+Boolean to run command via sudo.
+
+.. code-block:: yaml
+
+    ssh_sudo: False
+
+.. conf_master:: ssh_timeout
+
+``ssh_timeout``
+---------------
+
+Default: ``60``
+
+Number of seconds to wait for a response when establishing an SSH connection.
+
+.. code-block:: yaml
+
+    ssh_timeout: 60
+
+.. conf_master:: ssh_user
+
+``ssh_user``
+------------
+
+Default: ``root``
+
+The user to log in as.
+
+.. code-block:: yaml
+
+    ssh_user: root
 
 .. conf_master:: ssh_log_file
 
@@ -899,6 +1084,8 @@ overridden on a per-minion basis in the roster (``minion_opts``)
     ssh_minion_opts:
       gpg_keydir: /root/gpg
 
+.. conf_master:: ssh_use_home_key
+
 ``ssh_use_home_key``
 --------------------
 
@@ -910,6 +1097,41 @@ authentication with minions
 .. code-block:: yaml
 
     ssh_use_home_key: False
+
+.. conf_master:: ssh_identities_only
+
+``ssh_identities_only``
+-----------------------
+
+Default: ``False``
+
+Set this to ``True`` to default salt-ssh to run with ``-o IdentitiesOnly=yes``. This
+option is intended for situations where the ssh-agent offers many different identities
+and allows ssh to ignore those identities and use the only one specified in options.
+
+.. code-block:: yaml
+
+    ssh_identities_only: False
+
+.. conf_master:: ssh_list_nodegroups
+
+``ssh_list_nodegroups``
+-----------------------
+
+Default: ``{}``
+
+List-only nodegroups for salt-ssh. Each group must be formed as either a comma-separated
+list, or a YAML list. This option is useful to group minions into easy-to-target groups
+when using salt-ssh. These groups can then be targeted with the normal -N argument to
+salt-ssh.
+
+.. code-block:: yaml
+
+    ssh_list_nodegroups:
+      groupA: minion1,minion2
+      groupB: minion1,minion3
+
+.. conf_master:: thin_extra_mods
 
 ``thin_extra_mods``
 -------------------
@@ -928,6 +1150,8 @@ Default: None
 
 Identical as `thin_extra_mods`, only applied to the Salt Minimal.
 
+
+.. _master-security-settings:
 
 Master Security Settings
 ========================
@@ -1122,7 +1346,7 @@ from the eauth driver each time.
 .. conf_master:: eauth_acl_module
 
 ``eauth_acl_module``
----------------------
+--------------------
 
 Default: ``''``
 
@@ -1219,7 +1443,6 @@ signature. The :conf_master:`master_pubkey_signature` must also be set for this.
 
     master_use_pubkey_signature: True
 
-
 .. conf_master:: rotate_aes_key
 
 ``rotate_aes_key``
@@ -1235,7 +1458,6 @@ Do not disable this unless it is absolutely clear what this does.
 .. code-block:: yaml
 
     rotate_aes_key: True
-
 
 .. conf_master:: ssl
 
@@ -1265,7 +1487,7 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
 .. conf_master:: allow_minion_key_revoke
 
 ``allow_minion_key_revoke``
-------------------
+---------------------------
 
 Default: ``True``
 
@@ -1277,6 +1499,9 @@ the master will drop the request and the minion's key will remain accepted.
 .. code-block:: yaml
 
     rotate_aes_key: True
+
+
+.. _master-module-management:
 
 Master Module Management
 ========================
@@ -1309,6 +1534,8 @@ the Salt master.
 
     cython_enable: False
 
+
+.. _master-state-system-settings:
 
 Master State System Settings
 ============================
@@ -1566,6 +1793,21 @@ If set to 'changes', the output will be full unless the state didn't change.
 
     state_output: full
 
+.. conf_master:: state_output_diff
+
+``state_output_diff``
+---------------------
+
+Default: ``False``
+
+The state_output_diff setting changes whether or not the output from
+successful states is returned. Useful when even the terse output of these
+states is cluttering the logs. Set it to True to ignore them.
+
+.. code-block:: yaml
+
+    state_output_diff: False
+
 .. conf_master:: state_aggregate
 
 ``state_aggregate``
@@ -1625,6 +1867,9 @@ If set to ``True``, runner jobs will be saved to job cache (defined by
 .. code-block:: yaml
 
     runner_returns: True
+
+
+.. _master-file-server-settings:
 
 Master File Server Settings
 ===========================
@@ -1875,6 +2120,19 @@ Example:
     For masterless Salt, this parameter must be specified in the minion config
     file.
 
+.. conf_master:: master_roots
+
+``master_roots``
+----------------
+
+Default: ``/srv/salt-master``
+
+A master-only copy of the file_roots dictionary, used by the state compiler.
+
+.. code-block:: yaml
+
+    master_roots: /srv/salt-master
+
 git: Git Remote File Server Backend
 -----------------------------------
 
@@ -2041,6 +2299,60 @@ gitfs remotes.
     gitfs_saltenv:
       - dev:
         - ref: develop
+
+.. conf_master:: gitfs_disable_saltenv_mapping
+
+``gitfs_disable_saltenv_mapping``
+*********************************
+
+.. versionadded:: Oxygen
+
+Default: ``False``
+
+When set to ``True``, all saltenv mapping logic is disregarded (aside from
+which branch/tag is mapped to the ``base`` saltenv). To use any other
+environments, they must then be defined using :ref:`per-saltenv configuration
+parameters <gitfs-per-saltenv-config>`.
+
+.. code-block:: yaml
+
+    gitfs_disable_saltenv_mapping: True
+
+.. note::
+    This is is a global configuration option, see :ref:`here
+    <gitfs-per-remote-config>` for examples of configuring it for individual
+    repositories.
+
+.. conf_master:: gitfs_ref_types
+
+``gitfs_ref_types``
+*******************
+
+.. versionadded:: Oxygen
+
+Default: ``['branch', 'tag', 'sha']``
+
+This option defines what types of refs are mapped to fileserver environments
+(i.e. saltenvs). It also sets the order of preference when there are
+ambiguously-named refs (i.e. when a branch and tag both have the same name).
+The below example disables mapping of both tags and SHAs, so that only branches
+are mapped as saltenvs:
+
+.. code-block:: yaml
+
+    gitfs_ref_types:
+      - branch
+
+.. note::
+    This is is a global configuration option, see :ref:`here
+    <gitfs-per-remote-config>` for examples of configuring it for individual
+    repositories.
+
+.. note::
+    ``sha`` is special in that it will not show up when listing saltenvs (e.g.
+    with the :py:func:`fileserver.envs <salt.runners.fileserver.envs>` runner),
+    but works within states and with :py:func:`cp.cache_file
+    <salt.modules.cp.cache_file>` to retrieve a file from a specific git SHA.
 
 .. conf_master:: gitfs_saltenv_whitelist
 
@@ -3599,6 +3911,9 @@ can be utilized:
 
     pillar_cache_backend: disk
 
+
+.. _syndic-server-settings:
+
 Syndic Server Settings
 ======================
 
@@ -3748,6 +4063,8 @@ send events to all connected masters.
     syndic_forward_all_events: False
 
 
+.. _peer-publish-settings:
+
 Peer Publish Settings
 =====================
 
@@ -3862,7 +4179,6 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 
     log_level: warning
 
-
 .. conf_master:: log_level_logfile
 
 ``log_level_logfile``
@@ -3878,7 +4194,6 @@ it will inherit the level set by :conf_log:`log_level` option.
 
     log_level_logfile: warning
 
-
 .. conf_master:: log_datefmt
 
 ``log_datefmt``
@@ -3893,7 +4208,6 @@ The date and time format used in console log messages. See also
 
     log_datefmt: '%H:%M:%S'
 
-
 .. conf_master:: log_datefmt_logfile
 
 ``log_datefmt_logfile``
@@ -3907,7 +4221,6 @@ The date and time format used in log file messages. See also
 .. code-block:: yaml
 
     log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
-
 
 .. conf_master:: log_fmt_console
 
@@ -3941,7 +4254,6 @@ The format of the console logging messages. See also
     log_fmt_console: '%(colorlevel)s %(colormsg)s'
     log_fmt_console: '[%(levelname)-8s] %(message)s'
 
-
 .. conf_master:: log_fmt_logfile
 
 ``log_fmt_logfile``
@@ -3956,7 +4268,6 @@ The format of the log file logging messages. See also
 
     log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
-
 .. conf_master:: log_granular_levels
 
 ``log_granular_levels``
@@ -3966,6 +4277,9 @@ Default: ``{}``
 
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
+
+
+.. _node-groups:
 
 Node Groups
 ===========
@@ -3984,12 +4298,14 @@ A group consists of a group name and a compound target.
       group2: 'G@os:Debian and foo.domain.com'
       group3: 'G@os:Debian and N@group1'
       group4:
-	- 'G@foo:bar'
-	- 'or'
-	- 'G@foo:baz'
+        - 'G@foo:bar'
+        - 'or'
+        - 'G@foo:baz'
 
 More information on using nodegroups can be found :ref:`here <targeting-nodegroups>`.
 
+
+.. _range-cluster-settings:
 
 Range Cluster Settings
 ======================
@@ -4006,8 +4322,10 @@ https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 
 .. code-block:: yaml
 
-  range_server: range:80
+    range_server: range:80
 
+
+.. _include-configuration:
 
 Include Configuration
 =====================
@@ -4029,7 +4347,6 @@ file.
     Salt creates files in the ``master.d`` directory for its own use. These
     files are prefixed with an underscore. A common example of this is the
     ``_schedule.conf`` file.
-
 
 .. conf_master:: include
 
@@ -4059,6 +4376,7 @@ option then the master will log a warning message.
       - extra_config
       - master.d/*
       - /etc/roles/webserver
+
 
 .. _winrepo-master-config-opts:
 
@@ -4380,3 +4698,82 @@ configured both globally and for individual remotes.
       - '+refs/tags/*:refs/tags/*'
       - '+refs/pull/*/head:refs/remotes/origin/pr/*'
       - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
+
+.. _configure-master-on-windows:
+
+Configure Master on Windows
+===========================
+
+The master on Windows requires no additional configuration. You can modify the
+master configuration by creating/editing the master config file located at
+``c:\salt\conf\master``. The same configuration options available on Linux are
+available in Windows, as long as they apply. For example, SSH options wouldn't
+apply in Windows. The main differences are the file paths. If you are familiar
+with common salt paths, the following table may be useful:
+
+=============  =========  =================
+linux Paths               Windows Paths
+=============  =========  =================
+``/etc/salt``  ``<--->``  ``c:\salt\conf``
+``/``          ``<--->``  ``c:\salt``
+=============  =========  =================
+
+So, for example, the master config file in Linux is ``/etc/salt/master``. In
+Windows the master config file is ``c:\salt\conf\master``. The Linux path
+``/etc/salt`` becomes ``c:\salt\conf`` in Windows.
+
+Common File Locations
+---------------------
+
+======================================  =============================================
+Linux Paths                             Windows Paths
+======================================  =============================================
+``conf_file: /etc/salt/master``         ``conf_file: c:\salt\conf\master``
+``log_file: /var/log/salt/master``      ``log_file: c:\salt\var\log\salt\master``
+``pidfile: /var/run/salt-master.pid``   ``pidfile: c:\salt\var\run\salt-master.pid``
+======================================  =============================================
+
+Common Directories
+------------------
+
+======================================================  ============================================
+Linux Paths                                             Windows Paths
+======================================================  ============================================
+``cachedir: /var/cache/salt/master``                    ``cachedir: c:\salt\var\cache\salt\master``
+``extension_modules: /var/cache/salt/master/extmods``   ``c:\salt\var\cache\salt\master\extmods``
+``pki_dir: /etc/salt/pki/master``                       ``pki_dir: c:\salt\conf\pki\master``
+``root_dir: /``                                         ``root_dir: c:\salt``
+``sock_dir: /var/run/salt/master``                      ``sock_dir: c:\salt\var\run\salt\master``
+======================================================  ============================================
+
+Roots
+-----
+
+**file_roots**
+
+==================  =========================
+Linux Paths         Windows Paths
+==================  =========================
+``/srv/salt``       ``c:\salt\srv\salt``
+``/srv/spm/salt``   ``c:\salt\srv\spm\salt``
+==================  =========================
+
+**pillar_roots**
+
+====================  ===========================
+Linux Paths           Windows Paths
+====================  ===========================
+``/srv/pillar``       ``c:\salt\srv\pillar``
+``/srv/spm/pillar``   ``c:\salt\srv\spm\pillar``
+====================  ===========================
+
+Win Repo Settings
+-----------------
+
+==========================================  =================================================
+Linux Paths                                 Windows Paths
+==========================================  =================================================
+``winrepo_dir: /srv/salt/win/repo``         ``winrepo_dir: c:\salt\srv\salt\win\repo``
+``winrepo_dir_ng: /srv/salt/win/repo-ng``   ``winrepo_dir_ng: c:\salt\srv\salt\win\repo-ng``
+==========================================  =================================================

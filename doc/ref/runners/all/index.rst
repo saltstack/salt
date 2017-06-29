@@ -16,6 +16,7 @@ runner modules
     cache
     cloud
     ddns
+    digicertapi
     doc
     drac
     error

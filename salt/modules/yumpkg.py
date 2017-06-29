@@ -927,7 +927,7 @@ list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
 
 def list_downloaded():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List prefetched packages downloaded by Yum in the local disk.
 
@@ -1243,13 +1243,6 @@ def install(name=None,
         return {}
 
     version_num = kwargs.get('version')
-    if version_num:
-        if pkgs is None and sources is None:
-            # Allow "version" to work for single package target
-            pkg_params = {name: version_num}
-        else:
-            log.warning('"version" parameter will be ignored for multiple '
-                        'package targets')
 
     old = list_pkgs(versions_as_list=False) if not downloadonly else list_downloaded()
     # Use of __context__ means no duplicate work here, just accessing
@@ -2579,8 +2572,9 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         if stanza == repo:
             continue
         comments = ''
-        if 'comments' in filerepos[stanza]:
-            comments = '\n'.join(filerepos[stanza]['comments'])
+        if 'comments' in six.iterkeys(filerepos[stanza]):
+            comments = salt.utils.pkg.rpm.combine_comments(
+                    filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
         for line in filerepos[stanza]:
@@ -2715,7 +2709,8 @@ def mod_repo(repo, basedir=None, **kwargs):
     for stanza in six.iterkeys(filerepos):
         comments = ''
         if 'comments' in six.iterkeys(filerepos[stanza]):
-            comments = '\n'.join(filerepos[stanza]['comments'])
+            comments = salt.utils.pkg.rpm.combine_comments(
+                    filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
         for line in six.iterkeys(filerepos[stanza]):
@@ -3034,7 +3029,7 @@ def _get_patches(installed_only=False):
 
 def list_patches(refresh=False):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List all known advisory patches from available repos.
 
@@ -3057,7 +3052,7 @@ def list_patches(refresh=False):
 
 def list_installed_patches():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List installed advisory patches on the system.
 

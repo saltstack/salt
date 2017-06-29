@@ -126,7 +126,7 @@ gcc-6-base:i386
                 inspector.grains_core.os_data = MagicMock()
                 inspector.grains_core.os_data().get = MagicMock(return_value='Debian')
                 self.assertEqual(inspector._get_cfg_pkgs(), 'dpkg')
-                inspector.grains_core.os_data().get = MagicMock(return_value='SUSE')
+                inspector.grains_core.os_data().get = MagicMock(return_value='Suse')
                 self.assertEqual(inspector._get_cfg_pkgs(), 'rpm')
                 inspector.grains_core.os_data().get = MagicMock(return_value='redhat')
                 self.assertEqual(inspector._get_cfg_pkgs(), 'rpm')

@@ -4,6 +4,36 @@
 Salt 2017.7.0 Release Notes - Codename Nitrogen
 ===============================================
 
+
+========
+Python 3
+========
+
+The 2017.7 Salt Release adds initial Python 3 support.
+
+The default Python version of Salt will remain Python 2, although Python 3 packages will be supplied for users who want to help test this new feature.
+
+======================
+Python 2.6 Deprecation
+======================
+
+Salt will no longer support Python 2.6. We will provide python2.7 packages on our repo_ for RedHat and CentOS 6 to ensure users can still run Salt on these platforms.
+
+.. _repo: https://repo.saltstack.com/
+
+============
+Known Issues
+============
+The following salt-cloud drivers have known issues running with Python 3. These drivers will not work with Python 3, and Python 2.7 should be used instead:
+
+- Joyent
+
+- Any driver that relies on the `apache-libcloud` library such as cloudstack, dimenstiondata, gce, nova, and openstack
+
+- When running under Python 3, users who require Unicode support should ensure that a locale is set on their machines.
+  Users using the `C` locale are advised to switch to a UTF-aware locale to ensure proper functionality with Salt with Python 3.
+
+
 States Added for Management of systemd Unit Masking
 ===================================================
 
@@ -161,6 +191,7 @@ Wildcard Versions in :py:func:`pkg.installed <salt.states.pkg.installed>` States
 - The :py:func:`pkg.installed <salt.states.pkg.installed>` state now supports
   wildcards in package versions, for the following platforms:
 
+  - SUSE/openSUSE Leap/Thumbleweed
   - Debian/Ubuntu
   - RHEL/CentOS
   - Arch Linux
@@ -579,6 +610,11 @@ Beacons
 
 - :mod:`salt.beacons.log <salt.beacons.log>`
 
+Cache
+-----
+
+- :mod:`salt.cache.redis_cache <salt.cache.redis_cache>`
+
 Engines
 -------
 
@@ -600,7 +636,6 @@ Execution modules
 - :mod:`salt.modules.heat <salt.modules.heat>`
 - :mod:`salt.modules.icinga2 <salt.modules.icinga2>`
 - :mod:`salt.modules.logmod <salt.modules.logmod>`
-- :mod:`salt.modules.mattermost <salt.modules.mattermost>`
 - :mod:`salt.modules.mattermost <salt.modules.mattermost>`
 - :mod:`salt.modules.namecheap_dns <salt.modules.namecheap_dns>`
 - :mod:`salt.modules.namecheap_domains <salt.modules.namecheap_domains>`
