@@ -364,7 +364,10 @@ def dec(data, **kwargs):
         salt-call --local nacl.dec data='pEXHQM6cuaF7A=' keyfile=/root/.nacl
         salt-call --local nacl.dec data='pEXHQM6cuaF7A=' key='YmFkcGFzcwo='
     '''
+    if data == None:
+      return None
     key = _get_key(**kwargs)
     sk = base64.b64decode(key)
     b = libnacl.secret.SecretBox(key=sk)
     return b.decrypt(base64.b64decode(data))
+
