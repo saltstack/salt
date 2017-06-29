@@ -19,8 +19,10 @@ import functools
 import inspect
 import logging
 import os
+import random
 import signal
 import socket
+import string
 import sys
 import threading
 import time
@@ -1329,6 +1331,25 @@ def http_basic_auth(login_cb=lambda username, password: False):
         handler_class._execute = wrap_execute(handler_class._execute)
         return handler_class
     return wrapper
+
+
+def generate_random_name(prefix, size=6):
+    '''
+    Generates a random name by combining the provided prefix with a randomly generated
+    ascii string.
+
+    .. versionadded:: Oxygen
+
+    prefix
+        The string to prefix onto the randomly generated ascii string.
+
+    size
+        The number of characters to generate. Default: 6.
+    '''
+    return prefix + ''.join(
+        random.choice(string.ascii_uppercase + string.digits)
+        for x in range(size)
+    )
 
 
 class Webserver(object):
