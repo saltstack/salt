@@ -13,9 +13,9 @@ in applications that require human readable data rather than Python objects.
 
 For example, inside a Jinja template:
 
-```jinja
-{{ salt.out.string_format(complex_object) }}
-```
+.. code-block:: jinja
+
+    {{ salt.out.string_format(complex_object, out='highstate') }}
 '''
 from __future__ import absolute_import
 
