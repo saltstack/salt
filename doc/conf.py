@@ -72,6 +72,7 @@ MOCK_MODULES = [
     'Crypto.Signature',
     'Crypto.Signature.PKCS1_v1_5',
     'M2Crypto',
+    'msgpack',
     'yaml',
     'yaml.constructor',
     'yaml.nodes',
