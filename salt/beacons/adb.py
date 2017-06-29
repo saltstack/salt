@@ -38,24 +38,25 @@ def validate(config):
         log.info('Configuration for adb beacon must be a list.')
         return False, ('Configuration for adb beacon must be a list.')
 
-    # Configuration for adb beacon should contain states array
-    if not [True for config_item
-            in config
-            if 'states' in config_item
-               and isinstance(config_item['states'], list)]:
+    _config = {}
+    list(map(_config.update, config))
+
+    if 'states' not in _config:
         log.info('Configuration for adb beacon must include a states array.')
         return False, ('Configuration for adb beacon must include a states array.')
     else:
-        _states = sum([config_item['states'] for config_item
-                       in config if 'states' in config_item], [])
-        states = ['offline', 'bootloader', 'device', 'host',
-                  'recovery', 'no permissions',
-                  'sideload', 'unauthorized', 'unknown', 'missing']
-        if any(s not in states for s in _states):
-            log.info('Need a one of the following adb '
-                     'states: {0}'.format(', '.join(states)))
-            return False, ('Need a one of the following adb '
-                           'states: {0}'.format(', '.join(states)))
+        if not isinstance(_config['states'], list):
+            log.info('Configuration for adb beacon must include a states array.')
+            return False, ('Configuration for adb beacon must include a states array.')
+        else:
+            states = ['offline', 'bootloader', 'device', 'host',
+                      'recovery', 'no permissions',
+                      'sideload', 'unauthorized', 'unknown', 'missing']
+            if any(s not in states for s in _config['states']):
+                log.info('Need a one of the following adb '
+                         'states: {0}'.format(', '.join(states)))
+                return False, ('Need a one of the following adb '
+                               'states: {0}'.format(', '.join(states)))
     return True, 'Valid beacon configuration'
 
 
@@ -84,12 +85,7 @@ def beacon(config):
     ret = []
 
     _config = {}
-    _valid_config_options = ['user', 'battery_low',
-                             'states', 'no_devices_event']
-    for config_item in config:
-        for opt in _valid_config_options:
-            if opt in config_item:
-                _config[opt] = config_item[opt]
+    list(map(_config.update, config))
 
     out = __salt__['cmd.run']('adb devices', runas=_config.get('user', None))
 

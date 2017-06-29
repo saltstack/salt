@@ -49,12 +49,15 @@ def validate(config):
     '''
     # Configuration for journald beacon should be a list of dicts
     if not isinstance(config, list):
-        return False
+        return (False, 'Configuration for journald beacon must be a list.')
     else:
-        for config_item in config:
-            if not isinstance(config_item, dict):
-                return False, ('Configuration for journald beacon must '
-                               'be a list of dictionaries.')
+        _config = {}
+        list(map(_config.update, config))
+
+        for name in _config.get('services', {}):
+            if not isinstance(_config['services'][name], dict):
+                return False, ('Services configuration for journald beacon '
+                               'must be a list of dictionaries.')
     return True, 'Valid beacon configuration'
 
 
@@ -69,28 +72,31 @@ def beacon(config):
 
         beacons:
           journald:
-            - sshd:
-                SYSLOG_IDENTIFIER: sshd
-                PRIORITY: 6
+            - services:
+                sshd:
+                  SYSLOG_IDENTIFIER: sshd
+                  PRIORITY: 6
     '''
     ret = []
     journal = _get_journal()
+
+    _config = {}
+    list(map(_config.update, config))
+
     while True:
         cur = journal.get_next()
         if not cur:
             break
-        for name_config in config:
 
-            name = name_config.keys()[0]
-
+        for name in _config.get('services', {}):
             n_flag = 0
-            for key in name_config[name]:
+            for key in _config['services'][name]:
                 if isinstance(key, salt.ext.six.string_types):
                     key = salt.utils.locales.sdecode(key)
                 if key in cur:
-                    if name_config[name][key] == cur[key]:
+                    if _config['services'][name][key] == cur[key]:
                         n_flag += 1
-            if n_flag == len(name_config[name]):
+            if n_flag == len(_config['services'][name]):
                 # Match!
                 sub = salt.utils.simple_types_filter(cur)
                 sub.update({'tag': name})

@@ -109,11 +109,7 @@ def validate(config):
         return False, 'Configuration for inotify beacon must be a list.'
     else:
         _config = {}
-        _valid_config_options = ['files', 'coalesce']
-        for config_item in config:
-            for opt in _valid_config_options:
-                if opt in config_item:
-                    _config[opt] = config_item[opt]
+        list(map(_config.update, config))
 
         for path in _config.get('files', {}):
 
@@ -214,11 +210,7 @@ def beacon(config):
       being at the Notifier level in pyinotify.
     '''
     _config = {}
-    _valid_config_options = ['files', 'coalesce']
-    for config_item in config:
-        for opt in _valid_config_options:
-            if opt in config_item:
-                _config[opt] = config_item[opt]
+    list(map(_config.update, config))
 
     ret = []
     notifier = _get_notifier(_config)

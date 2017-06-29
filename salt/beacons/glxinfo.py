@@ -35,7 +35,11 @@ def validate(config):
     # Configuration for glxinfo beacon should be a dictionary
     if not isinstance(config, list):
         return False, ('Configuration for glxinfo beacon must be a list.')
-    if not [True for config_item in config if 'user' in config_item]:
+
+    _config = {}
+    list(map(_config.update, config))
+
+    if 'user' not in _config:
         return False, ('Configuration for glxinfo beacon must '
                        'include a user as glxinfo is not available to root.')
     return True, 'Valid beacon configuration'
@@ -61,13 +65,10 @@ def beacon(config):
     ret = []
 
     _config = {}
-    _valid_config_options = ['user', 'screen_event']
-    for config_item in config:
-        for opt in _valid_config_options:
-            if opt in config_item:
-                _config[opt] = config_item[opt]
+    list(map(_config.update, config))
 
-    retcode = __salt__['cmd.retcode']('DISPLAY=:0 glxinfo', runas=_config['user'], python_shell=True)
+    retcode = __salt__['cmd.retcode']('DISPLAY=:0 glxinfo',
+                                      runas=_config['user'], python_shell=True)
 
     if 'screen_event' in _config and _config['screen_event']:
         last_value = last_state.get('screen_available', False)

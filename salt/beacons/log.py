@@ -48,13 +48,13 @@ def _get_loc():
         return __context__[LOC_KEY]
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
     # Configuration for log beacon should be a list of dicts
-    if not isinstance(config, dict):
-        return False, ('Configuration for log beacon must be a dictionary.')
+    if not isinstance(config, list):
+        return False, ('Configuration for log beacon must be a list.')
     return True, 'Valid beacon configuration'
 
 
