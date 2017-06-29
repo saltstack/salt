@@ -169,107 +169,107 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             # force it into a list
             identity = [identity]
 
-        with salt.utils.files.set_umask(0o077):
-            # try each of the identities, independently
-            tmp_identity_file = None
-            for id_file in identity:
-                if 'salt://' in id_file:
+        # try each of the identities, independently
+        tmp_identity_file = None
+        for id_file in identity:
+            if 'salt://' in id_file:
+                with salt.utils.files.set_umask(0o077):
                     tmp_identity_file = salt.utils.mkstemp()
-                    _id_file = id_file
-                    id_file = __salt__['cp.get_file'](id_file,
-                                                      tmp_identity_file,
-                                                      saltenv)
-                    if not id_file:
-                        log.error('identity {0} does not exist.'.format(_id_file))
-                        __salt__['file.remove'](tmp_identity_file)
-                        continue
-                    else:
-                        if user:
-                            os.chown(id_file,
-                                     __salt__['file.user_to_uid'](user),
-                                     -1)
+                _id_file = id_file
+                id_file = __salt__['cp.get_file'](id_file,
+                                                  tmp_identity_file,
+                                                  saltenv)
+                if not id_file:
+                    log.error('identity {0} does not exist.'.format(_id_file))
+                    __salt__['file.remove'](tmp_identity_file)
+                    continue
                 else:
-                    if not __salt__['file.file_exists'](id_file):
-                        missing_keys.append(id_file)
-                        log.error('identity {0} does not exist.'.format(id_file))
-                        continue
-
-                env = {
-                    'GIT_IDENTITY': id_file
-                }
-
-                # copy wrapper to area accessible by ``runas`` user
-                # currently no suppport in windows for wrapping git ssh
-                ssh_id_wrapper = os.path.join(
-                    salt.utils.templates.TEMPLATE_DIRNAME,
-                    'git/ssh-id-wrapper'
-                )
-                if salt.utils.is_windows():
-                    for suffix in ('', ' (x86)'):
-                        ssh_exe = (
-                            'C:\\Program Files{0}\\Git\\bin\\ssh.exe'
-                            .format(suffix)
-                        )
-                        if os.path.isfile(ssh_exe):
-                            env['GIT_SSH_EXE'] = ssh_exe
-                            break
-                    else:
-                        raise CommandExecutionError(
-                            'Failed to find ssh.exe, unable to use identity file'
-                        )
-                    # Use the windows batch file instead of the bourne shell script
-                    ssh_id_wrapper += '.bat'
-                    env['GIT_SSH'] = ssh_id_wrapper
-                else:
-                    tmp_file = salt.utils.mkstemp()
-                    salt.utils.files.copyfile(ssh_id_wrapper, tmp_file)
-                    os.chmod(tmp_file, 0o500)
-                    os.chown(tmp_file, __salt__['file.user_to_uid'](user), -1)
-                    env['GIT_SSH'] = tmp_file
-
-                if 'salt-call' not in _salt_cli \
-                        and __salt__['ssh.key_is_encrypted'](id_file):
-                    errors.append(
-                        'Identity file {0} is passphrase-protected and cannot be '
-                        'used in a non-interactive command. Using salt-call from '
-                        'the minion will allow a passphrase-protected key to be '
-                        'used.'.format(id_file)
-                    )
+                    if user:
+                        os.chown(id_file,
+                                 __salt__['file.user_to_uid'](user),
+                                 -1)
+            else:
+                if not __salt__['file.file_exists'](id_file):
+                    missing_keys.append(id_file)
+                    log.error('identity {0} does not exist.'.format(id_file))
                     continue
 
-                log.info(
-                    'Attempting git authentication using identity file {0}'
-                    .format(id_file)
-                )
+            env = {
+                'GIT_IDENTITY': id_file
+            }
 
-                try:
-                    result = __salt__['cmd.run_all'](
-                        command,
-                        cwd=cwd,
-                        runas=user,
-                        password=password,
-                        env=env,
-                        python_shell=False,
-                        log_callback=salt.utils.url.redact_http_basic_auth,
-                        ignore_retcode=ignore_retcode,
-                        redirect_stderr=redirect_stderr,
-                        **kwargs)
-                finally:
-                    if not salt.utils.is_windows() and 'GIT_SSH' in env:
-                        os.remove(env['GIT_SSH'])
-
-                    # Cleanup the temporary identify file
-                    if tmp_identity_file and os.path.exists(tmp_identity_file):
-                        log.debug('Removing identify file {0}'.format(tmp_identity_file))
-                        __salt__['file.remove'](tmp_identity_file)
-
-                # If the command was successful, no need to try additional IDs
-                if result['retcode'] == 0:
-                    return result
+            # copy wrapper to area accessible by ``runas`` user
+            # currently no suppport in windows for wrapping git ssh
+            ssh_id_wrapper = os.path.join(
+                salt.utils.templates.TEMPLATE_DIRNAME,
+                'git/ssh-id-wrapper'
+            )
+            if salt.utils.is_windows():
+                for suffix in ('', ' (x86)'):
+                    ssh_exe = (
+                        'C:\\Program Files{0}\\Git\\bin\\ssh.exe'
+                        .format(suffix)
+                    )
+                    if os.path.isfile(ssh_exe):
+                        env['GIT_SSH_EXE'] = ssh_exe
+                        break
                 else:
-                    err = result['stdout' if redirect_stderr else 'stderr']
-                    if err:
-                        errors.append(salt.utils.url.redact_http_basic_auth(err))
+                    raise CommandExecutionError(
+                        'Failed to find ssh.exe, unable to use identity file'
+                    )
+                # Use the windows batch file instead of the bourne shell script
+                ssh_id_wrapper += '.bat'
+                env['GIT_SSH'] = ssh_id_wrapper
+            else:
+                tmp_file = salt.utils.mkstemp()
+                salt.utils.files.copyfile(ssh_id_wrapper, tmp_file)
+                os.chmod(tmp_file, 0o500)
+                os.chown(tmp_file, __salt__['file.user_to_uid'](user), -1)
+                env['GIT_SSH'] = tmp_file
+
+            if 'salt-call' not in _salt_cli \
+                    and __salt__['ssh.key_is_encrypted'](id_file):
+                errors.append(
+                    'Identity file {0} is passphrase-protected and cannot be '
+                    'used in a non-interactive command. Using salt-call from '
+                    'the minion will allow a passphrase-protected key to be '
+                    'used.'.format(id_file)
+                )
+                continue
+
+            log.info(
+                'Attempting git authentication using identity file {0}'
+                .format(id_file)
+            )
+
+            try:
+                result = __salt__['cmd.run_all'](
+                    command,
+                    cwd=cwd,
+                    runas=user,
+                    password=password,
+                    env=env,
+                    python_shell=False,
+                    log_callback=salt.utils.url.redact_http_basic_auth,
+                    ignore_retcode=ignore_retcode,
+                    redirect_stderr=redirect_stderr,
+                    **kwargs)
+            finally:
+                if not salt.utils.is_windows() and 'GIT_SSH' in env:
+                    os.remove(env['GIT_SSH'])
+
+                # Cleanup the temporary identify file
+                if tmp_identity_file and os.path.exists(tmp_identity_file):
+                    log.debug('Removing identify file {0}'.format(tmp_identity_file))
+                    __salt__['file.remove'](tmp_identity_file)
+
+            # If the command was successful, no need to try additional IDs
+            if result['retcode'] == 0:
+                return result
+            else:
+                err = result['stdout' if redirect_stderr else 'stderr']
+                if err:
+                    errors.append(salt.utils.url.redact_http_basic_auth(err))
 
         # We've tried all IDs and still haven't passed, so error out
         if failhard:
