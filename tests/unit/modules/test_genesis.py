@@ -61,12 +61,12 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
                 genesis.bootstrap('pacman', 'root', 'dir')
                 pacman_patch.assert_called_with('root', img_format='dir', exclude_pkgs=[], pkgs=[])
 
-    @patch('salt.utils.which', MagicMock(return_value=False))
     def test_avail_platforms(self):
         '''
         Test for Return which platforms are available
         '''
-        self.assertFalse(genesis.avail_platforms()['deb'])
+        with patch('salt.utils.which', MagicMock(return_value=False)):
+            self.assertFalse(genesis.avail_platforms()['deb'])
 
     def test_pack(self):
         '''

@@ -10,7 +10,7 @@ Vault Pillar Module
 
 This module allows pillar data to be stored in Hashicorp Vault.
 
-Base configuration instructions are documented in the execution module docs.
+Base configuration instructions are documented in the :ref:`execution module docs <vault-setup>`.
 Below are noted extra configuration required for the pillar module, but the base
 configuration must also be completed.
 
@@ -45,6 +45,7 @@ Multiple Vault sources may also be used:
     ext_pillar:
       - vault: path=secret/salt
       - vault: path=secret/root
+      - vault: path=secret/minions/{minion}/pass
 '''
 
 # import python libs
@@ -76,7 +77,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
 
     if not comps[0].startswith('path='):
         salt.utils.warn_until(
-            'Oxygen',
+            'Fluorine',
             'The \'profile\' argument has been deprecated. Any parts up until '
             'and following the first "path=" are discarded'
         )
@@ -87,6 +88,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
 
     try:
         path = paths[0].replace('path=', '')
+        path = path.format(**{'minion': minion_id})
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('GET', url)
         if response.status_code != 200:

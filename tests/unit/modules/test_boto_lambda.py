@@ -244,8 +244,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegexp(SaltInvocationError,
-                                         'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
+            with self.assertRaisesRegex(SaltInvocationError,
+                                        'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
                 lambda_creation_result = boto_lambda.create_function(
                     FunctionName='testfunction',
                     Runtime='python2.7',
@@ -258,8 +258,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegexp(SaltInvocationError,
-                                         'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
+            with self.assertRaisesRegex(SaltInvocationError,
+                                        'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
                 with TempZipFile() as zipfile:
                     lambda_creation_result = boto_lambda.create_function(
                         FunctionName='testfunction',
@@ -400,7 +400,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                 SaltInvocationError,
                 ('Either ZipFile must be specified, or S3Bucket '
                  'and S3Key must be provided.')):
@@ -713,7 +713,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         tests Deleting a mapping without identifier
         '''
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             SaltInvocationError,
             ('Either UUID must be specified, or EventSourceArn '
              'and FunctionName must be provided.')):

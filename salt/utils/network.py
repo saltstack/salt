@@ -12,6 +12,7 @@ import types
 import socket
 import logging
 import platform
+import subprocess
 from string import ascii_letters, digits
 
 # Import 3rd-party libs
@@ -26,7 +27,8 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt._compat import subprocess, ipaddress
+from salt._compat import ipaddress
+from salt.utils.decorators import jinja_filter
 
 # inet_pton does not exist in Windows, this is a workaround
 if salt.utils.is_windows():
@@ -93,12 +95,12 @@ def _generate_minion_id():
 
     class DistinctList(list):
         '''
-        List, which allows to append only distinct objects.
+        List, which allows one to append only distinct objects.
         Needs to work on Python 2.6, because of collections.OrderedDict only since 2.7 version.
         Override 'filter()' for custom filtering.
         '''
-        localhost_matchers = ['localhost.*', 'ip6-.*', '127.*', r'0\.0\.0\.0',
-                              '::1.*', 'ipv6-.*', 'fe00::.*', 'fe02::.*', '1.0.0.*.ip6.arpa']
+        localhost_matchers = [r'localhost.*', r'ip6-.*', r'127[.]\d', r'0\.0\.0\.0',
+                              r'::1.*', r'ipv6-.*', r'fe00::.*', r'fe02::.*', r'1.0.0.*.ip6.arpa']
 
         def append(self, p_object):
             if p_object and p_object not in self and not self.filter(p_object):
@@ -231,6 +233,7 @@ def is_ipv6(ip):
         return False
 
 
+@jinja_filter('is_ip')
 def is_ip_filter(ip, options=None):
     '''
     Returns a bool telling if the passed IP is a valid IPv4 or IPv6 address.
@@ -333,6 +336,7 @@ def _is_ipv(ip, version, options=None):
     return _ip_options(ip_obj, version, options=options)
 
 
+@jinja_filter('is_ipv4')
 def is_ipv4_filter(ip, options=None):
     '''
     Returns a bool telling if the value passed to it was a valid IPv4 address.
@@ -350,6 +354,7 @@ def is_ipv4_filter(ip, options=None):
     return isinstance(_is_ipv4, six.string_types)
 
 
+@jinja_filter('is_ipv6')
 def is_ipv6_filter(ip, options=None):
     '''
     Returns a bool telling if the value passed to it was a valid IPv6 address.
@@ -385,6 +390,7 @@ def _ipv_filter(value, version, options=None):
     return None
 
 
+@jinja_filter('ipv4')
 def ipv4(value, options=None):
     '''
     Filters a list and returns IPv4 values only.
@@ -392,6 +398,7 @@ def ipv4(value, options=None):
     return _ipv_filter(value, 4, options=options)
 
 
+@jinja_filter('ipv6')
 def ipv6(value, options=None):
     '''
     Filters a list and returns IPv6 values only.
@@ -399,6 +406,7 @@ def ipv6(value, options=None):
     return _ipv_filter(value, 6, options=options)
 
 
+@jinja_filter('ipaddr')
 def ipaddr(value, options=None):
     '''
     Filters and returns only valid IP objects.
@@ -430,6 +438,7 @@ def _filter_ipaddr(value, options, version=None):
     return ipaddr_filter_out
 
 
+@jinja_filter('ip_host')
 def ip_host(value, options=None, version=None):
     '''
     Returns the interfaces IP address, e.g.: 192.168.0.1/28.
@@ -449,6 +458,7 @@ def _network_hosts(ip_addr_entry):
     ]
 
 
+@jinja_filter('network_hosts')
 def network_hosts(value, options=None, version=None):
     '''
     Return the list of hosts within a network.
@@ -468,6 +478,7 @@ def _network_size(ip_addr_entry):
     return ipaddress.ip_network(ip_addr_entry, strict=False).num_addresses
 
 
+@jinja_filter('network_size')
 def network_size(value, options=None, version=None):
     '''
     Get the size of a network.
@@ -944,10 +955,39 @@ def _get_iface_info(iface):
         return None, error_msg
 
 
+def _hw_addr_aix(iface):
+    '''
+    Return the hardware address (a.k.a. MAC address) for a given interface on AIX
+    MAC address not available in through interfaces
+    '''
+    cmd = subprocess.Popen(
+        'entstat -d {0} | grep \'Hardware Address\''.format(iface),
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT).communicate()[0]
+
+    if cmd:
+        comps = cmd.split(' ')
+        if len(comps) == 3:
+            mac_addr = comps[2].strip('\'').strip()
+            return mac_addr
+
+    error_msg = ('Interface "{0}" either not available or does not contain a hardware address'.format(iface))
+    log.error(error_msg)
+    return error_msg
+
+
 def hw_addr(iface):
     '''
     Return the hardware address (a.k.a. MAC address) for a given interface
+
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     '''
+    if salt.utils.is_aix():
+        return _hw_addr_aix
+
     iface_info, error = _get_iface_info(iface)
 
     if error is False:
@@ -998,8 +1038,10 @@ def _subnets(proto='inet', interfaces_=None):
 
     if proto == 'inet':
         subnet = 'netmask'
+        dflt_cidr = 32
     elif proto == 'inet6':
         subnet = 'prefixlen'
+        dflt_cidr = 128
     else:
         log.error('Invalid proto {0} calling subnets()'.format(proto))
         return
@@ -1009,7 +1051,10 @@ def _subnets(proto='inet', interfaces_=None):
         addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
 
         for intf in addrs:
-            intf = ipaddress.ip_interface('{0}/{1}'.format(intf['address'], intf[subnet]))
+            if subnet in intf:
+                intf = ipaddress.ip_interface('{0}/{1}'.format(intf['address'], intf[subnet]))
+            else:
+                intf = ipaddress.ip_interface('{0}/{1}'.format(intf['address'], dflt_cidr))
             if not intf.is_loopback:
                 ret.add(intf.network)
     return [str(net) for net in sorted(ret)]
@@ -1216,6 +1261,8 @@ def _remotes_on(port, which_end):
             return _openbsd_remotes_on(port, which_end)
         if salt.utils.is_windows():
             return _windows_remotes_on(port, which_end)
+        if salt.utils.is_aix():
+            return _aix_remotes_on(port, which_end)
 
         return _linux_remotes_on(port, which_end)
 
@@ -1525,4 +1572,54 @@ def _linux_remotes_on(port, which_end):
             continue
         remotes.add(rhost.strip("[]"))
 
+    return remotes
+
+
+def _aix_remotes_on(port, which_end):
+    '''
+    AIX specific helper function.
+    Returns set of ipv4 host addresses of remote established connections
+    on local or remote tcp port.
+
+    Parses output of shell 'netstat' to get connections
+
+    root@la68pp002_pub:/opt/salt/lib/python2.7/site-packages/salt/modules# netstat -f inet -n
+    Active Internet connections
+    Proto Recv-Q Send-Q  Local Address          Foreign Address        (state)
+    tcp4       0      0  172.29.149.95.50093    209.41.78.13.4505      ESTABLISHED
+    tcp4       0      0  127.0.0.1.9514         *.*                    LISTEN
+    tcp4       0      0  127.0.0.1.9515         *.*                    LISTEN
+    tcp4       0      0  127.0.0.1.199          127.0.0.1.32779        ESTABLISHED
+    tcp4       0      0  127.0.0.1.32779        127.0.0.1.199          ESTABLISHED
+    tcp4       0     40  172.29.149.95.22       172.29.96.83.41022     ESTABLISHED
+    tcp4       0      0  172.29.149.95.22       172.29.96.83.41032     ESTABLISHED
+    tcp4       0      0  127.0.0.1.32771        127.0.0.1.32775        ESTABLISHED
+    tcp        0      0  127.0.0.1.32775        127.0.0.1.32771        ESTABLISHED
+    tcp4       0      0  127.0.0.1.32771        127.0.0.1.32776        ESTABLISHED
+    tcp        0      0  127.0.0.1.32776        127.0.0.1.32771        ESTABLISHED
+    tcp4       0      0  127.0.0.1.32771        127.0.0.1.32777        ESTABLISHED
+    tcp        0      0  127.0.0.1.32777        127.0.0.1.32771        ESTABLISHED
+    tcp4       0      0  127.0.0.1.32771        127.0.0.1.32778        ESTABLISHED
+    tcp        0      0  127.0.0.1.32778        127.0.0.1.32771        ESTABLISHED
+    '''
+    remotes = set()
+    try:
+        data = subprocess.check_output(['netstat', '-f', 'inet', '-n'])  # pylint: disable=minimum-python-version
+    except subprocess.CalledProcessError:
+        log.error('Failed netstat')
+        raise
+
+    lines = salt.utils.to_str(data).split('\n')
+    for line in lines:
+        if 'ESTABLISHED' not in line:
+            continue
+        chunks = line.split()
+        local_host, local_port = chunks[3].rsplit('.', 1)
+        remote_host, remote_port = chunks[4].rsplit('.', 1)
+
+        if which_end == 'remote_port' and int(remote_port) != port:
+            continue
+        if which_end == 'local_port' and int(local_port) != port:
+            continue
+        remotes.add(remote_host)
     return remotes

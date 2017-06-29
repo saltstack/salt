@@ -15,10 +15,9 @@ import logging
 import salt.utils
 import salt.utils.files
 import salt.utils.stringio
-from salt._compat import string_io
-
-# Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import StringIO
+
 log = logging.getLogger(__name__)
 
 
@@ -82,7 +81,9 @@ def compile_template(template,
     # Get the list of render funcs in the render pipe line.
     render_pipe = template_shebang(template, renderers, default, blacklist, whitelist, input_data)
 
-    input_data = string_io(input_data)
+    windows_newline = '\r\n' in input_data
+
+    input_data = StringIO(input_data)
     for render, argline in render_pipe:
         if salt.utils.stringio.is_readable(input_data):
             input_data.seek(0)      # pylint: disable=no-member
@@ -113,6 +114,23 @@ def compile_template(template,
                     template,
                     ret.read()))    # pylint: disable=no-member
                 ret.seek(0)         # pylint: disable=no-member
+
+    # Preserve newlines from original template
+    if windows_newline:
+        if salt.utils.stringio.is_readable(ret):
+            is_stringio = True
+            contents = ret.read()
+        else:
+            is_stringio = False
+            contents = ret
+
+        if isinstance(contents, six.string_types):
+            if '\r\n' not in contents:
+                contents = contents.replace('\n', '\r\n')
+                ret = StringIO(contents) if is_stringio else contents
+            else:
+                if is_stringio:
+                    ret.seek(0)
     return ret
 
 
@@ -168,17 +186,15 @@ def template_shebang(template, renderers, default, blacklist, whitelist, input_d
 #
 OLD_STYLE_RENDERERS = {}
 
-for comb in '''
-        yaml_jinja
-        yaml_mako
-        yaml_wempy
-        json_jinja
-        json_mako
-        json_wempy
-        yamlex_jinja
-        yamlexyamlex_mako
-        yamlexyamlex_wempy
-        '''.strip().split():
+for comb in ('yaml_jinja',
+             'yaml_mako',
+             'yaml_wempy',
+             'json_jinja',
+             'json_mako',
+             'json_wempy',
+             'yamlex_jinja',
+             'yamlexyamlex_mako',
+             'yamlexyamlex_wempy'):
 
     fmt, tmpl = comb.split('_')
     OLD_STYLE_RENDERERS[comb] = '{0}|{1}'.format(tmpl, fmt)
@@ -204,7 +220,9 @@ def check_render_pipe_str(pipestr, renderers, blacklist, whitelist):
             name, argline = (part + ' ').split(' ', 1)
             if whitelist and name not in whitelist or \
                     blacklist and name in blacklist:
-                log.warning('The renderer "{0}" is disallowed by cofiguration and will be skipped.'.format(name))
+                log.warning(
+                    'The renderer "{0}" is disallowed by configuration and '
+                    'will be skipped.'.format(name))
                 continue
             results.append((renderers[name], argline.strip()))
         return results

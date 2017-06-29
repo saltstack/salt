@@ -45,20 +45,18 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
         config = []
 
         log_mock = Mock()
-        glxinfo.log = log_mock
+        with patch.object(glxinfo, 'log', log_mock):
+            ret = glxinfo.beacon(config)
 
-        ret = glxinfo.beacon(config)
-
-        self.assertEqual(ret, [])
+            self.assertEqual(ret, [])
 
     def test_no_user(self):
         config = {'screen_event': True}
 
         log_mock = Mock()
-        glxinfo.log = log_mock
-
-        ret = glxinfo.beacon(config)
-        self.assertEqual(ret, [])
+        with patch.object(glxinfo, 'log', log_mock):
+            ret = glxinfo.beacon(config)
+            self.assertEqual(ret, [])
 
     def test_screen_state(self):
         config = {'screen_event': True, 'user': 'frank'}

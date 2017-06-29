@@ -12,11 +12,11 @@ import datetime
 import errno
 import fnmatch
 import hashlib
-import imp
 import json
 import logging
 import numbers
 import os
+import posixpath
 import random
 import re
 import shlex
@@ -40,10 +40,13 @@ from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-
 # pylint: disable=redefined-builtin
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
-from salt.ext.six.moves import map
 from stat import S_IMODE
 # pylint: enable=import-error,redefined-builtin
 
+if six.PY3:
+    import importlib.util  # pylint: disable=no-name-in-module,import-error
+else:
+    import imp
 
 try:
     import cProfile
@@ -86,9 +89,9 @@ except ImportError:
 
 try:
     import salt.utils.win_functions
-    HAS_WIN32 = True
+    HAS_WIN_FUNCTIONS = True
 except ImportError:
-    HAS_WIN32 = False
+    HAS_WIN_FUNCTIONS = False
 
 try:
     import grp
@@ -125,6 +128,7 @@ import salt.defaults.exitcodes
 import salt.log
 import salt.utils.dictupdate
 import salt.version
+from salt.utils.decorators import jinja_filter
 from salt.utils.decorators import memoize as real_memoize
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.textformat import TextFormat
@@ -149,6 +153,7 @@ def safe_rm(tgt):
         pass
 
 
+@jinja_filter('is_empty')
 def is_empty(filename):
     '''
     Is a file empty?
@@ -160,6 +165,7 @@ def is_empty(filename):
         return False
 
 
+@jinja_filter('is_hex')
 def is_hex(value):
     '''
     Returns True if value is a hexidecimal string, otherwise returns False
@@ -290,12 +296,13 @@ def get_user():
     '''
     if HAS_PWD:
         return pwd.getpwuid(os.geteuid()).pw_name
-    elif HAS_WIN32:
+    elif HAS_WIN_FUNCTIONS and salt.utils.win_functions.HAS_WIN32:
         return salt.utils.win_functions.get_current_user()
     else:
         raise CommandExecutionError("Required external libraries not found. Need 'pwd' or 'win32api")
 
 
+@jinja_filter('get_uid')
 def get_uid(user=None):
     """
     Get the uid for a given user name. If no user given,
@@ -556,6 +563,7 @@ def rand_str(size=9999999999, hash_type=None):
     return hasher(to_bytes(str(random.SystemRandom().randint(0, size)))).hexdigest()
 
 
+@jinja_filter('which')
 def which(exe=None):
     '''
     Python clone of /usr/bin/which
@@ -683,6 +691,7 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
     return pr
 
 
+@jinja_filter('list_files')
 def list_files(directory):
     '''
     Return a list of all files found under directory
@@ -698,6 +707,7 @@ def list_files(directory):
     return list(ret)
 
 
+@jinja_filter('gen_mac')
 def gen_mac(prefix='AC:DE:48'):
     '''
     Generates a MAC address with the defined OUI prefix.
@@ -722,6 +732,7 @@ def gen_mac(prefix='AC:DE:48'):
                                                 random.randint(0, 0xff))
 
 
+@jinja_filter('mac_str_to_bytes')
 def mac_str_to_bytes(mac_str):
     '''
     Convert a MAC address string into bytes. Works with or without separators:
@@ -755,6 +766,15 @@ def ip_bracket(addr):
     return addr
 
 
+def refresh_dns():
+    '''
+    issue #21397: force glibc to re-read resolv.conf
+    '''
+    if HAS_RESINIT:
+        res_init()
+
+
+@jinja_filter('dns_check')
 def dns_check(addr, port, safe=False, ipv6=None):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
@@ -766,9 +786,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
     lookup = addr
     seen_ipv6 = False
     try:
-        # issue #21397: force glibc to re-read resolv.conf
-        if HAS_RESINIT:
-            res_init()
+        refresh_dns()
         hostnames = socket.getaddrinfo(
             addr, None, socket.AF_UNSPEC, socket.SOCK_STREAM
         )
@@ -793,8 +811,8 @@ def dns_check(addr, port, safe=False, ipv6=None):
                 if h[0] != socket.AF_INET6 or ipv6 is not None:
                     candidates.append(candidate_addr)
 
-                s = socket.socket(h[0], socket.SOCK_STREAM)
                 try:
+                    s = socket.socket(h[0], socket.SOCK_STREAM)
                     s.connect((candidate_addr.strip('[]'), port))
                     s.close()
 
@@ -837,7 +855,11 @@ def required_module_list(docstring=None):
     modules = parse_docstring(docstring).get('deps', [])
     for mod in modules:
         try:
-            imp.find_module(mod)
+            if six.PY3:
+                if importlib.util.find_spec(mod) is None:  # pylint: disable=no-member
+                    ret.append(mod)
+            else:
+                imp.find_module(mod)
         except ImportError:
             ret.append(mod)
     return ret
@@ -912,21 +934,33 @@ def backup_minion(path, bkroot):
         os.chmod(bkpath, fstat.st_mode)
 
 
-def path_join(*parts):
+@jinja_filter('path_join')
+def path_join(*parts, **kwargs):
     '''
     This functions tries to solve some issues when joining multiple absolute
     paths on both *nix and windows platforms.
 
     See tests/unit/utils/path_join_test.py for some examples on what's being
     talked about here.
+
+    The "use_posixpath" kwarg can be be used to force joining using poxixpath,
+    which is useful for Salt fileserver paths on Windows masters.
     '''
     if six.PY3:
         new_parts = []
         for part in parts:
             new_parts.append(to_str(part))
         parts = new_parts
+
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    use_posixpath = kwargs.pop('use_posixpath', False)
+    if kwargs:
+        invalid_kwargs(kwargs)
+
+    pathlib = posixpath if use_posixpath else os.path
+
     # Normalize path converting any os.sep as needed
-    parts = [os.path.normpath(p) for p in parts]
+    parts = [pathlib.normpath(p) for p in parts]
 
     try:
         root = parts.pop(0)
@@ -937,14 +971,9 @@ def path_join(*parts):
     if not parts:
         ret = root
     else:
-        if is_windows():
-            if len(root) == 1:
-                root += ':'
-            root = root.rstrip(os.sep) + os.sep
-
         stripped = [p.lstrip(os.sep) for p in parts]
         try:
-            ret = os.path.join(root, *stripped)
+            ret = pathlib.join(root, *stripped)
         except UnicodeDecodeError:
             # This is probably Python 2 and one of the parts contains unicode
             # characters in a bytestring. First try to decode to the system
@@ -954,13 +983,13 @@ def path_join(*parts):
             except NameError:
                 enc = sys.stdin.encoding or sys.getdefaultencoding()
             try:
-                ret = os.path.join(root.decode(enc),
+                ret = pathlib.join(root.decode(enc),
                                    *[x.decode(enc) for x in stripped])
             except UnicodeDecodeError:
                 # Last resort, try UTF-8
-                ret = os.path.join(root.decode('UTF-8'),
+                ret = pathlib.join(root.decode('UTF-8'),
                                    *[x.decode('UTF-8') for x in stripped])
-    return os.path.normpath(ret)
+    return pathlib.normpath(ret)
 
 
 def pem_finger(path=None, key=None, sum_type='sha256'):
@@ -1190,6 +1219,7 @@ def arg_lookup(fun, aspec=None):
     return ret
 
 
+@jinja_filter('is_text_file')
 def istextfile(fp_, blocksize=512):
     '''
     Uses heuristics to guess whether the given file is text or binary,
@@ -1228,6 +1258,7 @@ def istextfile(fp_, blocksize=512):
     return float(len(nontext)) / len(block) <= 0.30
 
 
+@jinja_filter('is_sorted')
 def isorted(to_sort):
     '''
     Sort a list of strings ignoring case.
@@ -1242,6 +1273,7 @@ def isorted(to_sort):
     return sorted(to_sort, key=lambda x: x.lower())
 
 
+@jinja_filter('mysql_to_dict')
 def mysql_to_dict(data, key):
     '''
     Convert MySQL-style output to a python dictionary
@@ -1270,6 +1302,7 @@ def mysql_to_dict(data, key):
     return ret
 
 
+@jinja_filter('contains_whitespace')
 def contains_whitespace(text):
     '''
     Returns True if there are any whitespace characters in the string
@@ -1277,6 +1310,7 @@ def contains_whitespace(text):
     return any(x.isspace() for x in text)
 
 
+@jinja_filter('str_to_num')
 def str_to_num(text):
     '''
     Convert a string to a number.
@@ -1331,9 +1365,13 @@ def fopen(*args, **kwargs):
             if 'b' in kwargs['mode']:
                 binary = True
         if not binary:
-            kwargs['encoding'] = 'utf-8'
+            kwargs['encoding'] = __salt_system_encoding__
 
-    fhandle = open(*args, **kwargs)
+    if six.PY3 and not binary and not kwargs.get('newline', None):
+        kwargs['newline'] = ''
+
+    fhandle = open(*args, **kwargs)  # pylint: disable=resource-leakage
+
     if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
         # unix and unix-like systems only
@@ -1424,6 +1462,7 @@ def expr_match(line, expr):
     return False
 
 
+@jinja_filter('check_whitelist_blacklist')
 def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     '''
     Check a whitelist and/or blacklist to see if the value matches it.
@@ -1627,7 +1666,7 @@ def clean_kwargs(**kwargs):
     Return a dict without any of the __pub* keys (or any other keys starting
     with a dunder) from the kwargs dict passed into the execution module
     functions. These keys are useful for tracking what was used to invoke
-    the function call, but they may not be desierable to have if passing the
+    the function call, but they may not be desirable to have if passing the
     kwargs forward wholesale.
     '''
     ret = {}
@@ -1674,7 +1713,9 @@ def is_proxy():
     # then this will fail.
     is_proxy = False
     try:
-        if 'salt-proxy' in main.__file__:
+        # Changed this from 'salt-proxy in main...' to 'proxy in main...'
+        # to support the testsuite's temp script that is called 'cli_salt_proxy'
+        if 'proxy' in main.__file__:
             is_proxy = True
     except AttributeError:
         pass
@@ -1787,6 +1828,14 @@ def is_openbsd():
     return sys.platform.startswith('openbsd')
 
 
+@real_memoize
+def is_aix():
+    '''
+    Simple function to return if host is AIX or not
+    '''
+    return sys.platform.startswith('aix')
+
+
 def is_fcntl_available(check_sunos=False):
     '''
     Simple function to check if the `fcntl` module is available or not.
@@ -1856,7 +1905,108 @@ def gen_state_tag(low):
     return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
 
 
-def check_state_result(running, recurse=False):
+def search_onfail_requisites(sid, highstate):
+    """
+    For a particular low chunk, search relevant onfail related
+    states
+    """
+    onfails = []
+    if '_|-' in sid:
+        st = salt.state.split_low_tag(sid)
+    else:
+        st = {'__id__': sid}
+    for fstate, fchunks in six.iteritems(highstate):
+        if fstate == st['__id__']:
+            continue
+        else:
+            for mod_, fchunk in six.iteritems(fchunks):
+                if (
+                    not isinstance(mod_, six.string_types) or
+                    mod_.startswith('__')
+                ):
+                    continue
+                else:
+                    if not isinstance(fchunk, list):
+                        continue
+                    else:
+                        # bydefault onfail will fail, but you can
+                        # set onfail_stop: False to prevent the highstate
+                        # to stop if you handle it
+                        onfail_handled = False
+                        for fdata in fchunk:
+                            if not isinstance(fdata, dict):
+                                continue
+                            onfail_handled = (fdata.get('onfail_stop', True)
+                                              is False)
+                            if onfail_handled:
+                                break
+                        if not onfail_handled:
+                            continue
+                        for fdata in fchunk:
+                            if not isinstance(fdata, dict):
+                                continue
+                            for knob, fvalue in six.iteritems(fdata):
+                                if knob != 'onfail':
+                                    continue
+                                for freqs in fvalue:
+                                    for fmod, fid in six.iteritems(freqs):
+                                        if not (
+                                            fid == st['__id__'] and
+                                            fmod == st.get('state', fmod)
+                                        ):
+                                            continue
+                                        onfails.append((fstate, mod_, fchunk))
+    return onfails
+
+
+def check_onfail_requisites(state_id, state_result, running, highstate):
+    '''
+    When a state fail and is part of a highstate, check
+    if there is onfail requisites.
+    When we find onfail requisites, we will consider the state failed
+    only if at least one of those onfail requisites also failed
+
+    Returns:
+
+        True: if onfail handlers suceeded
+        False: if one on those handler failed
+        None: if the state does not have onfail requisites
+
+    '''
+    nret = None
+    if (
+        state_id and state_result and
+        highstate and isinstance(highstate, dict)
+    ):
+        onfails = search_onfail_requisites(state_id, highstate)
+        if onfails:
+            for handler in onfails:
+                fstate, mod_, fchunk = handler
+                ofresult = True
+                for rstateid, rstate in six.iteritems(running):
+                    if '_|-' in rstateid:
+                        st = salt.state.split_low_tag(rstateid)
+                    # in case of simple state, try to guess
+                    else:
+                        id_ = rstate.get('__id__', rstateid)
+                        if not id_:
+                            raise ValueError('no state id')
+                        st = {'__id__': id_, 'state': mod_}
+                    if mod_ == st['state'] and fstate == st['__id__']:
+                        ofresult = rstate.get('result', _empty)
+                        if ofresult in [False, True]:
+                            nret = ofresult
+                        if ofresult is False:
+                            # as soon as we find an errored onfail, we stop
+                            break
+                # consider that if we parsed onfailes without changing
+                # the ret, that we have failed
+                if nret is None:
+                    nret = False
+    return nret
+
+
+def check_state_result(running, recurse=False, highstate=None):
     '''
     Check the total return value of the run and determine if the running
     dict has any issues
@@ -1868,7 +2018,7 @@ def check_state_result(running, recurse=False):
         return False
 
     ret = True
-    for state_result in six.itervalues(running):
+    for state_id, state_result in six.iteritems(running):
         if not recurse and not isinstance(state_result, dict):
             ret = False
         if ret and isinstance(state_result, dict):
@@ -1877,7 +2027,13 @@ def check_state_result(running, recurse=False):
                 ret = False
             # only override return value if we are not already failed
             elif result is _empty and isinstance(state_result, dict) and ret:
-                ret = check_state_result(state_result, recurse=True)
+                ret = check_state_result(
+                    state_result, recurse=True, highstate=highstate)
+        # if we detect a fail, check for onfail requisites
+        if not ret:
+            # ret can be None in case of no onfail reqs, recast it to bool
+            ret = bool(check_onfail_requisites(state_id, state_result,
+                                               running, highstate))
         # return as soon as we got a failure
         if not ret:
             break
@@ -1957,6 +2113,7 @@ def is_true(value=None):
         return bool(value)
 
 
+@jinja_filter('exactly_n_true')
 def exactly_n(l, n=1):
     '''
     Tests that exactly N items in an iterable are "truthy" (neither None,
@@ -1966,6 +2123,7 @@ def exactly_n(l, n=1):
     return all(any(i) for j in range(n)) and not any(i)
 
 
+@jinja_filter('exactly_one_true')
 def exactly_one(l):
     '''
     Check if only one item is not None, False, or 0 in an iterable.
@@ -2059,19 +2217,31 @@ def parse_docstring(docstring):
         return ret
 
 
-def print_cli(msg):
+def print_cli(msg, retries=10, step=0.01):
     '''
     Wrapper around print() that suppresses tracebacks on broken pipes (i.e.
     when salt output is piped to less and less is stopped prematurely).
     '''
-    try:
+    while retries:
         try:
-            print(msg)
-        except UnicodeEncodeError:
-            print(msg.encode('utf-8'))
-    except IOError as exc:
-        if exc.errno != errno.EPIPE:
-            raise
+            try:
+                print(msg)
+            except UnicodeEncodeError:
+                print(msg.encode('utf-8'))
+        except IOError as exc:
+            err = "{0}".format(exc)
+            if exc.errno != errno.EPIPE:
+                if (
+                    ("temporarily unavailable" in err or
+                     exc.errno in (errno.EAGAIN,)) and
+                    retries
+                ):
+                    time.sleep(step)
+                    retries -= 1
+                    continue
+                else:
+                    raise
+        break
 
 
 def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
@@ -2125,6 +2295,7 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
         yield top, dirs, nondirs
 
 
+@jinja_filter('file_hashsum')
 def get_hash(path, form='sha256', chunk_size=65536):
     '''
     Get the hash sum of a file
@@ -2152,7 +2323,7 @@ def namespaced_function(function, global_dict, defaults=None, preserve_context=F
     Redefine (clone) a function under a different globals() namespace scope
 
         preserve_context:
-            Allow to keep the context taken from orignal namespace,
+            Allow keeping the context taken from orignal namespace,
             and extend it with globals() taken from
             new targetted namespace.
     '''
@@ -2245,6 +2416,7 @@ def date_cast(date):
                 'Unable to parse {0}. Consider installing timelib'.format(date))
 
 
+@jinja_filter('strftime')
 def date_format(date=None, format="%Y-%m-%d"):
     '''
     Converts date into a time-based string
@@ -2494,6 +2666,7 @@ def compare_versions(ver1='',
         return cmp_result in cmp_map[oper]
 
 
+@jinja_filter('compare_dicts')
 def compare_dicts(old=None, new=None):
     '''
     Compare before and after results from various salt functions, returning a
@@ -2516,6 +2689,7 @@ def compare_dicts(old=None, new=None):
     return ret
 
 
+@jinja_filter('compare_lists')
 def compare_lists(old=None, new=None):
     '''
     Compare before and after results from various salt functions, returning a
@@ -2576,6 +2750,7 @@ def argspec_report(functions, module=''):
     return ret
 
 
+@jinja_filter('json_decode_list')
 def decode_list(data):
     '''
     JSON decodes as unicode, Jinja needs bytes...
@@ -2592,6 +2767,7 @@ def decode_list(data):
     return rv
 
 
+@jinja_filter('json_decode_dict')
 def decode_dict(data):
     '''
     JSON decodes as unicode, Jinja needs bytes...
@@ -2629,6 +2805,7 @@ def find_json(raw):
         raise ValueError
 
 
+@jinja_filter('is_bin_file')
 def is_bin_file(path):
     '''
     Detects if the file is a binary, returns bool. Returns True if the file is
@@ -2762,6 +2939,14 @@ def repack_dictlist(data,
     return ret
 
 
+def get_default_group(user):
+    if HAS_GRP is False or HAS_PWD is False:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty list
+        return None
+    return grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
+
+
 def get_group_list(user=None, include_default=True):
     '''
     Returns a list of all of the system group names of which the user
@@ -2800,7 +2985,7 @@ def get_group_list(user=None, include_default=True):
         log.trace('Trying generic group list for \'{0}\''.format(user))
         group_names = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
         try:
-            default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
+            default_group = get_default_group(user)
             if default_group not in group_names:
                 group_names.append(default_group)
         except KeyError:
@@ -2956,6 +3141,7 @@ def chugid_and_umask(runas, umask):
         os.umask(umask)
 
 
+@jinja_filter('random_str')
 def rand_string(size=32):
     key = os.urandom(size)
     return key.encode('base64').replace('\n', '')
@@ -3018,7 +3204,7 @@ def to_str(s, encoding=None):
             # https://docs.python.org/3/howto/unicode.html#the-unicode-type
             # replace error with U+FFFD, REPLACEMENT CHARACTER
             return s.decode(encoding or __salt_system_encoding__, "replace")
-        raise TypeError('expected str, bytes, or bytearray')
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
             return str(s)
@@ -3027,6 +3213,7 @@ def to_str(s, encoding=None):
         raise TypeError('expected str, bytearray, or unicode')
 
 
+@jinja_filter('to_bytes')
 def to_bytes(s, encoding=None):
     '''
     Given bytes, bytearray, str, or unicode (python 2), return bytes (str for
@@ -3059,6 +3246,7 @@ def to_unicode(s, encoding=None):
     return s
 
 
+@jinja_filter('is_list')
 def is_list(value):
     '''
     Check if a variable is a list.
@@ -3066,6 +3254,7 @@ def is_list(value):
     return isinstance(value, list)
 
 
+@jinja_filter('is_iter')
 def is_iter(y, ignore=six.string_types):
     '''
     Test if an object is iterable, but not a string type.
@@ -3204,6 +3393,7 @@ def simple_types_filter(data):
     return data
 
 
+@jinja_filter('substring_in_list')
 def substr_in_list(string_to_search_for, list_to_search):
     '''
     Return a boolean value that indicates whether or not a given
@@ -3284,3 +3474,26 @@ def fnmatch_multiple(candidates, pattern):
         except TypeError:
             pass
     return None
+
+
+def is_quoted(val):
+    '''
+    Return a single or double quote, if a string is wrapped in extra quotes.
+    Otherwise return an empty string.
+    '''
+    ret = ''
+    if (
+        isinstance(val, six.string_types) and val[0] == val[-1] and
+        val.startswith(('\'', '"'))
+    ):
+        ret = val[0]
+    return ret
+
+
+def dequote(val):
+    '''
+    Remove extra quotes around a string.
+    '''
+    if is_quoted(val):
+        return val[1:-1]
+    return val

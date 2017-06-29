@@ -20,17 +20,17 @@ from tests.support.mock import (
 import salt.modules.win_path as win_path
 
 
-class MockWin32Gui(object):
+class MockWin32API(object):
     '''
-        Mock class for win32gui
+        Mock class for win32api
     '''
     def __init__(self):
         pass
 
     @staticmethod
-    def SendMessageTimeout(*args):
+    def SendMessage(*args):
         '''
-            Mock method for SendMessageTimeOut
+            Mock method for SendMessage
         '''
         return [args[0]]
 
@@ -52,7 +52,11 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         Test cases for salt.modules.win_path
     '''
     def setup_loader_modules(self):
-        return {win_path: {'win32gui': MockWin32Gui, 'win32con': MockWin32Con}}
+        return {win_path: {'win32api': MockWin32API,
+                           'win32con': MockWin32Con,
+                           'SendMessage': MagicMock,
+                           'HWND_BROADCAST': MagicMock,
+                           'WM_SETTINGCHANGE': MagicMock}}
 
     def test_rehash(self):
         '''

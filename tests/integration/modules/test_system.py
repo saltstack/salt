@@ -9,9 +9,9 @@ import signal
 import subprocess
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import salt libs
 import salt.utils
@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
-class SystemModuleTest(integration.ModuleCase):
+class SystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the system module
     '''
@@ -108,7 +108,7 @@ class SystemModuleTest(integration.ModuleCase):
                 log.debug('Comparing hwclock to sys clock')
                 with os.fdopen(rpipeFd, "r") as rpipe:
                     with os.fdopen(wpipeFd, "w") as wpipe:
-                        with open(os.devnull, "r") as nulFd:
+                        with salt.utils.fopen(os.devnull, "r") as nulFd:
                             p = subprocess.Popen(args=['hwclock', '--compare'],
                                 stdin=nulFd, stdout=wpipeFd, stderr=subprocess.PIPE)
                             p.communicate()
@@ -176,7 +176,7 @@ class SystemModuleTest(integration.ModuleCase):
         self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_system_date_time(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -194,7 +194,7 @@ class SystemModuleTest(integration.ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_system_date_time_utc(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -212,7 +212,7 @@ class SystemModuleTest(integration.ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_system_date_time_utcoffset_east(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -232,7 +232,7 @@ class SystemModuleTest(integration.ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_system_date_time_utcoffset_west(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -252,7 +252,7 @@ class SystemModuleTest(integration.ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_system_time(self):
         '''
         Test setting the system time without adjusting the date.
@@ -271,7 +271,7 @@ class SystemModuleTest(integration.ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_system_date(self):
         '''
         Test setting the system date without adjusting the time.
@@ -292,7 +292,7 @@ class SystemModuleTest(integration.ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_get_computer_desc(self):
         '''
         Test getting the system hostname
@@ -312,7 +312,7 @@ class SystemModuleTest(integration.ModuleCase):
                     self.assertIn(res, data.decode('string_escape'))
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_computer_desc(self):
         '''
         Test setting the system hostname
@@ -325,7 +325,7 @@ class SystemModuleTest(integration.ModuleCase):
         self.assertTrue(ret)
         self.assertIn(desc, computer_desc)
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_has_hwclock(self):
         '''
         Verify platform has a settable hardware clock, if possible.

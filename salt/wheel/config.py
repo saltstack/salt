@@ -13,6 +13,7 @@ import yaml
 
 # Import salt libs
 import salt.config
+from salt.utils.yamldumper import SafeOrderedDumper
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +40,13 @@ def apply(key, value):
     data = values()
     data[key] = value
     with salt.utils.fopen(path, 'w+') as fp_:
-        fp_.write(yaml.dump(data, default_flow_style=False))
+        fp_.write(
+            yaml.dump(
+                data,
+                default_flow_style=False,
+                Dumper=SafeOrderedDumper
+            )
+        )
 
 
 def update_config(file_name, yaml_contents):

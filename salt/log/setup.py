@@ -62,6 +62,7 @@ LOG_LEVELS = {
     'warning': logging.WARNING,
 }
 
+LOG_VALUES_TO_LEVELS = dict((v, k) for (k, v) in LOG_LEVELS.items())
 
 LOG_COLORS = {
     'levels': {
@@ -121,6 +122,20 @@ __MP_LOGGING_QUEUE_HANDLER = None
 __MP_IN_MAINPROCESS = multiprocessing.current_process().name == 'MainProcess'
 
 
+class __NullLoggingHandler(TemporaryLoggingHandler):
+    '''
+    This class exists just to better identify which temporary logging
+    handler is being used for what.
+    '''
+
+
+class __StoreLoggingHandler(TemporaryLoggingHandler):
+    '''
+    This class exists just to better identify which temporary logging
+    handler is being used for what.
+    '''
+
+
 def is_console_configured():
     return __CONSOLE_CONFIGURED
 
@@ -148,15 +163,14 @@ def is_mp_logging_configured():
 def is_extended_logging_configured():
     return __EXTERNAL_LOGGERS_CONFIGURED
 
-
 # Store a reference to the temporary queue logging handler
-LOGGING_NULL_HANDLER = TemporaryLoggingHandler(logging.WARNING)
+LOGGING_NULL_HANDLER = __NullLoggingHandler(logging.WARNING)
 
 # Store a reference to the temporary console logger
 LOGGING_TEMP_HANDLER = StreamHandler(sys.stderr)
 
 # Store a reference to the "storing" logging handler
-LOGGING_STORE_HANDLER = TemporaryLoggingHandler()
+LOGGING_STORE_HANDLER = __StoreLoggingHandler()
 
 
 class SaltLogQueueHandler(QueueHandler):
@@ -237,7 +251,7 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
 
         try:
             max_logger_length = len(max(
-                list(logging.Logger.manager.loggerDict.keys()), key=len
+                list(logging.Logger.manager.loggerDict), key=len
             ))
             for handler in logging.root.handlers:
                 if handler in (LOGGING_NULL_HANDLER,

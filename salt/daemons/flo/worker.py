@@ -65,7 +65,7 @@ def worker_fork(self):
 
 class Worker(multiprocessing.Process):
     '''
-    Create an ioflo worker in a seperate process
+    Create an ioflo worker in a separate process
     '''
     def __init__(self, opts, windex, worker_verify, access_keys, mkey, aes):
         super(Worker, self).__init__()

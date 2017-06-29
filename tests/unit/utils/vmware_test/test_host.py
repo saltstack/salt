@@ -28,16 +28,19 @@ log = logging.getLogger(__name__)
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.get_mors_with_properties',
-       MagicMock(return_value=[]))
-@patch('salt.utils.vmware.get_datacenter',
-       MagicMock(return_value=None))
-@patch('salt.utils.vmware.get_cluster',
-       MagicMock(return_value=None))
 class GetHostsTestCase(TestCase):
     '''Tests for salt.utils.vmware.get_hosts'''
 
     def setUp(self):
+        patches = (
+            ('salt.utils.vmware.get_mors_with_properties', MagicMock(return_value=[])),
+            ('salt.utils.vmware.get_datacenter', MagicMock(return_value=None)),
+            ('salt.utils.vmware.get_cluster', MagicMock(return_value=None))
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.mock_root_folder = MagicMock()
         self.mock_si = MagicMock()
         self.mock_host1, self.mock_host2, self.mock_host3 = MagicMock(), \

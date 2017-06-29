@@ -28,12 +28,14 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.npm
     '''
     def setup_loader_modules(self):
+        patcher = patch('salt.modules.npm._check_valid_version',
+                        MagicMock(return_value=True))
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return {npm: {}}
 
     # 'install' function tests: 1
 
-    @patch('salt.modules.npm._check_valid_version',
-           MagicMock(return_value=True))
     def test_install(self):
         '''
         Test if it install an NPM package.
@@ -60,8 +62,6 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'uninstall' function tests: 1
 
-    @patch('salt.modules.npm._check_valid_version',
-           MagicMock(return_value=True))
     def test_uninstall(self):
         '''
         Test if it uninstall an NPM package.
@@ -76,8 +76,6 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_' function tests: 1
 
-    @patch('salt.modules.npm._check_valid_version',
-           MagicMock(return_value=True))
     def test_list(self):
         '''
         Test if it list installed NPM packages.
@@ -95,8 +93,6 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'cache_clean' function tests: 1
 
-    @patch('salt.modules.npm._check_valid_version',
-           MagicMock(return_value=True))
     def test_cache_clean(self):
         '''
         Test if it cleans the cached NPM packages.
@@ -115,8 +111,6 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'cache_list' function tests: 1
 
-    @patch('salt.modules.npm._check_valid_version',
-           MagicMock(return_value=True))
     def test_cache_list(self):
         '''
         Test if it lists the NPM cache.
@@ -137,8 +131,6 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'cache_path' function tests: 1
 
-    @patch('salt.modules.npm._check_valid_version',
-           MagicMock(return_value=True))
     def test_cache_path(self):
         '''
         Test if it prints the NPM cache path.

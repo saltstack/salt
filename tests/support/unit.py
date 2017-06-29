@@ -19,7 +19,7 @@
 
     .. _`unittest2`: https://pypi.python.org/pypi/unittest2
 '''
-# pylint: disable=unused-import
+# pylint: disable=unused-import,blacklisted-module,deprecated-method
 
 # Import python libs
 from __future__ import absolute_import
@@ -129,6 +129,7 @@ class TestSuite(_TestSuite):
         if previousClass and getattr(previousClass, 'tearDownClass', None):
             prerun_class_attributes = getattr(previousClass, '_prerun_class_attributes', None)
             if prerun_class_attributes is not None:
+                previousClass._prerun_class_attributes = None
                 del previousClass._prerun_class_attributes
                 for attr in prerun_class_attributes:
                     if hasattr(previousClass, attr):
@@ -136,6 +137,7 @@ class TestSuite(_TestSuite):
                         if attr_value is None:
                             continue
                         if isinstance(attr_value, (bool,) + six.string_types + six.integer_types):
+                            setattr(previousClass, attr, None)
                             continue
                         log.warning('Deleting extra class attribute after test run: %s.%s(%s). '
                                     'Please consider using \'del self.%s\' on the test class '
@@ -175,6 +177,7 @@ class TestCase(_TestCase):
 
     def run(self, result=None):
         self._prerun_instance_attributes = dir(self)
+        self.maxDiff = None
         outcome = super(TestCase, self).run(result=result)
         for attr in dir(self):
             if attr == '_prerun_instance_attributes':
@@ -186,12 +189,14 @@ class TestCase(_TestCase):
                 if attr_value is None:
                     continue
                 if isinstance(attr_value, (bool,) + six.string_types + six.integer_types):
+                    setattr(self, attr, None)
                     continue
                 log.warning('Deleting extra class attribute after test run: %s.%s(%s). '
                             'Please consider using \'del self.%s\' on the test case '
                             '\'tearDown()\' method', self.__class__.__name__, attr,
                             getattr(self, attr), attr)
                 delattr(self, attr)
+        self._prerun_instance_attributes = None
         del self._prerun_instance_attributes
         return outcome
 
@@ -222,6 +227,36 @@ class TestCase(_TestCase):
         )
         # return _TestCase.assertEquals(self, *args, **kwargs)
 
+    def assertNotEquals(self, *args, **kwargs):
+        raise DeprecationWarning(
+            'The {0}() function is deprecated. Please start using {1}() '
+            'instead.'.format('assertNotEquals', 'assertNotEqual')
+        )
+        # return _TestCase.assertNotEquals(self, *args, **kwargs)
+
+    def assert_(self, *args, **kwargs):
+        # The unittest2 library uses this deprecated method, we can't raise
+        # the exception.
+        raise DeprecationWarning(
+            'The {0}() function is deprecated. Please start using {1}() '
+            'instead.'.format('assert_', 'assertTrue')
+        )
+        # return _TestCase.assert_(self, *args, **kwargs)
+
+    def assertAlmostEquals(self, *args, **kwargs):
+        raise DeprecationWarning(
+            'The {0}() function is deprecated. Please start using {1}() '
+            'instead.'.format('assertAlmostEquals', 'assertAlmostEqual')
+        )
+        # return _TestCase.assertAlmostEquals(self, *args, **kwargs)
+
+    def assertNotAlmostEquals(self, *args, **kwargs):
+        raise DeprecationWarning(
+            'The {0}() function is deprecated. Please start using {1}() '
+            'instead.'.format('assertNotAlmostEquals', 'assertNotAlmostEqual')
+        )
+        # return _TestCase.assertNotAlmostEquals(self, *args, **kwargs)
+
     def failUnlessEqual(self, *args, **kwargs):
         raise DeprecationWarning(
             'The {0}() function is deprecated. Please start using {1}() '
@@ -242,15 +277,6 @@ class TestCase(_TestCase):
             'instead.'.format('failUnless', 'assertTrue')
         )
         # return _TestCase.failUnless(self, *args, **kwargs)
-
-    def assert_(self, *args, **kwargs):
-        # The unittest2 library uses this deprecated method, we can't raise
-        # the exception.
-        raise DeprecationWarning(
-            'The {0}() function is deprecated. Please start using {1}() '
-            'instead.'.format('assert_', 'assertTrue')
-        )
-        # return _TestCase.assert_(self, *args, **kwargs)
 
     def failIf(self, *args, **kwargs):
         raise DeprecationWarning(
@@ -279,6 +305,73 @@ class TestCase(_TestCase):
             'instead.'.format('failIfAlmostEqual', 'assertNotAlmostEqual')
         )
         # return _TestCase.failIfAlmostEqual(self, *args, **kwargs)
+
+    if six.PY2:
+        def assertRegexpMatches(self, *args, **kwds):
+            raise DeprecationWarning(
+                'The {0}() function will be deprecated in python 3. Please start '
+                'using {1}() instead.'.format(
+                    'assertRegexpMatches',
+                    'assertRegex'
+                )
+            )
+
+        def assertRegex(self, text, regex, msg=None):
+            # In python 2, alias to the future python 3 function
+            return _TestCase.assertRegexpMatches(self, text, regex, msg=msg)
+
+        def assertNotRegexpMatches(self, *args, **kwds):
+            raise DeprecationWarning(
+                'The {0}() function will be deprecated in python 3. Please start '
+                'using {1}() instead.'.format(
+                    'assertNotRegexpMatches',
+                    'assertNotRegex'
+                )
+            )
+
+        def assertNotRegex(self, text, regex, msg=None):
+            # In python 2, alias to the future python 3 function
+            return _TestCase.assertNotRegexpMatches(self, text, regex, msg=msg)
+
+        def assertRaisesRegexp(self, *args, **kwds):
+            raise DeprecationWarning(
+                'The {0}() function will be deprecated in python 3. Please start '
+                'using {1}() instead.'.format(
+                    'assertRaisesRegexp',
+                    'assertRaisesRegex'
+                )
+            )
+
+        def assertRaisesRegex(self, exception, regexp, *args, **kwds):
+            # In python 2, alias to the future python 3 function
+            return _TestCase.assertRaisesRegexp(self, exception, regexp, *args, **kwds)
+    else:
+        def assertRegexpMatches(self, *args, **kwds):
+            raise DeprecationWarning(
+                'The {0}() function is deprecated. Please start using {1}() '
+                'instead.'.format(
+                    'assertRegexpMatches',
+                    'assertRegex'
+                )
+            )
+
+        def assertNotRegexpMatches(self, *args, **kwds):
+            raise DeprecationWarning(
+                'The {0}() function is deprecated. Please start using {1}() '
+                'instead.'.format(
+                    'assertNotRegexpMatches',
+                    'assertNotRegex'
+                )
+            )
+
+        def assertRaisesRegexp(self, *args, **kwds):
+            raise DeprecationWarning(
+                'The {0}() function is deprecated. Please start using {1}() '
+                'instead.'.format(
+                    'assertRaisesRegexp',
+                    'assertRaisesRegex'
+                )
+            )
 
 
 class TextTestResult(_TextTestResult):

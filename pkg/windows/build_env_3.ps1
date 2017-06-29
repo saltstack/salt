@@ -245,6 +245,18 @@ DownloadFileWithProgress $url $file
 # Install
 Start_Process_and_test_exitcode  "$($ini['Settings']['Scripts3Dir'])\pip.exe" "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " "pip install PyWin32"
 
+# Move DLL's to Python Root
+Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
+Move-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['Python3Dir'])" -Force
+
+# Remove pywin32_system32 directory
+Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
+Remove-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32"
+
+# Remove pythonwin directory
+Write-Output " - $script_name :: Removing pythonwin Directory . . ."
+Remove-Item "$($ini['Settings']['SitePkgs3Dir'])\pythonwin" -Force -Recurse
+
 #==============================================================================
 # Fix PyCrypto
 #==============================================================================

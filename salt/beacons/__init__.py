@@ -54,9 +54,7 @@ class Beacon(object):
                 current_beacon_config = {}
                 list(map(current_beacon_config.update, config[mod]))
             elif isinstance(config[mod], dict):
-                raise CommandExecutionError(
-                    'Beacon configuration should be a list instead of a dictionary.'
-                )
+                current_beacon_config = config[mod]
 
             if 'enabled' in current_beacon_config:
                 if not current_beacon_config['enabled']:
@@ -109,7 +107,7 @@ class Beacon(object):
                 if runonce:
                     self.disable_beacon(mod)
             else:
-                log.debug('Unable to process beacon {0}'.format(mod))
+                log.warning('Unable to process beacon {0}'.format(mod))
         return ret
 
     def _trim_config(self, b_config, mod, key):

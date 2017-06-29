@@ -5,16 +5,14 @@ from __future__ import absolute_import
 import os
 import sys
 import textwrap
-import tempfile
 
 # Import Salt Testing libs
-import tests.integration as integration
-from tests.support.unit import skipIf
+from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
-    skip_if_binaries_missing
+    skip_if_binaries_missing,
+    skip_if_not_root
 )
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 
 # Import salt libs
 import salt.utils
@@ -32,8 +30,7 @@ AVAILABLE_PYTHON_EXECUTABLE = salt.utils.which_bin([
 ])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-class CMDModuleTest(integration.ModuleCase):
+class CMDModuleTest(ModuleCase):
     '''
     Validate the cmd module
     '''
@@ -65,45 +62,6 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertEqual(self.run_function('cmd.run',
                          ['echo "a=b" | sed -e s/=/:/g'],
                          python_shell=True), 'a:b')
-
-    @patch('pwd.getpwnam')
-    @patch('subprocess.Popen')
-    def test_os_environment_remains_intact(self,
-                                           popen_mock,
-                                           getpwnam_mock):
-        '''
-        Make sure the OS environment is not tainted after running a command
-        that specifies runas.
-        '''
-        environment = os.environ.copy()
-
-        popen_mock.return_value = Mock(
-            communicate=lambda *args, **kwags: ['{}', None],
-            pid=lambda: 1,
-            retcode=0
-        )
-
-        from salt.modules import cmdmod
-
-        cmdmod.__grains__ = {'os': 'Darwin', 'os_family': 'Solaris'}
-        if sys.platform.startswith(('freebsd', 'openbsd')):
-            shell = '/bin/sh'
-        else:
-            shell = '/bin/bash'
-
-        try:
-            cmdmod._run('ls',
-                        cwd=tempfile.gettempdir(),
-                        runas='foobar',
-                        shell=shell)
-
-            environment2 = os.environ.copy()
-
-            self.assertEqual(environment, environment2)
-
-            getpwnam_mock.assert_called_with('foobar')
-        finally:
-            delattr(cmdmod, '__grains__')
 
     def test_stdout(self):
         '''
@@ -238,7 +196,7 @@ class CMDModuleTest(integration.ModuleCase):
         result = self.run_function('cmd.run_stdout', [cmd]).strip()
         self.assertEqual(result, expected_result)
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_quotes_runas(self):
         '''
         cmd.run with quoted command
@@ -276,20 +234,3 @@ class CMDModuleTest(integration.ModuleCase):
                                 f_timeout=2,
                                 python_shell=True)
         self.assertEqual(out, 'hello')
-
-    def test_run_cwd_doesnt_exist_issue_7154(self):
-        '''
-        cmd.run should fail and raise
-        salt.exceptions.CommandExecutionError if the cwd dir does not
-        exist
-        '''
-        from salt.exceptions import CommandExecutionError
-        import salt.modules.cmdmod as cmdmod
-        cmd = 'echo OHAI'
-        cwd = '/path/to/nowhere'
-        try:
-            cmdmod.run_all(cmd, cwd=cwd)
-        except CommandExecutionError:
-            pass
-        else:
-            raise RuntimeError

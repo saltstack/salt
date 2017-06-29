@@ -15,6 +15,8 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
+from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
@@ -22,7 +24,6 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 import salt.minion
 import salt.utils
 import salt.utils.network
-import tests.integration as integration
 from salt.syspaths import CONFIG_DIR
 from salt import config as sconfig
 from salt.exceptions import (
@@ -73,15 +74,16 @@ def _salt_configuration_error(filename):
     raise SaltConfigurationError('Configuration error in {0}'.format(filename))
 
 
-class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
+class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_sha256_is_default_for_master(self):
         fpath = tempfile.mktemp()
         try:
-            salt.utils.fopen(fpath, 'w').write(
-                "root_dir: /\n"
-                "key_logfile: key\n"
-            )
+            with salt.utils.fopen(fpath, 'w') as wfh:
+                wfh.write(
+                    "root_dir: /\n"
+                    "key_logfile: key\n"
+                )
             config = sconfig.master_config(fpath)
             self.assertEqual(config['hash_type'], 'sha256')
         finally:
@@ -91,10 +93,11 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     def test_sha256_is_default_for_minion(self):
         fpath = tempfile.mktemp()
         try:
-            salt.utils.fopen(fpath, 'w').write(
-                "root_dir: /\n"
-                "key_logfile: key\n"
-            )
+            with salt.utils.fopen(fpath, 'w') as wfh:
+                wfh.write(
+                    "root_dir: /\n"
+                    "key_logfile: key\n"
+                )
             config = sconfig.minion_config(fpath)
             self.assertEqual(config['hash_type'], 'sha256')
         finally:
@@ -103,23 +106,32 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
     def test_proper_path_joining(self):
         fpath = tempfile.mktemp()
+        temp_config = 'root_dir: /\n'\
+                      'key_logfile: key\n'
+        if salt.utils.is_windows():
+            temp_config = 'root_dir: c:\\\n'\
+                          'key_logfile: key\n'
         try:
             with salt.utils.fopen(fpath, 'w') as fp_:
-                fp_.write(
-                    'root_dir: /\n'
-                    'key_logfile: key\n'
-                )
+                fp_.write(temp_config)
+
             config = sconfig.master_config(fpath)
+            expect_path_join = os.path.join('/', 'key')
+            expect_sep_join = '//key'
+            if salt.utils.is_windows():
+                expect_path_join = os.path.join('c:\\', 'key')
+                expect_sep_join = 'c:\\\\key'
+
             # os.path.join behavior
-            self.assertEqual(config['key_logfile'], os.path.join('/', 'key'))
+            self.assertEqual(config['key_logfile'], expect_path_join)
             # os.sep.join behavior
-            self.assertNotEqual(config['key_logfile'], '//key')
+            self.assertNotEqual(config['key_logfile'], expect_sep_join)
         finally:
             if os.path.isfile(fpath):
                 os.unlink(fpath)
 
     def test_common_prefix_stripping(self):
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             root_dir = os.path.join(tempdir, 'foo', 'bar')
             os.makedirs(root_dir)
@@ -135,10 +147,32 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
+    def test_default_root_dir_included_in_config_root_dir(self):
+        os.makedirs(os.path.join(TMP, 'tmp2'))
+        tempdir = tempfile.mkdtemp(dir=os.path.join(TMP, 'tmp2'))
+        try:
+            root_dir = os.path.join(tempdir, 'foo', 'bar')
+            os.makedirs(root_dir)
+            fpath = os.path.join(root_dir, 'config')
+            with salt.utils.fopen(fpath, 'w') as fp_:
+                fp_.write(
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(root_dir, fpath)
+                )
+            with patch('salt.syspaths.ROOT_DIR', TMP):
+                config = sconfig.master_config(fpath)
+            self.assertEqual(config['log_file'], fpath)
+        finally:
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
+    @skipIf(
+        salt.utils.is_windows(),
+        'You can\'t set an environment dynamically in Windows')
     def test_load_master_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
@@ -179,10 +213,13 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
+    @skipIf(
+        salt.utils.is_windows(),
+        'You can\'t set an environment dynamically in Windows')
     def test_load_minion_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
@@ -225,7 +262,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     def test_load_client_config_from_environ_var(self):
         original_environ = os.environ.copy()
         try:
-            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+            tempdir = tempfile.mkdtemp(dir=TMP)
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
 
@@ -282,7 +319,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
     def test_issue_5970_minion_confd_inclusion(self):
         try:
-            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+            tempdir = tempfile.mkdtemp(dir=TMP)
             minion_config = os.path.join(tempdir, 'minion')
             minion_confd = os.path.join(tempdir, 'minion.d')
             os.makedirs(minion_confd)
@@ -317,7 +354,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
     def test_master_confd_inclusion(self):
         try:
-            tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+            tempdir = tempfile.mkdtemp(dir=TMP)
             master_config = os.path.join(tempdir, 'master')
             master_confd = os.path.join(tempdir, 'master.d')
             os.makedirs(master_confd)
@@ -353,18 +390,20 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     def test_master_file_roots_glob(self):
         # Config file and stub file_roots.
         fpath = tempfile.mktemp()
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
             for f in 'abc':
                 fpath = os.path.join(tempdir, f)
-                salt.utils.fopen(fpath, 'w').write(f)
+                with salt.utils.fopen(fpath, 'w') as wfh:
+                    wfh.write(f)
 
-            salt.utils.fopen(fpath, 'w').write(
-                'file_roots:\n'
-                '  base:\n'
-                '    - {0}'.format(os.path.join(tempdir, '*'))
-            )
+            with salt.utils.fopen(fpath, 'w') as wfh:
+                wfh.write(
+                    'file_roots:\n'
+                    '  base:\n'
+                    '    - {0}'.format(os.path.join(tempdir, '*'))
+                )
             config = sconfig.master_config(fpath)
             base = config['file_roots']['base']
             self.assertEqual(set(base), set([
@@ -381,18 +420,20 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     def test_master_pillar_roots_glob(self):
         # Config file and stub pillar_roots.
         fpath = tempfile.mktemp()
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
             for f in 'abc':
                 fpath = os.path.join(tempdir, f)
-                salt.utils.fopen(fpath, 'w').write(f)
+                with salt.utils.fopen(fpath, 'w') as wfh:
+                    wfh.write(f)
 
-            salt.utils.fopen(fpath, 'w').write(
-                'pillar_roots:\n'
-                '  base:\n'
-                '    - {0}'.format(os.path.join(tempdir, '*'))
-            )
+            with salt.utils.fopen(fpath, 'w') as wfh:
+                wfh.write(
+                    'pillar_roots:\n'
+                    '  base:\n'
+                    '    - {0}'.format(os.path.join(tempdir, '*'))
+                )
             config = sconfig.master_config(fpath)
             base = config['pillar_roots']['base']
             self.assertEqual(set(base), set([
@@ -409,18 +450,20 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     def test_minion_file_roots_glob(self):
         # Config file and stub file_roots.
         fpath = tempfile.mktemp()
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
             for f in 'abc':
                 fpath = os.path.join(tempdir, f)
-                salt.utils.fopen(fpath, 'w').write(f)
+                with salt.utils.fopen(fpath, 'w') as wfh:
+                    wfh.write(f)
 
-            salt.utils.fopen(fpath, 'w').write(
-                'file_roots:\n'
-                '  base:\n'
-                '    - {0}'.format(os.path.join(tempdir, '*'))
-            )
+            with salt.utils.fopen(fpath, 'w') as wfh:
+                wfh.write(
+                    'file_roots:\n'
+                    '  base:\n'
+                    '    - {0}'.format(os.path.join(tempdir, '*'))
+                )
             config = sconfig.minion_config(fpath)
             base = config['file_roots']['base']
             self.assertEqual(set(base), set([
@@ -437,18 +480,20 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     def test_minion_pillar_roots_glob(self):
         # Config file and stub pillar_roots.
         fpath = tempfile.mktemp()
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             # Create some kown files.
             for f in 'abc':
                 fpath = os.path.join(tempdir, f)
-                salt.utils.fopen(fpath, 'w').write(f)
+                with salt.utils.fopen(fpath, 'w') as wfh:
+                    wfh.write(f)
 
-            salt.utils.fopen(fpath, 'w').write(
-                'pillar_roots:\n'
-                '  base:\n'
-                '    - {0}'.format(os.path.join(tempdir, '*'))
-            )
+            with salt.utils.fopen(fpath, 'w') as wfh:
+                wfh.write(
+                    'pillar_roots:\n'
+                    '  base:\n'
+                    '    - {0}'.format(os.path.join(tempdir, '*'))
+                )
             config = sconfig.minion_config(fpath)
             base = config['pillar_roots']['base']
             self.assertEqual(set(base), set([
@@ -492,59 +537,58 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     # cloud_config tests
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('salt.config.load_config', MagicMock(return_value={}))
     def test_cloud_config_double_master_path(self):
         '''
         Tests passing in master_config_path and master_config kwargs.
         '''
-        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
-                          master_config_path='foo', master_config='bar')
+        with patch('salt.config.load_config', MagicMock(return_value={})):
+            self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                              master_config_path='foo', master_config='bar')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('salt.config.load_config', MagicMock(return_value={}))
     def test_cloud_config_double_providers_path(self):
         '''
         Tests passing in providers_config_path and providers_config kwargs.
         '''
-        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
-                          providers_config_path='foo', providers_config='bar')
+        with patch('salt.config.load_config', MagicMock(return_value={})):
+            self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                              providers_config_path='foo', providers_config='bar')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('salt.config.load_config', MagicMock(return_value={}))
     def test_cloud_config_double_profiles_path(self):
         '''
         Tests passing in profiles_config_path and profiles_config kwargs.
         '''
-        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
-                          profiles_config_path='foo', profiles_config='bar')
+        with patch('salt.config.load_config', MagicMock(return_value={})):
+            self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                              profiles_config_path='foo', profiles_config='bar')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('salt.config.load_config', MagicMock(return_value={}))
-    @patch('salt.config.apply_cloud_config',
-           MagicMock(return_value={'providers': 'foo'}))
     def test_cloud_config_providers_in_opts(self):
         '''
         Tests mixing old cloud providers with pre-configured providers configurations
         using the providers_config kwarg
         '''
-        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
-                          providers_config='bar')
+        with patch('salt.config.load_config', MagicMock(return_value={})):
+            with patch('salt.config.apply_cloud_config',
+                       MagicMock(return_value={'providers': 'foo'})):
+                self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                                  providers_config='bar')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('salt.config.load_config', MagicMock(return_value={}))
-    @patch('salt.config.apply_cloud_config',
-           MagicMock(return_value={'providers': 'foo'}))
-    @patch('os.path.isfile', MagicMock(return_value=True))
     def test_cloud_config_providers_in_opts_path(self):
         '''
         Tests mixing old cloud providers with pre-configured providers configurations
         using the providers_config_path kwarg
         '''
-        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
-                          providers_config_path='bar')
+        with patch('salt.config.load_config', MagicMock(return_value={})):
+            with patch('salt.config.apply_cloud_config',
+                       MagicMock(return_value={'providers': 'foo'})):
+                with patch('os.path.isfile', MagicMock(return_value=True)):
+                    self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                                      providers_config_path='bar')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('os.path.isdir', MagicMock(return_value=True))
     def test_cloud_config_deploy_scripts_search_path(self):
         '''
         Tests the contents of the 'deploy_scripts_search_path' tuple to ensure that
@@ -556,15 +600,19 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         ``/etc/local/salt/cloud.deploy.d``, so we'll only test against the last part of
         the path.
         '''
-        search_paths = sconfig.cloud_config('/etc/salt/cloud').get('deploy_scripts_search_path')
-        etc_deploy_path = '/salt/cloud.deploy.d'
-        deploy_path = '/salt/cloud/deploy'
+        with patch('os.path.isdir', MagicMock(return_value=True)):
+            search_paths = sconfig.cloud_config('/etc/salt/cloud').get('deploy_scripts_search_path')
+            etc_deploy_path = '/salt/cloud.deploy.d'
+            deploy_path = '/salt/cloud/deploy'
+            if salt.utils.is_windows():
+                etc_deploy_path = '/salt\\cloud.deploy.d'
+                deploy_path = '\\salt\\cloud\\deploy'
 
-        # Check cloud.deploy.d path is the first element in the search_paths tuple
-        self.assertTrue(search_paths[0].endswith(etc_deploy_path))
+            # Check cloud.deploy.d path is the first element in the search_paths tuple
+            self.assertTrue(search_paths[0].endswith(etc_deploy_path))
 
-        # Check the second element in the search_paths tuple
-        self.assertTrue(search_paths[1].endswith(deploy_path))
+            # Check the second element in the search_paths tuple
+            self.assertTrue(search_paths[1].endswith(deploy_path))
 
     # apply_cloud_config tests
 
@@ -585,32 +633,36 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                           overrides, defaults=DEFAULT)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('salt.config.old_to_new',
-           MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
-                                   'providers': {'foo': {'bar': {
-                                       'driver': 'foo:bar'}}}}))
     def test_apply_cloud_config_success_list(self):
         '''
         Tests success when valid data is passed into the function as a list
         '''
-        overrides = {'providers': {'foo': [{'driver': 'bar'}]}}
-        ret = {'default_include': 'path/to/some/cloud/conf/file',
-               'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}}
-        self.assertEqual(sconfig.apply_cloud_config(overrides, defaults=DEFAULT), ret)
+        with patch('salt.config.old_to_new',
+                   MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
+                                           'providers': {
+                                               'foo': {
+                                                   'bar': {
+                                                       'driver': 'foo:bar'}}}})):
+            overrides = {'providers': {'foo': [{'driver': 'bar'}]}}
+            ret = {'default_include': 'path/to/some/cloud/conf/file',
+                   'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}}
+            self.assertEqual(sconfig.apply_cloud_config(overrides, defaults=DEFAULT), ret)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('salt.config.old_to_new',
-           MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
-                                   'providers': {'foo': {'bar': {
-                                       'driver': 'foo:bar'}}}}))
     def test_apply_cloud_config_success_dict(self):
         '''
         Tests success when valid data is passed into function as a dictionary
         '''
-        overrides = {'providers': {'foo': {'driver': 'bar'}}}
-        ret = {'default_include': 'path/to/some/cloud/conf/file',
-               'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}}
-        self.assertEqual(sconfig.apply_cloud_config(overrides, defaults=DEFAULT), ret)
+        with patch('salt.config.old_to_new',
+                   MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
+                                           'providers': {
+                                               'foo': {
+                                                   'bar': {
+                                                       'driver': 'foo:bar'}}}})):
+            overrides = {'providers': {'foo': {'driver': 'bar'}}}
+            ret = {'default_include': 'path/to/some/cloud/conf/file',
+                   'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}}
+            self.assertEqual(sconfig.apply_cloud_config(overrides, defaults=DEFAULT), ret)
 
     # apply_vm_profiles_config tests
 
@@ -973,10 +1025,13 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
     # other cloud configuration tests
 
+    @skipIf(
+        salt.utils.is_windows(),
+        'You can\'t set an environment dynamically in Windows')
     def test_load_cloud_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         try:
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
@@ -1019,7 +1074,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 shutil.rmtree(tempdir)
 
     def test_deploy_search_path_as_string(self):
-        temp_conf_dir = os.path.join(integration.TMP, 'issue-8863')
+        temp_conf_dir = os.path.join(TMP, 'issue-8863')
         config_file_path = os.path.join(temp_conf_dir, 'cloud')
         deploy_dir_path = os.path.join(temp_conf_dir, 'test-deploy.d')
         try:

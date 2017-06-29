@@ -35,8 +35,12 @@ def query(url, output=True, **kwargs):
         log.warning('Output option has been deprecated. Please use --quiet.')
     if 'node' not in kwargs:
         kwargs['node'] = 'master'
+    opts = __opts__.copy()
+    if 'opts' in kwargs:
+        opts.update(kwargs['opts'])
+        del kwargs['opts']
 
-    ret = salt.utils.http.query(url=url, opts=__opts__, **kwargs)
+    ret = salt.utils.http.query(url=url, opts=opts, **kwargs)
     return ret
 
 

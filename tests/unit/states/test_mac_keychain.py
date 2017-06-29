@@ -117,65 +117,65 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             assert not uninstall_mock.called
             self.assertEqual(out, expected)
 
-    @patch('os.path.exists')
-    def test_default_keychain(self, exists_mock):
+    def test_default_keychain(self):
         '''
             Test setting the default keychain
         '''
-        expected = {
-            'changes': {'default': '/path/to/chain.keychain'},
-            'comment': '',
-            'name': '/path/to/chain.keychain',
-            'result': True
-        }
+        with patch('os.path.exists') as exists_mock:
+            expected = {
+                'changes': {'default': '/path/to/chain.keychain'},
+                'comment': '',
+                'name': '/path/to/chain.keychain',
+                'result': True
+            }
 
-        exists_mock.return_value = True
-        get_default_mock = MagicMock(return_value='/path/to/other.keychain')
-        set_mock = MagicMock(return_value='')
-        with patch.dict(keychain.__salt__, {'keychain.get_default_keychain': get_default_mock,
-                                            'keychain.set_default_keychain': set_mock}):
-            out = keychain.default_keychain('/path/to/chain.keychain', 'system', 'frank')
-            get_default_mock.assert_called_once_with('frank', 'system')
-            set_mock.assert_called_once_with('/path/to/chain.keychain', 'system', 'frank')
-            self.assertEqual(out, expected)
+            exists_mock.return_value = True
+            get_default_mock = MagicMock(return_value='/path/to/other.keychain')
+            set_mock = MagicMock(return_value='')
+            with patch.dict(keychain.__salt__, {'keychain.get_default_keychain': get_default_mock,
+                                                'keychain.set_default_keychain': set_mock}):
+                out = keychain.default_keychain('/path/to/chain.keychain', 'system', 'frank')
+                get_default_mock.assert_called_once_with('frank', 'system')
+                set_mock.assert_called_once_with('/path/to/chain.keychain', 'system', 'frank')
+                self.assertEqual(out, expected)
 
-    @patch('os.path.exists')
-    def test_default_keychain_set_already(self, exists_mock):
+    def test_default_keychain_set_already(self):
         '''
             Test setting the default keychain when it's already set
         '''
-        expected = {
-            'changes': {},
-            'comment': '/path/to/chain.keychain was already the default keychain.',
-            'name': '/path/to/chain.keychain',
-            'result': True
-        }
+        with patch('os.path.exists') as exists_mock:
+            expected = {
+                'changes': {},
+                'comment': '/path/to/chain.keychain was already the default keychain.',
+                'name': '/path/to/chain.keychain',
+                'result': True
+            }
 
-        exists_mock.return_value = True
-        get_default_mock = MagicMock(return_value='/path/to/chain.keychain')
-        set_mock = MagicMock(return_value='')
-        with patch.dict(keychain.__salt__, {'keychain.get_default_keychain': get_default_mock,
-                                            'keychain.set_default_keychain': set_mock}):
-            out = keychain.default_keychain('/path/to/chain.keychain', 'system', 'frank')
-            get_default_mock.assert_called_once_with('frank', 'system')
-            assert not set_mock.called
-            self.assertEqual(out, expected)
+            exists_mock.return_value = True
+            get_default_mock = MagicMock(return_value='/path/to/chain.keychain')
+            set_mock = MagicMock(return_value='')
+            with patch.dict(keychain.__salt__, {'keychain.get_default_keychain': get_default_mock,
+                                                'keychain.set_default_keychain': set_mock}):
+                out = keychain.default_keychain('/path/to/chain.keychain', 'system', 'frank')
+                get_default_mock.assert_called_once_with('frank', 'system')
+                assert not set_mock.called
+                self.assertEqual(out, expected)
 
-    @patch('os.path.exists')
-    def test_default_keychain_missing(self, exists_mock):
+    def test_default_keychain_missing(self):
         '''
             Test setting the default keychain when the keychain is missing
         '''
-        expected = {
-            'changes': {},
-            'comment': 'Keychain not found at /path/to/cert.p12',
-            'name': '/path/to/cert.p12',
-            'result': False
-        }
+        with patch('os.path.exists') as exists_mock:
+            expected = {
+                'changes': {},
+                'comment': 'Keychain not found at /path/to/cert.p12',
+                'name': '/path/to/cert.p12',
+                'result': False
+            }
 
-        exists_mock.return_value = False
-        out = keychain.default_keychain('/path/to/cert.p12', 'system', 'frank')
-        self.assertEqual(out, expected)
+            exists_mock.return_value = False
+            out = keychain.default_keychain('/path/to/cert.p12', 'system', 'frank')
+            self.assertEqual(out, expected)
 
     def test_install_cert_salt_fileserver(self):
         '''

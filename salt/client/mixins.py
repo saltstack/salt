@@ -215,7 +215,9 @@ class SyncClientMixin(object):
             raise salt.exceptions.SaltInvocationError(
                 'kwarg must be formatted as a dictionary'
             )
-        arglist = salt.utils.args.parse_input(arg)
+        arglist = salt.utils.args.parse_input(
+            arg,
+            no_parse=self.opts.get('no_parse', []))
 
         # if you were passed kwarg, add it to arglist
         if kwarg:
@@ -538,7 +540,7 @@ class AsyncClientMixin(object):
 
         # if this is a ret, we have our own set of rules
         if suffix == 'ret':
-            # Check if ouputter was passed in the return data. If this is the case,
+            # Check if outputter was passed in the return data. If this is the case,
             # then the return data will be a dict two keys: 'data' and 'outputter'
             if isinstance(event.get('return'), dict) \
                     and set(event['return']) == set(('data', 'outputter')):

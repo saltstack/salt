@@ -4,13 +4,15 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.unit import TestCase
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import Salt libs
 import salt.runner
 
 
-class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixIn):
+class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
+    # This is really an integration test since it needs a salt-master running
     eauth_creds = {
         'username': 'saltdev_auto',
         'password': 'saltdev',
@@ -131,3 +133,14 @@ class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTes
                 'quuz': 'on',
             },
         })
+
+    def test_invalid_kwargs_are_ignored(self):
+        low = {
+            'client': 'runner',
+            'fun': 'test.metasyntactic',
+            'thiskwargisbad': 'justpretendimnothere',
+        }
+        low.update(self.eauth_creds)
+
+        ret = self.runner.cmd_sync(low)
+        self.assertEqual(ret[0], 'foo')

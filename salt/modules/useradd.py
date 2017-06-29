@@ -116,7 +116,8 @@ def add(name,
         homephone='',
         createhome=True,
         loginclass=None,
-        root=None):
+        root=None,
+        nologinit=False):
     '''
     Add a user to the minion
 
@@ -177,6 +178,9 @@ def add(name,
     elif (__grains__['kernel'] != 'NetBSD'
             and __grains__['kernel'] != 'OpenBSD'):
         cmd.append('-M')
+
+    if nologinit:
+        cmd.append('-l')
 
     if home is not None:
         cmd.extend(['-d', home])
@@ -432,7 +436,7 @@ def chgroups(name, groups, append=False, root=None):
         if result['retcode'] != 0 and 'not found in' in result['stderr']:
             ret = True
             for group in groups:
-                cmd = ['gpasswd', '-a', '{0}'.format(name), '{1}'.format(group)]
+                cmd = ['gpasswd', '-a', '{0}'.format(name), '{0}'.format(group)]
                 if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
                     ret = False
             return ret

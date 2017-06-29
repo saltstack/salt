@@ -8,9 +8,10 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 log = logging.getLogger(__name__)
 
@@ -28,8 +29,7 @@ except ImportError:
     'Please install keystoneclient and a keystone server before running'
     'openstack integration tests.'
 )
-class OpenstackTest(integration.ModuleCase,
-                    integration.SaltReturnAssertsMixIn):
+class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the keystone state
     '''

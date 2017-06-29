@@ -5,13 +5,13 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 
 # Import salt libs
 import salt.utils
 
 
-class StdTest(integration.ModuleCase):
+class StdTest(ModuleCase):
     '''
     Test standard client calls
     '''

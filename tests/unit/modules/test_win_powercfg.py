@@ -27,7 +27,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {powercfg: {'__grains__': {'osrelease': 8}}}
 
-    query_ouput = '''Subgroup GUID: 238c9fa8-0aad-41ed-83f4-97be242c8f20  (Hibernate)
+    query_output = '''Subgroup GUID: 238c9fa8-0aad-41ed-83f4-97be242c8f20  (Hibernate)
                 GUID Alias: SUB_SLEEP
                 Power Setting GUID: 29f6c1db-86da-48c5-9fdb-f2b67b1f44da  (Hibernate after)
                 GUID Alias: HIBERNATEIDLE
@@ -43,7 +43,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             Test to make sure we can set the monitor timeout value
         '''
         mock = MagicMock()
-        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_ouput]
+        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_output]
 
         with patch.dict(powercfg.__salt__, {'cmd.run': mock}):
             powercfg.set_monitor_timeout(0, "dc")
@@ -58,7 +58,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             Test to make sure we can set the disk timeout value
         '''
         mock = MagicMock()
-        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_ouput]
+        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_output]
 
         with patch.dict(powercfg.__salt__, {'cmd.run': mock}):
             powercfg.set_disk_timeout(0, "dc")
@@ -73,7 +73,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             Test to make sure we can set the standby timeout value
         '''
         mock = MagicMock()
-        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_ouput]
+        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_output]
 
         with patch.dict(powercfg.__salt__, {'cmd.run': mock}):
             powercfg.set_standby_timeout(0, "dc")
@@ -88,7 +88,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             Test to make sure we can set the hibernate timeout value
         '''
         mock = MagicMock()
-        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_ouput]
+        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_output]
 
         with patch.dict(powercfg.__salt__, {'cmd.run': mock}):
             powercfg.set_hibernate_timeout(0, "dc")
@@ -103,7 +103,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             Test to make sure we can get the monitor timeout value
         '''
         mock = MagicMock()
-        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_ouput]
+        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_output]
 
         with patch.dict(powercfg.__salt__, {'cmd.run': mock}):
             ret = powercfg.get_monitor_timeout()
@@ -120,7 +120,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             Test to make sure we can get the disk timeout value
         '''
         mock = MagicMock()
-        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_ouput]
+        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_output]
 
         with patch.dict(powercfg.__salt__, {'cmd.run': mock}):
             ret = powercfg.get_disk_timeout()
@@ -137,7 +137,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             Test to make sure we can get the standby timeout value
         '''
         mock = MagicMock()
-        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_ouput]
+        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_output]
 
         with patch.dict(powercfg.__salt__, {'cmd.run': mock}):
             ret = powercfg.get_standby_timeout()
@@ -154,7 +154,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             Test to make sure we can get the hibernate timeout value
         '''
         mock = MagicMock()
-        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_ouput]
+        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_output]
 
         with patch.dict(powercfg.__salt__, {'cmd.run': mock}):
             ret = powercfg.get_hibernate_timeout()
@@ -171,7 +171,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             Test to make sure we can get the hibernate timeout value on windows 7
         '''
         mock = MagicMock()
-        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_ouput]
+        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_output]
 
         with patch.dict(powercfg.__salt__, {'cmd.run': mock}):
             with patch.dict(powercfg.__grains__, {'osrelease': '7'}):
@@ -189,7 +189,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             Test to make sure we can set the hibernate timeout value
         '''
         mock = MagicMock()
-        mock.side_effect = [self.query_ouput]
+        mock.side_effect = [self.query_output]
 
         with patch.dict(powercfg.__salt__, {'cmd.run': mock}):
             powercfg.set_hibernate_timeout(0, "dc", scheme="SCHEME_MIN")
@@ -203,7 +203,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             Test to make sure we can get the hibernate timeout value with a specified scheme
         '''
         mock = MagicMock()
-        mock.side_effect = [self.query_ouput]
+        mock.side_effect = [self.query_output]
 
         with patch.dict(powercfg.__salt__, {'cmd.run': mock}):
             ret = powercfg.get_hibernate_timeout(scheme="SCHEME_MIN")

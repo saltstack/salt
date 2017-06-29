@@ -503,7 +503,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     # via the legacy salt cloud configuration style.
     # On other cases, we should rely on settings provided by the new
     # salt lxc network profile style configuration which can
-    # be also be overriden or a per interface basis via the nic_opts dict.
+    # be also be overridden or a per interface basis via the nic_opts dict.
     if bridge:
         eth0['link'] = bridge
     if gateway:
@@ -2979,7 +2979,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
     ret = {'changes': changes, 'result': True, 'comment': ''}
 
     # do not use salt.utils.fopen !
-    with open(lxc_conf_p, 'r') as fic:
+    with salt.utils.fopen(lxc_conf_p, 'r') as fic:
         filtered_lxc_conf = []
         for row in lxc_conf:
             if not row:
@@ -3038,9 +3038,9 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
         if conf_changed:
             # DO NOT USE salt.utils.fopen here, i got (kiorky)
             # problems with lxc configs which were wiped !
-            with open('{0}.{1}'.format(lxc_conf_p, chrono), 'w') as wfic:
+            with salt.utils.fopen('{0}.{1}'.format(lxc_conf_p, chrono), 'w') as wfic:
                 wfic.write(conf)
-            with open(lxc_conf_p, 'w') as wfic:
+            with salt.utils.fopen(lxc_conf_p, 'w') as wfic:
                 wfic.write(conf)
             ret['comment'] = 'Updated'
             ret['result'] = True

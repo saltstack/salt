@@ -10,7 +10,8 @@ import tempfile
 import yaml
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.payload
@@ -18,7 +19,7 @@ import salt.utils
 import salt.utils.jid
 
 
-class RunnerReturnsTest(integration.ShellCase):
+class RunnerReturnsTest(ShellCase):
     '''
     Test the "runner_returns" feature
     '''
@@ -120,15 +121,15 @@ class RunnerReturnsTest(integration.ShellCase):
         with salt.utils.fopen(serialized_return, 'rb') as fp_:
             deserialized = serial.loads(fp_.read())
 
-        self.clean_return(deserialized)
+        self.clean_return(deserialized['return'])
 
         # Now we have something sane we can reliably compare in an assert.
         self.assertEqual(
             deserialized,
-            {'fun': 'runner.test.arg',
-             'fun_args': ['foo', {'bar': 'hello world!'}],
-             'jid': jid,
-             'return': {'args': ['foo'], 'kwargs': {'bar': 'hello world!'}},
-             'success': True,
-             'user': 'root'}
+            {'return': {'fun': 'runner.test.arg',
+                        'fun_args': ['foo', {'bar': 'hello world!'}],
+                        'jid': jid,
+                        'return': {'args': ['foo'], 'kwargs': {'bar': 'hello world!'}},
+                        'success': True,
+                        'user': RUNTIME_VARS.RUNNING_TESTS_USER}}
         )

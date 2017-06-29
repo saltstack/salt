@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 import re
 import os
+import sys
 import json
 import time
 import logging
@@ -46,6 +47,22 @@ def gen_key(path):
     subprocess.call(cmd, shell=True)
 
 
+def gen_shell(opts, **kwargs):
+    '''
+    Return the correct shell interface for the target system
+    '''
+    if kwargs['winrm']:
+        try:
+            import saltwinshell
+            shell = saltwinshell.Shell(opts, **kwargs)
+        except ImportError:
+            log.error('The saltwinshell library is not available')
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+    else:
+        shell = Shell(opts, **kwargs)
+    return shell
+
+
 class Shell(object):
     '''
     Create a shell connection object to encapsulate ssh executions
@@ -65,6 +82,7 @@ class Shell(object):
             identities_only=False,
             sudo_user=None,
             remote_port_forwards=None,
+            winrm=False,
             ssh_options=None):
         self.opts = opts
         # ssh <ipv6>, but scp [<ipv6]:/path

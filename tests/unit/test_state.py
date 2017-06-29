@@ -7,23 +7,22 @@
 from __future__ import absolute_import
 import copy
 import os
-import sys
 import tempfile
 
 # Import Salt Testing libs
 import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import Salt libs
 import salt.state
-import salt.config
 import salt.exceptions
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class StateCompilerTestCase(TestCase):
+class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
     TestCase for the state compiler.
     '''
@@ -42,43 +41,49 @@ class StateCompilerTestCase(TestCase):
                'result': True}
         salt.state.format_log(ret)
 
-    @skipIf(sys.version_info < (2, 7), 'Context manager in assertEquals only available in > Py2.7')
-    @patch('salt.state.State._gather_pillar')
-    def test_render_error_on_invalid_requisite(self, state_patch):
+    def test_render_error_on_invalid_requisite(self):
         '''
         Test that the state compiler correctly deliver a rendering
         exception when a requisite cannot be resolved
         '''
-        high_data = {'git': OrderedDict([('pkg', [OrderedDict([('require', [OrderedDict([('file', OrderedDict([('test1', 'test')]))])])]), 'installed', {'order': 10000}]), ('__sls__', u'issue_35226'), ('__env__', 'base')])}
-        minion_opts = salt.config.minion_config(os.path.join(integration.TMP_CONF_DIR, 'minion'))
-        minion_opts['pillar'] = {'git': OrderedDict([('test1', 'test')])}
-        state_obj = salt.state.State(minion_opts)
-        with self.assertRaises(salt.exceptions.SaltRenderError):
-            state_obj.call_high(high_data)
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            high_data = {
+                'git': OrderedDict([
+                    ('pkg', [
+                        OrderedDict([
+                            ('require', [
+                                OrderedDict([
+                                    ('file', OrderedDict(
+                                        [('test1', 'test')]))])])]),
+                        'installed', {'order': 10000}]), ('__sls__', u'issue_35226'), ('__env__', 'base')])}
+            minion_opts = self.get_temp_config('minion')
+            minion_opts['pillar'] = {'git': OrderedDict([('test1', 'test')])}
+            state_obj = salt.state.State(minion_opts)
+            with self.assertRaises(salt.exceptions.SaltRenderError):
+                state_obj.call_high(high_data)
 
 
-class HighStateTestCase(TestCase):
+class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
-        self.root_dir = tempfile.mkdtemp(dir=integration.TMP)
-        self.state_tree_dir = os.path.join(self.root_dir, 'state_tree')
-        self.cache_dir = os.path.join(self.root_dir, 'cachedir')
-        if not os.path.isdir(self.root_dir):
-            os.makedirs(self.root_dir)
+        root_dir = tempfile.mkdtemp(dir=integration.TMP)
+        state_tree_dir = os.path.join(root_dir, 'state_tree')
+        cache_dir = os.path.join(root_dir, 'cachedir')
+        for dpath in (root_dir, state_tree_dir, cache_dir):
+            if not os.path.isdir(dpath):
+                os.makedirs(dpath)
 
-        if not os.path.isdir(self.state_tree_dir):
-            os.makedirs(self.state_tree_dir)
-
-        if not os.path.isdir(self.cache_dir):
-            os.makedirs(self.cache_dir)
-        self.config = salt.config.minion_config(None)
-        self.config['root_dir'] = self.root_dir
-        self.config['state_events'] = False
-        self.config['id'] = 'match'
-        self.config['file_client'] = 'local'
-        self.config['file_roots'] = dict(base=[self.state_tree_dir])
-        self.config['cachedir'] = self.cache_dir
-        self.config['test'] = False
+        overrides = {}
+        overrides['root_dir'] = root_dir
+        overrides['state_events'] = False
+        overrides['id'] = 'match'
+        overrides['file_client'] = 'local'
+        overrides['file_roots'] = dict(base=[state_tree_dir])
+        overrides['cachedir'] = cache_dir
+        overrides['test'] = False
+        self.config = self.get_temp_config('minion', **overrides)
+        self.addCleanup(delattr, self, 'config')
         self.highstate = salt.state.HighState(self.config)
+        self.addCleanup(delattr, self, 'highstate')
         self.highstate.push_active()
 
     def tearDown(self):
@@ -134,7 +139,7 @@ class HighStateTestCase(TestCase):
         self.assertEqual(state_usage_dict['base']['unused'], ['state.c'])
 
 
-class TopFileMergeTestCase(TestCase):
+class TopFileMergeTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
     Test various merge strategies for multiple tops files collected from
     multiple environments. Various options correspond to merge strategies
@@ -154,6 +159,7 @@ class TopFileMergeTestCase(TestCase):
         likely due to incorrect logic in merge_tops.
         '''
         self.env_order = ['base', 'foo', 'bar', 'baz']
+        self.addCleanup(delattr, self, 'env_order')
         self.tops = {
             'base': OrderedDict([
                 ('base', OrderedDict([('*', ['base_base'])])),
@@ -176,29 +182,30 @@ class TopFileMergeTestCase(TestCase):
             # Empty environment
             'baz': OrderedDict()
         }
+        self.addCleanup(delattr, self, 'tops')
 
         # Version without the other envs defined in the base top file
         self.tops_limited_base = copy.deepcopy(self.tops)
         self.tops_limited_base['base'] = OrderedDict([
             ('base', OrderedDict([('*', ['base_base'])])),
         ])
+        self.addCleanup(delattr, self, 'tops_limited_base')
 
-    @staticmethod
-    def highstate(**opts):
-        config = salt.config.minion_config(None)
+    def highstate(self, **opts):
         root_dir = tempfile.mkdtemp(dir=integration.TMP)
         state_tree_dir = os.path.join(root_dir, 'state_tree')
         cache_dir = os.path.join(root_dir, 'cachedir')
-        config['root_dir'] = root_dir
-        config['state_events'] = False
-        config['id'] = 'match'
-        config['file_client'] = 'local'
-        config['file_roots'] = dict(base=[state_tree_dir])
-        config['cachedir'] = cache_dir
-        config['test'] = False
-        config['default_top'] = 'base'
-        config.update(opts)
-        return salt.state.HighState(config)
+        overrides = {}
+        overrides['root_dir'] = root_dir
+        overrides['state_events'] = False
+        overrides['id'] = 'match'
+        overrides['file_client'] = 'local'
+        overrides['file_roots'] = dict(base=[state_tree_dir])
+        overrides['cachedir'] = cache_dir
+        overrides['test'] = False
+        overrides['default_top'] = 'base'
+        overrides.update(opts)
+        return salt.state.HighState(self.get_temp_config('minion', **overrides))
 
     def get_tops(self, tops=None, env_order=None, state_top_saltenv=None):
         '''

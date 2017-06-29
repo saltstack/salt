@@ -2028,54 +2028,54 @@ class ConfigTestCase(TestCase):
         self.assertDictEqual(TestConf2.serialize(), expected)
 
 
-class TestComplexSchemaItem(schema.ComplexSchemaItem):
+class ComplexSchemaItem(schema.ComplexSchemaItem):
     _complex_attributes = ['thirsty']
     thirsty = schema.BooleanItem(title='Thirsty',
                                  description='Are you thirsty?')
 
 
-class TestComplexComplexSchemaItem(schema.ComplexSchemaItem):
+class ComplexComplexSchemaItem(schema.ComplexSchemaItem):
     _complex_attributes = ['hungry', 'complex_item']
 
     hungry = schema.BooleanItem(title='Hungry',
                                 description='Are you hungry?',
                                 required=True)
-    complex_item = TestComplexSchemaItem(definition_name='test_definition')
+    complex_item = ComplexSchemaItem(definition_name='test_definition')
 
 
 class TestComplexDefinitionsSchema(schema.DefinitionsSchema):
     title = 'Test Complex Definition Schema'
-    complex_item = TestComplexSchemaItem()
+    complex_item = ComplexSchemaItem()
 
 
 class TestOneOfComplexDefinitionsSchema(schema.DefinitionsSchema):
     title = 'Test OneOf Complex Definitions Schema'
     one_of_item = schema.OneOfItem(
-        items=[TestComplexSchemaItem(), schema.StringItem()])
+        items=[ComplexSchemaItem(), schema.StringItem()])
 
 
 class TestArrayComplexDefinitionsSchema(schema.DefinitionsSchema):
     title = 'Test Array Complex Definitions Schema'
-    array_item = schema.ArrayItem(items=TestComplexSchemaItem())
+    array_item = schema.ArrayItem(items=ComplexSchemaItem())
 
 
 class TestDictComplexDefinitionsSchema(schema.DefinitionsSchema):
     title = 'Test Dict Complex Definitions Schema'
     dict_item = schema.DictItem(
-        properties={'complex_obj': TestComplexSchemaItem(required=True)},
-        additional_properties=TestComplexSchemaItem())
+        properties={'complex_obj': ComplexSchemaItem(required=True)},
+        additional_properties=ComplexSchemaItem())
 
 
 class TestComplexComplexDefinitionsSchema(schema.DefinitionsSchema):
     title = 'Test Complex Complex Definition Schema'
-    complex_complex_item = TestComplexComplexSchemaItem()
+    complex_complex_item = ComplexComplexSchemaItem()
 
 
 class ComplexSchemaTestCase(TestCase):
     ''' Test cases with definition schemas containing complex items'''
 
-    obj = TestComplexSchemaItem()
-    complex_obj = TestComplexComplexSchemaItem()
+    obj = ComplexSchemaItem()
+    complex_obj = ComplexComplexSchemaItem()
     schema = TestComplexDefinitionsSchema()
     one_of_schema = TestOneOfComplexDefinitionsSchema()
     array_schema = TestArrayComplexDefinitionsSchema()
@@ -2085,14 +2085,14 @@ class ComplexSchemaTestCase(TestCase):
     def test_complex_schema_item_serialize(self):
         obj = copy.deepcopy(self.obj)
         expected_serialized = {'$ref':
-                               '#/definitions/TestComplexSchemaItem'}
+                               '#/definitions/ComplexSchemaItem'}
         self.assertDictEqual(obj.serialize(), expected_serialized)
 
     def test_complex_schema_item_definition(self):
         obj = copy.deepcopy(self.obj)
         expected_def = {
             'type': 'object',
-            'title': 'TestComplexSchemaItem',
+            'title': 'ComplexSchemaItem',
             'properties':  {
                 'thirsty': {
                     'type': 'boolean',
@@ -2104,7 +2104,7 @@ class ComplexSchemaTestCase(TestCase):
         complex_obj = copy.deepcopy(self.complex_obj)
         expected_def = {
             'type': 'object',
-            'title': 'TestComplexComplexSchemaItem',
+            'title': 'ComplexComplexSchemaItem',
             'properties':  {
                 'hungry': {
                     'type': 'boolean',
@@ -2124,13 +2124,13 @@ class ComplexSchemaTestCase(TestCase):
             'type': 'object',
             'properties': {
                 'complex_item': {
-                    '$ref': '#/definitions/TestComplexSchemaItem'}},
+                    '$ref': '#/definitions/ComplexSchemaItem'}},
             'x-ordering': ['complex_item'],
             'additionalProperties': False,
             'definitions': {
-                'TestComplexSchemaItem': {
+                'ComplexSchemaItem': {
                     'type': 'object',
-                    'title': 'TestComplexSchemaItem',
+                    'title': 'ComplexSchemaItem',
                     'properties':  {
                         'thirsty': {
                             'type': 'boolean',
@@ -2146,14 +2146,14 @@ class ComplexSchemaTestCase(TestCase):
             'type': 'object',
             'properties': {
                 'one_of_item': {
-                    'oneOf': [{'$ref': '#/definitions/TestComplexSchemaItem'},
+                    'oneOf': [{'$ref': '#/definitions/ComplexSchemaItem'},
                               {'type': 'string'}]}},
             'x-ordering': ['one_of_item'],
             'additionalProperties': False,
             'definitions': {
-                'TestComplexSchemaItem': {
+                'ComplexSchemaItem': {
                     'type': 'object',
-                    'title': 'TestComplexSchemaItem',
+                    'title': 'ComplexSchemaItem',
                     'properties':  {
                         'thirsty': {
                             'type': 'boolean',
@@ -2171,13 +2171,13 @@ class ComplexSchemaTestCase(TestCase):
                 'array_item': {
                     'type': 'array',
                     'title': 'array_item',
-                    'items': {'$ref': '#/definitions/TestComplexSchemaItem'}}},
+                    'items': {'$ref': '#/definitions/ComplexSchemaItem'}}},
             'x-ordering': ['array_item'],
             'additionalProperties': False,
             'definitions': {
-                'TestComplexSchemaItem': {
+                'ComplexSchemaItem': {
                     'type': 'object',
-                    'title': 'TestComplexSchemaItem',
+                    'title': 'ComplexSchemaItem',
                     'properties':  {
                         'thirsty': {
                             'type': 'boolean',
@@ -2198,15 +2198,15 @@ class ComplexSchemaTestCase(TestCase):
                     'required': ['complex_obj'],
                     'properties':
                         {'complex_obj':
-                            {'$ref': '#/definitions/TestComplexSchemaItem'}},
+                            {'$ref': '#/definitions/ComplexSchemaItem'}},
                     'additionalProperties':
-                        {'$ref': '#/definitions/TestComplexSchemaItem'}}},
+                        {'$ref': '#/definitions/ComplexSchemaItem'}}},
             'x-ordering': ['dict_item'],
             'additionalProperties': False,
             'definitions': {
-                'TestComplexSchemaItem': {
+                'ComplexSchemaItem': {
                     'type': 'object',
-                    'title': 'TestComplexSchemaItem',
+                    'title': 'ComplexSchemaItem',
                     'properties':  {
                         'thirsty': {
                             'type': 'boolean',
@@ -2223,13 +2223,13 @@ class ComplexSchemaTestCase(TestCase):
             'type': 'object',
             'properties': {
                 'complex_complex_item': {
-                    '$ref': '#/definitions/TestComplexComplexSchemaItem'}},
+                    '$ref': '#/definitions/ComplexComplexSchemaItem'}},
             'x-ordering': ['complex_complex_item'],
             'additionalProperties': False,
             'definitions': {
-                'TestComplexComplexSchemaItem': {
+                'ComplexComplexSchemaItem': {
                     'type': 'object',
-                    'title': 'TestComplexComplexSchemaItem',
+                    'title': 'ComplexComplexSchemaItem',
                     'properties':  {
                         'hungry': {
                             'type': 'boolean',

@@ -7,7 +7,7 @@ see the `Parallels Desktop Reference Guide
 <http://download.parallels.com/desktop/v9/ga/docs/en_US/Parallels%20Command%20Line%20Reference%20Guide.pdf>`_.
 
 What has not been implemented yet can be accessed through ``parallels.prlctl``
-and ``parallels.prlsrvctl`` (note the preceeding double dash ``--`` as
+and ``parallels.prlsrvctl`` (note the preceding double dash ``--`` as
 necessary):
 
 .. code-block::

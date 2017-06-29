@@ -2,7 +2,7 @@
 '''
 Management of Docker images
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends: docker_ Python module
 
@@ -28,7 +28,7 @@ Management of Docker images
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 
 These states were moved from the :mod:`docker <salt.states.docker>` state
-module (formerly called **dockerng**) in the Nitrogen release.
+module (formerly called **dockerng**) in the 2017.7.0 release.
 
 .. note::
     To pull from a Docker registry, authentication must be configured. See
@@ -46,6 +46,7 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # Define the module's virtual name
 __virtualname__ = 'docker_image'
+__virtual_aliases__ = ('moby_image',)
 
 
 def __virtual__():
@@ -102,15 +103,15 @@ def present(name,
                 - build: /home/myuser/docker/myimage
                 - dockerfile: Dockerfile.alternative
 
-            .. versionadded:: 2016.11.0
+        .. versionadded:: 2016.11.0
 
         The image will be built using :py:func:`docker.build
-        <salt.modules.docker.build>` and the specified image name and tag
+        <salt.modules.dockermod.build>` and the specified image name and tag
         will be applied to it.
 
     load
         Loads a tar archive created with :py:func:`docker.load
-        <salt.modules.docker.load>` (or the ``docker load`` Docker CLI
+        <salt.modules.dockermod.load>` (or the ``docker load`` Docker CLI
         command), and assigns it the specified repo and tag.
 
         .. code-block:: yaml
@@ -147,17 +148,17 @@ def present(name,
                 - base: centos
                 - saltenv: base
 
-        .. versionadded: Nitrogen
+        .. versionadded: 2017.7.0
 
     base
         Base image with which to start ``dockerng.sls_build``
 
-        .. versionadded: Nitrogen
+        .. versionadded: 2017.7.0
 
     saltenv
         environment from which to pull sls files for ``dockerng.sls_build``.
 
-        .. versionadded: Nitrogen
+        .. versionadded: 2017.7.0
     '''
     ret = {'name': name,
            'changes': {},

@@ -10,32 +10,31 @@ import shutil
 import sys
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.mock import patch, MagicMock
+from tests.support.paths import FILES, TMP
 
 # Import salt libs
 import salt.utils
-from salt.modules import file as filemod
 
 
-class FileModuleTest(integration.ModuleCase):
+class FileModuleTest(ModuleCase):
     '''
     Validate the file module
     '''
     def setUp(self):
-        self.myfile = os.path.join(integration.TMP, 'myfile')
+        self.myfile = os.path.join(TMP, 'myfile')
         with salt.utils.fopen(self.myfile, 'w+') as fp:
             fp.write('Hello\n')
-        self.mydir = os.path.join(integration.TMP, 'mydir/isawesome')
+        self.mydir = os.path.join(TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
             # left behind... Don't fail because of this!
             os.makedirs(self.mydir)
-        self.mysymlink = os.path.join(integration.TMP, 'mysymlink')
+        self.mysymlink = os.path.join(TMP, 'mysymlink')
         if os.path.islink(self.mysymlink):
             os.remove(self.mysymlink)
         os.symlink(self.myfile, self.mysymlink)
-        self.mybadsymlink = os.path.join(integration.TMP, 'mybadsymlink')
+        self.mybadsymlink = os.path.join(TMP, 'mybadsymlink')
         if os.path.islink(self.mybadsymlink):
             os.remove(self.mybadsymlink)
         os.symlink('/nonexistentpath', self.mybadsymlink)
@@ -122,8 +121,8 @@ class FileModuleTest(integration.ModuleCase):
             self.skipTest('patch is not installed')
 
         src_patch = os.path.join(
-            integration.FILES, 'file', 'base', 'hello.patch')
-        src_file = os.path.join(integration.TMP, 'src.txt')
+            FILES, 'file', 'base', 'hello.patch')
+        src_file = os.path.join(TMP, 'src.txt')
         with salt.utils.fopen(src_file, 'w+') as fp:
             fp.write('Hello\n')
 
@@ -165,59 +164,6 @@ class FileModuleTest(integration.ModuleCase):
                                                      'filehash', 'base'])
         self.assertEqual(list(ret), ['salt://http/httpd.conf', 'filehash'])
 
-    def test_source_list_for_list_returns_existing_file(self):
-        filemod.__salt__ = {
-            'cp.list_master': MagicMock(
-                return_value=['http/httpd.conf.fallback']),
-            'cp.list_master_dirs': MagicMock(return_value=[]),
-        }
-        filemod.__context__ = {}
-
-        ret = filemod.source_list(['salt://http/httpd.conf',
-                                   'salt://http/httpd.conf.fallback'],
-                                  'filehash', 'base')
-        self.assertEqual(list(ret), ['salt://http/httpd.conf.fallback', 'filehash'])
-
-    def test_source_list_for_list_returns_file_from_other_env(self):
-        def list_master(env):
-            dct = {'base': [], 'dev': ['http/httpd.conf']}
-            return dct[env]
-        filemod.__salt__ = {
-            'cp.list_master': MagicMock(side_effect=list_master),
-            'cp.list_master_dirs': MagicMock(return_value=[]),
-        }
-        filemod.__context__ = {}
-
-        ret = filemod.source_list(['salt://http/httpd.conf?saltenv=dev',
-                                   'salt://http/httpd.conf.fallback'],
-                                  'filehash', 'base')
-        self.assertEqual(list(ret), ['salt://http/httpd.conf?saltenv=dev', 'filehash'])
-
-    def test_source_list_for_list_returns_file_from_dict(self):
-        filemod.__salt__ = {
-            'cp.list_master': MagicMock(return_value=['http/httpd.conf']),
-            'cp.list_master_dirs': MagicMock(return_value=[]),
-        }
-        filemod.__context__ = {}
-
-        ret = filemod.source_list(
-            [{'salt://http/httpd.conf': ''}], 'filehash', 'base')
-        self.assertEqual(list(ret), ['salt://http/httpd.conf', 'filehash'])
-
-    @patch('salt.modules.file.os.remove')
-    def test_source_list_for_list_returns_file_from_dict_via_http(self, remove):
-        remove.return_value = None
-        filemod.__salt__ = {
-            'cp.list_master': MagicMock(return_value=[]),
-            'cp.list_master_dirs': MagicMock(return_value=[]),
-            'cp.cache_file': MagicMock(return_value='/tmp/http.conf'),
-        }
-        filemod.__context__ = {}
-
-        ret = filemod.source_list(
-            [{'http://t.est.com/http/httpd.conf': 'filehash'}], '', 'base')
-        self.assertEqual(list(ret), ['http://t.est.com/http/httpd.conf', 'filehash'])
-
     def test_source_list_for_single_local_file_slash_returns_unchanged(self):
         ret = self.run_function('file.source_list', [self.myfile,
                                                      'filehash', 'base'])
@@ -226,26 +172,4 @@ class FileModuleTest(integration.ModuleCase):
     def test_source_list_for_single_local_file_proto_returns_unchanged(self):
         ret = self.run_function('file.source_list', ['file://' + self.myfile,
                                                      'filehash', 'base'])
-        self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
-
-    def test_source_list_for_list_returns_existing_local_file_slash(self):
-        ret = filemod.source_list([self.myfile + '-foo',
-                                   self.myfile],
-                                  'filehash', 'base')
-        self.assertEqual(list(ret), [self.myfile, 'filehash'])
-
-    def test_source_list_for_list_returns_existing_local_file_proto(self):
-        ret = filemod.source_list(['file://' + self.myfile + '-foo',
-                                   'file://' + self.myfile],
-                                  'filehash', 'base')
-        self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
-
-    def test_source_list_for_list_returns_local_file_slash_from_dict(self):
-        ret = filemod.source_list(
-            [{self.myfile: ''}], 'filehash', 'base')
-        self.assertEqual(list(ret), [self.myfile, 'filehash'])
-
-    def test_source_list_for_list_returns_local_file_proto_from_dict(self):
-        ret = filemod.source_list(
-            [{'file://' + self.myfile: ''}], 'filehash', 'base')
         self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])

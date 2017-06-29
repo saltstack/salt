@@ -69,12 +69,12 @@ class IntrospectTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'service_highstate' function tests: 1
 
-    @patch('salt.modules.introspect.running_service_owners',
-           MagicMock(return_value={}))
-    @patch('salt.modules.introspect.enabled_service_owners',
-           MagicMock(return_value={}))
     def test_service_highstate(self):
         '''
         Test if it return running and enabled services in a highstate structure.
         '''
-        self.assertDictEqual(introspect.service_highstate(), {})
+        with patch('salt.modules.introspect.running_service_owners',
+                   MagicMock(return_value={})), \
+                patch('salt.modules.introspect.enabled_service_owners',
+                      MagicMock(return_value={})):
+            self.assertDictEqual(introspect.service_highstate(), {})

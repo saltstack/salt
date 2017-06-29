@@ -116,7 +116,8 @@ def _publish(
             'tok': tok,
             'tmo': timeout,
             'form': form,
-            'id': __opts__['id']}
+            'id': __opts__['id'],
+            'no_parse': __opts__.get('no_parse', [])}
 
     channel = salt.transport.Channel.factory(__opts__, master_uri=master_uri)
     try:
@@ -204,7 +205,7 @@ def publish(tgt,
     - range
     - compound
 
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -342,7 +343,8 @@ def runner(fun, arg=None, timeout=5):
             'arg': arg,
             'tok': tok,
             'tmo': timeout,
-            'id': __opts__['id']}
+            'id': __opts__['id'],
+            'no_parse': __opts__.get('no_parse', [])}
 
     channel = salt.transport.Channel.factory(__opts__)
     try:

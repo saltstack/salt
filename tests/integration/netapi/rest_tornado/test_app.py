@@ -28,14 +28,25 @@ except ImportError:
 
 
 def json_loads(data):
-    if six.PY3:
+    if six.PY3 and isinstance(data, bytes):
         data = data.decode('utf-8')
     return json.loads(data)
 
 
+class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstract-method
+
+    @property
+    def opts(self):
+        return self.get_config('client_config', from_scratch=True)
+
+    @property
+    def mod_opts(self):
+        return self.get_config('minion', from_scratch=True)
+
+
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 @skipIf(StrictVersion(zmq.__version__) < StrictVersion('14.0.1'), 'PyZMQ must be >= 14.0.1 to run these tests.')
-class TestSaltAPIHandler(SaltnadoTestCase):
+class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def get_app(self):
         urls = [('/', saltnado.SaltAPIHandler)]
 
@@ -79,7 +90,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(response.headers['Location'], '/login')
 
     # Local client tests
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_simple_local_post(self):
         '''
         Test a basic API of /
@@ -291,7 +302,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
 
 @flaky
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
-class TestMinionSaltAPIHandler(SaltnadoTestCase):
+class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def get_app(self):
         urls = [(r"/minions/(.*)", saltnado.MinionSaltAPIHandler),
                 (r"/minions", saltnado.MinionSaltAPIHandler),
@@ -315,7 +326,7 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
         for minion_id, grains in six.iteritems(response_obj['return'][0]):
             self.assertEqual(minion_id, grains['id'])
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_get(self):
         response = self.fetch('/minions/minion',
                               method='GET',
@@ -390,7 +401,7 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
 
 
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
-class TestJobsSaltAPIHandler(SaltnadoTestCase):
+class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def get_app(self):
         urls = [(r"/jobs/(.*)", saltnado.JobsSaltAPIHandler),
                 (r"/jobs", saltnado.JobsSaltAPIHandler),
@@ -399,7 +410,7 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_get(self):
         # test with no JID
         self.http_client.fetch(self.get_url('/jobs'),
@@ -444,7 +455,7 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
 # TODO: run all the same tests from the root handler, but for now since they are
 # the same code, we'll just sanity check
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
-class TestRunSaltAPIHandler(SaltnadoTestCase):
+class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def get_app(self):
         urls = [("/run", saltnado.RunSaltAPIHandler),
                 ]
@@ -452,7 +463,7 @@ class TestRunSaltAPIHandler(SaltnadoTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_get(self):
         low = [{'client': 'local',
                 'tgt': '*',
@@ -469,7 +480,7 @@ class TestRunSaltAPIHandler(SaltnadoTestCase):
 
 
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
-class TestEventsSaltAPIHandler(SaltnadoTestCase):
+class TestEventsSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def get_app(self):
         urls = [(r"/events", saltnado.EventsSaltAPIHandler),
                 ]
@@ -515,7 +526,7 @@ class TestEventsSaltAPIHandler(SaltnadoTestCase):
 
 
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
-class TestWebhookSaltAPIHandler(SaltnadoTestCase):
+class TestWebhookSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
     def get_app(self):
 

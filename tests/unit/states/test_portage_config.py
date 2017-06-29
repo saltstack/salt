@@ -43,37 +43,37 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'flags' function tests: 1
 
-    @patch('traceback.format_exc', MagicMock(return_value='SALTSTACK'))
     def test_flags(self):
         '''
         Test to enforce the given flags on the given package or ``DEPEND`` atom.
         '''
-        name = 'salt'
+        with patch('traceback.format_exc', MagicMock(return_value='SALTSTACK')):
+            name = 'salt'
 
-        ret = {'name': name,
-               'result': False,
-               'comment': 'SALTSTACK',
-               'changes': {}}
+            ret = {'name': name,
+                   'result': False,
+                   'comment': 'SALTSTACK',
+                   'changes': {}}
 
-        mock = MagicMock(side_effect=Exception('error'))
-        with patch.dict(portage_config.__salt__,
-                        {'portage_config.get_missing_flags': mock}):
-            self.assertDictEqual(portage_config.flags(name, use='openssl'), ret)
+            mock = MagicMock(side_effect=Exception('error'))
+            with patch.dict(portage_config.__salt__,
+                            {'portage_config.get_missing_flags': mock}):
+                self.assertDictEqual(portage_config.flags(name, use='openssl'), ret)
 
-            self.assertDictEqual(portage_config.flags(name,
-                                                      accept_keywords=True),
-                                 ret)
+                self.assertDictEqual(portage_config.flags(name,
+                                                          accept_keywords=True),
+                                     ret)
 
-            self.assertDictEqual(portage_config.flags(name, env=True), ret)
+                self.assertDictEqual(portage_config.flags(name, env=True), ret)
 
-            self.assertDictEqual(portage_config.flags(name, license=True), ret)
+                self.assertDictEqual(portage_config.flags(name, license=True), ret)
 
-            self.assertDictEqual(portage_config.flags(name, properties=True),
-                                 ret)
+                self.assertDictEqual(portage_config.flags(name, properties=True),
+                                     ret)
 
-            self.assertDictEqual(portage_config.flags(name, mask=True), ret)
+                self.assertDictEqual(portage_config.flags(name, mask=True), ret)
 
-            self.assertDictEqual(portage_config.flags(name, unmask=True), ret)
+                self.assertDictEqual(portage_config.flags(name, unmask=True), ret)
 
-            ret.update({'comment': '', 'result': True})
-            self.assertDictEqual(portage_config.flags(name), ret)
+                ret.update({'comment': '', 'result': True})
+                self.assertDictEqual(portage_config.flags(name), ret)

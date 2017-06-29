@@ -5,17 +5,12 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import os
 import random
 import string
 
 # Import Salt Testing Libs
-import tests.integration as integration
-from tests.support.unit import skipIf
-from tests.support.helpers import (
-    destructiveTest,
-    requires_system_grains
-)
+from tests.support.case import ModuleCase
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
@@ -41,9 +36,8 @@ CHANGE_USER = __random_string()
 
 
 @destructiveTest
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-@requires_system_grains
-class MacUserModuleTest(integration.ModuleCase):
+@skip_if_not_root
+class MacUserModuleTest(ModuleCase):
     '''
     Integration tests for the mac_user module
     '''
@@ -61,7 +55,7 @@ class MacUserModuleTest(integration.ModuleCase):
                 )
             )
 
-    def test_mac_user_add(self, grains=None):
+    def test_mac_user_add(self):
         '''
         Tests the add function
         '''
@@ -73,7 +67,7 @@ class MacUserModuleTest(integration.ModuleCase):
             self.run_function('user.delete', [ADD_USER])
             raise
 
-    def test_mac_user_delete(self, grains=None):
+    def test_mac_user_delete(self):
         '''
         Tests the delete function
         '''
@@ -90,7 +84,7 @@ class MacUserModuleTest(integration.ModuleCase):
         except CommandExecutionError:
             raise
 
-    def test_mac_user_primary_group(self, grains=None):
+    def test_mac_user_primary_group(self):
         '''
         Tests the primary_group function
         '''
@@ -110,7 +104,7 @@ class MacUserModuleTest(integration.ModuleCase):
             self.run_function('user.delete', [PRIMARY_GROUP_USER])
             raise
 
-    def test_mac_user_changes(self, grains=None):
+    def test_mac_user_changes(self):
         '''
         Tests mac_user functions that change user properties
         '''
@@ -154,7 +148,7 @@ class MacUserModuleTest(integration.ModuleCase):
             self.run_function('user.delete', [CHANGE_USER])
             raise
 
-    def tearDown(self, grains=None):
+    def tearDown(self):
         '''
         Clean up after tests
         '''

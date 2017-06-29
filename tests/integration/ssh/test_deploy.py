@@ -7,11 +7,11 @@ from __future__ import absolute_import
 
 # Import salt testing libs
 from tests.support.unit import skipIf
-import tests.integration as integration
+from tests.support.case import SSHCase
 
 
 @skipIf(True, 'Not ready for production')
-class SSHTest(integration.SSHCase):
+class SSHTest(SSHCase):
     '''
     Test general salt-ssh functionality
     '''

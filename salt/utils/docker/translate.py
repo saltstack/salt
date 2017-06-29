@@ -14,7 +14,7 @@ import salt.utils.network
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
-from salt.ext import six
+import salt.ext.six as six
 from salt.ext.six.moves import range, zip  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -705,7 +705,13 @@ def ports(val, **kwargs):  # pylint: disable=unused-argument
             raise SaltInvocationError(exc.__str__())
         new_ports.update([_get_port_def(x, proto)
                           for x in range(range_start, range_end + 1)])
-    return sorted(new_ports)
+    ordered_new_ports = [
+        port if proto == 'tcp' else (port, proto) for (port, proto) in sorted(
+            [(new_port, 'tcp') if isinstance(new_port, six.integer_types) else new_port
+             for new_port in new_ports]
+        )
+    ]
+    return ordered_new_ports
 
 
 def privileged(val, **kwargs):  # pylint: disable=unused-argument

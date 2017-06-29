@@ -373,7 +373,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(name),
         args={
-            'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, kwargs.keys()),
+            'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, list(kwargs)),
         },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
@@ -400,7 +400,7 @@ def create(vm_):
     private_wds = config.get_cloud_config_value(
         'private_windows', vm_, __opts__, default=False
     )
-    if private_ssh or private_wds or public_vlan is None or public_vlan is False:
+    if private_ssh or private_wds or public_vlan is None:
         ip_type = 'primaryBackendIpAddress'
 
     def wait_for_ip():

@@ -6,6 +6,7 @@ A module to wrap (non-Windows) archive calls
 '''
 from __future__ import absolute_import
 import contextlib  # For < 2.7 compat
+import copy
 import errno
 import glob
 import logging
@@ -13,8 +14,8 @@ import os
 import re
 import shlex
 import stat
+import subprocess
 import tarfile
-import tempfile
 import zipfile
 try:
     from shlex import quote as _quote  # pylint: disable=E0611
@@ -164,7 +165,10 @@ def list_(name,
         files = []
         links = []
         try:
-            with contextlib.closing(tarfile.open(cached)) as tar_archive:
+            open_kwargs = {'name': cached} \
+                if not isinstance(cached, subprocess.Popen) \
+                else {'fileobj': cached.stdout, 'mode': 'r|'}
+            with contextlib.closing(tarfile.open(**open_kwargs)) as tar_archive:
                 for member in tar_archive.getmembers():
                     if member.issym():
                         links.append(member.name)
@@ -175,7 +179,15 @@ def list_(name,
             return dirs, files, links
 
         except tarfile.ReadError:
-            if not failhard:
+            if failhard:
+                if isinstance(cached, subprocess.Popen):
+                    stderr = cached.communicate()[1]
+                    if cached.returncode != 0:
+                        raise CommandExecutionError(
+                            'Failed to decompress {0}'.format(name),
+                            info={'error': stderr}
+                        )
+            else:
                 if not salt.utils.which('tar'):
                     raise CommandExecutionError('\'tar\' command not available')
                 if decompress_cmd is not None:
@@ -194,29 +206,12 @@ def list_(name,
                         decompress_cmd = 'xz --decompress --stdout'
 
                 if decompress_cmd:
-                    fd, decompressed = tempfile.mkstemp()
-                    os.close(fd)
-                    try:
-                        cmd = '{0} {1} > {2}'.format(decompress_cmd,
-                                                     _quote(cached),
-                                                     _quote(decompressed))
-                        result = __salt__['cmd.run_all'](cmd, python_shell=True)
-                        if result['retcode'] != 0:
-                            raise CommandExecutionError(
-                                'Failed to decompress {0}'.format(name),
-                                info={'error': result['stderr']}
-                            )
-                        return _list_tar(name, decompressed, None, True)
-                    finally:
-                        try:
-                            os.remove(decompressed)
-                        except OSError as exc:
-                            if exc.errno != errno.ENOENT:
-                                log.warning(
-                                    'Failed to remove intermediate '
-                                    'decompressed archive %s: %s',
-                                    decompressed, exc.__str__()
-                                )
+                    decompressed = subprocess.Popen(
+                        '{0} {1}'.format(decompress_cmd, _quote(cached)),
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE)
+                    return _list_tar(name, decompressed, None, True)
 
         raise CommandExecutionError(
             'Unable to list contents of {0}. If this is an XZ-compressed tar '
@@ -255,13 +250,16 @@ def list_(name,
                         else:
                             files.append(path)
 
-                for path in files:
+                _files = copy.deepcopy(files)
+                for path in _files:
                     # ZIP files created on Windows do not add entries
                     # to the archive for directories. So, we'll need to
                     # manually add them.
                     dirname = ''.join(path.rpartition('/')[:2])
                     if dirname:
                         dirs.add(dirname)
+                        if dirname in files:
+                            files.remove(dirname)
             return list(dirs), files, links
         except zipfile.BadZipfile:
             raise CommandExecutionError('{0} is not a ZIP file'.format(name))
@@ -483,7 +481,7 @@ def tar(options, tarfile, sources=None, dest=None,
         Comma delimited list of files to **pack** into the tarfile. Can also be
         passed as a Python list.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             Globbing is now supported for this argument
 
     dest
@@ -508,7 +506,7 @@ def tar(options, tarfile, sources=None, dest=None,
 
         # Create a tarfile
         salt '*' archive.tar -cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
-        # Create a tarfile using globbing (Nitrogen and later)
+        # Create a tarfile using globbing (2017.7.0 and later)
         salt '*' archive.tar -cjvf /tmp/tarfile.tar.bz2 '/tmp/file_*'
         # Unpack a tarfile
         salt '*' archive.tar xf foo.tar dest=/target/directory
@@ -634,7 +632,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
         Comma-separated list of sources to include in the zip file. Sources can
         also be passed in a Python list.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             Globbing is now supported for this argument
 
     template : None
@@ -671,7 +669,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
     .. code-block:: bash
 
         salt '*' archive.cmd_zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
-        # Globbing for sources (Nitrogen and later)
+        # Globbing for sources (2017.7.0 and later)
         salt '*' archive.cmd_zip /tmp/zipfile.zip '/tmp/sourcefile*'
     '''
     cmd = ['zip', '-r']
@@ -703,7 +701,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
         Comma-separated list of sources to include in the zip file. Sources can
         also be passed in a Python list.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             Globbing is now supported for this argument
 
     template : None
@@ -736,7 +734,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     .. code-block:: bash
 
         salt '*' archive.zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
-        # Globbing for sources (Nitrogen and later)
+        # Globbing for sources (2017.7.0 and later)
         salt '*' archive.zip /tmp/zipfile.zip '/tmp/sourcefile*'
     '''
     if runas:
@@ -1000,7 +998,7 @@ def unzip(zip_file,
     extract_perms : True
         The Python zipfile_ module does not extract file/directory attributes
         by default. When this argument is set to ``True``, Salt will attempt to
-        apply the file permision attributes to the extracted files/folders.
+        apply the file permission attributes to the extracted files/folders.
 
         On Windows, only the read-only flag will be extracted as set within the
         zip file, other attributes (i.e. user/group permissions) are ignored.
@@ -1061,7 +1059,15 @@ def unzip(zip_file,
                             continue
                     zfile.extract(target, dest, password)
                     if extract_perms:
-                        os.chmod(os.path.join(dest, target), zfile.getinfo(target).external_attr >> 16)
+                        perm = zfile.getinfo(target).external_attr >> 16
+                        if perm == 0:
+                            umask_ = os.umask(0)
+                            os.umask(umask_)
+                            if target.endswith('/'):
+                                perm = 0o777 & ~umask_
+                            else:
+                                perm = 0o666 & ~umask_
+                        os.chmod(os.path.join(dest, target), perm)
     except Exception as exc:
         if runas:
             os.seteuid(euid)
@@ -1157,7 +1163,7 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
         Comma-separated list of sources to include in the rar file. Sources can
         also be passed in a Python list.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             Globbing is now supported for this argument
 
     cwd : None
@@ -1182,7 +1188,7 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
     .. code-block:: bash
 
         salt '*' archive.rar /tmp/rarfile.rar /tmp/sourcefile1,/tmp/sourcefile2
-        # Globbing for sources (Nitrogen and later)
+        # Globbing for sources (2017.7.0 and later)
         salt '*' archive.rar /tmp/rarfile.rar '/tmp/sourcefile*'
     '''
     cmd = ['rar', 'a', '-idp', '{0}'.format(rarfile)]

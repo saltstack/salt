@@ -35,6 +35,12 @@ please refer to the `NAPALM Read the Docs page`_.
 .. _`NAPALM Read the Docs page`: https://napalm.readthedocs.io/en/latest/#supported-network-operating-systems
 .. _`optional arguments`: http://napalm.readthedocs.io/en/latest/support/index.html#list-of-supported-optional-arguments
 
+.. versionadded:: 2017.7.0
+
+* always_alive: in certain less dynamic environments, maintaining the remote connection permanently
+    open with the network device is not always beneficial. In that case, the user can
+    select to initialize the connection only when needed, by specifying this field to ``false``.
+    Default: ``true`` (maintains the connection with the remote network device).
 
 Example:
 
@@ -48,12 +54,15 @@ Example:
         passwd: my_password
         optional_args:
             port: 12201
-            config_format: set
 
 .. seealso::
 
     - :mod:`NAPALM grains: select network devices based on their characteristics <salt.grains.napalm>`
     - :mod:`NET module: network basic features <salt.modules.napalm_network>`
+    - :mod:`Network config state: Manage the configuration using arbitrary templates <salt.states.netconfig>`
+    - :mod:`NAPALM YANG state: Manage the configuration according to the YANG models (OpenConfig/IETF) <salt.states.netyang>`
+    - :mod:`Network ACL module: Generate and load ACL (firewall) configuration <salt.modules.napalm_acl>`
+    - :mod:`Network ACL state: Manage the firewall configuration <salt.states.netacl>`
     - :mod:`NTP operational and configuration management module <salt.modules.napalm_ntp>`
     - :mod:`BGP operational and configuration management module <salt.modules.napalm_bgp>`
     - :mod:`Routes details <salt.modules.napalm_route>`
@@ -127,7 +136,7 @@ def alive(opts):
     '''
     Return the connection status with the remote device.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     '''
     if salt.utils.napalm.not_always_alive(opts):
         return True  # don't force reconnection for not-always alive proxies
@@ -245,11 +254,11 @@ def call(method, *args, **kwargs):
         * result (True/False): if the operation succeeded
         * out (object): returns the object as-is from the call
         * comment (string): provides more details in case the call failed
-        * traceback (string): complete traceback in case of exeception. Please submit an issue including this traceback
+        * traceback (string): complete traceback in case of exception. Please submit an issue including this traceback
         on the `correct driver repo`_ and make sure to read the FAQ_
 
     .. _`correct driver repo`: https://github.com/napalm-automation/napalm/issues/new
-    .. FAQ_: https://github.com/napalm-automation/napalm#faq
+    .. _FAQ: https://github.com/napalm-automation/napalm#faq
 
     Example:
 

@@ -2,7 +2,7 @@
 '''
 IRC Bot engine
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Example Configuration
 
@@ -42,12 +42,12 @@ Example of usage
 
 .. code:: txt
 
-    08:33:57 @gtmanfred » !ping
-    08:33:57   gtmanbot » gtmanfred: pong
-    08:34:02 @gtmanfred » !echo ping
-    08:34:02   gtmanbot » ping
-    08:34:17 @gtmanfred » !event test/tag/ircbot irc is usefull
-    08:34:17   gtmanbot » gtmanfred: TaDa!
+    08:33:57 @gtmanfred > !ping
+    08:33:57   gtmanbot > gtmanfred: pong
+    08:34:02 @gtmanfred > !echo ping
+    08:34:02   gtmanbot > ping
+    08:34:17 @gtmanfred > !event test/tag/ircbot irc is usefull
+    08:34:17   gtmanbot > gtmanfred: TaDa!
 
 .. code:: txt
 

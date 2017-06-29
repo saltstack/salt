@@ -13,7 +13,8 @@ import string
 from salt.config import cloud_providers_config
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
 
 # Import Third-Party Libs
@@ -34,7 +35,7 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'ec2'
 
 
-class EC2Test(integration.ShellCase):
+class EC2Test(ShellCase):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
@@ -61,7 +62,7 @@ class EC2Test(integration.ShellCase):
         # and provider are present
         config = cloud_providers_config(
             os.path.join(
-                integration.FILES,
+                FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'

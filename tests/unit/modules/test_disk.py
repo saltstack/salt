@@ -56,44 +56,47 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {disk: {}}
 
-    @patch('salt.modules.disk.usage', MagicMock(return_value=STUB_DISK_USAGE))
     def test_usage_dict(self):
-        with patch.dict(disk.__grains__, {'kernel': 'Linux'}):
+        with patch.dict(disk.__grains__, {'kernel': 'Linux'}), \
+                patch('salt.modules.disk.usage',
+                      MagicMock(return_value=STUB_DISK_USAGE)):
             mock_cmd = MagicMock(return_value=1)
             with patch.dict(disk.__salt__, {'cmd.run': mock_cmd}):
                 self.assertDictEqual(STUB_DISK_USAGE, disk.usage(args=None))
 
-    @patch('salt.modules.disk.usage', MagicMock(return_value=''))
     def test_usage_none(self):
-        with patch.dict(disk.__grains__, {'kernel': 'Linux'}):
+        with patch.dict(disk.__grains__, {'kernel': 'Linux'}), \
+                patch('salt.modules.disk.usage', MagicMock(return_value='')):
             mock_cmd = MagicMock(return_value=1)
             with patch.dict(disk.__salt__, {'cmd.run': mock_cmd}):
                 self.assertEqual('', disk.usage(args=None))
 
-    @patch('salt.modules.disk.inodeusage', MagicMock(return_value=STUB_DISK_INODEUSAGE))
     def test_inodeusage(self):
-        with patch.dict(disk.__grains__, {'kernel': 'OpenBSD'}):
+        with patch.dict(disk.__grains__, {'kernel': 'OpenBSD'}), \
+                patch('salt.modules.disk.inodeusage',
+                       MagicMock(return_value=STUB_DISK_INODEUSAGE)):
             mock = MagicMock()
             with patch.dict(disk.__salt__, {'cmd.run': mock}):
                 self.assertDictEqual(STUB_DISK_INODEUSAGE, disk.inodeusage(args=None))
 
-    @patch('salt.modules.disk.percent', MagicMock(return_value=STUB_DISK_PERCENT))
     def test_percent(self):
-        with patch.dict(disk.__grains__, {'kernel': 'Linux'}):
+        with patch.dict(disk.__grains__, {'kernel': 'Linux'}), \
+                patch('salt.modules.disk.percent',
+                      MagicMock(return_value=STUB_DISK_PERCENT)):
             mock = MagicMock()
             with patch.dict(disk.__salt__, {'cmd.run': mock}):
                 self.assertDictEqual(STUB_DISK_PERCENT, disk.percent(args=None))
 
-    @patch('salt.modules.disk.percent', MagicMock(return_value='/'))
     def test_percent_args(self):
-        with patch.dict(disk.__grains__, {'kernel': 'Linux'}):
+        with patch.dict(disk.__grains__, {'kernel': 'Linux'}), \
+                patch('salt.modules.disk.percent', MagicMock(return_value='/')):
             mock = MagicMock()
             with patch.dict(disk.__salt__, {'cmd.run': mock}):
                 self.assertEqual('/', disk.percent('/'))
 
-    @patch('salt.modules.disk.blkid', MagicMock(return_value=STUB_DISK_BLKID))
     def test_blkid(self):
-        with patch.dict(disk.__salt__, {'cmd.run_stdout': MagicMock(return_value=1)}):
+        with patch.dict(disk.__salt__, {'cmd.run_stdout': MagicMock(return_value=1)}), \
+                patch('salt.modules.disk.blkid', MagicMock(return_value=STUB_DISK_BLKID)):
             self.assertDictEqual(STUB_DISK_BLKID, disk.blkid())
 
     def test_dump(self):
@@ -121,12 +124,22 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(disk.__salt__, {'cmd.run': mock}):
             mock_dump = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch('salt.modules.disk.dump', mock_dump):
-                kwargs = {'read-ahead': 512, 'filesystem-read-ahead': 512}
+                kwargs = {'read-ahead': 512, 'filesystem-read-ahead': 1024}
                 disk.tune('/dev/sda', **kwargs)
-                mock.assert_called_once_with(
-                    'blockdev --setra 512 --setfra 512 /dev/sda',
-                    python_shell=False
-                )
+
+                mock.assert_called_once()
+
+                args, kwargs = mock.call_args
+
+                # Assert called once with either 'blockdev --setra 512 --setfra 512 /dev/sda' or
+                # 'blockdev --setfra 512 --setra 512 /dev/sda' and python_shell=False kwarg.
+                self.assertEqual(len(args), 1)
+                self.assertTrue(args[0].startswith('blockdev '))
+                self.assertTrue(args[0].endswith(' /dev/sda'))
+                self.assertIn(' --setra 512 ', args[0])
+                self.assertIn(' --setfra 1024 ', args[0])
+                self.assertEqual(len(args[0].split()), 6)
+                self.assertEqual(kwargs, {'python_shell': False})
 
     @skipIf(not salt.utils.which('sync'), 'sync not found')
     @skipIf(not salt.utils.which('mkfs'), 'mkfs not found')
@@ -146,8 +159,9 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         device = '/dev/sdX1'
         fs_type = 'ext4'
         mock = MagicMock(return_value='FSTYPE\n{0}'.format(fs_type))
-        with patch.dict(disk.__salt__, {'cmd.run': mock}):
-            self.assertEqual(disk.fstype(device), fs_type)
+        with patch.dict(disk.__grains__, {'kernel': 'Linux'}):
+            with patch.dict(disk.__salt__, {'cmd.run': mock}):
+                self.assertEqual(disk.fstype(device), fs_type)
 
     @skipIf(not salt.utils.which('resize2fs'), 'resize2fs not found')
     def test_resize2fs(self):

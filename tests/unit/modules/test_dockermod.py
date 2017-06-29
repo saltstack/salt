@@ -41,16 +41,30 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {docker_mod: {'__context__': {'docker.docker_version': ''}}}
 
+    try:
+        docker_version = docker_mod.docker.version_info
+    except AttributeError:
+        docker_version = 0,
+
+    def setUp(self):
+        '''
+        Ensure we aren't persisting context dunders between tests
+        '''
+        docker_mod.__context__.pop('docker.client', None)
+
     def test_ps_with_host_true(self):
         '''
         Check that docker.ps called with host is ``True``,
         include resutlt of ``network.interfaces`` command in returned result.
         '''
+        client = Mock()
+        client.containers = MagicMock(return_value=[])
+        get_client_mock = MagicMock(return_value=client)
         network_interfaces = Mock(return_value={'mocked': None})
+
         with patch.dict(docker_mod.__salt__,
                         {'network.interfaces': network_interfaces}):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': MagicMock()}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 ret = docker_mod.ps_(host=True)
                 self.assertEqual(ret,
                                  {'host': {'interfaces': {'mocked': None}}})
@@ -59,74 +73,75 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Check that docker.ps accept filters parameter.
         '''
-        client = MagicMock()
-        with patch.dict(docker_mod.__context__,
-                        {'docker.client': client}):
+        client = Mock()
+        client.containers = MagicMock(return_value=[])
+        get_client_mock = MagicMock(return_value=client)
+
+        with patch.object(docker_mod, '_get_client', get_client_mock):
             docker_mod.ps_(filters={'label': 'KEY'})
             client.containers.assert_called_once_with(
                 all=True,
                 filters={'label': 'KEY'})
 
-    @patch.object(docker_mod, '_get_exec_driver')
-    def test_check_mine_cache_is_refreshed_on_container_change_event(self, _):
+    def test_check_mine_cache_is_refreshed_on_container_change_event(self):
         '''
         Every command that might modify docker containers state.
         Should trig an update on ``mine.send``
         '''
-        client_args_mock = MagicMock(return_value={
-            'create_container': [
-                'image', 'command', 'hostname', 'user', 'detach', 'stdin_open',
-                'tty', 'ports', 'environment', 'volumes', 'network_disabled',
-                'name', 'entrypoint', 'working_dir', 'domainname', 'cpuset',
-                'host_config', 'mac_address', 'labels', 'volume_driver',
-                'stop_signal', 'networking_config', 'healthcheck',
-                'stop_timeout'],
-           'host_config': [
-               'binds', 'port_bindings', 'lxc_conf', 'publish_all_ports',
-               'links', 'privileged', 'dns', 'dns_search', 'volumes_from',
-               'network_mode', 'restart_policy', 'cap_add', 'cap_drop',
-               'devices', 'extra_hosts', 'read_only', 'pid_mode', 'ipc_mode',
-               'security_opt', 'ulimits', 'log_config', 'mem_limit',
-               'memswap_limit', 'mem_reservation', 'kernel_memory',
-               'mem_swappiness', 'cgroup_parent', 'group_add', 'cpu_quota',
-               'cpu_period', 'blkio_weight', 'blkio_weight_device',
-               'device_read_bps', 'device_write_bps', 'device_read_iops',
-               'device_write_iops', 'oom_kill_disable', 'shm_size', 'sysctls',
-               'tmpfs', 'oom_score_adj', 'dns_opt', 'cpu_shares',
-               'cpuset_cpus', 'userns_mode', 'pids_limit', 'isolation',
-               'auto_remove', 'storage_opt'],
-           'networking_config': [
-               'aliases', 'links', 'ipv4_address', 'ipv6_address',
-               'link_local_ips'],
-           }
+        with patch.object(docker_mod, '_get_exec_driver'):
+            client_args_mock = MagicMock(return_value={
+                'create_container': [
+                    'image', 'command', 'hostname', 'user', 'detach', 'stdin_open',
+                    'tty', 'ports', 'environment', 'volumes', 'network_disabled',
+                    'name', 'entrypoint', 'working_dir', 'domainname', 'cpuset',
+                    'host_config', 'mac_address', 'labels', 'volume_driver',
+                    'stop_signal', 'networking_config', 'healthcheck',
+                    'stop_timeout'],
+               'host_config': [
+                   'binds', 'port_bindings', 'lxc_conf', 'publish_all_ports',
+                   'links', 'privileged', 'dns', 'dns_search', 'volumes_from',
+                   'network_mode', 'restart_policy', 'cap_add', 'cap_drop',
+                   'devices', 'extra_hosts', 'read_only', 'pid_mode', 'ipc_mode',
+                   'security_opt', 'ulimits', 'log_config', 'mem_limit',
+                   'memswap_limit', 'mem_reservation', 'kernel_memory',
+                   'mem_swappiness', 'cgroup_parent', 'group_add', 'cpu_quota',
+                   'cpu_period', 'blkio_weight', 'blkio_weight_device',
+                   'device_read_bps', 'device_write_bps', 'device_read_iops',
+                   'device_write_iops', 'oom_kill_disable', 'shm_size', 'sysctls',
+                   'tmpfs', 'oom_score_adj', 'dns_opt', 'cpu_shares',
+                   'cpuset_cpus', 'userns_mode', 'pids_limit', 'isolation',
+                   'auto_remove', 'storage_opt'],
+               'networking_config': [
+                   'aliases', 'links', 'ipv4_address', 'ipv6_address',
+                   'link_local_ips'],
+               }
 
-        )
+            )
 
-        for command_name, args in (('create', ()),
-                                   ('rm_', ()),
-                                   ('kill', ()),
-                                   ('pause', ()),
-                                   ('signal_', ('KILL',)),
-                                   ('start', ()),
-                                   ('stop', ()),
-                                   ('unpause', ()),
-                                   ('_run', ('command',)),
-                                   ('_script', ('command',)),
-                                   ):
-            mine_send = Mock()
-            command = getattr(docker_mod, command_name)
-            docker_client = MagicMock()
-            docker_client.api_version = '1.12'
-            with patch.dict(docker_mod.__salt__,
-                            {'mine.send': mine_send,
-                             'container_resource.run': MagicMock(),
-                             'cp.cache_file': MagicMock(return_value=False),
-                             'docker.get_client_args': client_args_mock}):
-                with patch.dict(docker_mod.__context__,
-                                {'docker.client': docker_client}):
-                    command('container', *args)
-            mine_send.assert_called_with('docker.ps', verbose=True, all=True,
-                                         host=True)
+            for command_name, args in (('create', ()),
+                                       ('rm_', ()),
+                                       ('kill', ()),
+                                       ('pause', ()),
+                                       ('signal_', ('KILL',)),
+                                       ('start', ()),
+                                       ('stop', ()),
+                                       ('unpause', ()),
+                                       ('_run', ('command',)),
+                                       ('_script', ('command',)),
+                                       ):
+                mine_send = Mock()
+                command = getattr(docker_mod, command_name)
+                client = MagicMock()
+                client.api_version = '1.12'
+                with patch.dict(docker_mod.__salt__,
+                                {'mine.send': mine_send,
+                                 'container_resource.run': MagicMock(),
+                                 'cp.cache_file': MagicMock(return_value=False),
+                                 'docker.get_client_args': client_args_mock}):
+                    with patch.object(docker_mod, '_get_client', client):
+                        command('container', *args)
+                mine_send.assert_called_with('docker.ps', verbose=True, all=True,
+                                             host=True)
 
     @skipIf(_docker_py_version() < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
@@ -141,20 +156,15 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
+        get_client_mock = MagicMock(return_value=client)
+
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
-                docker_mod.networks(
-                    names=['foo'],
-                    ids=['01234'],
-                )
-        client.networks.assert_called_once_with(
-                    names=['foo'],
-                    ids=['01234'],
-        )
+            with patch.object(docker_mod, '_get_client', get_client_mock):
+                docker_mod.networks(names=['foo'], ids=['01234'])
+        client.networks.assert_called_once_with(names=['foo'], ids=['01234'])
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
     def test_create_network(self, *args):
         '''
@@ -167,20 +177,20 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
+        get_client_mock = MagicMock(return_value=client)
+
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
-                docker_mod.create_network(
-                    'foo',
-                    driver='bridge',
-                )
-        client.create_network.assert_called_once_with(
-                    'foo',
-                    driver='bridge',
-        )
+            with patch.object(docker_mod, '_get_client', get_client_mock):
+                docker_mod.create_network('foo',
+                                          driver='bridge',
+                                          driver_opts={})
+        client.create_network.assert_called_once_with('foo',
+                                                      driver='bridge',
+                                                      options={},
+                                                      check_duplicate=True)
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
     def test_remove_network(self, *args):
         '''
@@ -193,14 +203,15 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
+        get_client_mock = MagicMock(return_value=client)
+
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod.remove_network('foo')
         client.remove_network.assert_called_once_with('foo')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
     def test_inspect_network(self, *args):
         '''
@@ -213,18 +224,19 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
+        get_client_mock = MagicMock(return_value=client)
+
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod.inspect_network('foo')
         client.inspect_network.assert_called_once_with('foo')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
     def test_connect_container_to_network(self, *args):
         '''
-        test inspect network.
+        test connect_container_to_network
         '''
         __salt__ = {
             'config.get': Mock(),
@@ -233,22 +245,23 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
+        get_client_mock = MagicMock(return_value=client)
 
-        context = {'docker.client': client,
-                   'docker.exec_driver': 'docker-exec'}
+        context = {'docker.exec_driver': 'docker-exec'}
 
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
             with patch.dict(docker_mod.__context__, context):
-                docker_mod.connect_container_to_network('container', 'foo')
+                with patch.object(docker_mod, '_get_client', get_client_mock):
+                    docker_mod.connect_container_to_network('container', 'foo')
         client.connect_container_to_network.assert_called_once_with(
             'container', 'foo', None)
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
     def test_disconnect_container_from_network(self, *args):
         '''
-        test inspect network.
+        test disconnect_container_from_network
         '''
         __salt__ = {
             'config.get': Mock(),
@@ -257,15 +270,16 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         host_config = {}
         client = Mock()
         client.api_version = '1.21'
+        get_client_mock = MagicMock(return_value=client)
+
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod.disconnect_container_from_network('container', 'foo')
         client.disconnect_container_from_network.assert_called_once_with(
             'container', 'foo')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
     def test_list_volumes(self, *args):
         '''
@@ -277,10 +291,11 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         }
         client = Mock()
         client.api_version = '1.21'
+        get_client_mock = MagicMock(return_value=client)
+
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod.volumes(
                     filters={'dangling': [True]},
                 )
@@ -288,7 +303,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             filters={'dangling': [True]},
         )
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
     def test_create_volume(self, *args):
         '''
@@ -300,10 +315,11 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         }
         client = Mock()
         client.api_version = '1.21'
+        get_client_mock = MagicMock(return_value=client)
+
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod.create_volume(
                     'foo',
                     driver='bridge',
@@ -315,7 +331,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                     driver_opts={},
         )
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
     def test_remove_volume(self, *args):
         '''
@@ -327,14 +343,15 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         }
         client = Mock()
         client.api_version = '1.21'
+        get_client_mock = MagicMock(return_value=client)
+
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod.remove_volume('foo')
         client.remove_volume.assert_called_once_with('foo')
 
-    @skipIf(_docker_py_version() < (1, 5, 0),
+    @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
     def test_inspect_volume(self, *args):
         '''
@@ -346,10 +363,11 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         }
         client = Mock()
         client.api_version = '1.21'
+        get_client_mock = MagicMock(return_value=client)
+
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod.inspect_volume('foo')
         client.inspect_volume.assert_called_once_with('foo')
 
@@ -357,13 +375,14 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         client = Mock()
         client.api_version = '1.21'
         client.wait = Mock(return_value=0)
+        get_client_mock = MagicMock(return_value=client)
+
         docker_inspect_container = Mock(side_effect=[
             {'State': {'Running': True}},
             {'State': {'Stopped': True}}])
         with patch.object(docker_mod, 'inspect_container',
                           docker_inspect_container):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod._clear_context()
                 result = docker_mod.wait('foo')
         self.assertEqual(result, {'result': True,
@@ -375,14 +394,15 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         client = Mock()
         client.api_version = '1.21'
         client.wait = Mock(return_value=0)
+        get_client_mock = MagicMock(return_value=client)
+
         docker_inspect_container = Mock(side_effect=[
             {'State': {'Stopped': True}},
             {'State': {'Stopped': True}},
         ])
         with patch.object(docker_mod, 'inspect_container',
                           docker_inspect_container):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod._clear_context()
                 result = docker_mod.wait('foo')
         self.assertEqual(result, {'result': False,
@@ -395,14 +415,15 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         client = Mock()
         client.api_version = '1.21'
         client.wait = Mock(return_value=0)
+        get_client_mock = MagicMock(return_value=client)
+
         docker_inspect_container = Mock(side_effect=[
             {'State': {'Stopped': True}},
             {'State': {'Stopped': True}},
         ])
         with patch.object(docker_mod, 'inspect_container',
                           docker_inspect_container):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod._clear_context()
                 result = docker_mod.wait('foo', ignore_already_stopped=True)
         self.assertEqual(result, {'result': True,
@@ -414,11 +435,12 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
     def test_wait_success_absent_container(self):
         client = Mock()
         client.api_version = '1.21'
+        get_client_mock = MagicMock(return_value=client)
+
         docker_inspect_container = Mock(side_effect=CommandExecutionError)
         with patch.object(docker_mod, 'inspect_container',
                           docker_inspect_container):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod._clear_context()
                 result = docker_mod.wait('foo', ignore_already_stopped=True)
         self.assertEqual(result, {'result': True,
@@ -428,13 +450,14 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         client = Mock()
         client.api_version = '1.21'
         client.wait = Mock(return_value=1)
+        get_client_mock = MagicMock(return_value=client)
+
         docker_inspect_container = Mock(side_effect=[
             {'State': {'Running': True}},
             {'State': {'Stopped': True}}])
         with patch.object(docker_mod, 'inspect_container',
                           docker_inspect_container):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod._clear_context()
                 result = docker_mod.wait('foo', fail_on_exit_status=True)
         self.assertEqual(result, {'result': False,
@@ -446,13 +469,14 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         client = Mock()
         client.api_version = '1.21'
         client.wait = Mock(return_value=1)
+        get_client_mock = MagicMock(return_value=client)
+
         docker_inspect_container = Mock(side_effect=[
             {'State': {'Stopped': True}},
             {'State': {'Stopped': True}}])
         with patch.object(docker_mod, 'inspect_container',
                           docker_inspect_container):
-            with patch.dict(docker_mod.__context__,
-                            {'docker.client': client}):
+            with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod._clear_context()
                 result = docker_mod.wait('foo',
                                            ignore_already_stopped=True,
@@ -619,41 +643,49 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             )
         client = Mock()
         client.put_archive = Mock()
+        get_client_mock = MagicMock(return_value=client)
 
-        context = {'docker.client': client,
-                   'docker.exec_driver': 'docker-exec'}
+        context = {'docker.exec_driver': 'docker-exec'}
         salt_dunder = {'config.option': docker_config_mock}
 
         with patch.object(docker_mod, 'run_all', docker_run_all_mock):
             with patch.object(docker_mod, 'copy_to', docker_copy_to_mock):
-                with patch.dict(docker_mod.__opts__, {'cachedir': '/tmp'}):
-                    with patch.dict(docker_mod.__salt__, salt_dunder):
-                        with patch.dict(docker_mod.__context__, context):
-                            # call twice to verify tmp path later
-                            for i in range(2):
-                                ret = docker_mod.call(
-                                    'ID',
-                                    'test.arg',
-                                    1, 2,
-                                    arg1='val1')
+                with patch.object(docker_mod, '_get_client', get_client_mock):
+                    with patch.dict(docker_mod.__opts__, {'cachedir': '/tmp'}):
+                        with patch.dict(docker_mod.__salt__, salt_dunder):
+                            with patch.dict(docker_mod.__context__, context):
+                                # call twice to verify tmp path later
+                                for i in range(2):
+                                    ret = docker_mod.call(
+                                        'ID',
+                                        'test.arg',
+                                        1, 2,
+                                        arg1='val1')
 
         # Check that the directory is different each time
         # [ call(name, [args]), ...
+        self.maxDiff = None
         self.assertIn('mkdir', docker_run_all_mock.mock_calls[0][1][1])
-        self.assertIn('mkdir', docker_run_all_mock.mock_calls[3][1][1])
+        self.assertIn('mkdir', docker_run_all_mock.mock_calls[4][1][1])
         self.assertNotEqual(docker_run_all_mock.mock_calls[0][1][1],
-                            docker_run_all_mock.mock_calls[3][1][1])
-
-        self.assertIn('salt-call', docker_run_all_mock.mock_calls[1][1][1])
-        self.assertIn('salt-call', docker_run_all_mock.mock_calls[4][1][1])
-        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
                             docker_run_all_mock.mock_calls[4][1][1])
 
-        # check directory cleanup
-        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[2][1][1])
-        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[5][1][1])
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[2][1][1])
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[6][1][1])
         self.assertNotEqual(docker_run_all_mock.mock_calls[2][1][1],
+                            docker_run_all_mock.mock_calls[6][1][1])
+
+        # check thin untar
+        self.assertIn('tarfile', docker_run_all_mock.mock_calls[1][1][1])
+        self.assertIn('tarfile', docker_run_all_mock.mock_calls[5][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
                             docker_run_all_mock.mock_calls[5][1][1])
+
+        # check directory cleanup
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[3][1][1])
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[7][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[3][1][1],
+                            docker_run_all_mock.mock_calls[7][1][1])
 
         self.assertEqual({"retcode": 0, "comment": "container cmd"}, ret)
 
@@ -669,8 +701,9 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                           {'Id': 'sha256:abcdef'},
                           {'Id': 'sha256:abcdefg',
                            'RepoTags': ['image:latest']}])
-        with patch.dict(docker_mod.__context__,
-                        {'docker.client': client}):
+        get_client_mock = MagicMock(return_value=client)
+
+        with patch.object(docker_mod, '_get_client', get_client_mock):
             docker_mod._clear_context()
             result = docker_mod.images()
         self.assertEqual(result,

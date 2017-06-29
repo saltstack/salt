@@ -84,7 +84,7 @@ def beacon(config):
     '''
     Broadcast values via zeroconf
 
-    If the announced values are static, it is adviced to set run_once: True
+    If the announced values are static, it is advised to set run_once: True
     (do not poll) on the beacon configuration.
 
     The following are required configuration settings:

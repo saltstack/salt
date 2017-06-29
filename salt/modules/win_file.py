@@ -18,6 +18,7 @@ import logging
 # pylint: disable=W0611
 import operator  # do not remove
 from collections import Iterable, Mapping  # do not remove
+from functools import reduce  # do not remove
 import datetime  # do not remove.
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
@@ -49,13 +50,16 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         touch, append, contains, contains_regex, get_source_sum,
         contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
         get_hash, manage_file, file_exists, get_diff, line, list_backups,
-        __clean_tmp, check_file_meta, _binary_replace, restore_backup,
+        __clean_tmp, check_file_meta, _binary_replace,
+        _splitlines_preserving_trailing_newline, restore_backup,
         access, copy, readdir, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
         lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
         comment, uncomment, _add_flags, comment_line, _regex_to_static,
-        _get_line_indent, apply_template_on_contents)
+        _get_line_indent, apply_template_on_contents, dirname, basename,
+        list_backups_dir)
+from salt.modules.file import normpath as normpath_
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -69,6 +73,13 @@ try:
         HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False
+
+# This is to fix the pylint error: E0602: Undefined variable "WindowsError"
+try:
+    from exceptions import WindowsError
+except ImportError:
+    class WindowsError(OSError):
+        pass
 
 HAS_WIN_DACL = False
 try:
@@ -100,15 +111,19 @@ def __virtual__():
             global get_diff, line, _get_flags, extract_hash, comment_line
             global access, copy, readdir, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
+            global _splitlines_preserving_trailing_newline
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
-            global _regex_to_static, _get_line_indent
+            global _regex_to_static, _get_line_indent, dirname, basename
+            global list_backups_dir, normpath_
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
             _get_flags = _namespaced_function(_get_flags, globals())
             _binary_replace = _namespaced_function(_binary_replace, globals())
+            _splitlines_preserving_trailing_newline = _namespaced_function(
+                _splitlines_preserving_trailing_newline, globals())
             _error = _namespaced_function(_error, globals())
             _get_bkroot = _namespaced_function(_get_bkroot, globals())
             list_backups = _namespaced_function(list_backups, globals())
@@ -160,6 +175,10 @@ def __virtual__():
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
             _add_flags = _namespaced_function(_add_flags, globals())
             apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())
+            dirname = _namespaced_function(dirname, globals())
+            basename = _namespaced_function(basename, globals())
+            list_backups_dir = _namespaced_function(list_backups_dir, globals())
+            normpath_ = _namespaced_function(normpath_, globals())
 
         else:
             return False, 'Module win_file: Missing Win32 modules'
@@ -175,7 +194,8 @@ __outputter__ = {
 }
 
 __func_alias__ = {
-    'makedirs_': 'makedirs'
+    'makedirs_': 'makedirs',
+    'normpath_': 'normpath',
 }
 
 
@@ -1234,7 +1254,10 @@ def mkdir(path,
         not apply to parent directories if they must be created
 
     Returns:
-        bool: True if successful, otherwise raise an error
+        bool: True if successful
+
+    Raises:
+        CommandExecutionError: If unsuccessful
 
     CLI Example:
 
@@ -1259,24 +1282,27 @@ def mkdir(path,
 
     if not os.path.isdir(path):
 
-        # Make the directory
-        os.mkdir(path)
+        try:
+            # Make the directory
+            os.mkdir(path)
 
-        # Set owner
-        if owner:
-            salt.utils.win_dacl.set_owner(path, owner)
+            # Set owner
+            if owner:
+                salt.utils.win_dacl.set_owner(path, owner)
 
-        # Set permissions
-        set_perms(path, grant_perms, deny_perms, inheritance)
+            # Set permissions
+            set_perms(path, grant_perms, deny_perms, inheritance)
+        except WindowsError as exc:
+            raise CommandExecutionError(exc)
 
     return True
 
 
-def makedirs(path,
-             owner=None,
-             grant_perms=None,
-             deny_perms=None,
-             inheritance=True):
+def makedirs_(path,
+              owner=None,
+              grant_perms=None,
+              deny_perms=None,
+              inheritance=True):
     '''
     Ensure that the parent directory containing this path is available.
 
@@ -1319,6 +1345,12 @@ def makedirs(path,
         ``C:\\temp\\test``, then it would be treated as ``C:\\temp\\`` but if
         the path ends with a trailing slash like ``C:\\temp\\test\\``, then it
         would be treated as ``C:\\temp\\test\\``.
+
+    Returns:
+        bool: True if successful
+
+    Raises:
+        CommandExecutionError: If unsuccessful
 
     CLI Example:
 
@@ -1372,7 +1404,9 @@ def makedirs(path,
     for directory_to_create in directories_to_create:
         # all directories have the user, group and mode set!!
         log.debug('Creating directory: %s', directory_to_create)
-        mkdir(path, owner, grant_perms, deny_perms, inheritance)
+        mkdir(directory_to_create, owner, grant_perms, deny_perms, inheritance)
+
+    return True
 
 
 def makedirs_perms(path,

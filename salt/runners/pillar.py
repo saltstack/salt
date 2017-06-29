@@ -41,6 +41,7 @@ def show_pillar(minion='*', **kwargs):
     Returns the compiled pillar either of a specific minion
     or just the global available pillars. This function assumes
     that no minion has the id ``*``.
+    Function also accepts pillarenv as attribute in order to limit to a specific pillar branch of git
 
     CLI Example:
 
@@ -64,6 +65,12 @@ def show_pillar(minion='*', **kwargs):
 
         salt-run pillar.show_pillar 'pillarenv=dev'
 
+    shows global pillar for 'dev' pillar environment and specific pillarenv = dev:
+
+    .. code-block:: bash
+
+        salt-run pillar.show_pillar 'saltenv=dev' 'pillarenv=dev'
+
     API Example:
 
     .. code-block:: python
@@ -83,6 +90,8 @@ def show_pillar(minion='*', **kwargs):
         grains = {'fqdn': minion}
 
     for key in kwargs:
+        if key == 'pillarenv':
+            __opts__['pillarenv'] = kwargs[key]
         if key == 'saltenv':
             saltenv = kwargs[key]
         elif key == 'pillarenv':

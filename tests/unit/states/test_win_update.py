@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -59,12 +60,14 @@ class MockPyWinUpdater(object):
         return True
 
 
-@patch('salt.states.win_update.PyWinUpdater', MockPyWinUpdater)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinUpdateTestCase(TestCase):
+class WinUpdateTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the win_update state
     '''
+    def setup_loader_modules(self):
+        return {win_update: {'PyWinUpdater': MockPyWinUpdater}}
+
     def test_installed(self):
         '''
             Test to install specified windows updates
@@ -72,7 +75,10 @@ class WinUpdateTestCase(TestCase):
         ret = {'name': 'salt',
                'changes': {},
                'result': False,
-               'comment': ''}
+               'comment': '',
+               'warnings': ["The 'win_update' module is deprecated, and will "
+                            "be removed in Salt Fluorine. Please use the "
+                            "'win_wua' module instead."]}
 
         mock = MagicMock(side_effect=[['Saltstack', False, 5],
                                       ['Saltstack', True, 5],
@@ -105,7 +111,10 @@ class WinUpdateTestCase(TestCase):
         ret = {'name': 'salt',
                'changes': {},
                'result': False,
-               'comment': ''}
+               'comment': '',
+               'warnings': ["The 'win_update' module is deprecated, and will "
+                            "be removed in Salt Fluorine. Please use the "
+                            "'win_wua' module instead."]}
 
         mock = MagicMock(side_effect=[['Saltstack', False, 5],
                                       ['Saltstack', True, 5],

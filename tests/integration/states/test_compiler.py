@@ -7,10 +7,10 @@ tests for host state
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 
 
-class CompileTest(integration.ModuleCase):
+class CompileTest(ModuleCase):
     '''
     Validate the state compiler
     '''

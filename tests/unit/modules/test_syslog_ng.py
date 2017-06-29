@@ -278,4 +278,4 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertTrue(mock_function.called)
                 self.assertEqual(len(mock_function.call_args), 2)
                 mock_param = mock_function.call_args
-                self.assertTrue(mock_param[0][0].endswith(mock_function_args))
+                self.assertEqual(mock_param[0][0], mock_function_args.split())

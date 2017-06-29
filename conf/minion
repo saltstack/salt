@@ -151,7 +151,11 @@
 # Set the default outputter used by the salt-call command. The default is
 # "nested".
 #output: nested
-#
+
+# To set a list of additional directories to search for salt outputters, set the
+# outputter_dirs option.
+#outputter_dirs: []
+
 # By default output is colored. To disable colored output, set the color value
 # to False.
 #color: True
@@ -193,6 +197,15 @@
 # The wait-time will be a random number of seconds between 0 and the defined value.
 #random_reauth_delay: 60
 
+
+# To avoid overloading a master when many minions startup at once, a randomized
+# delay may be set to tell the minions to wait before connecting to the master.
+# This value is the number of seconds to choose from for a random number. For
+# example, setting this value to 60 will choose a random number of seconds to delay
+# on startup between zero seconds and sixty seconds. Setting to '0' will disable
+# this feature.
+#random_startup_delay: 0
+
 # When waiting for a master to accept the minion's public key, salt will
 # continuously attempt to reconnect until successful. This is the timeout value,
 # in seconds, for each individual attempt. After this timeout expires, the minion
@@ -222,7 +235,7 @@
 # cause sub minion process to restart.
 #auth_safemode: False
 
-# Ping Master to ensure connection is alive (minutes).
+# Ping Master to ensure connection is alive (seconds).
 #ping_interval: 0
 
 # To auto recover minions if master changes IP address (DDNS)
@@ -359,6 +372,9 @@
 #  network.ip_addrs:
 #    interface: eth0
 #    cidr: '10.0.0.0/8'
+
+# The number of seconds a mine update runs.
+#mine_interval: 60
 
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
 # process communications. Set ipc_mode to 'tcp' on such systems
@@ -736,6 +752,10 @@
 # ZeroMQ is installed.
 #
 #zmq_monitor: False
+
+# Number of times to try to authenticate with the salt master when reconnecting
+# to the master
+#tcp_authentication_retries: 5
 
 ######      Module configuration      #####
 ###########################################

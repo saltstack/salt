@@ -7,7 +7,7 @@ Manage accounts in Samba's passdb using pdbedit
 :depends:       pdbedit
 :platform:      posix
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 
 .. code-block:: yaml
 

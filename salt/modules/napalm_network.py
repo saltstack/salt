@@ -16,6 +16,7 @@ Dependencies
 - :mod:`napalm proxy minion <salt.proxy.napalm>`
 
 .. versionadded:: 2016.11.0
+.. versionchanged:: 2017.7.0
 '''
 
 from __future__ import absolute_import
@@ -148,6 +149,11 @@ def _config_logic(napalm_device,
     if _compare.get('result', False):
         loaded_result['diff'] = _compare.get('out')
         loaded_result.pop('out', '')  # not needed
+    else:
+        loaded_result['diff'] = None
+        loaded_result['result'] = False
+        loaded_result['comment'] = _compare.get('comment')
+        return loaded_result
 
     _loaded_res = loaded_result.get('result', False)
     if not _loaded_res or test:
@@ -577,7 +583,7 @@ def ipaddrs(**kwargs):  # pylint: disable=unused-argument
     Returns all configured IP addresses on all interfaces as a dictionary of dictionaries.\
     Keys of the main dictionary represent the name of the interface.\
     Values of the main dictionary represent are dictionaries that may consist of two keys\
-    'ipv4' and 'ipv6' (one, both or none) which are themselvs dictionaries witht the IP addresses as keys.\
+    'ipv4' and 'ipv6' (one, both or none) which are themselvs dictionaries with the IP addresses as keys.\
 
     CLI Example:
 
@@ -808,6 +814,104 @@ def mac(address='', interface='', vlan=0, **kwargs):  # pylint: disable=unused-a
     return proxy_output
 
 
+@proxy_napalm_wrap
+def config(source=None, **kwargs):  # pylint: disable=unused-argument
+    '''
+    .. versionadded:: 2017.7.0
+
+    Return the whole configuration of the network device.
+    By default, it will return all possible configuration
+    sources supported by the network device.
+    At most, there will be:
+
+    - running config
+    - startup config
+    - candidate config
+
+    To return only one of the configurations, you can use
+    the ``source`` argument.
+
+    source (optional)
+        Which configuration type you want to display, default is all of them.
+
+        Options:
+
+        - running
+        - candidate
+        - startup
+
+    :return:
+        The object returned is a dictionary with the following keys:
+
+        - running (string): Representation of the native running configuration.
+        - candidate (string): Representation of the native candidate configuration.
+            If the device doesnt differentiate between running and startup
+            configuration this will an empty string.
+        - startup (string): Representation of the native startup configuration.
+            If the device doesnt differentiate between running and startup
+            configuration this will an empty string.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' net.config
+        salt '*' net.config source=candidate
+    '''
+    return salt.utils.napalm.call(
+        napalm_device,  # pylint: disable=undefined-variable
+        'get_config',
+        **{
+            'retrieve': source
+        }
+    )
+
+
+@proxy_napalm_wrap
+def optics(**kwargs):  # pylint: disable=unused-argument
+    '''
+    .. versionadded:: 2017.7.0
+
+    Fetches the power usage on the various transceivers installed
+    on the network device (in dBm), and returns a view that conforms with the
+    OpenConfig model openconfig-platform-transceiver.yang.
+
+    :return:
+        Returns a dictionary where the keys are as listed below:
+            * intf_name (unicode)
+                * physical_channels
+                    * channels (list of dicts)
+                        * index (int)
+                        * state
+                            * input_power
+                                * instant (float)
+                                * avg (float)
+                                * min (float)
+                                * max (float)
+                            * output_power
+                                * instant (float)
+                                * avg (float)
+                                * min (float)
+                                * max (float)
+                            * laser_bias_current
+                                * instant (float)
+                                * avg (float)
+                                * min (float)
+                                * max (float)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' net.optics
+    '''
+    return salt.utils.napalm.call(
+        napalm_device,  # pylint: disable=undefined-variable
+        'get_optics',
+        **{
+        }
+    )
+
 # <---- Call NAPALM getters --------------------------------------------------------------------------------------------
 
 # ----- Configuration specific functions ------------------------------------------------------------------------------>
@@ -831,7 +935,7 @@ def load_config(filename=None,
 
     To avoid committing the configuration, set the argument ``test`` to ``True`` and will discard (dry run).
 
-    To keep the chnages but not commit, set ``commit`` to ``False``.
+    To keep the changes but not commit, set ``commit`` to ``False``.
 
     To replace the config, set ``replace`` to ``True``.
 
@@ -849,7 +953,7 @@ def load_config(filename=None,
         Commit? Default: ``True``.
 
     debug: False
-        Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` contaning the raw
+        Debug mode. Will insert a new key under the output dictionary, as ``loaded_config`` containing the raw
         configuration loaded on the device.
 
         .. versionadded:: 2016.11.2
@@ -912,7 +1016,8 @@ def load_config(filename=None,
     loaded_config = None
     if debug:
         if filename:
-            loaded_config = open(filename).read()
+            with salt.utils.fopen(filename) as rfh:
+                loaded_config = rfh.read()
         else:
             loaded_config = text
     return _config_logic(napalm_device,  # pylint: disable=undefined-variable
@@ -933,7 +1038,7 @@ def load_template(template_name,
                   template_mode='755',
                   saltenv=None,
                   template_engine='jinja',
-                  skip_verify=True,
+                  skip_verify=False,
                   defaults=None,
                   test=False,
                   commit=True,
@@ -951,7 +1056,7 @@ def load_template(template_name,
     To avoid committing the configuration, set the argument ``test`` to ``True``
     and will discard (dry run).
 
-    To preserve the chnages, set ``commit`` to ``False``.
+    To preserve the changes, set ``commit`` to ``False``.
     However, this is recommended to be used only in exceptional cases
     when there are applied few consecutive states
     and/or configuration changes.
@@ -975,7 +1080,7 @@ def load_template(template_name,
 
         Placing the template under ``/etc/salt/states/templates/example.jinja``,
         it can be used as ``salt://templates/example.jinja``.
-        Alternatively, for local files, the user can specify the abolute path.
+        Alternatively, for local files, the user can specify the absolute path.
         If remotely, the source can be retrieved via ``http``, ``https`` or ``ftp``.
 
         Examples:
@@ -1057,7 +1162,7 @@ def load_template(template_name,
 
     debug: False
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw result after the template was rendered.
+        as ``loaded_config`` containing the raw result after the template was rendered.
 
         .. versionadded:: 2016.11.2
 
@@ -1076,7 +1181,7 @@ def load_template(template_name,
 
         .. note::
 
-            Do not explicitely specify this argument.
+            Do not explicitly specify this argument.
             This represents any other variable that will be sent
             to the template rendering system.
             Please see the examples below!
@@ -1215,7 +1320,7 @@ def load_template(template_name,
             if template_path and not file_exists:
                 template_name = __salt__['file.join'](template_path, template_name)
                 if not saltenv:
-                    # no saltenv overriden
+                    # no saltenv overridden
                     # use the custom template path
                     saltenv = template_path if not salt_render else 'base'
             elif salt_render and not saltenv:
@@ -1256,7 +1361,8 @@ def load_template(template_name,
                     _loaded['result'] = False
                     _loaded['comment'] = 'Error while rendering the template.'
                     return _loaded
-                _rendered = open(_temp_tpl_file).read()
+                with salt.utils.fopen(_temp_tpl_file) as rfh:
+                    _rendered = rfh.read()
                 __salt__['file.remove'](_temp_tpl_file)
             else:
                 return _loaded  # exit
@@ -1439,8 +1545,8 @@ def config_control(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
     If differences found, will try to commit.
     In case commit unsuccessful, will try to rollback.
 
-    :return: A tuple with a boolean that specifies if the config was changed/commited/rollbacked on the device.\
-    And a string that provides more details of the reason why the configuration was not commited properly.
+    :return: A tuple with a boolean that specifies if the config was changed/committed/rollbacked on the device.\
+    And a string that provides more details of the reason why the configuration was not committed properly.
 
     CLI Example:
 

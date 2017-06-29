@@ -64,7 +64,6 @@ def _process_return_data(retData):
     else:
         msg = 'Unsuccessful error code {0} returned'.format(retData.status_code)
         raise CommandExecutionError(msg)
-    return None
 
 
 def delete_record(name,
@@ -393,7 +392,6 @@ def get_network(network_name,
         return records
     else:
         return False
-    return False
 
 
 def get_record(record_name,
@@ -473,7 +471,6 @@ def get_record(record_name,
         return records
     else:
         return False
-    return False
 
 
 def _parse_record_data(entry_data):

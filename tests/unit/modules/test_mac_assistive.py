@@ -39,66 +39,67 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(assistive.__grains__, {'osrelease': '10.11.3'}):
                 self.assertRaises(CommandExecutionError, assistive.install, 'foo')
 
-    @patch('salt.modules.mac_assistive._get_assistive_access', MagicMock(return_value=[('foo', 0)]))
     def test_installed_bundle(self):
         '''
         Test checking to see if a bundle id is installed as being able to use assistive access
         '''
-        self.assertTrue(assistive.installed('foo'))
+        with patch('salt.modules.mac_assistive._get_assistive_access',
+                   MagicMock(return_value=[('foo', 0)])):
+            self.assertTrue(assistive.installed('foo'))
 
-    @patch('salt.modules.mac_assistive._get_assistive_access',
-           MagicMock(return_value=[]))
     def test_installed_bundle_not(self):
         '''
         Test checking to see if a bundle id is installed as being able to use assistive access
         '''
-        self.assertFalse(assistive.installed('foo'))
+        with patch('salt.modules.mac_assistive._get_assistive_access',
+                   MagicMock(return_value=[])):
+            self.assertFalse(assistive.installed('foo'))
 
-    @patch('salt.modules.mac_assistive._get_assistive_access',
-           MagicMock(return_value=[('foo', 0)]))
     def test_enable_assistive(self):
         '''
         Test enabling a bundle ID as being allowed to run with assistive access
         '''
         mock_ret = MagicMock(return_value={'retcode': 0})
-        with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}):
+        with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}), \
+                patch('salt.modules.mac_assistive._get_assistive_access',
+                      MagicMock(return_value=[('foo', 0)])):
             self.assertTrue(assistive.enable('foo', True))
 
-    @patch('salt.modules.mac_assistive._get_assistive_access',
-           MagicMock(return_value=[('foo', 0)]))
     def test_enable_error(self):
         '''
         Test enabled a bundle ID that throws a command error
         '''
         mock_ret = MagicMock(return_value={'retcode': 1})
-        with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}):
+        with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}), \
+                patch('salt.modules.mac_assistive._get_assistive_access',
+                      MagicMock(return_value=[('foo', 0)])):
             self.assertRaises(CommandExecutionError,
                               assistive.enable,
                               'foo')
 
-    @patch('salt.modules.mac_assistive._get_assistive_access',
-           MagicMock(return_value=[]))
     def test_enable_false(self):
         '''
         Test return of enable function when app isn't found.
         '''
-        self.assertFalse(assistive.enable('foo'))
+        with patch('salt.modules.mac_assistive._get_assistive_access',
+                   MagicMock(return_value=[])):
+            self.assertFalse(assistive.enable('foo'))
 
-    @patch('salt.modules.mac_assistive._get_assistive_access',
-           MagicMock(return_value=[('foo', '1')]))
     def test_enabled_assistive(self):
         '''
         Test enabling a bundle ID as being allowed to run with assistive access
         '''
-        self.assertTrue(assistive.enabled('foo'))
+        with patch('salt.modules.mac_assistive._get_assistive_access',
+                   MagicMock(return_value=[('foo', '1')])):
+            self.assertTrue(assistive.enabled('foo'))
 
-    @patch('salt.modules.mac_assistive._get_assistive_access',
-           MagicMock(return_value=[]))
     def test_enabled_assistive_false(self):
         '''
         Test if a bundle ID is disabled for assistive access
         '''
-        self.assertFalse(assistive.enabled('foo'))
+        with patch('salt.modules.mac_assistive._get_assistive_access',
+                   MagicMock(return_value=[])):
+            self.assertFalse(assistive.enabled('foo'))
 
     def test_remove_assistive(self):
         '''

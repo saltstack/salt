@@ -279,18 +279,19 @@ import jinja2
 import re
 from os.path import isfile, join
 
-# Import 3rd-party libs
+# Import Salt libs
 import salt.ext.six as six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
+import salt.utils
+from salt.utils.yamlloader import SaltYamlSafeLoader
 
+# Import 3rd-party libs
 try:
     import requests
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
 
-# Import Salt libs
-import salt.utils
 
 # Only used when called from a terminal
 log = None
@@ -436,7 +437,10 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
                     data['grains'] = __grains__.copy()
                     data['pillar'] = pillar.copy()
                     results_jinja = template.render(data)
-                    results = yaml.load(results_jinja)
+                    results = yaml.load(
+                        results_jinja,
+                        Loader=SaltYamlSafeLoader
+                    )
                 except jinja2.UndefinedError as err:
                     log.error('Failed to parse JINJA template: {0}\n{1}'.format(fn, err))
                 except yaml.YAMLError as err:
@@ -529,7 +533,10 @@ def validate(output, resource):
         data = output
         data['grains'] = __grains__.copy()
         data['pillar'] = __pillar__.copy()
-        schema = yaml.load(template.render(data))
+        schema = yaml.load(
+            template.render(data),
+            Loader=SaltYamlSafeLoader
+        )
         all_schemas.update(schema)
         pepa_schemas.append(fn)
 
@@ -551,7 +558,12 @@ if __name__ == '__main__':
 
     # Get configuration
     with salt.utils.fopen(args.config) as fh_:
-        __opts__.update(yaml.load(fh_.read()))
+        __opts__.update(
+            yaml.load(
+                fh_.read(),
+                Loader=SaltYamlSafeLoader
+            )
+        )
 
     loc = 0
     for name in [next(iter(list(e.keys()))) for e in __opts__['ext_pillar']]:
@@ -564,14 +576,24 @@ if __name__ == '__main__':
     if 'pepa_grains' in __opts__:
         __grains__ = __opts__['pepa_grains']
     if args.grains:
-        __grains__.update(yaml.load(args.grains))
+        __grains__.update(
+            yaml.load(
+                args.grains,
+                Loader=SaltYamlSafeLoader
+            )
+        )
 
     # Get pillars
     __pillar__ = {}
     if 'pepa_pillar' in __opts__:
         __pillar__ = __opts__['pepa_pillar']
     if args.pillar:
-        __pillar__.update(yaml.load(args.pillar))
+        __pillar__.update(
+            yaml.load(
+                args.pillar,
+                Loader=SaltYamlSafeLoader
+            )
+        )
 
     # Validate or not
     if args.validate:
@@ -607,7 +629,6 @@ if __name__ == '__main__':
             raise RuntimeError('Failed to get Grains from SaltStack REST API')
 
         __grains__ = result[args.hostname]
-#        print yaml.safe_dump(__grains__, indent=4, default_flow_style=False)
 
     # Print results
     ex_subkey = False

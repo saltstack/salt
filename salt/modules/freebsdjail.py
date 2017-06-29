@@ -7,10 +7,10 @@ The jail module for FreeBSD
 from __future__ import absolute_import
 import os
 import re
+import subprocess
 
 # Import salt libs
 import salt.utils
-from salt._compat import subprocess
 
 # Define the module's virtual name
 __virtualname__ = 'jail'

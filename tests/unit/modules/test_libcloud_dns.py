@@ -28,12 +28,11 @@ def get_mock_driver():
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.modules.libcloud_dns._get_driver',
-       MagicMock(return_value=MockDNSDriver()))
 class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         module_globals = {
+            '_get_driver': MagicMock(return_value=MockDNSDriver()),
             '__salt__': {
                 'config.option': MagicMock(return_value={
                     'test': {

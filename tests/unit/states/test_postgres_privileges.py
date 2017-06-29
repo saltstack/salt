@@ -4,6 +4,7 @@
 '''
 from __future__ import absolute_import
 
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,26 +17,32 @@ import salt.states.postgres_privileges as postgres_privileges
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PostgresPrivilegesTestCase(TestCase):
+class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.postgres_privileges
     '''
+
+    def setup_loader_modules(self):
+        return {postgres_privileges: {}}
 
     def setUp(self):
         '''
         Setup data for the tests
         '''
-        postgres_privileges.__opts__ = {}
-        postgres_privileges.__salt__ = {}
         self.table_name = 'awl'
         self.group_name = 'admins'
         self.name = 'baruwa'
         self.ret = {'name': self.name,
-               'changes': {},
-               'result': False,
-               'comment': ''}
+                    'changes': {},
+                    'result': False,
+                    'comment': ''}
         self.mock_true = MagicMock(return_value=True)
         self.mock_false = MagicMock(return_value=False)
+
+    def tearDown(self):
+        del self.ret
+        del self.mock_true
+        del self.mock_false
 
     def test_present_table(self):
         '''

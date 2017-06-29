@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
 
@@ -13,11 +14,14 @@ from salt.exceptions import CommandExecutionError
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LinuxAclTestCase(TestCase):
+class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        self.cmdrun = MagicMock()
+        self.addCleanup(delattr, self, 'cmdrun')
+        return {linux_acl: {'__salt__': {'cmd.run': self.cmdrun}}}
 
     def setUp(self):
-        linux_acl.__salt__ = {'cmd.run': MagicMock()}
-        self.cmdrun = linux_acl.__salt__['cmd.run']
         self.file = '/tmp/file'
         self.quoted_file = '"/tmp/file"'
         self.files = ['/tmp/file1', '/tmp/file2', '/tmp/file3 with whitespaces']
@@ -32,6 +36,13 @@ class LinuxAclTestCase(TestCase):
         self.d_user_acl = ['d:user', 'myuser', 'rwx']
         self.default_user_acl = ['d:user', 'myuser', 'rwx']
         self.default_user_acl_cmd = 'd:u:myuser:rwx'
+
+    def tearDown(self):
+        for attrname in ('file', 'quoted_file', 'files', 'quoted_files',
+                         'u_acl', 'user_acl', 'user_acl_cmd', 'g_acl',
+                         'group_acl', 'group_acl_cmd', 'd_u_acl',
+                         'd_user_acl', 'default_user_acl', 'default_user_acl_cmd'):
+            delattr(self, attrname)
 
     # too easy to test (DRY)
     def test_version(self):

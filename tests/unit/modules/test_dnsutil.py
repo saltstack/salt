@@ -73,9 +73,9 @@ class DNSUtilTestCase(TestCase):
                                                      '127.0.0.1': ['localhost'],
                                                      'fe80::1%lo0': ['localhost']})
 
-    @patch('salt.modules.dnsutil.parse_hosts', MagicMock(return_value=mock_hosts_file_rtn))
     def test_hosts_append(self):
-        with patch('salt.utils.fopen', mock_open(read_data=mock_hosts_file)) as m_open:
+        with patch('salt.utils.fopen', mock_open(read_data=mock_hosts_file)) as m_open, \
+                patch('salt.modules.dnsutil.parse_hosts', MagicMock(return_value=mock_hosts_file_rtn)):
             dnsutil.hosts_append('/etc/hosts', '127.0.0.1', 'ad1.yuk.co,ad2.yuk.co')
             helper_open = m_open()
             helper_open.write.assert_called_once_with('\n127.0.0.1 ad1.yuk.co ad2.yuk.co')

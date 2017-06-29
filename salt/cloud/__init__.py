@@ -41,9 +41,12 @@ from salt.template import compile_template
 
 # Import third party libs
 try:
-    import Crypto.Random
+    import Cryptodome.Random
 except ImportError:
-    pass  # pycrypto < 2.1
+    try:
+        import Crypto.Random
+    except ImportError:
+        pass  # pycrypto < 2.1
 import yaml
 import salt.ext.six as six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
@@ -1400,8 +1403,8 @@ class Cloud(object):
         mapped_providers = self.map_providers_parallel()
         profile_details = self.opts['profiles'][profile]
         vms = {}
-        for prov in mapped_providers:
-            prov_name = mapped_providers[prov].keys()[0]
+        for prov, val in six.iteritems(mapped_providers):
+            prov_name = next(iter(val))
             for node in mapped_providers[prov][prov_name]:
                 vms[node] = mapped_providers[prov][prov_name][node]
                 vms[node]['provider'] = prov
@@ -1511,6 +1514,11 @@ class Cloud(object):
                             ret[alias] = {}
                         if driver not in ret[alias]:
                             ret[alias][driver] = {}
+
+                        # Clean kwargs of "__pub_*" data before running the cloud action call.
+                        # Prevents calling positional "kwarg" arg before "call" when no kwarg
+                        # argument is present in the cloud driver function's arg spec.
+                        kwargs = salt.utils.clean_kwargs(**kwargs)
 
                         if kwargs:
                             ret[alias][driver][vm_name] = self.clouds[fun](

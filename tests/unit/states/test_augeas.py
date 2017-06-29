@@ -5,10 +5,10 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
-
 import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     mock_open,
@@ -23,14 +23,15 @@ import salt.states.augeas as augeas
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class AugeasTestCase(TestCase):
+class AugeasTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.augeas
     '''
+    def setup_loader_modules(self):
+        return {augeas: {}}
+
     # 'change' function tests: 1
     def setUp(self):
-        augeas.__opts__ = {}
-        augeas.__salt__ = {}
         self.name = 'zabbix'
         self.context = '/files/etc/services'
         self.changes = ['ins service-name after service-name[last()]',
@@ -53,6 +54,12 @@ class AugeasTestCase(TestCase):
             'remove': 'remove',
         }
         self.mock_method_map = MagicMock(return_value=method_map)
+
+    def tearDown(self):
+        del self.ret
+        del self.changes
+        del self.fp_changes
+        del self.mock_method_map
 
     def test_change_non_list_changes(self):
         '''

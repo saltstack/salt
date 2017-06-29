@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 
 # Import salt libs
 from salt.returners import librato_return
@@ -47,7 +47,7 @@ MOCK_RET_OBJ = {
 }
 
 
-class libratoTest(integration.ShellCase):
+class libratoTest(ShellCase):
     '''
     Test the librato returner
     '''

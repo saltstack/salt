@@ -40,6 +40,8 @@ import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
 import salt.utils.itertools
+import salt.utils.pkg
+import salt.utils.pkg.deb
 import salt.utils.systemd
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -378,6 +380,8 @@ def refresh_db(cache_valid_time=0, failhard=False):
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     failhard = salt.utils.is_true(failhard)
     ret = {}
     error_repos = list()
@@ -440,6 +444,7 @@ def install(name=None,
             pkgs=None,
             sources=None,
             reinstall=False,
+            ignore_epoch=False,
             **kwargs):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -501,6 +506,10 @@ def install(name=None,
         Install a specific version of the package, e.g. 1.2.3~0ubuntu0. Ignored
         if "pkgs" or "sources" is passed.
 
+        .. versionchanged:: Oxygen
+            version can now contain comparison operators (e.g. ``>1.2.3``,
+            ``<=2.0``, etc.)
+
     reinstall : False
         Specifying reinstall=True will use ``apt-get install --reinstall``
         rather than simply ``apt-get install`` for requested packages that are
@@ -512,6 +521,13 @@ def install(name=None,
 
         .. versionadded:: 2015.8.0
 
+    ignore_epoch : False
+        Only used when the version of a package is specified using a comparison
+        operator (e.g. ``>4.1``). If set to ``True``, then the epoch will be
+        ignored when comparing the currently-installed version to the desired
+        version.
+
+        .. versionadded:: Oxygen
 
     Multiple Package Installation Options:
 
@@ -627,8 +643,14 @@ def install(name=None,
     targets = []
     downgrade = []
     to_reinstall = {}
+    errors = []
     if pkg_type == 'repository':
-        pkg_params_items = six.iteritems(pkg_params)
+        pkg_params_items = list(six.iteritems(pkg_params))
+        has_comparison = [x for x, y in pkg_params_items
+                          if y is not None
+                          and (y.startswith('<') or y.startswith('>'))]
+        _available = list_repo_pkgs(*has_comparison, byrepo=False, **kwargs) \
+            if has_comparison else {}
         # Build command prefix
         cmd_prefix.extend(['apt-get', '-q', '-y'])
         if kwargs.get('force_yes', False):
@@ -710,6 +732,29 @@ def install(name=None,
             # not None, since the only way version_num is not None is if DEB
             # metadata parsing was successful.
             if pkg_type == 'repository':
+                # Remove leading equals sign(s) to keep from building a pkgstr
+                # with multiple equals (which would be invalid)
+                version_num = version_num.lstrip('=')
+                if pkgname in has_comparison:
+                    candidates = _available.get(pkgname, [])
+                    target = salt.utils.pkg.match_version(
+                        version_num,
+                        candidates,
+                        cmp_func=version_cmp,
+                        ignore_epoch=ignore_epoch,
+                    )
+                    if target is None:
+                        errors.append(
+                            'No version matching \'{0}{1}\' could be found '
+                            '(available: {2})'.format(
+                                pkgname,
+                                version_num,
+                                ', '.join(candidates) if candidates else None
+                            )
+                        )
+                        continue
+                    else:
+                        version_num = target
                 pkgstr = '{0}={1}'.format(pkgname, version_num)
             else:
                 pkgstr = pkgpath
@@ -757,44 +802,44 @@ def install(name=None,
         cmds.append(cmd)
 
     if not cmds:
-        return {}
+        ret = {}
+    else:
+        cache_valid_time = kwargs.pop('cache_valid_time', 0)
+        if _refresh_db:
+            refresh_db(cache_valid_time)
 
-    cache_valid_time = kwargs.pop('cache_valid_time', 0)
-    if _refresh_db:
-        refresh_db(cache_valid_time)
+        env = _parse_env(kwargs.get('env'))
+        env.update(DPKG_ENV_VARS.copy())
 
-    env = _parse_env(kwargs.get('env'))
-    env.update(DPKG_ENV_VARS.copy())
+        hold_pkgs = get_selections(state='hold').get('hold', [])
+        # all_pkgs contains the argument to be passed to apt-get install, which
+        # when a specific version is requested will be in the format
+        # name=version.  Strip off the '=' if present so we can compare the
+        # held package names against the pacakges we are trying to install.
+        targeted_names = [x.split('=')[0] for x in all_pkgs]
+        to_unhold = [x for x in hold_pkgs if x in targeted_names]
 
-    state = get_selections(state='hold')
-    hold_pkgs = state.get('hold')
-    to_unhold = []
-    for _pkg in hold_pkgs:
-        if _pkg in all_pkgs:
-            to_unhold.append(_pkg)
+        if to_unhold:
+            unhold(pkgs=to_unhold)
 
-    if to_unhold:
-        unhold(pkgs=to_unhold)
+        for cmd in cmds:
+            out = __salt__['cmd.run_all'](cmd,
+                                          output_loglevel='trace',
+                                          python_shell=False)
+            if out['retcode'] != 0 and out['stderr']:
+                errors.append(out['stderr'])
 
-    errors = []
-    for cmd in cmds:
-        out = __salt__['cmd.run_all'](cmd,
-                                      output_loglevel='trace',
-                                      python_shell=False)
-        if out['retcode'] != 0 and out['stderr']:
-            errors.append(out['stderr'])
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret = salt.utils.compare_dicts(old, new)
 
-    __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+        for pkgname in to_reinstall:
+            if pkgname not in ret or pkgname in old:
+                ret.update({pkgname: {'old': old.get(pkgname, ''),
+                                      'new': new.get(pkgname, '')}})
 
-    for pkgname in to_reinstall:
-        if pkgname not in ret or pkgname in old:
-            ret.update({pkgname: {'old': old.get(pkgname, ''),
-                                  'new': new.get(pkgname, '')}})
-
-    if to_unhold:
-        hold(pkgs=to_unhold)
+        if to_unhold:
+            hold(pkgs=to_unhold)
 
     if errors:
         raise CommandExecutionError(
@@ -1048,6 +1093,11 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
+    download_only
+        Only donwload the packages, don't unpack or install them
+
+        .. versionadded:: Oxygen
+
     force_conf_new
         Always install the new version of any configuration files.
 
@@ -1081,6 +1131,8 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         cmd.append('--force-yes')
     if kwargs.get('skip_verify', False):
         cmd.append('--allow-unauthenticated')
+    if kwargs.get('download_only', False):
+        cmd.append('--download-only')
 
     cmd.append('dist-upgrade' if dist_upgrade else 'upgrade')
 
@@ -1234,8 +1286,8 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         elif salt.utils.is_true(state.get('hold', False)):
             if 'test' in __opts__ and __opts__['test']:
                 ret[target].update(result=None)
-                ret['comment'] = ('Package {0} is set not to be held.'
-                                  .format(target))
+                ret[target]['comment'] = ('Package {0} is set not to be '
+                                          'held.'.format(target))
             else:
                 result = set_selections(selection={'install': [target]})
                 ret[target].update(changes=result[target], result=True)
@@ -1585,7 +1637,7 @@ def _consolidate_repo_sources(sources):
 
 def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Returns all available packages. Optionally, package names (and name globs)
     can be passed and the results will be filtered to packages matching those
@@ -1866,7 +1918,7 @@ def del_repo(repo, **kwargs):
 
 def _convert_if_int(value):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: 2017.7.0
 
     Convert to an int if necessary.
 
@@ -1884,7 +1936,7 @@ def _convert_if_int(value):
 
 def get_repo_keys():
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: 2017.7.0
 
     List known repo key details.
 
@@ -1956,7 +2008,7 @@ def get_repo_keys():
 
 def add_repo_key(path=None, text=None, keyserver=None, keyid=None, saltenv='base'):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: 2017.7.0
 
     Add a repo key using ``apt-key add``.
 
@@ -2091,6 +2143,11 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     The following options are available to modify a repo definition:
 
+        architectures
+            a comma separated list of supported architectures, e.g. ``amd64``
+            If this option is not set, all architectures (configured in the
+            system) will be used.
+
         comps
             a comma separated list of components for the repo, e.g. ``main``
 
@@ -2114,8 +2171,9 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
         comments
             Sometimes you want to supply additional information, but not as
-            enabled configuration. Anything supplied for this list will be saved
-            in the repo configuration with a comment marker (#) in front.
+            enabled configuration. All comments provided here will be joined
+            into a single string and appended to the repo configuration with a
+            comment marker (#) before it.
 
             .. versionadded:: 2015.8.9
 
@@ -2350,13 +2408,17 @@ def mod_repo(repo, saltenv='base', **kwargs):
             if mod_source:
                 break
 
+    if 'comments' in kwargs:
+        kwargs['comments'] = \
+            salt.utils.pkg.deb.combine_comments(kwargs['comments'])
+
     if not mod_source:
         mod_source = sourceslist.SourceEntry(repo)
         if 'comments' in kwargs:
-            mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
+            mod_source.comment = kwargs['comments']
         sources.list.append(mod_source)
     elif 'comments' in kwargs:
-        mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
+        mod_source.comment = kwargs['comments']
 
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):
@@ -2461,6 +2523,9 @@ def expand_repo_def(**kwargs):
             kwargs['file'] = filename.format(owner_name, ppa_name, dist)
 
     source_entry = sourceslist.SourceEntry(repo)
+    for list_args in ('architectures', 'comps'):
+        if list_args in kwargs:
+            kwargs[list_args] = kwargs[list_args].split(',')
     for kwarg in _MODIFY_OK:
         if kwarg in kwargs:
             setattr(source_entry, kwarg, kwargs[kwarg])

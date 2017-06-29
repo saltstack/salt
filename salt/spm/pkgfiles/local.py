@@ -5,11 +5,15 @@ This module allows SPM to use the local filesystem to install files for SPM.
 .. versionadded:: 2015.8.0
 '''
 
+# Import Python libs
 from __future__ import absolute_import
 import os
 import os.path
 import logging
+
+# Import Salt libs
 import salt.syspaths
+import salt.utils
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -180,7 +184,7 @@ def hash_file(path, hashobj, conn=None):
         return ''
 
     with salt.utils.fopen(path, 'r') as f:
-        hashobj.update(f.read())
+        hashobj.update(salt.utils.to_bytes(f.read()))
         return hashobj.hexdigest()
 
 

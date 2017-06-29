@@ -321,6 +321,7 @@ configured gitfs remotes):
 
 * :conf_master:`gitfs_base`
 * :conf_master:`gitfs_root`
+* :conf_master:`gitfs_ssl_verify`
 * :conf_master:`gitfs_mountpoint` (new in 2014.7.0)
 * :conf_master:`gitfs_user` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_password` (**pygit2 only**, new in 2014.7.0)
@@ -328,7 +329,13 @@ configured gitfs remotes):
 * :conf_master:`gitfs_pubkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_privkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_passphrase` (**pygit2 only**, new in 2014.7.0)
-* :conf_master:`gitfs_refspecs` (new in Nitrogen)
+* :conf_master:`gitfs_refspecs` (new in 2017.7.0)
+* :conf_master:`gitfs_disable_saltenv_mapping` (new in Oxygen)
+* :conf_master:`gitfs_ref_types` (new in Oxygen)
+
+.. note::
+    pygit2 only supports disabling SSL verification in versions 0.23.2 and
+    newer.
 
 These parameters can now be overridden on a per-remote basis. This allows for a
 tremendous amount of customization. Here's some example usage:
@@ -344,16 +351,25 @@ tremendous amount of customization. Here's some example usage:
         - root: salt
         - mountpoint: salt://bar
         - base: salt-base
+        - ssl_verify: False
       - https://foo.com/bar.git:
         - name: second_bar_repo
         - root: other/salt
         - mountpoint: salt://other/bar
         - base: salt-base
+        - ref_types:
+          - branch
       - http://foo.com/baz.git:
         - root: salt/states
         - user: joe
         - password: mysupersecretpassword
         - insecure_auth: True
+        - disable_saltenv_mapping: True
+        - saltenv:
+          - foo:
+            - ref: foo
+      - http://foo.com/quux.git:
+        - all_saltenvs: master
 
 .. important::
 
@@ -365,8 +381,10 @@ tremendous amount of customization. Here's some example usage:
 
     2. Per-remote configuration parameters are named like the global versions,
        with the ``gitfs_`` removed from the beginning. The exception being the
-       ``name`` and ``saltenv`` parameters, which are only available to
-       per-remote configurations.
+       ``name``, ``saltenv``, and ``all_saltenvs`` parameters, which are only
+       available to per-remote configurations.
+
+    The ``all_saltenvs`` parameter is new in the Oxygen release.
 
 In the example configuration above, the following is true:
 
@@ -381,17 +399,31 @@ In the example configuration above, the following is true:
    will only serve files from the ``salt/states`` directory (and its
    subdirectories).
 
-3. The first and fourth remotes will have files located under the root of the
+3. The third remote will only serve files from branches, and not from tags or
+   SHAs.
+
+4. The fourth remote will only have two saltenvs available: ``base`` (pointed
+   at ``develop``), and ``foo`` (pointed at ``foo``).
+
+5. The first and fourth remotes will have files located under the root of the
    Salt fileserver namespace (``salt://``). The files from the second remote
    will be located under ``salt://bar``, while the files from the third remote
    will be located under ``salt://other/bar``.
 
-4. The second and third remotes reference the same repository and unique names
+6. The second and third remotes reference the same repository and unique names
    need to be declared for duplicate gitfs remotes.
 
-5. The fourth remote overrides the default behavior of :ref:`not authenticating
+7. The fourth remote overrides the default behavior of :ref:`not authenticating
    to insecure (non-HTTPS) remotes <gitfs-insecure-auth>`.
 
+8. Because ``all_saltenvs`` is configured for the fifth remote, files from the
+   branch/tag ``master`` will appear in every fileserver environment.
+
+   .. note::
+       The use of ``http://`` (instead of ``https://``) is permitted here
+       *only* because authentication is not being used. Otherwise, the
+       ``insecure_auth`` parameter must be used (as in the fourth remote) to
+       force Salt to authenticate to an ``http://`` remote.
 
 .. _gitfs-per-saltenv-config:
 
@@ -453,7 +485,7 @@ Given the above configuration, the following is true:
 Custom Refspecs
 ===============
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 GitFS will by default fetch remote branches and tags. However, sometimes it can
 be useful to fetch custom refs (such as those created for `GitHub pull
@@ -500,6 +532,34 @@ would only fetch branches and tags (the default).
           - '+refs/pull/*/head:refs/remotes/origin/pr/*'
           - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
 
+
+.. _gitfs-global-remotes:
+
+Global Remotes
+==============
+
+.. versionadded:: Oxygen
+
+The ``all_saltenvs`` per-remote configuration parameter overrides the logic
+Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This
+allows a single branch/tag to appear in *all* saltenvs.
+
+This is very useful in particular when working with :ref:`salt formulas
+<conventions-formula>`. Prior to the addition of this feature, it was necessary
+to push a branch/tag to the remote repo for each saltenv in which that formula
+was to be used. If the formula needed to be updated, this update would need to
+be reflected in all of the other branches/tags. This is both inconvenient and
+not scalable.
+
+With ``all_saltenvs``, it is now possible to define your formula once, in a
+single branch.
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://foo.com/quux.git:
+        - all_saltenvs: anything
+
 Configuration Order of Precedence
 =================================
 
@@ -540,6 +600,17 @@ overrides all levels below it):
 
        gitfs_mountpoint: salt://bar
 
+.. note::
+    The one exception to the above is when :ref:`all_saltenvs
+    <gitfs-global-remotes>` is used. This value overrides all logic for mapping
+    branches/tags to fileserver environments. So, even if
+    :conf_master:`gitfs_saltenv` is used to globally override the mapping for a
+    given saltenv, :ref:`all_saltenvs <gitfs-global-remotes>` would take
+    precedence for any remote which uses it.
+
+    It's important to note however that any ``root`` and ``mountpoint`` values
+    configured in :conf_master:`gitfs_saltenv` (or :ref:`per-saltenv
+    configuration <gitfs-per-saltenv-config>`) would be unaffected by this.
 
 .. _gitfs-walkthrough-root:
 
@@ -676,16 +747,16 @@ Environment Whitelist/Blacklist
 
 .. versionadded:: 2014.7.0
 
-The :conf_master:`gitfs_env_whitelist` and :conf_master:`gitfs_env_blacklist`
-parameters allow for greater control over which branches/tags are exposed as
-fileserver environments. Exact matches, globs, and regular expressions are
-supported, and are evaluated in that order. If using a regular expression,
-``^`` and ``$`` must be omitted, and the expression must match the entire
-branch/tag.
+The :conf_master:`gitfs_saltenv_whitelist` and
+:conf_master:`gitfs_saltenv_blacklist` parameters allow for greater control
+over which branches/tags are exposed as fileserver environments. Exact matches,
+globs, and regular expressions are supported, and are evaluated in that order.
+If using a regular expression, ``^`` and ``$`` must be omitted, and the
+expression must match the entire branch/tag.
 
 .. code-block:: yaml
 
-    gitfs_env_whitelist:
+    gitfs_saltenv_whitelist:
       - base
       - v1.*
       - 'mybranch\d+'
@@ -699,11 +770,12 @@ branch/tag.
 The behavior of the blacklist/whitelist will differ depending on which
 combination of the two options is used:
 
-* If only :conf_master:`gitfs_env_whitelist` is used, then **only** branches/tags
-  which match the whitelist will be available as environments
+* If only :conf_master:`gitfs_saltenv_whitelist` is used, then **only**
+  branches/tags which match the whitelist will be available as environments
 
-* If only :conf_master:`gitfs_env_blacklist` is used, then the branches/tags
-  which match the blacklist will **not** be available as environments
+* If only :conf_master:`gitfs_saltenv_blacklist` is used, then the
+  branches/tags which match the blacklist will **not** be available as
+  environments
 
 * If both are used, then the branches/tags which match the whitelist, but do
   **not** match the blacklist, will be available as environments.
@@ -783,11 +855,57 @@ simply ``passphrase`` if being configured :ref:`per-remote
 Finally, the SSH host key must be :ref:`added to the known_hosts file
 <gitfs-ssh-fingerprint>`.
 
+.. note::
+    There is a known issue with public-key SSH authentication to Microsoft
+    Visual Studio (VSTS) with pygit2. This is due to a bug or lack of support
+    for VSTS in older libssh2 releases. Known working releases include libssh2
+    1.7.0 and later, and known incompatible releases include 1.5.0 and older.
+    At the time of this writing, 1.6.0 has not been tested.
+
+    Since upgrading libssh2 would require rebuilding many other packages (curl,
+    etc.), followed by a rebuild of libgit2 and a reinstall of pygit2, an
+    easier workaround for systems with older libssh2 is to use GitPython with a
+    passphraseless key for authentication.
+
 GitPython
 ---------
 
-With GitPython_, only passphrase-less SSH public key authentication is
-supported. **The auth parameters (pubkey, privkey, etc.) shown in the pygit2
+HTTPS
+~~~~~
+
+For HTTPS repositories which require authentication, the username and password
+can be configured in one of two ways. The first way is to include them in the
+URL using the format ``https://<user>:<password>@<url>``, like so:
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - https://git:mypassword@domain.tld/myrepo.git
+
+The other way would be to configure the authentication in ``~/.netrc``:
+
+.. code-block:: text
+
+    machine domain.tld
+    login git
+    password mypassword
+
+
+If the repository is served over HTTP instead of HTTPS, then Salt will by
+default refuse to authenticate to it. This behavior can be overridden by adding
+an ``insecure_auth`` parameter:
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://git:mypassword@domain.tld/insecure_repo.git:
+        - insecure_auth: True
+
+SSH
+~~~
+
+Only passphrase-less SSH public key authentication is supported using
+GitPython. **The auth parameters (pubkey, privkey, etc.) shown in the pygit2
 authentication examples above do not work with GitPython.**
 
 .. code-block:: yaml

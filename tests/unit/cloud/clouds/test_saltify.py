@@ -35,13 +35,13 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
-    @patch('salt.cloud.clouds.saltify._verify', MagicMock(return_value=True))
     def test_create_no_deploy(self):
         '''
         Test if deployment fails. This is the most basic test as saltify doesn't contain much logic
         '''
-        vm = {'deploy':  False,
-              'driver': 'saltify',
-              'name': 'dummy'
-             }
-        self.assertTrue(saltify.create(vm))
+        with patch('salt.cloud.clouds.saltify._verify', MagicMock(return_value=True)):
+            vm = {'deploy':  False,
+                  'driver': 'saltify',
+                  'name': 'dummy'
+                 }
+            self.assertTrue(saltify.create(vm))

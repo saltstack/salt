@@ -52,19 +52,19 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'remove' function tests: 4
 
-    @patch('os.listdir', MagicMock(return_value=['']))
     def test_remove(self):
         '''
         Test if it remove a module using cpan
         '''
-        mock = MagicMock(return_value='')
-        with patch.dict(cpan.__salt__, {'cmd.run': mock}):
-            mock = MagicMock(return_value={'installed version': '2.1',
-                                           'cpan build dirs': [''],
-                                           'installed file': '/root'})
-            with patch.object(cpan, 'show', mock):
-                self.assertDictEqual(cpan.remove('Alloy'),
-                                     {'new': None, 'old': '2.1'})
+        with patch('os.listdir', MagicMock(return_value=[''])):
+            mock = MagicMock(return_value='')
+            with patch.dict(cpan.__salt__, {'cmd.run': mock}):
+                mock = MagicMock(return_value={'installed version': '2.1',
+                                               'cpan build dirs': [''],
+                                               'installed file': '/root'})
+                with patch.object(cpan, 'show', mock):
+                    self.assertDictEqual(cpan.remove('Alloy'),
+                                         {'new': None, 'old': '2.1'})
 
     def test_remove_unexist_error(self):
         '''
@@ -117,15 +117,14 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                                   'This package does not seem to exist',
                                   'name': 'Alloy'})
 
-    @patch('salt.modules.cpan.show',
-           MagicMock(return_value={'Salt': 'salt'}))
     def test_show_mock(self):
         '''
         Test if it show information about a specific Perl module
         '''
-        mock = MagicMock(return_value='Salt module installed')
-        with patch.dict(cpan.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(cpan.show('Alloy'), {'Salt': 'salt'})
+        with patch('salt.modules.cpan.show', MagicMock(return_value={'Salt': 'salt'})):
+            mock = MagicMock(return_value='Salt module installed')
+            with patch.dict(cpan.__salt__, {'cmd.run': mock}):
+                self.assertDictEqual(cpan.show('Alloy'), {'Salt': 'salt'})
 
     # 'show_config' function tests: 1
 

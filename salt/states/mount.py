@@ -24,6 +24,16 @@ Mount any type of mountable filesystem with the mounted function:
         - pass_num: 2
         - persist: True
         - mkmnt: True
+
+    /var/lib/bigdata:
+      mount.mounted:
+        - device: /srv/bigdata
+        - fstype: none
+        - opts: bind
+        - dump: 0
+        - pass_num: 0
+        - persist: True
+        - mkmnt: True
 '''
 from __future__ import absolute_import
 
@@ -157,7 +167,7 @@ def mounted(name,
 
             password=badsecret
 
-    extra_ignore_fs_keys
+    extra_mount_ignore_fs_keys
         A dict of filesystem options which should not force a remount. This will update
         the internal dictionary. The dict should look like this::
 
@@ -369,6 +379,9 @@ def mounted(name,
                     # make cifs option user synonym for option username which is reported by /proc/mounts
                     if fstype in ['cifs'] and opt.split('=')[0] == 'user':
                         opt = "username={0}".format(opt.split('=')[1])
+
+                    if opt.split('=')[0] in mount_ignore_fs_keys.get(fstype, []):
+                        opt = opt.split('=')[0]
 
                     # convert uid/gid to numeric value from user/group name
                     name_id_opts = {'uid': 'user.info',

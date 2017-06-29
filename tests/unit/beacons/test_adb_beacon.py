@@ -48,36 +48,35 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         config = []
 
         log_mock = Mock()
-        adb.log = log_mock
+        with patch.object(adb, 'log', log_mock):
 
-        ret = adb.beacon(config)
+            ret = adb.beacon(config)
 
-        self.assertEqual(ret, [])
-        log_mock.info.assert_called_once_with('Configuration for adb beacon must be a dict.')
+            self.assertEqual(ret, [])
+            log_mock.info.assert_called_once_with('Configuration for adb beacon must be a dict.')
 
     def test_empty_config(self):
         config = {}
 
         log_mock = Mock()
-        adb.log = log_mock
+        with patch.object(adb, 'log', log_mock):
+            ret = adb.beacon(config)
 
-        ret = adb.beacon(config)
-
-        self.assertEqual(ret, [])
-        log_mock.info.assert_called_once_with('Configuration for adb beacon must include a states array.')
+            self.assertEqual(ret, [])
+            log_mock.info.assert_called_once_with('Configuration for adb beacon must include a states array.')
 
     def test_invalid_states(self):
         config = {'states': ['Random', 'Failings']}
 
         log_mock = Mock()
-        adb.log = log_mock
+        with patch.object(adb, 'log', log_mock):
 
-        ret = adb.beacon(config)
+            ret = adb.beacon(config)
 
-        self.assertEqual(ret, [])
-        log_mock.info.assert_called_once_with('Need a one of the following adb states:'
-                                              ' offline, bootloader, device, host, recovery, '
-                                              'no permissions, sideload, unauthorized, unknown, missing')
+            self.assertEqual(ret, [])
+            log_mock.info.assert_called_once_with('Need a one of the following adb states:'
+                                                  ' offline, bootloader, device, host, recovery, '
+                                                  'no permissions, sideload, unauthorized, unknown, missing')
 
     def test_device_state(self):
         config = {'states': ['device']}

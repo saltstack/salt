@@ -26,7 +26,6 @@ import salt.runner
 import salt.auth
 import salt.wheel
 import salt.minion
-import salt.search
 import salt.key
 import salt.fileserver
 import salt.utils.args
@@ -180,7 +179,8 @@ def clean_pub_auth(opts):
                     auth_file_path = os.path.join(dirpath, auth_file)
                     if not os.path.isfile(auth_file_path):
                         continue
-                    if os.path.getmtime(auth_file_path) - time.time() > opts['keep_jobs']:
+                    if (time.time() - os.path.getmtime(auth_file_path) >
+                            (opts['keep_jobs'] * 3600)):
                         os.remove(auth_file_path)
     except (IOError, OSError):
         log.error('Unable to delete pub auth file')
@@ -255,27 +255,12 @@ def access_keys(opts):
         acl_users.add(opts['user'])
     acl_users.add(salt.utils.get_user())
     if opts['client_acl_verify'] and HAS_PWD:
-        log.profile('Beginning pwd.getpwall() call in masterarpi acess_keys function')
+        log.profile('Beginning pwd.getpwall() call in masterarpi access_keys function')
         for user in pwd.getpwall():
             users.append(user.pw_name)
-        log.profile('End pwd.getpwall() call in masterarpi acess_keys function')
+        log.profile('End pwd.getpwall() call in masterarpi access_keys function')
     for user in acl_users:
-        log.info(
-            'Preparing the {0} key for local communication'.format(
-                user
-            )
-        )
-
-        if opts['client_acl_verify'] and HAS_PWD:
-            if user not in users:
-                try:
-                    log.profile('Beginning pwd.getpnam() call in masterarpi acess_keys function')
-                    user = pwd.getpwnam(user).pw_name
-                    log.profile('Beginning pwd.getpwnam() call in masterarpi acess_keys function')
-                except KeyError:
-                    log.error('ACL user {0} is not available'.format(user))
-                    continue
-
+        log.info('Preparing the %s key for local communication', user)
         keys[user] = mk_key(opts, user)
 
     # Check other users matching ACL patterns
@@ -456,7 +441,7 @@ class RemoteFuncs(object):
                 states=False,
                 rend=False)
         self.__setup_fileserver()
-        self.cache = salt.cache.Cache(opts)
+        self.cache = salt.cache.factory(opts)
 
     def __setup_fileserver(self):
         '''
@@ -536,10 +521,9 @@ class RemoteFuncs(object):
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
 
-    def _ext_nodes(self, load, skip_verify=False):
+    def _master_tops(self, load, skip_verify=False):
         '''
-        Return the results from an external node classifier if one is
-        specified
+        Return the results from master_tops if configured
         '''
         if not skip_verify:
             if 'id' not in load:
@@ -730,7 +714,7 @@ class RemoteFuncs(object):
                 load.get('saltenv', load.get('env')),
                 load.get('ext'),
                 self.mminion.functions,
-                pillar=load.get('pillar_override', {}))
+                pillar_override=load.get('pillar_override', {}))
         pillar_dirs = {}
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         if self.opts.get('minion_data_cache', False):
@@ -772,6 +756,7 @@ class RemoteFuncs(object):
         # If the return data is invalid, just ignore it
         if any(key not in load for key in ('return', 'jid', 'id')):
             return False
+
         if load['jid'] == 'req':
             # The minion is returning a standalone job, request a jobid
             prep_fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
@@ -850,7 +835,9 @@ class RemoteFuncs(object):
         opts = {}
         opts.update(self.opts)
         opts.update({'fun': load['fun'],
-                'arg': salt.utils.args.parse_input(load['arg']),
+                'arg': salt.utils.args.parse_input(
+                    load['arg'],
+                    no_parse=load.get('no_parse', [])),
                 'id': load['id'],
                 'doc': False,
                 'conf_file': self.opts['conf_file']})
@@ -900,7 +887,9 @@ class RemoteFuncs(object):
         # Set up the publication payload
         pub_load = {
             'fun': load['fun'],
-            'arg': salt.utils.args.parse_input(load['arg']),
+            'arg': salt.utils.args.parse_input(
+                load['arg'],
+                no_parse=load.get('no_parse', [])),
             'tgt_type': load.get('tgt_type', 'glob'),
             'tgt': load['tgt'],
             'ret': load['ret'],
@@ -953,7 +942,9 @@ class RemoteFuncs(object):
         # Set up the publication payload
         pub_load = {
             'fun': load['fun'],
-            'arg': salt.utils.args.parse_input(load['arg']),
+            'arg': salt.utils.args.parse_input(
+                load['arg'],
+                no_parse=load.get('no_parse', [])),
             'tgt_type': load.get('tgt_type', 'glob'),
             'tgt': load['tgt'],
             'ret': load['ret'],
@@ -1326,7 +1317,9 @@ class LocalFuncs(object):
                 'tgt': load['tgt'],
                 'user': load['user'],
                 'fun': load['fun'],
-                'arg': salt.utils.args.parse_input(load['arg']),
+                'arg': salt.utils.args.parse_input(
+                    load['arg'],
+                    no_parse=load.get('no_parse', [])),
                 'minions': minions,
             }
 
@@ -1378,7 +1371,9 @@ class LocalFuncs(object):
         # way that won't have a negative impact.
         pub_load = {
             'fun': load['fun'],
-            'arg': salt.utils.args.parse_input(load['arg']),
+            'arg': salt.utils.args.parse_input(
+                load['arg'],
+                no_parse=load.get('no_parse', [])),
             'tgt': load['tgt'],
             'jid': load['jid'],
             'ret': load['ret'],

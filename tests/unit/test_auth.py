@@ -12,16 +12,25 @@ from tests.support.mock import patch, call, NO_MOCK, NO_MOCK_REASON, MagicMock
 
 # Import Salt libraries
 import salt.master
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from salt import auth
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LoadAuthTestCase(TestCase):
 
-    @patch('salt.payload.Serial')
-    @patch('salt.loader.auth', return_value={'pam.auth': 'fake_func_str', 'pam.groups': 'fake_groups_function_str'})
-    def setUp(self, auth_mock, serial_mock):  # pylint: disable=W0221
+    def setUp(self):  # pylint: disable=W0221
+        patches = (
+            ('salt.payload.Serial', None),
+            ('salt.loader.auth', dict(return_value={'pam.auth': 'fake_func_str', 'pam.groups': 'fake_groups_function_str'}))
+        )
+        for mod, mock in patches:
+            if mock:
+                patcher = patch(mod, **mock)
+            else:
+                patcher = patch(mod)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.lauth = auth.LoadAuth({})  # Load with empty opts
 
     def test_load_name(self):
@@ -59,19 +68,31 @@ class LoadAuthTestCase(TestCase):
             format_call_mock.assert_has_calls((expected_ret,), any_order=True)
 
 
-@patch('zmq.Context', MagicMock())
-@patch('salt.payload.Serial.dumps', MagicMock())
-@patch('salt.master.tagify', MagicMock())
-@patch('salt.utils.event.SaltEvent.fire_event', return_value='dummy_tag')
-@patch('salt.auth.LoadAuth.time_auth', MagicMock(return_value=True))
-class MasterACLTestCase(integration.ModuleCase):
+class MasterACLTestCase(ModuleCase):
     '''
     A class to check various aspects of the publisher ACL system
     '''
-    @patch('salt.minion.MasterMinion', MagicMock())
-    @patch('salt.utils.verify.check_path_traversal', MagicMock())
+
     def setUp(self):
-        opts = self.get_config('master', from_scratch=True)
+        self.fire_event_mock = MagicMock(return_value='dummy_tag')
+        self.addCleanup(delattr, self, 'fire_event_mock')
+        opts = self.get_temp_config('master')
+
+        patches = (
+            ('zmq.Context', MagicMock()),
+            ('salt.payload.Serial.dumps', MagicMock()),
+            ('salt.master.tagify', MagicMock()),
+            ('salt.utils.event.SaltEvent.fire_event', self.fire_event_mock),
+            ('salt.auth.LoadAuth.time_auth', MagicMock(return_value=True)),
+            ('salt.minion.MasterMinion', MagicMock()),
+            ('salt.utils.verify.check_path_traversal', MagicMock()),
+            ('salt.client.get_local_client', MagicMock(return_value=opts['conf_file'])),
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
         opts['publisher_acl'] = {}
         opts['publisher_acl_blacklist'] = {}
         opts['master_job_cache'] = ''
@@ -99,6 +120,7 @@ class MasterACLTestCase(integration.ModuleCase):
                                 ]
              }
         self.clear = salt.master.ClearFuncs(opts, MagicMock())
+        self.addCleanup(delattr, self, 'clear')
 
         # overwrite the _send_pub method so we don't have to serialize MagicMock
         self.clear._send_pub = lambda payload: True
@@ -122,42 +144,43 @@ class MasterACLTestCase(integration.ModuleCase):
                                 'arg': '',
                                 'fun': 'test.ping',
                                 }
+        self.addCleanup(delattr, self, 'valid_clear_load')
 
-    @patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='some_minions'))
-    def test_master_publish_name(self, fire_event_mock):
+    def test_master_publish_name(self):
         '''
         Test to ensure a simple name can auth against a given function.
         This tests to ensure test_user can access test.ping but *not* sys.doc
         '''
-        # Can we access test.ping?
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.call_args[0][0]['fun'], 'test.ping')
+        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='some_minions')):
+            # Can we access test.ping?
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.call_args[0][0]['fun'], 'test.ping')
 
-        # Are we denied access to sys.doc?
-        sys_doc_load = self.valid_clear_load
-        sys_doc_load['fun'] = 'sys.doc'
-        self.clear.publish(sys_doc_load)
-        self.assertNotEqual(fire_event_mock.call_args[0][0]['fun'], 'sys.doc')  # If sys.doc were to fire, this would match
+            # Are we denied access to sys.doc?
+            sys_doc_load = self.valid_clear_load
+            sys_doc_load['fun'] = 'sys.doc'
+            self.clear.publish(sys_doc_load)
+            self.assertNotEqual(self.fire_event_mock.call_args[0][0]['fun'], 'sys.doc')  # If sys.doc were to fire, this would match
 
-    @patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='some_minions'))
-    def test_master_publish_group(self, fire_event_mock):
+    def test_master_publish_group(self):
         '''
         Tests to ensure test_group can access test.echo but *not* sys.doc
         '''
-        self.valid_clear_load['kwargs']['user'] = 'new_user'
-        self.valid_clear_load['fun'] = 'test.echo'
-        self.valid_clear_load['arg'] = 'hello'
-        with patch('salt.auth.LoadAuth.get_groups', return_value=['test_group', 'second_test_group']):
-            self.clear.publish(self.valid_clear_load)
-        # Did we fire test.echo?
-        self.assertEqual(fire_event_mock.call_args[0][0]['fun'], 'test.echo')
+        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='some_minions')):
+            self.valid_clear_load['kwargs']['user'] = 'new_user'
+            self.valid_clear_load['fun'] = 'test.echo'
+            self.valid_clear_load['arg'] = 'hello'
+            with patch('salt.auth.LoadAuth.get_groups', return_value=['test_group', 'second_test_group']):
+                self.clear.publish(self.valid_clear_load)
+            # Did we fire test.echo?
+            self.assertEqual(self.fire_event_mock.call_args[0][0]['fun'], 'test.echo')
 
-        # Request sys.doc
-        self.valid_clear_load['fun'] = 'sys.doc'
-        # Did we fire it?
-        self.assertNotEqual(fire_event_mock.call_args[0][0]['fun'], 'sys.doc')
+            # Request sys.doc
+            self.valid_clear_load['fun'] = 'sys.doc'
+            # Did we fire it?
+            self.assertNotEqual(self.fire_event_mock.call_args[0][0]['fun'], 'sys.doc')
 
-    def test_master_publish_some_minions(self, fire_event_mock):
+    def test_master_publish_some_minions(self):
         '''
         Tests to ensure we can only target minions for which we
         have permission with publisher acl.
@@ -168,9 +191,9 @@ class MasterACLTestCase(integration.ModuleCase):
         self.valid_clear_load['kwargs']['username'] = 'test_user_mminion'
         self.valid_clear_load['user'] = 'test_user_mminion'
         self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
+        self.assertEqual(self.fire_event_mock.mock_calls, [])
 
-    def test_master_not_user_glob_all(self, fire_event_mock):
+    def test_master_not_user_glob_all(self):
         '''
         Test to ensure that we DO NOT access to a given
         function to all users with publisher acl. ex:
@@ -189,9 +212,9 @@ class MasterACLTestCase(integration.ModuleCase):
         self.valid_clear_load['user'] = 'NOT_A_VALID_USERNAME'
         self.valid_clear_load['fun'] = 'test.ping'
         self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
+        self.assertEqual(self.fire_event_mock.mock_calls, [])
 
-    def test_master_minion_glob(self, fire_event_mock):
+    def test_master_minion_glob(self):
         '''
         Test to ensure we can allow access to a given
         function for a user to a subset of minions
@@ -211,10 +234,10 @@ class MasterACLTestCase(integration.ModuleCase):
         self.valid_clear_load['fun'] = requested_function
         with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=['minion_glob1'])):  # Assume that there is a listening minion match
             self.clear.publish(self.valid_clear_load)
-        self.assertTrue(fire_event_mock.called, 'Did not fire {0} for minion tgt {1}'.format(requested_function, requested_tgt))
-        self.assertEqual(fire_event_mock.call_args[0][0]['fun'], requested_function, 'Did not fire {0} for minion glob'.format(requested_function))
+        self.assertTrue(self.fire_event_mock.called, 'Did not fire {0} for minion tgt {1}'.format(requested_function, requested_tgt))
+        self.assertEqual(self.fire_event_mock.call_args[0][0]['fun'], requested_function, 'Did not fire {0} for minion glob'.format(requested_function))
 
-    def test_master_function_glob(self, fire_event_mock):
+    def test_master_function_glob(self):
         '''
         Test to ensure that we can allow access to a given
         set of functions in an execution module as selected
@@ -227,9 +250,7 @@ class MasterACLTestCase(integration.ModuleCase):
         # Unimplemented
         pass
 
-    @patch('salt.utils.minions.CkMinions.check_minions',
-           MagicMock(return_value='minion1'))
-    def test_args_empty_spec(self, fire_event_mock):
+    def test_args_empty_spec(self):
         '''
         Test simple arg restriction allowed.
 
@@ -237,17 +258,16 @@ class MasterACLTestCase(integration.ModuleCase):
             minion1:
                 - test.empty:
         '''
-        self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
-        self.valid_clear_load.update({'user': 'test_user_func',
-                                      'tgt': 'minion1',
-                                      'fun': 'test.empty',
-                                      'arg': ['TEST']})
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.call_args[0][0]['fun'], 'test.empty')
+        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='minion1')):
+            self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
+            self.valid_clear_load.update({'user': 'test_user_func',
+                                          'tgt': 'minion1',
+                                          'fun': 'test.empty',
+                                          'arg': ['TEST']})
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.call_args[0][0]['fun'], 'test.empty')
 
-    @patch('salt.utils.minions.CkMinions.check_minions',
-           MagicMock(return_value='minion1'))
-    def test_args_simple_match(self, fire_event_mock):
+    def test_args_simple_match(self):
         '''
         Test simple arg restriction allowed.
 
@@ -258,17 +278,16 @@ class MasterACLTestCase(integration.ModuleCase):
                         - 'TEST'
                         - 'TEST.*'
         '''
-        self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
-        self.valid_clear_load.update({'user': 'test_user_func',
-                                      'tgt': 'minion1',
-                                      'fun': 'test.echo',
-                                      'arg': ['TEST', 'any', 'TEST ABC']})
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.call_args[0][0]['fun'], 'test.echo')
+        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='minion1')):
+            self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
+            self.valid_clear_load.update({'user': 'test_user_func',
+                                          'tgt': 'minion1',
+                                          'fun': 'test.echo',
+                                          'arg': ['TEST', 'any', 'TEST ABC']})
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.call_args[0][0]['fun'], 'test.echo')
 
-    @patch('salt.utils.minions.CkMinions.check_minions',
-           MagicMock(return_value='minion1'))
-    def test_args_more_args(self, fire_event_mock):
+    def test_args_more_args(self):
         '''
         Test simple arg restriction allowed to pass unlisted args.
 
@@ -279,22 +298,21 @@ class MasterACLTestCase(integration.ModuleCase):
                         - 'TEST'
                         - 'TEST.*'
         '''
-        self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
-        self.valid_clear_load.update({'user': 'test_user_func',
-                                      'tgt': 'minion1',
-                                      'fun': 'test.echo',
-                                      'arg': ['TEST',
-                                              'any',
-                                              'TEST ABC',
-                                              'arg 3',
-                                              {'kwarg1': 'val1',
-                                               '__kwarg__': True}]})
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.call_args[0][0]['fun'], 'test.echo')
+        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='minion1')):
+            self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
+            self.valid_clear_load.update({'user': 'test_user_func',
+                                          'tgt': 'minion1',
+                                          'fun': 'test.echo',
+                                          'arg': ['TEST',
+                                                  'any',
+                                                  'TEST ABC',
+                                                  'arg 3',
+                                                  {'kwarg1': 'val1',
+                                                   '__kwarg__': True}]})
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.call_args[0][0]['fun'], 'test.echo')
 
-    @patch('salt.utils.minions.CkMinions.check_minions',
-           MagicMock(return_value='minion1'))
-    def test_args_simple_forbidden(self, fire_event_mock):
+    def test_args_simple_forbidden(self):
         '''
         Test simple arg restriction forbidden.
 
@@ -305,30 +323,29 @@ class MasterACLTestCase(integration.ModuleCase):
                         - 'TEST'
                         - 'TEST.*'
         '''
-        self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
-        # Wrong last arg
-        self.valid_clear_load.update({'user': 'test_user_func',
-                                      'tgt': 'minion1',
-                                      'fun': 'test.echo',
-                                      'arg': ['TEST', 'any', 'TESLA']})
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
-        # Wrong first arg
-        self.valid_clear_load['arg'] = ['TES', 'any', 'TEST1234']
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
-        # Missing the last arg
-        self.valid_clear_load['arg'] = ['TEST', 'any']
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
-        # No args
-        self.valid_clear_load['arg'] = []
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
+        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='minion1')):
+            self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
+            # Wrong last arg
+            self.valid_clear_load.update({'user': 'test_user_func',
+                                          'tgt': 'minion1',
+                                          'fun': 'test.echo',
+                                          'arg': ['TEST', 'any', 'TESLA']})
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
+            # Wrong first arg
+            self.valid_clear_load['arg'] = ['TES', 'any', 'TEST1234']
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
+            # Missing the last arg
+            self.valid_clear_load['arg'] = ['TEST', 'any']
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
+            # No args
+            self.valid_clear_load['arg'] = []
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
 
-    @patch('salt.utils.minions.CkMinions.check_minions',
-           MagicMock(return_value='some_minions'))
-    def test_args_kwargs_match(self, fire_event_mock):
+    def test_args_kwargs_match(self):
         '''
         Test simple kwargs restriction allowed.
 
@@ -338,20 +355,19 @@ class MasterACLTestCase(integration.ModuleCase):
                     kwargs:
                         text: 'KWMSG:.*'
         '''
-        self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
-        self.valid_clear_load.update({'user': 'test_user_func',
-                                      'tgt': '*',
-                                      'fun': 'test.echo',
-                                      'arg': [{'text': 'KWMSG: a message',
-                                               'anything': 'hello all',
-                                               'none': 'hello none',
-                                               '__kwarg__': True}]})
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.call_args[0][0]['fun'], 'test.echo')
+        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='some_minions')):
+            self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
+            self.valid_clear_load.update({'user': 'test_user_func',
+                                          'tgt': '*',
+                                          'fun': 'test.echo',
+                                          'arg': [{'text': 'KWMSG: a message',
+                                                   'anything': 'hello all',
+                                                   'none': 'hello none',
+                                                   '__kwarg__': True}]})
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.call_args[0][0]['fun'], 'test.echo')
 
-    @patch('salt.utils.minions.CkMinions.check_minions',
-           MagicMock(return_value='some_minions'))
-    def test_args_kwargs_mismatch(self, fire_event_mock):
+    def test_args_kwargs_mismatch(self):
         '''
         Test simple kwargs restriction allowed.
 
@@ -361,47 +377,46 @@ class MasterACLTestCase(integration.ModuleCase):
                     kwargs:
                         text: 'KWMSG:.*'
         '''
-        self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
-        self.valid_clear_load.update({'user': 'test_user_func',
-                                      'tgt': '*',
-                                      'fun': 'test.echo'})
-        # Wrong kwarg value
-        self.valid_clear_load['arg'] = [{'text': 'KWMSG a message',
-                                         'anything': 'hello all',
-                                         'none': 'hello none',
-                                         '__kwarg__': True}]
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
-        # Missing kwarg value
-        self.valid_clear_load['arg'] = [{'anything': 'hello all',
-                                         'none': 'hello none',
-                                         '__kwarg__': True}]
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
-        self.valid_clear_load['arg'] = [{'__kwarg__': True}]
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
-        self.valid_clear_load['arg'] = [{}]
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
-        self.valid_clear_load['arg'] = []
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
-        # Missing kwarg allowing any value
-        self.valid_clear_load['arg'] = [{'text': 'KWMSG: a message',
-                                         'none': 'hello none',
-                                         '__kwarg__': True}]
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
-        self.valid_clear_load['arg'] = [{'text': 'KWMSG: a message',
-                                         'anything': 'hello all',
-                                         '__kwarg__': True}]
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
+        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='some_minions')):
+            self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
+            self.valid_clear_load.update({'user': 'test_user_func',
+                                          'tgt': '*',
+                                          'fun': 'test.echo'})
+            # Wrong kwarg value
+            self.valid_clear_load['arg'] = [{'text': 'KWMSG a message',
+                                             'anything': 'hello all',
+                                             'none': 'hello none',
+                                             '__kwarg__': True}]
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
+            # Missing kwarg value
+            self.valid_clear_load['arg'] = [{'anything': 'hello all',
+                                             'none': 'hello none',
+                                             '__kwarg__': True}]
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
+            self.valid_clear_load['arg'] = [{'__kwarg__': True}]
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
+            self.valid_clear_load['arg'] = [{}]
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
+            self.valid_clear_load['arg'] = []
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
+            # Missing kwarg allowing any value
+            self.valid_clear_load['arg'] = [{'text': 'KWMSG: a message',
+                                             'none': 'hello none',
+                                             '__kwarg__': True}]
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
+            self.valid_clear_load['arg'] = [{'text': 'KWMSG: a message',
+                                             'anything': 'hello all',
+                                             '__kwarg__': True}]
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
 
-    @patch('salt.utils.minions.CkMinions.check_minions',
-           MagicMock(return_value='some_minions'))
-    def test_args_mixed_match(self, fire_event_mock):
+    def test_args_mixed_match(self):
         '''
         Test mixed args and kwargs restriction allowed.
 
@@ -415,24 +430,23 @@ class MasterACLTestCase(integration.ModuleCase):
                         'kwa': 'kwa.*'
                         'kwb': 'kwb'
         '''
-        self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
-        self.valid_clear_load.update({'user': 'test_user_func',
-                                      'tgt': '*',
-                                      'fun': 'my_mod.some_func',
-                                      'arg': ['alpha',
-                                              'beta',
-                                              'gamma',
-                                              {'kwa': 'kwarg #1',
-                                               'kwb': 'kwb',
-                                               'one_more': 'just one more',
-                                               '__kwarg__': True}]})
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.call_args[0][0]['fun'],
-                         'my_mod.some_func')
+        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='some_minions')):
+            self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
+            self.valid_clear_load.update({'user': 'test_user_func',
+                                          'tgt': '*',
+                                          'fun': 'my_mod.some_func',
+                                          'arg': ['alpha',
+                                                  'beta',
+                                                  'gamma',
+                                                  {'kwa': 'kwarg #1',
+                                                   'kwb': 'kwb',
+                                                   'one_more': 'just one more',
+                                                   '__kwarg__': True}]})
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.call_args[0][0]['fun'],
+                             'my_mod.some_func')
 
-    @patch('salt.utils.minions.CkMinions.check_minions',
-           MagicMock(return_value='some_minions'))
-    def test_args_mixed_mismatch(self, fire_event_mock):
+    def test_args_mixed_mismatch(self):
         '''
         Test mixed args and kwargs restriction forbidden.
 
@@ -446,56 +460,70 @@ class MasterACLTestCase(integration.ModuleCase):
                         'kwa': 'kwa.*'
                         'kwb': 'kwb'
         '''
-        self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
-        self.valid_clear_load.update({'user': 'test_user_func',
-                                      'tgt': '*',
-                                      'fun': 'my_mod.some_func'})
-        # Wrong arg value
-        self.valid_clear_load['arg'] = ['alpha',
-                                        'gamma',
-                                        {'kwa': 'kwarg #1',
-                                         'kwb': 'kwb',
-                                         'one_more': 'just one more',
-                                         '__kwarg__': True}]
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
-        # Wrong kwarg value
-        self.valid_clear_load['arg'] = ['alpha',
-                                        'beta',
-                                        'gamma',
-                                        {'kwa': 'kkk',
-                                         'kwb': 'kwb',
-                                         'one_more': 'just one more',
-                                         '__kwarg__': True}]
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
-        # Missing arg
-        self.valid_clear_load['arg'] = ['alpha',
-                                        {'kwa': 'kwarg #1',
-                                         'kwb': 'kwb',
-                                         'one_more': 'just one more',
-                                         '__kwarg__': True}]
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
-        # Missing kwarg
-        self.valid_clear_load['arg'] = ['alpha',
-                                        'beta',
-                                        'gamma',
-                                        {'kwa': 'kwarg #1',
-                                         'one_more': 'just one more',
-                                         '__kwarg__': True}]
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(fire_event_mock.mock_calls, [])
+        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='some_minions')):
+            self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
+            self.valid_clear_load.update({'user': 'test_user_func',
+                                          'tgt': '*',
+                                          'fun': 'my_mod.some_func'})
+            # Wrong arg value
+            self.valid_clear_load['arg'] = ['alpha',
+                                            'gamma',
+                                            {'kwa': 'kwarg #1',
+                                             'kwb': 'kwb',
+                                             'one_more': 'just one more',
+                                             '__kwarg__': True}]
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
+            # Wrong kwarg value
+            self.valid_clear_load['arg'] = ['alpha',
+                                            'beta',
+                                            'gamma',
+                                            {'kwa': 'kkk',
+                                             'kwb': 'kwb',
+                                             'one_more': 'just one more',
+                                             '__kwarg__': True}]
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
+            # Missing arg
+            self.valid_clear_load['arg'] = ['alpha',
+                                            {'kwa': 'kwarg #1',
+                                             'kwb': 'kwb',
+                                             'one_more': 'just one more',
+                                             '__kwarg__': True}]
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
+            # Missing kwarg
+            self.valid_clear_load['arg'] = ['alpha',
+                                            'beta',
+                                            'gamma',
+                                            {'kwa': 'kwarg #1',
+                                             'one_more': 'just one more',
+                                             '__kwarg__': True}]
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.fire_event_mock.mock_calls, [])
 
 
-class AuthACLTestCase(integration.ModuleCase):
+class AuthACLTestCase(ModuleCase):
     '''
     A class to check various aspects of the publisher ACL system
     '''
-    @patch('salt.minion.MasterMinion', MagicMock())
-    @patch('salt.utils.verify.check_path_traversal', MagicMock())
     def setUp(self):
-        opts = self.get_config('master', from_scratch=True)
+        self.auth_check_mock = MagicMock(return_value=True)
+        opts = self.get_temp_config('master')
+
+        patches = (
+            ('salt.minion.MasterMinion', MagicMock()),
+            ('salt.utils.verify.check_path_traversal', MagicMock()),
+            ('salt.utils.minions.CkMinions.auth_check', self.auth_check_mock),
+            ('salt.auth.LoadAuth.time_auth', MagicMock(return_value=True)),
+            ('salt.client.get_local_client', MagicMock(return_value=opts['conf_file'])),
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.addCleanup(delattr, self, 'auth_check_mock')
+
         opts['publisher_acl'] = {}
         opts['publisher_acl_blacklist'] = {}
         opts['master_job_cache'] = ''
@@ -505,6 +533,7 @@ class AuthACLTestCase(integration.ModuleCase):
         opts['external_auth']['pam'] = {'test_user': [{'alpha_minion': ['test.ping']}]}
 
         self.clear = salt.master.ClearFuncs(opts, MagicMock())
+        self.addCleanup(delattr, self, 'clear')
 
         # overwrite the _send_pub method so we don't have to serialize MagicMock
         self.clear._send_pub = lambda payload: True
@@ -528,18 +557,15 @@ class AuthACLTestCase(integration.ModuleCase):
                                  'arg': '',
                                  'fun': 'test.ping',
                                  }
+        self.addCleanup(delattr, self, 'valid_clear_load')
 
-    @patch('salt.auth.LoadAuth.time_auth', MagicMock(return_value=True))
-    @patch('salt.utils.minions.CkMinions.auth_check', return_value=True)
-    def test_acl_simple_allow(self, auth_check_mock):
+    def test_acl_simple_allow(self):
         self.clear.publish(self.valid_clear_load)
-        self.assertEqual(auth_check_mock.call_args[0][0],
+        self.assertEqual(self.auth_check_mock.call_args[0][0],
                          [{'alpha_minion': ['test.ping']}])
 
-    @patch('salt.auth.LoadAuth.time_auth', MagicMock(return_value=True))
-    @patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[{'beta_minion': ['test.ping']}]))
-    @patch('salt.utils.minions.CkMinions.auth_check', return_value=True)
-    def test_acl_simple_deny(self, auth_check_mock):
-        self.clear.publish(self.valid_clear_load)
-        self.assertEqual(auth_check_mock.call_args[0][0],
-                         [{'beta_minion': ['test.ping']}])
+    def test_acl_simple_deny(self):
+        with patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[{'beta_minion': ['test.ping']}])):
+            self.clear.publish(self.valid_clear_load)
+            self.assertEqual(self.auth_check_mock.call_args[0][0],
+                             [{'beta_minion': ['test.ping']}])

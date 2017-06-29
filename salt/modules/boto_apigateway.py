@@ -354,7 +354,7 @@ def create_api_resources(restApiId, path,
         salt myminion boto_apigateway.create_api_resources myapi_id resource_path
 
     '''
-    path_parts = str.split(path, '/')
+    path_parts = path.split('/')
     created = []
     current_path = ''
     try:
@@ -1408,7 +1408,7 @@ def describe_usage_plans(name=None, plan_id=None, region=None, key=None, keyid=N
     '''
     Returns a list of existing usage plans, optionally filtered to match a given plan name
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -1460,7 +1460,7 @@ def create_usage_plan(name, description=None, throttle=None, quota=None, region=
     '''
     Creates a new usage plan with throttling and quotas optionally applied
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     name
         Name of the usage plan
@@ -1518,7 +1518,7 @@ def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None,
     '''
     Updates an existing usage plan with throttling and quotas
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     plan_id
         Id of the created usage plan
@@ -1592,7 +1592,7 @@ def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):
     '''
     Deletes usage plan identified by plan_id
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -1655,7 +1655,7 @@ def attach_usage_plan_to_apis(plan_id, apis, region=None, key=None, keyid=None, 
     '''
     Attaches given usage plan to each of the apis provided in a list of apiId and stage values
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     apis
         a list of dictionaries, where each dictionary contains the following:
@@ -1680,7 +1680,7 @@ def detach_usage_plan_from_apis(plan_id, apis, region=None, key=None, keyid=None
     '''
     Detaches given usage plan from each of the apis provided in a list of apiId and stage value
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     apis
         a list of dictionaries, where each dictionary contains the following:

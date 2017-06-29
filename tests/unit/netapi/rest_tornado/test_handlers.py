@@ -3,27 +3,28 @@
 # Import Python libs
 from __future__ import absolute_import
 import json
-import yaml
 import os
 import copy
 import hashlib
 
 # Import Salt Testing Libs
-from tests.support.unit import skipIf
-import tests.integration as integration
+from tests.integration import AdaptedConfigurationTestCaseMixin
+from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
+import salt.auth
 try:
     import salt.netapi.rest_tornado as rest_tornado
     from salt.netapi.rest_tornado import saltnado
     HAS_TORNADO = True
 except ImportError:
     HAS_TORNADO = False
-import salt.auth
 
 # Import 3rd-party libs
+import yaml
 # pylint: disable=import-error
 try:
+    import tornado.escape
     import tornado.testing
     import tornado.concurrent
     from tornado.testing import AsyncHTTPTestCase, gen_test
@@ -45,7 +46,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')  # pylint: disable=W0223
-class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
+class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTestCase):
     '''
     Mixin to hold some shared things
     '''
@@ -68,11 +69,11 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
 
     @property
     def opts(self):
-        return self.get_config('client_config', from_scratch=True)
+        return self.get_temp_config('client_config')
 
     @property
     def mod_opts(self):
-        return self.get_config('minion', from_scratch=True)
+        return self.get_temp_config('minion')
 
     @property
     def auth(self):
@@ -86,21 +87,12 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
         return self.auth.mk_token(self.auth_creds_dict)
 
     def setUp(self):
-        # FIXME
-        # The try/except here and in tearDownis a temporary fix, pending the release of a
-        # new salt version, later than 08.22.16
-        try:
-            super(SaltnadoTestCase, self).setUp()
-        except (NotImplementedError, AttributeError):
-            pass
+        super(SaltnadoTestCase, self).setUp()
         self.async_timeout_prev = os.environ.pop('ASYNC_TEST_TIMEOUT', None)
         os.environ['ASYNC_TEST_TIMEOUT'] = str(30)
 
     def tearDown(self):
-        try:
-            super(SaltnadoTestCase, self).tearDown()
-        except AttributeError:
-            pass
+        super(SaltnadoTestCase, self).tearDown()
         if self.async_timeout_prev is None:
             os.environ.pop('ASYNC_TEST_TIMEOUT', None)
         else:
@@ -134,6 +126,22 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
         application.mod_opts = self.mod_opts
 
         return application
+
+    def decode_body(self, response):
+        if response is None:
+            return response
+        if six.PY2:
+            return response
+        if response.body:
+            # Decode it
+            if response.headers.get('Content-Type') == 'application/json':
+                response._body = response.body.decode('utf-8')
+            else:
+                response._body = tornado.escape.native_str(response.body)
+        return response
+
+    def fetch(self, path, **kwargs):
+        return self.decode_body(super(SaltnadoTestCase, self).fetch(path, **kwargs))
 
 
 class TestBaseSaltAPIHandler(SaltnadoTestCase):
@@ -471,29 +479,29 @@ class TestWebhookSaltHandler(SaltnadoTestCase):
         ]
         return self.build_tornado_app(urls)
 
-    @patch('salt.utils.event.get_event')
-    def test_hook_can_handle_get_parameters(self, get_event):
-        self._app.mod_opts['webhook_disable_auth'] = True
-        event = MagicMock()
-        event.fire_event.return_value = True
-        get_event.return_value = event
-        response = self.fetch('/hook/my_service/?param=1&param=2',
-                              body=json.dumps({}),
-                              method='POST',
-                              headers={'Content-Type': self.content_type_map['json']})
-        self.assertEqual(response.code, 200, response.body)
-        host = urlparse(response.effective_url).netloc
-        event.fire_event.assert_called_once_with(
-            {'headers': {'Content-Length': '2',
-                         'Connection': 'close',
-                         'Content-Type': 'application/json',
-                         'Host': host,
-                         'Accept-Encoding': 'gzip'},
-             'post': {},
-             'get': {'param': ['1', '2']}
-             },
-            'salt/netapi/hook/my_service/',
-        )
+    def test_hook_can_handle_get_parameters(self):
+        with patch('salt.utils.event.get_event') as get_event:
+            with patch.dict(self._app.mod_opts, {'webhook_disable_auth': True}):
+                event = MagicMock()
+                event.fire_event.return_value = True
+                get_event.return_value = event
+                response = self.fetch('/hook/my_service/?param=1&param=2',
+                                      body=json.dumps({}),
+                                      method='POST',
+                                      headers={'Content-Type': self.content_type_map['json']})
+                self.assertEqual(response.code, 200, response.body)
+                host = urlparse(response.effective_url).netloc
+                event.fire_event.assert_called_once_with(
+                    {'headers': {'Content-Length': '2',
+                                 'Connection': 'close',
+                                 'Content-Type': 'application/json',
+                                 'Host': host,
+                                 'Accept-Encoding': 'gzip'},
+                     'post': {},
+                     'get': {'param': ['1', '2']}
+                     },
+                    'salt/netapi/hook/my_service/',
+                )
 
 
 class TestSaltAuthHandler(SaltnadoTestCase):
@@ -625,7 +633,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
                                                 method='POST',
                                                 body=urlencode(self.auth_creds),
                                                 headers={'Content-Type': self.content_type_map['form']})
-        token = json.loads(response.body)['return'][0]['token']
+        token = json.loads(self.decode_body(response).body)['return'][0]['token']
 
         url = 'ws://127.0.0.1:{0}/all_events/{1}'.format(self.get_http_port(), token)
         request = HTTPRequest(url, headers={'Origin': 'http://example.com',
@@ -657,7 +665,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
                                                 method='POST',
                                                 body=urlencode(self.auth_creds),
                                                 headers={'Content-Type': self.content_type_map['form']})
-        token = json.loads(response.body)['return'][0]['token']
+        token = json.loads(self.decode_body(response).body)['return'][0]['token']
 
         url = 'ws://127.0.0.1:{0}/all_events/{1}'.format(self.get_http_port(), token)
         request = HTTPRequest(url, headers={'Origin': 'http://foo.bar',
@@ -674,7 +682,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
                                                 method='POST',
                                                 body=urlencode(self.auth_creds),
                                                 headers={'Content-Type': self.content_type_map['form']})
-        token = json.loads(response.body)['return'][0]['token']
+        token = json.loads(self.decode_body(response).body)['return'][0]['token']
         url = 'ws://127.0.0.1:{0}/all_events/{1}'.format(self.get_http_port(), token)
 
         # Example.com should works
@@ -700,7 +708,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
                                                 method='POST',
                                                 body=urlencode(self.auth_creds),
                                                 headers={'Content-Type': self.content_type_map['form']})
-        token = json.loads(response.body)['return'][0]['token']
+        token = json.loads(self.decode_body(response).body)['return'][0]['token']
         url = 'ws://127.0.0.1:{0}/all_events/{1}'.format(self.get_http_port(), token)
 
         # Example.com should works

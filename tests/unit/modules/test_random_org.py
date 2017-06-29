@@ -8,11 +8,13 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # Import Salt Libs
-import salt.utils.http
 import salt.modules.random_org as random_org
+
+# Import 3rd-party libs
+from tornado.httpclient import HTTPClient
 
 
 def check_status():
@@ -20,19 +22,21 @@ def check_status():
     Check the status of random.org
     '''
     try:
-        ret = salt.utils.http.query('https://api.random.org/', status=True)
-        return ret['status'] == 200
-    except:  # pylint: disable=W0702
+        return HTTPClient().fetch('https://api.random.org/').code == 200
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
-@skipIf(not check_status(), 'random.org is not available')
 class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.random_org
     '''
     def setup_loader_modules(self):
         return {random_org: {}}
+
+    def setUp(self):
+        if check_status() is False:
+            self.skipTest('External resource \'https://api.random.org/\' not available')
 
     # 'getUsage' function tests: 1
 

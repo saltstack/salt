@@ -7,14 +7,15 @@ integration tests for mac_ports
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-import tests.integration as integration
-from tests.support.helpers import destructiveTest
+from tests.support.case import ModuleCase
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import salt libs
 import salt.utils
 
 
-class MacPortsModuleTest(integration.ModuleCase):
+@skip_if_not_root
+class MacPortsModuleTest(ModuleCase):
     '''
     Validate the mac_ports module
     '''
@@ -29,9 +30,6 @@ class MacPortsModuleTest(integration.ModuleCase):
 
         if not salt.utils.which('port'):
             self.skipTest('Test requires port binary')
-
-        if salt.utils.get_uid(salt.utils.get_user()) != 0:
-            self.skipTest('Test requires root')
 
         self.AGREE_INSTALLED = 'agree' in self.run_function('pkg.list_pkgs')
         self.run_function('pkg.refresh_db')

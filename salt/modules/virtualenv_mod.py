@@ -11,6 +11,7 @@ import glob
 import shutil
 import logging
 import os
+import sys
 
 # Import salt libs
 import salt.utils
@@ -19,13 +20,11 @@ import salt.utils.verify
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six import string_types
 
-KNOWN_BINARY_NAMES = frozenset(
-    ['virtualenv',
-     'virtualenv2',
-     'virtualenv-2.6',
-     'virtualenv-2.7'
-     ]
-)
+KNOWN_BINARY_NAMES = frozenset([
+    'virtualenv-{0}.{1}'.format(*sys.version_info[:2]),
+    'virtualenv{0}'.format(sys.version_info[0]),
+    'virtualenv',
+])
 
 log = logging.getLogger(__name__)
 

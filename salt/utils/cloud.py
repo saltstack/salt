@@ -55,6 +55,8 @@ except ImportError:
 import salt.crypt
 import salt.client
 import salt.config
+import salt.loader
+import salt.template
 import salt.utils
 import salt.utils.event
 from salt.utils import vt
@@ -1754,6 +1756,12 @@ def filter_event(tag, data, defaults):
     if use_defaults is False:
         defaults = []
 
+    # For PY3, if something like ".keys()" or ".values()" is used on a dictionary,
+    # it returns a dict_view and not a list like in PY2. "defaults" should be passed
+    # in with the correct data type, but don't stack-trace in case it wasn't.
+    if not isinstance(defaults, list):
+        defaults = list(defaults)
+
     defaults = list(set(defaults + keys))
 
     for key in defaults:
@@ -1819,7 +1827,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
                 if ('key_filename' in kwargs and kwargs['key_filename']
                     and SSH_PASSWORD_PROMP_SUDO_RE.search(stdout)
                 ):
-                    proc.sendline(kwargs['sudo_password', None])
+                    proc.sendline(kwargs['sudo_password'])
                 # elif authenticating via password and haven't exhausted our
                 # password_retires
                 elif (
@@ -2534,7 +2542,8 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     lock_file(index_file)
 
     if os.path.exists(index_file):
-        with salt.utils.fopen(index_file, 'r') as fh_:
+        mode = 'rb' if six.PY3 else 'r'
+        with salt.utils.fopen(index_file, mode) as fh_:
             index = msgpack.load(fh_)
     else:
         index = {}
@@ -2550,7 +2559,8 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
         }
     })
 
-    with salt.utils.fopen(index_file, 'w') as fh_:
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.fopen(index_file, mode) as fh_:
         msgpack.dump(index, fh_)
 
     unlock_file(index_file)
@@ -2566,7 +2576,8 @@ def cachedir_index_del(minion_id, base=None):
     lock_file(index_file)
 
     if os.path.exists(index_file):
-        with salt.utils.fopen(index_file, 'r') as fh_:
+        mode = 'rb' if six.PY3 else 'r'
+        with salt.utils.fopen(index_file, mode) as fh_:
             index = msgpack.load(fh_)
     else:
         return
@@ -2574,7 +2585,8 @@ def cachedir_index_del(minion_id, base=None):
     if minion_id in index:
         del index[minion_id]
 
-    with salt.utils.fopen(index_file, 'w') as fh_:
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.fopen(index_file, mode) as fh_:
         msgpack.dump(index, fh_)
 
     unlock_file(index_file)
@@ -3248,3 +3260,51 @@ def check_key_path_and_mode(provider, key_path):
         return False
 
     return True
+
+
+def userdata_template(opts, vm_, userdata):
+    '''
+    Use the configured templating engine to template the userdata file
+    '''
+    # No userdata, no need to template anything
+    if userdata is None:
+        return userdata
+
+    userdata_template = salt.config.get_cloud_config_value(
+        'userdata_template', vm_, opts, search_global=False, default=None
+    )
+    if userdata_template is False:
+        return userdata
+    # Use the cloud profile's userdata_template, otherwise get it from the
+    # master configuration file.
+    renderer = opts.get('userdata_template') \
+        if userdata_template is None \
+        else userdata_template
+    if renderer is None:
+        return userdata
+    else:
+        render_opts = opts.copy()
+        render_opts.update(vm_)
+        rend = salt.loader.render(render_opts, {})
+        blacklist = opts['renderer_blacklist']
+        whitelist = opts['renderer_whitelist']
+        templated = salt.template.compile_template(
+            ':string:',
+            rend,
+            renderer,
+            blacklist,
+            whitelist,
+            input_data=userdata,
+        )
+        if not isinstance(templated, six.string_types):
+            # template renderers like "jinja" should return a StringIO
+            try:
+                templated = ''.join(templated.readlines())
+            except AttributeError:
+                log.warning(
+                    'Templated userdata resulted in non-string result (%s), '
+                    'converting to string', templated
+                )
+                templated = str(templated)
+
+        return templated

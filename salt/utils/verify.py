@@ -486,7 +486,7 @@ def valid_id(opts, id_):
     '''
     try:
         return bool(clean_path(opts['pki_dir'], id_))
-    except (AttributeError, KeyError) as e:
+    except (AttributeError, KeyError, TypeError) as e:
         return False
 
 

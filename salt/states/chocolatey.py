@@ -67,7 +67,7 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
             Allow mulitiple versions of the package to be installed. Do not use
             with ``force``. Does not work with all packages. Default is False.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
     .. code-block:: yaml
 
@@ -92,7 +92,7 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
 
     # Determine action
     # Package not installed
-    if name not in pre_install:
+    if name not in [package.split('|')[0].lower() for package in pre_install.splitlines()]:
         if version:
             ret['changes'] = {name: 'Version {0} will be installed'
                                     ''.format(version)}
@@ -193,7 +193,7 @@ def uninstalled(name, version=None, uninstall_args=None, override_args=False):
     pre_uninstall = __salt__['chocolatey.list'](local_only=True)
 
     # Determine if package is installed
-    if name in pre_uninstall:
+    if name in [package.split('|')[0].lower() for package in pre_uninstall.splitlines()]:
         ret['changes'] = {name: '{0} version {1} will be removed'
                                 ''.format(name, pre_uninstall[name][0])}
     else:

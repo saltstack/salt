@@ -61,9 +61,9 @@ class QueueTest(TestCase, LoaderModuleMockMixin):
 
         queue_pop = MagicMock(return_value=ret)
         test_stdout_print = MagicMock(return_value=True)
-        queue_mod.__salt__['test.stdout_print'] = test_stdout_print
-        with patch.object(queue_mod, 'pop', queue_pop):
-            queue_mod.process_runner(queue='salt')
-        queue_pop.assert_called_once_with(queue='salt', quantity=1, backend='pgjsonb')
-        test_stdout_print.assert_called_once_with()
-        queue_pop.assert_called_once_with(queue='salt', quantity=1, backend='pgjsonb')
+        with patch.dict(queue_mod.__salt__, {'test.stdout_print': test_stdout_print}):
+            with patch.object(queue_mod, 'pop', queue_pop):
+                queue_mod.process_runner(queue='salt')
+            queue_pop.assert_called_once_with(queue='salt', quantity=1, backend='pgjsonb')
+            test_stdout_print.assert_called_once_with()
+            queue_pop.assert_called_once_with(queue='salt', quantity=1, backend='pgjsonb')

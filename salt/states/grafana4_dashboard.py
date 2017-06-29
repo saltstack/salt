@@ -2,7 +2,7 @@
 '''
 Manage Grafana v4.0 Dashboards
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 .. code-block:: yaml
 

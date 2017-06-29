@@ -2,7 +2,7 @@
 '''
 Return salt data via mattermost
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 The following fields can be set in the minion conf file::
 .. code-block:: yaml

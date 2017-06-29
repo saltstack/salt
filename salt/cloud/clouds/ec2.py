@@ -90,11 +90,10 @@ import decimal
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.hashutils
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
-import salt.loader
-from salt.template import compile_template
 
 # Import salt.cloud libs
 import salt.utils.cloud
@@ -344,7 +343,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         canonical_headers = 'host:' + host + '\n' + 'x-amz-date:' + amz_date + '\n'
         signed_headers = 'host;x-amz-date'
 
-        payload_hash = hashlib.sha256('').hexdigest()
+        payload_hash = salt.utils.hashutils.sha256_digest('')
 
         ec2_api_version = provider.get(
             'ec2_api_version',
@@ -353,7 +352,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
         params_with_headers['Version'] = ec2_api_version
 
-        keys = sorted(params_with_headers.keys())
+        keys = sorted(list(params_with_headers))
         values = map(params_with_headers.get, keys)
         querystring = _urlencode(list(zip(keys, values)))
         querystring = querystring.replace('+', '%20')
@@ -367,7 +366,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
         string_to_sign = algorithm + '\n' +  amz_date + '\n' + \
                          credential_scope + '\n' + \
-                         hashlib.sha256(canonical_request).hexdigest()
+                         salt.utils.hashutils.sha256_digest(canonical_request)
 
         kDate = sign(('AWS4' + provider['key']).encode('utf-8'), datestamp)
         kRegion = sign(kDate, region)
@@ -1777,6 +1776,7 @@ def request_instance(vm_=None, call=None):
     image_id = vm_['image']
     params[spot_prefix + 'ImageId'] = image_id
 
+    userdata = None
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False, default=None
     )
@@ -1790,18 +1790,13 @@ def request_instance(vm_=None, call=None):
             with salt.utils.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
-    if userdata is not None:
-        render_opts = __opts__.copy()
-        render_opts.update(vm_)
-        renderer = __opts__.get('renderer', 'yaml_jinja')
-        rend = salt.loader.render(render_opts, {})
-        blacklist = __opts__['renderer_blacklist']
-        whitelist = __opts__['renderer_whitelist']
-        userdata = compile_template(
-            ':string:', rend, renderer, blacklist, whitelist, input_data=userdata,
-        )
+    userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
 
-        params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
+    if userdata is not None:
+        try:
+            params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
+        except Exception as exc:
+            log.exception('Failed to encode userdata: %s', exc)
 
     vm_size = config.get_cloud_config_value(
         'size', vm_, __opts__, search_global=False
@@ -2006,7 +2001,7 @@ def request_instance(vm_=None, call=None):
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
             'kwargs': __utils__['cloud.filter_event'](
-                'requesting', params, params.keys()
+                'requesting', params, list(params)
             ),
             'location': location,
         },
@@ -2792,7 +2787,7 @@ def create(vm_=None, call=None):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('created', event_data, event_data.keys()),
+        args=__utils__['cloud.filter_event']('created', event_data, list(event_data)),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -2868,6 +2863,8 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             volume_dict['iops'] = volume['iops']
         if 'encrypted' in volume:
             volume_dict['encrypted'] = volume['encrypted']
+        if 'kmskeyid' in volume:
+            volume_dict['kmskeyid'] = volume['kmskeyid']
 
         if 'volume_id' not in volume_dict:
             created_volume = create_volume(volume_dict, call='function', wait_to_finish=wait_to_finish)
@@ -3400,7 +3397,8 @@ def _get_node(name=None, instance_id=None, location=None):
                                   provider=provider,
                                   opts=__opts__,
                                   sigver='4')
-            return _extract_instance_info(instances).values()[0]
+            instance_info = _extract_instance_info(instances).values()
+            return next(iter(instance_info))
         except IndexError:
             attempts -= 1
             log.debug(
@@ -3616,7 +3614,8 @@ def list_nodes_select(call=None):
 
 def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     '''
-    Show the details from EC2 concerning an AMI
+    Show the details from EC2 concerning an instance's termination protection state
+
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -3652,6 +3651,51 @@ def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     return disable_protect
 
 
+def show_detailed_monitoring(name=None, instance_id=None, call=None, quiet=False):
+    '''
+    Show the details from EC2 regarding cloudwatch detailed monitoring.
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_detailed_monitoring action must be called with -a or --action.'
+        )
+    location = get_location()
+    if str(name).startswith('i-') and (len(name) == 10 or len(name) == 19):
+        instance_id = name
+
+    if not name and not instance_id:
+        raise SaltCloudSystemExit(
+            'The show_detailed_monitoring action must be provided with a name or instance\
+ ID'
+        )
+    matched = _get_node(name=name, instance_id=instance_id, location=location)
+    log.log(
+        logging.DEBUG if quiet is True else logging.INFO,
+        'Detailed Monitoring is {0} for {1}'.format(matched['monitoring'], name)
+    )
+    return matched['monitoring']
+
+
+def _toggle_term_protect(name, value):
+    '''
+    Enable or Disable termination protection on a node
+
+    '''
+    instance_id = _get_node(name)['instanceId']
+    params = {'Action': 'ModifyInstanceAttribute',
+              'InstanceId': instance_id,
+              'DisableApiTermination.Value': value}
+
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       return_root=True,
+                       opts=__opts__,
+                       sigver='4')
+
+    return show_term_protect(name=name, instance_id=instance_id, call='action')
+
+
 def enable_term_protect(name, call=None):
     '''
     Enable termination protection on a node
@@ -3671,39 +3715,21 @@ def enable_term_protect(name, call=None):
     return _toggle_term_protect(name, 'true')
 
 
-def disable_term_protect(name, call=None):
+def disable_detailed_monitoring(name, call=None):
     '''
-    Disable termination protection on a node
+    Enable/disable detailed monitoring on a node
 
     CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a disable_term_protect mymachine
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The disable_term_protect action must be called with '
+            'The enable_term_protect action must be called with '
             '-a or --action.'
         )
 
-    return _toggle_term_protect(name, 'false')
-
-
-def _toggle_term_protect(name, value):
-    '''
-    Disable termination protection on a node
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a disable_term_protect mymachine
-    '''
     instance_id = _get_node(name)['instanceId']
-    params = {'Action': 'ModifyInstanceAttribute',
-              'InstanceId': instance_id,
-              'DisableApiTermination.Value': value}
+    params = {'Action': 'UnmonitorInstances',
+              'InstanceId.1': instance_id}
 
     result = aws.query(params,
                        location=get_location(),
@@ -3712,7 +3738,34 @@ def _toggle_term_protect(name, value):
                        opts=__opts__,
                        sigver='4')
 
-    return show_term_protect(name=name, instance_id=instance_id, call='action')
+    return show_detailed_monitoring(name=name, instance_id=instance_id, call='action')
+
+
+def enable_detailed_monitoring(name, call=None):
+    '''
+    Enable/disable detailed monitoring on a node
+
+    CLI Example:
+
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The enable_term_protect action must be called with '
+            '-a or --action.'
+        )
+
+    instance_id = _get_node(name)['instanceId']
+    params = {'Action': 'MonitorInstances',
+              'InstanceId.1': instance_id}
+
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       return_root=True,
+                       opts=__opts__,
+                       sigver='4')
+
+    return show_detailed_monitoring(name=name, instance_id=instance_id, call='action')
 
 
 def show_delvol_on_destroy(name, kwargs=None, call=None):
@@ -3967,7 +4020,46 @@ def volume_create(**kwargs):
 
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
     '''
-    Create a volume
+    Create a volume.
+
+    zone
+        The availability zone used to create the volume. Required. String.
+
+    size
+        The size of the volume, in GiBs. Defaults to ``10``. Integer.
+
+    snapshot
+        The snapshot-id from which to create the volume. Integer.
+
+    type
+        The volume type. This can be gp2 for General Purpose SSD, io1 for Provisioned
+        IOPS SSD, st1 for Throughput Optimized HDD, sc1 for Cold HDD, or standard for
+        Magnetic volumes. String.
+
+    iops
+        The number of I/O operations per second (IOPS) to provision for the volume,
+        with a maximum ratio of 50 IOPS/GiB. Only valid for Provisioned IOPS SSD
+        volumes. Integer.
+
+        This option will only be set if ``type`` is also specified as ``io1``.
+
+    encrypted
+        Specifies whether the volume will be encrypted. Boolean.
+
+        If ``snapshot`` is also given in the list of kwargs, then this value is ignored
+        since volumes that are created from encrypted snapshots are also automatically
+        encrypted.
+
+    tags
+        The tags to apply to the volume during creation. Dictionary.
+
+    call
+        The ``create_volume`` function must be called with ``-f`` or ``--function``.
+        String.
+
+    wait_to_finish
+        Whether or not to wait for the volume to be available. Boolean. Defaults to
+        ``False``.
 
     CLI Examples:
 
@@ -4008,6 +4100,13 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
     # You can't set `encrypted` if you pass a snapshot
     if 'encrypted' in kwargs and 'snapshot' not in kwargs:
         params['Encrypted'] = kwargs['encrypted']
+        if 'kmskeyid' in kwargs:
+            params['KmsKeyId'] = kwargs['kmskeyid']
+    if 'kmskeyid' in kwargs and 'encrypted' not in kwargs:
+        log.error(
+            'If a KMS Key ID is specified, encryption must be enabled'
+        )
+        return False
 
     log.debug(params)
 
@@ -4348,7 +4447,7 @@ def delete_keypair(kwargs=None, call=None):
         return False
 
     params = {'Action': 'DeleteKeyPair',
-              'KeyName.1': kwargs['keyname']}
+              'KeyName': kwargs['keyname']}
 
     data = aws.query(params,
                      return_url=True,

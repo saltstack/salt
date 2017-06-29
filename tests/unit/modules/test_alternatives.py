@@ -65,36 +65,36 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False
                 )
 
-    @patch('os.readlink')
-    def test_show_current(self, os_readlink_mock):
-        os_readlink_mock.return_value = '/etc/alternatives/salt'
-        ret = alternatives.show_current('better-world')
-        self.assertEqual('/etc/alternatives/salt', ret)
-        os_readlink_mock.assert_called_once_with(
-            '/etc/alternatives/better-world'
-        )
-
-        with TestsLoggingHandler() as handler:
-            os_readlink_mock.side_effect = OSError('Hell was not found!!!')
-            self.assertFalse(alternatives.show_current('hell'))
-            os_readlink_mock.assert_called_with('/etc/alternatives/hell')
-            self.assertIn('ERROR:alternative: hell does not exist',
-                          handler.messages)
-
-    @patch('os.readlink')
-    def test_check_installed(self, os_readlink_mock):
-        os_readlink_mock.return_value = '/etc/alternatives/salt'
-        self.assertTrue(
-            alternatives.check_installed(
-                'better-world', '/etc/alternatives/salt'
+    def test_show_current(self):
+        with patch('os.readlink') as os_readlink_mock:
+            os_readlink_mock.return_value = '/etc/alternatives/salt'
+            ret = alternatives.show_current('better-world')
+            self.assertEqual('/etc/alternatives/salt', ret)
+            os_readlink_mock.assert_called_once_with(
+                '/etc/alternatives/better-world'
             )
-        )
-        os_readlink_mock.return_value = False
-        self.assertFalse(
-            alternatives.check_installed(
-                'help', '/etc/alternatives/salt'
+
+            with TestsLoggingHandler() as handler:
+                os_readlink_mock.side_effect = OSError('Hell was not found!!!')
+                self.assertFalse(alternatives.show_current('hell'))
+                os_readlink_mock.assert_called_with('/etc/alternatives/hell')
+                self.assertIn('ERROR:alternative: hell does not exist',
+                              handler.messages)
+
+    def test_check_installed(self):
+        with patch('os.readlink') as os_readlink_mock:
+            os_readlink_mock.return_value = '/etc/alternatives/salt'
+            self.assertTrue(
+                alternatives.check_installed(
+                    'better-world', '/etc/alternatives/salt'
+                )
             )
-        )
+            os_readlink_mock.return_value = False
+            self.assertFalse(
+                alternatives.check_installed(
+                    'help', '/etc/alternatives/salt'
+                )
+            )
 
     def test_install(self):
         with patch.dict(alternatives.__grains__, {'os_family': 'RedHat'}):

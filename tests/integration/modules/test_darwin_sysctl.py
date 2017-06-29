@@ -14,19 +14,17 @@ import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
-import tests.integration as integration
-from tests.support.unit import skipIf
-from tests.support.helpers import (
-    destructiveTest,
-    requires_system_grains
-)
+from tests.support.case import ModuleCase
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Module Variables
 ASSIGN_CMD = 'net.inet.icmp.icmplim'
 CONFIG = '/etc/sysctl.conf'
 
 
-class DarwinSysctlModuleTest(integration.ModuleCase):
+@destructiveTest
+@skip_if_not_root
+class DarwinSysctlModuleTest(ModuleCase):
     '''
     Integration tests for the darwin_sysctl module
     '''
@@ -58,10 +56,7 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
                 raise CommandExecutionError(msg.format(CONFIG))
             os.remove(CONFIG)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_assign(self, grains=None):
+    def test_assign(self):
         '''
         Tests assigning a single sysctl parameter
         '''
@@ -80,10 +75,7 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
             self.run_function('sysctl.assign', [ASSIGN_CMD, self.val])
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_persist_new_file(self, grains=None):
+    def test_persist_new_file(self):
         '''
         Tests assigning a sysctl value to a system without a sysctl.conf file
         '''
@@ -102,10 +94,7 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
             os.remove(CONFIG)
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_persist_already_set(self, grains=None):
+    def test_persist_already_set(self):
         '''
         Tests assigning a sysctl value that is already set in sysctl.conf file
         '''
@@ -123,10 +112,7 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
             os.remove(CONFIG)
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_persist_apply_change(self, grains=None):
+    def test_persist_apply_change(self):
         '''
         Tests assigning a sysctl value and applying the change to system
         '''
@@ -190,10 +176,7 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
                     return True
             return False
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def tearDown(self, grains=None):
+    def tearDown(self):
         '''
         Clean up after tests
         '''

@@ -13,7 +13,10 @@ import hmac
 import salt.ext.six as six
 import salt.utils
 
+from salt.utils.decorators import jinja_filter
 
+
+@jinja_filter('base64_encode')
 def base64_b64encode(instr):
     '''
     Encode a string as base64 using the "modern" Python interface.
@@ -28,6 +31,7 @@ def base64_b64encode(instr):
     return base64.b64encode(instr)
 
 
+@jinja_filter('base64_decode')
 def base64_b64decode(instr):
     '''
     Decode a base64-encoded string using the "modern" Python interface.
@@ -72,6 +76,7 @@ def base64_decodestring(instr):
     return base64.decodestring(instr)
 
 
+@jinja_filter('md5')
 def md5_digest(instr):
     '''
     Generate an md5 hash of a given string.
@@ -82,6 +87,7 @@ def md5_digest(instr):
     return hashlib.md5(instr).hexdigest()
 
 
+@jinja_filter('sha256')
 def sha256_digest(instr):
     '''
     Generate an sha256 hash of a given string.
@@ -92,6 +98,7 @@ def sha256_digest(instr):
     return hashlib.sha256(instr).hexdigest()
 
 
+@jinja_filter('sha512')
 def sha512_digest(instr):
     '''
     Generate an sha512 hash of a given string
@@ -102,6 +109,7 @@ def sha512_digest(instr):
     return hashlib.sha512(instr).hexdigest()
 
 
+@jinja_filter('hmac')
 def hmac_signature(string, shared_secret, challenge_hmac):
     '''
     Verify a challenging hmac signature against a string / shared-secret

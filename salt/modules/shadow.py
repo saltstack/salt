@@ -365,3 +365,18 @@ def set_expire(name, expire):
     '''
     cmd = 'chage -E {0} {1}'.format(expire, name)
     return not __salt__['cmd.run'](cmd, python_shell=False)
+
+
+def list_users():
+    '''
+    .. versionadded:: Oxygen
+
+    Return a list of all shadow users
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.list_users
+    '''
+    return sorted([user.sp_nam for user in spwd.getspall()])

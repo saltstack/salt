@@ -41,6 +41,7 @@ from salt.utils.verify import verify_files
 import salt.exceptions
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.utils.yamldumper import SafeOrderedDumper
 
 
 def _sorted(mixins_or_funcs):
@@ -482,6 +483,30 @@ class HardCrashMixin(six.with_metaclass(MixInMeta, object)):
             help=('Raise any original exception rather than exiting gracefully. '
                   'Default: %default.')
         )
+
+
+class NoParseMixin(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio_ = 50
+
+    def _mixin_setup(self):
+        no_parse = os.environ.get('SALT_NO_PARSE', '')
+        self.add_option(
+            '--no-parse', default=no_parse,
+            help=('Comma-separated list of named CLI arguments (i.e. '
+                  'argname=value) which should not be parsed as Python '
+                  'data types'),
+            metavar='argname1,argname2,...',
+        )
+
+    def process_no_parse(self):
+        if self.options.no_parse:
+            try:
+                self.options.no_parse = \
+                    [x.strip() for x in self.options.no_parse.split(',')]
+            except AttributeError:
+                self.options.no_parse = []
+        else:
+            self.options.no_parse = []
 
 
 class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
@@ -1213,6 +1238,18 @@ class ProxyIdMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
 
+class CacheDirMixIn(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio = 40
+
+    def _mixin_setup(self):
+        self.add_option(
+            '--cachedir',
+            default='/var/cache/salt/',
+            dest='cachedir',
+            help=('Cache Directory')
+        )
+
+
 class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
 
     _mixin_prio_ = 40
@@ -1773,7 +1810,7 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
         except AttributeError:
             minion_id = None
 
-        return config.minion_config(self.get_config_file_path(),
+        return config.proxy_config(self.get_config_file_path(),
                                     cache_minion_id=False,
                                     minion_id=minion_id)
 
@@ -1817,7 +1854,8 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                              HardCrashMixin,
                                              SaltfileMixIn,
                                              ArgsStdinMixIn,
-                                             EAuthMixIn)):
+                                             EAuthMixIn,
+                                             NoParseMixin)):
 
     default_timeout = 5
 
@@ -1913,6 +1951,20 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                   'before freeing the slot in the batch for the next one.')
         )
         self.add_option(
+            '--batch-safe-limit',
+            default=0,
+            dest='batch_safe_limit',
+            type=int,
+            help=('Execute the salt job in batch mode if the job would have '
+                  'executed on more than this many minions.')
+        )
+        self.add_option(
+            '--batch-safe-size',
+            default=8,
+            dest='batch_safe_size',
+            help=('Batch size to use for batch jobs created by batch-safe-limit.')
+        )
+        self.add_option(
             '--return',
             default='',
             metavar='RETURNER',
@@ -1943,6 +1995,14 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             metavar='EXECUTOR_LIST',
             help=('Set an alternative list of executors to override the one '
                   'set in minion config.')
+        )
+        self.add_option(
+            '--executor-opts',
+            dest='executor_opts',
+            default=None,
+            metavar='EXECUTOR_OPTS',
+            help=('Set alternate executor options if supported by executor. '
+                  'Options set by minion config are used by default.')
         )
         self.add_option(
             '-d', '--doc', '--documentation',
@@ -2011,7 +2071,13 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
         # Dump the master configuration file, exit normally at the end.
         if self.options.config_dump:
             cfg = config.master_config(self.get_config_file_path())
-            sys.stdout.write(yaml.dump(cfg, default_flow_style=False))
+            sys.stdout.write(
+                yaml.dump(
+                    cfg,
+                    default_flow_style=False,
+                    Dumper=SafeOrderedDumper
+                )
+            )
             sys.exit(salt.defaults.exitcodes.EX_OK)
 
         if self.options.preview_target:
@@ -2079,14 +2145,16 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                     # interface
                     for i in range(len(self.config['arg'])):
                         self.config['arg'][i] = salt.utils.args.parse_input(
-                            self.config['arg'][i])
+                            self.config['arg'][i],
+                            no_parse=self.options.no_parse)
                 else:
                     self.config['fun'] = self.args[1]
                     self.config['arg'] = self.args[2:]
                     # parse the args and kwargs before sending to the publish
                     # interface
-                    self.config['arg'] = \
-                        salt.utils.args.parse_input(self.config['arg'])
+                    self.config['arg'] = salt.utils.args.parse_input(
+                        self.config['arg'],
+                        no_parse=self.options.no_parse)
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
 
@@ -2120,6 +2188,17 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
     _default_logging_level_ = config.DEFAULT_MASTER_OPTS['log_level']
     _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['log_file']
 
+    def _mixin_setup(self):
+        file_opts_group = optparse.OptionGroup(self, 'File Options')
+        file_opts_group.add_option(
+            '-n', '--no-compression',
+            default=True,
+            dest='compression',
+            action='store_false',
+            help='Disable gzip compression.'
+        )
+        self.add_option_group(file_opts_group)
+
     def _mixin_after_parsed(self):
         # salt-cp needs arguments
         if len(self.args) <= 1:
@@ -2133,8 +2212,9 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
                 self.config['tgt'] = self.args[0].split()
         else:
             self.config['tgt'] = self.args[0]
-        self.config['src'] = self.args[1:-1]
+        self.config['src'] = [os.path.realpath(x) for x in self.args[1:-1]]
         self.config['dest'] = self.args[-1]
+        self.config['gzip'] = True
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
@@ -2446,7 +2526,9 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
                                               HardCrashMixin,
                                               SaltfileMixIn,
                                               ArgsStdinMixIn,
-                                              ProfilingPMixIn)):
+                                              ProfilingPMixIn,
+                                              NoParseMixin,
+                                              CacheDirMixIn)):
 
     description = (
         'salt-call is used to execute module functions locally on a Salt Minion'
@@ -2664,7 +2746,8 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
                                              OutputOptionsMixIn,
                                              ArgsStdinMixIn,
                                              ProfilingPMixIn,
-                                             EAuthMixIn)):
+                                             EAuthMixIn,
+                                             NoParseMixin)):
 
     default_timeout = 1
 
@@ -2735,7 +2818,8 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
                                              TargetOptionsMixIn,
                                              OutputOptionsMixIn,
                                              SaltfileMixIn,
-                                             HardCrashMixin)):
+                                             HardCrashMixin,
+                                             NoParseMixin)):
 
     usage = '%prog [options] \'<target>\' <function> [arguments]'
 
@@ -2989,6 +3073,12 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
         if not self.config['argv'] or not self.config['tgt']:
             self.print_help()
             self.error('Insufficient arguments')
+
+        # Add back the --no-parse options so that shimmed/wrapped commands
+        # handle the arguments correctly.
+        if self.options.no_parse:
+            self.config['argv'].append(
+                '--no-parse=' + ','.join(self.options.no_parse))
 
         if self.options.ssh_askpass:
             self.options.ssh_passwd = getpass.getpass('Password: ')

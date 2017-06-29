@@ -125,6 +125,22 @@ class ContextDict(collections.MutableMapping):
         else:
             return iter(self.global_data)
 
+    def __copy__(self):
+        new_obj = type(self)(threadsafe=self._threadsafe)
+        if self.active:
+            new_obj.global_data = copy.copy(self._state.data)
+        else:
+            new_obj.global_data = copy.copy(self.global_data)
+        return new_obj
+
+    def __deepcopy__(self, memo):
+        new_obj = type(self)(threadsafe=self._threadsafe)
+        if self.active:
+            new_obj.global_data = copy.deepcopy(self._state.data, memo)
+        else:
+            new_obj.global_data = copy.deepcopy(self.global_data, memo)
+        return new_obj
+
 
 class ChildContextDict(collections.MutableMapping):
     '''An overrideable child of ContextDict

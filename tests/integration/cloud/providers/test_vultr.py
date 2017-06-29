@@ -11,7 +11,8 @@ import string
 import time
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
@@ -35,7 +36,7 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'vultr'
 
 
-class VultrTest(integration.ShellCase):
+class VultrTest(ShellCase):
     '''
     Integration tests for the Vultr cloud provider in Salt-Cloud
     '''
@@ -60,7 +61,7 @@ class VultrTest(integration.ShellCase):
         # check if api_key, ssh_key_file, and ssh_key_names are present
         config = cloud_providers_config(
             os.path.join(
-                integration.FILES,
+                FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'
@@ -156,10 +157,12 @@ class VultrTest(integration.ShellCase):
         '''
         # check if instance with salt installed returned
         try:
+            create_vm = self.run_cloud('-p vultr-test {0}'.format(INSTANCE_NAME), timeout=500)
             self.assertIn(
                 INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p vultr-test {0}'.format(INSTANCE_NAME), timeout=500)]
+                [i.strip() for i in create_vm]
             )
+            self.assertNotIn('Failed to start', str(create_vm))
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
             raise

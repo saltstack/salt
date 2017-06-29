@@ -21,6 +21,9 @@ from salt.utils import print_cli
 import salt.ext.six as six
 from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class Batch(object):
@@ -53,7 +56,9 @@ class Batch(object):
             args.append(self.opts.get('tgt_type', 'glob'))
 
         self.pub_kwargs['yield_pub_data'] = True
-        ping_gen = self.local.cmd_iter(*args, **self.pub_kwargs)
+        ping_gen = self.local.cmd_iter(*args,
+                                       gather_job_timeout=self.opts['gather_job_timeout'],
+                                       **self.pub_kwargs)
 
         # Broadcast to targets
         fret = set()
@@ -174,6 +179,7 @@ class Batch(object):
                                 ret=self.opts.get('return', ''),
                                 show_jid=show_jid,
                                 verbose=show_verbose,
+                                gather_job_timeout=self.opts['gather_job_timeout'],
                                 **self.eauth)
                 # add it to our iterators and to the minion_tracker
                 iters.append(new_iter)
@@ -242,8 +248,12 @@ class Batch(object):
                     if bwait:
                         wait.append(datetime.now() + timedelta(seconds=bwait))
                 # Munge retcode into return data
+                failhard = False
                 if 'retcode' in data and isinstance(data['ret'], dict) and 'retcode' not in data['ret']:
                     data['ret']['retcode'] = data['retcode']
+                    if self.opts.get('failhard') and data['ret']['retcode'] > 0:
+                        failhard = True
+
                 if self.opts.get('raw'):
                     ret[minion] = data
                     yield data
@@ -261,6 +271,9 @@ class Batch(object):
                             data,
                             out,
                             self.opts)
+                if failhard:
+                    log.error('ERROR: Minion {} returned with non-zero exit code. Batch run stopped due to failhard'.format(minion))
+                    raise StopIteration
 
             # remove inactive iterators from the iters list
             for queue in minion_tracker:

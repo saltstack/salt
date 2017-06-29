@@ -15,7 +15,8 @@ from __future__ import absolute_import, print_function
 from tests.support.unit import skipIf
 
 # Import salt libs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -29,8 +30,8 @@ except ImportError:
 
 
 @skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.11.4')
-class SaltCloudCliTest(integration.ShellCase,
-                       integration.ShellCaseCommonTestsMixin):
+class SaltCloudCliTest(ShellCase,
+                       ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-cloud'
 

@@ -137,6 +137,7 @@ import salt.config as config
 # Import 3rd-party libs
 import salt.ext.six as six
 try:
+    # Attempt to import pyVmomi libs
     from pyVmomi import vim
     HAS_PYVMOMI = True
 except Exception:
@@ -149,7 +150,6 @@ try:
 except Exception:
     pass
 
-# Attempt to import pyVim and pyVmomi libs
 ESX_5_5_NAME_PORTION = 'VMware ESXi 5.5'
 SAFE_ESX_5_5_CONTROLLER_KEY_INDEX = 200
 FLATTEN_DISK_FULL_CLONE = 'moveAllDiskBackingsAndDisallowSharing'
@@ -616,8 +616,9 @@ def _get_mode_spec(device, mode, disk_spec):
     return disk_spec
 
 
-def _get_size_spec(device, size_gb):
-    size_kb = int(size_gb * 1024.0 * 1024.0)
+def _get_size_spec(device, size_gb=None, size_kb=None):
+    if size_kb is None and size_gb is not None:
+        size_kb = int(size_gb * 1024.0 * 1024.0)
     disk_spec = _edit_existing_hard_disk_helper(disk=device, size_kb=size_kb) if device.capacityInKB < size_kb else None
     return disk_spec
 
@@ -649,26 +650,33 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         disk_spec = None
                         if 'size' in devices['disk'][device.deviceInfo.label]:
                             size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
-                            disk_spec = _get_size_spec(device, size_gb)
-                            size_kb = size_gb * 1024 * 1024
+                            size_kb = int(size_gb * 1024.0 * 1024.0)
                         else:
-                            # User didn't specify disk size
-                            # in the cloud profile
-                            # so use the existing disk size
-                            log.info('Virtual disk size was not'
-                                     ' specified in the cloud profile.'
-                                     ' Using existing disk size.')
+                            # User didn't specify disk size in the cloud
+                            # profile so use the existing disk size
                             size_kb = device.capacityInKB
-
-                        if device.capacityInKB < size_kb:
-                            # expand the disk
-                            disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
-                        elif device.capacityInKB > size_kb:
-                            raise SaltCloudSystemExit(
-                                'The specified disk size is smaller than the '
-                                'size of the disk image. It must be equal to '
-                                'or greater than the disk image'
+                            size_gb = size_kb / (1024.0 * 1024.0)
+                            log.debug(
+                                'Virtual disk size for \'{0}\' was not '
+                                'specified in the cloud profile or map file. '
+                                'Using existing virtual disk size of \'{1}GB\''.format(
+                                    device.deviceInfo.label,
+                                    size_gb
+                                )
                             )
+
+                        if device.capacityInKB > size_kb:
+                            raise SaltCloudSystemExit(
+                                'The specified disk size \'{0}GB\' for \'{1}\' is '
+                                'smaller than the disk image size \'{2}GB\'. It must '
+                                'be equal to or greater than the disk image'.format(
+                                    float(devices['disk'][device.deviceInfo.label]['size']),
+                                    device.deviceInfo.label,
+                                    float(device.capacityInKB / (1024.0 * 1024.0))
+                                )
+                            )
+                        else:
+                            disk_spec = _get_size_spec(device=device, size_kb=size_kb)
 
                         if 'mode' in devices['disk'][device.deviceInfo.label]:
                             if devices['disk'][device.deviceInfo.label]['mode'] \
@@ -981,6 +989,10 @@ def _format_instance_info_select(vm, selection):
         cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
         ram = "{0} MB".format(vm["config.hardware.memoryMB"]) if "config.hardware.memoryMB" in vm else "N/A"
         vm_select_info['size'] = u"cpu: {0}\nram: {1}".format(cpu, ram)
+        vm_select_info['size_dict'] = {
+            'cpu': cpu,
+            'memory': ram,
+        }
 
     if 'state' in selection:
         vm_select_info['state'] = str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A"
@@ -1168,6 +1180,10 @@ def _format_instance_info(vm):
         'id': str(vm['name']),
         'image': "{0} (Detected)".format(vm["config.guestFullName"]) if "config.guestFullName" in vm else "N/A",
         'size': u"cpu: {0}\nram: {1}".format(cpu, ram),
+        'size_dict': {
+            'cpu': cpu,
+            'memory': ram,
+        },
         'state': str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A",
         'private_ips': ip_addresses,
         'public_ips': [],
@@ -1572,6 +1588,10 @@ def list_nodes(kwargs=None, call=None):
             'id': vm["name"],
             'image': "{0} (Detected)".format(vm["config.guestFullName"]) if "config.guestFullName" in vm else "N/A",
             'size': u"cpu: {0}\nram: {1}".format(cpu, ram),
+            'size_dict': {
+                'cpu': cpu,
+                'memory': ram,
+            },
             'state': str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A",
             'private_ips': [vm["guest.ipAddress"]] if "guest.ipAddress" in vm else [],
             'public_ips': []
@@ -2351,6 +2371,9 @@ def create(vm_):
     extra_config = config.get_cloud_config_value(
         'extra_config', vm_, __opts__, default=None
     )
+    annotation = config.get_cloud_config_value(
+        'annotation', vm_, __opts__, default=None
+    )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=True
     )
@@ -2358,7 +2381,7 @@ def create(vm_):
         'private_key', vm_, __opts__, search_global=False, default=None
     )
     deploy = config.get_cloud_config_value(
-        'deploy', vm_, __opts__, search_global=False, default=True
+        'deploy', vm_, __opts__, search_global=True, default=True
     )
     wait_for_ip_timeout = config.get_cloud_config_value(
         'wait_for_ip_timeout', vm_, __opts__, default=20 * 60
@@ -2561,6 +2584,9 @@ def create(vm_):
             option = vim.option.OptionValue(key=key, value=value)
             config_spec.extraConfig.append(option)
 
+    if annotation:
+        config_spec.annotation = str(annotation)
+
     if 'clonefrom' in vm_:
         clone_spec = handle_snapshot(
             config_spec,
@@ -2640,7 +2666,7 @@ def create(vm_):
             'event',
             'requesting instance',
             'salt/cloud/{0}/requesting'.format(vm_['name']),
-            args=__utils__['cloud.filter_event']('requesting', event_kwargs, event_kwargs.keys()),
+            args=__utils__['cloud.filter_event']('requesting', event_kwargs, list(event_kwargs)),
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
@@ -2649,7 +2675,7 @@ def create(vm_):
             log.info("Creating {0} from {1}({2})".format(vm_['name'], clone_type, vm_['clonefrom']))
 
             if datastore and not datastore_ref and datastore_cluster_ref:
-                # datastore cluster has been specified so apply Storage DRS recomendations
+                # datastore cluster has been specified so apply Storage DRS recommendations
                 pod_spec = vim.storageDrs.PodSelectionSpec(storagePod=datastore_cluster_ref)
 
                 storage_spec = vim.storageDrs.StoragePlacementSpec(

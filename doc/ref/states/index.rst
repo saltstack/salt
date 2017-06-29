@@ -53,7 +53,7 @@ The Salt States are files which contain the information about how to configure
 Salt minions. The states are laid out in a directory tree and can be written in
 many different formats.
 
-The contents of the files and they way they are laid out is intended to be as
+The contents of the files and the way they are laid out is intended to be as
 simple as possible while allowing for maximum flexibility. The files are laid
 out in states and contains information about how the minion needs to be
 configured.
@@ -178,7 +178,7 @@ and the SLS files below it apply to all minions.
 
 The second expression is a regular expression that will match all minions
 with an ID matching ``saltmaster.*`` and specifies that for those minions, the
-salt.master state should be applied. To
+salt.master state should be applied. 
 
 .. important::
     Since version 2014.7.0, the default matcher (when one is not explicitly

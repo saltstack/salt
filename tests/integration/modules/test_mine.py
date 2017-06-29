@@ -7,10 +7,10 @@ from __future__ import absolute_import
 import time
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 
 
-class MineTest(integration.ModuleCase):
+class MineTest(ModuleCase):
     '''
     Test the mine system
     '''

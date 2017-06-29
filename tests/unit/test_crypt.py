@@ -2,6 +2,7 @@
 
 # python libs
 from __future__ import absolute_import
+import os
 
 # salt testing libs
 from tests.support.unit import TestCase, skipIf
@@ -13,10 +14,16 @@ from salt import crypt
 
 # third-party libs
 try:
-    import Crypto.PublicKey.RSA  # pylint: disable=unused-import
+    from Cryptodome.PublicKey import RSA  # pylint: disable=unused-import
     HAS_PYCRYPTO_RSA = True
 except ImportError:
     HAS_PYCRYPTO_RSA = False
+if not HAS_PYCRYPTO_RSA:
+    try:
+        from Crypto.PublicKey import RSA
+        HAS_PYCRYPTO_RSA = True
+    except ImportError:
+        HAS_PYCRYPTO_RSA = False
 
 
 PRIVKEY_DATA = (
@@ -80,26 +87,25 @@ SIG = (
 @skipIf(not HAS_PYCRYPTO_RSA, 'pycrypto >= 2.6 is not available')
 class CryptTestCase(TestCase):
 
-    @patch('os.umask', MagicMock())
-    @patch('os.chmod', MagicMock())
-    @patch('os.chown', MagicMock())
-    @patch('os.access', MagicMock(return_value=True))
     def test_gen_keys(self):
-        with patch('salt.utils.fopen', mock_open()):
-            open_priv_wb = call('/keydir/keyname.pem', 'wb+')
-            open_pub_wb = call('/keydir/keyname.pub', 'wb+')
-            with patch('os.path.isfile', return_value=True):
-                self.assertEqual(crypt.gen_keys('/keydir', 'keyname', 2048), '/keydir/keyname.pem')
-                self.assertNotIn(open_priv_wb, salt.utils.fopen.mock_calls)
-                self.assertNotIn(open_pub_wb, salt.utils.fopen.mock_calls)
-            with patch('os.path.isfile', return_value=False):
-                with patch('salt.utils.fopen', mock_open()):
-                    crypt.gen_keys('/keydir', 'keyname', 2048)
-                    salt.utils.fopen.assert_has_calls([open_priv_wb, open_pub_wb], any_order=True)
+        with patch.multiple(os, umask=MagicMock(), chmod=MagicMock(), chown=MagicMock,
+                            access=MagicMock(return_value=True)):
+            with patch('salt.utils.fopen', mock_open()):
+                open_priv_wb = call('/keydir/keyname.pem', 'wb+')
+                open_pub_wb = call('/keydir/keyname.pub', 'wb+')
+                with patch('os.path.isfile', return_value=True):
+                    self.assertEqual(crypt.gen_keys('/keydir', 'keyname', 2048), '/keydir/keyname.pem')
+                    self.assertNotIn(open_priv_wb, salt.utils.fopen.mock_calls)
+                    self.assertNotIn(open_pub_wb, salt.utils.fopen.mock_calls)
+                with patch('os.path.isfile', return_value=False):
+                    with patch('salt.utils.fopen', mock_open()):
+                        crypt.gen_keys('/keydir', 'keyname', 2048)
+                        salt.utils.fopen.assert_has_calls([open_priv_wb, open_pub_wb], any_order=True)
 
     def test_sign_message(self):
-        with patch('salt.utils.fopen', mock_open(read_data=PRIVKEY_DATA)):
-            self.assertEqual(SIG, crypt.sign_message('/keydir/keyname.pem', MSG))
+        key = RSA.importKey(PRIVKEY_DATA)
+        with patch('salt.crypt._get_rsa_key', return_value=key):
+            self.assertEqual(SIG, salt.crypt.sign_message('/keydir/keyname.pem', MSG))
 
     def test_verify_signature(self):
         with patch('salt.utils.fopen', mock_open(read_data=PUBKEY_DATA)):

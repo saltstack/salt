@@ -685,7 +685,7 @@ def file_query(database, file_name, **connection_args):
     Run an arbitrary SQL query from the specified file and return the
     the number of affected rows.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -1451,7 +1451,10 @@ def user_chpass(user,
     if salt.utils.is_true(allow_passwordless) and \
             salt.utils.is_true(unix_socket):
         if host == 'localhost':
-            qry += ' IDENTIFIED VIA unix_socket'
+            qry = ('UPDATE mysql.user SET ' + password_column + '='
+                   + password_sql + ', plugin=%(unix_socket)s' +
+                   ' WHERE User=%(user)s AND Host = %(host)s;')
+            args['unix_socket'] = 'unix_socket'
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
     try:

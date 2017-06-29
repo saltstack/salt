@@ -3,12 +3,16 @@
 # Import python libs
 from __future__ import absolute_import
 import os
-import yaml
 import shutil
 import tempfile
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.paths import TMP
+from tests.support.mixins import ShellCaseCommonTestsMixin
+
+# Import 3rd-party libs
+import yaml
 
 # Import salt libs
 import salt.utils
@@ -18,7 +22,7 @@ USERA_PWD = 'saltdev'
 HASHED_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
 
 
-class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
+class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
     '''
     Test salt-key script
     '''
@@ -207,7 +211,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
         self.assertEqual(data, expect)
 
     def test_keys_generation(self):
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
         self.run_key(arg_str)
         try:
@@ -222,7 +226,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
             shutil.rmtree(tempdir)
 
     def test_keys_generation_keysize_minmax(self):
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         arg_str = '--gen-keys minion --gen-keys-dir {0}'.format(tempdir)
         try:
             data, error = self.run_key(
@@ -244,7 +248,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        config_dir = os.path.join(TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 

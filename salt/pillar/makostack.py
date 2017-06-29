@@ -58,7 +58,7 @@ You can also provide a list of config files:
 Select config files through grains|pillar|opts matching
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can also opt for a much more flexible configuration: MakoStack allows to
+You can also opt for a much more flexible configuration: MakoStack allows one to
 select the config files for the current minion based on matching values from
 either grains, or pillar, or opts objects.
 

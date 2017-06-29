@@ -9,7 +9,7 @@ Almost verbatim copy of core lib w/compatibility fixes
 
 # This backport uses bytearray instead of bytes, as bytes is the same
 # as str in Python 2.7.
-bytes = bytearray
+#bytes = bytearray
 # s/\(b'[^']\+'\)/bytearray(\1)/g
 # plus manual fixes for implicit string concatenation.
 
@@ -31,21 +31,23 @@ bytes = bytearray
 
 """Unittest for ipaddress module."""
 
-
+# Import python libs
 import re
+import sys
 import contextlib
 import operator
-try:
-    import ipaddress
-except ImportError:
-    import salt.ext.ipaddress as ipaddress
 import sys
-if sys.version_info < (2, 7):
-    import unittest2 as unittest
-else:
-    import unittest
 
-class BaseTestCase(unittest.TestCase):
+# Import salt libs
+from salt._compat import ipaddress
+# Import salt test libs
+from tests.support.unit import TestCase, skipIf
+
+if sys.version_info < (3,):
+    bytes = bytearray
+
+@skipIf(sys.version_info > (3,), 'These are tested by the python test suite under Py3')
+class BaseTestCase(TestCase):
     # One big change in ipaddress over the original ipaddr module is
     # error reporting that tries to assume users *don't know the rules*
     # for what constitutes an RFC compliant IP address
@@ -73,11 +75,11 @@ class BaseTestCase(unittest.TestCase):
         """
         Ensure exception does not display a context by default
 
-        Wraps unittest.TestCase.assertRaisesRegex
+        Wraps TestCase.assertRaisesRegex
         """
         if args:
             details = details % args
-        cm = self.assertRaisesRegexp(exc_type, details)
+        cm = self.assertRaisesRegex(exc_type, details)
         with cm as exc:
             yield exc
 
@@ -153,6 +155,7 @@ class CommonTestMixin_v4(CommonTestMixin):
         assertBadLength(3)
         assertBadLength(5)
 
+
 class CommonTestMixin_v6(CommonTestMixin):
 
     def test_leading_zeros(self):
@@ -193,6 +196,7 @@ class CommonTestMixin_v6(CommonTestMixin):
         assertBadLength(17)
 
 
+@skipIf(sys.version_info > (3,), 'These are tested by the python test suite under Py3')
 class AddressTestCase_v4(BaseTestCase, CommonTestMixin_v4):
     factory = ipaddress.IPv4Address
 
@@ -283,6 +287,7 @@ class AddressTestCase_v4(BaseTestCase, CommonTestMixin_v4):
         assertBadOctet("192.168.0.999", 999)
 
 
+@skipIf(sys.version_info > (3,), 'These are tested by the python test suite under Py3')
 class AddressTestCase_v6(BaseTestCase, CommonTestMixin_v6):
     factory = ipaddress.IPv6Address
 
@@ -415,6 +420,7 @@ class AddressTestCase_v6(BaseTestCase, CommonTestMixin_v6):
         assertBadPart('2001:888888::1', "888888")
 
 
+@skipIf(sys.version_info > (3,), 'These are tested by the python test suite under Py3')
 class NetmaskTestMixin_v4(CommonTestMixin_v4):
     """Input validation on interfaces and networks is very similar"""
 
@@ -478,13 +484,17 @@ class NetmaskTestMixin_v4(CommonTestMixin_v4):
         assertBadNetmask("1.1.1.1", "::")
 
 
+@skipIf(sys.version_info > (3,), 'These are tested by the python test suite under Py3')
 class InterfaceTestCase_v4(BaseTestCase, NetmaskTestMixin_v4):
     factory = ipaddress.IPv4Interface
 
+
+@skipIf(sys.version_info > (3,), 'These are tested by the python test suite under Py3')
 class NetworkTestCase_v4(BaseTestCase, NetmaskTestMixin_v4):
     factory = ipaddress.IPv4Network
 
 
+@skipIf(sys.version_info > (3,), 'These are tested by the python test suite under Py3')
 class NetmaskTestMixin_v6(CommonTestMixin_v6):
     """Input validation on interfaces and networks is very similar"""
 
@@ -534,13 +544,18 @@ class NetmaskTestMixin_v6(CommonTestMixin_v6):
         assertBadNetmask("::1", "pudding")
         assertBadNetmask("::", "::")
 
+
+@skipIf(sys.version_info > (3,), 'These are tested by the python test suite under Py3')
 class InterfaceTestCase_v6(BaseTestCase, NetmaskTestMixin_v6):
     factory = ipaddress.IPv6Interface
 
+
+@skipIf(sys.version_info > (3,), 'These are tested by the python test suite under Py3')
 class NetworkTestCase_v6(BaseTestCase, NetmaskTestMixin_v6):
     factory = ipaddress.IPv6Network
 
 
+@skipIf(sys.version_info > (3,), 'These are tested by the python test suite under Py3')
 class FactoryFunctionErrors(BaseTestCase):
 
     def assertFactoryError(self, factory, kind):
@@ -560,7 +575,8 @@ class FactoryFunctionErrors(BaseTestCase):
         self.assertFactoryError(ipaddress.ip_network, "network")
 
 
-class ComparisonTests(unittest.TestCase):
+@skipIf(sys.version_info > (3,), 'These are tested by the python test suite under Py3')
+class ComparisonTests(TestCase):
 
     v4addr = ipaddress.IPv4Address(1)
     v4net = ipaddress.IPv4Network(1)
@@ -646,8 +662,8 @@ class ComparisonTests(unittest.TestCase):
         self.assertRaises(TypeError, v6net.__gt__, v4net)
 
 
-
-class IpaddrUnitTest(unittest.TestCase):
+@skipIf(sys.version_info > (3,), 'These are tested by the python test suite under Py3')
+class IpaddrUnitTest(TestCase):
 
     def setUp(self):
         self.ipv4_address = ipaddress.IPv4Address('1.2.3.4')
@@ -659,6 +675,14 @@ class IpaddrUnitTest(unittest.TestCase):
         self.ipv6_interface = ipaddress.IPv6Interface(
             '2001:658:22a:cafe:200:0:0:1/64')
         self.ipv6_network = ipaddress.IPv6Network('2001:658:22a:cafe::/64')
+
+    def tearDown(self):
+        for attrname in ('ipv4_network', 'ipv4_interface', 'ipv4_address',
+                'ipv6_network', 'ipv6_interface', 'ipv6_address'):
+            try:
+                delattr(self, attrname)
+            except AttributeError:
+                continue
 
     def testRepr(self):
         self.assertEqual("IPv4Interface('1.2.3.4/32')",
@@ -697,21 +721,21 @@ class IpaddrUnitTest(unittest.TestCase):
         class Broken(ipaddress._BaseAddress):
             pass
         broken = Broken('127.0.0.1')
-        with self.assertRaisesRegexp(NotImplementedError, "Broken.*version"):
+        with self.assertRaisesRegex(NotImplementedError, "Broken.*version"):
             broken.version
 
     def testMissingNetworkVersion(self):
         class Broken(ipaddress._BaseNetwork):
             pass
         broken = Broken('127.0.0.1')
-        with self.assertRaisesRegexp(NotImplementedError, "Broken.*version"):
+        with self.assertRaisesRegex(NotImplementedError, "Broken.*version"):
             broken.version
 
     def testMissingAddressClass(self):
         class Broken(ipaddress._BaseNetwork):
             pass
         broken = Broken('127.0.0.1')
-        with self.assertRaisesRegexp(NotImplementedError, "Broken.*address"):
+        with self.assertRaisesRegex(NotImplementedError, "Broken.*address"):
             broken._address_class
 
     def testGetNetwork(self):
@@ -1725,7 +1749,3 @@ class IpaddrUnitTest(unittest.TestCase):
         self.assertEqual(ipaddress.IPv4Address('172.29.45.100'),
                          sixtofouraddr.sixtofour)
         self.assertFalse(bad_addr.sixtofour)
-
-
-if __name__ == '__main__':
-    unittest.main()

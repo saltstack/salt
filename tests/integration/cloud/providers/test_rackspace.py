@@ -10,7 +10,8 @@ import random
 import string
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.paths import FILES
 from tests.support.unit import skipIf
 from tests.support.helpers import expensiveTest
 
@@ -42,7 +43,7 @@ DRIVER_NAME = 'openstack'
 
 
 @skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
-class RackspaceTest(integration.ShellCase):
+class RackspaceTest(ShellCase):
     '''
     Integration tests for the Rackspace cloud provider using the Openstack driver
     '''
@@ -67,7 +68,7 @@ class RackspaceTest(integration.ShellCase):
         # check if personal access token, ssh_key_file, and ssh_key_names are present
         config = cloud_providers_config(
             os.path.join(
-                integration.FILES,
+                FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'

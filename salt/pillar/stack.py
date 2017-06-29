@@ -377,6 +377,7 @@ You can also select a custom merging strategy using a ``__`` object in a list:
 # Import Python libs
 from __future__ import absolute_import
 import os
+import posixpath
 import logging
 from functools import partial
 from glob import glob
@@ -419,10 +420,19 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     return stack
 
 
+def _to_unix_slashes(path):
+    return posixpath.join(*path.split(os.sep))
+
+
+def _construct_unicode(loader, node):
+    return node.value
+
+
 def _process_stack_cfg(cfg, stack, minion_id, pillar):
     log.debug('Config: {0}'.format(cfg))
     basedir, filename = os.path.split(cfg)
-    jenv = Environment(loader=FileSystemLoader(basedir))
+    yaml.SafeLoader.add_constructor("tag:yaml.org,2002:python/unicode", _construct_unicode)
+    jenv = Environment(loader=FileSystemLoader(basedir), extensions=['jinja2.ext.do', salt.utils.jinja.SerializerExtension])
     jenv.globals.update({
         "__opts__": __opts__,
         "__salt__": __salt__,
@@ -444,8 +454,9 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             continue
         for path in sorted(paths):
             log.debug('YAML: basedir={0}, path={1}'.format(basedir, path))
-            obj = yaml.safe_load(jenv.get_template(
-                    os.path.relpath(path, basedir)).render(stack=stack))
+            # FileSystemLoader always expects unix-style paths
+            unix_path = _to_unix_slashes(os.path.relpath(path, basedir))
+            obj = yaml.safe_load(jenv.get_template(unix_path).render(stack=stack))
             if not isinstance(obj, dict):
                 log.info('Ignoring pillar stack template "{0}": Can\'t parse '
                          'as a valid yaml dictionary'.format(path))

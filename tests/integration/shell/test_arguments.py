@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.helpers import requires_salt_modules
 
 # Import Salt libs
@@ -15,7 +15,7 @@ import salt.utils.args
 
 
 @requires_salt_modules('test.ping', 'test.arg')
-class ArgumentTestCase(integration.ModuleCase):
+class ArgumentTestCase(ModuleCase):
     def test_unsupported_kwarg(self):
         '''
         Test passing a non-supported keyword argument. The relevant code that

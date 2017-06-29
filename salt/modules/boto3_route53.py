@@ -2,7 +2,7 @@
 '''
 Execution module for Amazon Route53 written against Boto 3
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :configuration: This module accepts explicit route53 credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.

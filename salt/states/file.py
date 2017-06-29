@@ -21,6 +21,7 @@ the jinja templating system would look like this:
         - user: root
         - group: root
         - mode: 644
+        - attrs: ai
         - template: jinja
         - defaults:
             custom_var: "default value"
@@ -74,6 +75,7 @@ salt fileserver. Here's an example:
         - user: foo
         - group: users
         - mode: 644
+        - attrs: i
         - backup: minion
 
 .. note::
@@ -94,6 +96,7 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
         - user: foo
         - group: users
         - mode: '0644'
+        - attrs: i
 
 .. warning::
 
@@ -267,9 +270,11 @@ import difflib
 import itertools
 import logging
 import os
+import posixpath
 import re
 import shutil
 import sys
+import time
 import traceback
 from collections import Iterable, Mapping, defaultdict
 from datetime import datetime   # python3 problem in the making?
@@ -292,6 +297,9 @@ if salt.utils.is_windows():
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import zip_longest
+if salt.utils.is_windows():
+    import pywintypes
+    import win32com.client
 
 log = logging.getLogger(__name__)
 
@@ -353,6 +361,41 @@ def _check_user(user, group):
     return err
 
 
+def _is_valid_relpath(
+        relpath,
+        maxdepth=None):
+    '''
+    Performs basic sanity checks on a relative path.
+
+    Requires POSIX-compatible paths (i.e. the kind obtained through
+    cp.list_master or other such calls).
+
+    Ensures that the path does not contain directory transversal, and
+    that it does not exceed a stated maximum depth (if specified).
+    '''
+    # Check relpath surrounded by slashes, so that `..` can be caught as
+    # a path component at the start, end, and in the middle of the path.
+    sep, pardir = posixpath.sep, posixpath.pardir
+    if sep + pardir + sep in sep + relpath + sep:
+        return False
+
+    # Check that the relative path's depth does not exceed maxdepth
+    if maxdepth is not None:
+        path_depth = relpath.strip(sep).count(sep)
+        if path_depth > maxdepth:
+            return False
+
+    return True
+
+
+def _salt_to_os_path(path):
+    '''
+    Converts a path from the form received via salt master to the OS's native
+    path format.
+    '''
+    return os.path.normpath(path.replace(posixpath.sep, os.path.sep))
+
+
 def _gen_recurse_managed_files(
         name,
         source,
@@ -366,20 +409,20 @@ def _gen_recurse_managed_files(
     Generate the list of files managed by a recurse state
     '''
 
+    # Convert a relative path generated from salt master paths to an OS path
+    # using "name" as the base directory
+    def full_path(master_relpath):
+        return os.path.join(name, _salt_to_os_path(master_relpath))
+
     # Process symlinks and return the updated filenames list
     def process_symlinks(filenames, symlinks):
         for lname, ltarget in six.iteritems(symlinks):
-            if not salt.utils.check_include_exclude(
-                    os.path.relpath(lname, srcpath), include_pat, exclude_pat):
+            srelpath = posixpath.relpath(lname, srcpath)
+            if not _is_valid_relpath(srelpath, maxdepth=maxdepth):
                 continue
-            srelpath = os.path.relpath(lname, srcpath)
-            # Check for max depth
-            if maxdepth is not None:
-                srelpieces = srelpath.split('/')
-                if not srelpieces[-1]:
-                    srelpieces = srelpieces[:-1]
-                if len(srelpieces) > maxdepth + 1:
-                    continue
+            if not salt.utils.check_include_exclude(
+                    srelpath, include_pat, exclude_pat):
+                continue
             # Check for all paths that begin with the symlink
             # and axe it leaving only the dirs/files below it.
             # This needs to use list() otherwise they reference
@@ -396,7 +439,7 @@ def _gen_recurse_managed_files(
             managed_symlinks.add((srelpath, ltarget))
 
             # Add the path to the keep set in case clean is set to True
-            keep.add(os.path.join(name, srelpath))
+            keep.add(full_path(srelpath))
         vdir.update(keep)
         return filenames
 
@@ -409,10 +452,9 @@ def _gen_recurse_managed_files(
     srcpath, senv = salt.utils.url.parse(source)
     if senv is None:
         senv = __env__
-    if not srcpath.endswith(os.sep):
+    if not srcpath.endswith(posixpath.sep):
         # we're searching for things that start with this *directory*.
-        # use '/' since #master only runs on POSIX
-        srcpath = srcpath + os.sep
+        srcpath = srcpath + posixpath.sep
     fns_ = __salt__['cp.list_master'](senv, srcpath)
 
     # If we are instructed to keep symlinks, then process them.
@@ -429,27 +471,16 @@ def _gen_recurse_managed_files(
         # the file to copy from; it is either a normal file or an
         # empty dir(if include_empty==true).
 
-        relname = sdecode(os.path.relpath(fn_, srcpath))
-        if relname.startswith('..'):
+        relname = sdecode(posixpath.relpath(fn_, srcpath))
+        if not _is_valid_relpath(relname, maxdepth=maxdepth):
             continue
-
-        # Check for maxdepth of the relative path
-        if maxdepth is not None:
-            # Since paths are all master, just use POSIX separator
-            relpieces = relname.split('/')
-            # Handle empty directories (include_empty==true) by removing the
-            # the last piece if it is an empty string
-            if not relpieces[-1]:
-                relpieces = relpieces[:-1]
-            if len(relpieces) > maxdepth + 1:
-                continue
 
         # Check if it is to be excluded. Match only part of the path
         # relative to the target directory
         if not salt.utils.check_include_exclude(
                 relname, include_pat, exclude_pat):
             continue
-        dest = os.path.join(name, relname)
+        dest = full_path(relname)
         dirname = os.path.dirname(dest)
         keep.add(dest)
 
@@ -464,10 +495,13 @@ def _gen_recurse_managed_files(
     if include_empty:
         mdirs = __salt__['cp.list_master_dirs'](senv, srcpath)
         for mdir in mdirs:
-            if not salt.utils.check_include_exclude(
-                    os.path.relpath(mdir, srcpath), include_pat, exclude_pat):
+            relname = posixpath.relpath(mdir, srcpath)
+            if not _is_valid_relpath(relname, maxdepth=maxdepth):
                 continue
-            mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
+            if not salt.utils.check_include_exclude(
+                    relname, include_pat, exclude_pat):
+                continue
+            mdest = full_path(relname)
             # Check for symlinks that happen to point to an empty dir.
             if keep_symlinks:
                 islink = False
@@ -1070,6 +1104,90 @@ def _validate_str_list(arg):
     return ret
 
 
+def _get_shortcut_ownership(path):
+    return __salt__['file.get_user'](path, follow_symlinks=False)
+
+
+def _check_shortcut_ownership(path, user):
+    '''
+    Check if the shortcut ownership matches the specified user
+    '''
+    cur_user = _get_shortcut_ownership(path)
+    return cur_user == user
+
+
+def _set_shortcut_ownership(path, user):
+    '''
+    Set the ownership of a shortcut and return a boolean indicating
+    success/failure
+    '''
+    try:
+        __salt__['file.lchown'](path, user)
+    except OSError:
+        pass
+    return _check_shortcut_ownership(path, user)
+
+
+def _shortcut_check(name,
+                    target,
+                    arguments,
+                    working_dir,
+                    description,
+                    icon_location,
+                    force,
+                    user):
+    '''
+    Check the shortcut function
+    '''
+    pchanges = {}
+    if not os.path.exists(name):
+        pchanges['new'] = name
+        return None, 'Shortcut "{0}" to "{1}" is set for creation'.format(
+            name, target
+        ), pchanges
+
+    if os.path.isfile(name):
+        shell = win32com.client.Dispatch("WScript.Shell")
+        scut = shell.CreateShortcut(name)
+        state_checks = [scut.TargetPath.lower() == target.lower()]
+        if arguments is not None:
+            state_checks.append(scut.Arguments == arguments)
+        if working_dir is not None:
+            state_checks.append(
+                scut.WorkingDirectory.lower() == working_dir.lower()
+            )
+        if description is not None:
+            state_checks.append(scut.Description == description)
+        if icon_location is not None:
+            state_checks.append(
+                scut.IconLocation.lower() == icon_location.lower()
+            )
+
+        if not all(state_checks):
+            pchanges['change'] = name
+            return None, 'Shortcut "{0}" target is set to be changed to "{1}"'.format(
+                name, target
+            ), pchanges
+        else:
+            result = True
+            msg = 'The shortcut "{0}" is present'.format(name)
+            if not _check_shortcut_ownership(name, user):
+                result = None
+                pchanges['ownership'] = '{0}'.format(_get_shortcut_ownership(name))
+                msg += (
+                    ', but the ownership of the shortcut would be changed '
+                    'from {1} to {0}'
+                ).format(user, _get_shortcut_ownership(name))
+            return result, msg, pchanges
+    else:
+        if force:
+            return None, ('The link or directory "{0}" is set for removal to '
+                          'make way for a new shortcut targeting "{1}"'
+                          .format(name, target)), pchanges
+        return False, ('Link or directory exists where the shortcut "{0}" '
+                       'should be. Did you mean to use force?'.format(name)), pchanges
+
+
 def symlink(
         name,
         target,
@@ -1400,6 +1518,7 @@ def managed(name,
             user=None,
             group=None,
             mode=None,
+            attrs=None,
             template=None,
             makedirs=False,
             dir_mode=None,
@@ -1620,6 +1739,23 @@ def managed(name,
             the ``contents`` options, setting the ``mode`` to ``keep`` is also
             incompatible with the ``contents`` options.
 
+        .. note:: keep does not work with salt-ssh.
+
+            As a consequence of how the files are transferred to the minion, and
+            the inability to connect back to the master with salt-ssh, salt is
+            unable to stat the file as it exists on the fileserver and thus
+            cannot mirror the mode on the salt-ssh minion
+
+    attrs
+        The attributes to have on this file, e.g. ``a``, ``i``. The attributes
+        can be any or a combination of the following characters:
+        ``acdijstuADST``.
+
+        .. note::
+            This option is **not** supported on Windows.
+
+        .. versionadded: Oxygen
+
     template
         If this setting is applied, the named templating engine will be used to
         render the downloaded file. The following templates are supported:
@@ -1715,6 +1851,7 @@ def managed(name,
                 - user: deployer
                 - group: deployer
                 - mode: 600
+                - attrs: a
                 - contents_pillar: userdata:deployer:id_rsa
 
         This would populate ``/home/deployer/.ssh/id_rsa`` with the contents of
@@ -1797,14 +1934,14 @@ def managed(name,
         See https://docs.python.org/3/library/codecs.html#standard-encodings
         for available encodings.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     encoding_errors : 'strict'
         Error encoding scheme. Default is ```'strict'```.
         See https://docs.python.org/2/library/codecs.html#codec-base-classes
         for the list of available schemes.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     allow_empty : True
         .. versionadded:: 2015.8.4
@@ -1837,6 +1974,7 @@ def managed(name,
                 - user: root
                 - group: root
                 - mode: 0440
+                - attrs: i
                 - source: salt://sudoers/files/sudoers.jinja
                 - template: jinja
                 - check_cmd: /usr/sbin/visudo -c -f
@@ -1846,7 +1984,7 @@ def managed(name,
 
     tmp_ext
         Suffix for temp file created by ``check_cmd``. Useful for checkers
-        dependant on config file extension (e.g. the init-checkconf upstart
+        dependent on config file extension (e.g. the init-checkconf upstart
         config checker).
 
         .. code-block:: yaml
@@ -1876,26 +2014,30 @@ def managed(name,
         The owner of the directory. If this is not passed, user will be used. If
         user is not passed, the account under which Salt is running will be
         used.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     win_perms : None
         A dictionary containing permissions to grant and their propagation. For
         example: ``{'Administrators': {'perms': 'full_control'}}`` Can be a
         single basic perm or a list of advanced perms. ``perms`` must be
         specified. ``applies_to`` does not apply to file objects.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     win_deny_perms : None
         A dictionary containing permissions to deny and their propagation. For
         example: ``{'Administrators': {'perms': 'full_control'}}`` Can be a
         single basic perm or a list of advanced perms. ``perms`` must be
         specified. ``applies_to`` does not apply to file objects.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     win_inheritance : True
         True to inherit permissions from the parent directory, False not to
         inherit permission.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -1943,6 +2085,9 @@ def managed(name,
 
     if mode is not None and salt.utils.is_windows():
         return _error(ret, 'The \'mode\' option is not supported on Windows')
+
+    if attrs is not None and salt.utils.is_windows():
+        return _error(ret, 'The \'attrs\' option is not supported on Windows')
 
     try:
         keep_mode = mode.lower() == 'keep'
@@ -2141,11 +2286,11 @@ def managed(name,
         # Check and set the permissions if necessary
         if salt.utils.is_windows():
             ret = __salt__['file.check_perms'](
-                name, ret, win_owner, win_perms, win_deny_perms,
+                name, ret, win_owner, win_perms, win_deny_perms, None,
                 win_inheritance)
         else:
             ret, _ = __salt__['file.check_perms'](
-                name, ret, user, group, mode, follow_symlinks)
+                name, ret, user, group, mode, attrs, follow_symlinks)
         if __opts__['test']:
             ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
@@ -2170,6 +2315,7 @@ def managed(name,
                     user,
                     group,
                     mode,
+                    attrs,
                     template,
                     context,
                     defaults,
@@ -2182,7 +2328,7 @@ def managed(name,
 
                 if salt.utils.is_windows():
                     ret = __salt__['file.check_perms'](
-                        name, ret, win_owner, win_perms, win_deny_perms,
+                        name, ret, win_owner, win_perms, win_deny_perms, None,
                         win_inheritance)
 
             if isinstance(ret['pchanges'], tuple):
@@ -2222,6 +2368,7 @@ def managed(name,
             user,
             group,
             mode,
+            attrs,
             __env__,
             context,
             defaults,
@@ -2260,6 +2407,7 @@ def managed(name,
                 user,
                 group,
                 mode,
+                attrs,
                 __env__,
                 backup,
                 makedirs,
@@ -2329,6 +2477,7 @@ def managed(name,
                 user,
                 group,
                 mode,
+                attrs,
                 __env__,
                 backup,
                 makedirs,
@@ -2390,7 +2539,7 @@ def _depth_limited_walk(top, max_depth=None):
     '''
     for root, dirs, files in os.walk(top):
         if max_depth is not None:
-            rel_depth = root.count(os.sep) - top.count(os.sep)
+            rel_depth = root.count(os.path.sep) - top.count(os.path.sep)
             if rel_depth >= max_depth:
                 del dirs[:]
         yield (str(root), list(dirs), list(files))
@@ -2551,7 +2700,8 @@ def directory(name,
         The owner of the directory. If this is not passed, user will be used. If
         user is not passed, the account under which Salt is running will be
         used.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     win_perms : None
         A dictionary containing permissions to grant and their propagation. For
@@ -2559,19 +2709,22 @@ def directory(name,
         'this_folder_only'}}`` Can be a single basic perm or a list of advanced
         perms. ``perms`` must be specified. ``applies_to`` is optional and
         defaults to ``this_folder_subfoler_files``.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     win_deny_perms : None
         A dictionary containing permissions to deny and their propagation. For
         example: ``{'Administrators': {'perms': 'full_control', 'applies_to':
         'this_folder_only'}}`` Can be a single basic perm or a list of advanced
         perms.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     win_inheritance : True
         True to inherit permissions from the parent directory, False not to
         inherit permission.
-        .. versionadded:: Nitrogen
+
+        .. versionadded:: 2017.7.0
 
     Here's an example using the above ``win_*`` parameters:
 
@@ -2746,10 +2899,10 @@ def directory(name,
     if not children_only:
         if salt.utils.is_windows():
             ret = __salt__['file.check_perms'](
-                name, ret, win_owner, win_perms, win_deny_perms, win_inheritance)
+                name, ret, win_owner, win_perms, win_deny_perms, None, win_inheritance)
         else:
             ret, perms = __salt__['file.check_perms'](
-                name, ret, user, group, dir_mode, follow_symlinks)
+                name, ret, user, group, dir_mode, None, follow_symlinks)
 
     errors = []
     if recurse or clean:
@@ -2817,11 +2970,11 @@ def directory(name,
                     try:
                         if salt.utils.is_windows():
                             ret = __salt__['file.check_perms'](
-                                full, ret, win_owner, win_perms, win_deny_perms,
+                                full, ret, win_owner, win_perms, win_deny_perms, None,
                                 win_inheritance)
                         else:
                             ret, _ = __salt__['file.check_perms'](
-                                full, ret, user, group, file_mode, follow_symlinks)
+                                full, ret, user, group, file_mode, None, follow_symlinks)
                     except CommandExecutionError as exc:
                         if not exc.strerror.endswith('does not exist'):
                             errors.append(exc.strerror)
@@ -2832,11 +2985,11 @@ def directory(name,
                     try:
                         if salt.utils.is_windows():
                             ret = __salt__['file.check_perms'](
-                                full, ret, win_owner, win_perms, win_deny_perms,
+                                full, ret, win_owner, win_perms, win_deny_perms, None,
                                 win_inheritance)
                         else:
                             ret, _ = __salt__['file.check_perms'](
-                                full, ret, user, group, dir_mode, follow_symlinks)
+                                full, ret, user, group, dir_mode, None, follow_symlinks)
                     except CommandExecutionError as exc:
                         if not exc.strerror.endswith('does not exist'):
                             errors.append(exc.strerror)
@@ -3193,6 +3346,7 @@ def recurse(name,
             user=user,
             group=group,
             mode='keep' if keep_mode else file_mode,
+            attrs=None,
             template=template,
             makedirs=True,
             context=context,
@@ -4070,10 +4224,11 @@ def blockreplace(
     if changes:
         ret['pchanges'] = {'diff': changes}
         if __opts__['test']:
+            ret['changes']['diff'] = ret['pchanges']['diff']
             ret['result'] = None
             ret['comment'] = 'Changes would be made'
         else:
-            ret['changes'] = {'diff': changes}
+            ret['changes']['diff'] = ret['pchanges']['diff']
             ret['result'] = True
             ret['comment'] = 'Changes were made'
     else:
@@ -5384,7 +5539,6 @@ def serialize(name,
               mode=None,
               backup='',
               makedirs=False,
-              show_diff=None,
               show_changes=True,
               create=True,
               merge_if_exists=False,
@@ -5422,14 +5576,14 @@ def serialize(name,
         See https://docs.python.org/3/library/codecs.html#standard-encodings
         for available encodings.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     encoding_errors : 'strict'
         Error encoding scheme. Default is ```'strict'```.
         See https://docs.python.org/2/library/codecs.html#codec-base-classes
         for the list of available schemes.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     user
         The user to own the directory, this defaults to the user salt is
@@ -5456,12 +5610,6 @@ def serialize(name,
         Create parent directories for destination file.
 
         .. versionadded:: 2014.1.3
-
-    show_diff
-        DEPRECATED: Please use show_changes.
-
-        If set to ``False``, the diff will not be shown in the return data if
-        changes are made.
 
     show_changes
         Output a unified diff of the old file and the new file. If ``False``
@@ -5601,14 +5749,6 @@ def serialize(name,
     # Make sure that any leading zeros stripped by YAML loader are added back
     mode = salt.utils.normalize_mode(mode)
 
-    if show_diff is not None:
-        show_changes = show_diff
-        msg = (
-            'The \'show_diff\' argument to the file.serialized state has been '
-            'deprecated, please use \'show_changes\' instead.'
-        )
-        salt.utils.warn_until('Oxygen', msg)
-
     if __opts__['test']:
         ret['changes'] = __salt__['file.check_managed_changes'](
             name=name,
@@ -5618,6 +5758,7 @@ def serialize(name,
             user=user,
             group=group,
             mode=mode,
+            attrs=None,
             template=None,
             context=None,
             defaults=None,
@@ -5647,6 +5788,7 @@ def serialize(name,
                                         user=user,
                                         group=group,
                                         mode=mode,
+                                        attrs=None,
                                         saltenv=__env__,
                                         backup=backup,
                                         makedirs=makedirs,
@@ -6011,4 +6153,254 @@ def decode(name,
             'new': __salt__['hashutil.digest_file'](name, checksum),
         }
 
+    return ret
+
+
+def shortcut(
+        name,
+        target,
+        arguments=None,
+        working_dir=None,
+        description=None,
+        icon_location=None,
+        force=False,
+        backupname=None,
+        makedirs=False,
+        user=None,
+        **kwargs):
+    '''
+    Create a Windows shortcut
+
+    If the file already exists and is a shortcut pointing to any location other
+    than the specified target, the shortcut will be replaced. If it is
+    a regular file or directory then the state will return False. If the
+    regular file or directory is desired to be replaced with a shortcut pass
+    force: True, if it is to be renamed, pass a backupname.
+
+    name
+        The location of the shortcut to create. Must end with either
+        ".lnk" or ".url"
+
+    target
+        The location that the shortcut points to
+
+    arguments
+        Any arguments to pass in the shortcut
+
+    working_dir
+        Working directory in which to execute target
+
+    description
+        Description to set on shortcut
+
+    icon_location
+        Location of shortcut's icon
+
+    force
+        If the name of the shortcut exists and is not a file and
+        force is set to False, the state will fail. If force is set to
+        True, the link or directory in the way of the shortcut file
+        will be deleted to make room for the shortcut, unless
+        backupname is set, when it will be renamed
+
+    backupname
+        If the name of the shortcut exists and is not a file, it will be
+        renamed to the backupname. If the backupname already
+        exists and force is False, the state will fail. Otherwise, the
+        backupname will be removed first.
+
+    makedirs
+        If the location of the shortcut does not already have a parent
+        directory then the state will fail, setting makedirs to True will
+        allow Salt to create the parent directory. Setting this to True will
+        also create the parent for backupname if necessary.
+
+    user
+        The user to own the file, this defaults to the user salt is running as
+        on the minion
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
+    '''
+    user = _test_owner(kwargs, user=user)
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+    if not salt.utils.is_windows():
+        return _error(ret, 'Shortcuts are only supported on Windows')
+    if not name:
+        return _error(ret, 'Must provide name to file.shortcut')
+    if not name.endswith('.lnk') and not name.endswith('.url'):
+        return _error(ret, 'Name must end with either ".lnk" or ".url"')
+
+    # Normalize paths; do this after error checks to avoid invalid input
+    # getting expanded, e.g. '' turning into '.'
+    name = os.path.realpath(os.path.expanduser(name))
+    if name.endswith('.lnk'):
+        target = os.path.realpath(os.path.expanduser(target))
+    if working_dir:
+        working_dir = os.path.realpath(os.path.expanduser(working_dir))
+    if icon_location:
+        icon_location = os.path.realpath(os.path.expanduser(icon_location))
+
+    if user is None:
+        user = __opts__['user']
+
+    # Make sure the user exists in Windows
+    # Salt default is 'root'
+    if not __salt__['user.info'](user):
+        # User not found, use the account salt is running under
+        # If username not found, use System
+        user = __salt__['user.current']()
+        if not user:
+            user = 'SYSTEM'
+
+    preflight_errors = []
+    uid = __salt__['file.user_to_uid'](user)
+
+    if uid == '':
+        preflight_errors.append('User {0} does not exist'.format(user))
+
+    if not os.path.isabs(name):
+        preflight_errors.append(
+            'Specified file {0} is not an absolute path'.format(name)
+        )
+
+    if preflight_errors:
+        msg = '. '.join(preflight_errors)
+        if len(preflight_errors) > 1:
+            msg += '.'
+        return _error(ret, msg)
+
+    presult, pcomment, ret['pchanges'] = _shortcut_check(name,
+                                                         target,
+                                                         arguments,
+                                                         working_dir,
+                                                         description,
+                                                         icon_location,
+                                                         force,
+                                                         user)
+    if __opts__['test']:
+        ret['result'] = presult
+        ret['comment'] = pcomment
+        return ret
+
+    if not os.path.isdir(os.path.dirname(name)):
+        if makedirs:
+            __salt__['file.makedirs'](
+                name,
+                user=user)
+        else:
+            return _error(
+                ret,
+                'Directory "{0}" for shortcut is not present'.format(
+                    os.path.dirname(name)
+                )
+            )
+
+    if os.path.isdir(name) or os.path.islink(name):
+        # It is not a shortcut, but a dir or symlink
+        if backupname is not None:
+            # Make a backup first
+            if os.path.lexists(backupname):
+                if not force:
+                    return _error(ret, ((
+                                            'File exists where the backup target {0} should go'
+                                        ).format(backupname)))
+                else:
+                    __salt__['file.remove'](backupname)
+                    time.sleep(1)  # wait for asynchronous deletion
+            if not os.path.isdir(os.path.dirname(backupname)):
+                if makedirs:
+                    os.makedirs(backupname)
+                else:
+                    return _error(ret, (
+                                            'Directory does not exist for'
+                                            ' backup at "{0}"'
+                                        ).format(os.path.dirname(backupname)))
+            os.rename(name, backupname)
+            time.sleep(1)  # wait for asynchronous rename
+        elif force:
+            # Remove whatever is in the way
+            __salt__['file.remove'](name)
+            ret['changes']['forced'] = 'Shortcut was forcibly replaced'
+            time.sleep(1)  # wait for asynchronous deletion
+        else:
+            # Otherwise throw an error
+            return _error(ret, ((
+                                    'Directory or symlink exists where the'
+                                    ' shortcut "{0}" should be'
+                                ).format(name)))
+
+    # This will just load the shortcut if it already exists
+    # It won't create the file until calling scut.Save()
+    shell = win32com.client.Dispatch("WScript.Shell")
+    scut = shell.CreateShortcut(name)
+
+    # The shortcut target will automatically be created with its
+    # canonical capitalization; no way to override it, so ignore case
+    state_checks = [scut.TargetPath.lower() == target.lower()]
+    if arguments is not None:
+        state_checks.append(scut.Arguments == arguments)
+    if working_dir is not None:
+        state_checks.append(
+            scut.WorkingDirectory.lower() == working_dir.lower()
+        )
+    if description is not None:
+        state_checks.append(scut.Description == description)
+    if icon_location is not None:
+        state_checks.append(scut.IconLocation.lower() == icon_location.lower())
+
+    if __salt__['file.file_exists'](name):
+        # The shortcut exists, verify that it matches the desired state
+        if not all(state_checks):
+            # The target is wrong, delete it
+            os.remove(name)
+        else:
+            if _check_shortcut_ownership(name, user):
+                # The shortcut looks good!
+                ret['comment'] = ('Shortcut {0} is present and owned by '
+                                  '{1}'.format(name, user))
+            else:
+                if _set_shortcut_ownership(name, user):
+                    ret['comment'] = ('Set ownership of shortcut {0} to '
+                                      '{1}'.format(name, user))
+                    ret['changes']['ownership'] = '{0}'.format(user)
+                else:
+                    ret['result'] = False
+                    ret['comment'] += (
+                        'Failed to set ownership of shortcut {0} to '
+                        '{1}'.format(name, user)
+                    )
+            return ret
+
+    if not os.path.exists(name):
+        # The shortcut is not present, make it
+        try:
+            scut.TargetPath = target
+            if arguments is not None:
+                scut.Arguments = arguments
+            if working_dir is not None:
+                scut.WorkingDirectory = working_dir
+            if description is not None:
+                scut.Description = description
+            if icon_location is not None:
+                scut.IconLocation = icon_location
+            scut.Save()
+        except (AttributeError, pywintypes.com_error) as exc:
+            ret['result'] = False
+            ret['comment'] = ('Unable to create new shortcut {0} -> '
+                              '{1}: {2}'.format(name, target, exc))
+            return ret
+        else:
+            ret['comment'] = ('Created new shortcut {0} -> '
+                              '{1}'.format(name, target))
+            ret['changes']['new'] = name
+
+        if not _check_shortcut_ownership(name, user):
+            if not _set_shortcut_ownership(name, user):
+                ret['result'] = False
+                ret['comment'] += (', but was unable to set ownership to '
+                                   '{0}'.format(user))
     return ret

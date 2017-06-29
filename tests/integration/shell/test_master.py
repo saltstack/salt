@@ -10,26 +10,30 @@
 # Import python libs
 from __future__ import absolute_import
 import os
-import yaml
 import signal
 import shutil
+
+# Import 3rd-party libs
+import yaml
 
 # Import salt libs
 import salt.utils
 
 # Import salt test libs
-import tests.integration as integration
 import tests.integration.utils
+from tests.support.case import ShellCase
+from tests.support.paths import TMP
+from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.integration.utils import testprogram
 
 
-class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixin):
+class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-master'
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        config_dir = os.path.join(TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
@@ -91,16 +95,18 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_NOUSER',
-            message='unknown user not on system',
-            stdout=stdout,
-            stderr=tests.integration.utils.decode_byte_list(stderr)
-        )
-        # Although the start-up should fail, call shutdown() to set the internal
-        # _shutdown flag and avoid the registered atexit calls to cause timeout
-        # exeptions and respective traceback
-        master.shutdown()
+        try:
+            self.assert_exit_status(
+                status, 'EX_NOUSER',
+                message='unknown user not on system',
+                stdout=stdout,
+                stderr=tests.integration.utils.decode_byte_list(stderr)
+            )
+        finally:
+            # Although the start-up should fail, call shutdown() to set the
+            # internal _shutdown flag and avoid the registered atexit calls to
+            # cause timeout exeptions and respective traceback
+            master.shutdown()
 
     # pylint: disable=invalid-name
     def test_exit_status_unknown_argument(self):
@@ -119,16 +125,18 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_USAGE',
-            message='unknown argument',
-            stdout=stdout,
-            stderr=tests.integration.utils.decode_byte_list(stderr)
-        )
-        # Although the start-up should fail, call shutdown() to set the internal
-        # _shutdown flag and avoid the registered atexit calls to cause timeout
-        # exeptions and respective traceback
-        master.shutdown()
+        try:
+            self.assert_exit_status(
+                status, 'EX_USAGE',
+                message='unknown argument',
+                stdout=stdout,
+                stderr=tests.integration.utils.decode_byte_list(stderr)
+            )
+        finally:
+            # Although the start-up should fail, call shutdown() to set the
+            # internal _shutdown flag and avoid the registered atexit calls to
+            # cause timeout exeptions and respective traceback
+            master.shutdown()
 
     def test_exit_status_correct_usage(self):
         '''
@@ -146,10 +154,32 @@ class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_OK',
-            message='correct usage',
-            stdout=stdout,
-            stderr=tests.integration.utils.decode_byte_list(stderr)
-        )
-        master.shutdown()
+        try:
+            self.assert_exit_status(
+                status, 'EX_OK',
+                message='correct usage',
+                stdout=stdout,
+                stderr=tests.integration.utils.decode_byte_list(stderr)
+            )
+        finally:
+            master.shutdown(wait_for_orphans=3)
+
+        # Do the test again to check does master shut down correctly
+        # **Due to some underlying subprocessing issues with Minion._thread_return, this
+        # part of the test has been commented out. Once these underlying issues have
+        # been addressed, this part of the test should be uncommented. Work for this
+        # issue is being tracked in https://github.com/saltstack/salt-jenkins/issues/378
+        # stdout, stderr, status = master.run(
+        #     args=['-d'],
+        #     catch_stderr=True,
+        #     with_retcode=True,
+        # )
+        # try:
+        #     self.assert_exit_status(
+        #         status, 'EX_OK',
+        #         message='correct usage',
+        #         stdout=stdout,
+        #         stderr=tests.integration.utils.decode_byte_list(stderr)
+        #     )
+        # finally:
+        #     master.shutdown(wait_for_orphans=3)

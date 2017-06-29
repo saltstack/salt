@@ -5,11 +5,10 @@
 
 # Import python libs
 from __future__ import absolute_import
-import os
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, skip_if_not_root
 from tests.support.mock import (
     MagicMock,
     patch,
@@ -103,7 +102,7 @@ class ObjectView(object):  # pylint: disable=too-few-public-methods
 
 
 @destructiveTest
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+@skip_if_not_root
 class LogSettingsParserTests(TestCase):
     '''
     Unit Tests for Log Level Mixin with Salt parsers
@@ -124,14 +123,18 @@ class LogSettingsParserTests(TestCase):
         Mock logger functions
         '''
         self.log_setup = LogSetupMock()
-        log.setup_console_logger = self.log_setup.setup_console_logger
-        log.setup_extended_logging = self.log_setup.setup_extended_logging
-        log.setup_logfile_logger = self.log_setup.setup_logfile_logger
-        log.get_multiprocessing_logging_queue = \
-                self.log_setup.get_multiprocessing_logging_queue
-        log.setup_multiprocessing_logging_listener = \
-                self.log_setup.setup_multiprocessing_logging_listener
-        log.setup_temp_logger = self.log_setup.setup_temp_logger
+        patcher = patch.multiple(
+            log,
+            setup_console_logger=self.log_setup.setup_console_logger,
+            setup_extended_logging=self.log_setup.setup_extended_logging,
+            setup_logfile_logger=self.log_setup.setup_logfile_logger,
+            get_multiprocessing_logging_queue=self.log_setup.get_multiprocessing_logging_queue,
+            setup_multiprocessing_logging_listener=self.log_setup.setup_multiprocessing_logging_listener,
+            setup_temp_logger=self.log_setup.setup_temp_logger
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.addCleanup(setattr, self, 'log_setup', None)
 
     # log level configuration tests
 
@@ -495,6 +498,7 @@ class MasterOptionParserTestCase(LogSettingsParserTests):
         '''
         # Set defaults
         self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/salt_master_parser_test'
@@ -506,6 +510,7 @@ class MasterOptionParserTestCase(LogSettingsParserTests):
 
         # Assign parser
         self.parser = salt.utils.parsers.MasterOptionParser
+        self.addCleanup(delattr, self, 'parser')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -519,6 +524,7 @@ class MinionOptionParserTestCase(LogSettingsParserTests):
         '''
         # Set defaults
         self.default_config = salt.config.DEFAULT_MINION_OPTS
+        self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/salt_minion_parser_test'
@@ -530,6 +536,7 @@ class MinionOptionParserTestCase(LogSettingsParserTests):
 
         # Assign parser
         self.parser = salt.utils.parsers.MinionOptionParser
+        self.addCleanup(delattr, self, 'parser')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -544,17 +551,19 @@ class ProxyMinionOptionParserTestCase(LogSettingsParserTests):
         # Set defaults
         self.default_config = salt.config.DEFAULT_MINION_OPTS.copy()
         self.default_config.update(salt.config.DEFAULT_PROXY_MINION_OPTS)
+        self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/salt_proxy_minion_parser_test'
         # Function to patch
-        self.config_func = 'salt.config.minion_config'
+        self.config_func = 'salt.config.proxy_config'
 
         # Mock log setup
         self.setup_log()
 
         # Assign parser
         self.parser = salt.utils.parsers.ProxyMinionOptionParser
+        self.addCleanup(delattr, self, 'parser')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -571,6 +580,7 @@ class SyndicOptionParserTestCase(LogSettingsParserTests):
 
         # Set defaults
         self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/salt_syndic_parser_test'
@@ -582,6 +592,7 @@ class SyndicOptionParserTestCase(LogSettingsParserTests):
 
         # Assign parser
         self.parser = salt.utils.parsers.SyndicOptionParser
+        self.addCleanup(delattr, self, 'parser')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -598,6 +609,7 @@ class SaltCMDOptionParserTestCase(LogSettingsParserTests):
 
         # Set defaults
         self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/salt_cmd_parser_test'
@@ -609,6 +621,7 @@ class SaltCMDOptionParserTestCase(LogSettingsParserTests):
 
         # Assign parser
         self.parser = salt.utils.parsers.SaltCMDOptionParser
+        self.addCleanup(delattr, self, 'parser')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -625,6 +638,7 @@ class SaltCPOptionParserTestCase(LogSettingsParserTests):
 
         # Set defaults
         self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/salt_cp_parser_test'
@@ -636,6 +650,7 @@ class SaltCPOptionParserTestCase(LogSettingsParserTests):
 
         # Assign parser
         self.parser = salt.utils.parsers.SaltCPOptionParser
+        self.addCleanup(delattr, self, 'parser')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -654,6 +669,7 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
 
         # Set defaults
         self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/salt_key_parser_test'
@@ -665,6 +681,7 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
 
         # Assign parser
         self.parser = salt.utils.parsers.SaltKeyOptionParser
+        self.addCleanup(delattr, self, 'parser')
 
     # log level configuration tests
 
@@ -766,6 +783,7 @@ class SaltCallOptionParserTestCase(LogSettingsParserTests):
 
         # Set defaults
         self.default_config = salt.config.DEFAULT_MINION_OPTS
+        self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/salt_call_parser_test'
@@ -777,6 +795,7 @@ class SaltCallOptionParserTestCase(LogSettingsParserTests):
 
         # Assign parser
         self.parser = salt.utils.parsers.SaltCallOptionParser
+        self.addCleanup(delattr, self, 'parser')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -793,6 +812,7 @@ class SaltRunOptionParserTestCase(LogSettingsParserTests):
 
         # Set defaults
         self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/salt_run_parser_test'
@@ -804,6 +824,7 @@ class SaltRunOptionParserTestCase(LogSettingsParserTests):
 
         # Assign parser
         self.parser = salt.utils.parsers.SaltRunOptionParser
+        self.addCleanup(delattr, self, 'parser')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -823,6 +844,7 @@ class SaltSSHOptionParserTestCase(LogSettingsParserTests):
 
         # Set defaults
         self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/salt_ssh_parser_test'
@@ -834,6 +856,7 @@ class SaltSSHOptionParserTestCase(LogSettingsParserTests):
 
         # Assign parser
         self.parser = salt.utils.parsers.SaltSSHOptionParser
+        self.addCleanup(delattr, self, 'parser')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -854,6 +877,7 @@ class SaltCloudParserTestCase(LogSettingsParserTests):
         # As we need the 'user' key later on.
         self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.default_config.update(salt.config.DEFAULT_CLOUD_OPTS)
+        self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/salt_cloud_parser_test'
@@ -865,6 +889,7 @@ class SaltCloudParserTestCase(LogSettingsParserTests):
 
         # Assign parser
         self.parser = salt.utils.parsers.SaltCloudParser
+        self.addCleanup(delattr, self, 'parser')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -885,6 +910,7 @@ class SPMParserTestCase(LogSettingsParserTests):
         # Set defaults
         self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.default_config.update(salt.config.DEFAULT_SPM_OPTS)
+        self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/spm_parser_test'
@@ -896,6 +922,7 @@ class SPMParserTestCase(LogSettingsParserTests):
 
         # Assign parser
         self.parser = salt.utils.parsers.SPMParser
+        self.addCleanup(delattr, self, 'parser')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -916,6 +943,7 @@ class SaltAPIParserTestCase(LogSettingsParserTests):
         # Set defaults
         self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.default_config.update(salt.config.DEFAULT_API_OPTS)
+        self.addCleanup(delattr, self, 'default_config')
 
         # Log file
         self.log_file = '/tmp/salt_api_parser_test'
@@ -927,6 +955,7 @@ class SaltAPIParserTestCase(LogSettingsParserTests):
 
         # Assign parser
         self.parser = salt.utils.parsers.SaltAPIParser
+        self.addCleanup(delattr, self, 'parser')
 
 
 # Hide the class from unittest framework when it searches for TestCase classes in the module

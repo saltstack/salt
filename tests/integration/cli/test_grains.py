@@ -20,10 +20,10 @@ import os
 import salt.utils
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ShellCase, SSHCase
 
 
-class GrainsTargetingTest(integration.ShellCase):
+class GrainsTargetingTest(ShellCase):
     '''
     Integration tests for targeting with grains.
     '''
@@ -75,10 +75,10 @@ class GrainsTargetingTest(integration.ShellCase):
             os.unlink(key_file)
 
 
-class SSHGrainsTest(integration.SSHCase):
+class SSHGrainsTest(SSHCase):
     '''
     Test salt-ssh grains functionality
-    Depend on proper environment set by integration.SSHCase class
+    Depend on proper environment set by SSHCase class
     '''
 
     def test_grains_id(self):

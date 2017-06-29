@@ -500,7 +500,8 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         ignore the data passed in and just get the args from wherever they are
         '''
         data = {}
-        for key, val in six.iteritems(self.request.arguments):
+        for key in self.request.arguments:
+            val = self.get_arguments(key)
             if len(val) == 1:
                 data[key] = val[0]
             else:
@@ -1633,9 +1634,15 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             opts=self.application.opts,
             listen=False)
 
+        arguments = {}
+        for argname in self.request.query_arguments:
+            value = self.get_arguments(argname)
+            if len(value) == 1:
+                value = value[0]
+            arguments[argname] = value
         ret = self.event.fire_event({
             'post': self.raw_data,
-            'get': dict(self.request.query_arguments),
+            'get': arguments,
             # In Tornado >= v4.0.3, the headers come
             # back as an HTTPHeaders instance, which
             # is a dictionary. We must cast this as

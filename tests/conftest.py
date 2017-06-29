@@ -15,22 +15,43 @@ import sys
 import stat
 import socket
 import logging
+from collections import namedtuple
 
-# Let's allow `integration` and `unit` to be importable
 TESTS_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
-if TESTS_DIR not in sys.path:
-    sys.path.insert(0, TESTS_DIR)
-
 CODE_DIR = os.path.dirname(TESTS_DIR)
+os.chdir(CODE_DIR)
+try:
+    # If we have a system-wide salt module imported, unload it
+    import salt
+    for module in list(sys.modules):
+        if module.startswith(('salt',)):
+            try:
+                if not sys.modules[module].__file__.startswith(CODE_DIR):
+                    sys.modules.pop(module)
+            except AttributeError:
+                continue
+    sys.path.insert(0, CODE_DIR)
+except ImportError:
+    sys.path.insert(0, CODE_DIR)
+
+# Import test libs
+import tests.support.paths  # pylint: disable=unused-import
+from tests.integration import TestDaemon
+
+# Import pytest libs
+import pytest
+from _pytest.terminal import TerminalReporter
 
 # Import 3rd-party libs
-import pytest
+import psutil
 import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
+import salt.log.setup
+from salt.utils.odict import OrderedDict
 
 # Define the pytest plugins we rely on
 pytest_plugins = ['pytest_catchlog', 'tempdir', 'helpers_namespace']  # pylint: disable=invalid-name
@@ -107,15 +128,93 @@ def pytest_addoption(parser):
         action='store_true',
         help='Disable colour printing.'
     )
+    output_options_group.addoption(
+        '--sys-stats',
+        default=False,
+        action='store_true',
+        help='Print System CPU and MEM statistics after each test execution.'
+    )
 # <---- CLI Options Setup --------------------------------------------------------------------------------------------
 
 
+# ----- CLI Terminal Reporter --------------------------------------------------------------------------------------->
+class SaltTerminalReporter(TerminalReporter):
+    def __init__(self, config):
+        TerminalReporter.__init__(self, config)
+
+    @pytest.hookimpl(trylast=True)
+    def pytest_sessionstart(self, session):
+        TerminalReporter.pytest_sessionstart(self, session)
+        self._session = session
+
+    def pytest_runtest_logreport(self, report):
+        TerminalReporter.pytest_runtest_logreport(self, report)
+        if self.verbosity <= 0:
+            return
+        if report.when != 'call':
+            return
+        if self.config.getoption('--sys-stats') is False:
+            return
+
+        test_daemon = getattr(self._session, 'test_daemon', None)
+        if self.verbosity == 1:
+            line = ' [CPU:{0}%|MEM:{1}%]'.format(psutil.cpu_percent(),
+                                               psutil.virtual_memory().percent)
+            self._tw.write(line)
+            return
+        else:
+            self.ensure_newline()
+            template = ' {}  -  CPU: {:6.2f} %   MEM: {:6.2f} %   SWAP: {:6.2f} %\n'
+            self._tw.write(
+                template.format(
+                    '            System',
+                    psutil.cpu_percent(),
+                    psutil.virtual_memory().percent,
+                    psutil.swap_memory().percent
+                )
+            )
+            for name, psproc in self._session.stats_processes.items():
+                with psproc.oneshot():
+                    cpu = psproc.cpu_percent()
+                    mem = psproc.memory_percent('vms')
+                    swap = psproc.memory_percent('swap')
+                    self._tw.write(template.format(name, cpu, mem, swap))
+
+
+def pytest_sessionstart(session):
+    session.stats_processes = OrderedDict((
+        #('Log Server', test_daemon.log_server),
+        ('    Test Suite Run', psutil.Process(os.getpid())),
+    ))
+# <---- CLI Terminal Reporter ----------------------------------------------------------------------------------------
+
+
 # ----- Register Markers -------------------------------------------------------------------------------------------->
+@pytest.mark.trylast
 def pytest_configure(config):
     '''
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     '''
+    # Configure the console logger based on the catch_log settings.
+    # Most importantly, shutdown Salt's null, store and temporary logging queue handlers
+    catch_log = config.pluginmanager.getplugin('_catch_log')
+    cli_logging_handler = catch_log.log_cli_handler
+    # Add the pytest_catchlog CLI log handler to the logging root
+    logging.root.addHandler(cli_logging_handler)
+    cli_level = cli_logging_handler.level
+    cli_level = config._catchlog_log_cli_level
+    cli_format = cli_logging_handler.formatter._fmt
+    cli_date_format = cli_logging_handler.formatter.datefmt
+    # Setup the console logger which shuts down the null and the temporary queue handlers
+    salt.log.setup_console_logger(
+        log_level=salt.log.setup.LOG_VALUES_TO_LEVELS.get(cli_level, 'error'),
+        log_format=cli_format,
+        date_format=cli_date_format
+    )
+    # Disable the store logging queue handler
+    salt.log.setup.setup_extended_logging({'extension_modules': ''})
+
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'templates'))
     config.addinivalue_line(
         'markers',
@@ -137,6 +236,17 @@ def pytest_configure(config):
         'requires_network(only_local_network=False): Skip if no networking is set up. '
         'If \'only_local_network\' is \'True\', only the local network is checked.'
     )
+
+    # Register our terminal reporter
+    if not getattr(config, 'slaveinput', None):
+        standard_reporter = config.pluginmanager.getplugin('terminalreporter')
+        salt_reporter = SaltTerminalReporter(standard_reporter.config)
+
+        config.pluginmanager.unregister(standard_reporter)
+        config.pluginmanager.register(salt_reporter, 'terminalreporter')
+
+    # Transplant configuration
+    TestDaemon.transplant_configs(transport=config.getoption('--transport'))
 # <---- Register Markers ---------------------------------------------------------------------------------------------
 
 
@@ -334,7 +444,7 @@ if six.PY2:
 
         global file_spec
         if file_spec is None:
-            file_spec = file
+            file_spec = file  # pylint: disable=undefined-variable
 
         if mock is None:
             mock = _mock.MagicMock(name='open', spec=open)
@@ -541,9 +651,6 @@ def session_pillar_tree_root_dir(session_integration_files_dir):
 # ----- Custom Fixtures Definitions --------------------------------------------------------------------------------->
 @pytest.fixture(scope='session')
 def test_daemon(request):
-    from collections import namedtuple
-    from tests.integration import TestDaemon
-    from tests.support.parser import PNUM
     values = (('transport', request.config.getoption('--transport')),
               ('sysinfo', request.config.getoption('--sysinfo')),
               ('no_colors', request.config.getoption('--no-colors')),
@@ -552,11 +659,16 @@ def test_daemon(request):
     options = namedtuple('options', [n for n, v in values])(*[v for n, v in values])
     fake_parser = namedtuple('parser', 'options')(options)
 
-    # Transplant configuration
-    TestDaemon.transplant_configs(transport=fake_parser.options.transport)
-
-    tg = TestDaemon(fake_parser)
-    with tg:
+    test_daemon = TestDaemon(fake_parser)
+    with test_daemon as test_daemon_running:
+        request.session.test_daemon = test_daemon_running
+        request.session.stats_processes.update(OrderedDict((
+            ('       Salt Master', psutil.Process(test_daemon.master_process.pid)),
+            ('       Salt Minion', psutil.Process(test_daemon.minion_process.pid)),
+            ('   Salt Sub Minion', psutil.Process(test_daemon.sub_minion_process.pid)),
+            ('Salt Syndic Master', psutil.Process(test_daemon.smaster_process.pid)),
+            ('       Salt Syndic', psutil.Process(test_daemon.syndic_process.pid)),
+        )).items())
         yield
     TestDaemon.clean()
 # <---- Custom Fixtures Definitions ----------------------------------------------------------------------------------

@@ -9,10 +9,13 @@
     some fake objects in order to properly set the function/class decorators
     and yet skip the test cases execution.
 '''
-# pylint: disable=unused-import,function-redefined,blacklisted-external-module
+# pylint: disable=unused-import,function-redefined,blacklisted-module,blacklisted-external-module
 
 from __future__ import absolute_import
 import sys
+
+# Import salt libs
+import salt.ext.six as six
 
 try:
     if sys.version_info >= (3,):
@@ -105,82 +108,89 @@ if NO_MOCK is False:
         NO_MOCK_REASON = 'you need to upgrade your mock version to >= 0.8.0'
 
 
-if sys.version_info >= (3,):
-    from mock import mock_open
-else:
-    # backport mock_open from the python 3 unittest.mock library so that we can
-    # mock read, readline, readlines, and file iteration properly
+# backport mock_open from the python 3 unittest.mock library so that we can
+# mock read, readline, readlines, and file iteration properly
 
-    file_spec = None
+file_spec = None
 
-    def _iterate_read_data(read_data):
-        # Helper for mock_open:
-        # Retrieve lines from read_data via a generator so that separate calls to
-        # readline, read, and readlines are properly interleaved
+
+def _iterate_read_data(read_data):
+    # Helper for mock_open:
+    # Retrieve lines from read_data via a generator so that separate calls to
+    # readline, read, and readlines are properly interleaved
+    if six.PY3 and isinstance(read_data, six.binary_type):
+        data_as_list = ['{0}\n'.format(l.decode(__salt_system_encoding__)) for l in read_data.split(six.b('\n'))]
+    else:
         data_as_list = ['{0}\n'.format(l) for l in read_data.split('\n')]
 
-        if data_as_list[-1] == '\n':
-            # If the last line ended in a newline, the list comprehension will have an
-            # extra entry that's just a newline.  Remove this.
-            data_as_list = data_as_list[:-1]
-        else:
-            # If there wasn't an extra newline by itself, then the file being
-            # emulated doesn't have a newline to end the last line  remove the
-            # newline that our naive format() added
-            data_as_list[-1] = data_as_list[-1][:-1]
+    if data_as_list[-1] == '\n':
+        # If the last line ended in a newline, the list comprehension will have an
+        # extra entry that's just a newline.  Remove this.
+        data_as_list = data_as_list[:-1]
+    else:
+        # If there wasn't an extra newline by itself, then the file being
+        # emulated doesn't have a newline to end the last line  remove the
+        # newline that our naive format() added
+        data_as_list[-1] = data_as_list[-1][:-1]
 
-        for line in data_as_list:
+    for line in data_as_list:
+        yield line
+
+
+def mock_open(mock=None, read_data=''):
+    """
+    A helper function to create a mock to replace the use of `open`. It works
+    for `open` called directly or used as a context manager.
+
+    The `mock` argument is the mock object to configure. If `None` (the
+    default) then a `MagicMock` will be created for you, with the API limited
+    to methods or attributes available on standard file handles.
+
+    `read_data` is a string for the `read` methoddline`, and `readlines` of the
+    file handle to return.  This is an empty string by default.
+    """
+    def _readlines_side_effect(*args, **kwargs):
+        if handle.readlines.return_value is not None:
+            return handle.readlines.return_value
+        return list(_data)
+
+    def _read_side_effect(*args, **kwargs):
+        if handle.read.return_value is not None:
+            return handle.read.return_value
+        return ''.join(_data)
+
+    def _readline_side_effect():
+        if handle.readline.return_value is not None:
+            while True:
+                yield handle.readline.return_value
+        for line in _data:
             yield line
 
-    def mock_open(mock=None, read_data=''):
-        """
-        A helper function to create a mock to replace the use of `open`. It works
-        for `open` called directly or used as a context manager.
+    global file_spec
+    if file_spec is None:
+        if six.PY3:
+            import _io
+            file_spec = list(set(dir(_io.TextIOWrapper)).union(set(dir(_io.BytesIO))))
+        else:
+            file_spec = file  # pylint: disable=undefined-variable
 
-        The `mock` argument is the mock object to configure. If `None` (the
-        default) then a `MagicMock` will be created for you, with the API limited
-        to methods or attributes available on standard file handles.
+    if mock is None:
+        mock = MagicMock(name='open', spec=open)
 
-        `read_data` is a string for the `read` methoddline`, and `readlines` of the
-        file handle to return.  This is an empty string by default.
-        """
-        def _readlines_side_effect(*args, **kwargs):
-            if handle.readlines.return_value is not None:
-                return handle.readlines.return_value
-            return list(_data)
+    handle = MagicMock(spec=file_spec)
+    handle.__enter__.return_value = handle
 
-        def _read_side_effect(*args, **kwargs):
-            if handle.read.return_value is not None:
-                return handle.read.return_value
-            return ''.join(_data)
+    _data = _iterate_read_data(read_data)
 
-        def _readline_side_effect():
-            if handle.readline.return_value is not None:
-                while True:
-                    yield handle.readline.return_value
-            for line in _data:
-                yield line
+    handle.write.return_value = None
+    handle.read.return_value = None
+    handle.readline.return_value = None
+    handle.readlines.return_value = None
 
-        global file_spec
-        if file_spec is None:
-            file_spec = file
+    # This is salt specific and not in the upstream mock
+    handle.read.side_effect = _read_side_effect
+    handle.readline.side_effect = _readline_side_effect()
+    handle.readlines.side_effect = _readlines_side_effect
 
-        if mock is None:
-            mock = MagicMock(name='open', spec=open)
-
-        handle = MagicMock(spec=file_spec)
-        handle.__enter__.return_value = handle
-
-        _data = _iterate_read_data(read_data)
-
-        handle.write.return_value = None
-        handle.read.return_value = None
-        handle.readline.return_value = None
-        handle.readlines.return_value = None
-
-        handle.read.side_effect = _read_side_effect
-        handle.readline.side_effect = _readline_side_effect()
-        handle.readlines.side_effect = _readlines_side_effect
-
-        mock.return_value = handle
-        return mock
+    mock.return_value = handle
+    return mock

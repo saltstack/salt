@@ -54,11 +54,10 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
 
         # test_user_create_when_user_exists(self):
         # ensure we don't try to create a user when one already exists
-        mock = MagicMock(return_value=True)
-        mysql.user_exists = mock
-        with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-            ret = mysql.user_create('testuser')
-            self.assertEqual(False, ret)
+        with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
+            with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                ret = mysql.user_create('testuser')
+                self.assertEqual(False, ret)
 
     def test_user_create(self):
         '''
@@ -80,20 +79,20 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         Test changing a MySQL user password in mysql exec module
         '''
         connect_mock = MagicMock()
-        mysql._connect = connect_mock
-        with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-            mysql.user_chpass('testuser', password='BLUECOW')
-            calls = (
-                call().cursor().execute(
-                    'UPDATE mysql.user SET Password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
-                    {'password': 'BLUECOW',
-                     'user': 'testuser',
-                     'host': 'localhost',
-                    }
-                ),
-                call().cursor().execute('FLUSH PRIVILEGES;'),
-            )
-            connect_mock.assert_has_calls(calls, any_order=True)
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                mysql.user_chpass('testuser', password='BLUECOW')
+                calls = (
+                    call().cursor().execute(
+                        'UPDATE mysql.user SET Password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
+                        {'password': 'BLUECOW',
+                         'user': 'testuser',
+                         'host': 'localhost',
+                        }
+                    ),
+                    call().cursor().execute('FLUSH PRIVILEGES;'),
+                )
+                connect_mock.assert_has_calls(calls, any_order=True)
 
     def test_user_remove(self):
         '''
@@ -130,14 +129,15 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test MySQL db remove function in mysql exec module
         '''
-        mysql.db_exists = MagicMock(return_value=True)
-        self._test_call(mysql.db_remove, 'DROP DATABASE `test``\'" db`;', 'test`\'" db')
+        with patch.object(mysql, 'db_exists', MagicMock(return_value=True)):
+            self._test_call(mysql.db_remove, 'DROP DATABASE `test``\'" db`;', 'test`\'" db')
 
     def test_db_tables(self):
         '''
         Test MySQL db_tables function in mysql exec module
         '''
-        self._test_call(mysql.db_tables, 'SHOW TABLES IN `test``\'" db`', 'test`\'" db')
+        with patch.object(mysql, 'db_exists', MagicMock(return_value=True)):
+            self._test_call(mysql.db_tables, 'SHOW TABLES IN `test``\'" db`', 'test`\'" db')
 
     def test_db_exists(self):
         '''
@@ -184,16 +184,14 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to ensure the mysql user_grants function returns properly formed SQL for a basic query
         '''
-        mock = MagicMock(return_value=True)
-        mysql.user_exists = mock
-        self._test_call(mysql.user_grants,
-                        {'sql': 'SHOW GRANTS FOR %(user)s@%(host)s',
-                         'sql_args': {'host': 'localhost',
-                                      'user': 'testuser',
-                                     }
-                        },
-                       'testuser'
-        )
+        with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
+            self._test_call(mysql.user_grants,
+                            {'sql': 'SHOW GRANTS FOR %(user)s@%(host)s',
+                             'sql_args': {'host': 'localhost',
+                                          'user': 'testuser',
+                                         }
+                            },
+                           'testuser')
 
     def test_grant_exists_true(self):
         '''
@@ -271,11 +269,11 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         Test get_slave_status in the mysql execution module, simulating a broken server
         '''
         connect_mock = MagicMock(return_value=None)
-        mysql._connect = connect_mock
-        with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-            rslt = mysql.get_slave_status()
-            connect_mock.assert_has_calls([call()])
-            self.assertEqual(rslt, [])
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                rslt = mysql.get_slave_status()
+                connect_mock.assert_has_calls([call()])
+                self.assertEqual(rslt, [])
 
     @skipIf(True, 'MySQL module claims this function is not ready for production')
     def test_free_slave(self):
@@ -286,11 +284,11 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
 
     def _test_call(self, function, expected_sql, *args, **kwargs):
         connect_mock = MagicMock()
-        mysql._connect = connect_mock
-        with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-            function(*args, **kwargs)
-            if isinstance(expected_sql, dict):
-                calls = call().cursor().execute('{0}'.format(expected_sql['sql']), expected_sql['sql_args'])
-            else:
-                calls = call().cursor().execute('{0}'.format(expected_sql))
-            connect_mock.assert_has_calls((calls,), True)
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                function(*args, **kwargs)
+                if isinstance(expected_sql, dict):
+                    calls = call().cursor().execute('{0}'.format(expected_sql['sql']), expected_sql['sql_args'])
+                else:
+                    calls = call().cursor().execute('{0}'.format(expected_sql))
+                connect_mock.assert_has_calls((calls,), True)

@@ -4,6 +4,7 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
 import time
 import tempfile
 
@@ -66,6 +67,60 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
                     'comment': 'States ran successfully.'
                     }
 
+        test_batch_return = {
+            'minion1': {
+                'ret': {
+                    'test_|-notify_me_|-this is a name_|-show_notification': {
+                        'comment': 'Notify me',
+                        'name': 'this is a name',
+                        'start_time': '10:43:41.487565',
+                        'result': True,
+                        'duration': 0.35,
+                        '__run_num__': 0,
+                        '__sls__': 'demo',
+                        'changes': {},
+                        '__id__': 'notify_me'
+                    },
+                    'retcode': 0
+                },
+                'out': 'highstate'
+            },
+            'minion2': {
+                'ret': {
+                    'test_|-notify_me_|-this is a name_|-show_notification': {
+                        'comment': 'Notify me',
+                        'name': 'this is a name',
+                        'start_time': '10:43:41.487565',
+                        'result': True,
+                        'duration': 0.35,
+                        '__run_num__': 0,
+                        '__sls__': 'demo',
+                        'changes': {},
+                        '__id__': 'notify_me'
+                    },
+                    'retcode': 0
+                },
+                'out': 'highstate'
+            },
+            'minion3': {
+                'ret': {
+                    'test_|-notify_me_|-this is a name_|-show_notification': {
+                        'comment': 'Notify me',
+                        'name': 'this is a name',
+                        'start_time': '10:43:41.487565',
+                        'result': True,
+                        'duration': 0.35,
+                        '__run_num__': 0,
+                        '__sls__': 'demo',
+                        'changes': {},
+                        '__id__': 'notify_me'
+                    },
+                    'retcode': 0
+                },
+                'out': 'highstate'
+            }
+        }
+
         self.assertDictEqual(saltmod.state(name, tgt, allow_fail='a'), ret)
 
         comt = ('No highstate or sls specified, no execution made')
@@ -81,12 +136,17 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(saltmod.__opts__, {'test': True}):
             self.assertDictEqual(saltmod.state(name, tgt, highstate=True), test_ret)
 
-        ret.update({'comment': 'States ran successfully.', 'result': True})
+        ret.update({'comment': 'States ran successfully. No changes made to silver.', 'result': True, '__jid__': '20170406104341210934'})
         with patch.dict(saltmod.__opts__, {'test': False}):
-            mock = MagicMock(return_value={})
+            mock = MagicMock(return_value={'silver': {'jid': '20170406104341210934', 'retcode': 0, 'ret': {'test_|-notify_me_|-this is a name_|-show_notification': {'comment': 'Notify me', 'name': 'this is a name', 'start_time': '10:43:41.487565', 'result': True, 'duration': 0.35, '__run_num__': 0, '__sls__': 'demo', 'changes': {}, '__id__': 'notify_me'}}, 'out': 'highstate'}})
             with patch.dict(saltmod.__salt__, {'saltutil.cmd': mock}):
-                self.assertDictEqual(saltmod.state(name, tgt, highstate=True),
-                                     ret)
+                self.assertDictEqual(saltmod.state(name, tgt, highstate=True), ret)
+
+        ret.update({'comment': 'States ran successfully. No changes made to minion1, minion3, minion2.'})
+        del ret['__jid__']
+        with patch.dict(saltmod.__opts__, {'test': False}):
+            with patch.dict(saltmod.__salt__, {'saltutil.cmd': MagicMock(return_value=test_batch_return)}):
+                self.assertDictEqual(saltmod.state(name, tgt, highstate=True), ret)
 
     # 'function' function tests: 1
 
@@ -204,3 +264,57 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(saltmod.__salt__, {'saltutil.wheel': wheel_mock}):
             self.assertDictEqual(saltmod.wheel(name), ret)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class StatemodTests(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        self.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
+        return {
+            saltmod: {
+                '__env__': 'base',
+                '__opts__': {
+                    'id': 'webserver2',
+                    'argv': [],
+                    '__role': 'master',
+                    'cachedir': self.tmp_cachedir,
+                    'extension_modules': os.path.join(self.tmp_cachedir, 'extmods'),
+                },
+                '__salt__': {'saltutil.cmd': MagicMock()},
+                '__orchestration_jid__': salt.utils.jid.gen_jid()
+            }
+        }
+
+    def test_statemod_state(self):
+        ''' Smoke test for for salt.states.statemod.state().  Ensures that we
+            don't take an exception if optional parameters are not specified in
+            __opts__ or __env__.
+        '''
+        args = ('webserver_setup', 'webserver2')
+        kwargs = {
+            'tgt_type': 'glob',
+            'fail_minions': None,
+            'pillar': None,
+            'top': None,
+            'batch': None,
+            'orchestration_jid': None,
+            'sls': 'vroom',
+            'queue': False,
+            'concurrent': False,
+            'highstate': None,
+            'expr_form': None,
+            'ret': '',
+            'ssh': False,
+            'timeout': None, 'test': False,
+            'allow_fail': 0,
+            'saltenv': None,
+            'expect_minions': False
+        }
+        ret = saltmod.state(*args, **kwargs)
+        expected = {
+            'comment': 'States ran successfully.',
+            'changes': {},
+            'name': 'webserver_setup',
+            'result': True
+        }
+        self.assertEqual(ret, expected)

@@ -13,7 +13,7 @@ import time
 import threading
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 
 # Import salt libs
 from salt.utils import event
@@ -22,7 +22,7 @@ from salt.utils import event
 from salt.ext.six.moves.queue import Queue, Empty  # pylint: disable=import-error,no-name-in-module
 
 
-class EventModuleTest(integration.ModuleCase):
+class EventModuleTest(ModuleCase):
     def __test_event_fire_master(self):
         events = Queue()
 

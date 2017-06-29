@@ -752,6 +752,40 @@ def get_secgroup_id(kwargs=None, call=None):
     return ret
 
 
+def get_template_image(kwargs=None, call=None):
+    '''
+    Returns a template's image from the given template name.
+
+    .. versionadded:: oxygen
+
+    .. code-block:: bash
+
+        salt-cloud -f get_template_image opennebula name=my-template-name
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The get_template_image function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    if name is None:
+        raise SaltCloudSystemExit(
+            'The get_template_image function requires a \'name\'.'
+        )
+
+    try:
+        ret = list_templates()[name]['template']['disk']['image']
+    except KeyError:
+        raise SaltCloudSystemExit(
+            'The image for template \'{1}\' could not be found.'.format(name)
+        )
+
+    return ret
+
+
 def get_template_id(kwargs=None, call=None):
     '''
     Returns a template's ID from the given template name.
@@ -766,7 +800,7 @@ def get_template_id(kwargs=None, call=None):
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The list_nodes_full function must be called with -f or --function.'
+            'The get_template_id function must be called with -f or --function.'
         )
 
     if kwargs is None:
@@ -782,7 +816,7 @@ def get_template_id(kwargs=None, call=None):
         ret = list_templates()[name]['id']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The template \'{0}\' could not be foound.'.format(name)
+            'The template \'{0}\' could not be found.'.format(name)
         )
 
     return ret
@@ -881,6 +915,53 @@ def get_vn_id(kwargs=None, call=None):
     return ret
 
 
+def _get_device_template(disk, disk_info, template=None):
+    '''
+    Returns the template format to create a disk in open nebula
+
+    .. versionadded:: oxygen
+
+    '''
+    def _require_disk_opts(*args):
+        for arg in args:
+            if arg not in disk_info:
+                raise SaltCloudSystemExit(
+                    'The disk {0} requires a {1}\
+                    argument'.format(disk, arg)
+                )
+
+    _require_disk_opts('disk_type', 'size')
+
+    size = disk_info['size']
+    disk_type = disk_info['disk_type']
+
+    if disk_type == 'clone':
+        if 'image' in disk_info:
+            clone_image = disk_info['image']
+        else:
+            clone_image = get_template_image(kwargs={'name':
+                                                    template})
+
+        clone_image_id = get_image_id(kwargs={'name': clone_image})
+        temp = 'DISK=[IMAGE={0}, IMAGE_ID={1}, CLONE=YES,\
+                        SIZE={2}]'.format(clone_image, clone_image_id,
+                                          size)
+        return temp
+
+    if disk_type == 'volatile':
+        _require_disk_opts('type')
+        v_type = disk_info['type']
+        temp = 'DISK=[TYPE={0}, SIZE={1}]'.format(v_type, size)
+
+        if v_type == 'fs':
+            _require_disk_opts('format')
+            format = disk_info['format']
+            temp = 'DISK=[TYPE={0}, SIZE={1}, FORMAT={2}]'.format(v_type,
+                                                                  size, format)
+        return temp
+    #TODO add persistant disk_type
+
+
 def create(vm_):
     r'''
     Create a single VM from a data dict.
@@ -948,7 +1029,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
-            'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, kwargs.keys()),
+            'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, list(kwargs)),
         },
         sock_dir=__opts__['sock_dir'],
     )
@@ -962,6 +1043,17 @@ def create(vm_):
         template.append('CPU={0}'.format(vm_.get('cpu')))
     if vm_.get('vcpu'):
         template.append('VCPU={0}'.format(vm_.get('vcpu')))
+    if vm_.get('disk'):
+        get_disks = vm_.get('disk')
+        template_name = vm_['image']
+        for disk in get_disks:
+            template.append(_get_device_template(disk, get_disks[disk],
+                                 template=template_name))
+        if 'CLONE' not in str(template):
+            raise SaltCloudSystemExit(
+                'Missing an image disk to clone. Must define a clone disk alongside all other disk definitions.'
+            )
+
     template_args = "\n".join(template)
 
     try:
@@ -1218,7 +1310,8 @@ def image_allocate(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The image_allocate function requires either a file \'path\' or \'data\' '
@@ -1783,7 +1876,8 @@ def image_update(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The image_update function requires either \'data\' or a file \'path\' '
@@ -1875,7 +1969,8 @@ def secgroup_allocate(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The secgroup_allocate function requires either \'data\' or a file '
@@ -2174,7 +2269,8 @@ def secgroup_update(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The secgroup_update function requires either \'data\' or a file \'path\' '
@@ -2239,7 +2335,8 @@ def template_allocate(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The template_allocate function requires either \'data\' or a file '
@@ -2553,7 +2650,8 @@ def template_update(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The template_update function requires either \'data\' or a file '
@@ -2685,7 +2783,8 @@ def vm_allocate(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The vm_allocate function requires either \'data\' or a file \'path\' '
@@ -2750,7 +2849,8 @@ def vm_attach(name, kwargs=None, call=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The vm_attach function requires either \'data\' or a file '
@@ -2816,7 +2916,8 @@ def vm_attach_nic(name, kwargs=None, call=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The vm_attach_nic function requires either \'data\' or a file '
@@ -3502,7 +3603,8 @@ def vm_resize(name, kwargs=None, call=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The vm_resize function requires either \'data\' or a file \'path\' '
@@ -3729,7 +3831,8 @@ def vm_update(name, kwargs=None, call=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The vm_update function requires either \'data\' or a file \'path\' '
@@ -3816,7 +3919,8 @@ def vn_add_ar(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The vn_add_ar function requires either \'data\' or a file \'path\' '
@@ -3888,7 +3992,8 @@ def vn_allocate(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The vn_allocate function requires either \'data\' or a file \'path\' '
@@ -4112,7 +4217,8 @@ def vn_hold(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The vn_hold function requires either \'data\' or a \'path\' to '
@@ -4256,7 +4362,8 @@ def vn_release(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The vn_release function requires either \'data\' or a \'path\' to '
@@ -4342,7 +4449,8 @@ def vn_reserve(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        data = salt.utils.fopen(path, mode='r').read()
+        with salt.utils.fopen(path, mode='r') as rfh:
+            data = rfh.read()
     else:
         raise SaltCloudSystemExit(
             'The vn_reserve function requires a \'path\' to be provided.'

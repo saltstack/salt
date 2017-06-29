@@ -4,6 +4,7 @@
 '''
 from __future__ import absolute_import
 
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,27 +17,35 @@ import salt.states.postgres_language as postgres_language
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PostgresLanguageTestCase(TestCase):
+class PostgresLanguageTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.postgres_language
     '''
+
+    def setup_loader_modules(self):
+        return {postgres_language: {}}
 
     def setUp(self):
         '''
         Setup data for the tests
         '''
-        postgres_language.__opts__ = {}
-        postgres_language.__salt__ = {}
         self.name = 'plpgsql'
         self.ret = {'name': self.name,
-               'changes': {},
-               'result': False,
-               'comment': ''}
+                    'changes': {},
+                    'result': False,
+                    'comment': ''}
         self.mock_true = MagicMock(return_value=True)
         self.mock_false = MagicMock(return_value=False)
         self.mock_empty_language_list = MagicMock(return_value={})
         self.mock_language_list = MagicMock(
             return_value={'plpgsql': self.name})
+
+    def tearDown(self):
+        del self.ret
+        del self.mock_true
+        del self.mock_false
+        del self.mock_language_list
+        del self.mock_empty_language_list
 
     def test_present_existing(self):
         '''

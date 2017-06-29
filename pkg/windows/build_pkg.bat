@@ -132,6 +132,7 @@ If Defined ProgramFiles(x86) (
 "%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
 "%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.%PyVerMinor%.exe"
 "%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.exe"
+"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\wheel.exe"
 @echo.
 
 @echo Cleaning up unused files and directories...
@@ -293,8 +294,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\modules\netbsd*"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\netbsd*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\netscaler.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\netscaler.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\modules\network.py"^
-    del /Q "%BinDir%\Lib\site-packages\salt\modules\network.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\neutron.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\neutron.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\nfs3.py"^

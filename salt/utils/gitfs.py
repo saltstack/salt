@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import copy
 import contextlib
+import distutils
 import errno
 import fnmatch
 import glob
@@ -23,6 +24,7 @@ import salt.utils
 import salt.utils.itertools
 import salt.utils.url
 import salt.fileserver
+from salt.config import DEFAULT_MASTER_OPTS as __DEFAULT_MASTER_OPTS
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running as pid_exists
 from salt.exceptions import (
@@ -38,6 +40,8 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 import salt.ext.six as six
 
 VALID_PROVIDERS = ('pygit2', 'gitpython')
+VALID_REF_TYPES = __DEFAULT_MASTER_OPTS['gitfs_ref_types']
+
 # Optional per-remote params that can only be used on a per-remote basis, and
 # thus do not have defaults in salt/config.py.
 PER_REMOTE_ONLY = ('name',)
@@ -115,9 +119,13 @@ def enforce_types(key, val):
     non_string_params = {
         'ssl_verify': bool,
         'insecure_auth': bool,
+        'disable_saltenv_mapping': bool,
         'env_whitelist': 'stringlist',
         'env_blacklist': 'stringlist',
+        'saltenv_whitelist': 'stringlist',
+        'saltenv_blacklist': 'stringlist',
         'refspecs': 'stringlist',
+        'ref_types': 'stringlist',
     }
 
     def _find_global(key):
@@ -315,9 +323,37 @@ class GitProvider(object):
                 setattr(self, '_' + key, self.conf[key])
             self.add_conf_overlay(key)
 
+        for item in ('env_whitelist', 'env_blacklist'):
+            val = getattr(self, item, None)
+            if val:
+                salt.utils.warn_until(
+                    'Neon',
+                    'The gitfs_{0} config option (and {0} per-remote config '
+                    'option) have been renamed to gitfs_salt{0} (and '
+                    'salt{0}). Please update your configuration.'.format(item)
+                )
+                setattr(self, 'salt{0}'.format(item), val)
+
         # Discard the conf dictionary since we have set all of the config
         # params as attributes
         delattr(self, 'conf')
+
+        # Normalize components of the ref_types configuration and check for
+        # invalid configuration.
+        if hasattr(self, 'ref_types'):
+            self.ref_types = [x.lower() for x in self.ref_types]
+            invalid_ref_types = [x for x in self.ref_types
+                                 if x not in VALID_REF_TYPES]
+            if invalid_ref_types:
+                log.critical(
+                    'The following ref_types for %s remote \'%s\' are '
+                    'invalid: %s. The supported values are: %s',
+                    self.role,
+                    self.id,
+                    ', '.join(invalid_ref_types),
+                    ', '.join(VALID_REF_TYPES),
+                )
+                failhard(self.role)
 
         if not isinstance(self.url, six.string_types):
             log.critical(
@@ -359,39 +395,31 @@ class GitProvider(object):
     def _get_envs_from_ref_paths(self, refs):
         '''
         Return the names of remote refs (stripped of the remote name) and tags
-        which are exposed as environments. If a branch or tag matches
+        which are map to the branches and tags.
         '''
-        def _check_ref(env_set, base_ref, rname):
+        def _check_ref(env_set, rname):
             '''
-            Check the ref and resolve it as the base_ref if it matches. If the
-            resulting env is exposed via whitelist/blacklist, add it to the
-            env_set.
+            Add the appropriate saltenv(s) to the set
             '''
-            _envs = []
             if rname in self.saltenv_revmap:
-                _envs.extend(self.saltenv_revmap[rname])
-                if base_ref == rname:
-                    _envs.append('base')
+                env_set.update(self.saltenv_revmap[rname])
             else:
-                if base_ref == rname:
-                    _envs.append('base')
-                else:
-                    _envs.append(rname)
-            for env_name in _envs:
-                if self.env_is_exposed(env_name):
-                    env_set.add(env_name)
+                env_set.add('base' if rname == self.base else rname)
+
+        use_branches = 'branch' in self.ref_types
+        use_tags = 'tag' in self.ref_types
 
         ret = set()
-        base_ref = getattr(self, 'base', None)
         for ref in refs:
             ref = re.sub('^refs/', '', ref)
             rtype, rname = ref.split('/', 1)
-            if rtype == 'remotes':
+            if rtype == 'remotes' and use_branches:
                 parted = rname.partition('/')
                 rname = parted[2] if parted[2] else parted[0]
-                _check_ref(ret, base_ref, rname)
-            elif rtype == 'tags':
-                _check_ref(ret, base_ref, rname)
+                _check_ref(ret, rname)
+            elif rtype == 'tags' and use_tags:
+                _check_ref(ret, rname)
+
         return ret
 
     def _get_lock_file(self, lock_type='update'):
@@ -411,16 +439,47 @@ class GitProvider(object):
             # Get saltenv-specific configuration
             saltenv_conf = self.saltenv.get(tgt_env, {})
             if name == 'ref':
-                if tgt_env == 'base':
-                    return self.base
-                else:
+                def _get_per_saltenv(tgt_env):
                     if name in saltenv_conf:
                         return saltenv_conf[name]
                     elif tgt_env in self.global_saltenv \
                             and name in self.global_saltenv[tgt_env]:
                         return self.global_saltenv[tgt_env][name]
                     else:
-                        return tgt_env
+                        return None
+
+                # Return the all_saltenvs branch/tag if it is configured
+                per_saltenv_ref = _get_per_saltenv(tgt_env)
+                try:
+                    all_saltenvs_ref = self.all_saltenvs
+                    if per_saltenv_ref and all_saltenvs_ref != per_saltenv_ref:
+                        log.debug(
+                            'The per-saltenv configuration has mapped the '
+                            '\'%s\' branch/tag to saltenv \'%s\' for %s '
+                            'remote \'%s\', but this remote has '
+                            'all_saltenvs set to \'%s\'. The per-saltenv '
+                            'mapping will be ignored in favor of \'%s\'.',
+                            per_saltenv_ref, tgt_env, self.role, self.id,
+                            all_saltenvs_ref, all_saltenvs_ref
+                        )
+                    return all_saltenvs_ref
+                except AttributeError:
+                    # all_saltenvs not configured for this remote
+                    pass
+
+                if tgt_env == 'base':
+                    return self.base
+                elif self.disable_saltenv_mapping:
+                    if per_saltenv_ref is None:
+                        log.debug(
+                            'saltenv mapping is diabled for %s remote \'%s\' '
+                            'and saltenv \'%s\' is not explicitly mapped',
+                            self.role, self.id, tgt_env
+                        )
+                    return per_saltenv_ref
+                else:
+                    return per_saltenv_ref or tgt_env
+
             if name in saltenv_conf:
                 return strip_sep(saltenv_conf[name])
             elif tgt_env in self.global_saltenv \
@@ -748,8 +807,8 @@ class GitProvider(object):
         '''
         return salt.utils.check_whitelist_blacklist(
             tgt_env,
-            whitelist=self.env_whitelist,
-            blacklist=self.env_blacklist
+            whitelist=self.saltenv_whitelist,
+            blacklist=self.saltenv_blacklist,
         )
 
     def _fetch(self):
@@ -798,9 +857,31 @@ class GitProvider(object):
 
     def get_tree(self, tgt_env):
         '''
-        This function must be overridden in a sub-class
+        Return a tree object for the specified environment
         '''
-        raise NotImplementedError()
+        if not self.env_is_exposed(tgt_env):
+            return None
+
+        tgt_ref = self.ref(tgt_env)
+        if tgt_ref is None:
+            return None
+
+        for ref_type in self.ref_types:
+            try:
+                func_name = 'get_tree_from_{0}'.format(ref_type)
+                func = getattr(self, func_name)
+            except AttributeError:
+                log.error(
+                    '%s class is missing function \'%s\'',
+                    self.__class__.__name__, func_name
+                )
+            else:
+                candidate = func(tgt_ref)
+                if candidate is not None:
+                    return candidate
+
+        # No matches found
+        return None
 
     def get_url(self):
         '''
@@ -817,6 +898,12 @@ class GitProvider(object):
                 self.url = self.id
         else:
             self.url = self.id
+
+    def setup_callbacks(self):
+        '''
+        Only needed in pygit2, included in the base class for simplicty of use
+        '''
+        pass
 
     def verify_auth(self):
         '''
@@ -988,7 +1075,8 @@ class GitPython(GitProvider):
             relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(
+            self.mountpoint(tgt_env), path, use_posixpath=True)
         for blob in tree.traverse():
             if isinstance(blob, git.Tree):
                 ret.add(add_mountpoint(relpath(blob.path)))
@@ -1060,7 +1148,8 @@ class GitPython(GitProvider):
             relpath = lambda path: os.path.relpath(path, self.root(tgt_env))
         else:
             relpath = lambda path: path
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(
+            self.mountpoint(tgt_env), path, use_posixpath=True)
         for file_blob in tree.traverse():
             if not isinstance(file_blob, git.Blob):
                 continue
@@ -1081,7 +1170,7 @@ class GitPython(GitProvider):
         '''
         tree = self.get_tree(tgt_env)
         if not tree:
-            # Branch/tag/SHA not found
+            # Branch/tag/SHA not found in repo
             return None, None, None
         blob = None
         depth = 0
@@ -1102,7 +1191,8 @@ class GitPython(GitProvider):
                     stream.seek(0)
                     link_tgt = stream.read()
                     stream.close()
-                    path = salt.utils.path_join(os.path.dirname(path), link_tgt)
+                    path = salt.utils.path_join(
+                        os.path.dirname(path), link_tgt, use_posixpath=True)
                 else:
                     blob = file_blob
                     if isinstance(blob, git.Tree):
@@ -1124,33 +1214,43 @@ class GitPython(GitProvider):
         refspecs = self.repo.git.config('--get-all', 'remote.origin.fetch')
         return [x.strip() for x in refspecs.splitlines()]
 
-    def get_tree(self, tgt_env):
+    def get_tree_from_branch(self, ref):
         '''
-        Return a git.Tree object if the branch/tag/SHA is found, otherwise None
+        Return a git.Tree object matching a head ref fetched into
+        refs/remotes/origin/
         '''
-        tgt_ref = self.ref(tgt_env)
-        for ref in self.repo.refs:
-            if isinstance(ref, (git.RemoteReference, git.TagReference)):
-                parted = ref.name.partition('/')
-                rspec = parted[2] if parted[2] else parted[0]
-                if rspec == tgt_ref:
-                    return ref.commit.tree
-
-        # Branch or tag not matched, check if 'tgt_env' is a commit
-        if not self.env_is_exposed(tgt_env):
+        try:
+            return git.RemoteReference(
+                self.repo,
+                'refs/remotes/origin/{0}'.format(ref)).commit.tree
+        except ValueError:
             return None
 
+    def get_tree_from_tag(self, ref):
+        '''
+        Return a git.Tree object matching a tag ref fetched into refs/tags/
+        '''
         try:
-            commit = self.repo.rev_parse(tgt_ref)
-            return commit.tree
-        except gitdb.exc.ODBError:
+            return git.TagReference(
+                self.repo,
+                'refs/tags/{0}'.format(ref)).commit.tree
+        except ValueError:
+            return None
+
+    def get_tree_from_sha(self, ref):
+        '''
+        Return a git.Tree object matching a SHA
+        '''
+        try:
+            return self.repo.rev_parse(ref).tree
+        except (gitdb.exc.ODBError, AttributeError):
             return None
 
     def write_file(self, blob, dest):
         '''
         Using the blob object, write the file to the destination path
         '''
-        with salt.utils.fopen(dest, 'w+') as fp_:
+        with salt.utils.fopen(dest, 'wb+') as fp_:
             blob.stream_data(fp_)
 
 
@@ -1161,9 +1261,6 @@ class Pygit2(GitProvider):
     def __init__(self, opts, remote, per_remote_defaults, per_remote_only,
                  override_params, cache_root, role='gitfs'):
         self.provider = 'pygit2'
-        self.use_callback = \
-            _LooseVersion(pygit2.__version__) >= \
-            _LooseVersion('0.23.2')
         GitProvider.__init__(self, opts, remote, per_remote_defaults,
                              per_remote_only, override_params, cache_root, role)
 
@@ -1400,7 +1497,7 @@ class Pygit2(GitProvider):
             try:
                 try:
                     self.repo = pygit2.Repository(self.cachedir)
-                except pygit2.GitError as exc:
+                except GitError as exc:
                     import pwd
                     # https://github.com/libgit2/pygit2/issues/339
                     # https://github.com/libgit2/libgit2/issues/2122
@@ -1457,9 +1554,14 @@ class Pygit2(GitProvider):
                 blob = self.repo[entry.oid]
                 if not isinstance(blob, pygit2.Tree):
                     continue
-                blobs.append(salt.utils.path_join(prefix, entry.name))
+                blobs.append(
+                    salt.utils.path_join(prefix, entry.name, use_posixpath=True)
+                )
                 if len(blob):
-                    _traverse(blob, blobs, salt.utils.path_join(prefix, entry.name))
+                    _traverse(
+                        blob, blobs, salt.utils.path_join(
+                            prefix, entry.name, use_posixpath=True)
+                    )
 
         ret = set()
         tree = self.get_tree(tgt_env)
@@ -1479,7 +1581,8 @@ class Pygit2(GitProvider):
         blobs = []
         if len(tree):
             _traverse(tree, blobs, self.root(tgt_env))
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(
+            self.mountpoint(tgt_env), path, use_posixpath=True)
         for blob in blobs:
             ret.add(add_mountpoint(relpath(blob)))
         if self.mountpoint(tgt_env):
@@ -1502,11 +1605,11 @@ class Pygit2(GitProvider):
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
         fetch_kwargs = {}
-        if self.credentials is not None:
-            if self.use_callback:
-                fetch_kwargs['callbacks'] = \
-                    pygit2.RemoteCallbacks(credentials=self.credentials)
-            else:
+        # pygit2 0.23.2 brought
+        if self.remotecallbacks is not None:
+            fetch_kwargs['callbacks'] = self.remotecallbacks
+        else:
+            if self.credentials is not None:
                 origin.credentials = self.credentials
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
@@ -1567,13 +1670,17 @@ class Pygit2(GitProvider):
                     continue
                 obj = self.repo[entry.oid]
                 if isinstance(obj, pygit2.Blob):
-                    repo_path = salt.utils.path_join(prefix, entry.name)
+                    repo_path = salt.utils.path_join(
+                        prefix, entry.name, use_posixpath=True)
                     blobs.setdefault('files', []).append(repo_path)
                     if stat.S_ISLNK(tree[entry.name].filemode):
                         link_tgt = self.repo[tree[entry.name].oid].data
                         blobs.setdefault('symlinks', {})[repo_path] = link_tgt
                 elif isinstance(obj, pygit2.Tree):
-                    _traverse(obj, blobs, salt.utils.path_join(prefix, entry.name))
+                    _traverse(
+                        obj, blobs, salt.utils.path_join(
+                            prefix, entry.name, use_posixpath=True)
+                    )
 
         files = set()
         symlinks = {}
@@ -1597,7 +1704,8 @@ class Pygit2(GitProvider):
         blobs = {}
         if len(tree):
             _traverse(tree, blobs, self.root(tgt_env))
-        add_mountpoint = lambda path: salt.utils.path_join(self.mountpoint(tgt_env), path)
+        add_mountpoint = lambda path: salt.utils.path_join(
+            self.mountpoint(tgt_env), path, use_posixpath=True)
         for repo_path in blobs.get('files', []):
             files.add(add_mountpoint(relpath(repo_path)))
         for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
@@ -1629,7 +1737,8 @@ class Pygit2(GitProvider):
                     # the symlink and set path to the location indicated
                     # in the blob data.
                     link_tgt = self.repo[entry.oid].data
-                    path = salt.utils.path_join(os.path.dirname(path), link_tgt)
+                    path = salt.utils.path_join(
+                        os.path.dirname(path), link_tgt, use_posixpath=True)
                 else:
                     blob = self.repo[entry.oid]
                     if isinstance(blob, pygit2.Tree):
@@ -1651,31 +1760,61 @@ class Pygit2(GitProvider):
             raise GitRemoteError('\'origin\' remote not not present')
         return list(self.repo.config.get_multivar('remote.origin.fetch'))
 
-    def get_tree(self, tgt_env):
+    def get_tree_from_branch(self, ref):
         '''
-        Return a pygit2.Tree object if the branch/tag/SHA is found, otherwise
-        None
+        Return a pygit2.Tree object matching a head ref fetched into
+        refs/remotes/origin/
         '''
-        tgt_ref = self.ref(tgt_env)
-        for ref in self.repo.listall_references():
-            _, rtype, rspec = ref.split('/', 2)
-            if rtype in ('remotes', 'tags'):
-                parted = rspec.partition('/')
-                rspec = parted[2] if parted[2] else parted[0]
-                if rspec == tgt_ref and self.env_is_exposed(tgt_env):
-                    return self.repo.lookup_reference(ref).get_object().tree
-
-        # Branch or tag not matched, check if 'tgt_env' is a commit
-        if not self.env_is_exposed(tgt_env):
-            return None
         try:
-            commit = self.repo.revparse_single(tgt_ref)
-        except (KeyError, TypeError, ValueError):
-            # Not a valid commit, likely not a commit SHA
-            pass
+            return self.repo.lookup_reference(
+                'refs/remotes/origin/{0}'.format(ref)).get_object().tree
+        except KeyError:
+            return None
+
+    def get_tree_from_tag(self, ref):
+        '''
+        Return a pygit2.Tree object matching a tag ref fetched into refs/tags/
+        '''
+        try:
+            return self.repo.lookup_reference(
+                'refs/tags/{0}'.format(ref)).get_object().tree
+        except KeyError:
+            return None
+
+    def get_tree_from_sha(self, ref):
+        '''
+        Return a pygit2.Tree object matching a SHA
+        '''
+        try:
+            return self.repo.revparse_single(ref).tree
+        except (KeyError, TypeError, ValueError, AttributeError):
+            return None
+
+    def setup_callbacks(self):
+        '''
+        Assign attributes for pygit2 callbacks
+        '''
+        # pygit2 radically changed fetching in 0.23.2
+        pygit2_version = pygit2.__version__
+        if distutils.version.LooseVersion(pygit2_version) >= \
+                distutils.version.LooseVersion('0.23.2'):
+            self.remotecallbacks = pygit2.RemoteCallbacks(
+                credentials=self.credentials)
+            if not self.ssl_verify:
+                # Override the certificate_check function with a lambda that
+                # just returns True, thus skipping the cert check.
+                self.remotecallbacks.certificate_check = \
+                    lambda *args, **kwargs: True
         else:
-            return commit.tree
-        return None
+            self.remotecallbacks = None
+            if not self.ssl_verify:
+                warnings.warn(
+                    'pygit2 does not support disabling the SSL certificate '
+                    'check in versions prior to 0.23.2 (installed: {0}). '
+                    'Fetches for self-signed certificates will fail.'.format(
+                        pygit2_version
+                    )
+                )
 
     def verify_auth(self):
         '''
@@ -1804,7 +1943,7 @@ class Pygit2(GitProvider):
         '''
         Using the blob object, write the file to the destination path
         '''
-        with salt.utils.fopen(dest, 'w+') as fp_:
+        with salt.utils.fopen(dest, 'wb+') as fp_:
             fp_.write(blob.data)
 
 
@@ -1829,8 +1968,7 @@ class GitBase(object):
                                                    self.role)
             self.remote_root = salt.utils.path_join(self.cache_root, 'remotes')
         self.env_cache = salt.utils.path_join(self.cache_root, 'envs.p')
-        self.hash_cachedir = salt.utils.path_join(
-            self.cache_root, 'hash')
+        self.hash_cachedir = salt.utils.path_join(self.cache_root, 'hash')
         self.file_list_cachedir = salt.utils.path_join(
             self.opts['cachedir'], 'file_lists', self.role)
 
@@ -1892,6 +2030,7 @@ class GitBase(object):
             if hasattr(repo_obj, 'repo'):
                 # Sanity check and assign the credential parameter
                 repo_obj.verify_auth()
+                repo_obj.setup_callbacks()
                 if self.opts['__role'] == 'minion' and repo_obj.new:
                     # Perform initial fetch on masterless minion
                     repo_obj.fetch()
@@ -2095,14 +2234,20 @@ class GitBase(object):
         if self.fetch_remotes():
             data['changed'] = True
 
+        # A masterless minion will need a new env cache file even if no changes
+        # were fetched.
+        refresh_env_cache = self.opts['__role'] == 'minion'
+
         if data['changed'] is True or not os.path.isfile(self.env_cache):
             env_cachedir = os.path.dirname(self.env_cache)
             if not os.path.exists(env_cachedir):
                 os.makedirs(env_cachedir)
+            refresh_env_cache = True
+
+        if refresh_env_cache:
             new_envs = self.envs(ignore_cache=True)
             serial = salt.payload.Serial(self.opts)
-            mode = 'wb+' if six.PY3 else 'w+'
-            with salt.utils.fopen(self.env_cache, mode) as fp_:
+            with salt.utils.fopen(self.env_cache, 'wb+') as fp_:
                 fp_.write(serial.dumps(new_envs))
                 log.trace('Wrote env cache data to {0}'.format(self.env_cache))
 
@@ -2378,7 +2523,12 @@ class GitFS(GitBase):
                 return cache_match
         ret = set()
         for repo in self.remotes:
-            ret.update(repo.envs())
+            repo_envs = set()
+            if not repo.disable_saltenv_mapping:
+                repo_envs.update(repo.envs())
+            for env_list in six.itervalues(repo.saltenv_revmap):
+                repo_envs.update(env_list)
+            ret.update([x for x in repo_envs if repo.env_is_exposed(x)])
         return sorted(ret)
 
     def find_file(self, path, tgt_env='base', **kwargs):  # pylint: disable=W0613

@@ -66,6 +66,7 @@ def render(template_file, saltenv='base', sls='', argline='',
                                           sls=sls,
                                           context=context,
                                           tmplpath=tmplpath,
+                                          proxy=__proxy__,
                                           **kws)
     if not tmp_data.get('result', False):
         raise SaltRenderError(

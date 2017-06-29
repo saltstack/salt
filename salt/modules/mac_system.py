@@ -16,6 +16,8 @@ try:  # python 3
 except ImportError:  # python 2
     from pipes import quote as _cmd_quote
 
+import getpass
+
 # Import salt libs
 import salt.utils
 import salt.utils.mac_utils
@@ -31,6 +33,9 @@ def __virtual__():
     if not salt.utils.is_darwin():
         return (False, 'The mac_system module could not be loaded: '
                        'module only works on MacOS systems.')
+
+    if getpass.getuser() != 'root':
+        return False, 'The mac_system module is not useful for non-root users.'
 
     if not _atrun_enabled():
         if not _enable_atrun():

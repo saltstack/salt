@@ -49,6 +49,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 # Import python libs
 from __future__ import absolute_import
 import json
+import logging
 
 # Import Salt libs
 import salt.ext.six as six
@@ -62,6 +63,8 @@ try:
     HAS_REDIS = True
 except ImportError:
     HAS_REDIS = False
+
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'redis'
@@ -97,6 +100,16 @@ def _get_options(ret=None):
     return _options
 
 
+CONN_POOL = None
+
+
+def _get_conn_pool():
+    global CONN_POOL
+    if CONN_POOL is None:
+        CONN_POOL = redis.ConnectionPool()
+    return CONN_POOL
+
+
 def _get_serv(ret=None):
     '''
     Return a redis server object
@@ -105,15 +118,17 @@ def _get_serv(ret=None):
     host = _options.get('host')
     port = _options.get('port')
     db = _options.get('db')
+    pool = _get_conn_pool()
 
     return redis.Redis(
             host=host,
             port=port,
-            db=db)
+            db=db,
+            connection_pool=pool)
 
 
 def _get_ttl():
-    return __opts__['keep_jobs'] * 3600
+    return __opts__.get('keep_jobs', 24) * 3600
 
 
 def returner(ret):
@@ -221,14 +236,16 @@ def clean_old_jobs():
     do manually cleaning here.
     '''
     serv = _get_serv(ret=None)
+    ret_jids = serv.keys('ret:*')
     living_jids = set(serv.keys('load:*'))
     to_remove = []
-    for ret_key in serv.keys('ret:*'):
+    for ret_key in ret_jids:
         load_key = ret_key.replace('ret:', 'load:', 1)
         if load_key not in living_jids:
             to_remove.append(ret_key)
     if len(to_remove) != 0:
         serv.delete(*to_remove)
+        log.debug('clean old jobs: {0}'.format(to_remove))
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument

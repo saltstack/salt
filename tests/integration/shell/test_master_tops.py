@@ -8,10 +8,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 
 
-class MasterTopsTest(integration.ShellCase):
+class MasterTopsTest(ShellCase):
 
     _call_binary_ = 'salt'
 

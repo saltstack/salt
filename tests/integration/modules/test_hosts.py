@@ -8,15 +8,16 @@ import os
 import shutil
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.paths import FILES, TMP
 
 # Import salt libs
 import salt.utils
 
-HFN = os.path.join(integration.TMP, 'hosts')
+HFN = os.path.join(TMP, 'hosts')
 
 
-class HostsModuleTest(integration.ModuleCase):
+class HostsModuleTest(ModuleCase):
     '''
     Test the hosts module
     '''
@@ -27,7 +28,7 @@ class HostsModuleTest(integration.ModuleCase):
         '''
         Clean out the hosts file
         '''
-        shutil.copyfile(os.path.join(integration.FILES, 'hosts'), HFN)
+        shutil.copyfile(os.path.join(FILES, 'hosts'), HFN)
 
     def __clear_hosts(self):
         '''

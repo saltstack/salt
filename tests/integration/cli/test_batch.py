@@ -6,10 +6,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 
 
-class BatchTest(integration.ShellCase):
+class BatchTest(ShellCase):
     '''
     Integration tests for the salt.cli.batch module
     '''

@@ -4,6 +4,11 @@ Connection module for Amazon VPC
 
 .. versionadded:: 2014.7.0
 
+:depends:
+
+- boto >= 2.8.0
+- boto3 >= 1.2.6
+
 :configuration: This module accepts explicit VPC credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
@@ -68,8 +73,6 @@ Connection module for Amazon VPC
 
         error:
           message: error message
-
-:depends: boto
 
 .. versionadded:: 2016.11.0
 
@@ -2283,7 +2286,7 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                                   'must be provided.')
 
     if not _exactly_one((gateway_id, internet_gateway_name, instance_id, interface_id, vpc_peering_connection_id,
-                         interface_id, nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
+                         nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
         raise SaltInvocationError('Only one of gateway_id, internet_gateway_name, instance_id, '
                                   'interface_id, vpc_peering_connection_id, nat_gateway_id, '
                                   'nat_gateway_subnet_id or nat_gateway_subnet_name may be provided.')

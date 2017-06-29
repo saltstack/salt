@@ -5,7 +5,7 @@ NAPALM ACL
 
 Generate and load ACL (firewall) configuration on network devices.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :codeauthor: Mircea Ulinic <mircea@cloudflare.com>
 :maturity:   new
@@ -368,7 +368,7 @@ def load_term_config(filter_name,
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         edge01.bjm01:
             ----------
@@ -555,7 +555,7 @@ def load_filter_config(filter_name,
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         edge01.bjm01:
             ----------

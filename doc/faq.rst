@@ -260,15 +260,15 @@ service. But restarting the service while in the middle of a state run
 interrupts the process of the Minion running states and sending results back to
 the Master. A common way to workaround that is to schedule restarting of the
 Minion service using :ref:`masterless mode <masterless-quickstart>` after all
-other states have been applied. This allows to keep Minion to Master connection
-alive for the Minion to report the final results to the Master, while the
-service is restarting in the background.
+other states have been applied. This allows the minion to keep Minion to Master
+connection alive for the Minion to report the final results to the Master, while
+the service is restarting in the background.
 
 Upgrade without automatic restart
 *********************************
 
 Doing the Minion upgrade seems to be a simplest state in your SLS file at
-first. But the operating systems such as Debian GNU/Linux, Ununtu and their
+first. But the operating systems such as Debian GNU/Linux, Ubuntu and their
 derivatives start the service after the package installation by default.
 To prevent this, we need to create policy layer which will prevent the Minion
 service to restart right after the upgrade:

@@ -324,6 +324,7 @@ from __future__ import absolute_import, with_statement
 import os
 import sys
 import time
+import copy
 import signal
 import datetime
 import itertools
@@ -349,6 +350,7 @@ import salt.log.setup as log_setup
 import salt.defaults.exitcodes
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running, default_signals, SignalHandlingMultiprocessingProcess
+from salt.utils.yamldumper import SafeOrderedDumper
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -473,7 +475,10 @@ class Schedule(object):
             with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(
                     salt.utils.to_bytes(
-                        yaml.dump({'schedule': self._get_schedule(include_pillar=False)})
+                        yaml.dump(
+                            {'schedule': self._get_schedule(include_pillar=False)},
+                            Dumper=SafeOrderedDumper
+                        )
                     )
                 )
         except (IOError, OSError):
@@ -823,7 +828,7 @@ class Schedule(object):
             kwargs = {}
             if 'kwargs' in data:
                 kwargs = data['kwargs']
-                ret['fun_args'].append(data['kwargs'])
+                ret['fun_args'].append(copy.deepcopy(kwargs))
 
             if func not in self.functions:
                 ret['return'] = self.functions.missing_fun_string(func)
@@ -880,26 +885,39 @@ class Schedule(object):
             ret['success'] = False
             ret['retcode'] = 254
         finally:
-            try:
-                # Only attempt to return data to the master
-                # if the scheduled job is running on a minion.
-                if '__role' in self.opts and self.opts['__role'] == 'minion':
-                    if 'return_job' in data and not data['return_job']:
-                        pass
-                    else:
-                        # Send back to master so the job is included in the job list
-                        mret = ret.copy()
-                        mret['jid'] = 'req'
-                        if data.get('return_job') == 'nocache':
-                            # overwrite 'req' to signal to master that this job shouldn't be stored
-                            mret['jid'] = 'nocache'
-                        event = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-                        load = {'cmd': '_return', 'id': self.opts['id']}
-                        for key, value in six.iteritems(mret):
-                            load[key] = value
-                        event.fire_event(load, '__schedule_return')
+            # Only attempt to return data to the master if the scheduled job is running
+            # on a master itself or a minion.
+            if '__role' in self.opts and self.opts['__role'] in ('master', 'minion'):
+                # The 'return_job' option is enabled by default even if not set
+                if 'return_job' in data and not data['return_job']:
+                    pass
+                else:
+                    # Send back to master so the job is included in the job list
+                    mret = ret.copy()
+                    mret['jid'] = 'req'
+                    if data.get('return_job') == 'nocache':
+                        # overwrite 'req' to signal to master that
+                        # this job shouldn't be stored
+                        mret['jid'] = 'nocache'
+                    load = {'cmd': '_return', 'id': self.opts['id']}
+                    for key, value in six.iteritems(mret):
+                        load[key] = value
 
-                log.debug('schedule.handle_func: Removing {0}'.format(proc_fn))
+                    if '__role' in self.opts and self.opts['__role'] == 'minion':
+                        event = salt.utils.event.get_event('minion',
+                                                           opts=self.opts,
+                                                           listen=False)
+                    elif '__role' in self.opts and self.opts['__role'] == 'master':
+                        event = salt.utils.event.get_master_event(self.opts,
+                                                                  self.opts['sock_dir'])
+                    try:
+                        event.fire_event(load, '__schedule_return')
+                    except Exception as exc:
+                        log.exception("Unhandled exception firing event: {0}".format(exc))
+
+            log.debug('schedule.handle_func: Removing {0}'.format(proc_fn))
+
+            try:
                 os.unlink(proc_fn)
             except OSError as exc:
                 if exc.errno == errno.EEXIST or exc.errno == errno.ENOENT:

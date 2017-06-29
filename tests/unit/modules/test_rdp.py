@@ -27,26 +27,26 @@ class RdpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enable' function tests: 1
 
-    @patch('salt.modules.rdp._parse_return_code_powershell',
-           MagicMock(return_value=0))
     def test_enable(self):
         '''
         Test if it enables RDP the service on the server
         '''
         mock = MagicMock(return_value=True)
-        with patch.dict(rdp.__salt__, {'cmd.run': mock}):
+        with patch.dict(rdp.__salt__, {'cmd.run': mock}), \
+                patch('salt.modules.rdp._parse_return_code_powershell',
+                      MagicMock(return_value=0)):
             self.assertTrue(rdp.enable())
 
     # 'disable' function tests: 1
 
-    @patch('salt.modules.rdp._parse_return_code_powershell',
-           MagicMock(return_value=0))
     def test_disable(self):
         '''
         Test if it disables RDP the service on the server
         '''
         mock = MagicMock(return_value=True)
-        with patch.dict(rdp.__salt__, {'cmd.run': mock}):
+        with patch.dict(rdp.__salt__, {'cmd.run': mock}), \
+                patch('salt.modules.rdp._parse_return_code_powershell',
+                      MagicMock(return_value=0)):
             self.assertTrue(rdp.disable())
 
     # 'status' function tests: 1

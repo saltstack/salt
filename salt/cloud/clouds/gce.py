@@ -54,10 +54,12 @@ import pprint
 import logging
 import msgpack
 from ast import literal_eval
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 # pylint: disable=import-error
 try:
+    import libcloud
     from libcloud.compute.types import Provider
     from libcloud.compute.providers import get_driver
     from libcloud.loadbalancer.types import Provider as Provider_lb
@@ -66,9 +68,14 @@ try:
         ResourceInUseError,
         ResourceNotFoundError,
         )
-    # See https://github.com/saltstack/salt/issues/32743
-    import libcloud.security
-    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
+    # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
+    # However, older versions of libcloud must still be supported with this work-around.
+    # This work-around can be removed when the required minimum version of libcloud is
+    # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+    if _LooseVersion(libcloud.__version__) < _LooseVersion('1.4.0'):
+        # See https://github.com/saltstack/salt/issues/32743
+        import libcloud.security
+        libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
@@ -460,7 +467,7 @@ def __get_subnetwork(vm_):
     '''
     ex_subnetwork = config.get_cloud_config_value(
         'subnetwork', vm_, __opts__,
-        default='default', search_global=False)
+        search_global=False)
 
     return ex_subnetwork
 
@@ -555,7 +562,7 @@ def __get_ssh_credentials(vm_):
 
 def create_network(kwargs=None, call=None):
     '''
-    ... versionchanged:: Nitrogen
+    ... versionchanged:: 2017.7.0
     Create a GCE network. Must specify name and cidr.
 
     CLI Example:
@@ -706,7 +713,7 @@ def show_network(kwargs=None, call=None):
 
 def create_subnetwork(kwargs=None, call=None):
     '''
-    ... versionadded:: Nitrogen
+    ... versionadded:: 2017.7.0
     Create a GCE Subnetwork. Must specify name, cidr, network, and region.
 
     CLI Example:
@@ -788,7 +795,7 @@ def create_subnetwork(kwargs=None, call=None):
 
 def delete_subnetwork(kwargs=None, call=None):
     '''
-    ... versionadded:: Nitrogen
+    ... versionadded:: 2017.7.0
     Delete a GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -856,7 +863,7 @@ def delete_subnetwork(kwargs=None, call=None):
 
 def show_subnetwork(kwargs=None, call=None):
     '''
-    ... versionadded:: Nitrogen
+    ... versionadded:: 2017.7.0
     Show details of an existing GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -2165,7 +2172,7 @@ def start(vm_name, call=None):
     '''
     Call GCE 'start on the instance.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -2209,7 +2216,7 @@ def stop(vm_name, call=None):
     '''
     Call GCE 'stop' on the instance.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -2385,7 +2392,7 @@ def create_attach_volumes(name, kwargs, call=None):
     Volumes are attached in the order in which they are given, thus on a new
     node the first volume will be /dev/sdb, the second /dev/sdc, and so on.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2418,7 +2425,7 @@ def request_instance(vm_):
     '''
     Request a single GCE instance from a data dict.
 
-    .. versionchanged: Nitrogen
+    .. versionchanged: 2017.7.0
     '''
     if not GCE_VM_NAME_REGEX.match(vm_['name']):
         raise SaltCloudSystemExit(

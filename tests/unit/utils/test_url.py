@@ -16,7 +16,6 @@ from tests.support.mock import (
 )
 
 
-@patch('salt.utils.is_windows', MagicMock(return_value=False))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class UrlTestCase(TestCase):
     '''

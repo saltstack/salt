@@ -30,21 +30,21 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'buildmod' function tests: 1
 
-    @patch('os.path.exists', MagicMock(return_value=False))
     def test_buildmod(self):
         '''
         Tests build module using znc-buildmod
         '''
-        self.assertEqual(znc.buildmod('modules.cpp'),
-                         'Error: The file (modules.cpp) does not exist.')
+        with patch('os.path.exists', MagicMock(return_value=False)):
+            self.assertEqual(znc.buildmod('modules.cpp'),
+                             'Error: The file (modules.cpp) does not exist.')
 
-    @patch('os.path.exists', MagicMock(return_value=True))
     def test_buildmod_module(self):
         '''
         Tests build module using znc-buildmod
         '''
         mock = MagicMock(return_value='SALT')
-        with patch.dict(znc.__salt__, {'cmd.run': mock}):
+        with patch.dict(znc.__salt__, {'cmd.run': mock}), \
+                patch('os.path.exists', MagicMock(return_value=True)):
             self.assertEqual(znc.buildmod('modules.cpp'), 'SALT')
 
     # 'dumpconf' function tests: 1

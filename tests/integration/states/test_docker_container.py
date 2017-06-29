@@ -16,11 +16,13 @@ import tempfile
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
+from tests.support.case import ModuleCase
+from tests.support.paths import FILES, TMP
+from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
 import salt.utils
-import tests.integration as integration
-from tests.support.helpers import destructiveTest
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -49,8 +51,7 @@ def with_random_name(func):
 @destructiveTest
 @skipIf(not salt.utils.which('busybox'), 'Busybox not installed')
 @skipIf(not salt.utils.which('dockerd'), 'Docker not installed')
-class DockerContainerTestCase(integration.ModuleCase,
-                              integration.SaltReturnAssertsMixIn):
+class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test docker_container states
     '''
@@ -59,12 +60,12 @@ class DockerContainerTestCase(integration.ModuleCase,
         '''
         '''
         # Create temp dir
-        cls.image_build_rootdir = tempfile.mkdtemp(dir=integration.TMP)
+        cls.image_build_rootdir = tempfile.mkdtemp(dir=TMP)
         # Generate image name
         cls.image = _random_name(prefix='salt_busybox_')
 
         script_path = \
-            os.path.join(integration.FILES, 'file/base/mkimage-busybox-static')
+            os.path.join(FILES, 'file/base/mkimage-busybox-static')
         cmd = [script_path, cls.image_build_rootdir, cls.image]
         log.debug('Running \'%s\' to build busybox image', ' '.join(cmd))
         process = subprocess.Popen(
@@ -81,7 +82,7 @@ class DockerContainerTestCase(integration.ModuleCase,
         try:
             salt.utils.rm_rf(cls.image_build_rootdir)
         except OSError as exc:
-            if not exc.errno == errno.ENOENT:
+            if exc.errno != errno.ENOENT:
                 raise
 
     @classmethod
@@ -107,7 +108,7 @@ class DockerContainerTestCase(integration.ModuleCase,
         if they aren't pre-defined in the image.
         '''
         try:
-            bind_dir_host = tempfile.mkdtemp(dir=integration.TMP)
+            bind_dir_host = tempfile.mkdtemp(dir=TMP)
             ret = self.run_state(
                 'docker_container.running',
                 name=name,
@@ -524,6 +525,38 @@ class DockerContainerTestCase(integration.ModuleCase,
                 ret['comment'],
                 'Forcibly removed container \'{0}\''.format(name)
             )
+        finally:
+            if name in self.run_function('docker.list_containers', all=True):
+                self.run_function('docker.rm', [name], force=True)
+
+    @with_random_name
+    def test_env_with_running_container(self, name):
+        '''
+        dockerng.running environnment part. Testing issue 39838.
+        '''
+        try:
+            ret = self.run_state(
+                'docker_container.running',
+                name=name,
+                image=self.image,
+                env='VAR1=value1,VAR2=value2,VAR3=value3',
+                )
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_function('docker.inspect_container', [name])
+            self.assertTrue('VAR1=value1' in ret['Config']['Env'])
+            self.assertTrue('VAR2=value2' in ret['Config']['Env'])
+            self.assertTrue('VAR3=value3' in ret['Config']['Env'])
+            ret = self.run_state(
+                'docker_container.running',
+                name=name,
+                image=self.image,
+                env='VAR1=value1,VAR2=value2',
+                )
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_function('docker.inspect_container', [name])
+            self.assertTrue('VAR1=value1' in ret['Config']['Env'])
+            self.assertTrue('VAR2=value2' in ret['Config']['Env'])
+            self.assertTrue('VAR3=value3' not in ret['Config']['Env'])
         finally:
             if name in self.run_function('docker.list_containers', all=True):
                 self.run_function('docker.rm', [name], force=True)

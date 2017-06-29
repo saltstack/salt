@@ -18,6 +18,7 @@ except ImportError:
     HAS_SALTCLOUD = False
 
 import salt.utils
+from salt.exceptions import SaltCloudConfigError
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -250,7 +251,12 @@ def action(
         salt minionname cloud.action show_image provider=my-ec2-config image=ami-1624987f
     '''
     client = _get_client()
-    info = client.action(fun, cloudmap, names, provider, instance, kwargs)
+    try:
+        info = client.action(fun, cloudmap, names, provider, instance, kwargs)
+    except SaltCloudConfigError as err:
+        log.error(err)
+        return None
+
     return info
 
 

@@ -39,8 +39,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
         try:
             # We don't need to bail on config file permission errors
-            # if the CLI
-            # process is run with the -a flag
+            # if the CLI process is run with the -a flag
             skip_perm_errors = self.options.eauth != ''
 
             self.local_client = salt.client.get_local_client(
@@ -60,7 +59,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             return
 
         if self.options.preview_target:
-            self._preview_target()
+            minion_list = self._preview_target()
+            self._output_ret(minion_list, self.config.get('output', 'nested'))
             return
 
         if self.options.timeout <= 0:
@@ -88,6 +88,15 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         else:
             kwargs['tgt_type'] = 'glob'
 
+        # If batch_safe_limit is set, check minions matching target and
+        # potentially switch to batch execution
+        if self.options.batch_safe_limit > 1:
+            if len(self._preview_target()) >= self.options.batch_safe_limit:
+                print_cli('\nNOTICE: Too many minions targeted, switching to batch execution.')
+                self.options.batch = self.options.batch_safe_size
+                self._run_batch()
+                return
+
         if getattr(self.options, 'return'):
             kwargs['ret'] = getattr(self.options, 'return')
 
@@ -100,6 +109,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
         if getattr(self.options, 'module_executors'):
             kwargs['module_executors'] = yamlify_arg(getattr(self.options, 'module_executors'))
+
+        if getattr(self.options, 'executor_opts'):
+            kwargs['executor_opts'] = yamlify_arg(getattr(self.options, 'executor_opts'))
 
         if getattr(self.options, 'metadata'):
             kwargs['metadata'] = yamlify_arg(
@@ -202,8 +214,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         Return a list of minions from a given target
         '''
-        minion_list = self.local_client.gather_minions(self.config['tgt'], self.selected_target_option or 'glob')
-        self._output_ret(minion_list, self.config.get('output', 'nested'))
+        return self.local_client.gather_minions(self.config['tgt'], self.selected_target_option or 'glob')
 
     def _run_batch(self):
         import salt.cli.batch
@@ -250,6 +261,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
         else:
             try:
+                self.config['batch'] = self.options.batch
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth, parser=self.options)
             except salt.exceptions.SaltClientError as exc:
                 # We will print errors to the console further down the stack
@@ -262,14 +274,6 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     if job_retcode > retcode:
                         # Exit with the highest retcode we find
                         retcode = job_retcode
-                    if self.options.failhard:
-                        if retcode != 0:
-                            sys.stderr.write(
-                                '{0}\nERROR: Minions returned with non-zero exit code.\n'.format(
-                                    res
-                                )
-                            )
-                            sys.exit(retcode)
             sys.exit(retcode)
 
     def _print_errors_summary(self, errors):
@@ -292,7 +296,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         not_connected_minions = []
         failed_minions = []
         for each_minion in ret:
-            minion_ret = ret[each_minion].get('ret')
+            minion_ret = ret[each_minion]
+            if isinstance(minion_ret, dict) and 'ret' in minion_ret:
+                minion_ret = ret[each_minion].get('ret')
             if (
                     isinstance(minion_ret, string_types)
                     and minion_ret.startswith("Minion did not return")

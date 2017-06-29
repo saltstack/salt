@@ -8,16 +8,17 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils
 
-TEST_FILE = os.path.join(integration.TMP, 'xattr_test_file.txt')
-NO_FILE = os.path.join(integration.TMP, 'xattr_no_file.txt')
+TEST_FILE = os.path.join(TMP, 'xattr_test_file.txt')
+NO_FILE = os.path.join(TMP, 'xattr_no_file.txt')
 
 
-class MacXattrModuleTest(integration.ModuleCase):
+class MacXattrModuleTest(ModuleCase):
     '''
     Validate the mac_xattr module
     '''

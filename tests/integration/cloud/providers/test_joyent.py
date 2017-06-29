@@ -10,7 +10,8 @@ import random
 import string
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
@@ -32,7 +33,7 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'joyent'
 
 
-class JoyentTest(integration.ShellCase):
+class JoyentTest(ShellCase):
     '''
     Integration tests for the Joyent cloud provider in Salt-Cloud
     '''
@@ -57,7 +58,7 @@ class JoyentTest(integration.ShellCase):
         # check if user, password, private_key, and keyname are present
         config = cloud_providers_config(
             os.path.join(
-                integration.FILES,
+                FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'

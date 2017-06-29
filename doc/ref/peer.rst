@@ -126,4 +126,4 @@ To match minions using other matchers, use ``tgt_type``:
     # salt-call publish.publish 'webserv* and not G@os:Ubuntu' test.ping tgt_type='compound'
 
 .. note::
-    In pre-Nitrogen releases, use ``expr_form`` instead of ``tgt_type``.
+    In pre-2017.7.0 releases, use ``expr_form`` instead of ``tgt_type``.

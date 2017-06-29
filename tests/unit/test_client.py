@@ -15,18 +15,13 @@ from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 from salt import client
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError, SaltClientError
 
-if integration.SaltClientTestCaseMixIn().get_config('minion')['transport'] != 'zeromq':
-    NOT_ZMQ = True
-else:
-    NOT_ZMQ = False
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalClientTestCase(TestCase,
-                          integration.SaltClientTestCaseMixIn):
+                          integration.SaltClientTestCaseMixin):
 
     def test_create_local_client(self):
-        local_client = client.LocalClient(self.get_config_file_path('master'))
+        local_client = client.LocalClient(mopts=self.get_temp_config('master'))
         self.assertIsInstance(local_client, client.LocalClient, 'LocalClient did not create a LocalClient instance')
 
     def test_check_pub_data(self):
@@ -49,31 +44,32 @@ class LocalClientTestCase(TestCase,
 
         self.assertDictEqual(valid_pub_data, self.client._check_pub_data(valid_pub_data))
 
-    @patch('salt.client.LocalClient.cmd', return_value={'minion1': ['first.func', 'second.func'],
-                                                        'minion2': ['first.func', 'second.func']})
-    def test_cmd_subset(self, cmd_mock):
-        with patch('salt.client.LocalClient.cmd_cli') as cmd_cli_mock:
-            self.client.cmd_subset('*', 'first.func', sub=1, cli=True)
-            try:
-                cmd_cli_mock.assert_called_with(['minion2'], 'first.func', (), progress=False,
-                                                kwarg=None, tgt_type='list',
-                                                ret='')
-            except AssertionError:
-                cmd_cli_mock.assert_called_with(['minion1'], 'first.func', (), progress=False,
-                                                kwarg=None, tgt_type='list',
-                                                ret='')
-            self.client.cmd_subset('*', 'first.func', sub=10, cli=True)
-            try:
-                cmd_cli_mock.assert_called_with(['minion2', 'minion1'], 'first.func', (), progress=False,
-                                                kwarg=None, tgt_type='list',
-                                                ret='')
-            except AssertionError:
-                cmd_cli_mock.assert_called_with(['minion1', 'minion2'], 'first.func', (), progress=False,
-                                                kwarg=None, tgt_type='list',
-                                                ret='')
+    def test_cmd_subset(self):
+        with patch('salt.client.LocalClient.cmd', return_value={'minion1': ['first.func', 'second.func'],
+                                                                'minion2': ['first.func', 'second.func']}):
+            with patch('salt.client.LocalClient.cmd_cli') as cmd_cli_mock:
+                self.client.cmd_subset('*', 'first.func', sub=1, cli=True)
+                try:
+                    cmd_cli_mock.assert_called_with(['minion2'], 'first.func', (), progress=False,
+                                                    kwarg=None, tgt_type='list',
+                                                    ret='')
+                except AssertionError:
+                    cmd_cli_mock.assert_called_with(['minion1'], 'first.func', (), progress=False,
+                                                    kwarg=None, tgt_type='list',
+                                                    ret='')
+                self.client.cmd_subset('*', 'first.func', sub=10, cli=True)
+                try:
+                    cmd_cli_mock.assert_called_with(['minion2', 'minion1'], 'first.func', (), progress=False,
+                                                    kwarg=None, tgt_type='list',
+                                                    ret='')
+                except AssertionError:
+                    cmd_cli_mock.assert_called_with(['minion1', 'minion2'], 'first.func', (), progress=False,
+                                                    kwarg=None, tgt_type='list',
+                                                    ret='')
 
-    @skipIf(NOT_ZMQ, 'This test only works with ZeroMQ')
     def test_pub(self):
+        if self.get_config('minion')['transport'] != 'zeromq':
+            self.skipTest('This test only works with ZeroMQ')
         # Make sure we cleanly return if the publisher isn't running
         with patch('os.path.exists', return_value=False):
             self.assertRaises(SaltClientError, lambda: self.client.pub('*', 'test.ping'))

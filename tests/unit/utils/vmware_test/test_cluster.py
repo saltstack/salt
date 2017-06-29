@@ -28,17 +28,20 @@ log = logging.getLogger(__name__)
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.get_managed_object_name',
-       MagicMock())
-@patch('salt.utils.vmware.get_service_instance_from_managed_object',
-       MagicMock())
-@patch('salt.utils.vmware.get_mors_with_properties',
-       MagicMock(return_value=[{'name': 'fake_cluster',
-                                'object': MagicMock()}]))
 class GetClusterTestCase(TestCase):
     '''Tests for salt.utils.vmware.get_cluster'''
 
     def setUp(self):
+        patches = (
+            ('salt.utils.vmware.get_managed_object_name', MagicMock()),
+            ('salt.utils.vmware.get_service_instance_from_managed_object', MagicMock()),
+            ('salt.utils.vmware.get_mors_with_properties', MagicMock(return_value=[{'name': 'fake_cluster',
+                                                                                    'object': MagicMock()}]))
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.mock_si = MagicMock()
         self.mock_dc = MagicMock()
         self.mock_cluster1 = MagicMock()
@@ -47,6 +50,8 @@ class GetClusterTestCase(TestCase):
                               'object': self.mock_cluster1},
                              {'name': 'fake_cluster2',
                               'object': self.mock_cluster2}]
+        for attr in ('mock_si', 'mock_dc', 'mock_cluster1', 'mock_cluster2', 'mock_entries'):
+            self.addCleanup(delattr, self, attr)
 
     def test_get_managed_object_name_call(self):
         mock_get_managed_object_name = MagicMock()
@@ -141,15 +146,23 @@ class GetClusterTestCase(TestCase):
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.get_managed_object_name', MagicMock())
 class CreateClusterTestCase(TestCase):
     '''Tests for salt.utils.vmware.create_cluster'''
 
     def setUp(self):
+        patches = (
+            ('salt.utils.vmware.get_managed_object_name', MagicMock()),
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.mock_create_cluster_ex = MagicMock()
         self.mock_dc = MagicMock(
             hostFolder=MagicMock(CreateClusterEx=self.mock_create_cluster_ex))
         self.mock_cluster_spec = MagicMock()
+        for attr in ('mock_create_cluster_ex', 'mock_dc', 'mock_cluster_spec'):
+            self.addCleanup(delattr, self, attr)
 
     def test_get_managed_object_name(self):
         mock_get_managed_object_name = MagicMock()
@@ -188,18 +201,26 @@ class CreateClusterTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.get_managed_object_name', MagicMock())
-@patch('salt.utils.vmware.wait_for_task', MagicMock())
 class UpdateClusterTestCase(TestCase):
     '''Tests for salt.utils.vmware.update_cluster'''
 
     def setUp(self):
+        patches = (
+            ('salt.utils.vmware.get_managed_object_name', MagicMock()),
+            ('salt.utils.vmware.wait_for_task', MagicMock()),
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.mock_task = MagicMock()
         self.mock_reconfigure_compute_resource_task = \
                 MagicMock(return_value=self.mock_task)
         self.mock_cluster = MagicMock(ReconfigureComputeResource_Task=
             self.mock_reconfigure_compute_resource_task)
         self.mock_cluster_spec = MagicMock()
+        for attr in ('mock_task', 'mock_reconfigure_compute_resource_task', 'mock_cluster', 'mock_cluster_spec'):
+            self.addCleanup(delattr, self, attr)
 
     def test_get_managed_object_name(self):
         mock_get_managed_object_name = MagicMock()

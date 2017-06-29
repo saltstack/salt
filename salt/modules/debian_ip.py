@@ -1498,6 +1498,16 @@ def _write_file_routes(iface, data, folder, pattern):
     '''
     Writes a file to disk
     '''
+    # ifup / ifdown is executing given folder via run-parts.
+    # according to run-parts man-page, only filenames with this pattern are
+    # executed: (^[a-zA-Z0-9_-]+$)
+
+    # In order to make the routes file work for vlan interfaces
+    # (default would have been in example /etc/network/if-up.d/route-bond0.12)
+    # these dots in the iface name need to be replaced by underscores, so it
+    # can be executed by run-parts
+    iface = iface.replace('.', '_')
+
     filename = os.path.join(folder, pattern.format(iface))
     if not os.path.exists(folder):
         msg = '{0} cannot be written. {1} does not exist'
@@ -1581,13 +1591,13 @@ def _write_file_ifaces(iface, data, **settings):
         if adapter == iface:
             saved_ifcfg = tmp
 
-    _SEPERATE_FILE = False
+    _SEPARATE_FILE = False
     if 'filename' in settings:
         if not settings['filename'].startswith('/'):
             filename = '{0}/{1}'.format(_DEB_NETWORK_DIR, settings['filename'])
         else:
             filename = settings['filename']
-        _SEPERATE_FILE = True
+        _SEPARATE_FILE = True
     else:
         if 'filename' in adapters[adapter]['data']:
             filename = adapters[adapter]['data']
@@ -1600,7 +1610,7 @@ def _write_file_ifaces(iface, data, **settings):
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.flopen(filename, 'w') as fout:
-        if _SEPERATE_FILE:
+        if _SEPARATE_FILE:
             fout.write(saved_ifcfg)
         else:
             fout.write(ifcfg)

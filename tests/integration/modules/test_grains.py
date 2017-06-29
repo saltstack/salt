@@ -9,12 +9,12 @@ import os
 import time
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
 
-class TestModulesGrains(integration.ModuleCase):
+class TestModulesGrains(ModuleCase):
     '''
     Test the grains module
     '''
@@ -53,6 +53,7 @@ class TestModulesGrains(integration.ModuleCase):
             'host',
             'kernel',
             'kernelrelease',
+            'kernelversion',
             'localhost',
             'mem_total',
             'num_cpus',
@@ -114,7 +115,7 @@ class TestModulesGrains(integration.ModuleCase):
 
         for grain in grains:
             get_grain = self.run_function('grains.get', [grain])
-            if os == 'Arch' and grain in ['osmajorrelease', 'osrelease']:
+            if os == 'Arch' and grain in ['osmajorrelease']:
                 self.assertEqual(get_grain, '')
                 continue
             if os == 'Windows' and grain in ['osmajorrelease']:
@@ -140,7 +141,7 @@ class TestModulesGrains(integration.ModuleCase):
 
 
 @destructiveTest
-class GrainsAppendTestCase(integration.ModuleCase):
+class GrainsAppendTestCase(ModuleCase):
     '''
     Tests written specifically for the grains.append function.
     '''

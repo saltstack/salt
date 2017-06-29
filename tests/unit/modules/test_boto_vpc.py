@@ -370,9 +370,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests checking vpc existence when no filters are provided
         '''
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least one of the following '
-                                                          'must be provided: vpc_id, vpc_name, '
-                                                          'cidr or tags.'):
+        with self.assertRaisesRegex(SaltInvocationError, 'At least one of the following '
+                                                         'must be provided: vpc_id, vpc_name, '
+                                                         'cidr or tags.'):
             boto_vpc.exists(**conn_parameters)
 
     @mock_ec2
@@ -447,7 +447,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests getting vpc id but providing no filters
         '''
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least one of the following must be provided: vpc_id, vpc_name, cidr or tags.'):
+        with self.assertRaisesRegex(SaltInvocationError, 'At least one of the following must be provided: vpc_id, vpc_name, cidr or tags.'):
             boto_vpc.get_id(**conn_parameters)
 
     @mock_ec2
@@ -458,7 +458,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc1 = self._create_vpc(name='vpc-test1')
         vpc2 = self._create_vpc(name='vpc-test2')
 
-        with self.assertRaisesRegexp(CommandExecutionError, 'Found more than one VPC matching the criteria.'):
+        with self.assertRaisesRegex(CommandExecutionError, 'Found more than one VPC matching the criteria.'):
             boto_vpc.get_id(cidr=u'10.0.0.0/24', **conn_parameters)
 
     @mock_ec2
@@ -575,7 +575,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests describing vpc without vpc id
         '''
-        with self.assertRaisesRegexp(SaltInvocationError,
+        with self.assertRaisesRegex(SaltInvocationError,
                                      'A valid vpc id or name needs to be specified.'):
             boto_vpc.describe(vpc_id=None, **conn_parameters)
 
@@ -770,7 +770,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests checking subnet existence without any filters
         '''
-        with self.assertRaisesRegexp(SaltInvocationError,
+        with self.assertRaisesRegex(SaltInvocationError,
                                      'At least one of the following must be specified: '
                                      'subnet id, cidr, subnet_name, tags, or zones.'):
             boto_vpc.subnet_exists(**conn_parameters)
@@ -1195,7 +1195,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests checking dhcp option existence with no filters
         '''
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least one of the following must be provided: id, name, or tags.'):
+        with self.assertRaisesRegex(SaltInvocationError, 'At least one of the following must be provided: id, name, or tags.'):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
 
@@ -1312,7 +1312,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests checking existence of network acl with no filters
         '''
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 SaltInvocationError,
                 'At least one of the following must be provided: id, name, or tags.'
         ):
@@ -1642,7 +1642,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests checking route table without filters
         '''
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 SaltInvocationError,
                 'At least one of the following must be provided: id, name, or tags.'
         ):

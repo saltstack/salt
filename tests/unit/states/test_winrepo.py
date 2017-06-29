@@ -48,13 +48,15 @@ class MockRunnerClient(object):
             return []
 
 
-@patch('salt.states.winrepo.salt.runner', MockRunnerClient)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Validate the winrepo state
     '''
     def setup_loader_modules(self):
+        patcher = patch('salt.states.winrepo.salt.runner', MockRunnerClient)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return {winrepo: {}}
 
     def test_genrepo(self):

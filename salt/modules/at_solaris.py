@@ -10,7 +10,7 @@ Wrapper for at(1) on Solaris-like systems
 :maturity:      new
 :platform:      solaris,illumos,smartso
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 '''
 from __future__ import absolute_import
 
@@ -224,7 +224,8 @@ def atc(jobid):
         job=jobid
     )
     if __salt__['file.file_exists'](atjob_file):
-        return "".join(salt.utils.fopen(atjob_file, 'r').readlines())
+        with salt.utils.fopen(atjob_file, 'r') as rfh:
+            return "".join(rfh.readlines())
     else:
         return {'error': 'invalid job id \'{0}\''.format(jobid)}
 

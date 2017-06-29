@@ -44,6 +44,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -118,6 +119,8 @@ def refresh_db(full=False):
         salt '*' pkg.refresh_db
         salt '*' pkg.refresh_db full=True
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     if full:
         return __salt__['cmd.retcode']('/bin/pkg refresh --full') == 0
     else:
@@ -164,10 +167,10 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
         Runs a full package database refresh before listing. Set to ``False`` to
         disable running the refresh.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
 
         In previous versions of Salt, ``refresh`` defaulted to ``False``. This was
-        changed to default to ``True`` in the Nitrogen release to make the behavior
+        changed to default to ``True`` in the 2017.7.0 release to make the behavior
         more consistent with the other package modules, which all default to ``True``.
 
     CLI Example:

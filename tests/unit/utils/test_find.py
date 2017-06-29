@@ -10,9 +10,9 @@ import stat
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
+from tests.support.paths import TMP
 
 # Import salt libs
-import tests.integration as integration
 import salt.ext.six as six
 import salt.utils
 import salt.utils.find
@@ -294,7 +294,7 @@ class TestGrepOption(TestCase):
 
     def setUp(self):
         super(TestGrepOption, self).setUp()
-        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        self.tmpdir = tempfile.mkdtemp(dir=TMP)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -339,7 +339,7 @@ class TestPrintOption(TestCase):
 
     def setUp(self):
         super(TestPrintOption, self).setUp()
-        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        self.tmpdir = tempfile.mkdtemp(dir=TMP)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -443,7 +443,7 @@ class TestFinder(TestCase):
 
     def setUp(self):
         super(TestFinder, self).setUp()
-        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        self.tmpdir = tempfile.mkdtemp(dir=TMP)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)

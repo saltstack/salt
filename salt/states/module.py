@@ -163,10 +163,11 @@ functions at once the following way:
           - user: myuser
           - opts: '--all'
 
-By default this behaviour is not turned on. In ordder to do so, please add the following
+By default this behaviour is not turned on. In order to do so, please add the following
 configuration to the minion:
 
 .. code-block:: yaml
+
     use_superseded:
       - module.run
 
@@ -214,11 +215,12 @@ def wait(name, **kwargs):
 watch = salt.utils.alias_function(wait, 'watch')
 
 
-@with_deprecated(globals(), "Oxygen", policy=with_deprecated.OPT_IN)
+@with_deprecated(globals(), "Sodium", policy=with_deprecated.OPT_IN)
 def run(**kwargs):
     '''
     Run a single module function or a range of module functions in a batch.
-    Supersedes `module.run` function, which requires `m_` prefix to function-specific parameters.
+    Supersedes ``module.run`` function, which requires ``m_`` prefix to
+    function-specific parameters.
 
     :param returner:
         Specify a common returner for the whole batch to send the return data
@@ -227,8 +229,9 @@ def run(**kwargs):
         Pass any arguments needed to execute the function(s)
 
     .. code-block:: yaml
+
       some_id_of_state:
-        module.xrun:
+        module.run:
           - network.ip_addrs:
             - interface: eth0
           - cloud.create:
@@ -337,7 +340,7 @@ def _call_function(name, returner=None, **kwargs):
 
 def _run(name, **kwargs):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
        Function name stays the same, behaviour will change.
 
     Run a single module function
@@ -424,16 +427,30 @@ def _run(name, **kwargs):
         ret['result'] = False
         return ret
 
-    if aspec.varargs and aspec.varargs in kwargs:
-        varargs = kwargs.pop(aspec.varargs)
+    if aspec.varargs:
+        if aspec.varargs == 'name':
+            rarg = 'm_name'
+        elif aspec.varargs == 'fun':
+            rarg = 'm_fun'
+        elif aspec.varargs == 'names':
+            rarg = 'm_names'
+        elif aspec.varargs == 'state':
+            rarg = 'm_state'
+        elif aspec.varargs == 'saltenv':
+            rarg = 'm_saltenv'
+        else:
+            rarg = aspec.varargs
 
-        if not isinstance(varargs, list):
-            msg = "'{0}' must be a list."
-            ret['comment'] = msg.format(aspec.varargs)
-            ret['result'] = False
-            return ret
+        if rarg in kwargs:
+            varargs = kwargs.pop(rarg)
 
-        args.extend(varargs)
+            if not isinstance(varargs, list):
+                msg = "'{0}' must be a list."
+                ret['comment'] = msg.format(aspec.varargs)
+                ret['result'] = False
+                return ret
+
+            args.extend(varargs)
 
     nkwargs = {}
     if aspec.keywords and aspec.keywords in kwargs:

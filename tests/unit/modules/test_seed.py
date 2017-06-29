@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 import os
 import shutil
+import uuid
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -18,6 +19,7 @@ from tests.support.mock import (
 
 
 # Import Salt Libs
+import salt.utils
 import salt.utils.odict
 import salt.modules.seed as seed
 
@@ -37,7 +39,7 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
             ddd['b'] = 'b'
             ddd['a'] = 'b'
             data = seed.mkconfig(ddd, approve_key=False)
-            with open(data['config']) as fic:
+            with salt.utils.fopen(data['config']) as fic:
                 fdata = fic.read()
                 self.assertEqual(fdata, 'b: b\na: b\nmaster: foo\n')
 
@@ -46,12 +48,13 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
         Test to update and get the random script to a random place
         '''
         with patch.dict(seed.__salt__,
-                        {'config.gather_bootstrap_script': MagicMock()}):
-            with patch.object(os.path, 'join', return_value='A'):
+                        {'config.gather_bootstrap_script': MagicMock(return_value='BS_PATH/BS')}):
+            with patch.object(uuid, 'uuid4', return_value='UUID'):
                 with patch.object(os.path, 'exists', return_value=True):
                     with patch.object(os, 'chmod', return_value=None):
                         with patch.object(shutil, 'copy', return_value=None):
-                            self.assertEqual(seed.prep_bootstrap('mpt'), ('A', 'A'))
+                            self.assertEqual(seed.prep_bootstrap('MPT'), ('MPT/tmp/UUID/BS', '/tmp/UUID'))
+                            self.assertEqual(seed.prep_bootstrap('/MPT'), ('/MPT/tmp/UUID/BS', '/tmp/UUID'))
 
     def test_apply_(self):
         '''

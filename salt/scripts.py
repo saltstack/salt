@@ -283,7 +283,7 @@ def proxy_minion_process(queue):
     sys.exit(status)
 
 
-def salt_proxy_minion():
+def salt_proxy():
     '''
     Start a proxy minion.
     '''

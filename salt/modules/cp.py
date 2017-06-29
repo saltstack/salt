@@ -5,6 +5,8 @@ Minion side functions for salt-cp
 
 # Import python libs
 from __future__ import absolute_import
+import base64
+import errno
 import os
 import logging
 import fnmatch
@@ -14,6 +16,7 @@ import salt.minion
 import salt.fileclient
 import salt.utils
 import salt.utils.files
+import salt.utils.gzip_util
 import salt.utils.url
 import salt.crypt
 import salt.transport
@@ -46,7 +49,7 @@ def _gather_pillar(pillarenv, pillar_override):
         __grains__,
         __opts__['id'],
         __opts__['environment'],
-        pillar=pillar_override,
+        pillar_override=pillar_override,
         pillarenv=pillarenv
     )
     ret = pillar.compile_pillar()
@@ -55,33 +58,69 @@ def _gather_pillar(pillarenv, pillar_override):
     return ret
 
 
-def recv(files, dest):
+def recv(dest, chunk, append=False, compressed=True, mode=None):
     '''
-    Used with salt-cp, pass the files dict, and the destination.
-
-    This function receives small fast copy files from the master via salt-cp.
-    It does not work via the CLI.
+    This function receives files copied to the minion using ``salt-cp`` and is
+    not intended to be used directly on the CLI.
     '''
-    ret = {}
-    for path, data in six.iteritems(files):
-        if os.path.basename(path) == os.path.basename(dest) \
-                and not os.path.isdir(dest):
-            final = dest
-        elif os.path.isdir(dest):
-            final = os.path.join(dest, os.path.basename(path))
-        elif os.path.isdir(os.path.dirname(dest)):
-            final = dest
-        else:
-            return 'Destination unavailable'
+    if 'retcode' not in __context__:
+        __context__['retcode'] = 0
 
+    def _error(msg):
+        __context__['retcode'] = 1
+        return msg
+
+    if chunk is None:
+        # dest is an empty dir and needs to be created
         try:
-            with salt.utils.fopen(final, 'w+') as fp_:
-                fp_.write(data)
-            ret[final] = True
-        except IOError:
-            ret[final] = False
+            os.makedirs(dest)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST:
+                if os.path.isfile(dest):
+                    return 'Path exists and is a file'
+            else:
+                return _error(exc.__str__())
+        return True
 
-    return ret
+    chunk = base64.b64decode(chunk)
+
+    open_mode = 'ab' if append else 'wb'
+    try:
+        fh_ = salt.utils.fopen(dest, open_mode)  # pylint: disable=W8470
+    except (IOError, OSError) as exc:
+        if exc.errno != errno.ENOENT:
+            # Parent dir does not exist, we need to create it
+            return _error(exc.__str__())
+        try:
+            os.makedirs(os.path.dirname(dest))
+        except (IOError, OSError) as makedirs_exc:
+            # Failed to make directory
+            return _error(makedirs_exc.__str__())
+        fh_ = salt.utils.fopen(dest, open_mode)  # pylint: disable=W8470
+
+    try:
+        # Write the chunk to disk
+        fh_.write(salt.utils.gzip_util.uncompress(chunk) if compressed
+                  else chunk)
+    except (IOError, OSError) as exc:
+        # Write failed
+        return _error(exc.__str__())
+    else:
+        # Write successful
+        if not append and mode is not None:
+            # If this is the first chunk we're writing, set the mode
+            #log.debug('Setting mode for %s to %s', dest, oct(mode))
+            log.debug('Setting mode for %s to %s', dest, mode)
+            try:
+                os.chmod(dest, mode)
+            except OSError:
+                return _error(exc.__str__())
+        return True
+    finally:
+        try:
+            fh_.close()
+        except AttributeError:
+            pass
 
 
 def _mk_client():
@@ -170,6 +209,9 @@ def get_file(path,
              gzip=None,
              **kwargs):
     '''
+    .. versionchanged:: Oxygen
+        ``dest`` can now be a directory
+
     Used to get a single file from the salt master
 
     CLI Example:
@@ -281,6 +323,9 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, **kwargs):
 
 def get_url(path, dest='', saltenv='base', makedirs=False):
     '''
+    .. versionchanged:: Oxygen
+        ``dest`` can now be a directory
+
     Used to get a single file from a URL.
 
     path
@@ -345,9 +390,11 @@ def get_file_str(path, saltenv='base'):
     '''
     fn_ = cache_file(path, saltenv)
     if isinstance(fn_, six.string_types):
-        with salt.utils.fopen(fn_, 'r') as fp_:
-            data = fp_.read()
-        return data
+        try:
+            with salt.utils.fopen(fn_, 'r') as fp_:
+                return fp_.read()
+        except IOError:
+            return False
     return fn_
 
 
@@ -630,6 +677,28 @@ def hash_file(path, saltenv='base'):
         saltenv = senv
 
     return _client().hash_file(path, saltenv)
+
+
+def stat_file(path, saltenv='base', octal=True):
+    '''
+    Return the permissions of a file, to get the permissions of a file on the
+    salt master file server prepend the path with salt://<file on server>
+    otherwise, prepend the file with / for a local file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.stat_file salt://path/to/file
+    '''
+    path, senv = salt.utils.url.split_env(path)
+    if senv:
+        saltenv = senv
+
+    stat = _client().hash_and_stat_file(path, saltenv)[1]
+    if stat is None:
+        return stat
+    return salt.utils.st_mode_to_octal(stat[0]) if octal is True else stat[0]
 
 
 def push(path, keep_symlinks=False, upload_path=None, remove_source=False):

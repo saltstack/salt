@@ -14,8 +14,8 @@ import logging
 import os.path
 import pprint
 import socket
-import urllib
 import yaml
+import re
 
 import ssl
 try:
@@ -44,6 +44,7 @@ import salt.config
 import salt.version
 from salt._compat import ElementTree as ET
 from salt.template import compile_template
+from salt.utils.decorators import jinja_filter
 from salt import syspaths
 
 # Import 3rd party libs
@@ -54,6 +55,7 @@ import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.parse import splitquery
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module
 
 # Don't need a try/except block, since Salt depends on tornado
@@ -89,6 +91,7 @@ log = logging.getLogger(__name__)
 USERAGENT = 'Salt/{0}'.format(salt.version.__version__)
 
 
+@jinja_filter('http_query')
 def query(url,
           method='GET',
           params=None,
@@ -121,7 +124,6 @@ def query(url,
           port=80,
           opts=None,
           backend=None,
-          requests_lib=None,
           ca_bundle=None,
           verify_ssl=None,
           cert=None,
@@ -154,18 +156,11 @@ def query(url,
             opts = {}
 
     if not backend:
-        if requests_lib is not None or 'requests_lib' in opts:
-            salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
-                                            'please change your config')
-            # beware the named arg above
-            if 'backend' in opts:
-                backend = opts['backend']
-            elif requests_lib or opts.get('requests_lib', False):
-                backend = 'requests'
-            else:
-                backend = 'tornado'
-        else:
-            backend = opts.get('backend', 'tornado')
+        backend = opts.get('backend', 'tornado')
+
+    match = re.match(r'https?://((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)($|/)', url)
+    if not match:
+        salt.utils.refresh_dns()
 
     if backend == 'requests':
         if HAS_REQUESTS is False:
@@ -179,7 +174,7 @@ def query(url,
 
     # Some libraries don't support separation of url and GET parameters
     # Don't need a try/except block, since Salt depends on tornado
-    url_full = tornado.httputil.url_concat(url, params)
+    url_full = tornado.httputil.url_concat(url, params) if params else url
 
     if ca_bundle is None:
         ca_bundle = get_ca_bundle(opts)
@@ -448,7 +443,7 @@ def query(url,
                           'not valid: {0}'.format(cert))
 
         if isinstance(data, dict):
-            data = urllib.urlencode(data)
+            data = _urlencode(data)
 
         if verify_ssl:
             req_kwargs['ca_certs'] = ca_bundle

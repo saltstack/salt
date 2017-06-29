@@ -15,9 +15,10 @@ from random import randint
 import grp
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, requires_system_grains
+from tests.support.helpers import destructiveTest, requires_system_grains, skip_if_not_root
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
@@ -35,9 +36,8 @@ else:
 
 
 @destructiveTest
-@skipIf(os.geteuid() != 0, 'you must be root to run this test')
-class UserTest(integration.ModuleCase,
-               integration.SaltReturnAssertsMixIn):
+@skip_if_not_root
+class UserTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     test for user absent
     '''
@@ -104,7 +104,8 @@ class UserTest(integration.ModuleCase,
         ret = self.run_state('user.present', name=self.user_name,
                              home=self.user_home)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(self.user_home))
+        if not salt.utils.is_darwin():
+            self.assertTrue(os.path.isdir(self.user_home))
 
     @requires_system_grains
     def test_user_present_gid_from_name_default(self, grains=None):
@@ -127,7 +128,8 @@ class UserTest(integration.ModuleCase,
         self.assertReturnNonEmptySaltType(ret)
         group_name = grp.getgrgid(ret['gid']).gr_name
 
-        self.assertTrue(os.path.isdir(self.user_home))
+        if not salt.utils.is_darwin():
+            self.assertTrue(os.path.isdir(self.user_home))
         if grains['os_family'] in ('Suse',):
             self.assertEqual(group_name, 'users')
         elif grains['os_family'] == 'MacOS':
@@ -151,7 +153,8 @@ class UserTest(integration.ModuleCase,
         self.assertReturnNonEmptySaltType(ret)
         group_name = grp.getgrgid(ret['gid']).gr_name
 
-        self.assertTrue(os.path.isdir(self.user_home))
+        if not salt.utils.is_darwin():
+            self.assertTrue(os.path.isdir(self.user_home))
         self.assertEqual(group_name, self.user_name)
         ret = self.run_state('user.absent', name=self.user_name)
         self.assertSaltTrueReturn(ret)

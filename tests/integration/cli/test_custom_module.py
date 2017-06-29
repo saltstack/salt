@@ -37,11 +37,11 @@
 # Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Libs
-import tests.integration as integration
+# Import test Libs
+from tests.support.case import SSHCase
 
 
-class SSHCustomModuleTest(integration.SSHCase):
+class SSHCustomModuleTest(SSHCase):
     '''
     Test sls with custom module functionality using ssh
     '''

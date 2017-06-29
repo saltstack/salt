@@ -16,15 +16,16 @@ import threading
 from salt.ext.six.moves import queue
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 from tests.support.unit import skipIf
+from tests.support.paths import TMP
 
 # Import Salt Libs
 import salt.utils
 import salt.utils.event
 
 
-class StateRunnerTest(integration.ShellCase):
+class StateRunnerTest(ShellCase):
     '''
     Test the state runner.
     '''
@@ -101,7 +102,7 @@ class StateRunnerTest(integration.ShellCase):
 
 
 @skipIf(salt.utils.is_windows(), '*NIX-only test')
-class OrchEventTest(integration.ShellCase):
+class OrchEventTest(ShellCase):
     '''
     Tests for orchestration events
     '''
@@ -120,14 +121,14 @@ class OrchEventTest(integration.ShellCase):
             dir=self.master_d_dir,
             delete=True,
         )
-        self.base_env = tempfile.mkdtemp(dir=integration.TMP)
-
-    def tearDown(self):
-        shutil.rmtree(self.base_env)
-        self.conf.close()
+        self.base_env = tempfile.mkdtemp(dir=TMP)
+        self.addCleanup(shutil.rmtree, self.base_env)
+        self.addCleanup(self.conf.close)
+        for attr in ('timeout', 'master_d_dir', 'conf', 'base_env'):
+            self.addCleanup(delattr, self, attr)
         # Force a reload of the configuration now that our temp config file has
         # been removed.
-        self.run_run_plus('test.arg', __reload_config=True)
+        self.addCleanup(self.run_run_plus, 'test.arg', __reload_config=True)
 
     def alarm_handler(self, signal, frame):
         raise Exception('Timeout of {0} seconds reached'.format(self.timeout))
@@ -208,4 +209,5 @@ class OrchEventTest(integration.ShellCase):
                         self.assertTrue('__jid__' in ret[job])
                     break
         finally:
+            del listener
             signal.alarm(0)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage users with the useradd command
+Manage users with the pw command
 
 .. important::
     If you feel that Salt should be using this module to manage users on a
@@ -475,7 +475,7 @@ def get_loginclass(name):
     userinfo = __salt__['cmd.run_stdout'](['pw', 'usershow', '-n', name])
     userinfo = userinfo.split(':')
 
-    return {'loginclass': userinfo[4] if len(userinfo) == 10 else ''}
+    return userinfo[4] if len(userinfo) == 10 else ''
 
 
 def list_groups(name):

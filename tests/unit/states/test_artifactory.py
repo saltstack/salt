@@ -54,4 +54,4 @@ class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
                           MagicMock(side_effect=Exception('error'))):
             ret = artifactory.downloaded(name, artifact)
             self.assertEqual(ret['result'], False)
-            self.assertEqual(repr(ret['comment']), repr(Exception('error')))
+            self.assertEqual(ret['comment'], 'error')

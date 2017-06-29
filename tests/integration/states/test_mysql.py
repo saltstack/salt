@@ -8,9 +8,10 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
@@ -34,8 +35,7 @@ if not salt.utils.which('mysqladmin'):
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
-class MysqlDatabaseStateTest(integration.ModuleCase,
-                             integration.SaltReturnAssertsMixIn):
+class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the mysql_database state
     '''
@@ -240,8 +240,7 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
-class MysqlGrantsStateTest(integration.ModuleCase,
-                           integration.SaltReturnAssertsMixIn):
+class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the mysql_grants states
     '''

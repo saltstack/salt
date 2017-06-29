@@ -2,7 +2,7 @@
 '''
 Management of Docker volumes
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends: docker_ Python module
 
@@ -28,7 +28,7 @@ Management of Docker volumes
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 
 These states were moved from the :mod:`docker <salt.states.docker>` state
-module (formerly called **dockerng**) in the Nitrogen release.
+module (formerly called **dockerng**) in the 2017.7.0 release.
 '''
 from __future__ import absolute_import
 import logging
@@ -41,6 +41,7 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # Define the module's virtual name
 __virtualname__ = 'docker_volume'
+__virtual_aliases__ = ('moby_volume',)
 
 
 def __virtual__():
@@ -74,7 +75,7 @@ def present(name, driver=None, driver_opts=None, force=False):
         This state no longer deletes and re-creates a volume if the existing
         volume's driver does not match the ``driver`` parameter (unless the
         ``force`` parameter is set to ``True``).
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         This state was renamed from **docker.volume_present** to **docker_volume.present**
 
     name
@@ -196,7 +197,7 @@ def absent(name, driver=None):
     Ensure that a volume is absent.
 
     .. versionadded:: 2015.8.4
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         This state was renamed from **docker.volume_absent** to **docker_volume.absent**
 
     name

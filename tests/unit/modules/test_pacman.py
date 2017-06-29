@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -20,14 +21,12 @@ import salt.modules.pacman as pacman
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PacmanTestCase(TestCase):
+class PacmanTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pacman
     '''
-
-    def setUp(self):
-        pacman.__salt__ = {}
-        pacman.__context__ = {}
+    def setup_loader_modules(self):
+        return {pacman: {}}
 
     def test_list_pkgs(self):
         '''

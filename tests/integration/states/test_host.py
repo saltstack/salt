@@ -9,21 +9,23 @@ import os
 import shutil
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.paths import FILES, TMP
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
 
-HFILE = os.path.join(integration.TMP, 'hosts')
+HFILE = os.path.join(TMP, 'hosts')
 
 
-class HostTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+class HostTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the host state
     '''
 
     def setUp(self):
-        shutil.copyfile(os.path.join(integration.FILES, 'hosts'), HFILE)
+        shutil.copyfile(os.path.join(FILES, 'hosts'), HFILE)
         super(HostTest, self).setUp()
 
     def tearDown(self):

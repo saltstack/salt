@@ -7,9 +7,9 @@ integration tests for mac_service
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import salt libs
 import salt.utils
@@ -18,9 +18,8 @@ import salt.utils
 @skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
 @skipIf(not salt.utils.which('launchctl'), 'Test requires launchctl binary')
 @skipIf(not salt.utils.which('plutil'), 'Test requires plutil binary')
-@skipIf(salt.utils.get_uid(salt.utils.get_user()) != 0,
-        'Test requires root')
-class MacServiceModuleTest(integration.ModuleCase):
+@skip_if_not_root
+class MacServiceModuleTest(ModuleCase):
     '''
     Validate the mac_service module
     '''

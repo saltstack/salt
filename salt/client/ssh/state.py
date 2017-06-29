@@ -78,7 +78,7 @@ class SSHHighState(salt.state.BaseHighState):
         '''
         return
 
-    def _ext_nodes(self):
+    def _master_tops(self):
         '''
         Evaluate master_tops locally
         '''
@@ -158,7 +158,7 @@ def salt_refs(data, ret=None):
     return ret
 
 
-def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None):
+def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, roster_grains=None):
     '''
     Generate the execution package from the saltenv file refs and a low state
     data structure
@@ -167,6 +167,7 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None):
     trans_tar = salt.utils.files.mkstemp()
     lowfn = os.path.join(gendir, 'lowstate.json')
     pillarfn = os.path.join(gendir, 'pillar.json')
+    roster_grainsfn = os.path.join(gendir, 'roster_grains.json')
     sync_refs = [
             [salt.utils.url.create('_modules')],
             [salt.utils.url.create('_states')],
@@ -181,14 +182,17 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None):
     if pillar:
         with salt.utils.fopen(pillarfn, 'w+') as fp_:
             fp_.write(json.dumps(pillar))
+    if roster_grains:
+        with salt.utils.fopen(roster_grainsfn, 'w+') as fp_:
+            fp_.write(json.dumps(roster_grains))
 
     if id_ is None:
         id_ = ''
     try:
-        cachedir = os.path.join(opts['cachedir'], 'salt-ssh', id_).rstrip(os.sep)
+        cachedir = os.path.join('salt-ssh', id_).rstrip(os.sep)
     except AttributeError:
         # Minion ID should always be a str, but don't let an int break this
-        cachedir = os.path.join(opts['cachedir'], 'salt-ssh', str(id_)).rstrip(os.sep)
+        cachedir = os.path.join('salt-ssh', str(id_)).rstrip(os.sep)
 
     for saltenv in file_refs:
         # Location where files in this saltenv will be cached
@@ -218,7 +222,7 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None):
                     files = ''
                 if files:
                     for filename in files:
-                        fn = filename[len(cache_dest):].strip('/')
+                        fn = filename[len(file_client.get_cachedir(cache_dest)):].strip('/')
                         tgt = os.path.join(
                                 env_root,
                                 short,

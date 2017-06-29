@@ -10,7 +10,8 @@ import random
 import string
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
 from tests.support.unit import skipIf
 
@@ -34,7 +35,7 @@ PROVIDER_NAME = 'gogrid'
 
 
 @skipIf(True, 'waiting on bug report fixes from #13365')
-class GoGridTest(integration.ShellCase):
+class GoGridTest(ShellCase):
     '''
     Integration tests for the GoGrid cloud provider in Salt-Cloud
     '''
@@ -59,7 +60,7 @@ class GoGridTest(integration.ShellCase):
         # check if client_key and api_key are present
         config = cloud_providers_config(
             os.path.join(
-                integration.FILES,
+                FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'

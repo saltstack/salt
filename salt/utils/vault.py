@@ -137,10 +137,11 @@ def make_request_with_profile(method, resource, profile, **args):
     details.
     '''
     salt.utils.warn_until(
-        'Oxygen',
+        'Fluorine',
         'Specifying Vault connection data within a \'profile\' has been '
         'deprecated. Please see the documentation for details on the new '
-        'configuration schema.'
+        'configuration schema. Support for this function will be removed '
+        'in Salt Fluorine.'
     )
     url = '{0}://{1}:{2}/v1/{3}'.format(
         profile.get('vault.scheme', 'https'),

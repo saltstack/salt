@@ -7,8 +7,10 @@ Module for managing Windows Updates using the Windows Update Agent.
 :depends:
         - salt.utils.win_update
 '''
+
 # Import Python libs
 from __future__ import absolute_import
+from __future__ import unicode_literals
 import logging
 
 # Import Salt libs
@@ -55,7 +57,7 @@ def available(software=True,
               severities=None,
               ):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     List updates that match the passed criteria.
 
@@ -179,7 +181,7 @@ def available(software=True,
 
 def list_update(name, download=False, install=False):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
        Use :func:`get` instead
     Returns details for all updates that match the search criteria
 
@@ -247,14 +249,14 @@ def list_update(name, download=False, install=False):
     '''
     salt.utils.warn_until(
         'Fluorine',
-        'This function is replaced by \'get\' as of Salt Nitrogen. This'
+        'This function is replaced by \'get\' as of Salt 2017.7.0. This'
         'warning will be removed in Salt Fluorine.')
     return get(name, download, install)
 
 
 def get(name, download=False, install=False):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Returns details for all updates that match the search criteria
 
@@ -348,7 +350,7 @@ def list_updates(software=True,
                  download=False,
                  install=False):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
        Use :func:`list` instead
 
     Returns a detailed list of available updates or a summary. If download or
@@ -463,7 +465,7 @@ def list_updates(software=True,
     '''
     salt.utils.warn_until(
         'Fluorine',
-        'This function is replaced by \'list\' as of Salt Nitrogen. This'
+        'This function is replaced by \'list\' as of Salt 2017.7.0. This'
         'warning will be removed in Salt Fluorine.')
     return list(software, drivers, summary, skip_installed, categories,
                 severities, download, install)
@@ -478,7 +480,7 @@ def list(software=True,
          download=False,
          install=False):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Returns a detailed list of available updates or a summary. If download or
     install is True the same list will be downloaded and/or installed.
@@ -616,7 +618,7 @@ def list(software=True,
 
 def download_update(name):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
        Use :func:`download` instead
 
     Downloads a single update.
@@ -643,14 +645,14 @@ def download_update(name):
     '''
     salt.utils.warn_until(
         'Fluorine',
-        'This function is replaced by \'download\' as of Salt Nitrogen. This'
+        'This function is replaced by \'download\' as of Salt 2017.7.0. This'
         'warning will be removed in Salt Fluorine.')
     return download(name)
 
 
 def download_updates(names):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
        Use :func:`download` instead
 
     Downloads updates that match the list of passed identifiers. It's easier to
@@ -674,14 +676,14 @@ def download_updates(names):
     '''
     salt.utils.warn_until(
         'Fluorine',
-        'This function is replaced by \'download\' as of Salt Nitrogen. This'
+        'This function is replaced by \'download\' as of Salt 2017.7.0. This'
         'warning will be removed in Salt Fluorine.')
     return download(names)
 
 
 def download(names):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Downloads updates that match the list of passed identifiers. It's easier to
     use this function by using list_updates and setting install=True.
@@ -721,7 +723,7 @@ def download(names):
 
 def install_update(name):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
        Use :func:`install` instead
 
     Installs a single update
@@ -748,14 +750,14 @@ def install_update(name):
     '''
     salt.utils.warn_until(
         'Fluorine',
-        'This function is replaced by \'install\' as of Salt Nitrogen. This'
+        'This function is replaced by \'install\' as of Salt 2017.7.0. This'
         'warning will be removed in Salt Fluorine.')
     return install(name)
 
 
 def install_updates(names):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
        Use :func:`install` instead
 
     Installs updates that match the list of identifiers. It may be easier to use
@@ -779,14 +781,14 @@ def install_updates(names):
     '''
     salt.utils.warn_until(
         'Fluorine',
-        'This function is replaced by \'install\' as of Salt Nitrogen. This'
+        'This function is replaced by \'install\' as of Salt 2017.7.0. This'
         'warning will be removed in Salt Fluorine.')
     return install(names)
 
 
 def install(names):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Installs updates that match the list of identifiers. It may be easier to use
     the list_updates function and set install=True.
@@ -826,7 +828,7 @@ def install(names):
 
 def uninstall(names):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Uninstall updates.
 

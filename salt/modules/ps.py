@@ -17,6 +17,7 @@ import re
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
+import salt.utils.decorators as decorators
 import salt.ext.six as six
 # pylint: disable=import-error
 try:
@@ -640,7 +641,7 @@ def get_users():
 
 def lsof(name):
     '''
-    Retrieve the lsof informations of the given process name.
+    Retrieve the lsof information of the given process name.
 
     CLI Example:
 
@@ -655,9 +656,10 @@ def lsof(name):
     return ret
 
 
+@decorators.which('netstat')
 def netstat(name):
     '''
-    Retrieve the netstat informations of the given process name.
+    Retrieve the netstat information of the given process name.
 
     CLI Example:
 
@@ -670,6 +672,31 @@ def netstat(name):
     found_infos = []
     ret = []
     for info in netstat_infos.splitlines():
+        if info.find(sanitize_name) != -1:
+            found_infos.append(info)
+    ret.extend([sanitize_name, found_infos])
+    return ret
+
+
+@decorators.which('ss')
+def ss(name):
+    '''
+    Retrieve the ss information of the given process name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.ss apache2
+
+    .. versionadded:: 2016.11.6
+
+    '''
+    sanitize_name = str(name)
+    ss_infos = __salt__['cmd.run']("ss -neap")
+    found_infos = []
+    ret = []
+    for info in ss_infos.splitlines():
         if info.find(sanitize_name) != -1:
             found_infos.append(info)
     ret.extend([sanitize_name, found_infos])
