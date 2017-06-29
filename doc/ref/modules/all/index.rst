@@ -298,6 +298,7 @@ execution modules
     opkg
     oracle
     osquery
+    out
     pacman
     pagerduty
     pagerduty_util
