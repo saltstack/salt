@@ -10,6 +10,7 @@ import inspect
 import logging
 
 from salt.utils.odict import OrderedDict
+from salt.utils.schema import Prepareable
 import salt.ext.six as six
 
 REQUISITES = ('listen', 'onchanges', 'onfail', 'require', 'watch', 'use', 'listen_in', 'onchanges_in', 'onfail_in', 'require_in', 'watch_in', 'use_in')
@@ -288,20 +289,30 @@ class SaltObject(object):
         return __wrapper__()
 
 
-class MapMeta(type):
+class MapMeta(six.with_metaclass(Prepareable, type)):
     '''
     This is the metaclass for our Map class, used for building data maps based
     off of grain data.
     '''
+    @classmethod
+    def __prepare__(metacls, name, bases):
+        return OrderedDict()
+
+    def __new__(cls, name, bases, attrs):
+        c = type.__new__(cls, name, bases, attrs)
+        c.__ordered_attrs__ = attrs.keys()
+        return c
+
     def __init__(cls, name, bases, nmspc):
         cls.__set_attributes__()
         super(MapMeta, cls).__init__(name, bases, nmspc)
 
     def __set_attributes__(cls):
-        match_groups = OrderedDict([])
+        match_info = []
+        grain_targets = set()
 
         # find all of our filters
-        for item in cls.__dict__:
+        for item in cls.__ordered_attrs__:
             if item[0] == '_':
                 continue
 
@@ -313,8 +324,7 @@ class MapMeta(type):
 
             # which grain are we filtering on
             grain = getattr(filt, '__grain__', 'os_family')
-            if grain not in match_groups:
-                match_groups[grain] = OrderedDict([])
+            grain_targets.add(grain)
 
             # does the object pointed to have a __match__ attribute?
             # if so use it, otherwise use the name of the object
@@ -325,19 +335,22 @@ class MapMeta(type):
             else:
                 match = item
 
-            match_groups[grain][match] = OrderedDict([])
+            match_attrs = {}
             for name in filt.__dict__:
-                if name[0] == '_':
-                    continue
+                if name[0] != '_':
+                    match_attrs[name] = filt.__dict__[name]
 
-                match_groups[grain][match][name] = filt.__dict__[name]
+            match_info.append((grain, match, match_attrs))
 
+        # Check for matches and update the attrs dict accordingly
         attrs = {}
-        for grain in match_groups:
-            filtered = Map.__salt__['grains.filter_by'](match_groups[grain],
-                                                        grain=grain)
-            if filtered:
-                attrs.update(filtered)
+        if match_info:
+            grain_vals = Map.__salt__['grains.item'](*grain_targets)
+            for grain, match, match_attrs in match_info:
+                if grain not in grain_vals:
+                    continue
+                if grain_vals[grain] == match:
+                    attrs.update(match_attrs)
 
         if hasattr(cls, 'merge'):
             pillar = Map.__salt__['pillar.get'](cls.merge)

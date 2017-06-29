@@ -10,7 +10,7 @@ import random
 import string
 
 # Import Salt Libs
-from salt.config import cloud_providers_config
+from salt.config import cloud_providers_config, cloud_config
 
 # Import Salt Testing LIbs
 from tests.support.case import ShellCase
@@ -90,12 +90,25 @@ class VMWareTest(ShellCase):
         Tests creating and deleting an instance on vmware and installing salt
         '''
         # create the instance
+        profile = os.path.join(
+                FILES,
+                'conf',
+                'cloud.profiles.d',
+                PROVIDER_NAME + '.conf'
+            )
+
+        profile_config = cloud_config(profile)
+        disk_datastore = profile_config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
+
         instance = self.run_cloud('-p vmware-test {0}'.format(INSTANCE_NAME), timeout=TIMEOUT)
         ret_str = '{0}:'.format(INSTANCE_NAME)
+        disk_datastore_str = '                [{0}] {1}/Hard disk 2-flat.vmdk'.format(disk_datastore, INSTANCE_NAME)
 
         # check if instance returned with salt installed
         try:
             self.assertIn(ret_str, instance)
+            self.assertIn(disk_datastore_str, instance,
+                          msg='Hard Disk 2 did not use the Datastore {0} '.format(disk_datastore))
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             raise

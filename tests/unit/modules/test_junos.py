@@ -28,7 +28,7 @@ except ImportError:
 import salt.modules.junos as junos
 
 
-@skipIf(not HAS_JUNOS, 'Missing dependencies')
+@skipIf(not HAS_JUNOS, 'Install junos-eznc to be able to run this test.')
 class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
 
     def setup_loader_modules(self):
