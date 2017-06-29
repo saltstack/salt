@@ -375,7 +375,7 @@ def extracted(name,
 
         .. versionadded:: 2016.11.0
 
-    source_hash_update
+    source_hash_update : False
         Set this to ``True`` if archive should be extracted if source_hash has
         changed. This would extract regardless of the ``if_missing`` parameter.
 
@@ -844,10 +844,10 @@ def extracted(name,
     if source_hash:
         try:
             source_sum = __salt__['file.get_source_sum'](
-                 source=source_match,
-                 source_hash=source_hash,
-                 source_hash_name=source_hash_name,
-                 saltenv=__env__)
+                source=source_match,
+                source_hash=source_hash,
+                source_hash_name=source_hash_name,
+                saltenv=__env__)
         except CommandExecutionError as exc:
             ret['comment'] = exc.strerror
             return ret
@@ -868,7 +868,7 @@ def extracted(name,
             # Prevent a traceback from attempting to read from a directory path
             salt.utils.rm_rf(cached_source)
 
-    existing_cached_source_sum = _read_cached_checksum(cached_source) \
+    existing_cached_source_sum = _read_cached_checksum(cached_source)
 
     if source_is_local:
         # No need to download archive, it's local to the minion
@@ -935,14 +935,15 @@ def extracted(name,
                 )
                 return file_result
 
-        if source_hash:
-            _update_checksum(cached_source)
-
     else:
         log.debug(
             'Archive %s is already in cache',
             salt.utils.url.redact_http_basic_auth(source_match)
         )
+
+    if source_hash and source_hash_update and not skip_verify:
+        # Create local hash sum file if we're going to track sum update
+        _update_checksum(cached_source)
 
     if archive_format == 'zip' and not password:
         log.debug('Checking %s to see if it is password-protected',
@@ -1147,6 +1148,15 @@ def extracted(name,
     created_destdir = False
 
     if extraction_needed:
+        if source_is_local and source_hash and not skip_verify:
+            ret['result'] = __salt__['file.check_hash'](source_match, source_sum['hsum'])
+            if not ret['result']:
+                ret['comment'] = \
+                    '{0} does not match the desired source_hash {1}'.format(
+                        source_match, source_sum['hsum']
+                    )
+                return ret
+
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = \
