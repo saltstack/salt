@@ -13,7 +13,6 @@ import tempfile
 import time
 
 # Import salt libs
-import salt.utils
 import salt.modules.selinux
 from salt.exceptions import CommandExecutionError, FileLockError, MinionError
 
@@ -83,6 +82,9 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     Copy files from a source to a destination in an atomic way, and if
     specified cache the file.
     '''
+    # Explicit late import to avoid circular import
+    import salt.utils
+
     if not os.path.isfile(source):
         raise IOError(
             '[Errno 2] No such file or directory: {0}'.format(source)
@@ -260,6 +262,9 @@ def set_umask(mask):
     '''
     Temporarily set the umask and restore once the contextmanager exits
     '''
+    # Explicit late import to avoid circular import
+    import salt.utils
+
     if salt.utils.is_windows():
         # Don't attempt on Windows
         yield
