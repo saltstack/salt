@@ -2179,14 +2179,14 @@ def replace(path,
         if not_found_content is None:
             not_found_content = repl
         if prepend_if_not_found:
-            new_file.insert(0, not_found_content + b'\n')
+            new_file.insert(0, not_found_content + os.linesep)
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith(b'\n'):
-                    new_file[-1] += b'\n'
-            new_file.append(not_found_content + b'\n')
+                if not new_file[-1].endswith(os.linesep):
+                    new_file[-1] += os.linesep
+            new_file.append(not_found_content + os.linesep)
         has_changes = True
         if not dry_run:
             try:
@@ -2197,7 +2197,7 @@ def replace(path,
                 raise CommandExecutionError("Exception: {0}".format(exc))
             # write new content in the file while avoiding partial reads
             try:
-                fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
                 for line in new_file:
                     fh_.write(salt.utils.to_str(line))
             finally:
@@ -2369,7 +2369,7 @@ def blockreplace(path,
     try:
         fi_file = fileinput.input(path,
                     inplace=False, backup=False,
-                    bufsize=1, mode='r')
+                    bufsize=1, mode='rb')
         for line in fi_file:
 
             result = line
@@ -2386,12 +2386,12 @@ def blockreplace(path,
 
                         # Check for multi-line '\n' terminated content as split will
                         # introduce an unwanted additional new line.
-                        if content and content[-1] == '\n':
+                        if content and content[-1] == os.linesep:
                             content = content[:-1]
 
                         # push new block content in file
-                        for cline in content.split('\n'):
-                            new_file.append(cline + '\n')
+                        for cline in content.split(os.linesep):
+                            new_file.append(cline + os.linesep)
 
                         done = True
 
@@ -2419,25 +2419,25 @@ def blockreplace(path,
     if not done:
         if prepend_if_not_found:
             # add the markers and content at the beginning of file
-            new_file.insert(0, marker_end + '\n')
+            new_file.insert(0, marker_end + os.linesep)
             if append_newline is True:
-                new_file.insert(0, content + '\n')
+                new_file.insert(0, content + os.linesep)
             else:
                 new_file.insert(0, content)
-            new_file.insert(0, marker_start + '\n')
+            new_file.insert(0, marker_start + os.linesep)
             done = True
         elif append_if_not_found:
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith('\n'):
-                    new_file[-1] += '\n'
+                if not new_file[-1].endswith(os.linesep):
+                    new_file[-1] += os.linesep
             # add the markers and content at the end of file
-            new_file.append(marker_start + '\n')
+            new_file.append(marker_start + os.linesep)
             if append_newline is True:
-                new_file.append(content + '\n')
+                new_file.append(content + os.linesep)
             else:
                 new_file.append(content)
-            new_file.append(marker_end + '\n')
+            new_file.append(marker_end + os.linesep)
             done = True
         else:
             raise CommandExecutionError(
@@ -2468,7 +2468,7 @@ def blockreplace(path,
 
             # write new content in the file while avoiding partial reads
             try:
-                fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
                 for line in new_file:
                     fh_.write(line)
             finally:
