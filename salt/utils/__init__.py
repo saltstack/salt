@@ -33,6 +33,8 @@ import string
 import subprocess
 import getpass
 
+import salt.utils.files
+
 # Import 3rd-party libs
 from salt.ext import six
 # pylint: disable=import-error
@@ -3453,3 +3455,15 @@ def dequote(val):
     if is_quoted(val):
         return val[1:-1]
     return val
+
+
+def mkstemp(*args, **kwargs):
+    '''
+    Moved to salt.utils.files
+    '''
+    warn_until(
+        'Fluorine',
+        'salt.utils.mkstemp() has been moved to salt.utils.files.mkstemp(). '
+        'Please update references to use the new function name.'
+    )
+    return salt.utils.files.mkstemp(*args, **kwargs)
