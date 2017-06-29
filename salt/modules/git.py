@@ -169,7 +169,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             # force it into a list
             identity = [identity]
 
-        with salt.utils.files.set_umask(0o177):
+        with salt.utils.files.set_umask(0o077):
             # try each of the identities, independently
             tmp_identity_file = None
             for id_file in identity:
