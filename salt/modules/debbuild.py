@@ -60,8 +60,7 @@ def __virtual__():
         return (False, 'The debbuild module could not be loaded: unsupported OS family')
 
 
-def _check_repo_sign_utils_support():
-    util_name = 'debsign'
+def _check_repo_sign_utils_support(util_name):
     if salt.utils.which(util_name):
         return True
     else:
@@ -170,8 +169,8 @@ def _get_repo_dists_env(env):
         'ORIGIN': ('O', 'Origin', 'SaltStack'),
         'LABEL': ('O', 'Label', 'salt_debian'),
         'SUITE': ('O', 'Suite', 'stable'),
-        'VERSION': ('O', 'Version', '8.1'),
-        'CODENAME': ('M', 'Codename', 'jessie'),
+        'VERSION': ('O', 'Version', '9.0'),
+        'CODENAME': ('M', 'Codename', 'stretch'),
         'ARCHS': ('M', 'Architectures', 'i386 amd64 source'),
         'COMPONENTS': ('M', 'Components', 'main'),
         'DESCRIPTION': ('O', 'Description', 'SaltStack debian package repo'),
@@ -205,7 +204,7 @@ def _get_repo_dists_env(env):
         else:
             env_dists += '{0}: {1}\n'.format(key, value)
 
-    ## ensure mandatories are included
+    # ensure mandatories are included
     env_keys = list(env.keys())
     for key in env_keys:
         if key in dflts_keys and dflts_dict[key][0] == 'M' and key not in env_man_seen:
@@ -312,7 +311,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     for src in sources:
         _get_src(tree_base, src, saltenv)
 
-    #.dsc then assumes sources already build
+    # .dsc then assumes sources already build
     if spec_pathfile.endswith('.dsc'):
         for efile in os.listdir(tree_base):
             full = os.path.join(tree_base, efile)
@@ -578,7 +577,8 @@ def make_repo(repodir,
     with salt.utils.fopen(repoconfopts, 'w') as fow:
         fow.write('{0}'.format(repocfg_opts))
 
-    local_fingerprint = None
+    local_keygrip_to_use = None
+    local_key_fingerprint = None
     local_keyid = None
     phrase = ''
 
@@ -587,17 +587,15 @@ def make_repo(repodir,
     gpg_tty_info_file = '{0}/gpg-tty-info-salt'.format(gnupghome)
     gpg_tty_info_dict = {}
 
-    # test if using older than gnupg 2.1, env file exists
+    # if using older than gnupg 2.1, then env file exists
     older_gnupg = __salt__['file.file_exists'](gpg_info_file)
-
-    # interval of 0.125 is really too fast on some systems
-    interval = 0.5
+    log.debug('DGM make_repo older_gnupg \'{0}\''.format(older_gnupg))
 
     if keyid is not None:
         with salt.utils.fopen(repoconfdist, 'a') as fow:
             fow.write('SignWith: {0}\n'.format(keyid))
 
-        ## import_keys
+        # import_keys
         pkg_pub_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_pub_keyname', None))
         pkg_priv_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_priv_keyname', None))
 
@@ -619,11 +617,52 @@ def make_repo(repodir,
         # gpg keys should have been loaded as part of setup
         # retrieve specified key, obtain fingerprint and preset passphrase
         local_keys = __salt__['gpg.list_keys'](user=runas, gnupghome=gnupghome)
+        log.debug('DGM make_repo local_keys \'{0}\''.format(local_keys))
         for gpg_key in local_keys:
+            log.debug('DGM make_repo gpg_key \'{0}\''.format(gpg_key))
             if keyid == gpg_key['keyid'][8:]:
-                local_fingerprint = gpg_key['fingerprint']
+                local_keygrip_to_use = gpg_key['fingerprint']
+                local_key_fingerprint = gpg_key['fingerprint']
                 local_keyid = gpg_key['keyid']
+                log.debug('DGM make_repo local_keys local_keyid \'{0}\', local_keygrip_to_use \'{1}\', local_key_fingerprint \'{2}\''
+                            .format(local_keyid, local_keygrip_to_use, local_key_fingerprint))
                 break
+
+        get_gpg2_fingerprint = None
+        get_gpg2_keygrip = None
+        if not older_gnupg:
+            log.debug('DGM make_repo local_keys using gpg2 and keygrip')
+            _check_repo_sign_utils_support('gpg2')
+            _gpg2 = salt.utils.which('gpg2')
+            cmd = '{0} --with-keygrip --list-secret-keys'.format(_gpg2)
+            local_keys2 = __salt__['cmd.run'](cmd, runas=runas)
+            log.debug('DGM make_repo local_keys2 \'{0}\''.format(local_keys2))
+            local_keys2_list = local_keys2.splitlines()
+            log.debug('DGM make_repo local_keys2_list \'{0}\''.format(local_keys2_list))
+            lklist = iter(local_keys2_list)
+            try:
+                for line in lklist:
+                    log.debug('DGM make_repo local_keys2_list line \'{0}\''.format(line))
+                    if line.startswith('sec'):
+                        log.debug('DGM make_repo local_keys2_list found sec, want fingerprint, line \'{0}\''.format(line))
+                        line_fingerprint = next(lklist).lstrip().rstrip()
+                        log.debug('DGM make_repo local_keys2_list read fingerprint, line \'{0}\', local_key_fingerprint \'{1}\', line_fingerprint \'{2}\''
+                                    .format(line, local_key_fingerprint, line_fingerprint))
+                        if local_key_fingerprint == line_fingerprint:
+                            log.debug('DGM make_repo local_keys2_list found wanted fingerprint, line \'{0}\', local_key_fingerprint \'{1}\', line_fingerprint \'{2}\''
+                                    .format(line, local_key_fingerprint, line_fingerprint))
+                            lkeygrip = next(lklist).split('=')
+                            local_keygrip_to_use = lkeygrip[1].lstrip().rstrip()
+                            log.debug('DGM make_repo local_keys2_list get keygrip, line \'{0}\', lkeygrip \'{1}\', local_key_keygrip \'{2}\''.format(line, lkeygrip, local_keygrip_to_use))
+                            break
+            except StopIteration:
+                log.debug('DGM make_repo local_keys2_list keygrip was not found for \'{0}\''
+                    .format(local_key_fingerprint)
+                )
+                raise SaltInvocationError(
+                    'unable to find keygrip associated with fingerprint \'{0}\' for keyid \'{1}\''
+                    .format(local_key_fingerprint, local_keyid)
+                )
 
         if local_keyid is None:
             raise SaltInvocationError(
@@ -631,11 +670,7 @@ def make_repo(repodir,
                 .format(keyid, gnupghome)
             )
 
-        _check_repo_sign_utils_support()
-
-        if use_passphrase:
-            _check_repo_gpg_phrase_utils_support()
-            phrase = __salt__['pillar.get']('gpg_passphrase')
+        _check_repo_sign_utils_support('debsign')
 
         if older_gnupg:
             with salt.utils.fopen(gpg_info_file, 'r') as fow:
@@ -656,10 +691,37 @@ def make_repo(repodir,
                 __salt__['environ.setenv'](gpg_tty_info_dict)
                 break
 
-            ## sign_it_here
-            for file in os.listdir(repodir):
-                if file.endswith('.dsc'):
-                    abs_file = os.path.join(repodir, file)
+        if use_passphrase:
+            _check_repo_gpg_phrase_utils_support()
+            phrase = __salt__['pillar.get']('gpg_passphrase')
+            log.debug('DGM make_repo setting use_passphrase')
+#            cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --verbose --forget {0}'.format(local_keygrip_to_use)
+#            __salt__['cmd.run'](cmd, runas=runas)
+
+            cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --verbose --preset --passphrase "{0}" {1}'.format(phrase, local_keygrip_to_use)
+            __salt__['cmd.run'](cmd, runas=runas)
+
+
+    for debfile in os.listdir(repodir):
+        abs_file = os.path.join(repodir, debfile)
+        if debfile.endswith('.changes'):
+            os.remove(abs_file)
+
+        if debfile.endswith('.dsc'):
+            if older_gnupg:
+                if local_keyid is not None:
+                    cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, abs_file)
+                    __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
+
+                cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(codename, abs_file)
+                __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
+            else:
+                log.debug('DGM make_repo gnu2.1 signing dsc and deb \'{0}\''.format(abs_file))
+
+                # sign_it_here
+                # interval of 0.125 is really too fast on some systems
+                interval = 0.5
+                if local_keyid is not None:
                     number_retries = timeout / interval
                     times_looped = 0
                     error_msg = 'Failed to debsign file {0}'.format(abs_file)
@@ -669,6 +731,9 @@ def make_repo(repodir,
                         proc = salt.utils.vt.Terminal(
                             cmd,
                             shell=True,
+                            log_stdin=True,
+                            log_stdout=True,
+                            log_stderr=True,
                             stream_stdout=True,
                             stream_stderr=True
                         )
@@ -702,27 +767,6 @@ def make_repo(repodir,
                     finally:
                         proc.close(terminate=True, kill=True)
 
-        if use_passphrase:
-            cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --verbose --forget {0}'.format(local_fingerprint)
-            __salt__['cmd.run'](cmd, runas=runas)
-
-            cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --verbose --preset --passphrase "{0}" {1}'.format(phrase, local_fingerprint)
-            __salt__['cmd.run'](cmd, runas=runas)
-
-    for debfile in os.listdir(repodir):
-        abs_file = os.path.join(repodir, debfile)
-        if debfile.endswith('.changes'):
-            os.remove(abs_file)
-
-        if debfile.endswith('.dsc'):
-            if older_gnupg:
-                if local_keyid is not None:
-                    cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, abs_file)
-                    __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
-
-                cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(codename, abs_file)
-                __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
-            else:
                 number_retries = timeout / interval
                 times_looped = 0
                 error_msg = 'Failed to reprepro includedsc file {0}'.format(abs_file)
@@ -734,6 +778,9 @@ def make_repo(repodir,
                             shell=True,
                             cwd=repodir,
                             env=gpg_tty_info_dict,
+                            log_stdin=True,
+                            log_stdout=True,
+                            log_stderr=True,
                             stream_stdout=True,
                             stream_stderr=True
                             )
@@ -747,8 +794,7 @@ def make_repo(repodir,
 
                         if times_looped > number_retries:
                             raise SaltInvocationError(
-                                'Attemping to reprepro includedsc for file {0} failed, timed out after {1} loops'
-                                .format(abs_file, int(times_looped * interval))
+                                    'Attemping to reprepro includedsc for file {0} failed, timed out after {1} loops'.format(abs_file, times_looped)
                              )
                         time.sleep(interval)
 
@@ -770,8 +816,8 @@ def make_repo(repodir,
             cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedeb {0} {1}'.format(codename, abs_file)
             res = __salt__['cmd.run_all'](cmd, cwd=repodir, use_vt=True)
 
-    if use_passphrase and local_keyid is not None:
-        cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --forget {0}'.format(local_fingerprint)
-        res = __salt__['cmd.run_all'](cmd, runas=runas)
+#    if use_passphrase and local_keyid is not None:
+#        cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --forget {0}'.format(local_keygrip_to_use)
+#        res = __salt__['cmd.run_all'](cmd, runas=runas)
 
     return res
