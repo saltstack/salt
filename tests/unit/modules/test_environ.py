@@ -70,7 +70,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
         Set multiple salt process environment variables from a dict.
         Returns a dict.
         '''
-        mock_environ = {'key': 'value'}
+        mock_environ = {'KEY': 'value'}
         with patch.dict(os.environ, mock_environ):
             self.assertFalse(environ.setenv('environ'))
 
