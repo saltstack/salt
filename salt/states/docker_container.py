@@ -314,8 +314,8 @@ def running(name,
               docker_container.running:
                 - image: bar/baz:latest
                 - binds:
-                  - /srv/www:/var/www:ro:Z
-                  - /home/myuser/conf/foo.conf:/etc/foo.conf:rw:Z
+                  - /srv/www:/var/www:ro,Z
+                  - /home/myuser/conf/foo.conf:/etc/foo.conf:rw,Z
 
         Optionally, the read-only information can be left off the end and the
         bind mount will be assumed to be read-write. The example below is
@@ -338,7 +338,7 @@ def running(name,
               docker_container.running:
                 - image: bar/baz:latest
                 - binds:
-                  - /srv/www:/var/www:ro:Z
+                  - /srv/www:/var/www:ro,Z
                   - /home/myuser/conf/foo.conf:/etc/foo.conf:Z
 
     blkio_weight
