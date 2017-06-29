@@ -1928,15 +1928,20 @@ def create(image,
         comma-separated list or a Python list. Requires Docker 1.2.0 or
         newer.
 
-        Example: ``cap_add=SYS_ADMIN,MKNOD``, ``cap_add="[SYS_ADMIN, MKNOD]"``
+        Examples:
+
+        - ``cap_add=SYS_ADMIN,MKNOD``
+        - ``cap_add="[SYS_ADMIN, MKNOD]"``
 
     cap_drop
         List of capabilities to drop within the container. Can be passed as a
         comma-separated string or a Python list. Requires Docker 1.2.0 or
         newer.
 
-        Example: ``cap_drop=SYS_ADMIN,MKNOD``,
-        ``cap_drop="[SYS_ADMIN, MKNOD]"``
+        Examples:
+
+        - ``cap_drop=SYS_ADMIN,MKNOD``,
+        - ``cap_drop="[SYS_ADMIN, MKNOD]"``
 
     command (or *cmd*)
         Command to run in the container
@@ -2060,8 +2065,10 @@ def create(image,
         List of DNS search domains. Can be passed as a comma-separated list
         or a Python list.
 
-        Example: ``dns_search=foo1.domain.tld,foo2.domain.tld`` or
-        ``dns_search="[foo1.domain.tld, foo2.domain.tld]"``
+        Examples:
+
+        - ``dns_search=foo1.domain.tld,foo2.domain.tld``
+        - ``dns_search="[foo1.domain.tld, foo2.domain.tld]"``
 
     domainname
         Set custom DNS search domains
