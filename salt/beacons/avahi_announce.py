@@ -58,12 +58,16 @@ def validate(config):
     '''
     Validate the beacon configuration
     '''
+    _config = {}
+    list(map(_config.update, config))
+
     if not isinstance(config, list):
         return False, ('Configuration for avahi_announce '
                        'beacon must be a list.')
-    elif not all(x in sum((y.keys() for y in config), []) for x in ('servicetype',
-                                                                    'port',
-                                                                    'txt')):
+
+    elif not all(x in _config for x in ('servicetype',
+                                        'port',
+                                        'txt')):
         return False, ('Configuration for avahi_announce beacon '
                        'must contain servicetype, port and txt items.')
     return True, 'Valid beacon configuration.'
@@ -155,12 +159,7 @@ def beacon(config):
     global LAST_GRAINS
 
     _config = {}
-    _valid_config_options = ['servicename', 'servicetype', 'txt', 'port',
-                             'copy_grains', 'reset_wait', 'reset_on_change']
-    for config_item in config:
-        for opt in _valid_config_options:
-            if opt in config_item:
-                _config[opt] = config_item[opt]
+    list(map(_config.update, config))
 
     if 'servicename' in _config:
         servicename = _config['servicename']
