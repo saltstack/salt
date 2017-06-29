@@ -234,3 +234,19 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         if obtained_lock:
             os.remove(lock_fn)
             log.trace('Write lock for %s (%s) released', path, lock_fn)
+
+
+@contextlib.contextmanager
+def set_umask(mask):
+    '''
+    Temporarily set the umask and restore once the contextmanager exits
+    '''
+    if salt.utils.is_windows():
+        # Don't attempt on Windows
+        yield
+    else:
+        try:
+            orig_mask = os.umask(mask)
+            yield
+        finally:
+            os.umask(orig_mask)
