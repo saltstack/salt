@@ -257,12 +257,22 @@ def _get_opts(**kwargs):
     Return a copy of the opts for use, optionally load a local config on top
     '''
     opts = copy.deepcopy(__opts__)
+
     if 'localconfig' in kwargs:
-        opts = salt.config.minion_config(kwargs['localconfig'], defaults=opts)
-    else:
-        if 'saltenv' in kwargs:
+        return salt.config.minion_config(kwargs['localconfig'], defaults=opts)
+
+    if 'saltenv' in kwargs:
+        saltenv = kwargs['saltenv']
+        if not isinstance(saltenv, six.string_types):
+            opts['environment'] = str(kwargs['saltenv'])
+        else:
             opts['environment'] = kwargs['saltenv']
-        if 'pillarenv' in kwargs:
+
+    if 'pillarenv' in kwargs:
+        pillarenv = kwargs['pillarenv']
+        if not isinstance(pillarenv, six.string_types):
+            opts['pillarenv'] = str(kwargs['pillarenv'])
+        else:
             opts['pillarenv'] = kwargs['pillarenv']
 
     return opts
