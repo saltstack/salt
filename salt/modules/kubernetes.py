@@ -152,7 +152,7 @@ def node(name, **kwargs):
 
     for k8s_node in api_response.items:
         if k8s_node.metadata.name == name:
-            return k8s_node
+            return k8s_node.to_dict()
 
     return None
 
