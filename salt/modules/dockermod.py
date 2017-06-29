@@ -1867,19 +1867,49 @@ def create(image,
 
     binds
         Files/directories to bind mount. Each bind mount should be passed in
-        the format ``<host_path>:<container_path>:<read_only>``, where
-        ``<read_only>`` is one of ``rw`` (for read-write access) or ``ro`` (for
-        read-only access).  Optionally, the read-only information can be left
-        off the end and the bind mount will be assumed to be read-write.
+        one of the following formats:
+
+        - ``<host_path>:<container_path>`` - ``host_path`` is mounted within
+          the container as ``container_path`` with read-write access.
+        - ``<host_path>:<container_path>:<selinux_context>`` - ``host_path`` is
+          mounted within the container as ``container_path`` with read-write
+          access. Additionally, the specified selinux context will be set
+          within the container.
+        - ``<host_path>:<container_path>:<read_only>`` - ``host_path`` is
+          mounted within the container as ``container_path``, with the
+          read-only or read-write setting explicitly defined.
+        - ``<host_path>:<container_path>:<read_only>,<selinux_context>`` -
+          ``host_path`` is mounted within the container as ``container_path``,
+          with the read-only or read-write setting explicitly defined.
+          Additionally, the specified selinux context will be set within the
+          container.
+
+        ``<read_only>`` can be either ``ro`` for read-write access, or ``ro``
+        for read-only access. When omitted, it is assumed to be read-write.
+
+        ``<selinux_context>`` can be ``z`` if the volume is shared between
+        multiple containers, or ``Z`` if the volume should be private.
+
+        .. note::
+            When both ``<read_only>`` and ``<selinux_context>`` are specified,
+            there must be a comma before ``<selinux_context>``.
+
+        Binds can be expressed as a comma-separated list or a Python list,
+        however in cases where both ro/rw and an selinux context are specified,
+        the binds *must* be specified as a Python list.
 
         Examples:
 
         - ``binds=/srv/www:/var/www:ro``
         - ``binds=/srv/www:/var/www:rw``
         - ``binds=/srv/www:/var/www``
+        - ``binds="['/srv/www:/var/www:ro,Z']"``
+        - ``binds="['/srv/www:/var/www:rw,Z']"``
+        - ``binds=/srv/www:/var/www:Z``
 
         .. note::
-            The second and third examples above are equivalent.
+            The second and third examples above are equivalent to each other,
+            as are the last two examples.
 
     blkio_weight
         Block IO weight (relative weight), accepts a weight value between 10
