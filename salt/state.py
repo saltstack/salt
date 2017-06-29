@@ -766,7 +766,7 @@ class State(object):
             agg_opt = low['aggregate']
         if agg_opt is True:
             agg_opt = [low['state']]
-        else:
+        elif not isinstance(agg_opt, list):
             return low
         if low['state'] in agg_opt and not low.get('__agg__'):
             agg_fun = '{0}.mod_aggregate'.format(low['state'])
