@@ -175,10 +175,10 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             if 'salt://' in id_file:
                 with salt.utils.files.set_umask(0o077):
                     tmp_identity_file = salt.utils.mkstemp()
-                _id_file = id_file
-                id_file = __salt__['cp.get_file'](id_file,
-                                                  tmp_identity_file,
-                                                  saltenv)
+                    _id_file = id_file
+                    id_file = __salt__['cp.get_file'](id_file,
+                                                      tmp_identity_file,
+                                                      saltenv)
                 if not id_file:
                     log.error('identity {0} does not exist.'.format(_id_file))
                     __salt__['file.remove'](tmp_identity_file)
@@ -261,7 +261,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                 # Cleanup the temporary identify file
                 if tmp_identity_file and os.path.exists(tmp_identity_file):
                     log.debug('Removing identify file {0}'.format(tmp_identity_file))
-                    __salt__['file.remove'](tmp_identity_file)
+                    #__salt__['file.remove'](tmp_identity_file)
 
             # If the command was successful, no need to try additional IDs
             if result['retcode'] == 0:
