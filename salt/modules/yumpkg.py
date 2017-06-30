@@ -2548,6 +2548,8 @@ def _parse_repo_file(filename):
         for line in rawfile:
             if line.strip().startswith('#'):
                 headers += '{0}\n'.format(line.strip())
+            else:
+                break
 
     return (headers, config)
 
