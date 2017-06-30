@@ -35,8 +35,10 @@ try:
     import yum
     HAS_YUM = True
 except ImportError:
-    from salt.ext.six.moves import configparser
     HAS_YUM = False
+
+from salt.ext.six.moves import configparser
+
 # pylint: enable=import-error,redefined-builtin
 
 # Import salt libs
@@ -2525,8 +2527,15 @@ def _parse_repo_file(filename):
     Turn a single repo file into a dict
     '''
     parsed = configparser.ConfigParser()
-    parsed.read(filename)
     config = {}
+
+    try:
+        parsed.read(filename)
+    except configparser.MissingSectionHeaderError as err:
+        log.error(
+            'Failed to parser file {0}, error: {1}'.format(filename, err.message)
+        )
+        return ('', {})
 
     for section in parsed._sections:
         section_dict = dict(parsed._sections[section])
