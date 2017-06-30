@@ -817,7 +817,7 @@ def enable(name, start_type='auto', start_delayed=False, **kwargs):
 
     Args:
         name (str): The name of the service to enable.
-		
+
         start_type (str): Specifies the service start type. Valid options are as
             follows:
 
@@ -845,7 +845,7 @@ def enable(name, start_type='auto', start_delayed=False, **kwargs):
     modify(name, start_type=start_type, start_delayed=start_delayed)
     svcstat = info(name)
     if start_type == 'auto':
-	    return svcstat['StartType'].lower() == start_type.lower() and svcstat['StartTypeDelayed'] == start_delayed
+        return svcstat['StartType'].lower() == start_type.lower() and svcstat['StartTypeDelayed'] == start_delayed
     else:
         return svcstat['StartType'].lower() == start_type.lower()
 
