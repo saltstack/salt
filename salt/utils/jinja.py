@@ -22,7 +22,6 @@ from jinja2.environment import TemplateModule
 from jinja2.ext import Extension
 from jinja2.exceptions import TemplateRuntimeError
 import jinja2
-import yaml
 
 # Import salt libs
 import salt
@@ -30,6 +29,7 @@ import salt.utils
 import salt.utils.url
 import salt.fileclient
 from salt.utils.odict import OrderedDict
+import salt.utils.yamldumper
 
 log = logging.getLogger(__name__)
 
@@ -39,18 +39,6 @@ __all__ = [
 ]
 
 GLOBAL_UUID = uuid.UUID('91633EBF-1C86-5E33-935A-28061F4B480E')
-
-# To dump OrderedDict objects as regular dicts. Used by the yaml
-# template filter.
-
-
-class OrderedDictDumper(yaml.Dumper):  # pylint: disable=W0232
-    pass
-
-
-yaml.add_representer(OrderedDict,
-                     yaml.representer.SafeRepresenter.represent_dict,
-                     Dumper=OrderedDictDumper)
 
 
 class SaltCacheLoader(BaseLoader):
@@ -717,8 +705,8 @@ class SerializerExtension(Extension, object):
         return Markup(json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
 
     def format_yaml(self, value, flow_style=True):
-        yaml_txt = yaml.dump(value, default_flow_style=flow_style,
-                             Dumper=OrderedDictDumper).strip()
+        yaml_txt = salt.utils.yamldumper.safe_dump(
+            value, default_flow_style=flow_style).strip()
         if yaml_txt.endswith('\n...'):
             yaml_txt = yaml_txt[:len(yaml_txt)-4]
         return Markup(yaml_txt)
