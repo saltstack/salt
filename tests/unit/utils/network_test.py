@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Import Python libs
 from __future__ import absolute_import
+import socket
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -111,8 +112,31 @@ class NetworkTestCase(TestCase):
         changed. In these cases, we just need to update the IP address in the
         assertion.
         '''
-        ret = network.host_to_ips('www.saltstack.com')
-        self.assertEqual(ret, ['104.197.168.128'])
+        def _side_effect(host, *args):
+            try:
+                return {
+                    'github.com': [
+                        (2, 1, 6, '', ('192.30.255.112', 0)),
+                        (2, 1, 6, '', ('192.30.255.113', 0)),
+                    ],
+                    'ipv6host.foo': [
+                        (10, 1, 6, '', ('2001:a71::1', 0, 0, 0)),
+                    ],
+                }[host]
+            except KeyError:
+                raise socket.gaierror(-2, 'Name or service not known')
+
+        getaddrinfo_mock = MagicMock(side_effect=_side_effect)
+        with patch.object(socket, 'getaddrinfo', getaddrinfo_mock):
+            # Test host that can be resolved
+            ret = network.host_to_ips('github.com')
+            self.assertEqual(ret, ['192.30.255.112', '192.30.255.113'])
+            # Test ipv6
+            ret = network.host_to_ips('ipv6host.foo')
+            self.assertEqual(ret, ['2001:a71::1'])
+            # Test host that can't be resolved
+            ret = network.host_to_ips('someothersite.com')
+            self.assertEqual(ret, None)
 
     def test_generate_minion_id(self):
         self.assertTrue(network.generate_minion_id())
