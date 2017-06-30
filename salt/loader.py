@@ -1366,7 +1366,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             (importlib.machinery.ExtensionFileLoader, importlib.machinery.EXTENSION_SUFFIXES),
                         ]
                         file_finder = importlib.machinery.FileFinder(
-                            os.path.dirname(fpath),
+                            fpath_dirname,
                             *loader_details
                         )
                         spec = file_finder.find_spec(mod_namespace)
