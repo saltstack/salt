@@ -2533,7 +2533,7 @@ def _parse_repo_file(filename):
         parsed.read(filename)
     except configparser.MissingSectionHeaderError as err:
         log.error(
-            'Failed to parser file {0}, error: {1}'.format(filename, err.message)
+            'Failed to parse file {0}, error: {1}'.format(filename, err.message)
         )
         return ('', {})
 
