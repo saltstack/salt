@@ -26,10 +26,6 @@ configuration:
           - test.*
           - pkg.*
 
-WARNING: client_acl and client_acl_blacklist options are deprecated and will be
-removed in the future releases. Use publisher_acl and publisher_acl_blacklist
-instead.
-
 Permission Issues
 -----------------
 Directories required for ``publisher_acl`` must be modified to be readable by

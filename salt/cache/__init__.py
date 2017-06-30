@@ -10,7 +10,8 @@ from __future__ import absolute_import
 import logging
 import time
 
-# Import Salt lobs
+# Import Salt libs
+import salt.config
 from salt.ext import six
 from salt.payload import Serial
 from salt.utils.odict import OrderedDict
@@ -66,9 +67,13 @@ class Cache(object):
     Key name is a string identifier of a data container (like a file inside a
     directory) which will hold the data.
     '''
-    def __init__(self, opts, **kwargs):
+    def __init__(self, opts, cachedir=None, **kwargs):
         self.opts = opts
-        self.driver = opts['cache']
+        if cachedir is None:
+            self.cachedir = opts.get('cachedir', salt.syspaths.CACHE_DIR)
+        else:
+            self.cachedir = cachedir
+        self.driver = opts.get('cache', salt.config.DEFAULT_MASTER_OPTS)
         self.serial = Serial(opts)
         self._modules = None
         self._kwargs = kwargs

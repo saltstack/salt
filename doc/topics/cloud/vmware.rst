@@ -152,6 +152,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             name: 10.30.40-500-Dev-DHCP
             adapter_type: e1000
             switch_type: distributed
+            mac: '00:16:3e:e8:19:0f'
           Network adapter 3:
             name: 10.40.50-600-Prod
             adapter_type: vmxnet3
@@ -193,6 +194,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         guestinfo.foo: bar
         guestinfo.domain: foobar.com
         guestinfo.customVariable: customValue
+      annotation: Created by Salt-Cloud
 
       deploy: True
       customization: True
@@ -326,6 +328,10 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             Enter the domain to be used with the network adapter. If the network
             specified is DHCP enabled, you do not have to specify this.
 
+        mac
+            Enter the MAC for this network adapter. If not specified an address
+            will be selected automatically.
+
     scsi
         Enter the SCSI controller specification here. If the SCSI controller doesn\'t exist,
         a new SCSI controller will be created of the specified type. If the SCSI controller
@@ -446,10 +452,23 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     present, it will be reset with the new value provided. Otherwise, a new option is
     added. Keys with empty values will be removed.
 
+``annotation``
+    User-provided description of the virtual machine. This will store a message in the
+    vSphere interface, under the annotations section in the Summary view of the virtual
+    machine.
+
 ``deploy``
     Specifies if salt should be installed on the newly created VM. Default is ``True``
     so salt will be installed using the bootstrap script. If ``template: True`` or
     ``power_on: False`` is set, this field is ignored and salt will not be installed.
+
+``wait_for_ip_timeout``
+    When ``deploy: True``, this timeout determines the maximum time to wait for
+    VMware tools to be installed on the virtual machine. If this timeout is
+    reached, an attempt to determine the client's IP will be made by resolving
+    the VM's name.  By lowering this value a salt bootstrap can be fully
+    automated for systems that are not built with VMware tools.  Default is
+    ``wait_for_ip_timeout: 1200``.
 
 ``customization``
     Specify whether the new virtual machine should be customized or not. If
@@ -720,6 +739,5 @@ can be set in the cloud profile as shown in example below:
           Hard disk 1:
             mode: 'independent_nonpersistent'
             size: 42
-
           Hard disk 2:
             mode: 'independent_nonpersistent'

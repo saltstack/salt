@@ -242,6 +242,13 @@ Server configuration values and their defaults:
     auth.ldap.persontype: 'person'
 
     auth.ldap.minion_stripdomains: []
+    
+    # Redhat Identity Policy Audit
+    auth.ldap.freeipa: False
+
+
+Authenticating to the LDAP Server
++++++++++++++++++++++++++++++++++
 
 There are two phases to LDAP authentication.  First, Salt authenticates to search for a users' Distinguished Name
 and group membership.  The user it authenticates as in this phase is often a special LDAP system user with
@@ -273,6 +280,10 @@ substitutes the ``{{ username }}`` value for the username when querying LDAP
 
     auth.ldap.filter: uid={{ username }}
 
+
+Determining Group Memberships (OpenLDAP / non-Active Directory)
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 For OpenLDAP, to determine group membership, one can specify an OU that contains
 group data. This is prepended to the basedn to create a search path.  Then
 the results are filtered against ``auth.ldap.groupclass``, default
@@ -282,7 +293,16 @@ the results are filtered against ``auth.ldap.groupclass``, default
 
     auth.ldap.groupou: Groups
 
-When using the `ldap('DC=domain,DC=com')` eauth operator, sometimes the records returned
+Note that as of 2017.7, auth.ldap.groupclass can refer to either a groupclass or an objectClass.
+For some LDAP servers (notably OpenLDAP without the ``memberOf`` overlay enabled) to determine group
+membership we need to know both the ``objectClass`` and the ``memberUid`` attributes.  Usually for these
+servers you will want a ``auth.ldap.groupclass`` of ``posixGroup`` and an ``auth.ldap.groupattribute`` of
+``memberUid``.
+
+LDAP servers with the ``memberOf`` overlay will have entries similar to ``auth.ldap.groupclass: person`` and
+``auth.ldap.groupattribute: memberOf``.
+
+When using the ``ldap('DC=domain,DC=com')`` eauth operator, sometimes the records returned
 from LDAP or Active Directory have fully-qualified domain names attached, while minion IDs
 instead are simple hostnames.  The parameter below allows the administrator to strip
 off a certain set of domain names so the hostnames looked up in the directory service
@@ -292,8 +312,9 @@ can match the minion IDs.
 
    auth.ldap.minion_stripdomains: ['.external.bigcorp.com', '.internal.bigcorp.com']
 
-Active Directory
-----------------
+
+Determining Group Memberships (Active Directory)
+++++++++++++++++++++++++++++++++++++++++++++++++
 
 Active Directory handles group membership differently, and does not utilize the
 ``groupou`` configuration variable.  AD needs the following options in
@@ -358,5 +379,5 @@ be part of the eAuth definition, they can be specified like this:
           - ldap('DC=corp,DC=example,DC=com'):
             - test.echo
 
-The string inside `ldap()` above is any valid LDAP/AD tree limiter.  `OU=` in
+The string inside ``ldap()`` above is any valid LDAP/AD tree limiter.  ``OU=`` in
 particular is permitted as long as it would return a list of computer objects.

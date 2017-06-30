@@ -6,14 +6,23 @@ Provides access to randomness generators.
 .. versionadded:: 2014.7.0
 
 '''
-from __future__ import absolute_import
 # Import python libs
+from __future__ import absolute_import
+import base64
 import hashlib
 import random
 
 # Import salt libs
 import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
+if six.PY2:
+    ALGORITHMS_ATTR_NAME = 'algorithms'
+else:
+    ALGORITHMS_ATTR_NAME = 'algorithms_guaranteed'
 
 # Define the module's virtual name
 __virtualname__ = 'random'
@@ -25,9 +34,12 @@ def __virtual__(algorithm='sha512'):
     '''
     # The hashlib function on Python <= 2.6 does not provide the attribute 'algorithms'
     # This attribute was introduced on Python >= 2.7
-    if not hasattr(hashlib, 'algorithms') and not hasattr(hashlib, algorithm):
-        return (False, 'The random execution module cannot be loaded: only available in Python >= 2.7.')
+    if six.PY2:
+        if not hasattr(hashlib, 'algorithms') and not hasattr(hashlib, algorithm):
+            return (False, 'The random execution module cannot be loaded: only available in Python >= 2.7.')
 
+    # Under python >= 3.2, the attribute name changed to 'algorithms_guaranteed'
+    # Since we support python 3.4+, we're good
     return __virtualname__
 
 
@@ -50,7 +62,11 @@ def hash(value, algorithm='sha512'):
 
         salt '*' random.hash 'I am a string' md5
     '''
-    if hasattr(hashlib, 'algorithms') and algorithm in hashlib.algorithms:
+    if six.PY3 and isinstance(value, six.string_types):
+        # Under Python 3 we must work with bytes
+        value = value.encode(__salt_system_encoding__)
+
+    if hasattr(hashlib, ALGORITHMS_ATTR_NAME) and algorithm in getattr(hashlib, ALGORITHMS_ATTR_NAME):
         hasher = hashlib.new(algorithm)
         hasher.update(value)
         out = hasher.hexdigest()
@@ -80,13 +96,29 @@ def str_encode(value, encoder='base64'):
 
         salt '*' random.str_encode 'I am a new string' base64
     '''
-    try:
-        out = value.encode(encoder)
-    except LookupError:
-        raise SaltInvocationError('You must specify a valid encoder')
-    except AttributeError:
-        raise SaltInvocationError('Value must be an encode-able string')
-
+    if six.PY2:
+        try:
+            out = value.encode(encoder)
+        except LookupError:
+            raise SaltInvocationError('You must specify a valid encoder')
+        except AttributeError:
+            raise SaltInvocationError('Value must be an encode-able string')
+    else:
+        if isinstance(value, six.string_types):
+            value = value.encode(__salt_system_encoding__)
+        if encoder == 'base64':
+            try:
+                out = base64.b64encode(value)
+                out = out.decode(__salt_system_encoding__)
+            except TypeError:
+                raise SaltInvocationError('Value must be an encode-able string')
+        else:
+            try:
+                out = value.encode(encoder)
+            except LookupError:
+                raise SaltInvocationError('You must specify a valid encoder')
+            except AttributeError:
+                raise SaltInvocationError('Value must be an encode-able string')
     return out
 
 

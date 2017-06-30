@@ -138,11 +138,11 @@ import json
 import os
 
 # Import Salt Libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 import salt.utils
 import salt.utils.odict as odict
 import salt.utils.dictupdate as dictupdate
-from salt.ext import six
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd party libs
 try:
@@ -161,10 +161,10 @@ if six.PY2:
         # Note that we intentionally don't treat odicts here - they won't compare equal
         # in many circumstances where AWS treats them the same...
         if isinstance(thing, dict):
-            return dict([(_byteify(k), _byteify(v)) for k, v in thing.iteritems()])
+            return dict([(_byteify(k), _byteify(v)) for k, v in six.iteritems(thing)])
         elif isinstance(thing, list):
             return [_byteify(m) for m in thing]
-        elif isinstance(thing, unicode):  # pylint: disable=W1699
+        elif isinstance(thing, six.text_type):  # pylint: disable=W1699
             return thing.encode('utf-8')
         else:
             return thing
@@ -250,12 +250,19 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
             for d in devices:
                 serial = d['serial_number']
                 if __opts__['test']:
-                    ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} MFA device {1} is set to be deleted.'.format(name, serial)])
+                    ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} MFA device {1} is set to be deactivated.'.format(name, serial)])
                     ret['result'] = None
                 else:
-                    mfa_deleted = __salt__['boto_iam.deactivate_mfa_device'](user_name=name, serial=serial, region=region, key=key, keyid=keyid, profile=profile)
+                    mfa_deactivated = __salt__['boto_iam.deactivate_mfa_device'](user_name=name, serial=serial, region=region, key=key, keyid=keyid, profile=profile)
+                    if mfa_deactivated:
+                        ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} MFA device {1} is deactivated.'.format(name, serial)])
+                if __opts__['test']:
+                    ret['comment'] = ' '.join([ret['comment'], 'Virtual MFA device {0} is set to be deleted.'.format(serial)])
+                    ret['result'] = None
+                else:
+                    mfa_deleted = __salt__['boto_iam.delete_virtual_mfa_device'](serial=serial, region=region, key=key, keyid=keyid, profile=profile)
                     if mfa_deleted:
-                        ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} MFA device {1} are deleted.'.format(name, serial)])
+                        ret['comment'] = ' '.join([ret['comment'], 'Virtual MFA device {0} is deleted.'.format(serial)])
     # delete the user's login profile
     if delete_profile:
         if __opts__['test']:
@@ -815,7 +822,7 @@ def group_absent(name, region=None, key=None, keyid=None, profile=None):
     return ret
 
 
-def group_present(name, policies=None, policies_from_pillars=None, managed_policies=None, users=None, path='/', region=None, key=None, keyid=None, profile=None):
+def group_present(name, policies=None, policies_from_pillars=None, managed_policies=None, users=None, path='/', region=None, key=None, keyid=None, profile=None, delete_policies=True):
     '''
 
     .. versionadded:: 2015.8.0
@@ -858,6 +865,12 @@ def group_present(name, policies=None, policies_from_pillars=None, managed_polic
     profile (dict)
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
+
+    delete_policies (boolean)
+        Delete or detach existing policies that are not in the given list of policies.
+        Default value is ``True``. If ``False`` is specified, existing policies
+        will not be deleted or detached allowing manual modifications on the IAM group
+        to be persistent.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not policies:
@@ -888,14 +901,14 @@ def group_present(name, policies=None, policies_from_pillars=None, managed_polic
         ret['comment'] = ' '.join([ret['comment'], 'Group {0} is present.'.format(name)])
     # Group exists, ensure group policies and users are set.
     _ret = _group_policies_present(
-        name, _policies, region, key, keyid, profile
+        name, _policies, region, key, keyid, profile, delete_policies
     )
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
         ret['result'] = _ret['result']
         return ret
-    _ret = _group_policies_attached(name, managed_policies, region, key, keyid, profile)
+    _ret = _group_policies_attached(name, managed_policies, region, key, keyid, profile, delete_policies)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -947,7 +960,8 @@ def _group_policies_present(
         region=None,
         key=None,
         keyid=None,
-        profile=None):
+        profile=None,
+        delete_policies=True):
     ret = {'result': True, 'comment': '', 'changes': {}}
     policies_to_create = {}
     policies_to_delete = []
@@ -964,7 +978,7 @@ def _group_policies_present(
         name, region, key, keyid, profile
     )
     for policy_name in _list:
-        if policy_name not in policies:
+        if delete_policies and policy_name not in policies:
             policies_to_delete.append(policy_name)
     if policies_to_create or policies_to_delete:
         _to_modify = list(policies_to_delete)
@@ -1016,7 +1030,8 @@ def _group_policies_attached(
         region=None,
         key=None,
         keyid=None,
-        profile=None):
+        profile=None,
+        detach_policies=True):
     ret = {'result': True, 'comment': '', 'changes': {}}
     policies_to_attach = []
     policies_to_detach = []
@@ -1036,7 +1051,8 @@ def _group_policies_attached(
                                                     profile=profile)
     oldpolicies = [x.get('policy_arn') for x in _list]
     for policy_data in _list:
-        if policy_data.get('policy_name') not in managed_policies \
+        if detach_policies \
+                  and policy_data.get('policy_name') not in managed_policies \
                   and policy_data.get('policy_arn') not in managed_policies:
             policies_to_detach.append(policy_data.get('policy_arn'))
     if policies_to_attach or policies_to_detach:
@@ -1489,7 +1505,7 @@ def policy_absent(name,
                                     keyid=keyid, profile=profile)
     if versions:
         for version in versions:
-            if version.get('is_default_version', False):
+            if version.get('is_default_version', False) in ('true', True):
                 continue
             r = __salt__['boto_iam.delete_policy_version'](name,
                                     version_id=version.get('version_id'),

@@ -60,13 +60,13 @@ def __virtual__():
 
 
 def _vartree():
-    import portage
+    import portage  # pylint: disable=3rd-party-module-not-gated
     portage = reload(portage)
     return portage.db[portage.root]['vartree']
 
 
 def _porttree():
-    import portage
+    import portage  # pylint: disable=3rd-party-module-not-gated
     portage = reload(portage)
     return portage.db[portage.root]['porttree']
 
@@ -234,7 +234,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
         installed = _cpv_to_version(_vartree().dep_bestmatch(name))
         avail = _cpv_to_version(_porttree().dep_bestmatch(name))
-        if avail:
+        if avail and (not installed or salt.utils.compare_versions(ver1=installed, oper='<', ver2=avail, cmp_func=version_cmp)):
             ret[name] = avail
 
     # Return a string if only one package name passed

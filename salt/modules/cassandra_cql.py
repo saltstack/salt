@@ -296,10 +296,11 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     :return:               A dictionary from the return values of the query
     :rtype:                list[dict]
 
+    CLI Example:
+
     .. code-block:: bash
 
-        # CLI Example: Simple CQL query
-        salt '*' cql_query "SELECT * FROM users_by_name WHERE first_name = 'jane'"
+         salt '*' cql_query "SELECT * FROM users_by_name WHERE first_name = 'jane'"
     '''
     try:
         cluster, session = _connect(contact_points=contact_points, port=port, cql_user=cql_user, cql_pass=cql_pass)
@@ -678,6 +679,8 @@ def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication
     :type  port:                    int
     :return:                        The info for the keyspace or False if it does not exist.
     :rtype:                         dict
+
+    CLI Example:
 
     .. code-block:: bash
 

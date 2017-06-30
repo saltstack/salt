@@ -10,8 +10,8 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt testing libraries
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call, \
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call, \
         PropertyMock
 
 # Import Salt libraries
@@ -30,10 +30,18 @@ log = logging.getLogger(__name__)
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.time.time', MagicMock(return_value=1))
-@patch('salt.utils.vmware.time.sleep', MagicMock(return_value=None))
 class WaitForTaskTestCase(TestCase):
     '''Tests for salt.utils.vmware.wait_for_task'''
+
+    def setUp(self):
+        patches = (
+            ('salt.utils.vmware.time.time', MagicMock(return_value=1)),
+            ('salt.utils.vmware.time.sleep', MagicMock(return_value=None))
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
     def test_first_task_info_raise_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -151,7 +159,7 @@ class WaitForTaskTestCase(TestCase):
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        self.assertEqual(excinfo.exception.message, 'error exc')
+        self.assertEqual(str(excinfo.exception), 'error exc')
 
     def test_info_error_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -426,14 +434,18 @@ class GetMorsWithPropertiesTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.get_service_instance_from_managed_object',
-       MagicMock())
-@patch('salt.utils.vmware.get_mors_with_properties',
-       MagicMock(return_value=[MagicMock()]))
 class GetPropertiesOfManagedObjectTestCase(TestCase):
     '''Tests for salt.utils.get_properties_of_managed_object'''
 
     def setUp(self):
+        patches = (
+            ('salt.utils.vmware.get_service_instance_from_managed_object', MagicMock()),
+            ('salt.utils.vmware.get_mors_with_properties', MagicMock(return_value=[MagicMock()]))
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.mock_si = MagicMock()
         self.fake_mo_ref = vim.ManagedEntity('Fake')
         self.mock_props = MagicMock()
@@ -490,12 +502,17 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
                          'retrieved', excinfo.exception.strerror)
 
 
-@patch('salt.utils.vmware.get_properties_of_managed_object',
-       MagicMock(return_value={'key': 'value'}))
 class GetManagedObjectName(TestCase):
     '''Tests for salt.utils.get_managed_object_name'''
 
     def setUp(self):
+        patches = (
+            ('salt.utils.vmware.get_properties_of_managed_object', MagicMock(return_value={'key': 'value'})),
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.mock_mo_ref = MagicMock()
 
     def test_get_properties_of_managed_object_call(self):
@@ -520,15 +537,6 @@ class GetManagedObjectName(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.get_root_folder', MagicMock())
-@patch('salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec',
-       MagicMock(return_value=MagicMock()))
-@patch('salt.utils.vmware.vmodl.query.PropertyCollector.PropertySpec',
-       MagicMock(return_value=MagicMock()))
-@patch('salt.utils.vmware.vmodl.query.PropertyCollector.ObjectSpec',
-       MagicMock(return_value=MagicMock()))
-@patch('salt.utils.vmware.vmodl.query.PropertyCollector.FilterSpec',
-       MagicMock(return_value=MagicMock()))
 class GetContentTestCase(TestCase):
     '''Tests for salt.utils.get_content'''
 
@@ -562,6 +570,17 @@ class GetContentTestCase(TestCase):
     filter_spec_mock = None
 
     def setUp(self):
+        patches = (
+            ('salt.utils.vmware.get_root_folder', MagicMock()),
+            ('salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec', MagicMock(return_value=MagicMock())),
+            ('salt.utils.vmware.vmodl.query.PropertyCollector.PropertySpec', MagicMock(return_value=MagicMock())),
+            ('salt.utils.vmware.vmodl.query.PropertyCollector.ObjectSpec', MagicMock(return_value=MagicMock())),
+            ('salt.utils.vmware.vmodl.query.PropertyCollector.FilterSpec', MagicMock(return_value=MagicMock()))
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         # setup the service instance
         self.si_mock = MagicMock()
         # RootFolder
@@ -789,12 +808,3 @@ class GetRootFolderTestCase(TestCase):
     def test_return(self):
         ret = salt.utils.vmware.get_root_folder(self.mock_si)
         self.assertEqual(ret, self.mock_root_folder)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WaitForTaskTestCase, needs_daemon=False)
-    run_tests(GetMorsWithPropertiesTestCase, needs_daemon=False)
-    run_tests(GetPropertiesOfManagedObjectTestCase, needs_daemon=False)
-    run_tests(GetManagedObjectName, needs_daemon=False)
-    run_tests(GetContentTestCase, needs_daemon=False)
-    run_tests(GetRootFolderTestCase, needs_daemon=False)

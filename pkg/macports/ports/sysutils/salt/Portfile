@@ -1,11 +1,11 @@
 # -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
-# $Id: Portfile 147021 2016-03-23 10:24:38Z mojca@macports.org $
+# $Id: Portfile 152295 2016-09-02 22:14:33Z larryv@macports.org $
 
 PortSystem          1.0
 PortGroup           github 1.0
 PortGroup           python 1.0
 
-github.setup        saltstack salt 2015.8.8.2 v
+github.setup        saltstack salt 2016.11 v
 name                salt
 categories          sysutils
 platforms           darwin
@@ -24,8 +24,8 @@ homepage            http://saltstack.com/
 
 python.default_version 27
 
-checksums           rmd160 0ffc4b342fc83a1cdf62eb0871a25cf573dad91d\
-                    sha256 510d17f9f0a99f10ba46b73edaa5ee20a8176111d791625b0c58a6b1f8b3648c
+checksums           rmd160 ad958f0c1a1bb0656ce401e06533a5f60b43fe72 \
+					sha256 d277570404bdd53bc883847f1ebdd2686d1b23f428ceb735006d2cddc5b15b79
 
 depends_build       port:py${python.version}-setuptools
 

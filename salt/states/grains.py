@@ -18,6 +18,31 @@ import re
 from salt.defaults import DEFAULT_TARGET_DELIM
 
 
+def exists(name, delimiter=DEFAULT_TARGET_DELIM):
+    '''
+    Ensure that a grain is set
+
+    name
+        The grain name
+
+    delimiter
+        A delimiter different from the default can be provided.
+
+    Check whether a grain exists. Does not attempt to check or set the value.
+    '''
+    name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Grain exists'}
+    _non_existent = object()
+    existing = __salt__['grains.get'](name, _non_existent)
+    if existing is _non_existent:
+        ret['result'] = False
+        ret['comment'] = 'Grain does not exist'
+    return ret
+
+
 def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     '''
     Ensure that a grain is set

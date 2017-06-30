@@ -388,7 +388,6 @@ def refresh_db():
     .. code-block:: bash
 
         salt mac pkg.refresh_db
-
     '''
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)

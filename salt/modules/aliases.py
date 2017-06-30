@@ -15,6 +15,8 @@ import salt.utils
 from salt.utils import which as _which
 from salt.exceptions import SaltInvocationError
 
+# Import third party libs
+import salt.ext.six as six
 
 __outputter__ = {
     'rm_alias': 'txt',
@@ -82,11 +84,14 @@ def __write_aliases_file(lines):
         if not line_comment:
             line_comment = ''
         if line_alias and line_target:
-            out.write('{0}: {1}{2}\n'.format(
+            write_line = '{0}: {1}{2}\n'.format(
                 line_alias, line_target, line_comment
-            ))
+            )
         else:
-            out.write('{0}\n'.format(line_comment))
+            write_line = '{0}\n'.format(line_comment)
+        if six.PY3:
+            write_line = write_line.encode(__salt_system_encoding__)
+        out.write(write_line)
 
     out.close()
     os.rename(out.name, afn)

@@ -654,6 +654,38 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         sys.exit(salt.defaults.exitcodes.EX_OK)
 
 
+def _set_tcp_keepalive(zmq_socket, opts):
+    '''
+    Ensure that TCP keepalives are set as specified in "opts".
+
+    Warning: Failure to set TCP keepalives on the salt-master can result in
+    not detecting the loss of a minion when the connection is lost or when
+    it's host has been terminated without first closing the socket.
+    Salt's Presence System depends on this connection status to know if a minion
+    is "present".
+
+    Warning: Failure to set TCP keepalives on minions can result in frequent or
+    unexpected disconnects!
+    '''
+    if hasattr(zmq, 'TCP_KEEPALIVE') and opts:
+        if 'tcp_keepalive' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE, opts['tcp_keepalive']
+            )
+        if 'tcp_keepalive_idle' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE_IDLE, opts['tcp_keepalive_idle']
+            )
+        if 'tcp_keepalive_cnt' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE_CNT, opts['tcp_keepalive_cnt']
+            )
+        if 'tcp_keepalive_intvl' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE_INTVL, opts['tcp_keepalive_intvl']
+            )
+
+
 class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     '''
     Encapsulate synchronous operations for a publisher channel
@@ -675,6 +707,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         context = zmq.Context(1)
         # Prepare minion publish socket
         pub_sock = context.socket(zmq.PUB)
+        _set_tcp_keepalive(pub_sock, self.opts)
         # if 2.1 >= zmq < 3.0, we only have one HWM setting
         try:
             pub_sock.setsockopt(zmq.HWM, self.opts.get('pub_hwm', 1000))
@@ -803,8 +836,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         if self.opts['zmq_filtering'] and load['tgt_type'] in match_targets:
             # Fetch a list of minions that match
             match_ids = self.ckminions.check_minions(load['tgt'],
-                                                     expr_form=load['tgt_type']
-                                                     )
+                                                     tgt_type=load['tgt_type'])
 
             log.debug("Publish Side Match: {0}".format(match_ids))
             # Send list of miions thru so zmq can target them
@@ -908,7 +940,7 @@ class AsyncReqMessageClient(object):
                 zmq.RECONNECT_IVL_MAX, 5000
             )
 
-        self._set_tcp_keepalive()
+        _set_tcp_keepalive(self.socket, self.opts)
         if self.addr.startswith('tcp://['):
             # Hint PF type if bracket enclosed IPv6 address
             if hasattr(zmq, 'IPV6'):
@@ -918,31 +950,6 @@ class AsyncReqMessageClient(object):
         self.socket.linger = self.linger
         self.socket.connect(self.addr)
         self.stream = zmq.eventloop.zmqstream.ZMQStream(self.socket, io_loop=self.io_loop)
-
-    def _set_tcp_keepalive(self):
-        '''
-        Ensure that TCP keepalives are set for the ReqServer.
-
-        Warning: Failure to set TCP keepalives can result in frequent or unexpected
-        disconnects!
-        '''
-        if hasattr(zmq, 'TCP_KEEPALIVE') and self.opts:
-            if 'tcp_keepalive' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
-                )
-            if 'tcp_keepalive_idle' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
-                )
-            if 'tcp_keepalive_cnt' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
-                )
-            if 'tcp_keepalive_intvl' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
-                )
 
     @tornado.gen.coroutine
     def _internal_send_recv(self):

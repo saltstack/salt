@@ -7,9 +7,7 @@ Common functions for working with RPM packages
 from __future__ import absolute_import
 import collections
 import logging
-
-# Import salt libs
-from salt._compat import subprocess
+import subprocess
 
 # Import 3rd-party libs
 from salt.ext import six

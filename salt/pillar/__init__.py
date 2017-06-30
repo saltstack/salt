@@ -6,10 +6,13 @@ Render the pillar data
 # Import python libs
 from __future__ import absolute_import
 import copy
+import fnmatch
 import os
 import collections
 import logging
 import tornado.gen
+import sys
+import traceback
 
 # Import salt libs
 import salt.loader
@@ -19,11 +22,13 @@ import salt.crypt
 import salt.transport
 import salt.utils.url
 import salt.utils.cache
+import salt.utils.crypt
 from salt.exceptions import SaltClientError
 from salt.template import compile_template
 from salt.utils.dictupdate import merge
 from salt.utils.odict import OrderedDict
 from salt.version import __version__
+from salt.utils.locales import decode_recursively
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -83,7 +88,7 @@ class AsyncRemotePillar(object):
         self.grains = grains
         self.minion_id = minion_id
         self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
-        if pillarenv is not None or 'pillarenv' not in self.opts:
+        if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
         self.pillar_override = pillar_override or {}
         if not isinstance(self.pillar_override, dict):
@@ -134,7 +139,7 @@ class RemotePillar(object):
         self.grains = grains
         self.minion_id = minion_id
         self.channel = salt.transport.Channel.factory(opts)
-        if pillarenv is not None or 'pillarenv' not in self.opts:
+        if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
         self.pillar_override = pillar_override or {}
         if not isinstance(self.pillar_override, dict):
@@ -164,7 +169,7 @@ class RemotePillar(object):
                 '{1}'.format(type(ret_pillar).__name__, ret_pillar)
             )
             return {}
-        return ret_pillar
+        return decode_recursively(ret_pillar)
 
 
 class PillarCache(object):
@@ -264,12 +269,16 @@ class Pillar(object):
                  pillar_override=None, pillarenv=None):
         self.minion_id = minion_id
         self.ext = ext
+        if pillarenv is None:
+            if opts.get('pillarenv_from_saltenv', False):
+                opts['pillarenv'] = saltenv
         # Store the file_roots path so we can restore later. Issue 5449
         self.actual_file_roots = opts['file_roots']
         # use the local file client
         self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, pillarenv=pillarenv)
         self.saltenv = saltenv
         self.client = salt.fileclient.get_file_client(self.opts, True)
+        self.avail = self.__gather_avail()
 
         if opts.get('file_client', '') == 'local':
             opts['grains'] = grains
@@ -338,6 +347,15 @@ class Pillar(object):
             return False
         return True
 
+    def __gather_avail(self):
+        '''
+        Gather the lists of available sls data from the master
+        '''
+        avail = {}
+        for saltenv in self._get_envs():
+            avail[saltenv] = self.client.list_states(saltenv)
+        return avail
+
     def __gen_opts(self, opts_in, grains, saltenv=None, ext=None, pillarenv=None):
         '''
         The options need to be altered to conform to the file client
@@ -390,13 +408,21 @@ class Pillar(object):
         # Gather initial top files
         try:
             if self.opts['pillarenv']:
-                top = self.client.cache_file(
-                    self.opts['state_top'], self.opts['pillarenv'])
-
-                if top:
+                # If the specified pillarenv is not present in the available
+                # pillar environments, do not cache the pillar top file.
+                if self.opts['pillarenv'] not in self.opts['file_roots']:
+                    log.debug(
+                        'pillarenv \'%s\' not found in the configured pillar '
+                        'environments (%s)',
+                        self.opts['pillarenv'], ', '.join(self.opts['file_roots'])
+                    )
+                else:
                     tops[self.opts['pillarenv']] = [
                             compile_template(
-                                top,
+                                self.client.cache_file(
+                                    self.opts['state_top'],
+                                    self.opts['pillarenv']
+                                    ),
                                 self.rend,
                                 self.opts['renderer'],
                                 self.opts['renderer_blacklist'],
@@ -667,9 +693,11 @@ class Pillar(object):
                                         )
                                 if nstate:
                                     if key:
-                                        nstate = {
-                                            key: nstate
-                                        }
+                                        # If key is x:y, convert it to {x: {y: nstate}}
+                                        for key_fragment in reversed(key.split(":")):
+                                            nstate = {
+                                                key_fragment: nstate
+                                            }
 
                                     state = merge(
                                         state,
@@ -691,8 +719,23 @@ class Pillar(object):
         if errors is None:
             errors = []
         for saltenv, pstates in six.iteritems(matches):
+            pstatefiles = []
             mods = set()
-            for sls in pstates:
+            for sls_match in pstates:
+                matched_pstates = []
+                try:
+                    matched_pstates = fnmatch.filter(self.avail[saltenv], sls_match)
+                except KeyError:
+                    errors.extend(
+                        ['No matching pillar environment for environment '
+                         '\'{0}\' found'.format(saltenv)]
+                    )
+                if matched_pstates:
+                    pstatefiles.extend(matched_pstates)
+                else:
+                    pstatefiles.append(sls_match)
+
+            for sls in pstatefiles:
                 pstate, mods, err = self.render_pstate(sls, saltenv, mods)
 
                 if err:
@@ -805,8 +848,16 @@ class Pillar(object):
                                                         pillar_dirs,
                                                         key)
                 except Exception as exc:
-                    errors.append('Failed to load ext_pillar {0}: {1}'.format(
-                        key, exc))
+                    errors.append(
+                        'Failed to load ext_pillar {0}: {1}'.format(
+                            key,
+                            exc.__str__(),
+                        )
+                    )
+                    log.error(
+                        'Execption caught loading ext_pillar \'%s\':\n%s',
+                        key, ''.join(traceback.format_tb(sys.exc_info()[2]))
+                    )
             if ext:
                 pillar = merge(
                     pillar,
@@ -864,7 +915,70 @@ class Pillar(object):
                            self.opts.get('renderer', 'yaml'),
                            self.opts.get('pillar_merge_lists', False))
 
+        decrypt_errors = self.decrypt_pillar(pillar)
+        if decrypt_errors:
+            pillar.setdefault('_errors', []).extend(decrypt_errors)
         return pillar
+
+    def decrypt_pillar(self, pillar):
+        '''
+        Decrypt the specified pillar dictionary items, if configured to do so
+        '''
+        errors = []
+        if self.opts.get('decrypt_pillar'):
+            decrypt_pillar = self.opts['decrypt_pillar']
+            if not isinstance(decrypt_pillar, dict):
+                decrypt_pillar = \
+                    salt.utils.repack_dictlist(self.opts['decrypt_pillar'])
+            if not decrypt_pillar:
+                errors.append('decrypt_pillar config option is malformed')
+            for key, rend in six.iteritems(decrypt_pillar):
+                ptr = salt.utils.traverse_dict(
+                    pillar,
+                    key,
+                    default=None,
+                    delimiter=self.opts['decrypt_pillar_delimiter'])
+                if ptr is None:
+                    log.debug('Pillar key %s not present', key)
+                    continue
+                try:
+                    hash(ptr)
+                    immutable = True
+                except TypeError:
+                    immutable = False
+                try:
+                    ret = salt.utils.crypt.decrypt(
+                        ptr,
+                        rend or self.opts['decrypt_pillar_default'],
+                        renderers=self.rend,
+                        opts=self.opts,
+                        valid_rend=self.opts['decrypt_pillar_renderers'])
+                    if immutable:
+                        # Since the key pointed to an immutable type, we need
+                        # to replace it in the pillar dict. First we will find
+                        # the parent, and then we will replace the child key
+                        # with the return data from the renderer.
+                        parent, _, child = key.rpartition(
+                            self.opts['decrypt_pillar_delimiter'])
+                        if not parent:
+                            # key is a top-level key, so the pointer to the
+                            # parent is the pillar dict itself.
+                            ptr = pillar
+                        else:
+                            ptr = salt.utils.traverse_dict(
+                                pillar,
+                                parent,
+                                default=None,
+                                delimiter=self.opts['decrypt_pillar_delimiter'])
+                        if ptr is not None:
+                            ptr[child] = ret
+                except Exception as exc:
+                    msg = 'Failed to decrypt pillar key \'{0}\': {1}'.format(
+                        key, exc
+                    )
+                    errors.append(msg)
+                    log.error(msg, exc_info=True)
+        return errors
 
 
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in

@@ -4,22 +4,23 @@ Management of Pacemaker/Corosync clusters with PCS
 ==================================================
 
 A state module to manage Pacemaker/Corosync clusters
-with the Pacemaker/Corosync configuration system(PCS)
+with the Pacemaker/Corosync configuration system (PCS)
 
 .. versionadded:: 2016.110
 
 :depends: pcs
 
-Walkthrough of a complete pcs cluster setup:
+Walkthrough of a complete PCS cluster setup:
+http://clusterlabs.org/doc/en-US/Pacemaker/1.1/html/Clusters_from_Scratch/
 
 Requirements:
     PCS is installed, pcs service is started and
     the password for the hacluster user is set and known.
 
 Remark on the cibname variable used in the examples:
-    The use of the cibname varible is optional.
+    The use of the cibname variable is optional.
     Use it only if you want to deploy your changes into a cibfile first and then push it.
-    This makes only sense if you want to deploy multiple changes (which require each other) at ones to the cluster.
+    This makes only sense if you want to deploy multiple changes (which require each other) at once to the cluster.
 
 At first the cibfile must be created:
 
@@ -44,7 +45,7 @@ Then the cibfile can be modified by creating resources (creating only 1 resource
                 - '--master'
             - cibname: cib_for_galera
 
-After modifying the cibfile it can be pushed to the live CIB in the cluster:
+After modifying the cibfile, it can be pushed to the live CIB in the cluster:
 
 .. code-block:: yaml
 
@@ -113,7 +114,7 @@ Create a cluster from scratch:
                - value: 60s
                - cibname: cib_for_cluster_settings
 
-6. Configure Fencing (!is not optional on production ready cluster!):
+6. Configure Fencing (!is often not optional on production ready cluster!):
 
    .. code-block:: yaml
 
@@ -359,11 +360,11 @@ def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=Non
     nodes
         a list of nodes which should be authorized to the cluster
     pcsuser
-        user for communitcation with pcs (default: hacluster)
+        user for communication with pcs (default: hacluster)
     pcspasswd
         password for pcsuser (default: hacluster)
     extra_args
-        list of extra option for the \'pcs cluster auth\' command
+        list of extra args for the \'pcs cluster auth\' command
 
     Example:
 
@@ -450,7 +451,7 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=None):
     pcsclustername
         Name of the Pacemaker cluster
     extra_args
-        list of extra option for the \'pcs cluster setup\' command
+        list of extra args for the \'pcs cluster setup\' command
 
     Example:
 
@@ -538,7 +539,7 @@ def cluster_node_present(name, node, extra_args=None):
     node
         node that should be added
     extra_args
-        list of extra option for the \'pcs cluster node add\' command
+        list of extra args for the \'pcs cluster node add\' command
 
     Example:
 
@@ -823,7 +824,7 @@ def prop_has_value(name, prop, value, extra_args=None, cibname=None):
     prop
         name of the property
     value
-        value of the property prop
+        value of the property
     extra_args
         additional options for the pcs property command
     cibname

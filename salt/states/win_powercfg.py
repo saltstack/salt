@@ -41,7 +41,7 @@ def _check_or_set(check_func, set_func, value, power):
         return False
 
 
-def set_timeout(name, value, power="ac"):
+def set_timeout(name, value, power="ac", scheme=None):
     '''
     Set the sleep timeouts of specific items such as disk, monitor.
 
@@ -67,6 +67,9 @@ def set_timeout(name, value, power="ac"):
 
     power
         Should we set the value for AC or DC (battery)? Valid options ac,dc.
+
+    scheme
+        The scheme to use, leave as None to use the current.
     '''
     ret = {'name': name,
            'result': True,
@@ -85,12 +88,12 @@ def set_timeout(name, value, power="ac"):
         check_func = __salt__["powercfg.get_{0}_timeout".format(name)]
         set_func = __salt__["powercfg.set_{0}_timeout".format(name)]
 
-        values = check_func()
+        values = check_func(scheme=scheme)
         if values[power] == value:
             comment.append("{0} {1} is already set with the value {2}.".format(name, power, value))
         else:
             ret['changes'] = {name: {power: value}}
-            set_func(value, power)
+            set_func(value, power, scheme=scheme)
 
     ret['comment'] = ' '.join(comment)
     return ret

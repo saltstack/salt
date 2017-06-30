@@ -14,6 +14,7 @@ import fnmatch
 import collections
 import copy
 import time
+import logging
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -28,6 +29,8 @@ from salt.utils.network import host_to_ips as _host_to_ips
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
 from salt.exceptions import CommandExecutionError
+
+log = logging.getLogger(__file__)
 
 __virtualname__ = 'status'
 __opts__ = {}
@@ -212,7 +215,8 @@ def uptime():
         ut_path = "/proc/uptime"
         if not os.path.exists(ut_path):
             raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
-        seconds = int(float(salt.utils.fopen(ut_path).read().split()[0]))
+        with salt.utils.fopen(ut_path) as rfh:
+            seconds = int(float(rfh.read().split()[0]))
     elif salt.utils.is_sunos():
         # note: some flavors/vesions report the host uptime inside a zone
         #       https://support.oracle.com/epmos/faces/BugDisplay?id=15611584
@@ -236,7 +240,7 @@ def uptime():
     elif salt.utils.is_aix():
         seconds = _get_boot_time_aix()
     else:
-        raise CommandExecutionError('This platform is not supported')
+        return __salt__['cmd.run']('uptime')
 
     # Setup datetime and timedelta objects
     boot_time = datetime.datetime.utcfromtimestamp(curr_seconds - seconds)
@@ -1238,7 +1242,7 @@ def netdev():
         '''
         ret = {}
         ##NOTE: we cannot use hwaddr_interfaces here, so we grab both ip4 and ip6
-        for dev in __grains__['ip4_interfaces'].keys() + __grains__['ip6_interfaces'].keys():
+        for dev in __grains__['ip4_interfaces'].keys() + __grains__['ip6_interfaces']:
             # fetch device info
             netstat_ipv4 = __salt__['cmd.run']('netstat -i -I {dev} -n -f inet'.format(dev=dev)).splitlines()
             netstat_ipv6 = __salt__['cmd.run']('netstat -i -I {dev} -n -f inet6'.format(dev=dev)).splitlines()
@@ -1478,28 +1482,25 @@ def master(master=None, connected=True):
 
         salt '*' status.master
     '''
-
-    # the default publishing port
-    port = 4505
     master_ips = None
 
-    if __salt__['config.get']('publish_port') != '':
-        port = int(__salt__['config.get']('publish_port'))
-
-    # Check if we have FQDN/hostname defined as master
-    # address and try resolving it first. _remote_port_tcp
-    # only works with IP-addresses.
-    if master is not None:
+    if master:
         master_ips = _host_to_ips(master)
 
-    master_connection_status = False
-    if master_ips:
-        ips = _remote_port_tcp(port)
-        for master_ip in master_ips:
-            if master_ip in ips:
-                master_connection_status = True
-                break
+    if not master_ips:
+        return
 
+    master_connection_status = False
+    port = __salt__['config.get']('publish_port', default=4505)
+    connected_ips = _remote_port_tcp(port)
+
+    # Get connection status for master
+    for master_ip in master_ips:
+        if master_ip in connected_ips:
+            master_connection_status = True
+            break
+
+    # Connection to master is not as expected
     if master_connection_status is not connected:
         event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
         if master_connection_status:
@@ -1552,6 +1553,50 @@ def ping_master(master):
         event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
 
     return result
+
+
+def proxy_reconnect(proxy_name, opts=None):
+    '''
+    Forces proxy minion reconnection when not alive.
+
+    proxy_name
+        The virtual name of the proxy module.
+
+    opts: None
+        Opts dictionary. Not intended for CLI usage.
+
+    CLI Example:
+
+        salt '*' status.proxy_reconnect rest_sample
+    '''
+
+    if not opts:
+        opts = __opts__
+
+    if 'proxy' not in opts:
+        return False  # fail
+
+    proxy_keepalive_fn = proxy_name+'.alive'
+    if proxy_keepalive_fn not in __proxy__:
+        return False  # fail
+
+    is_alive = __proxy__[proxy_keepalive_fn](opts)
+    if not is_alive:
+        minion_id = opts.get('proxyid', '') or opts.get('id', '')
+        log.info('{minion_id} ({proxy_name} proxy) is down. Restarting.'.format(
+                minion_id=minion_id,
+                proxy_name=proxy_name
+            )
+        )
+        __proxy__[proxy_name+'.shutdown'](opts)  # safely close connection
+        __proxy__[proxy_name+'.init'](opts)  # reopen connection
+        log.debug('Restarted {minion_id} ({proxy_name} proxy)!'.format(
+                minion_id=minion_id,
+                proxy_name=proxy_name
+            )
+        )
+
+    return True  # success
 
 
 def time_(format='%A, %d. %B %Y %I:%M%p'):

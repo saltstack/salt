@@ -12,7 +12,7 @@ http://cloud.dimensiondata.com/
 
 CaaS has its own non-standard `API`_ , SaltStack provides a 
 wrapper on top of this `API`_ with common methods with other IaaS solutions and
-Public cloud providers. Therefore, you can use use the Dimension Data
+Public cloud providers. Therefore, you can use the Dimension Data
 module to communicate with both the public and private clouds.
 
 

@@ -37,3 +37,4 @@ Full list of Salt Cloud modules
     virtualbox
     vmware
     vultrpy
+    xen

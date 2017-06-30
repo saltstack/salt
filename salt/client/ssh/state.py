@@ -16,6 +16,7 @@ from contextlib import closing
 import salt.client.ssh.shell
 import salt.client.ssh
 import salt.utils
+import salt.utils.files
 import salt.utils.thin
 import salt.utils.url
 import salt.roster
@@ -77,7 +78,7 @@ class SSHHighState(salt.state.BaseHighState):
         '''
         return
 
-    def _ext_nodes(self):
+    def _master_tops(self):
         '''
         Evaluate master_tops locally
         '''
@@ -157,15 +158,16 @@ def salt_refs(data, ret=None):
     return ret
 
 
-def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None):
+def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, roster_grains=None):
     '''
     Generate the execution package from the saltenv file refs and a low state
     data structure
     '''
     gendir = tempfile.mkdtemp()
-    trans_tar = salt.utils.mkstemp()
+    trans_tar = salt.utils.files.mkstemp()
     lowfn = os.path.join(gendir, 'lowstate.json')
     pillarfn = os.path.join(gendir, 'pillar.json')
+    roster_grainsfn = os.path.join(gendir, 'roster_grains.json')
     sync_refs = [
             [salt.utils.url.create('_modules')],
             [salt.utils.url.create('_states')],
@@ -180,6 +182,9 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None):
     if pillar:
         with salt.utils.fopen(pillarfn, 'w+') as fp_:
             fp_.write(json.dumps(pillar))
+    if roster_grains:
+        with salt.utils.fopen(roster_grainsfn, 'w+') as fp_:
+            fp_.write(json.dumps(roster_grains))
 
     if id_ is None:
         id_ = ''

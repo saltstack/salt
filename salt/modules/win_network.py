@@ -4,6 +4,7 @@ Module for gathering and managing network information
 '''
 from __future__ import absolute_import
 
+# Import python libs
 import re
 
 # Import salt libs
@@ -11,8 +12,16 @@ import salt.utils
 import hashlib
 import datetime
 import socket
+
+# Import salt libs
+import salt.utils
 import salt.utils.network
 import salt.utils.validate.net
+from salt.modules.network import (wol, get_hostname, interface, interface_ip,
+                                  subnets6, ip_in_subnet, convert_cidr,
+                                  calc_net, get_fqdn, ifacestartswith,
+                                  iphexval)
+from salt.utils import namespaced_function as _namespaced_function
 
 try:
     import salt.utils.winapi
@@ -21,6 +30,7 @@ except ImportError:
     HAS_DEPENDENCIES = False
 
 # Import 3rd party libraries
+import salt.ext.six as six  # pylint: disable=W0611
 try:
     import wmi  # pylint: disable=W0611
 except ImportError:
@@ -34,9 +44,28 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows() and HAS_DEPENDENCIES is True:
-        return __virtualname__
-    return (False, "Module win_network: module only works on Windows systems")
+    if not salt.utils.is_windows():
+        return False, "Module win_network: Only available on Windows"
+
+    if not HAS_DEPENDENCIES:
+        return False, "Module win_network: Missing dependencies"
+
+    global wol, get_hostname, interface, interface_ip, subnets6, ip_in_subnet
+    global convert_cidr, calc_net, get_fqdn, ifacestartswith, iphexval
+
+    wol = _namespaced_function(wol, globals())
+    get_hostname = _namespaced_function(get_hostname, globals())
+    interface = _namespaced_function(interface, globals())
+    interface_ip = _namespaced_function(interface_ip, globals())
+    subnets6 = _namespaced_function(subnets6, globals())
+    ip_in_subnet = _namespaced_function(ip_in_subnet, globals())
+    convert_cidr = _namespaced_function(convert_cidr, globals())
+    calc_net = _namespaced_function(calc_net, globals())
+    get_fqdn = _namespaced_function(get_fqdn, globals())
+    ifacestartswith = _namespaced_function(ifacestartswith, globals())
+    iphexval = _namespaced_function(iphexval, globals())
+
+    return __virtualname__
 
 
 def ping(host, timeout=False, return_boolean=False):

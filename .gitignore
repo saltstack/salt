@@ -17,6 +17,7 @@ MANIFEST
 #   top of salt such as
 # - /some/path$ git clone https://github.com/thatch45/salt.git
 # - /some/path$ virtualenv --python=/usr/bin/python2.6 salt
+/env/
 /bin/
 /etc/
 /include/

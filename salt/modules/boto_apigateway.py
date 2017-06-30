@@ -80,12 +80,12 @@ from __future__ import absolute_import
 import logging
 import json
 import datetime
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.ext.six as six
 import salt.utils.boto3
 import salt.utils.compat
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -98,6 +98,7 @@ try:
     import boto3
     # pylint: enable=unused-import
     from botocore.exceptions import ClientError
+    from botocore import __version__ as found_botocore_version
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
@@ -113,6 +114,7 @@ def __virtual__():
     '''
     required_boto_version = '2.8.0'
     required_boto3_version = '1.2.1'
+    required_botocore_version = '1.4.49'
     # the boto_apigateway execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
@@ -125,6 +127,9 @@ def __virtual__():
     elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
         return (False, 'The boto_apigateway module could not be loaded: '
                 'boto3 version {0} or later must be installed.'.format(required_boto3_version))
+    elif _LooseVersion(found_botocore_version) < _LooseVersion(required_botocore_version):
+        return (False, 'The boto_apigateway module could not be loaded: '
+                'botocore version {0} or later must be installed.'.format(required_botocore_version))
     else:
         return True
 
@@ -349,7 +354,7 @@ def create_api_resources(restApiId, path,
         salt myminion boto_apigateway.create_api_resources myapi_id resource_path
 
     '''
-    path_parts = str.split(path, '/')
+    path_parts = path.split('/')
     created = []
     current_path = ''
     try:
@@ -1390,3 +1395,307 @@ def create_api_integration_response(restApiId, resourcePath, httpMethod, statusC
         return {'created': False, 'error': 'no such resource'}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def _filter_plans(attr, name, plans):
+    '''
+    Helper to return list of usage plan items matching the given attribute value.
+    '''
+    return [plan for plan in plans if plan[attr] == name]
+
+
+def describe_usage_plans(name=None, plan_id=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Returns a list of existing usage plans, optionally filtered to match a given plan name
+
+    .. versionadded:: 2017.7.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.describe_usage_plans
+        salt myminion boto_apigateway.describe_usage_plans name='usage plan name'
+        salt myminion boto_apigateway.describe_usage_plans plan_id='usage plan id'
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        plans = _multi_call(conn.get_usage_plans, 'items')
+        if name:
+            plans = _filter_plans('name', name, plans)
+        if plan_id:
+            plans = _filter_plans('id', plan_id, plans)
+
+        return {'plans': [_convert_datetime_str(plan) for plan in plans]}
+
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+
+def _validate_throttle(throttle):
+    '''
+    Helper to verify that throttling parameters are valid
+    '''
+    if throttle is not None:
+        if not isinstance(throttle, dict):
+            raise TypeError('throttle must be a dictionary, provided value: {0}'.format(throttle))
+
+
+def _validate_quota(quota):
+    '''
+    Helper to verify that quota parameters are valid
+    '''
+    if quota is not None:
+        if not isinstance(quota, dict):
+            raise TypeError('quota must be a dictionary, provided value: {0}'.format(quota))
+        periods = ['DAY', 'WEEK', 'MONTH']
+        if 'period' not in quota or quota['period'] not in periods:
+            raise ValueError('quota must have a valid period specified, valid values are {0}'.format(','.join(periods)))
+        if 'limit' not in quota:
+            raise ValueError('quota limit must have a valid value')
+
+
+def create_usage_plan(name, description=None, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Creates a new usage plan with throttling and quotas optionally applied
+
+    .. versionadded:: 2017.7.0
+
+    name
+        Name of the usage plan
+
+    throttle
+        A dictionary consisting of the following keys:
+
+        rateLimit
+            requests per second at steady rate, float
+
+        burstLimit
+            maximum number of requests per second, integer
+
+    quota
+        A dictionary consisting of the following keys:
+
+        limit
+            number of allowed requests per specified quota period [required if quota parameter is present]
+
+        offset
+            number of requests to be subtracted from limit at the beginning of the period [optional]
+
+        period
+            quota period, must be one of DAY, WEEK, or MONTH. [required if quota parameter is present
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.create_usage_plan name='usage plan name' throttle='{"rateLimit": 10.0, "burstLimit": 10}'
+
+    '''
+    try:
+        _validate_throttle(throttle)
+        _validate_quota(quota)
+
+        values = dict(name=name)
+        if description:
+            values['description'] = description
+        if throttle:
+            values['throttle'] = throttle
+        if quota:
+            values['quota'] = quota
+
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        res = conn.create_usage_plan(**values)
+        return {'created': True, 'result': res}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+    except (TypeError, ValueError) as e:
+        return {'error': '{0}'.format(e)}
+
+
+def update_usage_plan(plan_id, throttle=None, quota=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Updates an existing usage plan with throttling and quotas
+
+    .. versionadded:: 2017.7.0
+
+    plan_id
+        Id of the created usage plan
+
+    throttle
+        A dictionary consisting of the following keys:
+
+        rateLimit
+            requests per second at steady rate, float
+
+        burstLimit
+            maximum number of requests per second, integer
+
+    quota
+        A dictionary consisting of the following keys:
+
+        limit
+            number of allowed requests per specified quota period [required if quota parameter is present]
+
+        offset
+            number of requests to be subtracted from limit at the beginning of the period [optional]
+
+        period
+            quota period, must be one of DAY, WEEK, or MONTH. [required if quota parameter is present
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.update_usage_plan plan_id='usage plan id' throttle='{"rateLimit": 10.0, "burstLimit": 10}'
+
+    '''
+    try:
+        _validate_throttle(throttle)
+        _validate_quota(quota)
+
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+        patchOperations = []
+
+        if throttle is None:
+            patchOperations.append({'op': 'remove', 'path': '/throttle'})
+        else:
+            if 'rateLimit' in throttle:
+                patchOperations.append({'op': 'replace', 'path': '/throttle/rateLimit', 'value': str(throttle['rateLimit'])})
+            if 'burstLimit' in throttle:
+                patchOperations.append({'op': 'replace', 'path': '/throttle/burstLimit', 'value': str(throttle['burstLimit'])})
+
+        if quota is None:
+            patchOperations.append({'op': 'remove', 'path': '/quota'})
+        else:
+            patchOperations.append({'op': 'replace', 'path': '/quota/period', 'value': str(quota['period'])})
+            patchOperations.append({'op': 'replace', 'path': '/quota/limit', 'value': str(quota['limit'])})
+            if 'offset' in quota:
+                patchOperations.append({'op': 'replace', 'path': '/quota/offset', 'value': str(quota['offset'])})
+
+        if patchOperations:
+            res = conn.update_usage_plan(usagePlanId=plan_id,
+                                         patchOperations=patchOperations)
+            return {'updated': True, 'result': res}
+
+        return {'updated': False}
+
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+    except (TypeError, ValueError) as e:
+        return {'error': '{0}'.format(e)}
+
+
+def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes usage plan identified by plan_id
+
+    .. versionadded:: 2017.7.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.delete_usage_plan plan_id='usage plan id'
+
+    '''
+    try:
+        existing = describe_usage_plans(plan_id=plan_id, region=region, key=key, keyid=keyid, profile=profile)
+        # don't attempt to delete the usage plan if it does not exist
+        if 'error' in existing:
+            return {'error': existing['error']}
+
+        if 'plans' in existing and existing['plans']:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            res = conn.delete_usage_plan(usagePlanId=plan_id)
+        return {'deleted': True, 'usagePlanId': plan_id}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+
+def _update_usage_plan_apis(plan_id, apis, op, region=None, key=None, keyid=None, profile=None):
+    '''
+    Helper function that updates the usage plan identified by plan_id by adding or removing it to each of the stages, specified by apis parameter.
+
+    apis
+        a list of dictionaries, where each dictionary contains the following:
+
+        apiId
+            a string, which is the id of the created API in AWS ApiGateway
+
+        stage
+            a string, which is the stage that the created API is deployed to.
+
+    op
+        'add' or 'remove'
+    '''
+    try:
+        patchOperations = []
+        for api in apis:
+            patchOperations.append({
+                                    'op': op,
+                                    'path': '/apiStages',
+                                    'value': '{0}:{1}'.format(api['apiId'], api['stage'])
+                                   })
+        res = None
+        if patchOperations:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            res = conn.update_usage_plan(usagePlanId=plan_id,
+                                         patchOperations=patchOperations)
+        return {'success': True, 'result': res}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+    except Exception as e:
+        return {'error': e}
+
+
+def attach_usage_plan_to_apis(plan_id, apis, region=None, key=None, keyid=None, profile=None):
+    '''
+    Attaches given usage plan to each of the apis provided in a list of apiId and stage values
+
+    .. versionadded:: 2017.7.0
+
+    apis
+        a list of dictionaries, where each dictionary contains the following:
+
+        apiId
+            a string, which is the id of the created API in AWS ApiGateway
+
+        stage
+            a string, which is the stage that the created API is deployed to.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.attach_usage_plan_to_apis plan_id='usage plan id' apis='[{"apiId": "some id 1", "stage": "some stage 1"}]'
+
+    '''
+    return _update_usage_plan_apis(plan_id, apis, 'add', region=region, key=key, keyid=keyid, profile=profile)
+
+
+def detach_usage_plan_from_apis(plan_id, apis, region=None, key=None, keyid=None, profile=None):
+    '''
+    Detaches given usage plan from each of the apis provided in a list of apiId and stage value
+
+    .. versionadded:: 2017.7.0
+
+    apis
+        a list of dictionaries, where each dictionary contains the following:
+
+        apiId
+            a string, which is the id of the created API in AWS ApiGateway
+
+        stage
+            a string, which is the stage that the created API is deployed to.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.detach_usage_plan_to_apis plan_id='usage plan id' apis='[{"apiId": "some id 1", "stage": "some stage 1"}]'
+
+    '''
+    return _update_usage_plan_apis(plan_id, apis, 'remove', region=region, key=key, keyid=keyid, profile=profile)

@@ -10,8 +10,8 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt testing libraries
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 
 # Import Salt libraries
 import salt.utils.vmware
@@ -28,16 +28,19 @@ log = logging.getLogger(__name__)
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.get_mors_with_properties',
-       MagicMock(return_value=[]))
-@patch('salt.utils.vmware.get_datacenter',
-       MagicMock(return_value=None))
-@patch('salt.utils.vmware.get_cluster',
-       MagicMock(return_value=None))
 class GetHostsTestCase(TestCase):
     '''Tests for salt.utils.vmware.get_hosts'''
 
     def setUp(self):
+        patches = (
+            ('salt.utils.vmware.get_mors_with_properties', MagicMock(return_value=[])),
+            ('salt.utils.vmware.get_datacenter', MagicMock(return_value=None)),
+            ('salt.utils.vmware.get_cluster', MagicMock(return_value=None))
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.mock_root_folder = MagicMock()
         self.mock_si = MagicMock()
         self.mock_host1, self.mock_host2, self.mock_host3 = MagicMock(), \
@@ -150,8 +153,3 @@ class GetHostsTestCase(TestCase):
                    MagicMock(return_value=[self.mock_prop_host1])):
             res = salt.utils.vmware.get_hosts(self.mock_si, get_all_hosts=True)
         self.assertEqual(res, [self.mock_host1])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GetHostsTestCase, needs_daemon=False)

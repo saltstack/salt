@@ -110,9 +110,9 @@ def _check_pkg_version_format(pkg):
 
     if not HAS_PIP:
         ret['comment'] = (
-            'An importable pip module is required but could not be found on '
-            'your system. This usually means that the system\'s pip package '
-            'is not installed properly.'
+            'An importable Python 2 pip module is required but could not be '
+            'found on your system. This usually means that the system\'s pip '
+            'package is not installed properly.'
         )
 
         return ret
@@ -719,9 +719,19 @@ def installed(name,
         if requirements or editable:
             comments = []
             if requirements:
+                PIP_REQUIREMENTS_NOCHANGE = [
+                    'Requirement already satisfied',
+                    'Collecting',
+                    'Cloning',
+                    'Cleaning up...',
+                ]
                 for line in pip_install_call.get('stdout', '').split('\n'):
-                    if not line.startswith('Requirement already satisfied') \
-                            and line != 'Cleaning up...':
+                    if not any(
+                        [
+                            line.strip().startswith(x)
+                            for x in PIP_REQUIREMENTS_NOCHANGE
+                        ]
+                    ):
                         ret['changes']['requirements'] = True
                 if ret['changes'].get('requirements'):
                     comments.append('Successfully processed requirements file '

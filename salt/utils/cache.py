@@ -137,15 +137,15 @@ class CacheDisk(CacheDict):
         '''
         if not HAS_MSGPACK or not os.path.exists(self._path):
             return
-        with salt.utils.fopen(self._path, 'r') as fp_:
-            cache = msgpack.load(fp_)
+        with salt.utils.fopen(self._path, 'rb') as fp_:
+            cache = msgpack.load(fp_, encoding=__salt_system_encoding__)
         if "CacheDisk_cachetime" in cache:  # new format
             self._dict = cache["CacheDisk_data"]
             self._key_cache_time = cache["CacheDisk_cachetime"]
         else:  # old format
             self._dict = cache
             timestamp = os.path.getmtime(self._path)
-            for key in self._dict.keys():
+            for key in self._dict:
                 self._key_cache_time[key] = timestamp
         if log.isEnabledFor(logging.DEBUG):
             log.debug('Disk cache retrieved: {0}'.format(cache))
@@ -158,12 +158,12 @@ class CacheDisk(CacheDict):
             return
         # TODO Add check into preflight to ensure dir exists
         # TODO Dir hashing?
-        with salt.utils.fopen(self._path, 'w+') as fp_:
+        with salt.utils.fopen(self._path, 'wb+') as fp_:
             cache = {
                 "CacheDisk_data": self._dict,
                 "CacheDisk_cachetime": self._key_cache_time
             }
-            msgpack.dump(cache, fp_)
+            msgpack.dump(cache, fp_, use_bin_type=True)
 
 
 class CacheCli(object):

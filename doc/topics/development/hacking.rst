@@ -66,34 +66,8 @@ Install Salt (and dependencies) into the virtualenv:
 
 .. code-block:: bash
 
-    pip install M2Crypto    # Don't install on Debian/Ubuntu (see below)
     pip install pyzmq PyYAML pycrypto msgpack-python jinja2 psutil futures tornado
     pip install -e ./salt   # the path to the salt git clone from above
-
-.. note:: Installing M2Crypto
-
-    ``swig`` and ``libssl-dev`` are required to build M2Crypto. To fix
-    the error ``command 'swig' failed with exit status 1`` while installing M2Crypto,
-    try installing it with the following command:
-
-    .. code-block:: bash
-
-        env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl" pip install M2Crypto
-
-    Debian and Ubuntu systems have modified openssl libraries and mandate that
-    a patched version of M2Crypto be installed. This means that M2Crypto
-    needs to be installed via apt:
-
-    .. code-block:: bash
-
-        apt-get install python-m2crypto
-
-    This also means that pulling in the M2Crypto installed using apt requires using
-    ``--system-site-packages`` when creating the virtualenv.
-
-    If you're using a platform other than Debian or Ubuntu, and you are
-    installing M2Crypto via pip instead of a system package, then you will also
-    need the ``gcc`` compiler.
 
 .. note:: Installing psutil
 
@@ -143,7 +117,7 @@ Edit the master config file:
 1.  Uncomment and change the ``user: root`` value to your own user.
 2.  Uncomment and change the ``root_dir: /`` value to point to
     ``/path/to/your/virtualenv``.
-3.  Uncomment and change the ``pki: /etc/salt/pki/master`` value to point to
+3.  Uncomment and change the ``pki_dir: /etc/salt/pki/master`` value to point to
     ``/path/to/your/virtualenv/etc/salt/pki/master``
 4.  If you are running version 0.11.1 or older, uncomment, and change the
     ``pidfile: /var/run/salt-master.pid`` value to point to
@@ -155,7 +129,7 @@ Edit the minion config file:
 
 1.  Repeat the edits you made in the master config for the ``user`` and
     ``root_dir`` values as well as any port changes.
-2.  Uncomment and change the ``pki: /etc/salt/pki/minion`` value to point to
+2.  Uncomment and change the ``pki_dir: /etc/salt/pki/minion`` value to point to
     ``/path/to/your/virtualenv/etc/salt/pki/minion``
 3.  If you are running version 0.11.1 or older, uncomment, and change the
     ``pidfile: /var/run/salt-minion.pid`` value to point to

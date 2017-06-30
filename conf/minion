@@ -165,7 +165,7 @@
 # strip_colors: False
 
 # Backup files that are replaced by file.managed and file.recurse under
-# 'cachedir'/file_backups relative to their original location and appended
+# 'cachedir'/file_backup relative to their original location and appended
 # with a timestamp. The only valid setting is "minion". Disabled by default.
 #
 # Alternatively this can be specified for each file in state files:
@@ -499,6 +499,11 @@
 # Isolates the pillar environment on the minion side. This functions the same
 # as the environment setting, but for pillar instead of states.
 #pillarenv: None
+#
+# Set this option to True to force the pillarenv to be the same as the
+# effective saltenv when running states. Note that if pillarenv is specified,
+# this option will be ignored.
+#pillarenv_from_saltenv: False
 #
 # Set this option to 'True' to force a 'KeyError' to be raised whenever an
 # attempt to retrieve a named value from pillar fails. When this option is set

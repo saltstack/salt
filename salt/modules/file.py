@@ -30,8 +30,8 @@ import time
 import glob
 import hashlib
 import mmap
-from functools import reduce  # pylint: disable=redefined-builtin
 from collections import Iterable, Mapping
+from functools import reduce  # pylint: disable=redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
@@ -499,6 +499,140 @@ def chgrp(path, group):
 
     user = get_user(path)
     return chown(path, user, group)
+
+
+def _cmp_attrs(path, attrs):
+    '''
+    .. versionadded: Oxygen
+
+    Compare attributes of a given file to given attributes.
+    Returns a pair (list) where first item are attributes to
+    add and second item are to be removed.
+
+    path
+        path to file to compare attributes with.
+
+    attrs
+        string of attributes to compare against a given file
+    '''
+    diff = [None, None]
+
+    lattrs = lsattr(path).get(path, '')
+
+    old = [chr for chr in lattrs if chr not in attrs]
+    if len(old) > 0:
+        diff[1] = ''.join(old)
+
+    new = [chr for chr in attrs if chr not in lattrs]
+    if len(new) > 0:
+        diff[0] = ''.join(new)
+
+    return diff
+
+
+def lsattr(path):
+    '''
+    .. versionadded: Oxygen
+
+    Obtain the modifiable attributes of the given file. If path
+    is to a directory, an empty list is returned.
+
+    path
+        path to file to obtain attributes of. File/directory must exist.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.lsattr foo1.txt
+    '''
+    if not os.path.exists(path):
+        raise SaltInvocationError("File or directory does not exist.")
+
+    # Put quotes around path to ensure we can handle spaces in filename.
+    if not salt.utils.is_quoted(path):
+        path = '"{0}"'.format(path)
+
+    cmd = 'lsattr {0}'.format(path)
+    result = __salt__['cmd.run'](cmd, python_shell=False)
+
+    results = {}
+    for line in result.splitlines():
+        if not line.startswith('lsattr'):
+            vals = line.split()
+            results[vals[1]] = re.findall(r"[acdijstuADST]", vals[0])
+
+    return results
+
+
+def chattr(*args, **kwargs):
+    '''
+    .. versionadded: Oxygen
+
+    Change the attributes of files
+
+    *args
+        list of files to modify attributes of
+
+    **kwargs - the following are valid <key,value> pairs:
+
+    operator
+        add|remove
+        determines whether attributes should be added or removed from files
+
+    attributes
+        acdijstuADST
+        string of characters representing attributes to add/remove from files
+
+    version
+        a version number to assign to the files
+
+    flags
+        [RVf]
+        flags to assign to chattr (recurse, verbose, suppress most errors)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.chattr foo1.txt foo2.txt operator=add attributes=ai
+        salt '*' file.chattr foo3.txt operator=remove attributes=i version=2
+    '''
+    args = [arg if salt.utils.is_quoted(arg) else '"{0}"'.format(arg)
+            for arg in args]
+
+    operator = kwargs.pop('operator', None)
+    attributes = kwargs.pop('attributes', None)
+    flags = kwargs.pop('flags', None)
+    version = kwargs.pop('version', None)
+
+    if (operator is None) or (operator not in ['add', 'remove']):
+        raise SaltInvocationError(
+            "Need an operator: 'add' or 'remove' to modify attributes.")
+    if attributes is None:
+        raise SaltInvocationError("Need attributes: [AacDdijsTtSu]")
+
+    if operator == "add":
+        attrs = '+{0}'.format(attributes)
+    elif operator == "remove":
+        attrs = '-{0}'.format(attributes)
+
+    flgs = ''
+    if flags is not None:
+        flgs = '-{0}'.format(flags)
+
+    vrsn = ''
+    if version is not None:
+        vrsn = '-v {0}'.format(version)
+
+    cmd = 'chattr {0} {1} {2} {3}'.format(attrs, flgs, vrsn, ' '.join(args))
+    result = __salt__['cmd.run'](cmd, python_shell=False)
+
+    if bool(result):
+        raise CommandExecutionError(
+            "chattr failed to run, possibly due to bad parameters.")
+
+    return True
 
 
 def get_sum(path, form='sha256'):
@@ -1314,6 +1448,8 @@ def comment_line(path,
             # Loop through each line of the file and look for a match
             for line in r_file:
                 # Is it in this line
+                if six.PY3:
+                    line = line.decode(__salt_system_encoding__)
                 if re.match(regex, line):
                     # Load lines into dictionaries, set found to True
                     orig_file.append(line)
@@ -1355,17 +1491,22 @@ def comment_line(path,
                                       buffering=bufsize) as r_file:
                     # Loop through each line of the file and look for a match
                     for line in r_file:
+                        if six.PY3:
+                            line = line.decode(__salt_system_encoding__)
                         try:
                             # Is it in this line
                             if re.match(regex, line):
                                 # Write the new line
                                 if cmnt:
-                                    w_file.write('{0}{1}'.format(char, line))
+                                    wline = '{0}{1}'.format(char, line)
                                 else:
-                                    w_file.write(line.lstrip(char))
+                                    wline = line.lstrip(char)
                             else:
                                 # Write the existing line (no change)
-                                w_file.write(line)
+                                wline = line
+                            if six.PY3:
+                                wline = wline.encode(__salt_system_encoding__)
+                            w_file.write(wline)
                         except (OSError, IOError) as exc:
                             raise CommandExecutionError(
                                 "Unable to write file '{0}'. Contents may "
@@ -1468,7 +1609,7 @@ def _mkstemp_copy(path,
     temp_file = None
     # Create the temp file
     try:
-        temp_file = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
+        temp_file = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
             "Unable to create temp file. "
@@ -1548,7 +1689,7 @@ def _regex_to_static(src, regex):
         return None
 
     try:
-        src = re.search(regex, src)
+        src = re.search(regex, src, re.M)
     except Exception as ex:
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
@@ -1589,7 +1730,7 @@ def _get_line_indent(src, line, indent):
     return ''.join(idt) + line.strip()
 
 
-def line(path, content, match=None, mode=None, location=None,
+def line(path, content=None, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
          quiet=False, indent=True):
     '''
@@ -1603,7 +1744,7 @@ def line(path, content, match=None, mode=None, location=None,
         Filesystem path to the file to be edited.
 
     content
-        Content of the line.
+        Content of the line. Allowed to be empty if mode=delete.
 
     match
         Match the target line for an action by
@@ -1704,6 +1845,13 @@ def line(path, content, match=None, mode=None, location=None,
             raise CommandExecutionError('Mode was not defined. How to process the file?')
         else:
             raise CommandExecutionError('Unknown mode: "{0}"'.format(mode))
+
+    # We've set the content to be empty in the function params but we want to make sure
+    # it gets passed when needed. Feature #37092
+    modeswithemptycontent = ['delete']
+    if mode not in modeswithemptycontent and content is None:
+        raise CommandExecutionError('Content can only be empty if mode is {0}'.format(modeswithemptycontent))
+    del modeswithemptycontent
 
     # Before/after has privilege. If nothing defined, match is used by content.
     if before is None and after is None and not match:
@@ -2039,8 +2187,8 @@ def replace(path,
 
     # Search the file; track if any changes have been made for the return val
     has_changes = False
-    orig_file = []  # used if show_changes
-    new_file = []  # used if show_changes
+    orig_file = []  # used for show_changes and change detection
+    new_file = []  # used for show_changes and change detection
     if not salt.utils.is_windows():
         pre_user = get_user(path)
         pre_group = get_group(path)
@@ -2097,14 +2245,10 @@ def replace(path,
                         # Content was found, so set found.
                         found = True
 
-                # Keep track of show_changes here, in case the file isn't
-                # modified
-                if show_changes or append_if_not_found or \
-                   prepend_if_not_found:
-                    orig_file = r_data.read(filesize).splitlines(True) \
-                        if isinstance(r_data, mmap.mmap) \
-                        else r_data.splitlines(True)
-                    new_file = result.splitlines(True)
+                orig_file = r_data.read(filesize).splitlines(True) \
+                    if isinstance(r_data, mmap.mmap) \
+                    else r_data.splitlines(True)
+                new_file = result.splitlines(True)
 
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
@@ -2226,10 +2370,19 @@ def replace(path,
     if not dry_run and not salt.utils.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
-    if show_changes:
+    def get_changes():
         orig_file_as_str = [salt.utils.to_str(x) for x in orig_file]
         new_file_as_str = [salt.utils.to_str(x) for x in new_file]
         return ''.join(difflib.unified_diff(orig_file_as_str, new_file_as_str))
+
+    if show_changes:
+        return get_changes()
+
+    # We may have found a regex line match but don't need to change the line
+    # (for situations where the pattern also matches the repl). Revert the
+    # has_changes flag to False if the final result is unchanged.
+    if not get_changes():
+        has_changes = False
 
     return has_changes
 
@@ -2920,8 +3073,8 @@ def seek_read(path, size, offset):
         salt '*' file.seek_read /path/to/file 4096 0
     '''
     path = os.path.expanduser(path)
+    seek_fh = os.open(path, os.O_RDONLY)
     try:
-        seek_fh = os.open(path, os.O_RDONLY)
         os.lseek(seek_fh, int(offset), 0)
         data = os.read(seek_fh, int(size))
     finally:
@@ -2951,8 +3104,8 @@ def seek_write(path, data, offset):
         salt '*' file.seek_write /path/to/file 'some data' 4096
     '''
     path = os.path.expanduser(path)
+    seek_fh = os.open(path, os.O_WRONLY)
     try:
-        seek_fh = os.open(path, os.O_WRONLY)
         os.lseek(seek_fh, int(offset), 0)
         ret = os.write(seek_fh, data)
         os.fsync(seek_fh)
@@ -3038,6 +3191,13 @@ def symlink(src, path):
         salt '*' file.symlink /path/to/file /path/to/link
     '''
     path = os.path.expanduser(path)
+
+    try:
+        if os.path.normpath(os.readlink(path)) == os.path.normpath(src):
+            log.debug('link already in correct state: %s -> %s', path, src)
+            return True
+    except OSError:
+        pass
 
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
@@ -3203,6 +3363,25 @@ def access(path, mode):
         return os.access(path, mode)
     else:
         raise SaltInvocationError('Invalid mode specified.')
+
+
+def read(path, binary=False):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Return the content of the file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.read /path/to/file
+    '''
+    access_mode = 'r'
+    if binary is True:
+        access_mode += 'b'
+    with salt.utils.fopen(path, access_mode) as file_obj:
+        return file_obj.read()
 
 
 def readlink(path, canonicalize=False):
@@ -3495,7 +3674,8 @@ def set_selinux_context(path,
 
     .. code-block:: bash
 
-        salt '*' file.set_selinux_context path <role> <type> <range>
+        salt '*' file.set_selinux_context path <user> <role> <type> <range>
+        salt '*' file.set_selinux_context /etc/yum.repos.d/epel.repo system_u object_r system_conf_t s0
     '''
     if not any((user, role, type, range)):
         return False
@@ -3658,6 +3838,9 @@ def apply_template_on_contents(
             opts=__opts__)['data']
         if six.PY2:
             contents = contents.encode('utf-8')
+        elif six.PY3 and isinstance(contents, bytes):
+            # bytes -> str
+            contents = contents.decode('utf-8')
     else:
         ret = {}
         ret['result'] = False
@@ -3676,6 +3859,7 @@ def get_managed(
         user,
         group,
         mode,
+        attrs,
         saltenv,
         context,
         defaults,
@@ -3710,6 +3894,11 @@ def get_managed(
 
     mode
         Permissions of file
+
+    attrs
+        Attributes of file
+
+        .. versionadded:: Oxygen
 
     context
         Variables to add to the template context
@@ -3827,6 +4016,7 @@ def get_managed(
                     user=user,
                     group=group,
                     mode=mode,
+                    attrs=attrs,
                     saltenv=saltenv,
                     context=context_dict,
                     salt=__salt__,
@@ -4080,15 +4270,15 @@ def extract_hash(hash_fn,
     return None
 
 
-def check_perms(name, ret, user, group, mode, follow_symlinks=False):
+def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False):
     '''
-    Check the permissions on files and chown if needed
+    Check the permissions on files, modify attributes and chown if needed
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.check_perms /etc/sudoers '{}' root root 400
+        salt '*' file.check_perms /etc/sudoers '{}' root root 400 ai
 
     .. versionchanged:: 2014.1.3
         ``follow_symlinks`` option added
@@ -4118,6 +4308,14 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     perms['lgroup'] = cur['group']
     perms['lmode'] = salt.utils.normalize_mode(cur['mode'])
 
+    is_dir = os.path.isdir(name)
+    if not salt.utils.is_windows and not is_dir:
+        # List attributes on file
+        perms['lattrs'] = ''.join(lsattr(name)[name])
+        # Remove attributes on file so changes can be enforced.
+        if perms['lattrs']:
+            chattr(name, operator='remove', attributes=perms['lattrs'])
+
     # Mode changes if needed
     if mode is not None:
         # File is a symlink, ignore the mode setting
@@ -4138,6 +4336,7 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
                         )
                     else:
                         ret['changes']['mode'] = mode
+
     # user/group changes if needed, then check if it worked
     if user:
         if isinstance(user, int):
@@ -4220,6 +4419,37 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
         ret['comment'] = '; '.join(ret['comment'])
     if __opts__['test'] is True and ret['changes']:
         ret['result'] = None
+
+    if not salt.utils.is_windows and not is_dir:
+        # Replace attributes on file if it had been removed
+        if perms['lattrs']:
+            chattr(name, operator='add', attributes=perms['lattrs'])
+
+    # Modify attributes of file if needed
+    if attrs is not None and not is_dir:
+        # File is a symlink, ignore the mode setting
+        # if follow_symlinks is False
+        if os.path.islink(name) and not follow_symlinks:
+            pass
+        else:
+            diff_attrs = _cmp_attrs(name, attrs)
+            if diff_attrs[0] is not None or diff_attrs[1] is not None:
+                if __opts__['test'] is True:
+                    ret['changes']['attrs'] = attrs
+                else:
+                    if diff_attrs[0] is not None:
+                        chattr(name, operator="add", attributes=diff_attrs[0])
+                    if diff_attrs[1] is not None:
+                        chattr(name, operator="remove", attributes=diff_attrs[1])
+                    cmp_attrs = _cmp_attrs(name, attrs)
+                    if cmp_attrs[0] is not None or cmp_attrs[1] is not None:
+                        ret['result'] = False
+                        ret['comment'].append(
+                            'Failed to change attributes to {0}'.format(attrs)
+                        )
+                    else:
+                        ret['changes']['attrs'] = attrs
+
     return ret, perms
 
 
@@ -4231,6 +4461,7 @@ def check_managed(
         user,
         group,
         mode,
+        attrs,
         template,
         context,
         defaults,
@@ -4266,6 +4497,7 @@ def check_managed(
             user,
             group,
             mode,
+            attrs,
             saltenv,
             context,
             defaults,
@@ -4275,7 +4507,7 @@ def check_managed(
             __clean_tmp(sfn)
             return False, comments
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, saltenv, contents)
+                              group, mode, attrs, saltenv, contents)
     # Ignore permission for files written temporary directories
     # Files in any path will still be set correctly using get_managed()
     if name.startswith(tempfile.gettempdir()):
@@ -4299,6 +4531,7 @@ def check_managed_changes(
         user,
         group,
         mode,
+        attrs,
         template,
         context,
         defaults,
@@ -4335,6 +4568,7 @@ def check_managed_changes(
             user,
             group,
             mode,
+            attrs,
             saltenv,
             context,
             defaults,
@@ -4351,7 +4585,7 @@ def check_managed_changes(
                 except Exception as exc:
                     log.warning('Unable to stat %s: %s', sfn, exc)
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, saltenv, contents)
+                              group, mode, attrs, saltenv, contents)
     __clean_tmp(sfn)
     return changes
 
@@ -4364,6 +4598,7 @@ def check_file_meta(
         user,
         group,
         mode,
+        attrs,
         saltenv,
         contents=None):
     '''
@@ -4405,6 +4640,11 @@ def check_file_meta(
     mode
         Destination file permissions mode
 
+    attrs
+        Destination file attributes
+
+        .. versionadded:: Oxygen
+
     saltenv
         Salt environment used to resolve source files
 
@@ -4442,8 +4682,8 @@ def check_file_meta(
 
     if contents is not None:
         # Write a tempfile with the static contents
-        tmp = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
-                                 text=True)
+        tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
+                                       text=True)
         if salt.utils.is_windows():
             contents = os.linesep.join(
                 _splitlines_preserving_trailing_newline(contents))
@@ -4465,19 +4705,33 @@ def check_file_meta(
                 else:
                     changes['diff'] = 'Replace binary file with text file'
 
-    if (user is not None
-            and user != lstats['user']
-            and user != lstats['uid']):
-        changes['user'] = user
-    if (group is not None
-            and group != lstats['group']
-            and group != lstats['gid']):
-        changes['group'] = group
-    # Normalize the file mode
-    smode = salt.utils.normalize_mode(lstats['mode'])
-    mode = salt.utils.normalize_mode(mode)
-    if mode is not None and mode != smode:
-        changes['mode'] = mode
+    if not salt.utils.is_windows():
+        # Check owner
+        if (user is not None
+                and user != lstats['user']
+                and user != lstats['uid']):
+            changes['user'] = user
+
+        # Check group
+        if (group is not None
+                and group != lstats['group']
+                and group != lstats['gid']):
+            changes['group'] = group
+
+        # Normalize the file mode
+        smode = salt.utils.normalize_mode(lstats['mode'])
+        mode = salt.utils.normalize_mode(mode)
+        if mode is not None and mode != smode:
+            changes['mode'] = mode
+
+        diff_attrs = _cmp_attrs(name, attrs)
+        if (
+            attrs is not None and
+            diff_attrs[0] is not None or
+            diff_attrs[1] is not None
+        ):
+            changes['attrs'] = attrs
+
     return changes
 
 
@@ -4529,6 +4783,7 @@ def manage_file(name,
                 user,
                 group,
                 mode,
+                attrs,
                 saltenv,
                 backup,
                 makedirs=False,
@@ -4539,6 +4794,8 @@ def manage_file(name,
                 follow_symlinks=True,
                 skip_verify=False,
                 keep_mode=False,
+                encoding=None,
+                encoding_errors='strict',
                 **kwargs):
     '''
     Checks the destination against what was retrieved with get_managed and
@@ -4578,6 +4835,11 @@ def manage_file(name,
     backup
         backup_mode
 
+    attrs
+        attributes to be set on file: '' means remove all of them
+
+        .. versionadded: Oxygen
+
     makedirs
         make directories if they do not exist
 
@@ -4611,6 +4873,21 @@ def manage_file(name,
             the inability to connect back to the master with salt-ssh, salt is
             unable to stat the file as it exists on the fileserver and thus
             cannot mirror the mode on the salt-ssh minion
+
+    encoding : None
+        If None, str() will be applied to contents.
+        If not None, specified encoding will be used.
+        See https://docs.python.org/3/library/codecs.html#standard-encodings
+        for the list of available encodings.
+
+        .. versionadded:: 2017.7.0
+
+    encoding_errors : 'strict'
+        Default is ```'strict'```.
+        See https://docs.python.org/2/library/codecs.html#codec-base-classes
+        for the error handling schemes.
+
+        .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -4728,13 +5005,17 @@ def manage_file(name,
 
         if contents is not None:
             # Write the static contents to a temporary file
-            tmp = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
-                                     text=True)
+            tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
+                                           text=True)
             if salt.utils.is_windows():
                 contents = os.linesep.join(
                     _splitlines_preserving_trailing_newline(contents))
             with salt.utils.fopen(tmp, 'w') as tmp_:
-                tmp_.write(str(contents))
+                if encoding:
+                    log.debug('File will be encoded with {0}'.format(encoding))
+                    tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
+                else:
+                    tmp_.write(str(contents))
 
             # Compare contents of files to know if we need to replace
             with salt.utils.fopen(tmp, 'r') as src:
@@ -4805,7 +5086,16 @@ def manage_file(name,
             ret['changes']['diff'] = \
                 'Replace symbolic link with regular file'
 
-        ret, _ = check_perms(name, ret, user, group, mode, follow_symlinks)
+        if salt.utils.is_windows():
+            ret = check_perms(name,
+                              ret,
+                              kwargs.get('win_owner'),
+                              kwargs.get('win_perms'),
+                              kwargs.get('win_deny_perms'),
+                              None,
+                              kwargs.get('win_inheritance'))
+        else:
+            ret, _ = check_perms(name, ret, user, group, mode, attrs, follow_symlinks)
 
         if ret['changes']:
             ret['comment'] = 'File {0} updated'.format(name)
@@ -4838,8 +5128,19 @@ def manage_file(name,
                     if mode_list[idx] != '0':
                         mode_list[idx] = str(int(mode_list[idx]) | 1)
                 dir_mode = ''.join(mode_list)
-            makedirs_(name, user=user,
-                      group=group, mode=dir_mode)
+
+            if salt.utils.is_windows():
+                # This function resides in win_file.py and will be available
+                # on Windows. The local function will be overridden
+                # pylint: disable=E1121
+                makedirs_(name,
+                          kwargs.get('win_owner'),
+                          kwargs.get('win_perms'),
+                          kwargs.get('win_deny_perms'),
+                          kwargs.get('win_inheritance'))
+                # pylint: enable=E1121
+            else:
+                makedirs_(name, user=user, group=group, mode=dir_mode)
 
         if source:
             # It is a new file, set the diff accordingly
@@ -4914,13 +5215,18 @@ def manage_file(name,
 
         if contents is not None:
             # Write the static contents to a temporary file
-            tmp = salt.utils.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
-                                     text=True)
+            tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
+                                           text=True)
             if salt.utils.is_windows():
                 contents = os.linesep.join(
                     _splitlines_preserving_trailing_newline(contents))
             with salt.utils.fopen(tmp, 'w') as tmp_:
-                tmp_.write(str(contents))
+                if encoding:
+                    log.debug('File will be encoded with {0}'.format(encoding))
+                    tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
+                else:
+                    tmp_.write(str(contents))
+
             # Copy into place
             salt.utils.files.copyfile(tmp,
                                 name,
@@ -4943,7 +5249,17 @@ def manage_file(name,
             os.umask(mask)
             # Calculate the mode value that results from the umask
             mode = oct((0o777 ^ mask) & 0o666)
-        ret, _ = check_perms(name, ret, user, group, mode)
+
+        if salt.utils.is_windows():
+            ret = check_perms(name,
+                              ret,
+                              kwargs.get('win_owner'),
+                              kwargs.get('win_perms'),
+                              kwargs.get('win_deny_perms'),
+                              None,
+                              kwargs.get('win_inheritance'))
+        else:
+            ret, _ = check_perms(name, ret, user, group, mode, attrs)
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
@@ -4954,6 +5270,7 @@ def manage_file(name,
             ret['comment'] = 'File ' + name + ' is in the correct state'
         if sfn:
             __clean_tmp(sfn)
+
         return ret
 
 
@@ -5005,6 +5322,9 @@ def makedirs_(path,
         salt '*' file.makedirs /opt/code/
     '''
     path = os.path.expanduser(path)
+
+    if mode:
+        mode = salt.utils.normalize_mode(mode)
 
     # walk up the directory structure until we find the first existing
     # directory

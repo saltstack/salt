@@ -63,7 +63,7 @@ def returner(ret):
     changes = False
     errors = False
     job_minion_id = ret['id']
-    host = job_minion_id.split('.')[0]
+    host = job_minion_id
 
     if type(ret['return']) is dict:
         for state, item in six.iteritems(ret['return']):

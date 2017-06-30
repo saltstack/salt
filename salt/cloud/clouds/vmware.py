@@ -989,6 +989,10 @@ def _format_instance_info_select(vm, selection):
         cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
         ram = "{0} MB".format(vm["config.hardware.memoryMB"]) if "config.hardware.memoryMB" in vm else "N/A"
         vm_select_info['size'] = u"cpu: {0}\nram: {1}".format(cpu, ram)
+        vm_select_info['size_dict'] = {
+            'cpu': cpu,
+            'memory': ram,
+        }
 
     if 'state' in selection:
         vm_select_info['state'] = str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A"
@@ -1176,6 +1180,10 @@ def _format_instance_info(vm):
         'id': str(vm['name']),
         'image': "{0} (Detected)".format(vm["config.guestFullName"]) if "config.guestFullName" in vm else "N/A",
         'size': u"cpu: {0}\nram: {1}".format(cpu, ram),
+        'size_dict': {
+            'cpu': cpu,
+            'memory': ram,
+        },
         'state': str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A",
         'private_ips': ip_addresses,
         'public_ips': [],
@@ -1580,6 +1588,10 @@ def list_nodes(kwargs=None, call=None):
             'id': vm["name"],
             'image': "{0} (Detected)".format(vm["config.guestFullName"]) if "config.guestFullName" in vm else "N/A",
             'size': u"cpu: {0}\nram: {1}".format(cpu, ram),
+            'size_dict': {
+                'cpu': cpu,
+                'memory': ram,
+            },
             'state': str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A",
             'private_ips': [vm["guest.ipAddress"]] if "guest.ipAddress" in vm else [],
             'public_ips': []
@@ -2311,20 +2323,11 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -2367,6 +2370,9 @@ def create(vm_):
     )
     extra_config = config.get_cloud_config_value(
         'extra_config', vm_, __opts__, default=None
+    )
+    annotation = config.get_cloud_config_value(
+        'annotation', vm_, __opts__, default=None
     )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=True
@@ -2578,6 +2584,9 @@ def create(vm_):
             option = vim.option.OptionValue(key=key, value=value)
             config_spec.extraConfig.append(option)
 
+    if annotation:
+        config_spec.annotation = str(annotation)
+
     if 'clonefrom' in vm_:
         clone_spec = handle_snapshot(
             config_spec,
@@ -2657,11 +2666,7 @@ def create(vm_):
             'event',
             'requesting instance',
             'salt/cloud/{0}/requesting'.format(vm_['name']),
-            args={
-                'name': vm_['name'],
-                'profile': vm_['profile'],
-                'provider': vm_['driver'],
-            },
+            args=__utils__['cloud.filter_event']('requesting', event_kwargs, list(event_kwargs)),
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
@@ -2742,11 +2747,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )

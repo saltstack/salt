@@ -76,22 +76,26 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             'username', 'password', 'eauth', 'token', 'client', 'user', 'key',
         ] if i in low])
 
-        # Separate the new-style args/kwargs.
-        pre_arg = low.pop('arg', [])
-        pre_kwarg = low.pop('kwarg', {})
-        # Anything not pop'ed from low should hopefully be an old-style kwarg.
-        low['__kwarg__'] = True
-        pre_kwarg.update(low)
+        # Run name=value args through parse_input. We don't need to run kwargs
+        # through because there is no way to send name=value strings in the low
+        # dict other than by including an `arg` array.
+        _arg, _kwarg = salt.utils.args.parse_input(
+                low.pop('arg', []), condition=False)
+        _kwarg.update(low.pop('kwarg', {}))
 
-        # Normalize old- & new-style args in a format suitable for
-        # load_args_and_kwargs
-        old_new_normalized_input = []
-        old_new_normalized_input.extend(pre_arg)
-        old_new_normalized_input.append(pre_kwarg)
+        # If anything hasn't been pop()'ed out of low by this point it must be
+        # an old-style kwarg.
+        _kwarg.update(low)
 
+        # Finally, mung our kwargs to a format suitable for the byzantine
+        # load_args_and_kwargs so that we can introspect the function being
+        # called and fish for invalid kwargs.
+        munged = []
+        munged.extend(_arg)
+        munged.append(dict(__kwarg__=True, **_kwarg))
         arg, kwarg = salt.minion.load_args_and_kwargs(
             self.functions[fun],
-            old_new_normalized_input,
+            munged,
             self.opts,
             ignore_invalid=True)
 
@@ -118,7 +122,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
         return mixins.AsyncClientMixin.cmd_async(self, reformatted_low)
 
-    def cmd_sync(self, low, timeout=None):
+    def cmd_sync(self, low, timeout=None, full_return=False):
         '''
         Execute a runner function synchronously; eauth is respected
 
@@ -135,7 +139,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             })
         '''
         reformatted_low = self._reformat_low(low)
-        return mixins.SyncClientMixin.cmd_sync(self, reformatted_low, timeout)
+        return mixins.SyncClientMixin.cmd_sync(self, reformatted_low, timeout, full_return)
 
     def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):
         '''
@@ -180,10 +184,18 @@ class Runner(RunnerClient):
         else:
             low = {'fun': self.opts['fun']}
             try:
+                # Allocate a jid
+                async_pub = self._gen_async_pub()
+                self.jid = async_pub['jid']
+
+                fun_args = salt.utils.args.parse_input(
+                        self.opts['arg'],
+                        no_parse=self.opts.get('no_parse', []))
+
                 verify_fun(self.functions, low['fun'])
                 args, kwargs = salt.minion.load_args_and_kwargs(
                     self.functions[low['fun']],
-                    salt.utils.args.parse_input(self.opts['arg']),
+                    fun_args,
                     self.opts,
                 )
                 low['arg'] = args
@@ -218,10 +230,6 @@ class Runner(RunnerClient):
                         low['eauth'] = self.opts['eauth']
                 else:
                     user = salt.utils.get_specific_user()
-
-                # Allocate a jid
-                async_pub = self._gen_async_pub()
-                self.jid = async_pub['jid']
 
                 if low['fun'] == 'state.orchestrate':
                     low['kwarg']['orchestration_jid'] = async_pub['jid']
@@ -259,6 +267,14 @@ class Runner(RunnerClient):
                                               async_pub['jid'],
                                               daemonize=False)
             except salt.exceptions.SaltException as exc:
+                evt = salt.utils.event.get_event('master', opts=self.opts)
+                evt.fire_event({'success': False,
+                                'return':  "{0}".format(exc),
+                                'retcode': 254,
+                                'fun': self.opts['fun'],
+                                'fun_args': fun_args,
+                                'jid': self.jid},
+                               tag='salt/run/{0}/ret'.format(self.jid))
                 ret = '{0}'.format(exc)
                 if not self.opts.get('quiet', False):
                     display_output(ret, 'nested', self.opts)

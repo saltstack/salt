@@ -72,4 +72,6 @@ def render(template_file, saltenv='base', sls='', argline='',
         raise SaltRenderError(
                 tmp_data.get('data', 'Unknown render error in jinja renderer')
         )
+    if six.PY3 and isinstance(tmp_data['data'], bytes):
+        tmp_data['data'] = tmp_data['data'].decode(__salt_system_encoding__)
     return StringIO(tmp_data['data'])

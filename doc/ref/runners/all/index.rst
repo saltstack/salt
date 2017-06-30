@@ -12,9 +12,11 @@ runner modules
 
     asam
     auth
+    bgp
     cache
     cloud
     ddns
+    digicertapi
     doc
     drac
     error
@@ -27,8 +29,10 @@ runner modules
     launchd
     lxc
     manage
+    mattermost
     mine
     nacl
+    net
     network
     pagerduty
     pillar
@@ -39,13 +43,14 @@ runner modules
     saltutil
     sdb
     smartos_vmadm
-    search
     spacewalk
     ssh
     state
     survey
     test
     thin
+    vault
+    venafiapi
     virt
     vistara
     winrepo

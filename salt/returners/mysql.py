@@ -153,7 +153,8 @@ import salt.returners
 import salt.utils.jid
 import salt.exceptions
 
-# Import third party libs
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     import MySQLdb
     HAS_MYSQL = True
@@ -201,9 +202,15 @@ def _get_options(ret=None):
                                                    __salt__=__salt__,
                                                    __opts__=__opts__,
                                                    defaults=defaults)
-    # Ensure port is an int
-    if 'port' in _options:
-        _options['port'] = int(_options['port'])
+    # post processing
+    for k, v in six.iteritems(_options):
+        if isinstance(v, six.string_types) and v.lower() == 'none':
+            # Ensure 'None' is rendered as None
+            _options[k] = None
+        if k == 'port':
+            # Ensure port is an int
+            _options[k] = int(v)
+
     return _options
 
 

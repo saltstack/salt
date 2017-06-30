@@ -721,7 +721,7 @@ def smart_attributes(dev, attributes=None, values=None):
         except:  # pylint: disable=bare-except
             pass
 
-        for field in data.keys():
+        for field in data:
             val = data[field]
             try:
                 val = int(val)

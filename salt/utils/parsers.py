@@ -15,7 +15,6 @@
 from __future__ import absolute_import, print_function
 import os
 import sys
-import types
 import signal
 import getpass
 import logging
@@ -238,7 +237,9 @@ class OptionParser(optparse.OptionParser, object):
     def _add_version_option(self):
         optparse.OptionParser._add_version_option(self)
         self.add_option(
-            '--versions-report', action='store_true',
+            '--versions-report',
+            '-V',
+            action='store_true',
             help='Show program\'s dependencies version number and exit.'
         )
 
@@ -484,6 +485,30 @@ class HardCrashMixin(six.with_metaclass(MixInMeta, object)):
         )
 
 
+class NoParseMixin(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio_ = 50
+
+    def _mixin_setup(self):
+        no_parse = os.environ.get('SALT_NO_PARSE', '')
+        self.add_option(
+            '--no-parse', default=no_parse,
+            help=('Comma-separated list of named CLI arguments (i.e. '
+                  'argname=value) which should not be parsed as Python '
+                  'data types'),
+            metavar='argname1,argname2,...',
+        )
+
+    def process_no_parse(self):
+        if self.options.no_parse:
+            try:
+                self.options.no_parse = \
+                    [x.strip() for x in self.options.no_parse.split(',')]
+            except AttributeError:
+                self.options.no_parse = []
+        else:
+            self.options.no_parse = []
+
+
 class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = -10
     _config_filename_ = None
@@ -608,6 +633,9 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         self._mixin_after_parsed_funcs.append(self.__setup_console_logger_config)
         # Setup the multiprocessing log queue listener if enabled
         self._mixin_after_parsed_funcs.append(self._setup_mp_logging_listener)
+        # Setup the multiprocessing log queue client if listener is enabled
+        # and using Windows
+        self._mixin_after_parsed_funcs.append(self._setup_mp_logging_client)
         # Setup the console as the last _mixin_after_parsed_func to run
         self._mixin_after_parsed_funcs.append(self.__setup_console_logger)
 
@@ -746,7 +774,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             if self.config['user'] != current_user:
                 # Yep, not the same user!
                 # Is the current user in ACL?
-                acl = self.config.get('publisher_acl') or self.config.get('client_acl', {})
+                acl = self.config['publisher_acl']
                 if salt.utils.check_whitelist_blacklist(current_user, whitelist=six.iterkeys(acl)):
                     # Yep, the user is in ACL!
                     # Let's write the logfile to its home directory instead.
@@ -775,28 +803,56 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # If we haven't changed the logfile path and it's not writeable,
             # salt will fail once we try to setup the logfile logging.
 
+        # Log rotate options
+        log_rotate_max_bytes = self.config.get('log_rotate_max_bytes', 0)
+        log_rotate_backup_count = self.config.get('log_rotate_backup_count', 0)
+        if not salt.utils.is_windows():
+            # Not supported on platforms other than Windows.
+            # Other platforms may use an external tool such as 'logrotate'
+            if log_rotate_max_bytes != 0:
+                logging.getLogger(__name__).warning('\'log_rotate_max_bytes\' is only supported on Windows')
+                log_rotate_max_bytes = 0
+            if log_rotate_backup_count != 0:
+                logging.getLogger(__name__).warning('\'log_rotate_backup_count\' is only supported on Windows')
+                log_rotate_backup_count = 0
+
         # Save the settings back to the configuration
         self.config[self._logfile_config_setting_name_] = logfile
         self.config[self._logfile_loglevel_config_setting_name_] = loglevel
         self.config['log_fmt_logfile'] = log_file_fmt
         self.config['log_datefmt_logfile'] = log_file_datefmt
+        self.config['log_rotate_max_bytes'] = log_rotate_max_bytes
+        self.config['log_rotate_backup_count'] = log_rotate_backup_count
 
     def setup_logfile_logger(self):
+        if salt.utils.is_windows() and self._setup_mp_logging_listener_:
+            # On Windows when using a logging listener, all log file logging
+            # will go through the logging listener.
+            return
+
         logfile = self.config[self._logfile_config_setting_name_]
         loglevel = self.config[self._logfile_loglevel_config_setting_name_]
         log_file_fmt = self.config['log_fmt_logfile']
         log_file_datefmt = self.config['log_datefmt_logfile']
+        log_rotate_max_bytes = self.config['log_rotate_max_bytes']
+        log_rotate_backup_count = self.config['log_rotate_backup_count']
 
         log.setup_logfile_logger(
             logfile,
             loglevel,
             log_format=log_file_fmt,
-            date_format=log_file_datefmt
+            date_format=log_file_datefmt,
+            max_bytes=log_rotate_max_bytes,
+            backup_count=log_rotate_backup_count
         )
         for name, level in six.iteritems(self.config.get('log_granular_levels', {})):
             log.set_logger_level(name, level)
 
     def __setup_extended_logging(self, *args):  # pylint: disable=unused-argument
+        if salt.utils.is_windows() and self._setup_mp_logging_listener_:
+            # On Windows when using a logging listener, all extended logging
+            # will go through the logging listener.
+            return
         log.setup_extended_logging(self.config)
 
     def _get_mp_logging_listener_queue(self):
@@ -808,6 +864,23 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 self.config,
                 self._get_mp_logging_listener_queue()
             )
+
+    def _setup_mp_logging_client(self, *args):  # pylint: disable=unused-argument
+        if salt.utils.is_windows() and self._setup_mp_logging_listener_:
+            # On Windows, all logging including console and
+            # log file logging will go through the multiprocessing
+            # logging listener if it exists.
+            # This will allow log file rotation on Windows
+            # since only one process can own the log file
+            # for log file rotation to work.
+            log.setup_multiprocessing_logging(
+                self._get_mp_logging_listener_queue()
+            )
+            # Remove the temp logger and any other configured loggers since all of
+            # our logging is going through the multiprocessing logging listener.
+            log.shutdown_temp_logging()
+            log.shutdown_console_logging()
+            log.shutdown_logfile_logging()
 
     def __setup_console_logger_config(self, *args):  # pylint: disable=unused-argument
         # Since we're not going to be a daemon, setup the console logger
@@ -840,9 +913,20 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         if getattr(self.options, 'daemon', False) is True:
             return
 
+        if salt.utils.is_windows() and self._setup_mp_logging_listener_:
+            # On Windows when using a logging listener, all console logging
+            # will go through the logging listener.
+            return
+
+        # ensure that yaml stays valid with log output
+        if getattr(self.options, 'output', None) == 'yaml':
+            log_format = '# {0}'.format(self.config['log_fmt_console'])
+        else:
+            log_format = self.config['log_fmt_console']
+
         log.setup_console_logger(
             self.config['log_level'],
-            log_format=self.config['log_fmt_console'],
+            log_format=log_format,
             date_format=self.config['log_datefmt_console']
         )
         for name, level in six.iteritems(self.config.get('log_granular_levels', {})):
@@ -959,58 +1043,6 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
 
     def shutdown(self, exitcode=0, exitmsg=None):
         self.exit(exitcode, exitmsg)
-
-
-class PidfileMixin(six.with_metaclass(MixInMeta, object)):
-    _mixin_prio_ = 40
-
-    def _mixin_setup(self):
-        salt.utils.warn_until(
-            'Nitrogen',
-            'Please stop sub-classing PidfileMix and instead subclass '
-            'DaemonMixIn which contains the same behavior. PidfileMixin '
-            'will be supported until Salt {version}.'
-        )
-        try:
-            self.add_option(
-                '--pid-file', dest='pidfile',
-                default=os.path.join(
-                    syspaths.PIDFILE_DIR, '{0}.pid'.format(self.get_prog_name())
-                ),
-                help=('Specify the location of the pidfile. Default: \'%default\'.')
-            )
-
-            # Since there was no colision with DaemonMixin, let's add the
-            # pidfile mixin methods. This is used using types.MethodType
-            # because if we had defined these at the class level, they would
-            # have overridden the exact same methods from the DaemonMixin.
-
-            def set_pidfile(self):
-                from salt.utils.process import set_pidfile
-                set_pidfile(self.config['pidfile'], self.config['user'])
-
-            self.set_pidfile = types.MethodType(set_pidfile, self)
-
-            def check_pidfile(self):
-                '''
-                Report whether a pidfile exists
-                '''
-                from salt.utils.process import check_pidfile
-                return check_pidfile(self.config['pidfile'])
-
-            self.check_pidfile = types.MethodType(check_pidfile, self)
-
-            def get_pidfile(self):
-                '''
-                Return a pid contained in a pidfile
-                '''
-                from salt.utils.process import get_pidfile
-                return get_pidfile(self.config['pidfile'])
-
-            self.get_pidfile = types.MethodType(get_pidfile, self)
-        except optparse.OptionConflictError:
-            # The option was already added by the DaemonMixin
-            pass
 
 
 class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
@@ -1203,6 +1235,18 @@ class ProxyIdMixIn(six.with_metaclass(MixInMeta, object)):
             default=None,
             dest='proxyid',
             help=('Id for this proxy.')
+        )
+
+
+class CacheDirMixIn(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio = 40
+
+    def _mixin_setup(self):
+        self.add_option(
+            '--cachedir',
+            default='/var/cache/salt/',
+            dest='cachedir',
+            help=('Cache Directory')
         )
 
 
@@ -1810,7 +1854,8 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                              HardCrashMixin,
                                              SaltfileMixIn,
                                              ArgsStdinMixIn,
-                                             EAuthMixIn)):
+                                             EAuthMixIn,
+                                             NoParseMixin)):
 
     default_timeout = 5
 
@@ -1906,6 +1951,20 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                   'before freeing the slot in the batch for the next one.')
         )
         self.add_option(
+            '--batch-safe-limit',
+            default=0,
+            dest='batch_safe_limit',
+            type=int,
+            help=('Execute the salt job in batch mode if the job would have '
+                  'executed on more than this many minions.')
+        )
+        self.add_option(
+            '--batch-safe-size',
+            default=8,
+            dest='batch_safe_size',
+            help=('Batch size to use for batch jobs created by batch-safe-limit.')
+        )
+        self.add_option(
             '--return',
             default='',
             metavar='RETURNER',
@@ -1936,6 +1995,14 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             metavar='EXECUTOR_LIST',
             help=('Set an alternative list of executors to override the one '
                   'set in minion config.')
+        )
+        self.add_option(
+            '--executor-opts',
+            dest='executor_opts',
+            default=None,
+            metavar='EXECUTOR_OPTS',
+            help=('Set alternate executor options if supported by executor. '
+                  'Options set by minion config are used by default.')
         )
         self.add_option(
             '-d', '--doc', '--documentation',
@@ -1981,9 +2048,16 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             help=('Dump the master configuration values')
         )
+        self.add_option(
+            '--preview-target',
+            dest='preview_target',
+            action='store_true',
+            default=False,
+            help=('Show the minions expected to match a target. Does not issue any command.')
+        )
 
     def _mixin_after_parsed(self):
-        if len(self.args) <= 1 and not self.options.doc:
+        if len(self.args) <= 1 and not self.options.doc and not self.options.preview_target:
             try:
                 self.print_help()
             except Exception:  # pylint: disable=broad-except
@@ -2005,6 +2079,10 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                 )
             )
             sys.exit(salt.defaults.exitcodes.EX_OK)
+
+        if self.options.preview_target:
+            # Insert dummy arg which won't be used
+            self.args.append('not_a_valid_command')
 
         if self.options.doc:
             # Include the target
@@ -2067,14 +2145,16 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                     # interface
                     for i in range(len(self.config['arg'])):
                         self.config['arg'][i] = salt.utils.args.parse_input(
-                            self.config['arg'][i])
+                            self.config['arg'][i],
+                            no_parse=self.options.no_parse)
                 else:
                     self.config['fun'] = self.args[1]
                     self.config['arg'] = self.args[2:]
                     # parse the args and kwargs before sending to the publish
                     # interface
-                    self.config['arg'] = \
-                        salt.utils.args.parse_input(self.config['arg'])
+                    self.config['arg'] = salt.utils.args.parse_input(
+                        self.config['arg'],
+                        no_parse=self.options.no_parse)
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
 
@@ -2446,7 +2526,9 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
                                               HardCrashMixin,
                                               SaltfileMixIn,
                                               ArgsStdinMixIn,
-                                              ProfilingPMixIn)):
+                                              ProfilingPMixIn,
+                                              NoParseMixin,
+                                              CacheDirMixIn)):
 
     description = (
         'salt-call is used to execute module functions locally on a Salt Minion'
@@ -2533,11 +2615,18 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
         self.add_option(
             '--metadata',
             default=False,
-            dest='metadata',
+            dest='print_metadata',
             action='store_true',
             help=('Print out the execution metadata as well as the return. '
                   'This will print out the outputter data, the return code, '
                   'etc.')
+        )
+        self.add_option(
+            '--set-metadata',
+            dest='metadata',
+            default=None,
+            metavar='METADATA',
+            help=('Pass metadata into Salt, used to search jobs.')
         )
         self.add_option(
             '--id',
@@ -2626,7 +2715,7 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
             raise ValueError(emsg)
 
         if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.minion]:  # minion check
-            from raet.lane.yarding import Yard
+            from raet.lane.yarding import Yard  # pylint: disable=3rd-party-module-not-gated
             ha, dirpath = Yard.computeHa(dirpath, lanename, yardname)  # pylint: disable=invalid-name
             if (os.path.exists(ha) and
                     not os.path.isfile(ha) and
@@ -2657,7 +2746,8 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
                                              OutputOptionsMixIn,
                                              ArgsStdinMixIn,
                                              ProfilingPMixIn,
-                                             EAuthMixIn)):
+                                             EAuthMixIn,
+                                             NoParseMixin)):
 
     default_timeout = 1
 
@@ -2728,7 +2818,8 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
                                              TargetOptionsMixIn,
                                              OutputOptionsMixIn,
                                              SaltfileMixIn,
-                                             HardCrashMixin)):
+                                             HardCrashMixin,
+                                             NoParseMixin)):
 
     usage = '%prog [options] \'<target>\' <function> [arguments]'
 
@@ -2792,6 +2883,10 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default=None,
             help='Pass in extra files to include in the state tarball.'
         )
+        self.add_option('--min-extra-modules',
+                        dest='min_extra_mods', default=None,
+                        help='One or comma-separated list of extra Python modules'
+                             'to be included into Minimal Salt.')
         self.add_option(
             '--thin-extra-modules',
             dest='thin_extra_mods',
@@ -2847,11 +2942,11 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Pass a JID to be used instead of generating one.'
         )
 
-        ports_group = optparse.OptionGroup(
-            self, 'Port Forwarding Options',
-            'Parameters for setting up SSH port forwarding.'
+        ssh_group = optparse.OptionGroup(
+            self, 'SSH Options',
+            'Parameters for the SSH client.'
         )
-        ports_group.add_option(
+        ssh_group.add_option(
             '--remote-port-forwards',
             dest='ssh_remote_port_forwards',
             help='Setup remote port forwarding using the same syntax as with '
@@ -2859,7 +2954,15 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
                  'forwarding definitions will be translated into multiple '
                  '-R parameters.'
         )
-        self.add_option_group(ports_group)
+        ssh_group.add_option(
+            '--ssh-option',
+            dest='ssh_options',
+            action='append',
+            help='Equivalent to the -o ssh command option. Passes options to '
+                 'the SSH client in the format used in the client configuration file. '
+                 'Can be used multiple times.'
+        )
+        self.add_option_group(ssh_group)
 
         auth_group = optparse.OptionGroup(
             self, 'Authentication Options',
@@ -2971,8 +3074,19 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             self.print_help()
             self.error('Insufficient arguments')
 
+        # Add back the --no-parse options so that shimmed/wrapped commands
+        # handle the arguments correctly.
+        if self.options.no_parse:
+            self.config['argv'].append(
+                '--no-parse=' + ','.join(self.options.no_parse))
+
         if self.options.ssh_askpass:
             self.options.ssh_passwd = getpass.getpass('Password: ')
+            for group in self.option_groups:
+                for option in group.option_list:
+                    if option.dest == 'ssh_passwd':
+                        option.explicit = True
+                        break
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
