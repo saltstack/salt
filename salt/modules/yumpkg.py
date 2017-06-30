@@ -2524,41 +2524,23 @@ def _parse_repo_file(filename):
     '''
     Turn a single repo file into a dict
     '''
-    repos = {}
-    header = ''
-    repo = ''
-    with salt.utils.fopen(filename, 'r') as rfile:
-        for line in rfile:
-            if line.startswith('['):
-                repo = line.strip().replace('[', '').replace(']', '')
-                repos[repo] = {}
+    parsed = configparser.ConfigParser()
+    parsed.read(filename)
+    config = {}
 
-            # Even though these are essentially uselss, I want to allow the
-            # user to maintain their own comments, etc
-            if not line:
-                if not repo:
-                    header += line
-            if line.startswith('#'):
-                if not repo:
-                    header += line
-                else:
-                    if 'comments' not in repos[repo]:
-                        repos[repo]['comments'] = []
-                    repos[repo]['comments'].append(line.strip())
-                continue
+    for section in parsed._sections:
+        section_dict = dict(parsed._sections[section])
+        section_dict.pop('__name__')
+        config[section] = section_dict
 
-            # These are the actual configuration lines that matter
-            if '=' in line:
-                try:
-                    comps = line.strip().split('=')
-                    repos[repo][comps[0].strip()] = '='.join(comps[1:])
-                except KeyError:
-                    log.error(
-                        'Failed to parse line in %s, offending line was '
-                        '\'%s\'', filename, line.rstrip()
-                    )
+    # Try to extract leading comments
+    headers = ''
+    with salt.utils.fopen(filename, 'r') as rawfile:
+        for line in rawfile:
+            if line.strip().startswith('#'):
+                headers += '{0}\n'.format(line.strip())
 
-    return (header, repos)
+    return (headers, config)
 
 
 def file_list(*packages):
