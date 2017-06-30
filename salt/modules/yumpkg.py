@@ -2537,7 +2537,7 @@ def _parse_repo_file(filename):
             if '=' in line:
                 try:
                     comps = line.strip().split('=')
-                    repos[repo][comps[0].strip()] = '='.join(comps[1:])
+                    repos[repo][comps[0].strip()] = '='.join(comps[1:]).strip()
                 except KeyError:
                     log.error(
                         'Failed to parse line in %s, offending line was '
