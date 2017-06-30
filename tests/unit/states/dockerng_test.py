@@ -724,9 +724,13 @@ class DockerngTestCase(TestCase):
         '''
         dockerng_remove_network = Mock(return_value='removed')
         dockerng_disconnect_container_from_network = Mock(return_value='disconnected')
+        dockerng_networks = Mock(return_value=[{
+            'Name': 'network_foo',
+            'Containers': {'container': {}}
+        }])
         __salt__ = {'dockerng.remove_network': dockerng_remove_network,
                     'dockerng.disconnect_container_from_network': dockerng_disconnect_container_from_network,
-                    'dockerng.networks': Mock(return_value=[{'Containers': {'container': {}}}]),
+                    'dockerng.networks': dockerng_networks,
                     }
         with patch.dict(dockerng_state.__dict__,
                         {'__salt__': __salt__}):
