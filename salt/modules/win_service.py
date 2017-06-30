@@ -817,6 +817,7 @@ def enable(name, **kwargs):
 
     Args:
         name (str): The name of the service to enable.
+        **kwargs supports StartType
 
     Returns:
         bool: ``True`` if successful, ``False`` otherwise
@@ -827,8 +828,20 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     '''
-    modify(name, start_type='Auto')
-    return info(name)['StartType'] == 'Auto'
+    if kwargs is not None:
+        for key, value in kwargs.iteritems():
+            if key == 'StartType' and value == 'Manual':
+                modify(name, start_type='Manual')
+                return info(name)['StartType'] == 'Manual'
+            elif key == 'StartType' and value == 'Delayed':
+                modify(name, start_type='Auto', start_delayed=True)
+                return info(name)['StartTypeDelayed']
+            else:
+                log.error('Invalid argument for win_service.enable!')
+                return False
+    else:
+        modify(name, start_type='Auto')
+        return info(name)['StartType'] == 'Auto'
 
 
 def disable(name, **kwargs):
