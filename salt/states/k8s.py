@@ -47,7 +47,7 @@ def label_present(
         node=None,
         apiserver=None):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`kubernetes.node_label_present
         <salt.states.kubernetes.node_label_present`.
 
@@ -85,7 +85,7 @@ def label_absent(
         node=None,
         apiserver=None):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`kubernetes.node_label_absent
         <salt.states.kubernetes.node_label_absent`.
 
@@ -120,7 +120,7 @@ def label_folder_absent(
         node=None,
         apiserver=None):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`kubernetes.node_label_folder_absent
         <salt.states.kubernetes.node_label_folder_absent`.
 
