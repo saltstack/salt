@@ -283,10 +283,35 @@ def running(name,
 
     binds
         Files/directories to bind mount. Each bind mount should be passed in
-        the format ``<host_path>:<container_path>:<read_only>``, where
-        ``<read_only>`` is one of ``rw`` (for read-write access) or ``ro`` (for
-        read-only access). Can be expressed as a comma-separated list or a YAML
-        list. The below two examples are equivalent:
+        one of the following formats:
+
+        - ``<host_path>:<container_path>`` - ``host_path`` is mounted within
+          the container as ``container_path`` with read-write access.
+        - ``<host_path>:<container_path>:<selinux_context>`` - ``host_path`` is
+          mounted within the container as ``container_path`` with read-write
+          access. Additionally, the specified selinux context will be set
+          within the container.
+        - ``<host_path>:<container_path>:<read_only>`` - ``host_path`` is
+          mounted within the container as ``container_path``, with the
+          read-only or read-write setting explicitly defined.
+        - ``<host_path>:<container_path>:<read_only>,<selinux_context>`` -
+          ``host_path`` is mounted within the container as ``container_path``,
+          with the read-only or read-write setting explicitly defined.
+          Additionally, the specified selinux context will be set within the
+          container.
+
+        ``<read_only>`` can be either ``ro`` for read-write access, or ``ro``
+        for read-only access. When omitted, it is assumed to be read-write.
+
+        ``<selinux_context>`` can be ``z`` if the volume is shared between
+        multiple containers, or ``Z`` if the volume should be private.
+
+        .. note::
+            When both ``<read_only>`` and ``<selinux_context>`` are specified,
+            there must be a comma before ``<selinux_context>``.
+
+        Binds can be expressed as a comma-separated list or a YAML list. The
+        below two examples are equivalent:
 
         .. code-block:: yaml
 
@@ -304,9 +329,8 @@ def running(name,
                   - /srv/www:/var/www:ro
                   - /home/myuser/conf/foo.conf:/etc/foo.conf:rw
 
-        Optionally, the read-only information can be left off the end and the
-        bind mount will be assumed to be read-write. The example below is
-        equivalent to the one above:
+        However, in cases where both ro/rw and an selinux context are combined,
+        the only option is to use a YAML list, like so:
 
         .. code-block:: yaml
 
@@ -314,8 +338,20 @@ def running(name,
               docker_container.running:
                 - image: bar/baz:latest
                 - binds:
-                  - /srv/www:/var/www:ro
-                  - /home/myuser/conf/foo.conf:/etc/foo.conf
+                  - /srv/www:/var/www:ro,Z
+                  - /home/myuser/conf/foo.conf:/etc/foo.conf:rw,Z
+
+        Since the second bind in the previous example is mounted read-write,
+        the ``rw`` and comma can be dropped. For example:
+
+        .. code-block:: yaml
+
+            foo:
+              docker_container.running:
+                - image: bar/baz:latest
+                - binds:
+                  - /srv/www:/var/www:ro,Z
+                  - /home/myuser/conf/foo.conf:/etc/foo.conf:Z
 
     blkio_weight
         Block IO weight (relative weight), accepts a weight value between 10

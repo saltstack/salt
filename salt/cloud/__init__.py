@@ -381,10 +381,9 @@ class CloudClient(object):
 
         .. code-block:: python
 
-            client.create(names=['myinstance'], provider='my-ec2-config',
-                kwargs={'image': 'ami-1624987f', 'size': 't1.micro',
-                        'ssh_username': 'ec2-user', 'securitygroup': 'default',
-                        'delvol_on_destroy': True})
+            client.create(provider='my-ec2-config', names=['myinstance'],
+                image='ami-1624987f', size='t1.micro', ssh_username='ec2-user',
+                securitygroup='default', delvol_on_destroy=True)
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
         providers = self.opts['providers']
@@ -399,7 +398,16 @@ class CloudClient(object):
             vm_ = kwargs.copy()
             vm_['name'] = name
             vm_['driver'] = provider
+
+            # This function doesn't require a profile, but many cloud drivers
+            # check for profile information (which includes the provider key) to
+            # help with config file debugging and setting up instances. Setting
+            # the profile and provider defaults here avoids errors in other
+            # cloud functions relying on these keys. See SaltStack Issue #41971
+            # and PR #38166 for more information.
             vm_['profile'] = None
+            vm_['provider'] = provider
+
             ret[name] = salt.utils.simple_types_filter(
                 mapper.create(vm_))
         return ret
