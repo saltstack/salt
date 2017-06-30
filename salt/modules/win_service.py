@@ -811,13 +811,26 @@ def modify(name,
     return changes
 
 
-def enable(name, **kwargs):
+def enable(name, start_type='auto', start_delayed=False, **kwargs):
     '''
     Enable the named service to start at boot
 
     Args:
         name (str): The name of the service to enable.
-        **kwargs supports StartType
+		
+        start_type (str): Specifies the service start type. Valid options are as
+            follows:
+
+            - boot: Device driver that is loaded by the boot loader
+            - system: Device driver that is started during kernel initialization
+            - auto: Service that automatically starts
+            - manual: Service must be started manually
+            - disabled: Service cannot be started
+
+        start_delayed (bool): Set the service to Auto(Delayed Start). Only valid
+            if the start_type is set to ``Auto``. If service_type is not passed,
+            but the service is already set to ``Auto``, then the flag will be
+            set.
 
     Returns:
         bool: ``True`` if successful, ``False`` otherwise
@@ -828,20 +841,13 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     '''
-    if kwargs is not None:
-        for key, value in kwargs.iteritems():
-            if key == 'StartType' and value == 'Manual':
-                modify(name, start_type='Manual')
-                return info(name)['StartType'] == 'Manual'
-            elif key == 'StartType' and value == 'Delayed':
-                modify(name, start_type='Auto', start_delayed=True)
-                return info(name)['StartTypeDelayed']
-            else:
-                log.error('Invalid argument for win_service.enable!')
-                return False
+
+    modify(name, start_type=start_type, start_delayed=start_delayed)
+    svcstat = info(name)
+    if start_type == 'auto':
+	    return svcstat['StartType'].lower() == start_type.lower() and svcstat['StartTypeDelayed'] == start_delayed
     else:
-        modify(name, start_type='Auto')
-        return info(name)['StartType'] == 'Auto'
+        return svcstat['StartType'].lower() == start_type.lower()
 
 
 def disable(name, **kwargs):
