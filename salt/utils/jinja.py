@@ -22,6 +22,7 @@ from jinja2.environment import TemplateModule
 from jinja2.ext import Extension
 from jinja2.exceptions import TemplateRuntimeError
 import jinja2
+import yaml
 
 # Import salt libs
 import salt
