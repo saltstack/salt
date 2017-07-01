@@ -26,12 +26,12 @@ def __virtual__():
         return False
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
     # Configuration for twilio_txt_msg beacon should be a list of dicts
-    if not isinstance(config, dict):
+    if not isinstance(config, list):
         return False, ('Configuration for twilio_txt_msg beacon '
                        'must be a dictionary.')
     return True, 'Valid beacon configuration'
@@ -46,20 +46,26 @@ def beacon(config):
 
         beacons:
           twilio_txt_msg:
-            account_sid: "<account sid>"
-            auth_token: "<auth token>"
-            twilio_number: "+15555555555"
-            interval: 10
+            - account_sid: "<account sid>"
+            - auth_token: "<auth token>"
+            - twilio_number: "+15555555555"
+            - interval: 10
 
     '''
     log.trace('twilio_txt_msg beacon starting')
+
+    _config = {}
+    list(map(_config.update, config))
+
     ret = []
-    if not all([config['account_sid'], config['auth_token'], config['twilio_number']]):
+    if not all([_config['account_sid'],
+                _config['auth_token'],
+                _config['twilio_number']]):
         return ret
     output = {}
     output['texts'] = []
-    client = TwilioRestClient(config['account_sid'], config['auth_token'])
-    messages = client.messages.list(to=config['twilio_number'])
+    client = TwilioRestClient(_config['account_sid'], _config['auth_token'])
+    messages = client.messages.list(to=_config['twilio_number'])
     log.trace('Num messages: {0}'.format(len(messages)))
     if len(messages) < 1:
         log.trace('Twilio beacon has no texts')
