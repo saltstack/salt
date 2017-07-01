@@ -15,8 +15,12 @@ This renderer requires `Dogeon`__ (installable via pip)
 from __future__ import absolute_import
 
 # Import python libs
-import dson
 import logging
+
+try:
+    import dson
+except ImportError:
+    raise
 
 # Import salt libs
 from salt.ext import six

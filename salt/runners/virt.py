@@ -68,13 +68,13 @@ def query(host=None, quiet=False):
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
         for info in client.cmd_iter('virtual:physical',
-                                    'virt.full_info', expr_form='grain'):
+                                    'virt.full_info', tgt_type='grain'):
             if not info:
                 continue
             if not isinstance(info, dict):
                 continue
             chunk = {}
-            id_ = next(info.iterkeys())
+            id_ = next(six.iterkeys(info))
             if host:
                 if host != id_:
                     continue
@@ -105,7 +105,7 @@ def list(host=None, quiet=False, hyper=None):  # pylint: disable=redefined-built
     ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
     for info in client.cmd_iter('virtual:physical',
-                                'virt.vm_info', expr_form='grain'):
+                                'virt.vm_info', tgt_type='grain'):
         if not info:
             continue
         if not isinstance(info, dict):
@@ -185,7 +185,7 @@ def init(
         The number of cpus to allocate to this new virtual machine.
 
     mem
-        The amount of memory to allocate tot his virtual machine. The number
+        The amount of memory to allocate to this virtual machine. The number
         is interpreted in megabytes.
 
     image
@@ -370,7 +370,7 @@ def force_off(name):
     try:
         cmd_ret = client.cmd_iter(
                 host,
-                'virt.destroy',
+                'virt.stop',
                 [name],
                 timeout=600)
     except SaltClientError as client_error:

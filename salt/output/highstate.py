@@ -125,7 +125,6 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     The HighState Outputter is only meant to be used with the state.highstate
     function, or a function that returns highstate return data.
     '''
-
     # Discard retcode in dictionary as present in orchestrate data
     local_masters = [key for key in data.keys() if key.endswith('.local_master')]
     orchestrator_output = 'retcode' in data.keys() and len(local_masters) == 1
@@ -317,7 +316,10 @@ def _format_host(host, data):
             # be sure that ret['comment'] is utf-8 friendly
             try:
                 if not isinstance(ret['comment'], six.text_type):
-                    ret['comment'] = str(ret['comment']).decode('utf-8')
+                    if six.PY2:
+                        ret['comment'] = str(ret['comment']).decode('utf-8')
+                    else:
+                        ret['comment'] = salt.utils.to_str(ret['comment'])
             except UnicodeDecodeError:
                 # but try to continue on errors
                 pass
@@ -543,7 +545,7 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
             )
         fmt_string += u'{0}'
         if __opts__.get('state_output_profile', True) and 'start_time' in ret:
-            fmt_string += u'{6[start_time]!s} [{6[duration]!s} ms] '
+            fmt_string += u'{6[start_time]!s} [{6[duration]!s:>7} ms] '
         fmt_string += u'{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
     elif isinstance(tabular, str):
         fmt_string = tabular

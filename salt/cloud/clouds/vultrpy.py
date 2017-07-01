@@ -14,10 +14,10 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 .. code-block:: yaml
 
-my-vultr-config:
-  # Vultr account api key
-  api_key: <supersecretapi_key>
-  driver: vultr
+    my-vultr-config:
+      # Vultr account api key
+      api_key: <supersecretapi_key>
+      driver: vultr
 
 Set up the cloud profile at ``/etc/salt/cloud.profiles`` or
 ``/etc/salt/cloud.profiles.d/vultr.conf``:
@@ -38,11 +38,11 @@ from __future__ import absolute_import
 import pprint
 import logging
 import time
-import urllib
 
-# Import salt cloud libs
+# Import salt libs
 import salt.config as config
 import salt.ext.six as six
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode  # pylint: disable=E0611
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudSystemExit
@@ -173,8 +173,12 @@ def destroy(name):
     '''
     node = show_instance(name, call='action')
     params = {'SUBID': node['SUBID']}
-    result = _query('server/destroy', method='POST', decode=False, data=urllib.urlencode(params))
-    if result['body'] == '' and result['text'] == '':
+    result = _query('server/destroy', method='POST', decode=False, data=_urlencode(params))
+
+    # The return of a destroy call is empty in the case of a success.
+    # Errors are only indicated via HTTP status code. Status code 200
+    # effetively therefore means "success".
+    if result.get('body') == '' and result.get('text') == '':
         return True
     return result
 
@@ -244,11 +248,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -283,13 +283,15 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args={'kwargs': kwargs},
+        args={
+            'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, list(kwargs)),
+        },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport'],
     )
 
     try:
-        data = _query('server/create', method='POST', data=urllib.urlencode(kwargs))
+        data = _query('server/create', method='POST', data=_urlencode(kwargs))
         if int(data.get('status', '200')) >= 300:
             log.error('Error creating {0} on Vultr\n\n'
                 'Vultr API returned {1}\n'.format(vm_['name'], data))
@@ -330,7 +332,6 @@ def create(vm_):
         Wait for the IP address to become available
         '''
         data = show_instance(vm_['name'], call='action')
-        pprint.pprint(data)
         main_ip = str(data.get('main_ip', '0'))
         if main_ip.startswith('0'):
             time.sleep(3)
@@ -342,8 +343,33 @@ def create(vm_):
         Wait for the IP address to become available
         '''
         data = show_instance(vm_['name'], call='action')
-        pprint.pprint(data)
+        # print("Waiting for default password")
+        # pprint.pprint(data)
         if str(data.get('default_password', '')) == '':
+            time.sleep(1)
+            return False
+        return data['default_password']
+
+    def wait_for_status():
+        '''
+        Wait for the IP address to become available
+        '''
+        data = show_instance(vm_['name'], call='action')
+        # print("Waiting for status normal")
+        # pprint.pprint(data)
+        if str(data.get('status', '')) != 'active':
+            time.sleep(1)
+            return False
+        return data['default_password']
+
+    def wait_for_server_state():
+        '''
+        Wait for the IP address to become available
+        '''
+        data = show_instance(vm_['name'], call='action')
+        # print("Waiting for server state ok")
+        # pprint.pprint(data)
+        if str(data.get('server_state', '')) != 'ok':
             time.sleep(1)
             return False
         return data['default_password']
@@ -358,6 +384,17 @@ def create(vm_):
         timeout=config.get_cloud_config_value(
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
+    __utils__['cloud.wait_for_fun'](
+        wait_for_status,
+        timeout=config.get_cloud_config_value(
+            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
+    )
+    __utils__['cloud.wait_for_fun'](
+        wait_for_server_state,
+        timeout=config.get_cloud_config_value(
+            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
+    )
+
     __opts__['hard_timeout'] = config.get_cloud_config_value(
         'hard_timeout',
         get_configured_provider(),
@@ -382,11 +419,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )

@@ -252,13 +252,21 @@ def put(consul_url=None, key=None, value=None, **kwargs):
     if not key:
         raise SaltInvocationError('Required argument "key" is missing.')
 
+    # Invalid to specified these together
+    conflicting_args = ['cas', 'release', 'acquire']
+    for _l1 in conflicting_args:
+        for _l2 in conflicting_args:
+            if _l1 in kwargs and _l2 in kwargs and _l1 != _l2:
+                raise SaltInvocationError('Using arguments `{0}` and `{1}`'
+                                          ' together is invalid.'.format(_l1, _l2))
+
     query_params = {}
 
     available_sessions = session_list(consul_url=consul_url, return_list=True)
     _current = get(consul_url=consul_url, key=key)
 
     if 'flags' in kwargs:
-        if not kwargs['flags'] >= 0 and not kwargs['flags'] <= 2**64:
+        if kwargs['flags'] >= 0 and kwargs['flags'] <= 2**64:
             query_params['flags'] = kwargs['flags']
 
     if 'cas' in kwargs:
@@ -280,8 +288,6 @@ def put(consul_url=None, key=None, value=None, **kwargs):
                               'CAS argument can not be used.'.format(key))
             ret['res'] = False
             return ret
-    else:
-        log.error('Key {0} does not exist. Skipping release.')
 
     if 'acquire' in kwargs:
         if kwargs['acquire'] not in available_sessions:

@@ -35,14 +35,14 @@ def __virtual__():
 
 
 def _save_state(details):
-    pck = open(FILENAME, 'wb')
+    pck = open(FILENAME, 'wb')  # pylint: disable=W8470
     pickle.dump(details, pck)
     pck.close()
 
 
 def _load_state():
     try:
-        pck = open(FILENAME, 'r')
+        pck = open(FILENAME, 'r')  # pylint: disable=W8470
         DETAILS = pickle.load(pck)
         pck.close()
     except IOError:

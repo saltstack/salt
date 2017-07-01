@@ -90,6 +90,7 @@ import decimal
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.hashutils
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
@@ -342,7 +343,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         canonical_headers = 'host:' + host + '\n' + 'x-amz-date:' + amz_date + '\n'
         signed_headers = 'host;x-amz-date'
 
-        payload_hash = hashlib.sha256('').hexdigest()
+        payload_hash = salt.utils.hashutils.sha256_digest('')
 
         ec2_api_version = provider.get(
             'ec2_api_version',
@@ -351,7 +352,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
         params_with_headers['Version'] = ec2_api_version
 
-        keys = sorted(params_with_headers.keys())
+        keys = sorted(list(params_with_headers))
         values = map(params_with_headers.get, keys)
         querystring = _urlencode(list(zip(keys, values)))
         querystring = querystring.replace('+', '%20')
@@ -365,7 +366,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
         string_to_sign = algorithm + '\n' +  amz_date + '\n' + \
                          credential_scope + '\n' + \
-                         hashlib.sha256(canonical_request).hexdigest()
+                         salt.utils.hashutils.sha256_digest(canonical_request)
 
         kDate = sign(('AWS4' + provider['key']).encode('utf-8'), datestamp)
         kRegion = sign(kDate, region)
@@ -682,6 +683,26 @@ def avail_sizes(call=None):
                 'ram': '60 GiB'
             },
         },
+        'GPU Compute': {
+            'p2.xlarge': {
+                'id': 'p2.xlarge',
+                'cores': '4',
+                'disk': 'EBS',
+                'ram': '61 GiB'
+            },
+            'p2.8xlarge': {
+                'id': 'p2.8xlarge',
+                'cores': '32',
+                'disk': 'EBS',
+                'ram': '488 GiB'
+            },
+            'p2.16xlarge': {
+                'id': 'p2.16xlarge',
+                'cores': '64',
+                'disk': 'EBS',
+                'ram': '732 GiB'
+            },
+        },
         'High I/O': {
             'i2.xlarge': {
                 'id': 'i2.xlarge',
@@ -709,23 +730,53 @@ def avail_sizes(call=None):
             }
         },
         'High Memory': {
-            'm2.2xlarge': {
-                'id': 'm2.2xlarge',
-                'cores': '4 (with 3.25 ECUs each)',
-                'disk': '840 GiB (1 x 840 GiB)',
-                'ram': '34.2 GiB'
+            'x1.16xlarge': {
+                'id': 'x1.16xlarge',
+                'cores': '64 (with 5.45 ECUs each)',
+                'disk': '1920 GiB (1 x 1920 GiB)',
+                'ram': '976 GiB'
             },
-            'm2.xlarge': {
-                'id': 'm2.xlarge',
-                'cores': '2 (with 3.25 ECUs each)',
-                'disk': '410 GiB (1 x 410 GiB)',
-                'ram': '17.1 GiB'
+            'x1.32xlarge': {
+                'id': 'x1.32xlarge',
+                'cores': '128 (with 2.73 ECUs each)',
+                'disk': '3840 GiB (2 x 1920 GiB)',
+                'ram': '1952 GiB'
             },
-            'm2.4xlarge': {
-                'id': 'm2.4xlarge',
-                'cores': '8 (with 3.25 ECUs each)',
-                'disk': '1680 GiB (2 x 840 GiB)',
-                'ram': '68.4 GiB'
+            'r4.large': {
+                'id': 'r4.large',
+                'cores': '2 (with 3.45 ECUs each)',
+                'disk': 'EBS',
+                'ram': '15.25 GiB'
+            },
+            'r4.xlarge': {
+                'id': 'r4.xlarge',
+                'cores': '4 (with 3.35 ECUs each)',
+                'disk': 'EBS',
+                'ram': '30.5 GiB'
+            },
+            'r4.2xlarge': {
+                'id': 'r4.2xlarge',
+                'cores': '8 (with 3.35 ECUs each)',
+                'disk': 'EBS',
+                'ram': '61 GiB'
+            },
+            'r4.4xlarge': {
+                'id': 'r4.4xlarge',
+                'cores': '16 (with 3.3 ECUs each)',
+                'disk': 'EBS',
+                'ram': '122 GiB'
+            },
+            'r4.8xlarge': {
+                'id': 'r4.8xlarge',
+                'cores': '32 (with 3.1 ECUs each)',
+                'disk': 'EBS',
+                'ram': '244 GiB'
+            },
+            'r4.16xlarge': {
+                'id': 'r4.16xlarge',
+                'cores': '64 (with 3.05 ECUs each)',
+                'disk': 'EBS',
+                'ram': '488 GiB'
             },
             'r3.large': {
                 'id': 'r3.large',
@@ -805,6 +856,18 @@ def avail_sizes(call=None):
                 'disk': 'EBS',
                 'ram': '8 GiB'
             },
+            't2.xlarge': {
+                'id': 't2.xlarge',
+                'cores': '4',
+                'disk': 'EBS',
+                'ram': '16 GiB'
+            },
+            't2.2xlarge': {
+                'id': 't2.2xlarge',
+                'cores': '8',
+                'disk': 'EBS',
+                'ram': '32 GiB'
+            },
             'm4.large': {
                 'id': 'm4.large',
                 'cores': '2',
@@ -834,6 +897,12 @@ def avail_sizes(call=None):
                 'cores': '40',
                 'disk': 'EBS - 4000 Mbps',
                 'ram': '160 GiB'
+            },
+            'm4.16xlarge': {
+                'id': 'm4.16xlarge',
+                'cores': '64',
+                'disk': 'EBS - 10000 Mbps',
+                'ram': '256 GiB'
             },
             'm3.medium': {
                 'id': 'm3.medium',
@@ -1120,6 +1189,26 @@ def get_tenancy(vm_):
     )
 
 
+def _get_subnetname_id(subnetname):
+    '''
+    Returns the SubnetId of a SubnetName to use
+    '''
+    params = {'Action': 'DescribeSubnets'}
+    for subnet in aws.query(params, location=get_location(),
+               provider=get_provider(), opts=__opts__, sigver='4'):
+        tags = subnet.get('tagSet', {}).get('item', {})
+        if not isinstance(tags, list):
+            tags = [tags]
+        for tag in tags:
+            if tag['key'] == 'Name' and tag['value'] == subnetname:
+                log.debug('AWS Subnet ID of {0} is {1}'.format(
+                    subnetname,
+                    subnet['subnetId'])
+                )
+                return subnet['subnetId']
+    return None
+
+
 def get_subnetid(vm_):
     '''
     Returns the SubnetId to use
@@ -1134,19 +1223,27 @@ def get_subnetid(vm_):
         'subnetname', vm_, __opts__, search_global=False
     )
     if subnetname:
-        params = {'Action': 'DescribeSubnets'}
-        for subnet in aws.query(params, location=get_location(),
-                   provider=get_provider(), opts=__opts__, sigver='4'):
-            tags = subnet.get('tagSet', {}).get('item', {})
-            if not isinstance(tags, list):
-                tags = [tags]
-            for tag in tags:
-                if tag['key'] == 'Name' and tag['value'] == subnetname:
-                    log.debug('AWS Subnet ID of {0} is {1}'.format(
-                        subnetname, subnet['subnetId'])
-                    )
-                    return subnet['subnetId']
+        return _get_subnetname_id(subnetname)
     return None
+
+
+def _get_securitygroupname_id(securitygroupname_list):
+    '''
+    Returns the SecurityGroupId of a SecurityGroupName to use
+    '''
+    securitygroupid_set = set()
+    if not isinstance(securitygroupname_list, list):
+        securitygroupname_list = [securitygroupname_list]
+    params = {'Action': 'DescribeSecurityGroups'}
+    for sg in aws.query(params, location=get_location(),
+                        provider=get_provider(), opts=__opts__, sigver='4'):
+        if sg['groupName'] in securitygroupname_list:
+            log.debug('AWS SecurityGroup ID of {0} is {1}'.format(
+                sg['groupName'],
+                sg['groupId'])
+            )
+            securitygroupid_set.add(sg['groupId'])
+    return list(securitygroupid_set)
 
 
 def securitygroupid(vm_):
@@ -1155,7 +1252,10 @@ def securitygroupid(vm_):
     '''
     securitygroupid_set = set()
     securitygroupid_list = config.get_cloud_config_value(
-        'securitygroupid', vm_, __opts__, search_global=False
+        'securitygroupid',
+        vm_,
+        __opts__,
+        search_global=False
     )
     # If the list is None, then the set will remain empty
     # If the list is already a set then calling 'set' on it is a no-op
@@ -1206,12 +1306,7 @@ def get_provider(vm_=None):
     if vm_ is None:
         provider = __active_provider_name__ or 'ec2'
     else:
-        # Since using "provider: <provider-engine>" is deprecated, alias provider
-        # to use driver: "driver: <provider-engine>"
-        if 'provider' in vm_:
-            vm_['driver'] = vm_.pop('provider')
-
-        provider = vm_.get('driver', 'ec2')
+        provider = vm_.get('provider', 'ec2')
 
     if ':' in provider:
         prov_comps = provider.split(':')
@@ -1287,6 +1382,11 @@ def _create_eni_if_necessary(interface, vm_):
                              provider=get_provider(),
                              opts=__opts__,
                              sigver='4')
+
+    if 'SecurityGroupId' not in interface and 'securitygroupname' in interface:
+        interface['SecurityGroupId'] = _get_securitygroupname_id(interface['securitygroupname'])
+    if 'SubnetId' not in interface and 'subnetname' in interface:
+        interface['SubnetId'] = _get_subnetname_id(interface['subnetname'])
 
     subnet_id = _get_subnet_id_for_interface(subnet_query, interface)
     if not subnet_id:
@@ -1899,7 +1999,12 @@ def request_instance(vm_=None, call=None):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args={'kwargs': params, 'location': location},
+        args={
+            'kwargs': __utils__['cloud.filter_event'](
+                'requesting', params, list(params)
+            ),
+            'location': location,
+        },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1956,8 +2061,7 @@ def request_instance(vm_=None, call=None):
 
             log.debug('Returned query data: {0}'.format(data))
 
-            if 'state' in data[0]:
-                state = data[0]['state']
+            state = data[0].get('state')
 
             if state == 'active':
                 return data
@@ -2384,6 +2488,31 @@ def wait_for_instance(
     return vm_
 
 
+def _validate_key_path_and_mode(key_filename):
+    if key_filename is None:
+        raise SaltCloudSystemExit(
+            'The required \'private_key\' configuration setting is missing from the '
+            '\'ec2\' driver.'
+        )
+
+    if not os.path.exists(key_filename):
+        raise SaltCloudSystemExit(
+            'The EC2 key file \'{0}\' does not exist.\n'.format(
+                key_filename
+            )
+        )
+
+    key_mode = stat.S_IMODE(os.stat(key_filename).st_mode)
+    if key_mode not in (0o400, 0o600):
+        raise SaltCloudSystemExit(
+            'The EC2 key file \'{0}\' needs to be set to mode 0400 or 0600.\n'.format(
+                key_filename
+            )
+        )
+
+    return True
+
+
 def create(vm_=None, call=None):
     '''
     Create a single VM from a data dict
@@ -2403,11 +2532,6 @@ def create(vm_=None, call=None):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     # Check for private_key and keyfile name for bootstrapping new instances
     deploy = config.get_cloud_config_value(
         'deploy', vm_, __opts__, default=True
@@ -2418,42 +2542,16 @@ def create(vm_=None, call=None):
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
-    if deploy or (deploy and win_password == 'auto'):
+    if deploy:
         # The private_key and keyname settings are only needed for bootstrapping
-        # new instances when deploy is True, or when win_password is set to 'auto'
-        # and deploy is also True.
-        if key_filename is None:
-            raise SaltCloudSystemExit(
-                'The required \'private_key\' configuration setting is missing from the '
-                '\'ec2\' driver.'
-            )
-
-        if not os.path.exists(key_filename):
-            raise SaltCloudSystemExit(
-                'The EC2 key file \'{0}\' does not exist.\n'.format(
-                    key_filename
-                )
-            )
-
-        key_mode = str(
-            oct(stat.S_IMODE(os.stat(key_filename).st_mode))
-        )
-        if key_mode not in ('0400', '0600'):
-            raise SaltCloudSystemExit(
-                'The EC2 key file \'{0}\' needs to be set to mode 0400 or 0600.\n'.format(
-                    key_filename
-                )
-            )
+        # new instances when deploy is True
+        _validate_key_path_and_mode(key_filename)
 
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -2689,7 +2787,7 @@ def create(vm_=None, call=None):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args=event_data,
+        args=__utils__['cloud.filter_event']('created', event_data, list(event_data)),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -2765,6 +2863,8 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             volume_dict['iops'] = volume['iops']
         if 'encrypted' in volume:
             volume_dict['encrypted'] = volume['encrypted']
+        if 'kmskeyid' in volume:
+            volume_dict['kmskeyid'] = volume['kmskeyid']
 
         if 'volume_id' not in volume_dict:
             created_volume = create_volume(volume_dict, call='function', wait_to_finish=wait_to_finish)
@@ -3297,7 +3397,8 @@ def _get_node(name=None, instance_id=None, location=None):
                                   provider=provider,
                                   opts=__opts__,
                                   sigver='4')
-            return _extract_instance_info(instances).values()[0]
+            instance_info = _extract_instance_info(instances).values()
+            return next(iter(instance_info))
         except IndexError:
             attempts -= 1
             log.debug(
@@ -3341,11 +3442,6 @@ def list_nodes_full(location=None, call=None):
 
 
 def _vm_provider_driver(vm_):
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     alias, driver = vm_['driver'].split(':')
     if alias not in __opts__['providers']:
         return None
@@ -3518,7 +3614,8 @@ def list_nodes_select(call=None):
 
 def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     '''
-    Show the details from EC2 concerning an AMI
+    Show the details from EC2 concerning an instance's termination protection state
+
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -3554,6 +3651,51 @@ def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     return disable_protect
 
 
+def show_detailed_monitoring(name=None, instance_id=None, call=None, quiet=False):
+    '''
+    Show the details from EC2 regarding cloudwatch detailed monitoring.
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_detailed_monitoring action must be called with -a or --action.'
+        )
+    location = get_location()
+    if str(name).startswith('i-') and (len(name) == 10 or len(name) == 19):
+        instance_id = name
+
+    if not name and not instance_id:
+        raise SaltCloudSystemExit(
+            'The show_detailed_monitoring action must be provided with a name or instance\
+ ID'
+        )
+    matched = _get_node(name=name, instance_id=instance_id, location=location)
+    log.log(
+        logging.DEBUG if quiet is True else logging.INFO,
+        'Detailed Monitoring is {0} for {1}'.format(matched['monitoring'], name)
+    )
+    return matched['monitoring']
+
+
+def _toggle_term_protect(name, value):
+    '''
+    Enable or Disable termination protection on a node
+
+    '''
+    instance_id = _get_node(name)['instanceId']
+    params = {'Action': 'ModifyInstanceAttribute',
+              'InstanceId': instance_id,
+              'DisableApiTermination.Value': value}
+
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       return_root=True,
+                       opts=__opts__,
+                       sigver='4')
+
+    return show_term_protect(name=name, instance_id=instance_id, call='action')
+
+
 def enable_term_protect(name, call=None):
     '''
     Enable termination protection on a node
@@ -3573,39 +3715,21 @@ def enable_term_protect(name, call=None):
     return _toggle_term_protect(name, 'true')
 
 
-def disable_term_protect(name, call=None):
+def disable_detailed_monitoring(name, call=None):
     '''
-    Disable termination protection on a node
+    Enable/disable detailed monitoring on a node
 
     CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a disable_term_protect mymachine
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The disable_term_protect action must be called with '
+            'The enable_term_protect action must be called with '
             '-a or --action.'
         )
 
-    return _toggle_term_protect(name, 'false')
-
-
-def _toggle_term_protect(name, value):
-    '''
-    Disable termination protection on a node
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a disable_term_protect mymachine
-    '''
     instance_id = _get_node(name)['instanceId']
-    params = {'Action': 'ModifyInstanceAttribute',
-              'InstanceId': instance_id,
-              'DisableApiTermination.Value': value}
+    params = {'Action': 'UnmonitorInstances',
+              'InstanceId.1': instance_id}
 
     result = aws.query(params,
                        location=get_location(),
@@ -3614,7 +3738,34 @@ def _toggle_term_protect(name, value):
                        opts=__opts__,
                        sigver='4')
 
-    return show_term_protect(name=name, instance_id=instance_id, call='action')
+    return show_detailed_monitoring(name=name, instance_id=instance_id, call='action')
+
+
+def enable_detailed_monitoring(name, call=None):
+    '''
+    Enable/disable detailed monitoring on a node
+
+    CLI Example:
+
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The enable_term_protect action must be called with '
+            '-a or --action.'
+        )
+
+    instance_id = _get_node(name)['instanceId']
+    params = {'Action': 'MonitorInstances',
+              'InstanceId.1': instance_id}
+
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       return_root=True,
+                       opts=__opts__,
+                       sigver='4')
+
+    return show_detailed_monitoring(name=name, instance_id=instance_id, call='action')
 
 
 def show_delvol_on_destroy(name, kwargs=None, call=None):
@@ -3859,6 +4010,14 @@ def register_image(kwargs=None, call=None):
     return r_data
 
 
+def volume_create(**kwargs):
+    '''
+    Wrapper around create_volume.
+    Here just to ensure the compatibility with the cloud module.
+    '''
+    return create_volume(kwargs, 'function')
+
+
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
     '''
     Create a volume.
@@ -3941,6 +4100,13 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
     # You can't set `encrypted` if you pass a snapshot
     if 'encrypted' in kwargs and 'snapshot' not in kwargs:
         params['Encrypted'] = kwargs['encrypted']
+        if 'kmskeyid' in kwargs:
+            params['KmsKeyId'] = kwargs['kmskeyid']
+    if 'kmskeyid' in kwargs and 'encrypted' not in kwargs:
+        log.error(
+            'If a KMS Key ID is specified, encryption must be enabled'
+        )
+        return False
 
     log.debug(params)
 
@@ -4114,6 +4280,14 @@ def delete_volume(name=None, kwargs=None, instance_id=None, call=None):
                      opts=__opts__,
                      sigver='4')
     return data
+
+
+def volume_list(**kwargs):
+    '''
+    Wrapper around describe_volumes.
+    Here just to ensure the compatibility with the cloud module.
+    '''
+    return describe_volumes(kwargs, 'function')
 
 
 def describe_volumes(kwargs=None, call=None):

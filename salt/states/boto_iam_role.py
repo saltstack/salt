@@ -104,6 +104,7 @@ def __virtual__():
 def present(
         name,
         policy_document=None,
+        policy_document_from_pillars=None,
         path=None,
         policies=None,
         policies_from_pillars=None,
@@ -122,6 +123,13 @@ def present(
 
     policy_document
         The policy that grants an entity permission to assume the role. (See https://boto.readthedocs.io/en/latest/ref/iam.html#boto.iam.connection.IAMConnection.create_role)
+
+    policy_document_from_pillars
+        A pillar key that contains a role policy document. The statements
+        defined here will be appended with the policy document statements
+        defined in the policy_document argument.
+
+        .. versionadded:: 2017.7.0
 
     path
         The path to the role/instance profile. (See https://boto.readthedocs.io/en/latest/ref/iam.html#boto.iam.connection.IAMConnection.create_role)
@@ -166,8 +174,22 @@ def present(
         .. versionadded:: 2015.8.0
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    _ret = _role_present(name, policy_document, path, region, key, keyid,
+    # Build up _policy_document
+    _policy_document = {}
+    if policy_document_from_pillars:
+        from_pillars = __salt__['pillar.get'](policy_document_from_pillars)
+        if from_pillars:
+            _policy_document['Version'] = from_pillars['Version']
+            _policy_document.setdefault('Statement', [])
+            _policy_document['Statement'].extend(from_pillars['Statement'])
+    if policy_document:
+        _policy_document['Version'] = policy_document['Version']
+        _policy_document.setdefault('Statement', [])
+        _policy_document['Statement'].extend(policy_document['Statement'])
+    _ret = _role_present(name, _policy_document, path, region, key, keyid,
                          profile)
+
+    # Build up _policies
     if not policies:
         policies = {}
     if not policies_from_pillars:
@@ -247,11 +269,11 @@ def _role_present(
         if not policy_document:
             policy = __salt__['boto_iam.build_policy'](region, key, keyid,
                                                        profile)
-            if role['assume_role_policy_document'] != policy:
+            if _sort_policy(role['assume_role_policy_document']) != _sort_policy(policy):
                 update_needed = True
                 _policy_document = policy
         else:
-            if role['assume_role_policy_document'] != policy_document:
+            if _sort_policy(role['assume_role_policy_document']) != _sort_policy(policy_document):
                 update_needed = True
                 _policy_document = policy_document
         if update_needed:
@@ -333,6 +355,19 @@ def _instance_profile_associated(
             msg = 'Failed to associate {0} instance profile with {0} role.'
             ret['comment'] = msg.format(name)
     return ret
+
+
+def _sort_policy(doc):
+    # List-type sub-items in policies don't happen to be order-sensitive, but
+    # compare operations will render them unequal, leading to non-idempotent
+    # state runs.  We'll sort any list-type subitems before comparison to reduce
+    # the likelihood of false negatives.
+    if isinstance(doc, list):
+        return sorted([_sort_policy(i) for i in doc])
+    elif isinstance(doc, dict):
+        return dict([(k, _sort_policy(v)) for k, v in doc.items()])
+    else:
+        return doc
 
 
 def _policies_present(

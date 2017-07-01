@@ -217,12 +217,12 @@ from subprocess import Popen, PIPE
 
 # Import salt libs
 import salt.utils
+import salt.utils.stringio
 import salt.syspaths
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
 import salt.ext.six as six
-
 
 log = logging.getLogger(__name__)
 
@@ -268,12 +268,17 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
     the cipher and return the decrypted string. If the cipher cannot be
     decrypted, log the error, and return the ciphertext back out.
     '''
-    cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '-d']
+    if translate_newlines:
+        cipher = cipher.replace(r'\n', '\n')
+    if six.PY3:
+        cipher = cipher.encode(__salt_system_encoding__)
+    cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '--status-fd', '2',
+           '--no-tty', '-d']
     proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
-    decrypted_data, decrypt_error = proc.communicate(
-        input=cipher.replace(r'\n', '\n') if translate_newlines else cipher
-    )
+    decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
+        if six.PY3:
+            cipher = cipher.decode(__salt_system_encoding__)
         log.warning(
             'Could not decrypt cipher %s, received: %s',
             cipher,
@@ -281,6 +286,8 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
         )
         return cipher
     else:
+        if six.PY3 and isinstance(decrypted_data, bytes):
+            decrypted_data = decrypted_data.decode(__salt_system_encoding__)
         return str(decrypted_data)
 
 
@@ -290,6 +297,8 @@ def _decrypt_object(obj, translate_newlines=False):
     (string or unicode), and it contains a valid GPG header, decrypt it,
     otherwise keep going until a string is found.
     '''
+    if salt.utils.stringio.is_readable(obj):
+        return _decrypt_object(obj.getvalue(), translate_newlines)
     if isinstance(obj, six.string_types):
         if GPG_HEADER.search(obj):
             return _decrypt_ciphertext(obj,

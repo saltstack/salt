@@ -6,6 +6,12 @@ Control Apache Traffic Server
 .. versionadded:: 2015.8.0
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
+# Import Salt libs
+import salt.utils
+
 
 def __virtual__():
     '''
@@ -237,7 +243,7 @@ def set_var(name, value):
     '''
     Set Traffic Server configuration variable values.
 
-    .. deprecated:: Oxygen
+    .. deprecated:: Fluorine
         Use ``trafficserver.config`` instead.
 
     .. code-block:: yaml
@@ -254,6 +260,11 @@ def set_var(name, value):
             - value: cdn.site.domain.tld
 
     '''
+    salt.utils.warn_until(
+        'Fluorine',
+        'The \'set_var\' function has been deprecated and will be removed in Salt '
+        '{version}. Please use \'trafficserver.config\' instead.'
+    )
     return config(name, value)
 
 

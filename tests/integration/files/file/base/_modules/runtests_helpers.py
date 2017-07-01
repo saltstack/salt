@@ -12,6 +12,7 @@ from __future__ import absolute_import
 import fnmatch
 import os
 import re
+import fnmatch
 import tempfile
 
 # Import salt libs
@@ -83,6 +84,7 @@ def get_invalid_docs():
     )
     allow_failure_glob = (
         'runtests_helpers.*',
+        'vsphere.*',
     )
     nodoc = set()
     noexample = set()
@@ -100,8 +102,21 @@ def get_invalid_docs():
                 continue
         if not isinstance(docstring, six.string_types):
             nodoc.add(fun)
-        elif not re.search(r'([E|e]xample(?:s)?)+(?:.*):?', docstring):
+        elif isinstance(docstring, dict) and not re.search(r'([E|e]xample(?:s)?)+(?:.*):?', docstring):
             noexample.add(fun)
 
     return {'missing_docstring': sorted(nodoc),
             'missing_cli_example': sorted(noexample)}
+
+
+def modules_available(*names):
+    '''
+    Returns a list of modules not available. Empty list if modules are all available
+    '''
+    not_found = []
+    for name in names:
+        if '.' not in name:
+            name = name + '.*'
+        if not fnmatch.filter(list(__salt__), name):
+            not_found.append(name)
+    return not_found

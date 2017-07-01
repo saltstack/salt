@@ -143,7 +143,7 @@ import os
 import logging
 import socket
 import pprint
-from distutils.version import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import libcloud
 try:
@@ -551,17 +551,19 @@ def request_instance(vm_=None, call=None):
     if config_drive is not None:
         kwargs['ex_config_drive'] = config_drive
 
+    event_kwargs = {
+        'name': kwargs['name'],
+        'image': kwargs['image'].name,
+        'size': kwargs['size'].name,
+        'profile': vm_['profile'],
+    }
+
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
-            'kwargs': {
-                'name': kwargs['name'],
-                'image': kwargs['image'].name,
-                'size': kwargs['size'].name,
-                'profile': vm_['profile'],
-            }
+            'kwargs': __utils__['cloud.filter_event']('requesting', event_kwargs, list(event_kwargs)),
         },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
@@ -719,11 +721,6 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
     key_filename = config.get_cloud_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
@@ -743,11 +740,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -836,11 +829,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )

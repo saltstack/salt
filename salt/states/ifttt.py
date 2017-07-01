@@ -48,7 +48,7 @@ def trigger_event(name,
             - event: TestEvent
             - value1: 'A value that we want to send.'
             - value2: 'A second value that we want to send.'
-            - value3: 'A third value that wen want to send.'
+            - value3: 'A third value that we want to send.'
 
     The following parameters are required:
 
