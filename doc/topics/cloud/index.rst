@@ -106,6 +106,7 @@ Cloud Provider Specifics
         Getting Started With Aliyun <aliyun>
         Getting Started With Azure <azure>
         Getting Started With Azure Arm <azurearm>
+        Getting Started With CloudStack <cloudstack>
         Getting Started With DigitalOcean <digitalocean>
         Getting Started With Dimension Data <dimensiondata>
         Getting Started With EC2 <aws>
@@ -113,6 +114,7 @@ Cloud Provider Specifics
         Getting Started With Google Compute Engine <gce>
         Getting Started With HP Cloud <hpcloud>
         Getting Started With Joyent <joyent>
+        Getting Started With Libvirt <libvirt>
         Getting Started With Linode <linode>
         Getting Started With LXC <lxc>
         Getting Started With OpenNebula <opennebula>
@@ -127,6 +129,7 @@ Cloud Provider Specifics
         Getting Started With Vexxhost <vexxhost>
         Getting Started With Virtualbox <virtualbox>
         Getting Started With VMware <vmware>
+        Getting Started With Xen <xen>
 
 
 Miscellaneous Options

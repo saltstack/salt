@@ -69,11 +69,10 @@ def _walk_through(job_dir):
             if not os.path.isfile(load_path):
                 continue
 
-            # serial.load() closes the filehandle, no need to enclose this in a
-            # "with" block.
-            job = serial.load(salt.utils.fopen(load_path, 'rb'))
-            jid = job['jid']
-            yield jid, job, t_path, final
+            with salt.utils.fopen(load_path, 'rb') as rfh:
+                job = serial.load(rfh)
+                jid = job['jid']
+                yield jid, job, t_path, final
 
 
 #TODO: add to returner docs-- this is a new one
@@ -161,7 +160,7 @@ def returner(load):
         raise
 
     serial.dump(
-        load['return'],
+        dict((key, load[key]) for key in ['return', 'retcode', 'success'] if key in load),
         # Use atomic open here to avoid the file being read before it's
         # completely written to. Refs #1935
         salt.utils.atomicfile.atomic_open(
@@ -210,10 +209,8 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
         else:
             raise
     try:
-        serial.dump(
-            clear_load,
-            salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
-            )
+        with salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b') as wfh:
+            serial.dump(clear_load, wfh)
     except IOError as exc:
         log.warning(
             'Could not write job invocation cache file: %s', exc
@@ -277,7 +274,8 @@ def save_minions(jid, minions, syndic_id=None):
                 os.makedirs(jid_dir)
             except OSError:
                 pass
-        serial.dump(minions, salt.utils.fopen(minions_path, 'w+b'))
+        with salt.utils.fopen(minions_path, 'w+b') as wfh:
+            serial.dump(minions, wfh)
     except IOError as exc:
         log.error(
             'Failed to write minion list {0} to job cache file {1}: {2}'
@@ -294,8 +292,8 @@ def get_load(jid):
     if not os.path.exists(jid_dir) or not os.path.exists(load_fn):
         return {}
     serial = salt.payload.Serial(__opts__)
-
-    ret = serial.load(salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'rb'))
+    with salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'rb') as rfh:
+        ret = serial.load(rfh)
 
     minions_cache = [os.path.join(jid_dir, MINIONS_P)]
     minions_cache.extend(
@@ -305,9 +303,8 @@ def get_load(jid):
     for minions_path in minions_cache:
         log.debug('Reading minion list from %s', minions_path)
         try:
-            all_minions.update(
-                serial.load(salt.utils.fopen(minions_path, 'rb'))
-            )
+            with salt.utils.fopen(minions_path, 'rb') as rfh:
+                all_minions.update(serial.load(rfh))
         except IOError as exc:
             salt.utils.files.process_read_exception(exc, minions_path)
 
@@ -338,12 +335,17 @@ def get_jid(jid):
                 continue
             while fn_ not in ret:
                 try:
-                    ret_data = serial.load(
-                        salt.utils.fopen(retp, 'rb'))
-                    ret[fn_] = {'return': ret_data}
+                    with salt.utils.fopen(retp, 'rb') as rfh:
+                        ret_data = serial.load(rfh)
+                    if not isinstance(ret_data, dict) or 'return' not in ret_data:
+                        # Convert the old format in which return.p contains the only return data to
+                        # the new that is dict containing 'return' and optionally 'retcode' and
+                        # 'success'.
+                        ret_data = {'return': ret_data}
+                    ret[fn_] = ret_data
                     if os.path.isfile(outp):
-                        ret[fn_]['out'] = serial.load(
-                            salt.utils.fopen(outp, 'rb'))
+                        with salt.utils.fopen(outp, 'rb') as rfh:
+                            ret[fn_]['out'] = serial.load(rfh)
                 except Exception as exc:
                     if 'Permission denied:' in str(exc):
                         raise
@@ -488,7 +490,7 @@ def save_reg(data):
     reg_dir = _reg_dir()
     regfile = os.path.join(reg_dir, 'register')
     try:
-        if not os.path.exists():
+        if not os.path.exists(reg_dir):
             os.makedirs(reg_dir)
     except OSError as exc:
         if exc.errno == errno.EEXIST:
@@ -498,7 +500,6 @@ def save_reg(data):
     try:
         with salt.utils.fopen(regfile, 'a') as fh_:
             msgpack.dump(data, fh_)
-        fh_.close()
     except:
         log.error('Could not write to msgpack file {0}'.format(__opts__['outdir']))
         raise

@@ -34,7 +34,6 @@ Module to provide Postgres compatibility to salt.
 # Import python libs
 from __future__ import absolute_import
 import datetime
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
 import hashlib
 import os
@@ -49,8 +48,10 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.itertools
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -96,6 +97,7 @@ _PRIVILEGES_OBJECTS = frozenset(
     'table',
     'group',
     'database',
+    'function',
     )
 )
 _PRIVILEGE_TYPE_MAP = {
@@ -105,6 +107,7 @@ _PRIVILEGE_TYPE_MAP = {
     'sequence': 'rwU',
     'schema': 'UC',
     'database': 'CTc',
+    'function': 'X',
 }
 
 
@@ -153,7 +156,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
         if not host or host.startswith('/'):
             if 'FreeBSD' in __grains__['os_family']:
                 runas = 'pgsql'
-            if 'OpenBSD' in __grains__['os_family']:
+            elif 'OpenBSD' in __grains__['os_family']:
                 runas = '_postgresql'
             else:
                 runas = 'postgres'
@@ -167,7 +170,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     if password is None:
         password = __salt__['config.option']('postgres.pass')
     if password is not None:
-        pgpassfile = salt.utils.mkstemp(text=True)
+        pgpassfile = salt.utils.files.mkstemp(text=True)
         with salt.utils.fopen(pgpassfile, 'w') as fp_:
             fp_.write('{0}:{1}:*:{2}:{3}'.format(
                 'localhost' if not host or host.startswith('/') else host,
@@ -201,7 +204,7 @@ def _run_initdb(name,
     if runas is None:
         if 'FreeBSD' in __grains__['os_family']:
             runas = 'pgsql'
-        if 'OpenBSD' in __grains__['os_family']:
+        elif 'OpenBSD' in __grains__['os_family']:
             runas = '_postgresql'
         else:
             runas = 'postgres'
@@ -223,7 +226,7 @@ def _run_initdb(name,
         cmd.append('--locale={0}'.format(locale))
 
     if password is not None:
-        pgpassfile = salt.utils.mkstemp(text=True)
+        pgpassfile = salt.utils.files.mkstemp(text=True)
         with salt.utils.fopen(pgpassfile, 'w') as fp_:
             fp_.write('{0}'.format(password))
             __salt__['file.chown'](pgpassfile, runas, '')
@@ -290,7 +293,7 @@ def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
     )
 
     if psql_version:
-        return distutils.version.LooseVersion(psql_version)
+        return _LooseVersion(psql_version)
     else:
         log.warning('Attempt to parse version of Postgres server failed. '
                     'Is the server responding?')
@@ -366,7 +369,7 @@ def _psql_prepare_and_run(cmd,
 
 
 def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
-               password=None, runas=None):
+               password=None, runas=None, write=False):
     '''
     Run an SQL-Query and return the results as a list. This command
     only supports SELECT statements.  This limitation can be worked around
@@ -396,6 +399,9 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
     runas
         User to run the command as.
 
+    write
+        Mark query as READ WRITE transaction.
+
     CLI Example:
 
     .. code-block:: bash
@@ -406,6 +412,11 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
 
     csv_query = 'COPY ({0}) TO STDOUT WITH CSV HEADER'.format(
         query.strip().rstrip(';'))
+
+    # Mark transaction as R/W to achieve write will be allowed
+    # Commit is necessary due to transaction
+    if write:
+        csv_query = 'START TRANSACTION READ WRITE; {0}; COMMIT TRANSACTION;'.format(csv_query)
 
     # always use the same datestyle settings to allow parsing dates
     # regardless what server settings are configured
@@ -427,6 +438,10 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
             header = row
             continue
         ret.append(dict(zip(header, row)))
+
+    # Remove 'COMMIT' message if query is inside R/W transction
+    if write:
+        ret = ret[0:-1]
 
     return ret
 
@@ -807,11 +822,11 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
                           password=password,
                           runas=runas)
     if ver:
-        if ver >= distutils.version.LooseVersion('9.1'):
+        if ver >= _LooseVersion('9.1'):
             replication_column = 'pg_roles.rolreplication'
         else:
             replication_column = 'NULL'
-        if ver >= distutils.version.LooseVersion('9.5'):
+        if ver >= _LooseVersion('9.5'):
             rolcatupdate_column = 'NULL'
         else:
             rolcatupdate_column = 'pg_roles.rolcatupdate'
@@ -2405,16 +2420,16 @@ def _make_privileges_list_query(name, object_type, prepend):
             "WHERE nspname = '{0}'",
             'ORDER BY nspname',
         ])).format(name)
-    # elif object_type == 'function':
-    #     query = (' '.join([
-    #         'SELECT proacl AS name',
-    #         'FROM pg_catalog.pg_proc p',
-    #         'JOIN pg_catalog.pg_namespace n',
-    #         'ON n.oid = p.pronamespace',
-    #         "WHERE nspname = '{0}'",
-    #         "AND proname = '{1}'",
-    #         'ORDER BY proname, proargtypes',
-    #     ])).format(prepend, name)
+    elif object_type == 'function':
+        query = (' '.join([
+            'SELECT proacl AS name',
+            'FROM pg_catalog.pg_proc p',
+            'JOIN pg_catalog.pg_namespace n',
+            'ON n.oid = p.pronamespace',
+            "WHERE nspname = '{0}'",
+            "AND p.oid::regprocedure::text = '{1}'",
+            'ORDER BY proname, proargtypes',
+        ])).format(prepend, name)
     elif object_type == 'tablespace':
         query = (' '.join([
             'SELECT spcacl AS name',
@@ -2491,6 +2506,16 @@ def _get_object_owner(name,
             'ON n.nspowner = r.oid',
             "WHERE nspname = '{0}'",
         ])).format(name)
+    elif object_type == 'function':
+        query = (' '.join([
+            'SELECT rolname AS name',
+            'FROM pg_catalog.pg_proc p',
+            'JOIN pg_catalog.pg_namespace n',
+            'ON n.oid = p.pronamespace',
+            "WHERE nspname = '{0}'",
+            "AND p.oid::regprocedure::text = '{1}'",
+            'ORDER BY proname, proargtypes',
+        ])).format(prepend, name)
     elif object_type == 'tablespace':
         query = (' '.join([
             'SELECT rolname AS name',
@@ -2620,6 +2645,7 @@ def privileges_list(
        - language
        - database
        - group
+       - function
 
     prepend
         Table and Sequence object types live under a schema so this should be
@@ -2724,6 +2750,7 @@ def has_privileges(name,
        - language
        - database
        - group
+       - function
 
     privileges
        Comma separated list of privileges to check, from the list below:
@@ -2846,6 +2873,7 @@ def privileges_grant(name,
        - language
        - database
        - group
+       - function
 
     privileges
        Comma separated list of privileges to grant, from the list below:
@@ -2905,6 +2933,8 @@ def privileges_grant(name,
 
     if object_type in ['table', 'sequence']:
         on_part = '{0}."{1}"'.format(prepend, object_name)
+    elif object_type == 'function':
+        on_part = '{0}'.format(object_name)
     else:
         on_part = '"{0}"'.format(object_name)
 
@@ -2981,6 +3011,7 @@ def privileges_revoke(name,
        - language
        - database
        - group
+       - function
 
     privileges
        Comma separated list of privileges to revoke, from the list below:

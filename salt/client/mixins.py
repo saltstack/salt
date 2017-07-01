@@ -10,6 +10,7 @@ import logging
 import weakref
 import traceback
 import collections
+import copy as pycopy
 
 # Import Salt libs
 import salt.exceptions
@@ -137,7 +138,7 @@ class SyncClientMixin(object):
                 salt.utils.error.raise_error(**ret['error'])
         return ret
 
-    def cmd_sync(self, low, timeout=None):
+    def cmd_sync(self, low, timeout=None, full_return=False):
         '''
         Execute a runner function synchronously; eauth is respected
 
@@ -165,7 +166,7 @@ class SyncClientMixin(object):
                 "RunnerClient job '{0}' timed out".format(job['jid']),
                 jid=job['jid'])
 
-        return ret['data']['return']
+        return ret if full_return else ret['data']['return']
 
     def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):
         '''
@@ -214,7 +215,9 @@ class SyncClientMixin(object):
             raise salt.exceptions.SaltInvocationError(
                 'kwarg must be formatted as a dictionary'
             )
-        arglist = salt.utils.args.parse_input(arg)
+        arglist = salt.utils.args.parse_input(
+            arg,
+            no_parse=self.opts.get('no_parse', []))
 
         # if you were passed kwarg, add it to arglist
         if kwarg:
@@ -332,13 +335,14 @@ class SyncClientMixin(object):
                         }
 
         try:
-            salt.utils.lazy.verify_fun(self.functions, fun)
+            self_functions = pycopy.copy(self.functions)
+            salt.utils.lazy.verify_fun(self_functions, fun)
 
             # Inject some useful globals to *all* the function's global
             # namespace only once per module-- not per func
             completed_funcs = []
 
-            for mod_name in six.iterkeys(self.functions):
+            for mod_name in six.iterkeys(self_functions):
                 if '.' not in mod_name:
                     continue
                 mod, _ = mod_name.split('.', 1)
@@ -348,7 +352,7 @@ class SyncClientMixin(object):
                 for global_key, value in six.iteritems(func_globals):
                     self.functions[mod_name].__globals__[global_key] = value
 
-            # There are some descrepencies of what a "low" structure is in the
+            # There are some discrepancies of what a "low" structure is in the
             # publisher world it is a dict including stuff such as jid, fun,
             # arg (a list of args, with kwargs packed in). Historically this
             # particular one has had no "arg" and just has had all the kwargs
@@ -368,21 +372,14 @@ class SyncClientMixin(object):
                 args = low['arg']
 
             if 'kwarg' not in low:
-                if f_call is None:
-                    f_call = salt.utils.format_call(
-                        self.functions[fun],
-                        low,
-                        expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
-                    )
-                kwargs = f_call.get('kwargs', {})
-
-                # throw a warning for the badly formed low data if we found
-                # kwargs using the old mechanism
-                if kwargs:
-                    salt.utils.warn_until(
-                        'Nitrogen',
-                        'kwargs must be passed inside the low under "kwargs"'
-                    )
+                log.critical(
+                    'kwargs must be passed inside the low data within the '
+                    '\'kwarg\' key. See usage of '
+                    'salt.utils.args.parse_input() and '
+                    'salt.minion.load_args_and_kwargs() elsewhere in the '
+                    'codebase.'
+                )
+                kwargs = {}
             else:
                 kwargs = low['kwarg']
 

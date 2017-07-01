@@ -298,7 +298,7 @@ More Testing, More BugFixes
 ---------------------------
 
 0.9.5 comes with more bugfixes due to more testing than any previous release.
-The growing community and the introduction a a dedicated QA environment have
+The growing community and the introduction a dedicated QA environment have
 unearthed many issues that were hiding under the covers. This has further
 refined and cleaned the state interface, taking care of things from minor
 visual issues to repairing misleading data.

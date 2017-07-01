@@ -33,10 +33,10 @@ def __virtual__():
     log.debug('rest_sample proxy __virtual__() called...')
     return True
 
-
 # Every proxy module needs an 'init', though you can
 # just put DETAILS['initialized'] = True here if nothing
 # else needs to be done.
+
 
 def init(opts):
     log.debug('rest_sample proxy init() called...')
@@ -57,6 +57,13 @@ def initialized():
     our init() function has been called
     '''
     return DETAILS.get('initialized', False)
+
+
+def alive(opts):
+    log.debug('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
+    log.debug('proxys alive() fn called')
+    log.debug('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
+    return False
 
 
 def id(opts):

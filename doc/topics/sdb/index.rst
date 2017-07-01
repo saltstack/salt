@@ -14,12 +14,14 @@ SDB was added to Salt in version 2014.7.0.
 
 SDB Configuration
 =================
-In order to use the SDB interface, a configuration profile must be set up in
-either the master or minion configuration file. The configuration stanza
-includes the name/ID that the profile will be referred to as, a ``driver``
-setting, and any other arguments that are necessary for the SDB module that will
-be used. For instance, a profile called ``mykeyring``, which uses the
-``system`` service in the ``keyring`` module would look like:
+In order to use the SDB interface, a configuration profile must be set up.
+To be available for master commands, such as runners, it needs to be
+configured in the master configuration. For modules executed on a minion, it
+can be set either in the minion configuration file, or as a pillar. The
+configuration stanza includes the name/ID that the profile will be referred to
+as, a ``driver`` setting, and any other arguments that are necessary for the SDB
+module that will be used. For instance, a profile called ``mykeyring``, which
+uses the ``system`` service in the ``keyring`` module would look like:
 
 .. code-block:: yaml
 

@@ -139,6 +139,63 @@ def _netstat_linux():
     return ret
 
 
+def _ss_linux():
+    '''
+    Return ss information for Linux distros
+    (netstat is deprecated and may not be available)
+    '''
+    ret = []
+    cmd = 'ss -tulpnea'
+    out = __salt__['cmd.run'](cmd)
+    for line in out.splitlines():
+        comps = line.split()
+        ss_user = 0
+        ss_inode = 0
+        ss_program = ''
+        length = len(comps)
+        if line.startswith('tcp') or line.startswith('udp'):
+            i = 6
+            while i < (length - 1):
+                fields = comps[i].split(":")
+                if fields[0] == "users":
+                    users = fields[1].split(",")
+                    ss_program = users[0].split("\"")[1]
+
+                if fields[0] == "uid":
+                    ss_user = fields[1]
+
+                if fields[0] == "ino":
+                    ss_inode = fields[1]
+
+                i += 1
+
+        if line.startswith('tcp'):
+            ss_state = comps[1]
+            if ss_state == "ESTAB":
+                ss_state = "ESTABLISHED"
+            ret.append({
+                'proto': comps[0],
+                'recv-q': comps[2],
+                'send-q': comps[3],
+                'local-address': comps[4],
+                'remote-address': comps[5],
+                'state': ss_state,
+                'user': ss_user,
+                'inode': ss_inode,
+                'program': ss_program})
+        if line.startswith('udp'):
+            ret.append({
+                'proto': comps[0],
+                'recv-q': comps[2],
+                'send-q': comps[3],
+                'local-address': comps[4],
+                'remote-address': comps[5],
+                'user': ss_user,
+                'inode': ss_inode,
+                'program': ss_program})
+    return ret
+
+
 def _netinfo_openbsd():
     '''
     Get process information for network connections using fstat
@@ -409,7 +466,7 @@ def _netstat_route_linux():
                 'destination': comps[0],
                 'gateway': comps[1],
                 'netmask': '',
-                'flags': comps[3],
+                'flags': comps[2],
                 'interface': comps[5]})
         elif len(comps) == 7:
             ret.append({
@@ -417,10 +474,106 @@ def _netstat_route_linux():
                 'destination': comps[0],
                 'gateway': comps[1],
                 'netmask': '',
-                'flags': comps[3],
+                'flags': comps[2],
                 'interface': comps[6]})
         else:
             continue
+    return ret
+
+
+def _ip_route_linux():
+    '''
+    Return ip routing information for Linux distros
+    (netstat is deprecated and may not be available)
+    '''
+    # table main closest to old netstat inet output
+    ret = []
+    cmd = 'ip -4 route show table main'
+    out = __salt__['cmd.run'](cmd, python_shell=True)
+    for line in out.splitlines():
+        comps = line.split()
+
+        # need to fake similar output to that provided by netstat
+        # to maintain output format
+        if comps[0] == "unreachable":
+            continue
+
+        if comps[0] == "default":
+            ip_interface = ''
+            if comps[3] == "dev":
+                ip_interface = comps[4]
+
+            ret.append({
+                'addr_family': 'inet',
+                'destination': '0.0.0.0',
+                'gateway': comps[2],
+                'netmask': '0.0.0.0',
+                'flags': 'UG',
+                'interface': ip_interface})
+        else:
+            address_mask = convert_cidr(comps[0])
+            ip_interface = ''
+            if comps[1] == "dev":
+                ip_interface = comps[2]
+
+            ret.append({
+                'addr_family': 'inet',
+                'destination': address_mask['network'],
+                'gateway': '0.0.0.0',
+                'netmask': address_mask['netmask'],
+                'flags': 'U',
+                'interface': ip_interface})
+
+    # table all closest to old netstat inet6 output
+    cmd = 'ip -6 route show table all'
+    out = __salt__['cmd.run'](cmd, python_shell=True)
+    for line in out.splitlines():
+        comps = line.split()
+
+        # need to fake similar output to that provided by netstat
+        # to maintain output format
+        if comps[0] == "unreachable":
+            continue
+
+        if comps[0] == "default":
+            ip_interface = ''
+            if comps[3] == "dev":
+                ip_interface = comps[4]
+
+            ret.append({
+                'addr_family': 'inet6',
+                'destination': '::',
+                'gateway': comps[2],
+                'netmask': '',
+                'flags': 'UG',
+                'interface': ip_interface})
+
+        elif comps[0] == "local":
+            ip_interface = ''
+            if comps[2] == "dev":
+                ip_interface = comps[3]
+
+            local_address = comps[1] + "/128"
+            ret.append({
+                'addr_family': 'inet6',
+                'destination': local_address,
+                'gateway': '::',
+                'netmask': '',
+                'flags': 'U',
+                'interface': ip_interface})
+        else:
+            address_mask = convert_cidr(comps[0])
+            ip_interface = ''
+            if comps[1] == "dev":
+                ip_interface = comps[2]
+
+            ret.append({
+                'addr_family': 'inet6',
+                'destination': comps[0],
+                'gateway': '::',
+                'netmask': '',
+                'flags': 'U',
+                'interface': ip_interface})
     return ret
 
 
@@ -607,7 +760,10 @@ def netstat():
         salt '*' network.netstat
     '''
     if __grains__['kernel'] == 'Linux':
-        return _netstat_linux()
+        if not salt.utils.which('netstat'):
+            return _ss_linux()
+        else:
+            return _netstat_linux()
     elif __grains__['kernel'] in ('OpenBSD', 'FreeBSD', 'NetBSD'):
         return _netstat_bsd()
     elif __grains__['kernel'] == 'SunOS':
@@ -1069,8 +1225,21 @@ def get_hostname():
         salt '*' network.get_hostname
     '''
 
-    from socket import gethostname
-    return gethostname()
+    return socket.gethostname()
+
+
+def get_fqdn():
+    '''
+    Get fully qualified domain name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.get_fqdn
+    '''
+
+    return socket.getfqdn()
 
 
 def mod_hostname(hostname):
@@ -1432,7 +1601,10 @@ def routes(family=None):
         raise CommandExecutionError('Invalid address family {0}'.format(family))
 
     if __grains__['kernel'] == 'Linux':
-        routes_ = _netstat_route_linux()
+        if not salt.utils.which('netstat'):
+            routes_ = _ip_route_linux()
+        else:
+            routes_ = _netstat_route_linux()
     elif __grains__['kernel'] == 'SunOS':
         routes_ = _netstat_route_sunos()
     elif __grains__['os'] in ['FreeBSD', 'MacOS', 'Darwin']:
@@ -1664,7 +1836,7 @@ def ifacestartswith(cidr):
 
 def iphexval(ip):
     '''
-    Retrieve the interface name from a specific CIDR
+    Retrieve the hexadecimal representation of an IP address
 
     .. versionadded:: 2016.11.0
 
@@ -1675,7 +1847,5 @@ def iphexval(ip):
         salt '*' network.iphexval 10.0.0.1
     '''
     a = ip.split('.')
-    hexval = ""
-    for val in a:
-        hexval = hexval.join(hex(int(val))[2:])
-    return hexval.upper()
+    hexval = ['%02X' % int(x) for x in a]  # pylint: disable=E1321
+    return ''.join(hexval)

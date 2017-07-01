@@ -83,7 +83,7 @@ def _gluster_xml(cmd):
 
     if _gluster_ok(root):
         output = root.find('output')
-        if output:
+        if output is not None:
             log.info('Gluster call "{0}" succeeded: {1}'.format(cmd, root.find('output').text))
         else:
             log.info('Gluster call "{0}" succeeded'.format(cmd))
@@ -169,25 +169,6 @@ def peer_status():
             elif item.tag != 'uuid':
                 result[uuid][item.tag] = item.text
     return result
-
-
-def list_peers():
-    '''
-    Deprecated version of peer_status(), which returns the peered hostnames
-    and some additional information.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' glusterfs.list_peers
-
-    '''
-    salt.utils.warn_until(
-        'Nitrogen',
-        'The glusterfs.list_peers function is deprecated in favor of'
-        ' more verbose but very similar glusterfs.peer_status.')
-    return peer_status()
 
 
 def peer(name):
@@ -312,18 +293,6 @@ def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
     if start:
         return start_volume(name)
     return True
-
-
-def create(*args, **kwargs):
-    '''
-    Deprecated version of more consistently named create_volume
-    '''
-    salt.utils.warn_until(
-        'Nitrogen',
-        'The glusterfs.create function is deprecated in favor of'
-        ' more descriptive glusterfs.create_volume.'
-    )
-    return create_volume(*args, **kwargs)
 
 
 def list_volumes():
@@ -542,18 +511,6 @@ def delete_volume(target, stop=True):
     return _gluster(cmd)
 
 
-def delete(*args, **kwargs):
-    '''
-    Deprecated version of more consistently named delete_volume
-    '''
-    salt.utils.warn_until(
-        'Nitrogen',
-        'The glusterfs.delete function is deprecated in favor of'
-        ' more descriptive glusterfs.delete_volume.'
-    )
-    return delete_volume(*args, **kwargs)
-
-
 def add_volume_bricks(name, bricks):
     '''
     Add brick(s) to an existing volume
@@ -591,3 +548,112 @@ def add_volume_bricks(name, bricks):
             cmd += ' {0}'.format(brick)
         return _gluster(cmd)
     return True
+
+
+def enable_quota_volume(name):
+    '''
+    Enable quota on a glusterfs volume.
+
+    name
+        Name of the gluster volume
+    '''
+
+    cmd = 'volume quota {0} enable'.format(name)
+    if not _gluster(cmd):
+        return False
+    return True
+
+
+def disable_quota_volume(name):
+    '''
+    Disable quota on a glusterfs volume.
+
+    name
+        Name of the gluster volume
+    '''
+
+    cmd = 'volume quota {0} disable'.format(name)
+    if not _gluster(cmd):
+        return False
+    return True
+
+
+def set_quota_volume(name, path, size, enable_quota=False):
+    '''
+    Set quota to glusterfs volume.
+
+    name
+        Name of the gluster volume
+
+    path
+        Folder path for restriction in volume ("/")
+
+    size
+        Hard-limit size of the volume (MB/GB)
+
+    enable_quota
+        Enable quota before set up restriction
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glusterfs.set_quota_volume <volume> <path> <size> enable_quota=True
+
+    '''
+    cmd = 'volume quota {0}'.format(name)
+    if path:
+        cmd += ' limit-usage {0}'.format(path)
+    if size:
+        cmd += ' {0}'.format(size)
+
+    if enable_quota:
+        if not enable_quota_volume(name):
+            pass
+    if not _gluster(cmd):
+        return False
+    return True
+
+
+def unset_quota_volume(name, path):
+    '''
+    Unset quota to glusterfs volume.
+    name
+        Name of the gluster volume
+    path
+        Folder path for restriction in volume
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' glusterfs.unset_quota_volume <volume> <path>
+
+    '''
+    cmd = 'volume quota {0}'.format(name)
+    if path:
+        cmd += ' remove {0}'.format(path)
+
+    if not _gluster(cmd):
+        return False
+    return True
+
+
+def list_quota_volume(name):
+    '''
+    List quotas of glusterfs volume.
+    name
+        Name of the gluster volume
+
+    '''
+    cmd = 'volume quota {0}'.format(name)
+    cmd += ' list'
+
+    root = _gluster_xml(cmd)
+    if not _gluster_ok(root):
+        return None
+
+    ret = {}
+    for limit in _iter(root, 'limit'):
+        path = limit.find('path').text
+        ret[path] = _etree_to_dict(limit)
+
+    return ret

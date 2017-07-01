@@ -34,12 +34,17 @@ FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 log = logging.getLogger(__name__)
 
 
-def _ping(tgt, expr_form, timeout, gather_job_timeout):
+def _ping(tgt, tgt_type, timeout, gather_job_timeout):
     client = salt.client.get_local_client(__opts__['conf_file'])
-    pub_data = client.run_job(tgt, 'test.ping', (), expr_form, '', timeout, '')
+    pub_data = client.run_job(tgt, 'test.ping', (), tgt_type, '', timeout, '')
 
     if not pub_data:
         return pub_data
+
+    log.debug(
+        'manage runner will ping the following minion(s): %s',
+        ', '.join(sorted(pub_data['minions']))
+    )
 
     returned = set()
     for fn_ret in client.get_cli_event_returns(
@@ -47,20 +52,26 @@ def _ping(tgt, expr_form, timeout, gather_job_timeout):
             pub_data['minions'],
             client._get_timeout(timeout),
             tgt,
-            expr_form,
+            tgt_type,
             gather_job_timeout=gather_job_timeout):
 
         if fn_ret:
             for mid, _ in six.iteritems(fn_ret):
+                log.debug('minion \'%s\' returned from ping', mid)
                 returned.add(mid)
 
-    not_returned = set(pub_data['minions']) - returned
+    not_returned = sorted(set(pub_data['minions']) - returned)
+    returned = sorted(returned)
 
-    return list(returned), list(not_returned)
+    return returned, not_returned
 
 
-def status(output=True, tgt='*', expr_form='glob', timeout=None, gather_job_timeout=None):
+def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Print the status of all known salt minions
 
     CLI Example:
@@ -68,9 +79,20 @@ def status(output=True, tgt='*', expr_form='glob', timeout=None, gather_job_time
     .. code-block:: bash
 
         salt-run manage.status
+        salt-run manage.status tgt="webservers" tgt_type="nodegroup"
         salt-run manage.status timeout=5 gather_job_timeout=10
-        salt-run manage.status tgt="webservers" expr_form="nodegroup"
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
     ret = {}
 
     if not timeout:
@@ -78,7 +100,7 @@ def status(output=True, tgt='*', expr_form='glob', timeout=None, gather_job_time
     if not gather_job_timeout:
         gather_job_timeout = __opts__['gather_job_timeout']
 
-    ret['up'], ret['down'] = _ping(tgt, expr_form, timeout, gather_job_timeout)
+    ret['up'], ret['down'] = _ping(tgt, tgt_type, timeout, gather_job_timeout)
     return ret
 
 
@@ -134,8 +156,12 @@ def key_regen():
     return msg
 
 
-def down(removekeys=False, tgt='*', expr_form='glob'):
+def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Print a list of all the down or unresponsive salt minions
     Optionally remove keys of down minions
 
@@ -145,10 +171,10 @@ def down(removekeys=False, tgt='*', expr_form='glob'):
 
         salt-run manage.down
         salt-run manage.down removekeys=True
-        salt-run manage.down tgt="webservers" expr_form="nodegroup"
+        salt-run manage.down tgt="webservers" tgt_type="nodegroup"
 
     '''
-    ret = status(output=False, tgt=tgt, expr_form=expr_form).get('down', [])
+    ret = status(output=False, tgt=tgt, tgt_type=tgt_type).get('down', [])
     for minion in ret:
         if removekeys:
             wheel = salt.wheel.Wheel(__opts__)
@@ -156,8 +182,12 @@ def down(removekeys=False, tgt='*', expr_form='glob'):
     return ret
 
 
-def up(tgt='*', expr_form='glob', timeout=None, gather_job_timeout=None):  # pylint: disable=C0103
+def up(tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):  # pylint: disable=C0103
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Print a list of all of the minions that are up
 
     CLI Example:
@@ -165,13 +195,13 @@ def up(tgt='*', expr_form='glob', timeout=None, gather_job_timeout=None):  # pyl
     .. code-block:: bash
 
         salt-run manage.up
+        salt-run manage.up tgt="webservers" tgt_type="nodegroup"
         salt-run manage.up timeout=5 gather_job_timeout=10
-        salt-run manage.up tgt="webservers" expr_form="nodegroup"
     '''
     ret = status(
         output=False,
         tgt=tgt,
-        expr_form=expr_form,
+        tgt_type=tgt_type,
         timeout=timeout,
         gather_job_timeout=gather_job_timeout
     ).get('up', [])
@@ -547,8 +577,12 @@ def lane_stats(estate=None):
     return get_stats(estate=estate, stack='lane')
 
 
-def safe_accept(target, expr_form='glob'):
+def safe_accept(target, tgt_type='glob', expr_form=None):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
+        releases must use ``expr_form``.
+
     Accept a minion's public key after checking the fingerprint over salt-ssh
 
     CLI Example:
@@ -556,12 +590,12 @@ def safe_accept(target, expr_form='glob'):
     .. code-block:: bash
 
         salt-run manage.safe_accept my_minion
-        salt-run manage.safe_accept minion1,minion2 expr_form=list
+        salt-run manage.safe_accept minion1,minion2 tgt_type=list
     '''
     salt_key = salt.key.Key(__opts__)
     ssh_client = salt.client.ssh.client.SSHClient()
 
-    ret = ssh_client.cmd(target, 'key.finger', expr_form=expr_form)
+    ret = ssh_client.cmd(target, 'key.finger', tgt_type=tgt_type)
 
     failures = {}
     for minion, finger in six.iteritems(ret):

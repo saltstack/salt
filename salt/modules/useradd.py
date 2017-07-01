@@ -116,7 +116,8 @@ def add(name,
         homephone='',
         createhome=True,
         loginclass=None,
-        root=None):
+        root=None,
+        nologinit=False):
     '''
     Add a user to the minion
 
@@ -177,6 +178,9 @@ def add(name,
     elif (__grains__['kernel'] != 'NetBSD'
             and __grains__['kernel'] != 'OpenBSD'):
         cmd.append('-M')
+
+    if nologinit:
+        cmd.append('-l')
 
     if home is not None:
         cmd.extend(['-d', home])

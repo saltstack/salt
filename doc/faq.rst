@@ -397,6 +397,8 @@ files on the local system, grains are considered less secure than other
 identifiers in Salt. Use caution when targeting sensitive operations or setting
 pillar values based on grain data.
 
+The only grain which can be safely used is ``grains['id']`` which contains the Minion ID.
+
 When possible, you should target sensitive operations and data using the Minion
 ID. If the Minion ID of a system changes, the Salt Minion's public key must be
 re-accepted by an administrator on the Salt Master, making it less vulnerable

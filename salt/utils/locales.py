@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import sys
 
 import salt.utils
+import salt.ext.six as six
 from salt.utils.decorators import memoize as real_memoize
-from salt.ext.six import string_types
 
 
 @real_memoize
@@ -37,14 +37,15 @@ def sdecode(string_):
     '''
     Since we don't know where a string is coming from and that string will
     need to be safely decoded, this function will attempt to decode the string
-    until if has a working string that does not stack trace
+    until it has a working string that does not stack trace
     '''
     encodings = get_encodings()
     for encoding in encodings:
         try:
             decoded = salt.utils.to_unicode(string_, encoding)
-            # Make sure unicode string ops work
-            u' ' + decoded  # pylint: disable=W0104
+            if isinstance(decoded, six.string_types):
+                # Make sure unicode string ops work
+                u' ' + decoded  # pylint: disable=W0104
             return decoded
         except UnicodeDecodeError:
             continue
@@ -56,7 +57,7 @@ def sdecode_if_string(value_):
     If the value is a string, run sdecode() on it to ensure it is parsed
     properly. If it is not a string, return it as-is
     '''
-    if isinstance(value_, string_types):
+    if isinstance(value_, six.string_types):
         value_ = sdecode(value_)
     return value_
 
@@ -114,3 +115,17 @@ def normalize_locale(loc):
     comps['codeset'] = comps['codeset'].lower().replace('-', '')
     comps['charmap'] = ''
     return join_locale(comps)
+
+
+def decode_recursively(object_):
+    if isinstance(object_, list):
+        return [decode_recursively(o) for o in object_]
+    if isinstance(object_, tuple):
+        return tuple([decode_recursively(o) for o in object_])
+    if isinstance(object_, dict):
+        return dict([(decode_recursively(key), decode_recursively(value))
+                     for key, value in salt.ext.six.iteritems(object_)])
+    elif isinstance(object_, six.string_types):
+        return sdecode(object_)
+    else:
+        return object_

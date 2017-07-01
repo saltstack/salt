@@ -97,8 +97,10 @@ def ext_pillar(minion_id, pillar, **kwargs):
 
     # If reclass is installed, __virtual__ put it onto the search path, so we
     # don't need to protect against ImportError:
+    # pylint: disable=3rd-party-module-not-gated
     from reclass.adapters.salt import ext_pillar as reclass_ext_pillar
     from reclass.errors import ReclassException
+    # pylint: enable=3rd-party-module-not-gated
 
     try:
         # the source path we used above isn't something reclass needs to care

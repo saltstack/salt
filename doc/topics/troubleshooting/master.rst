@@ -250,9 +250,8 @@ service.
         of the number of attempts.
 
 
-=====================
-Running state locally
-=====================
+Running states locally
+======================
 
 To debug the states, you can use call locally.
 

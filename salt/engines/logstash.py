@@ -12,6 +12,7 @@ them onto a logstash endpoint.
           - logstash:
             host: log.my_network.com
             port: 5959
+            proto: tcp
 
 :depends: logstash
 '''
@@ -40,13 +41,19 @@ def __virtual__():
 log = logging.getLogger(__name__)
 
 
-def start(host, port=5959, tag='salt/engine/logstash'):
+def start(host, port=5959, tag='salt/engine/logstash', proto='udp'):
     '''
     Listen to salt events and forward them to logstash
     '''
+
+    if proto == 'tcp':
+        logstashHandler = logstash.TCPLogstashHandler
+    elif proto == 'udp':
+        logstashHandler = logstash.UDPLogstashHandler
+
     logstash_logger = logging.getLogger('python-logstash-logger')
     logstash_logger.setLevel(logging.INFO)
-    logstash_logger.addHandler(logstash.LogstashHandler(host, port, version=1))
+    logstash_logger.addHandler(logstashHandler(host, port, version=1))
 
     if __opts__.get('id').endswith('_master'):
         event_bus = salt.utils.event.get_master_event(

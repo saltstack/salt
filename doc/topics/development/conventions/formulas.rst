@@ -37,7 +37,8 @@ Adding a Formula as a GitFS remote
 One design goal of Salt's GitFS fileserver backend was to facilitate reusable
 States. GitFS is a quick and natural way to use Formulas.
 
-1.  :ref:`Install and configure GitFS <tutorial-gitfs>`.
+1.  :ref:`Install any necessary dependencies and configure GitFS
+    <tutorial-gitfs>`.
 
 2.  Add one or more Formula repository URLs as remotes in the
     :conf_master:`gitfs_remotes` list in the Salt Master configuration file:
@@ -56,6 +57,13 @@ States. GitFS is a quick and natural way to use Formulas.
     upstream with a quick pull request!
 
 3.  Restart the Salt master.
+
+Beginning with the Oxygen release, using formulas with GitFS is now much more
+convenient for deployments which use many different fileserver environments
+(i.e. saltenvs). Using the :ref:`all_saltenvs <gitfs-global-remotes>`
+parameter, files from a single git branch/tag will appear in all environments.
+See :ref:`here <gitfs-global-remotes>` for more information on this feature.
+
 
 Adding a Formula directory manually
 -----------------------------------
@@ -1162,7 +1170,7 @@ Pillar overrides
 
 Pillar lookups must use the safe :py:func:`~salt.modules.pillar.get`
 and must provide a default value. Create local variables using the Jinja
-``set`` construct to increase redability and to avoid potentially hundreds or
+``set`` construct to increase readability and to avoid potentially hundreds or
 thousands of function calls across a large state tree.
 
 .. code-block:: jinja

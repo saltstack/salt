@@ -60,7 +60,10 @@ def install(pkg, target='LocalSystem', store=False, allow_untrusted=False):
 
         salt '*' macpackage.install test.pkg
     '''
-    pkg = _quote(pkg)
+    if '*.' not in pkg:
+        # If we use wildcards, we cannot use quotes
+        pkg = _quote(pkg)
+
     target = _quote(target)
 
     cmd = 'installer -pkg {0} -target {1}'.format(pkg, target)
@@ -96,8 +99,6 @@ def install_app(app, target='/Applications/'):
 
         salt '*' macpackage.install_app /tmp/tmp.app /Applications/
     '''
-    app = _quote(app)
-    target = _quote(target)
 
     if not target[-4:] == '.app':
         if app[-1:] == '/':
@@ -110,7 +111,7 @@ def install_app(app, target='/Applications/'):
     if not app[-1] == '/':
         app += '/'
 
-    cmd = 'rsync -a --delete {0} {1}'.format(app, target)
+    cmd = 'rsync -a --delete "{0}" "{1}"'.format(app, target)
     return __salt__['cmd.run'](cmd)
 
 

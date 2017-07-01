@@ -17,6 +17,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ def _write_adminfile(kwargs):
     basedir = kwargs.get('basedir', 'default')
 
     # Make tempfile to hold the adminfile contents.
-    fd_, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
+    fd_, adminfile = salt.utils.files.mkstemp(prefix="salt-", close_fd=False)
 
     # Write to file then close it.
     os.write(fd_, 'email={0}\n'.format(email))
@@ -457,7 +458,7 @@ def remove(name=None, pkgs=None, saltenv='base', **kwargs):
         basedir = kwargs.get('basedir', 'default')
 
         # Make tempfile to hold the adminfile contents.
-        fd_, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
+        fd_, adminfile = salt.utils.files.mkstemp(prefix="salt-", close_fd=False)
 
         # Write to file then close it.
         os.write(fd_, 'email={0}\n'.format(email))

@@ -215,7 +215,7 @@ def purge(**kwargs):
                         else:
                             ret['comment'].append('Failed to delete job {0} from schedule.'.format(name))
                             ret['result'] = True
-                        return ret
+
             except KeyError:
                 # Effectively a no-op, since we can't really return without an event system
                 ret['comment'] = 'Event module not available. Schedule add failed.'

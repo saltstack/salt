@@ -5,6 +5,7 @@ Module for managing timezone on POSIX-like systems.
 from __future__ import absolute_import
 
 # Import python libs
+import filecmp
 import os
 import errno
 import logging
@@ -61,6 +62,23 @@ def _get_zone_solaris():
     raise CommandExecutionError('Unable to get timezone from ' + tzfile)
 
 
+def _get_adjtime_timezone():
+    '''
+    Return the timezone in /etc/adjtime of the system clock
+    '''
+    adjtime_file = '/etc/adjtime'
+    if os.path.exists(adjtime_file):
+        cmd = ['tail', '-n', '1', adjtime_file]
+        return __salt__['cmd.run'](cmd, python_shell=False)
+    elif os.path.exists('/dev/rtc'):
+        raise CommandExecutionError(
+            'Unable to get hwclock timezone from ' + adjtime_file
+        )
+    else:
+        # There is no RTC.
+        return None
+
+
 def _get_zone_sysconfig():
     tzfile = '/etc/sysconfig/clock'
     with salt.utils.fopen(tzfile, 'r') as fp_:
@@ -112,8 +130,15 @@ def _get_zone_etc_localtime():
 
 
 def _get_zone_etc_timezone():
-    with salt.utils.fopen('/etc/timezone', 'r') as fp_:
-        return fp_.read().strip()
+    tzfile = '/etc/timezone'
+    try:
+        with salt.utils.fopen(tzfile, 'r') as fp_:
+            return fp_.read().strip()
+    except IOError as exc:
+        raise CommandExecutionError(
+            'Problem reading timezone file {0}: {1}'
+            .format(tzfile, exc.strerror)
+        )
 
 
 def _get_zone_aix():
@@ -312,34 +337,28 @@ def zone_compare(timezone):
     if 'Solaris' in __grains__['os_family'] or 'AIX' in __grains__['os_family']:
         return timezone == get_zone()
 
-    curtzstring = get_zone()
-    if curtzstring != timezone:
-        return False
-
-    tzfile = '/etc/localtime'
-    zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
-
-    if not os.path.exists(tzfile):
-        return 'Error: {0} does not exist.'.format(tzfile)
-
-    hash_type = __opts__.get('hash_type', 'md5')
-
+    tzfile = _get_etc_localtime_path()
+    zonepath = _get_zone_file(timezone)
     try:
-        usrzone = salt.utils.get_hash(zonepath, hash_type)
-    except IOError as exc:
-        raise SaltInvocationError('Invalid timezone \'{0}\''.format(timezone))
+        return filecmp.cmp(tzfile, zonepath, shallow=False)
+    except OSError as exc:
+        problematic_file = exc.filename
+        if problematic_file == zonepath:
+            raise SaltInvocationError(
+                'Can\'t find a local timezone "{0}"'.format(timezone))
+        elif problematic_file == tzfile:
+            raise CommandExecutionError(
+                'Failed to read {0} to determine current timezone: {1}'
+                .format(tzfile, exc.strerror))
+        raise
 
-    try:
-        etczone = salt.utils.get_hash(tzfile, hash_type)
-    except IOError as exc:
-        raise CommandExecutionError(
-            'Problem reading timezone file {0}: {1}'
-            .format(tzfile, exc.strerror)
-        )
 
-    if usrzone == etczone:
-        return True
-    return False
+def _get_etc_localtime_path():
+    return '/etc/localtime'
+
+
+def _get_zone_file(timezone):
+    return '/usr/share/zoneinfo/{0}'.format(timezone)
 
 
 def get_hwclock():
@@ -370,10 +389,9 @@ def get_hwclock():
 
     else:
         os_family = __grains__['os_family']
-        for family in ('RedHat', 'Suse'):
+        for family in ('RedHat', 'Suse', 'NILinuxRT'):
             if family in os_family:
-                cmd = ['tail', '-n', '1', '/etc/adjtime']
-                return __salt__['cmd.run'](cmd, python_shell=False)
+                return _get_adjtime_timezone()
 
         if 'Debian' in __grains__['os_family']:
             # Original way to look up hwclock on Debian-based systems
@@ -391,8 +409,7 @@ def get_hwclock():
             except IOError as exc:
                 pass
             # Since Wheezy
-            cmd = ['tail', '-n', '1', '/etc/adjtime']
-            return __salt__['cmd.run'](cmd, python_shell=False)
+            return _get_adjtime_timezone()
 
         if 'Gentoo' in __grains__['os_family']:
             if not os.path.exists('/etc/adjtime'):
@@ -416,8 +433,7 @@ def get_hwclock():
                         'Problem reading offset file {0}: {1}'
                         .format(offset_file, exc.strerror)
                     )
-            cmd = ['tail', '-n', '1', '/etc/adjtime']
-            return __salt__['cmd.run'](cmd, python_shell=False)
+            return _get_adjtime_timezone()
 
         if 'Solaris' in __grains__['os_family']:
             offset_file = '/etc/rtc_config'
@@ -464,7 +480,8 @@ def set_hwclock(clock):
 
         salt '*' timezone.set_hwclock UTC
     '''
-    if 'AIX' in __grains__['os_family']:
+    os_family = __grains__['os_family']
+    if os_family in ('AIX', 'NILinuxRT'):
         if clock.lower() != 'utc':
             raise SaltInvocationError(
                 'UTC is the only permitted value'

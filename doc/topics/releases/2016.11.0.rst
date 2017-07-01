@@ -103,6 +103,9 @@ Additional Features
           - source: salt://path/to/myapp
           - dir_mode: 755
           - file_mode: keep
+          
+- The ``junos`` state module is now available. It has all the functions 
+  that are present in the ``junos`` execution module.
 
 - The ``junos`` state module is now available. It has all the functions
   that are present in the ``junos`` execution module.
@@ -272,6 +275,18 @@ Pillar Changes
   ref:`utility modules <writing-utility-modules>` synced to the correct
   location on the Master so that they are available in execution modules called
   from Pillar SLS files.
+  
+Junos Module Changes
+===================
+
+- The following new functionalities were added to the junos module
+
+  - facts - Displays the facts gathered during the connection.
+  - shutdown - Shut down or reboot a device running Junos OS.
+  - install_config - Modify the configuration of a Junos device.
+  - install_os - Install Junos OS software package.
+  - zeroize - Remove all configuration information on the Routing Engines and reset all key values on a device.
+  - file_copy - Copy file from proxy to the Junos device.
 
 Network Automation: NAPALM
 ==========================
@@ -443,6 +458,7 @@ Engines
 -------
 
 - :mod:`salt.engines.hipchat <salt.engines.hipchat>`
+- :mod:`salt.engines.http_logstash <salt.engines.http_logstash>`
 
 Modules
 -------
@@ -545,7 +561,7 @@ General Deprecations
   - If ``env`` (or ``__env__``) is supplied as a keyword argument to a function
     that also accepts arbitrary keyword arguments, then a new warning informs the
     user that ``env`` is no longer used if it is found.  This new warning will be
-    removed in Salt Nitrogen.
+    removed in Salt 2017.7.0.
 
     .. code-block:: python
 

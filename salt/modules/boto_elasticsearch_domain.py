@@ -78,7 +78,6 @@ Connection module for Amazon Elasticsearch Service
 from __future__ import absolute_import
 import logging
 import json
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.ext.six as six
@@ -86,6 +85,7 @@ import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ def __virtual__():
     a given version.
     '''
     required_boto_version = '2.8.0'
-    required_boto3_version = '1.2.5'
+    required_boto3_version = '1.4.0'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
@@ -183,7 +183,8 @@ def status(DomainName,
             domain = domain.get('DomainStatus', {})
             keys = ('Endpoint', 'Created', 'Deleted',
                     'DomainName', 'DomainId', 'EBSOptions', 'SnapshotOptions',
-                    'AccessPolicies', 'Processing', 'AdvancedOptions', 'ARN')
+                    'AccessPolicies', 'Processing', 'AdvancedOptions', 'ARN',
+                    'ElasticsearchVersion')
             return {'domain': dict([(k, domain.get(k)) for k in keys if k in domain])}
         else:
             return {'domain': None}
@@ -222,7 +223,8 @@ def describe(DomainName,
 
 def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
            AccessPolicies=None, SnapshotOptions=None, AdvancedOptions=None,
-           region=None, key=None, keyid=None, profile=None):
+           region=None, key=None, keyid=None, profile=None,
+           ElasticsearchVersion=None):
     '''
     Given a valid config, create a domain.
 
@@ -249,7 +251,8 @@ def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         kwargs = {}
         for k in ('ElasticsearchClusterConfig', 'EBSOptions',
-                    'AccessPolicies', 'SnapshotOptions', 'AdvancedOptions'):
+                    'AccessPolicies', 'SnapshotOptions', 'AdvancedOptions',
+                    'ElasticsearchVersion'):
             if locals()[k] is not None:
                 val = locals()[k]
                 if isinstance(val, six.string_types):
@@ -260,6 +263,8 @@ def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
                 kwargs[k] = val
         if 'AccessPolicies' in kwargs:
             kwargs['AccessPolicies'] = json.dumps(kwargs['AccessPolicies'])
+        if 'ElasticsearchVersion' in kwargs:
+            kwargs['ElasticsearchVersion'] = str(kwargs['ElasticsearchVersion'])
         domain = conn.create_elasticsearch_domain(DomainName=DomainName, **kwargs)
         if domain and 'DomainStatus' in domain:
             return {'created': True}

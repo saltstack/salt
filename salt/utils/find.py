@@ -490,7 +490,8 @@ class PrintOption(Option):
                     _FILE_TYPES.get(stat.S_IFMT(fstat[stat.ST_MODE]), '?')
                 )
             elif arg == 'mode':
-                result.append(int(oct(fstat[stat.ST_MODE])[-3:]))
+                # PY3 compatibility: Use radix value 8 on int type-cast explicitly
+                result.append(int(oct(fstat[stat.ST_MODE])[-3:], 8))
             elif arg == 'mtime':
                 result.append(fstat[stat.ST_MTIME])
             elif arg == 'user':

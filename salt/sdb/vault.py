@@ -10,27 +10,18 @@ Vault SDB Module
 
 This module allows access to Hashicorp Vault using an ``sdb://`` URI.
 
+Base configuration instructions are documented in the execution module docs.
+Below are noted extra configuration required for the sdb module, but the base
+configuration must also be completed.
+
 Like all sdb modules, the vault module requires a configuration profile to
-be configured in either the minion or master configuration file. This profile
-requires very little. In the example:
+be configured in either the minion configuration file or a pillar. This profile
+requires only setting the ``driver`` parameter to ``vault``:
 
 .. code-block:: yaml
 
     myvault:
       driver: vault
-      vault.host: 127.0.0.1
-      vault.port: 8200
-      vault.scheme: http  # Optional; default is https
-      vault.token: 012356789abcdef  # Required, unless set in environment
-
-The ``driver`` refers to the ``vault`` module, ``vault.host`` refers to the host
-that is hosting vault and ``vault.port`` refers to the port on that host. A
-vault token is also required. It may be set statically, as above, or as an
-environment variable:
-
-.. code-block:: bash
-
-    $ export VAULT_TOKEN=0123456789abcdef
 
 Once configured you can access data using a URL such as:
 
@@ -52,20 +43,13 @@ The above URI is analogous to running the following vault command:
 # import python libs
 from __future__ import absolute_import
 import logging
-import salt.utils.vault
+import salt.exceptions
 
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
     'set_': 'set'
 }
-
-
-def __virtual__():
-    '''
-    This module has no external dependencies
-    '''
-    return True
 
 
 def set_(key, value, profile=None):
@@ -75,7 +59,22 @@ def set_(key, value, profile=None):
     comps = key.split('?')
     path = comps[0]
     key = comps[1]
-    return salt.utils.vault.write_(path, key, value, profile=profile)
+
+    try:
+        url = 'v1/{0}'.format(path)
+        data = {key: value}
+        response = __utils__['vault.make_request'](
+                                                   'POST',
+                                                   url,
+                                                   profile,
+                                                   json=data
+                                                  )
+        if response.status_code != 204:
+            response.raise_for_status()
+        return True
+    except Exception as e:
+        log.error('Failed to write secret! {0}: {1}'.format(type(e).__name__, e))
+        raise salt.exceptions.CommandExecutionError(e)
 
 
 def get(key, profile=None):
@@ -85,4 +84,15 @@ def get(key, profile=None):
     comps = key.split('?')
     path = comps[0]
     key = comps[1]
-    return salt.utils.vault.read_(path, key, profile=profile)
+
+    try:
+        url = 'v1/{0}'.format(path)
+        response = __utils__['vault.make_request']('GET', url, profile)
+        if response.status_code != 200:
+            response.raise_for_status()
+        data = response.json()['data']
+
+        return data[key]
+    except Exception as e:
+        log.error('Failed to read secret! {0}: {1}'.format(type(e).__name__, e))
+        raise salt.exceptions.CommandExecutionError(e)

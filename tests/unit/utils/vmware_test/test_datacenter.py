@@ -9,8 +9,8 @@ Tests for datacenter related functions in salt.utils.vmware
 from __future__ import absolute_import
 import logging
 # Import Salt testing libraries
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 
 from salt.exceptions import VMwareObjectRetrievalError, VMwareApiError, \
         VMwareRuntimeError
@@ -30,12 +30,18 @@ log = logging.getLogger(__name__)
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.get_mors_with_properties',
-       MagicMock(return_value=[{'name': 'fake_dc', 'object': MagicMock()}]))
 class GetDatacentersTestCase(TestCase):
     '''Tests for salt.utils.vmware.get_datacenters'''
 
     def setUp(self):
+        patches = (
+            ('salt.utils.vmware.get_mors_with_properties',
+                MagicMock(return_value=[{'name': 'fake_dc', 'object': MagicMock()}])),
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.mock_si = MagicMock()
         self.mock_dc1 = MagicMock()
         self.mock_dc2 = MagicMock()
@@ -90,12 +96,17 @@ class GetDatacentersTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.get_datacenters',
-       MagicMock(return_value=[MagicMock()]))
 class GetDatacenterTestCase(TestCase):
     '''Tests for salt.utils.vmware.get_datacenter'''
 
     def setUp(self):
+        patches = (
+            ('salt.utils.vmware.get_datacenters', MagicMock(return_value=[MagicMock()])),
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.mock_si = MagicMock()
         self.mock_dc = MagicMock()
 
@@ -124,11 +135,17 @@ class GetDatacenterTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-@patch('salt.utils.vmware.get_root_folder', MagicMock())
 class CreateDatacenterTestCase(TestCase):
     '''Tests for salt.utils.vmware.create_datacenter'''
 
     def setUp(self):
+        patches = (
+            ('salt.utils.vmware.get_root_folder', MagicMock()),
+        )
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.mock_si = MagicMock()
         self.mock_dc = MagicMock()
         self.mock_create_datacenter = MagicMock(return_value=self.mock_dc)
@@ -174,10 +191,3 @@ class CreateDatacenterTestCase(TestCase):
                    MagicMock(return_value=self.mock_root_folder)):
             res = vmware.create_datacenter(self.mock_si, 'fake_dc')
         self.assertEqual(res, self.mock_dc)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GetDatacentersTestCase, needs_daemon=False)
-    run_tests(GetDatacenterTestCase, needs_daemon=False)
-    run_tests(CreateDatacenterTestCase, needs_daemon=False)

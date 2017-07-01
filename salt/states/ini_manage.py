@@ -26,13 +26,14 @@ def __virtual__():
     return __virtualname__ if 'ini.set_option' in __salt__ else False
 
 
-def options_present(name, sections=None, separator='='):
+def options_present(name, sections=None, separator='=', strict=False):
     '''
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
           ini.options_present:
             - separator: '='
+            - strict: True
             - sections:
                 test:
                   testkey: 'testval'
@@ -41,7 +42,8 @@ def options_present(name, sections=None, separator='='):
                   testkey1: 'testval121'
 
     options present in file and not specified in sections
-    dict will be untouched
+    dict will be untouched, unless `strict: True` flag is
+    used
 
     changes dict will contain the list of changes made
     '''
@@ -72,7 +74,25 @@ def options_present(name, sections=None, separator='='):
             ret['comment'] = 'No changes detected.'
         return ret
     try:
-        changes = __salt__['ini.set_option'](name, sections, separator)
+        changes = {}
+        if sections:
+            for section_name, section_body in sections.items():
+                changes[section_name] = {}
+                if strict:
+                    original = __salt__['ini.get_section'](name, section_name, separator)
+                    for key_to_remove in set(original.keys()).difference(section_body.keys()):
+                        orig_value = __salt__['ini.get_option'](name, section_name, key_to_remove, separator)
+                        __salt__['ini.remove_option'](name, section_name, key_to_remove, separator)
+                        changes[section_name].update({key_to_remove: ''})
+                        changes[section_name].update({key_to_remove: {'before': orig_value,
+                                                                      'after': None}})
+                options_updated = __salt__['ini.set_option'](name, {section_name: section_body}, separator)
+                if options_updated:
+                    changes[section_name].update(options_updated[section_name])
+                if not changes[section_name]:
+                    del changes[section_name]
+        else:
+            changes = __salt__['ini.set_option'](name, sections, separator)
     except IOError as err:
         ret['comment'] = "{0}".format(err)
         ret['result'] = False
@@ -82,8 +102,12 @@ def options_present(name, sections=None, separator='='):
         ret['comment'] = 'Errors encountered. {0}'.format(changes['error'])
         ret['changes'] = {}
     else:
-        ret['comment'] = 'Changes take effect'
-        ret['changes'] = changes
+        if changes:
+            ret['changes'] = changes
+            ret['comment'] = 'Changes take effect'
+        else:
+            ret['changes'] = {}
+            ret['comment'] = 'No changes take effect'
     return ret
 
 

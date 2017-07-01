@@ -95,6 +95,9 @@ import logging
 import datetime
 import salt.exceptions
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'status'
@@ -119,6 +122,12 @@ def beacon(config):
     '''
     log.debug(config)
     ctime = datetime.datetime.utcnow().isoformat()
+    ret = {}
+    if salt.utils.is_windows():
+        return [{
+            'tag': ctime,
+            'data': ret,
+        }]
 
     if len(config) < 1:
         config = [{

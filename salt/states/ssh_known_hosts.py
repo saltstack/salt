@@ -61,6 +61,9 @@ def present(
 
     name
         The name of the remote host (e.g. "github.com")
+        Note that only a single hostname is supported, if foo.example.com and
+        bar.example.com have the same host you will need two separate Salt
+        States to represent them.
 
     user
         The user who owns the ssh authorized keys file to modify
@@ -100,14 +103,10 @@ def present(
 
     fingerprint_hash_type
         The public key fingerprint hash type that the public key fingerprint
-        was originally hashed with. This defaults to ``md5`` if not specified.
+        was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-
-        .. note::
-
-            The default value of the ``fingerprint_hash_type`` will change to
-            ``sha256`` in Salt Nitrogen.
+        .. versionchanged:: 2017.7.0: default changed from ``md5`` to ``sha256``
 
     '''
     ret = {'name': name,
@@ -197,6 +196,9 @@ def absent(name, user=None, config=None):
 
     name
         The host name
+        Note that only single host names are supported.  If foo.example.com
+        and bar.example.com are the same machine and you need to exclude both,
+        you will need one Salt state for each.
 
     user
         The user who owns the ssh authorized keys file to modify

@@ -357,6 +357,12 @@ def gen(id_=None, keysize=2048):
         ret['priv'] = fp_.read()
     with salt.utils.fopen(pub) as fp_:
         ret['pub'] = fp_.read()
+
+    # The priv key is given the Read-Only attribute. The causes `os.remove` to
+    # fail in Windows.
+    if salt.utils.is_windows():
+        os.chmod(priv, 128)
+
     os.remove(priv)
     os.remove(pub)
     return ret

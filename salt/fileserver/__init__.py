@@ -876,7 +876,7 @@ class FSChan(object):
                 self.opts['__fs_update'] = True
         else:
             self.fs.update()
-        self.cmd_stub = {'ext_nodes': {}}
+        self.cmd_stub = {'master_tops': {}}
 
     def send(self, load, tries=None, timeout=None, raw=False):  # pylint: disable=unused-argument
         '''

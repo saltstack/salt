@@ -77,6 +77,7 @@ MOCK_MODULES = [
     'yaml.nodes',
     'yaml.parser',
     'yaml.scanner',
+    'salt.utils.yamlloader',
     'zmq',
     'zmq.eventloop',
     'zmq.eventloop.ioloop',
@@ -125,6 +126,7 @@ MOCK_MODULES = [
     'ClusterShell',
     'ClusterShell.NodeSet',
     'django',
+    'docker',
     'libvirt',
     'MySQLdb',
     'MySQLdb.cursors',
@@ -165,11 +167,16 @@ MOCK_MODULES = [
     'pyroute2.ipdb',
     'avahi',
     'dbus',
+    'twisted',
+    'twisted.internet',
+    'twisted.internet.protocol',
+    'twisted.internet.protocol.DatagramProtocol',
+    'msgpack',
 ]
 
 for mod_name in MOCK_MODULES:
     if mod_name == 'psutil':
-        mock = Mock(mapping={'total': 0})  # Otherwise it will crash Sphinx
+        mock = Mock(mapping={'total': 0, 'version_info': (0, 6,0)})  # Otherwise it will crash Sphinx
     else:
         mock = Mock()
     sys.modules[mod_name] = mock
@@ -239,7 +246,7 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2016.11.5'  # latest release
+latest_release = '2016.11.6'  # latest release
 previous_release = '2016.3.6'  # latest release from previous branch
 previous_release_dir = '2016.3'  # path on web server for previous branch
 next_release = ''  # next release
@@ -252,8 +259,8 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'latest'  # latest, previous, develop, next
-release = latest_release  # version, latest_release, previous_release
+build_type = 'develop'  # latest, previous, develop, next
+release = version  # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
@@ -499,6 +506,7 @@ epub_copyright = copyright
 epub_scheme = 'URL'
 epub_identifier = 'http://saltstack.com/'
 
+epub_tocdup = False
 #epub_tocdepth = 3
 
 

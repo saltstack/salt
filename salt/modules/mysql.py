@@ -40,6 +40,7 @@ import logging
 import re
 import sys
 import shlex
+import os
 
 # Import salt libs
 import salt.utils
@@ -620,19 +621,22 @@ def query(database, query, **connection_args):
     orig_conv = MySQLdb.converters.conversions
     conv_iter = iter(orig_conv)
     conv = dict(zip(conv_iter, [str] * len(orig_conv)))
+
     # some converters are lists, do not break theses
-    conv[FIELD_TYPE.BLOB] = [
-        (FLAG.BINARY, str),
-    ]
-    conv[FIELD_TYPE.STRING] = [
-        (FLAG.BINARY, str),
-    ]
-    conv[FIELD_TYPE.VAR_STRING] = [
-        (FLAG.BINARY, str),
-    ]
-    conv[FIELD_TYPE.VARCHAR] = [
-        (FLAG.BINARY, str),
-    ]
+    conv_mysqldb = {'MYSQLDB': True}
+    if conv_mysqldb.get(MySQLdb.__package__.upper()):
+        conv[FIELD_TYPE.BLOB] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.STRING] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.VAR_STRING] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.VARCHAR] = [
+            (FLAG.BINARY, str),
+        ]
 
     connection_args.update({'connection_db': database, 'connection_conv': conv})
     dbc = _connect(**connection_args)
@@ -647,7 +651,7 @@ def query(database, query, **connection_args):
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)
-        return {}
+        return False
     results = cur.fetchall()
     elapsed = (time.time() - start)
     if elapsed < 0.200:
@@ -674,6 +678,68 @@ def query(database, query, **connection_args):
     else:
         ret['rows affected'] = affected
         return ret
+
+
+def file_query(database, file_name, **connection_args):
+    '''
+    Run an arbitrary SQL query from the specified file and return the
+    the number of affected rows.
+
+    .. versionadded:: 2017.7.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.file_query mydb file_name=/tmp/sqlfile.sql
+
+    Return data:
+
+    .. code-block:: python
+
+        {'query time': {'human': '39.0ms', 'raw': '0.03899'}, 'rows affected': 1L}
+
+    '''
+    if os.path.exists(file_name):
+        with salt.utils.fopen(file_name, 'r') as ifile:
+            contents = ifile.read()
+    else:
+        log.error('File "{0}" does not exist'.format(file_name))
+        return False
+
+    query_string = ""
+    ret = {'rows returned': 0, 'columns': 0, 'results': 0, 'rows affected': 0, 'query time': {'raw': 0}}
+    for line in contents.splitlines():
+        if re.match(r'--', line):  # ignore sql comments
+            continue
+        if not re.search(r'[^-;]+;', line):  # keep appending lines that don't end in ;
+            query_string = query_string + line
+        else:
+            query_string = query_string + line  # append lines that end with ; and run query
+            query_result = query(database, query_string, **connection_args)
+            query_string = ""
+
+            if query_result is False:
+                # Fail out on error
+                return False
+
+            if 'query time' in query_result:
+                ret['query time']['raw'] += float(query_result['query time']['raw'])
+            if 'rows returned' in query_result:
+                ret['rows returned'] += query_result['rows returned']
+            if 'columns' in query_result:
+                ret['columns'] += query_result['columns']
+            if 'results' in query_result:
+                ret['results'] += query_result['results']
+            if 'rows affected' in query_result:
+                ret['rows affected'] += query_result['rows affected']
+    ret['query time']['human'] = str(round(float(ret['query time']['raw']), 2)) + 's'
+    ret['query time']['raw'] = round(float(ret['query time']['raw']), 5)
+
+    # Remove empty keys in ret
+    ret = dict((k, v) for k, v in six.iteritems(ret) if v)
+
+    return ret
 
 
 def status(**connection_args):

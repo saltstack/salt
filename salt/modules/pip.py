@@ -121,19 +121,23 @@ def _get_pip_bin(bin_env):
     if not bin_env:
         which_result = __salt__['cmd.which_bin'](
             ['pip{0}.{1}'.format(*sys.version_info[:2]),
-             'pip', 'pip2', 'pip3', 'pip-python']
+             'pip{0}'.format(sys.version_info[0]),
+             'pip', 'pip-python']
         )
+        if salt.utils.is_windows() and six.PY2:
+            which_result.encode('string-escape')
         if which_result is None:
             raise CommandNotFoundError('Could not find a `pip` binary')
-        if salt.utils.is_windows():
-            return which_result.encode('string-escape')
         return which_result
 
     # try to get pip bin from virtualenv, bin_env
     if os.path.isdir(bin_env):
         if salt.utils.is_windows():
-            pip_bin = os.path.join(
-                bin_env, 'Scripts', 'pip.exe').encode('string-escape')
+            if six.PY2:
+                pip_bin = os.path.join(
+                    bin_env, 'Scripts', 'pip.exe').encode('string-escape')
+            else:
+                pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe')
         else:
             pip_bin = os.path.join(bin_env, 'bin', 'pip')
         if os.path.isfile(pip_bin):
@@ -1101,7 +1105,7 @@ def version(bin_env=None):
     '''
     pip_bin = _get_pip_bin(bin_env)
 
-    output = __salt__['cmd.run'](
+    output = __salt__['cmd.run_stdout'](
         '{0} --version'.format(pip_bin), python_shell=False)
     try:
         return re.match(r'^pip (\S+)', output).group(1)

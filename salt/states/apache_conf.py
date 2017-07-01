@@ -64,25 +64,6 @@ def enabled(name):
     return ret
 
 
-def enable(name):
-    '''
-    Ensure an Apache conf is enabled.
-
-    .. warning::
-
-        This function is deprecated and will be removed in Salt Nitrogen.
-
-    name
-        Name of the Apache conf
-    '''
-    salt.utils.warn_until(
-        'Nitrogen',
-        'apache_module.enable function has been renamed'
-        ' apache_module.enabled and will be removed in Salt Nitrogen'
-    )
-    return enabled(name)
-
-
 def disabled(name):
     '''
     Ensure an Apache conf is disabled.
@@ -115,22 +96,3 @@ def disabled(name):
     else:
         ret['comment'] = '{0} already disabled.'.format(name)
     return ret
-
-
-def disable(name):
-    '''
-    Ensure an Apache conf is disabled.
-
-    .. warning::
-
-        This function is deprecated and will be removed in Salt Nitrogen.
-
-    name
-        Name of the Apache conf
-    '''
-    salt.utils.warn_until(
-        'Nitrogen',
-        'apache_module.disable function has been renamed'
-        ' apache_module.disabled and will be removed in Salt Nitrogen'
-    )
-    return disabled(name)

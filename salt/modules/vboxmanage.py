@@ -457,7 +457,7 @@ def clonemedium(medium,
         params += ' ' + uuid_out
     elif file_out:
         try:
-            salt.utils.fopen(file_out, 'w').close()
+            salt.utils.fopen(file_out, 'w').close()  # pylint: disable=resource-leakage
             os.unlink(file_out)
             params += ' ' + file_out
         except OSError:

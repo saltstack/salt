@@ -14,13 +14,12 @@ or for problem solving if your minion is having problems.
 from __future__ import absolute_import
 import datetime
 import logging
-
+import subprocess
 log = logging.getLogger(__name__)
 
 # Import Salt Libs
 import salt.utils
 import salt.utils.event
-from salt._compat import subprocess
 from salt.utils.network import host_to_ips as _host_to_ips
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -31,11 +30,15 @@ import copy
 # pylint: enable=W0611
 
 # Import 3rd Party Libs
-HAS_WMI = False
-if salt.utils.is_windows():
-    import wmi
-    import salt.utils.winapi
-    HAS_WMI = True
+try:
+    if salt.utils.is_windows():
+        import wmi
+        import salt.utils.winapi
+        HAS_WMI = True
+    else:
+        HAS_WMI = False
+except ImportError:
+    HAS_WMI = False
 
 HAS_PSUTIL = False
 if salt.utils.is_windows():
@@ -315,23 +318,25 @@ def master(master=None, connected=True):
     port = 4505
     master_ips = None
 
+    if master:
+        master_ips = _host_to_ips(master)
+
+    if not master_ips:
+        return
+
     if __salt__['config.get']('publish_port') != '':
         port = int(__salt__['config.get']('publish_port'))
 
-    # Check if we have FQDN/hostname defined as master
-    # address and try resolving it first. _remote_port_tcp
-    # only works with IP-addresses.
-    if master is not None:
-        master_ips = _host_to_ips(master)
-
     master_connection_status = False
-    if master_ips:
-        ips = _win_remotes_on(port)
-        for master_ip in master_ips:
-            if master_ip in ips:
-                master_connection_status = True
-                break
+    connected_ips = _win_remotes_on(port)
 
+    # Get connection status for master
+    for master_ip in master_ips:
+        if master_ip in connected_ips:
+            master_connection_status = True
+            break
+
+    # Connection to master is not as expected
     if master_connection_status is not connected:
         event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
         if master_connection_status:

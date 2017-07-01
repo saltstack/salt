@@ -83,7 +83,7 @@ def _filter_running(runnings):
     return ret
 
 
-def _set_retcode(ret):
+def _set_retcode(ret, highstate=None):
     '''
     Set the return code based on the data back from the state system
     '''
@@ -94,7 +94,8 @@ def _set_retcode(ret):
     if isinstance(ret, list):
         __context__['retcode'] = 1
         return
-    if not salt.utils.check_state_result(ret):
+    if not salt.utils.check_state_result(ret, highstate=highstate):
+
         __context__['retcode'] = 2
 
 
@@ -252,14 +253,26 @@ def _check_queue(queue, kwargs):
             return conflict
 
 
-def _get_opts(localconfig=None):
+def _get_opts(**kwargs):
     '''
     Return a copy of the opts for use, optionally load a local config on top
     '''
     opts = copy.deepcopy(__opts__)
-    if localconfig:
-        opts = salt.config.minion_config(localconfig, defaults=opts)
+    if 'localconfig' in kwargs:
+        opts = salt.config.minion_config(kwargs['localconfig'], defaults=opts)
+    else:
+        if 'saltenv' in kwargs:
+            opts['environment'] = kwargs['saltenv']
+        if 'pillarenv' in kwargs:
+            opts['pillarenv'] = kwargs['pillarenv']
+
     return opts
+
+
+def _get_initial_pillar(opts):
+    return __pillar__ if __opts__['__cli'] == 'salt-call' \
+        and opts['pillarenv'] == __opts__['pillarenv'] \
+        else None
 
 
 def low(data, queue=False, **kwargs):
@@ -325,27 +338,34 @@ def high(data, test=None, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    opts = _get_opts(kwargs.get('localconfig'))
+    opts = _get_opts(**kwargs)
 
     opts['test'] = _get_test_value(test, **kwargs)
 
-    pillar = kwargs.get('pillar')
+    pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
     if pillar_enc is None \
-            and pillar is not None \
-            and not isinstance(pillar, dict):
+            and pillar_override is not None \
+            and not isinstance(pillar_override, dict):
         raise SaltInvocationError(
             'Pillar data must be formatted as a dictionary, unless pillar_enc '
             'is specified.'
         )
     try:
-        st_ = salt.state.State(__opts__, pillar, pillar_enc=pillar_enc, proxy=__proxy__,
-                context=__context__)
+        st_ = salt.state.State(opts,
+                               pillar_override,
+                               pillar_enc=pillar_enc,
+                               proxy=__proxy__,
+                               context=__context__,
+                               initial_pillar=_get_initial_pillar(opts))
     except NameError:
-        st_ = salt.state.State(__opts__, pillar, pillar_enc=pillar_enc)
+        st_ = salt.state.State(opts,
+                               pillar_override,
+                               pillar_enc=pillar_enc,
+                               initial_pillar=_get_initial_pillar(opts))
 
     ret = st_.call_high(data)
-    _set_retcode(ret)
+    _set_retcode(ret, highstate=data)
     return ret
 
 
@@ -371,15 +391,20 @@ def template(tem, queue=False, **kwargs):
             )
         kwargs.pop('env')
 
-    if 'saltenv' in kwargs:
-        saltenv = kwargs['saltenv']
-    else:
-        saltenv = ''
-
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.HighState(__opts__, context=__context__)
+
+    opts = _get_opts(**kwargs)
+    try:
+        st_ = salt.state.HighState(opts,
+                                   context=__context__,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   context=__context__,
+                                   initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -388,12 +413,16 @@ def template(tem, queue=False, **kwargs):
 
     if not tem.endswith('.sls'):
         tem = '{sls}.sls'.format(sls=tem)
-    high_state, errors = st_.render_state(tem, saltenv, '', None, local=True)
+    high_state, errors = st_.render_state(tem,
+                                          kwargs.get('saltenv', ''),
+                                          '',
+                                          None,
+                                          local=True)
     if errors:
         __context__['retcode'] = 1
         return errors
     ret = st_.state.call_high(high_state)
-    _set_retcode(ret)
+    _set_retcode(ret, highstate=high_state)
     return ret
 
 
@@ -410,10 +439,15 @@ def template_str(tem, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
+
+    opts = _get_opts(**kwargs)
+
     try:
-        st_ = salt.state.State(__opts__, proxy=__proxy__)
+        st_ = salt.state.State(opts,
+                               proxy=__proxy__,
+                               initial_pillar=_get_initial_pillar(opts))
     except NameError:
-        st_ = salt.state.State(__opts__)
+        st_ = salt.state.State(opts, initial_pillar=_get_initial_pillar(opts))
     ret = st_.call_template_str(tem)
     _set_retcode(ret)
     return ret
@@ -518,7 +552,7 @@ def apply_(mods=None,
             multiple state runs can safely be run at the same time. Do *not*
             use this flag for performance optimization.
 
-    saltenv : None
+    saltenv
         Specify a salt fileserver environment to be used when applying states
 
         .. versionchanged:: 0.17.0
@@ -532,8 +566,11 @@ def apply_(mods=None,
             saltenv was not explicitly set.
 
     pillarenv
-        Specify a Pillar environment to be used when applying states. By
-        default, all Pillar environments will be merged together and used.
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
 
     localconfig
         Optionally, instead of using the minion config, load minion opts from
@@ -688,9 +725,7 @@ def run_request(name='default', **kwargs):
     return {}
 
 
-def highstate(test=None,
-              queue=False,
-              **kwargs):
+def highstate(test=None, queue=False, **kwargs):
     '''
     Retrieve the state data from the salt master for this minion and execute it
 
@@ -718,6 +753,26 @@ def highstate(test=None,
 
         .. versionadded:: 2016.3.0
 
+    saltenv
+        Specify a salt fileserver environment to be used when applying states
+
+        .. versionchanged:: 0.17.0
+            Argument name changed from ``env`` to ``saltenv``.
+
+        .. versionchanged:: 2014.7.0
+            If no saltenv is specified, the minion config will be checked for a
+            ``saltenv`` parameter and if found, it will be used. If none is
+            found, ``base`` will be used. In prior releases, the minion config
+            was not checked and ``base`` would always be assumed when the
+            saltenv was not explicitly set.
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
     queue : False
         Instead of failing immediately when another state run is in progress,
         queue the new state run to begin running once the other has finished.
@@ -732,7 +787,7 @@ def highstate(test=None,
         states to be run with their own custom minion configuration, including
         different pillars, file_roots, etc.
 
-    mock:
+    mock
         The mock option allows for the state run to execute without actually
         calling any states. This then returns a mocked return which will show
         the requisite ordering as well as fully validate the state run.
@@ -765,7 +820,7 @@ def highstate(test=None,
         return conflict
     orig_test = __opts__.get('test', None)
 
-    opts = _get_opts(kwargs.get('localconfig'))
+    opts = _get_opts(**kwargs)
 
     opts['test'] = _get_test_value(test, **kwargs)
 
@@ -781,33 +836,36 @@ def highstate(test=None,
     if 'saltenv' in kwargs:
         opts['environment'] = kwargs['saltenv']
 
+    if 'pillarenv' in kwargs:
+        opts['pillarenv'] = kwargs['pillarenv']
+
     pillar = kwargs.get('pillar')
+    pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
     if pillar_enc is None \
-            and pillar is not None \
-            and not isinstance(pillar, dict):
+            and pillar_override is not None \
+            and not isinstance(pillar_override, dict):
         raise SaltInvocationError(
             'Pillar data must be formatted as a dictionary, unless pillar_enc '
             'is specified.'
         )
 
-    if 'pillarenv' in kwargs:
-        opts['pillarenv'] = kwargs['pillarenv']
-
     try:
         st_ = salt.state.HighState(opts,
-                                   pillar,
+                                   pillar_override,
                                    kwargs.get('__pub_jid'),
                                    pillar_enc=pillar_enc,
                                    proxy=__proxy__,
                                    context=__context__,
-                                   mocked=kwargs.get('mock', False))
+                                   mocked=kwargs.get('mock', False),
+                                   initial_pillar=_get_initial_pillar(opts))
     except NameError:
         st_ = salt.state.HighState(opts,
-                                   pillar,
+                                   pillar_override,
                                    kwargs.get('__pub_jid'),
                                    pillar_enc=pillar_enc,
-                                   mocked=kwargs.get('mock', False))
+                                   mocked=kwargs.get('mock', False),
+                                   initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -836,7 +894,7 @@ def highstate(test=None,
 
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
-    _set_retcode(ret)
+    _set_retcode(ret, highstate=st_.building_highstate)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
     _snapper_post(opts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
@@ -844,13 +902,7 @@ def highstate(test=None,
     return ret
 
 
-def sls(mods,
-        saltenv=None,
-        test=None,
-        exclude=None,
-        queue=False,
-        pillarenv=None,
-        **kwargs):
+def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     '''
     Execute the states in one or more SLS files
 
@@ -894,7 +946,7 @@ def sls(mods,
             multiple state runs can safely be run at the same time. Do *not*
             use this flag for performance optimization.
 
-    saltenv : None
+    saltenv
         Specify a salt fileserver environment to be used when applying states
 
         .. versionchanged:: 0.17.0
@@ -908,9 +960,11 @@ def sls(mods,
             saltenv was not explicitly set.
 
     pillarenv
-
-        Specify a Pillar environment to be used when applying states. By
-        default, all Pillar environments will be merged together and used.
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
 
     localconfig
 
@@ -946,16 +1000,6 @@ def sls(mods,
             )
         kwargs.pop('env')
 
-    if saltenv is None:
-        if __opts__.get('environment', None):
-            saltenv = __opts__['environment']
-        else:
-            saltenv = 'base'
-
-    if not pillarenv:
-        if __opts__.get('pillarenv', None):
-            pillarenv = __opts__['pillarenv']
-
     # Modification to __opts__ lost after this if-else
     if queue:
         _wait(kwargs.get('__pub_jid'))
@@ -965,10 +1009,6 @@ def sls(mods,
             __context__['retcode'] = 1
             return conflict
 
-    # Ensure desired environment
-    __opts__['environment'] = saltenv
-    __opts__['pillarenv'] = pillarenv
-
     if isinstance(mods, list):
         disabled = _disabled(mods)
     else:
@@ -976,20 +1016,28 @@ def sls(mods,
 
     if disabled:
         for state in disabled:
-            log.debug('Salt state {0} run is disabled. To re-enable, run state.enable {0}'.format(state))
+            log.debug(
+                'Salt state %s is disabled. To re-enable, run '
+                'state.enable %s', state, state
+            )
         __context__['retcode'] = 1
         return disabled
 
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(kwargs.get('localconfig'))
+    opts = _get_opts(**kwargs)
 
     opts['test'] = _get_test_value(test, **kwargs)
 
-    pillar = kwargs.get('pillar')
+    # Since this is running a specific SLS file (or files), fall back to the
+    # 'base' saltenv if none is configured and none was passed.
+    if opts['environment'] is None:
+        opts['environment'] = 'base'
+
+    pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
     if pillar_enc is None \
-            and pillar is not None \
-            and not isinstance(pillar, dict):
+            and pillar_override is not None \
+            and not isinstance(pillar_override, dict):
         raise SaltInvocationError(
             'Pillar data must be formatted as a dictionary, unless pillar_enc '
             'is specified.'
@@ -1000,20 +1048,23 @@ def sls(mods,
             __opts__['cachedir'],
             '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
             )
+
     try:
         st_ = salt.state.HighState(opts,
-                                   pillar,
+                                   pillar_override,
                                    kwargs.get('__pub_jid'),
                                    pillar_enc=pillar_enc,
                                    proxy=__proxy__,
                                    context=__context__,
-                                   mocked=kwargs.get('mock', False))
+                                   mocked=kwargs.get('mock', False),
+                                   initial_pillar=_get_initial_pillar(opts))
     except NameError:
         st_ = salt.state.HighState(opts,
-                                   pillar,
+                                   pillar_override,
                                    kwargs.get('__pub_jid'),
                                    pillar_enc=pillar_enc,
-                                   mocked=kwargs.get('mock', False))
+                                   mocked=kwargs.get('mock', False),
+                                   initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1036,7 +1087,7 @@ def sls(mods,
     st_.push_active()
     ret = {}
     try:
-        high_, errors = st_.render_highstate({saltenv: mods})
+        high_, errors = st_.render_highstate({opts['environment']: mods})
 
         if errors:
             __context__['retcode'] = 1
@@ -1066,7 +1117,7 @@ def sls(mods,
     except (IOError, OSError):
         msg = 'Unable to write to SLS cache file {0}. Check permission.'
         log.error(msg.format(cache_file))
-    _set_retcode(ret)
+    _set_retcode(ret, high_)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
     __opts__['test'] = orig_test
@@ -1086,15 +1137,30 @@ def sls(mods,
     return ret
 
 
-def top(topfn,
-        test=None,
-        queue=False,
-        saltenv=None,
-        **kwargs):
+def top(topfn, test=None, queue=False, **kwargs):
     '''
     Execute a specific top file instead of the default. This is useful to apply
     configurations from a different environment (for example, dev or prod), without
     modifying the default top file.
+
+    queue : False
+        Instead of failing immediately when another state run is in progress,
+        queue the new state run to begin running once the other has finished.
+
+        This option starts a new thread for each queued state run, so use this
+        option sparingly.
+
+    saltenv
+        Specify a salt fileserver environment to be used when applying states
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
+        .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -1108,20 +1174,31 @@ def top(topfn,
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(kwargs.get('localconfig'))
+    opts = _get_opts(**kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
 
-    pillar = kwargs.get('pillar')
+    pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
     if pillar_enc is None \
-            and pillar is not None \
-            and not isinstance(pillar, dict):
+            and pillar_override is not None \
+            and not isinstance(pillar_override, dict):
         raise SaltInvocationError(
             'Pillar data must be formatted as a dictionary, unless pillar_enc '
             'is specified.'
         )
-
-    st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc, context=__context__)
+    try:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   context=__context__,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   context=__context__,
+                                   initial_pillar=_get_initial_pillar(opts))
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
@@ -1132,8 +1209,8 @@ def top(topfn,
     st_.opts['state_top'] = salt.utils.url.create(topfn)
     ret = {}
     orchestration_jid = kwargs.get('orchestration_jid')
-    if saltenv:
-        st_.opts['state_top_saltenv'] = saltenv
+    if 'saltenv' in kwargs:
+        st_.opts['state_top_saltenv'] = kwargs['saltenv']
     try:
         snapper_pre = _snapper_pre(opts, kwargs.get('__pub_jid', 'called localy'))
         ret = st_.call_highstate(
@@ -1144,7 +1221,7 @@ def top(topfn,
     finally:
         st_.pop_active()
 
-    _set_retcode(ret)
+    _set_retcode(ret, highstate=st_.building_highstate)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
     _snapper_post(opts, kwargs.get('__pub_jid', 'called localy'), snapper_pre)
@@ -1167,17 +1244,28 @@ def show_highstate(queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    pillar = kwargs.get('pillar')
+    pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
     if pillar_enc is None \
-            and pillar is not None \
-            and not isinstance(pillar, dict):
+            and pillar_override is not None \
+            and not isinstance(pillar_override, dict):
         raise SaltInvocationError(
             'Pillar data must be formatted as a dictionary, unless pillar_enc '
             'is specified.'
         )
 
-    st_ = salt.state.HighState(__opts__, pillar, pillar_enc=pillar_enc)
+    opts = _get_opts(**kwargs)
+    try:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1207,7 +1295,15 @@ def show_lowstate(queue=False, **kwargs):
     if conflict is not None:
         assert False
         return conflict
-    st_ = salt.state.HighState(__opts__)
+
+    opts = _get_opts(**kwargs)
+    try:
+        st_ = salt.state.HighState(opts,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1222,38 +1318,93 @@ def show_lowstate(queue=False, **kwargs):
     return ret
 
 
-def sls_id(
-        id_,
-        mods,
-        saltenv='base',
-        test=None,
-        queue=False,
-        **kwargs):
+def show_state_usage(queue=False, **kwargs):
+    '''
+    Retrieve the highstate data from the salt master to analyse used and unused states
+
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.show_state_usage
+    '''
+    conflict = _check_queue(queue, kwargs)
+    if conflict is not None:
+        return conflict
+    pillar = kwargs.get('pillar')
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar is not None \
+            and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
+        )
+
+    st_ = salt.state.HighState(__opts__, pillar, pillar_enc=pillar_enc)
+    st_.push_active()
+
+    try:
+        ret = st_.compile_state_usage()
+    finally:
+        st_.pop_active()
+    _set_retcode(ret)
+    return ret
+
+
+def sls_id(id_, mods, test=None, queue=False, **kwargs):
     '''
     Call a single ID from the named module(s) and handle all requisites
 
     The state ID comes *before* the module ID(s) on the command line.
 
+    id
+        ID to call
+
+    mods
+        Comma-delimited list of modules to search for given id and its requisites
+
     .. versionadded:: 2014.7.0
+
+    saltenv : base
+        Specify a salt fileserver environment to be used when applying states
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' state.sls_id my_state my_module
+
+        salt '*' state.sls_id my_state my_module,a_common_module
     '''
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(kwargs.get('localconfig'))
+    opts = _get_opts(**kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
-    if 'pillarenv' in kwargs:
-        opts['pillarenv'] = kwargs['pillarenv']
+
+    # Since this is running a specific ID within a specific SLS file, fall back
+    # to the 'base' saltenv if none is configured and none was passed.
+    if opts['environment'] is None:
+        opts['environment'] = 'base'
+
     try:
-        st_ = salt.state.HighState(opts, proxy=__proxy__)
+        st_ = salt.state.HighState(opts,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
     except NameError:
-        st_ = salt.state.HighState(opts)
+        st_ = salt.state.HighState(opts,
+                                   initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1265,7 +1416,7 @@ def sls_id(
         split_mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({saltenv: split_mods})
+        high_, errors = st_.render_highstate({opts['environment']: split_mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -1278,32 +1429,39 @@ def sls_id(
         if chunk.get('__id__', '') == id_:
             ret.update(st_.state.call_chunk(chunk, {}, chunks))
 
-    _set_retcode(ret)
+    _set_retcode(ret, highstate=highstate)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
     __opts__['test'] = orig_test
     if not ret:
         raise SaltInvocationError(
             'No matches for ID \'{0}\' found in SLS \'{1}\' within saltenv '
-            '\'{2}\''.format(id_, mods, saltenv)
+            '\'{2}\''.format(id_, mods, opts['environment'])
         )
     return ret
 
 
-def show_low_sls(mods,
-                 saltenv='base',
-                 test=None,
-                 queue=False,
-                 **kwargs):
+def show_low_sls(mods, test=None, queue=False, **kwargs):
     '''
     Display the low data from a specific sls. The default environment is
     ``base``, use ``saltenv`` to specify a different environment.
+
+    saltenv
+        Specify a salt fileserver environment to be used when applying states
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' state.show_low_sls foo
+        salt '*' state.show_low_sls foo saltenv=dev
     '''
     if 'env' in kwargs:
         salt.utils.warn_until(
@@ -1318,11 +1476,19 @@ def show_low_sls(mods,
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(kwargs.get('localconfig'))
+    opts = _get_opts(**kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
-    if 'pillarenv' in kwargs:
-        opts['pillarenv'] = kwargs['pillarenv']
-    st_ = salt.state.HighState(opts)
+
+    # Since this is dealing with a specific SLS file (or files), fall back to
+    # the 'base' saltenv if none is configured and none was passed.
+    if opts['environment'] is None:
+        opts['environment'] = 'base'
+    try:
+        st_ = salt.state.HighState(opts,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1333,7 +1499,7 @@ def show_low_sls(mods,
         mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({saltenv: mods})
+        high_, errors = st_.render_highstate({opts['environment']: mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -1347,7 +1513,7 @@ def show_low_sls(mods,
     return ret
 
 
-def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
+def show_sls(mods, test=None, queue=False, **kwargs):
     '''
     Display the state data from a specific sls or list of sls files on the
     master. The default environment is ``base``, use ``saltenv`` to specify a
@@ -1357,6 +1523,16 @@ def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
     ``show_top`` instead.
 
     Custom Pillar data can be passed with the ``pillar`` kwarg.
+
+    saltenv
+        Specify a salt fileserver environment to be used when applying states
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
 
     CLI Example:
 
@@ -1377,24 +1553,36 @@ def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(kwargs.get('localconfig'))
+    opts = _get_opts(**kwargs)
 
     opts['test'] = _get_test_value(test, **kwargs)
 
-    pillar = kwargs.get('pillar')
+    # Since this is dealing with a specific SLS file (or files), fall back to
+    # the 'base' saltenv if none is configured and none was passed.
+    if opts['environment'] is None:
+        opts['environment'] = 'base'
+
+    pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
     if pillar_enc is None \
-            and pillar is not None \
-            and not isinstance(pillar, dict):
+            and pillar_override is not None \
+            and not isinstance(pillar_override, dict):
         raise SaltInvocationError(
             'Pillar data must be formatted as a dictionary, unless pillar_enc '
             'is specified.'
         )
 
-    if 'pillarenv' in kwargs:
-        opts['pillarenv'] = kwargs['pillarenv']
-
-    st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc)
+    try:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1405,7 +1593,7 @@ def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
         mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({saltenv: mods})
+        high_, errors = st_.render_highstate({opts['environment']: mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -1428,8 +1616,6 @@ def show_top(queue=False, **kwargs):
 
         salt '*' state.show_top
     '''
-    opts = copy.deepcopy(__opts__)
-
     if 'env' in kwargs:
         salt.utils.warn_until(
             'Oxygen',
@@ -1439,12 +1625,17 @@ def show_top(queue=False, **kwargs):
             )
         kwargs.pop('env')
 
-    if 'saltenv' in kwargs:
-        opts['environment'] = kwargs['saltenv']
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.HighState(opts)
+
+    opts = _get_opts(**kwargs)
+    try:
+        st_ = salt.state.HighState(opts,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1490,23 +1681,30 @@ def single(fun, name, test=None, queue=False, **kwargs):
                    '__id__': name,
                    'name': name})
     orig_test = __opts__.get('test', None)
-    opts = _get_opts(kwargs.get('localconfig'))
+    opts = _get_opts(**kwargs)
     opts['test'] = _get_test_value(test, **kwargs)
 
-    pillar = kwargs.get('pillar')
+    pillar_override = kwargs.get('pillar')
     pillar_enc = kwargs.get('pillar_enc')
     if pillar_enc is None \
-            and pillar is not None \
-            and not isinstance(pillar, dict):
+            and pillar_override is not None \
+            and not isinstance(pillar_override, dict):
         raise SaltInvocationError(
             'Pillar data must be formatted as a dictionary, unless pillar_enc '
             'is specified.'
         )
 
     try:
-        st_ = salt.state.State(opts, pillar, pillar_enc=pillar_enc, proxy=__proxy__)
+        st_ = salt.state.State(opts,
+                               pillar_override,
+                               pillar_enc=pillar_enc,
+                               proxy=__proxy__,
+                               initial_pillar=_get_initial_pillar(opts))
     except NameError:
-        st_ = salt.state.State(opts, pillar, pillar_enc=pillar_enc)
+        st_ = salt.state.State(opts,
+                               pillar_override,
+                               pillar_enc=pillar_enc,
+                               initial_pillar=_get_initial_pillar(opts))
     err = st_.verify_data(kwargs)
     if err:
         __context__['retcode'] = 1
@@ -1549,7 +1747,11 @@ def clear_cache():
     return ret
 
 
-def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
+def pkg(pkg_path,
+        pkg_sum,
+        hash_type,
+        test=None,
+        **kwargs):
     '''
     Execute a packaged state run, the packaged state run will exist in a
     tarball available locally. This packaged state
@@ -1587,10 +1789,18 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
     pillar_json = os.path.join(root, 'pillar.json')
     if os.path.isfile(pillar_json):
         with salt.utils.fopen(pillar_json, 'r') as fp_:
-            pillar = json.load(fp_)
+            pillar_override = json.load(fp_)
     else:
-        pillar = None
-    popts = _get_opts(kwargs.get('localconfig'))
+        pillar_override = None
+
+    roster_grains_json = os.path.join(root, 'roster_grains.json')
+    if os.path.isfile(roster_grains_json):
+        with salt.utils.fopen(roster_grains_json, 'r') as fp_:
+            roster_grains = json.load(fp_, object_hook=salt.utils.decode_dict)
+
+    popts = _get_opts(**kwargs)
+    if os.path.isfile(roster_grains_json):
+        popts['grains'] = roster_grains
     popts['fileclient'] = 'local'
     popts['file_roots'] = {}
     popts['test'] = _get_test_value(test, **kwargs)
@@ -1600,9 +1810,10 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
         if not os.path.isdir(full):
             continue
         popts['file_roots'][fn_] = [full]
-    st_ = salt.state.State(popts, pillar=pillar)
+    st_ = salt.state.State(popts, pillar_override=pillar_override)
     snapper_pre = _snapper_pre(popts, kwargs.get('__pub_jid', 'called localy'))
     ret = st_.call_chunks(lowstate)
+    ret = st_.call_listen(lowstate, ret)
     try:
         shutil.rmtree(root)
     except (IOError, OSError):

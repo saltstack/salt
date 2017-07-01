@@ -17,6 +17,9 @@ The configuration file for the salt-master is located at
 configuration file is located at :file:`/usr/local/etc/salt`.  The available
 options are as follows:
 
+
+.. _primary-master-configuration:
+
 Primary Master Configuration
 ============================
 
@@ -244,6 +247,48 @@ each of Salt's module types such as ``runners``, ``output``, ``wheel``,
 .. code-block:: yaml
 
     extension_modules: /root/salt_extmods
+
+``extmod_whitelist/extmod_blacklist``
+-------------------------------------
+
+.. versionadded:: 2017.7.0
+
+By using this dictionary, the modules that are synced to the master's extmod cache using `saltutil.sync_*` can be
+limited.  If nothing is set to a specific type, then all modules are accepted.  To block all modules of a specific type,
+whitelist an empty list.
+
+.. code-block:: yaml
+
+    extmod_whitelist:
+      modules:
+        - custom_module
+      engines:
+        - custom_engine
+      pillars: []
+
+    extmod_blacklist:
+      modules:
+        - specific_module
+
+Valid options:
+  - modules
+  - states
+  - grains
+  - renderers
+  - returners
+  - output
+  - proxy
+  - runners
+  - wheel
+  - engines
+  - queues
+  - pillar
+  - utils
+  - sdb
+  - cache
+  - clouds
+  - tops
+  - roster
 
 .. conf_master:: module_dirs
 
@@ -706,6 +751,31 @@ master event bus. The value is expressed in bytes.
 
     max_event_size: 1048576
 
+.. conf_master:: ping_on_rotate
+
+``ping_on_rotate``
+------------------
+
+.. versionadded:: 2014.7.0
+
+Default:  ``False``
+
+By default, the master AES key rotates every 24 hours. The next command
+following a key rotation will trigger a key refresh from the minion which may
+result in minions which do not respond to the first command after a key refresh.
+
+To tell the master to ping all minions immediately after an AES key refresh, set
+ping_on_rotate to ``True``. This should mitigate the issue where a minion does not
+appear to initially respond after a key is rotated.
+
+Note that ping_on_rotate may cause high load on the master immediately after
+the key rotation event as minions reconnect. Consider this carefully if this
+salt master is managing a large number of minions.
+
+.. code-black:: yaml
+
+    ping_on_rotate: False
+
 .. conf_master:: master_job_cache
 
 ``master_job_cache``
@@ -832,6 +902,8 @@ what you are doing! Transports are explained in :ref:`Salt Transports
 
     transport: zeromq
 
+.. conf_master:: transport_opts
+
 ``transport_opts``
 ------------------
 
@@ -849,6 +921,30 @@ what you are doing! Transports are explained in :ref:`Salt Transports
         publish_port: 4605
         ret_port: 4606
       zeromq: []
+
+.. conf_master:: sock_pool_size
+
+``sock_pool_size``
+------------------
+
+Default: 1
+
+To avoid blocking waiting while writing a data to a socket, we support
+socket pool for Salt applications. For example, a job with a large number
+of target host list can cause long period blocking waiting. The option
+is used by ZMQ and TCP transports, and the other transport methods don't
+need the socket pool by definition. Most of Salt tools, including CLI,
+are enough to use a single bucket of socket pool. On the other hands,
+it is highly recommended to set the size of socket pool larger than 1
+for other Salt applications, especially Salt API, which must write data
+to socket concurrently.
+
+.. code-block:: yaml
+
+    sock_pool_size: 15
+
+
+.. _salt-ssh-configuration:
 
 Salt-SSH Configuration
 ======================
@@ -1047,6 +1143,16 @@ Pass a list of importable Python modules that are typically located in
 the `site-packages` Python directory so they will be also always included
 into the Salt Thin, once generated.
 
+``min_extra_mods``
+------------------
+
+Default: None
+
+Identical as `thin_extra_mods`, only applied to the Salt Minimal.
+
+
+.. _master-security-settings:
+
 Master Security Settings
 ========================
 
@@ -1135,8 +1241,7 @@ membership in the :conf_master:`autosign_file` and the
 Default: ``{}``
 
 Enable user accounts on the master to execute specific modules. These modules
-can be expressed as regular expressions. Note that client_acl option is
-deprecated by publisher_acl option and will be removed in future releases.
+can be expressed as regular expressions.
 
 .. code-block:: yaml
 
@@ -1156,8 +1261,7 @@ Blacklist users or modules
 
 This example would blacklist all non sudo users, including root from
 running any commands. It would also blacklist any use of the "cmd"
-module. Note that client_acl_blacklist option is deprecated by
-publisher_acl_blacklist option and will be removed in future releases.
+module.
 
 This is completely disabled by default.
 
@@ -1223,6 +1327,35 @@ and usernames may be given:
         - tom
       ldap:
         - gary
+
+.. conf_master:: keep_acl_in_token
+
+``keep_acl_in_token``
+---------------------
+
+Default: ``False``
+
+Set to True to enable keeping the calculated user's auth list in the token
+file. This is disabled by default and the auth list is calculated or requested
+from the eauth driver each time.
+
+.. code-block:: yaml
+
+    keep_acl_in_token: False
+
+.. conf_master:: eauth_acl_module
+
+``eauth_acl_module``
+--------------------
+
+Default: ``''``
+
+Auth subsystem module to use to get authorized access list for a user. By default it's
+the same module used for external authentication.
+
+.. code-block:: yaml
+
+    eauth_acl_module: django
 
 .. conf_master:: file_recv
 
@@ -1310,7 +1443,6 @@ signature. The :conf_master:`master_pubkey_signature` must also be set for this.
 
     master_use_pubkey_signature: True
 
-
 .. conf_master:: rotate_aes_key
 
 ``rotate_aes_key``
@@ -1326,7 +1458,6 @@ Do not disable this unless it is absolutely clear what this does.
 .. code-block:: yaml
 
     rotate_aes_key: True
-
 
 .. conf_master:: ssl
 
@@ -1369,6 +1500,9 @@ the master will drop the request and the minion's key will remain accepted.
 
     rotate_aes_key: True
 
+
+.. _master-module-management:
+
 Master Module Management
 ========================
 
@@ -1400,6 +1534,8 @@ the Salt master.
 
     cython_enable: False
 
+
+.. _master-state-system-settings:
 
 Master State System Settings
 ============================
@@ -1732,6 +1868,9 @@ If set to ``True``, runner jobs will be saved to job cache (defined by
 
     runner_returns: True
 
+
+.. _master-file-server-settings:
+
 Master File Server Settings
 ===========================
 
@@ -1844,6 +1983,25 @@ on a large number of minions.
 .. code-block:: yaml
 
     fileserver_list_cache_time: 5
+
+.. conf_master:: fileserver_verify_config
+
+``fileserver_verify_config``
+----------------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``True``
+
+By default, as the master starts it performs some sanity checks on the
+configured fileserver backends. If any of these sanity checks fail (such as
+when an invalid configuration is used), the master daemon will abort.
+
+To skip these sanity checks, set this option to ``False``.
+
+.. code-block:: yaml
+
+    fileserver_verify_config: False
 
 .. conf_master:: hash_type
 
@@ -2018,13 +2176,13 @@ Walkthrough <gitfs-per-remote-config>`.
 Optional parameter used to specify the provider to be used for gitfs. More
 information can be found in the :ref:`GitFS Walkthrough <gitfs-dependencies>`.
 
-Must be one of the following: ``pygit2``, ``gitpython``, or ``dulwich``. If
-unset, then each will be tried in that same order, and the first one with a
-compatible version installed will be the provider that is used.
+Must be either ``pygit2`` or ``gitpython``. If unset, then each will be tried
+in that same order, and the first one with a compatible version installed will
+be the provider that is used.
 
 .. code-block:: yaml
 
-    gitfs_provider: dulwich
+    gitfs_provider: gitpython
 
 .. conf_master:: gitfs_ssl_verify
 
@@ -2142,12 +2300,68 @@ gitfs remotes.
       - dev:
         - ref: develop
 
-.. conf_master:: gitfs_env_whitelist
+.. conf_master:: gitfs_disable_saltenv_mapping
 
-``gitfs_env_whitelist``
-***********************
+``gitfs_disable_saltenv_mapping``
+*********************************
+
+.. versionadded:: Oxygen
+
+Default: ``False``
+
+When set to ``True``, all saltenv mapping logic is disregarded (aside from
+which branch/tag is mapped to the ``base`` saltenv). To use any other
+environments, they must then be defined using :ref:`per-saltenv configuration
+parameters <gitfs-per-saltenv-config>`.
+
+.. code-block:: yaml
+
+    gitfs_disable_saltenv_mapping: True
+
+.. note::
+    This is is a global configuration option, see :ref:`here
+    <gitfs-per-remote-config>` for examples of configuring it for individual
+    repositories.
+
+.. conf_master:: gitfs_ref_types
+
+``gitfs_ref_types``
+*******************
+
+.. versionadded:: Oxygen
+
+Default: ``['branch', 'tag', 'sha']``
+
+This option defines what types of refs are mapped to fileserver environments
+(i.e. saltenvs). It also sets the order of preference when there are
+ambiguously-named refs (i.e. when a branch and tag both have the same name).
+The below example disables mapping of both tags and SHAs, so that only branches
+are mapped as saltenvs:
+
+.. code-block:: yaml
+
+    gitfs_ref_types:
+      - branch
+
+.. note::
+    This is is a global configuration option, see :ref:`here
+    <gitfs-per-remote-config>` for examples of configuring it for individual
+    repositories.
+
+.. note::
+    ``sha`` is special in that it will not show up when listing saltenvs (e.g.
+    with the :py:func:`fileserver.envs <salt.runners.fileserver.envs>` runner),
+    but works within states and with :py:func:`cp.cache_file
+    <salt.modules.cp.cache_file>` to retrieve a file from a specific git SHA.
+
+.. conf_master:: gitfs_saltenv_whitelist
+
+``gitfs_saltenv_whitelist``
+***************************
 
 .. versionadded:: 2014.7.0
+.. versionchanged:: Oxygen
+    Renamed from ``gitfs_env_whitelist`` to ``gitfs_saltenv_whitelist``
 
 Default: ``[]``
 
@@ -2158,17 +2372,19 @@ information can be found in the :ref:`GitFS Walkthrough
 
 .. code-block:: yaml
 
-    gitfs_env_whitelist:
+    gitfs_saltenv_whitelist:
       - base
       - v1.*
       - 'mybranch\d+'
 
-.. conf_master:: gitfs_env_blacklist
+.. conf_master:: gitfs_saltenv_blacklist
 
-``gitfs_env_blacklist``
-***********************
+``gitfs_saltenv_blacklist``
+***************************
 
 .. versionadded:: 2014.7.0
+.. versionchanged:: Oxygen
+    Renamed from ``gitfs_env_blacklist`` to ``gitfs_saltenv_blacklist``
 
 Default: ``[]``
 
@@ -2179,7 +2395,7 @@ information can be found in the :ref:`GitFS Walkthrough
 
 .. code-block:: yaml
 
-    gitfs_env_blacklist:
+    gitfs_saltenv_blacklist:
       - base
       - v1.*
       - 'mybranch\d+'
@@ -2350,6 +2566,28 @@ authenticate is protected by a passphrase.
     <gitfs-per-remote-config>` for examples of configuring it for individual
     repositories.
 
+.. conf_master:: gitfs_refspecs
+
+``gitfs_refspecs``
+~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2017.7.0
+
+Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
+
+When fetching from remote repositories, by default Salt will fetch branches and
+tags. This parameter can be used to override the default and specify
+alternate refspecs to be fetched. More information on how this feature works
+can be found in the :ref:`GitFS Walkthrough <gitfs-custom-refspecs>`.
+
+.. code-block:: yaml
+
+    gitfs_refspecs:
+      - '+refs/heads/*:refs/remotes/origin/*'
+      - '+refs/tags/*:refs/tags/*'
+      - '+refs/pull/*/head:refs/remotes/origin/pr/*'
+      - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
 hg: Mercurial Remote File Server Backend
 ----------------------------------------
 
@@ -2490,12 +2728,14 @@ bookmark should be used as the ``base`` environment.
 
     hgfs_base: salt
 
-.. conf_master:: hgfs_env_whitelist
+.. conf_master:: hgfs_saltenv_whitelist
 
-``hgfs_env_whitelist``
-**********************
+``hgfs_saltenv_whitelist``
+**************************
 
 .. versionadded:: 2014.7.0
+.. versionchanged:: Oxygen
+    Renamed from ``hgfs_env_whitelist`` to ``hgfs_saltenv_whitelist``
 
 Default: ``[]``
 
@@ -2507,23 +2747,25 @@ expression must match the entire minion ID.
 If used, only branches/bookmarks/tags which match one of the specified
 expressions will be exposed as fileserver environments.
 
-If used in conjunction with :conf_master:`hgfs_env_blacklist`, then the subset
+If used in conjunction with :conf_master:`hgfs_saltenv_blacklist`, then the subset
 of branches/bookmarks/tags which match the whitelist but do *not* match the
 blacklist will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
-    hgfs_env_whitelist:
+    hgfs_saltenv_whitelist:
       - base
       - v1.*
       - 'mybranch\d+'
 
-.. conf_master:: hgfs_env_blacklist
+.. conf_master:: hgfs_saltenv_blacklist
 
-``hgfs_env_blacklist``
-**********************
+``hgfs_saltenv_blacklist``
+**************************
 
 .. versionadded:: 2014.7.0
+.. versionchanged:: Oxygen
+    Renamed from ``hgfs_env_blacklist`` to ``hgfs_saltenv_blacklist``
 
 Default: ``[]``
 
@@ -2535,13 +2777,13 @@ expression must match the entire minion ID.
 If used, branches/bookmarks/tags which match one of the specified expressions
 will *not* be exposed as fileserver environments.
 
-If used in conjunction with :conf_master:`hgfs_env_whitelist`, then the subset
+If used in conjunction with :conf_master:`hgfs_saltenv_whitelist`, then the subset
 of branches/bookmarks/tags which match the whitelist but do *not* match the
 blacklist will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
-    hgfs_env_blacklist:
+    hgfs_saltenv_blacklist:
       - base
       - v1.*
       - 'mybranch\d+'
@@ -2697,12 +2939,14 @@ also be configured on a per-remote basis, see :conf_master:`here
 
     svnfs_tags: tags
 
-.. conf_master:: svnfs_env_whitelist
+.. conf_master:: svnfs_saltenv_whitelist
 
-``svnfs_env_whitelist``
-***********************
+``svnfs_saltenv_whitelist``
+***************************
 
 .. versionadded:: 2014.7.0
+.. versionchanged:: Oxygen
+    Renamed from ``svnfs_env_whitelist`` to ``svnfs_saltenv_whitelist``
 
 Default: ``[]``
 
@@ -2714,23 +2958,25 @@ must match the entire minion ID.
 If used, only branches/tags which match one of the specified expressions will
 be exposed as fileserver environments.
 
-If used in conjunction with :conf_master:`svnfs_env_blacklist`, then the subset
+If used in conjunction with :conf_master:`svnfs_saltenv_blacklist`, then the subset
 of branches/tags which match the whitelist but do *not* match the blacklist
 will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
-    svnfs_env_whitelist:
+    svnfs_saltenv_whitelist:
       - base
       - v1.*
       - 'mybranch\d+'
 
-.. conf_master:: svnfs_env_blacklist
+.. conf_master:: svnfs_saltenv_blacklist
 
-``svnfs_env_blacklist``
-***********************
+``svnfs_saltenv_blacklist``
+***************************
 
 .. versionadded:: 2014.7.0
+.. versionchanged:: Oxygen
+    Renamed from ``svnfs_env_blacklist`` to ``svnfs_saltenv_blacklist``
 
 Default: ``[]``
 
@@ -2742,13 +2988,13 @@ expression must match the entire minion ID.
 If used, branches/tags which match one of the specified expressions will *not*
 be exposed as fileserver environments.
 
-If used in conjunction with :conf_master:`svnfs_env_whitelist`, then the subset
+If used in conjunction with :conf_master:`svnfs_saltenv_whitelist`, then the subset
 of branches/tags which match the whitelist but do *not* match the blacklist
 will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
-    svnfs_env_blacklist:
+    svnfs_saltenv_blacklist:
       - base
       - v1.*
       - 'mybranch\d+'
@@ -2879,7 +3125,7 @@ configuration is the same as :conf_master:`file_roots`:
 ``on_demand_ext_pillar``
 ------------------------
 
-.. versionadded:: 2016.3.6,2016.11.3,Nitrogen
+.. versionadded:: 2016.3.6,2016.11.3,2017.7.0
 
 Default: ``['libvirt', 'virtkey']``
 
@@ -2901,6 +3147,80 @@ The external pillars permitted to be used on-demand using :py:func:`pillar.ext
     limited to instances in which states/modules/etc. (built-in or custom) rely
     upon pillar data generated by :py:func:`pillar.ext
     <salt.modules.pillar.ext>`.
+
+.. conf_master:: decrypt_pillar
+
+``decrypt_pillar``
+------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``[]``
+
+A list of paths to be recursively decrypted during pillar compilation.
+
+.. code-block:: yaml
+
+    decrypt_pillar:
+      - 'foo:bar': gpg
+      - 'lorem:ipsum:dolor'
+
+Entries in this list can be formatted either as a simple string, or as a
+key/value pair, with the key being the pillar location, and the value being the
+renderer to use for pillar decryption. If the former is used, the renderer
+specified by :conf_master:`decrypt_pillar_default` will be used.
+
+.. conf_master:: decrypt_pillar_delimiter
+
+``decrypt_pillar_delimiter``
+----------------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``:``
+
+The delimiter used to distinguish nested data structures in the
+:conf_master:`decrypt_pillar` option.
+
+.. code-block:: yaml
+
+    decrypt_pillar_delimiter: '|'
+    decrypt_pillar:
+      - 'foo|bar': gpg
+      - 'lorem|ipsum|dolor'
+
+.. conf_master:: decrypt_pillar_default
+
+``decrypt_pillar_default``
+--------------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``gpg``
+
+The default renderer used for decryption, if one is not specified for a given
+pillar key in :conf_master:`decrypt_pillar`.
+
+.. code-block:: yaml
+
+    decrypt_pillar_default: my_custom_renderer
+
+.. conf_master:: decrypt_pillar_renderers
+
+``decrypt_pillar_renderers``
+----------------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``['gpg']``
+
+List of renderers which are permitted to be used for pillar decryption.
+
+.. code-block:: yaml
+
+    decrypt_pillar_renderers:
+      - gpg
+      - my_custom_renderer
 
 .. conf_master:: pillar_opts
 
@@ -2976,6 +3296,27 @@ ext_pillar keys to override those from :conf_master:`pillar_roots`.
 .. code-block:: yaml
 
     ext_pillar_first: False
+
+.. conf_minion:: pillarenv_from_saltenv
+
+``pillarenv_from_saltenv``
+--------------------------
+
+Default: ``False``
+
+When set to ``True``, the :conf_master:`pillarenv` value will assume the value
+of the effective saltenv when running states. This essentially makes ``salt-run
+pillar.show_pillar saltenv=dev`` equivalent to ``salt-run pillar.show_pillar
+saltenv=dev pillarenv=dev``. If :conf_master:`pillarenv` is set on the CLI, it
+will override this option.
+
+.. code-block:: yaml
+
+    pillarenv_from_saltenv: True
+
+.. note::
+    For salt remote execution commands this option should be set in the Minion
+    configuration instead.
 
 .. conf_master:: pillar_raise_on_missing
 
@@ -3188,13 +3529,36 @@ they were created by a different master.
 
 .. __: http://www.gluster.org/
 
+.. conf_master:: git_pillar_includes
+
+``git_pillar_includes``
+***********************
+
+.. versionadded:: 2017.7.0
+
+Default: ``True``
+
+Normally, when processing :ref:`git_pillar remotes
+<git-pillar-2015-8-0-and-later>`, if more than one repo under the same ``git``
+section in the ``ext_pillar`` configuration refers to the same pillar
+environment, then each repo in a given environment will have access to the
+other repos' files to be referenced in their top files. However, it may be
+desirable to disable this behavior. If so, set this value to ``False``.
+
+For a more detailed examination of how includes work, see :ref:`this
+explanation <git-pillar-multiple-remotes>` from the git_pillar documentation.
+
+.. code-block:: yaml
+
+    git_pillar_includes: False
+
 .. _git-ext-pillar-auth-opts:
 
 Git External Pillar Authentication Options
 ******************************************
 
 These parameters only currently apply to the ``pygit2``
-:conf_master:`git_pillar_provider`.  Authentication works the same as it does
+:conf_master:`git_pillar_provider`. Authentication works the same as it does
 in gitfs, as outlined in the :ref:`GitFS Walkthrough <gitfs-authentication>`,
 though the global configuration options are named differently to reflect that
 they are for git_pillar instead of gitfs.
@@ -3295,6 +3659,48 @@ authenticate is protected by a passphrase.
 .. code-block:: yaml
 
     git_pillar_passphrase: mypassphrase
+
+.. conf_master:: git_pillar_refspecs
+
+``git_pillar_refspecs``
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2017.7.0
+
+Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
+
+When fetching from remote repositories, by default Salt will fetch branches and
+tags. This parameter can be used to override the default and specify
+alternate refspecs to be fetched. This parameter works similarly to its
+:ref:`GitFS counterpart <git_pillar-custom-refspecs>`, in that it can be
+configured both globally and for individual remotes.
+
+.. code-block:: yaml
+
+    git_pillar_refspecs:
+      - '+refs/heads/*:refs/remotes/origin/*'
+      - '+refs/tags/*:refs/tags/*'
+      - '+refs/pull/*/head:refs/remotes/origin/pr/*'
+      - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
+.. conf_master:: git_pillar_verify_config
+
+``git_pillar_verify_config``
+----------------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``True``
+
+By default, as the master starts it performs some sanity checks on the
+configured git_pillar repositories. If any of these sanity checks fail (such as
+when an invalid configuration is used), the master daemon will abort.
+
+To skip these sanity checks, set this option to ``False``.
+
+.. code-block:: yaml
+
+    git_pillar_verify_config: False
 
 .. _pillar-merging-opts:
 
@@ -3505,6 +3911,9 @@ can be utilized:
 
     pillar_cache_backend: disk
 
+
+.. _syndic-server-settings:
+
 Syndic Server Settings
 ======================
 
@@ -3637,6 +4046,24 @@ check in with their lists of expected minions before giving up.
 
     syndic_wait: 5
 
+.. conf_master:: syndic_forward_all_events
+
+``syndic_forward_all_events``
+-----------------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``False``
+
+Option on multi-syndic or single when connected to multiple masters to be able to
+send events to all connected masters.
+
+.. code-block:: yaml
+
+    syndic_forward_all_events: False
+
+
+.. _peer-publish-settings:
 
 Peer Publish Settings
 =====================
@@ -3752,7 +4179,6 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 
     log_level: warning
 
-
 .. conf_master:: log_level_logfile
 
 ``log_level_logfile``
@@ -3768,7 +4194,6 @@ it will inherit the level set by :conf_log:`log_level` option.
 
     log_level_logfile: warning
 
-
 .. conf_master:: log_datefmt
 
 ``log_datefmt``
@@ -3783,7 +4208,6 @@ The date and time format used in console log messages. See also
 
     log_datefmt: '%H:%M:%S'
 
-
 .. conf_master:: log_datefmt_logfile
 
 ``log_datefmt_logfile``
@@ -3797,7 +4221,6 @@ The date and time format used in log file messages. See also
 .. code-block:: yaml
 
     log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
-
 
 .. conf_master:: log_fmt_console
 
@@ -3831,7 +4254,6 @@ The format of the console logging messages. See also
     log_fmt_console: '%(colorlevel)s %(colormsg)s'
     log_fmt_console: '[%(levelname)-8s] %(message)s'
 
-
 .. conf_master:: log_fmt_logfile
 
 ``log_fmt_logfile``
@@ -3846,7 +4268,6 @@ The format of the log file logging messages. See also
 
     log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
-
 .. conf_master:: log_granular_levels
 
 ``log_granular_levels``
@@ -3856,6 +4277,9 @@ Default: ``{}``
 
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
+
+
+.. _node-groups:
 
 Node Groups
 ===========
@@ -3874,12 +4298,14 @@ A group consists of a group name and a compound target.
       group2: 'G@os:Debian and foo.domain.com'
       group3: 'G@os:Debian and N@group1'
       group4:
-	- 'G@foo:bar'
-	- 'or'
-	- 'G@foo:baz'
+        - 'G@foo:bar'
+        - 'or'
+        - 'G@foo:baz'
 
 More information on using nodegroups can be found :ref:`here <targeting-nodegroups>`.
 
+
+.. _range-cluster-settings:
 
 Range Cluster Settings
 ======================
@@ -3896,8 +4322,10 @@ https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 
 .. code-block:: yaml
 
-  range_server: range:80
+    range_server: range:80
 
+
+.. _include-configuration:
 
 Include Configuration
 =====================
@@ -3919,7 +4347,6 @@ file.
     Salt creates files in the ``master.d`` directory for its own use. These
     files are prefixed with an underscore. A common example of this is the
     ``_schedule.conf`` file.
-
 
 .. conf_master:: include
 
@@ -3949,6 +4376,7 @@ option then the master will log a warning message.
       - extra_config
       - master.d/*
       - /etc/roles/webserver
+
 
 .. _winrepo-master-config-opts:
 
@@ -4247,3 +4675,105 @@ authenticate is protected by a passphrase.
 .. code-block:: yaml
 
     winrepo_passphrase: mypassphrase
+
+.. conf_master:: winrepo_refspecs
+
+``winrepo_refspecs``
+~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2017.7.0
+
+Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
+
+When fetching from remote repositories, by default Salt will fetch branches and
+tags. This parameter can be used to override the default and specify
+alternate refspecs to be fetched. This parameter works similarly to its
+:ref:`GitFS counterpart <winrepo-custom-refspecs>`, in that it can be
+configured both globally and for individual remotes.
+
+.. code-block:: yaml
+
+    winrepo_refspecs:
+      - '+refs/heads/*:refs/remotes/origin/*'
+      - '+refs/tags/*:refs/tags/*'
+      - '+refs/pull/*/head:refs/remotes/origin/pr/*'
+      - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
+
+.. _configure-master-on-windows:
+
+Configure Master on Windows
+===========================
+
+The master on Windows requires no additional configuration. You can modify the
+master configuration by creating/editing the master config file located at
+``c:\salt\conf\master``. The same configuration options available on Linux are
+available in Windows, as long as they apply. For example, SSH options wouldn't
+apply in Windows. The main differences are the file paths. If you are familiar
+with common salt paths, the following table may be useful:
+
+=============  =========  =================
+linux Paths               Windows Paths
+=============  =========  =================
+``/etc/salt``  ``<--->``  ``c:\salt\conf``
+``/``          ``<--->``  ``c:\salt``
+=============  =========  =================
+
+So, for example, the master config file in Linux is ``/etc/salt/master``. In
+Windows the master config file is ``c:\salt\conf\master``. The Linux path
+``/etc/salt`` becomes ``c:\salt\conf`` in Windows.
+
+Common File Locations
+---------------------
+
+======================================  =============================================
+Linux Paths                             Windows Paths
+======================================  =============================================
+``conf_file: /etc/salt/master``         ``conf_file: c:\salt\conf\master``
+``log_file: /var/log/salt/master``      ``log_file: c:\salt\var\log\salt\master``
+``pidfile: /var/run/salt-master.pid``   ``pidfile: c:\salt\var\run\salt-master.pid``
+======================================  =============================================
+
+Common Directories
+------------------
+
+======================================================  ============================================
+Linux Paths                                             Windows Paths
+======================================================  ============================================
+``cachedir: /var/cache/salt/master``                    ``cachedir: c:\salt\var\cache\salt\master``
+``extension_modules: /var/cache/salt/master/extmods``   ``c:\salt\var\cache\salt\master\extmods``
+``pki_dir: /etc/salt/pki/master``                       ``pki_dir: c:\salt\conf\pki\master``
+``root_dir: /``                                         ``root_dir: c:\salt``
+``sock_dir: /var/run/salt/master``                      ``sock_dir: c:\salt\var\run\salt\master``
+======================================================  ============================================
+
+Roots
+-----
+
+**file_roots**
+
+==================  =========================
+Linux Paths         Windows Paths
+==================  =========================
+``/srv/salt``       ``c:\salt\srv\salt``
+``/srv/spm/salt``   ``c:\salt\srv\spm\salt``
+==================  =========================
+
+**pillar_roots**
+
+====================  ===========================
+Linux Paths           Windows Paths
+====================  ===========================
+``/srv/pillar``       ``c:\salt\srv\pillar``
+``/srv/spm/pillar``   ``c:\salt\srv\spm\pillar``
+====================  ===========================
+
+Win Repo Settings
+-----------------
+
+==========================================  =================================================
+Linux Paths                                 Windows Paths
+==========================================  =================================================
+``winrepo_dir: /srv/salt/win/repo``         ``winrepo_dir: c:\salt\srv\salt\win\repo``
+``winrepo_dir_ng: /srv/salt/win/repo-ng``   ``winrepo_dir_ng: c:\salt\srv\salt\win\repo-ng``
+==========================================  =================================================

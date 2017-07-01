@@ -119,12 +119,11 @@ To execute the manage.up runner:
 
     # salt-call publish.runner manage.up
 
-To match minions using other matchers, use ``expr_form``:
+To match minions using other matchers, use ``tgt_type``:
 
 .. code-block:: bash
 
-    # salt-call publish.publish 'webserv* and not G@os:Ubuntu' test.ping expr_form='compound'
+    # salt-call publish.publish 'webserv* and not G@os:Ubuntu' test.ping tgt_type='compound'
 
 .. note::
-    The expr_form argument will be renamed to ``tgt_type`` in the Nitrogen
-    release of Salt.
+    In pre-2017.7.0 releases, use ``expr_form`` instead of ``tgt_type``.

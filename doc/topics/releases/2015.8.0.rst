@@ -231,7 +231,7 @@ Deprecations
 
 - The use of ``provider`` in Salt Cloud provider files to define cloud drivers
   has been deprecated in favor of using ``driver``. Both terms will work until
-  the Nitrogen release of Salt. Example provider file:
+  the 2017.7.0 release of Salt. Example provider file:
 
 .. code-block:: yaml
 

@@ -2,6 +2,8 @@
 '''
 Module for controlling Jenkins
 
+:depends: python-jenkins
+
 .. versionadded:: 2016.3.0
 
 :depends: python-jenkins_ Python module (not to be confused with jenkins_)
@@ -85,6 +87,26 @@ def _connect():
     return jenkins.Jenkins(jenkins_url,
                            username=jenkins_user,
                            password=jenkins_password)
+
+
+def run(script):
+    '''
+    .. versionadded:: Carbon
+
+    Execute a groovy script on the jenkins master
+
+    :param script: The groovy script
+
+    CLI Example:
+
+    .. code-block::
+
+        salt '*' jenkins.run 'Jenkins.instance.doSafeRestart()'
+
+    '''
+
+    server = _connect()
+    return server.run_script(script)
 
 
 def get_version():

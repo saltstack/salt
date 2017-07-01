@@ -135,7 +135,7 @@ def _get_config(**kwargs):
     }
     config_key = '{0}.config'.format(__virtualname__)
     config.update(__salt__['config.get'](config_key, {}))
-    for k in set(config.keys()) & set(kwargs.keys()):
+    for k in set(config) & set(kwargs):
         config[k] = kwargs[k]
     return config
 

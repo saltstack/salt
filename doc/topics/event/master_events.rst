@@ -133,8 +133,11 @@ Runner Events
     :var tgt: The target expression (e.g. ``*``). Included for ``state`` and
         ``function`` types only.
     :var args: The args passed to the orchestration job. **Note:** for
-        ``state`` and ``function`` types, also includes an ``expr_form`` which
-        shows what kind of match (``glob``, ``pcre``, etc.) was used.
+        ``state`` and ``function`` types, also includes a ``tgt_type`` value
+        which shows what kind of match (``glob``, ``pcre``, etc.) was used.
+        This value was named ``expr_form`` in the 2016.11 release cycle but has
+        been renamed to ``tgt_type`` in 2017.7.0 for consistency with other
+        events.
 
 .. _event-master_presence:
 

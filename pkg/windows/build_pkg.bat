@@ -1,66 +1,138 @@
 @echo off
 @echo Salt Windows Build Package Script
-@echo ----------------------------------------------------------------------
+@echo =====================================================================
+@echo.
+
+:: Get Passed Parameters
+@echo %0 :: Get Passed Parameters...
+@echo ---------------------------------------------------------------------
+Set "Version="
+Set "Python="
+:: First Parameter
+if not "%~1"=="" (
+    echo.%1 | FIND /I "=" > nul && (
+        :: Named Parameter
+        set "%~1"
+    ) || (
+        :: Positional Parameter
+        set "Version=%~1"
+    )
+)
+:: Second Parameter
+if not "%~2"=="" (
+    echo.%2 | FIND /I "=" > nul && (
+        :: Named Parameter
+        set "%~2"
+    ) || (
+        :: Positional Parameter
+        set "Python=%~2"
+    )
+)
+
+:: If Version not defined, Get the version from Git
+if "%Version%"=="" (
+    for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
+)
+
+:: If Python not defined, Assume Python 2
+if "%Python%"=="" (
+    set Python=2
+)
+
+:: Verify valid Python value (2 or 3)
+set "x="
+for /f "delims=23" %%i in ("%Python%") do set x=%%i
+if Defined x (
+    echo Invalid Python Version specified. Must be 2 or 3. Passed %Python%
+    goto eof
+)
 @echo.
 
 :: Define Variables
 @echo Defining Variables...
 @echo ----------------------------------------------------------------------
+if %Python%==2 (
+    Set "PyDir=C:\Python27"
+    Set "PyVerMajor=2"
+    Set "PyVerMinor=7"
+) else (
+    Set "PyDir=C:\Program Files\Python35"
+    Set "PyVerMajor=3"
+    Set "PyVerMinor=5"
+)
+
+:: Verify the Python Installation
+If not Exist "%PyDir%\python.exe" (
+    @echo Expected version of Python not found: Python %PyVerMajor%.%PyVerMinor%"
+    exit /b 1
+)
+
 Set "CurrDir=%cd%"
 Set "BinDir=%cd%\buildenv\bin"
 Set "InsDir=%cd%\installer"
 Set "PreDir=%cd%\prereqs"
-Set "PyDir=C:\Python27"
-
-:: Get the version from git if not passed
-if [%1]==[] (
-    for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
-) else (
-    set "Version=%~1"
-)
 
 :: Find the NSIS Installer
 If Exist "C:\Program Files\NSIS\" (
-    Set NSIS="C:\Program Files\NSIS\"
+    Set "NSIS=C:\Program Files\NSIS\"
 ) Else (
-    Set NSIS="C:\Program Files (x86)\NSIS\"
+    Set "NSIS=C:\Program Files (x86)\NSIS\"
 )
+If not Exist "%NSIS%NSIS.exe" (
+    @echo "NSIS not found in %NSIS%"
+    exit /b 1
+)
+
+:: Add NSIS to the Path
 Set "PATH=%NSIS%;%PATH%"
 @echo.
 
-@echo Copying C:\Python27 to bin...
-@echo ----------------------------------------------------------------------
 :: Check for existing bin directory and remove
-If Exist "%BinDir%\" rd /S /Q "%BinDir%"
+If Exist "%BinDir%\" (
+    @echo Removing %BinDir%
+    @echo ----------------------------------------------------------------------
+    rd /S /Q "%BinDir%"
+)
 
-:: Copy the Python27 directory to bin
+:: Copy the contents of the Python Dir to bin
+@echo Copying "%PyDir%" to bin...
+@echo ----------------------------------------------------------------------
 @echo xcopy /E /Q "%PyDir%" "%BinDir%\"
 xcopy /E /Q "%PyDir%" "%BinDir%\"
 @echo.
 
-@echo Copying VCRedist 2008 MFC to Prerequisites
+@echo Copying VCRedist to Prerequisites
 @echo ----------------------------------------------------------------------
 :: Make sure the "prereq" directory exists
 If NOT Exist "%PreDir%" mkdir "%PreDir%"
 
-:: Check for 64 bit by finding the Program Files (x86) directory
-Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
-Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
-If Defined ProgramFiles(x86) (
-    bitsadmin /transfer "VCRedist 2008 MFC AMD64" "%Url64%" "%PreDir%\vcredist.exe"
+:: Set the location of the vcredist to download
+If %Python%==3 (
+    Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2015.exe"
+    Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2015.exe"
+
 ) Else (
-    bitsadmin /transfer "VCRedist 2008 MFC x86" "%Url32%" "%PreDir%\vcredist.exe"
+    Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
+    Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
+)
+
+:: Check for 64 bit by finding the Program Files (x86) directory
+If Defined ProgramFiles(x86) (
+    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%PreDir%\vcredist.exe"
+) Else (
+    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%PreDir%\vcredist.exe"
 )
 @echo.
 
 :: Remove the fixed path in .exe files
 @echo Removing fixed path from .exe files
 @echo ----------------------------------------------------------------------
-%PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
-%PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install-2.7.exe"
-%PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
-%PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip2.7.exe"
-%PyDir%\python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip2.exe"
+"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
+"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install-%PyVerMajor%.%PyVerMinor%.exe"
+"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
+"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.%PyVerMinor%.exe"
+"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.exe"
+"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\wheel.exe"
 @echo.
 
 @echo Cleaning up unused files and directories...
@@ -475,7 +547,7 @@ If Exist "%BinDir%\Scripts\salt-unity*"^
 
 @echo Building the installer...
 @echo ----------------------------------------------------------------------
-makensis.exe /DSaltVersion=%Version% "%InsDir%\Salt-Minion-Setup.nsi"
+makensis.exe /DSaltVersion=%Version% /DPythonVersion=%Python% "%InsDir%\Salt-Minion-Setup.nsi"
 @echo.
 
 @echo.

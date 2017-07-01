@@ -22,7 +22,7 @@ if hasattr(ctypes, 'windll'):
     WSAStringToAddressA = ctypes.windll.ws2_32.WSAStringToAddressA
     WSAAddressToStringA = ctypes.windll.ws2_32.WSAAddressToStringA
 else:
-    def not_windows():
+    def not_windows(*args):
         raise SystemError(
             "Invalid platform. ctypes.windll must be available."
         )

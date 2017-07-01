@@ -118,8 +118,9 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                 # copied. The reason is the same as the io_loop skip above.
                 setattr(result, key,
                         AsyncReqMessageClientPool(result.opts,
-                                              self.master_uri,
-                                              io_loop=result._io_loop))
+                                                  args=(result.opts, self.master_uri,),
+                                                  kwargs={'io_loop': self._io_loop}))
+
                 continue
             setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
         return result
@@ -156,9 +157,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             # we don't need to worry about auth as a kwarg, since its a singleton
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self._io_loop)
         self.message_client = AsyncReqMessageClientPool(self.opts,
-                                                    self.master_uri,
-                                                    io_loop=self._io_loop,
-                                                    )
+                                                        args=(self.opts, self.master_uri,),
+                                                        kwargs={'io_loop': self._io_loop})
 
     def __del__(self):
         '''
@@ -654,6 +654,38 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         sys.exit(salt.defaults.exitcodes.EX_OK)
 
 
+def _set_tcp_keepalive(zmq_socket, opts):
+    '''
+    Ensure that TCP keepalives are set as specified in "opts".
+
+    Warning: Failure to set TCP keepalives on the salt-master can result in
+    not detecting the loss of a minion when the connection is lost or when
+    it's host has been terminated without first closing the socket.
+    Salt's Presence System depends on this connection status to know if a minion
+    is "present".
+
+    Warning: Failure to set TCP keepalives on minions can result in frequent or
+    unexpected disconnects!
+    '''
+    if hasattr(zmq, 'TCP_KEEPALIVE') and opts:
+        if 'tcp_keepalive' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE, opts['tcp_keepalive']
+            )
+        if 'tcp_keepalive_idle' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE_IDLE, opts['tcp_keepalive_idle']
+            )
+        if 'tcp_keepalive_cnt' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE_CNT, opts['tcp_keepalive_cnt']
+            )
+        if 'tcp_keepalive_intvl' in opts:
+            zmq_socket.setsockopt(
+                zmq.TCP_KEEPALIVE_INTVL, opts['tcp_keepalive_intvl']
+            )
+
+
 class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     '''
     Encapsulate synchronous operations for a publisher channel
@@ -675,6 +707,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         context = zmq.Context(1)
         # Prepare minion publish socket
         pub_sock = context.socket(zmq.PUB)
+        _set_tcp_keepalive(pub_sock, self.opts)
         # if 2.1 >= zmq < 3.0, we only have one HWM setting
         try:
             pub_sock.setsockopt(zmq.HWM, self.opts.get('pub_hwm', 1000))
@@ -803,8 +836,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         if self.opts['zmq_filtering'] and load['tgt_type'] in match_targets:
             # Fetch a list of minions that match
             match_ids = self.ckminions.check_minions(load['tgt'],
-                                                     expr_form=load['tgt_type']
-                                                     )
+                                                     tgt_type=load['tgt_type'])
 
             log.debug("Publish Side Match: {0}".format(match_ids))
             # Send list of miions thru so zmq can target them
@@ -815,32 +847,24 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         context.term()
 
 
-# TODO: unit tests!
-class AsyncReqMessageClientPool(object):
-    def __init__(self, opts, addr, linger=0, io_loop=None, socket_pool=1):
-        self.opts = opts
-        self.addr = addr
-        self.linger = linger
-        self.io_loop = io_loop
-        self.socket_pool = socket_pool
-        self.message_clients = []
+class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
+    '''
+    Wrapper class of AsyncReqMessageClientPool to avoid blocking waiting while writing data to socket.
+    '''
+    def __init__(self, opts, args=None, kwargs=None):
+        super(AsyncReqMessageClientPool, self).__init__(AsyncReqMessageClient, opts, args=args, kwargs=kwargs)
+
+    def __del__(self):
+        self.destroy()
 
     def destroy(self):
         for message_client in self.message_clients:
             message_client.destroy()
         self.message_clients = []
 
-    def __del__(self):
-        self.destroy()
-
-    def send(self, message, timeout=None, tries=3, future=None, callback=None, raw=False):
-        if len(self.message_clients) < self.socket_pool:
-            message_client = AsyncReqMessageClient(self.opts, self.addr, self.linger, self.io_loop)
-            self.message_clients.append(message_client)
-            return message_client.send(message, timeout, tries, future, callback, raw)
-        else:
-            available_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
-            return available_clients[0].send(message, timeout, tries, future, callback, raw)
+    def send(self, *args, **kwargs):
+        message_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
+        return message_clients[0].send(*args, **kwargs)
 
 
 # TODO: unit tests!
@@ -916,7 +940,7 @@ class AsyncReqMessageClient(object):
                 zmq.RECONNECT_IVL_MAX, 5000
             )
 
-        self._set_tcp_keepalive()
+        _set_tcp_keepalive(self.socket, self.opts)
         if self.addr.startswith('tcp://['):
             # Hint PF type if bracket enclosed IPv6 address
             if hasattr(zmq, 'IPV6'):
@@ -926,31 +950,6 @@ class AsyncReqMessageClient(object):
         self.socket.linger = self.linger
         self.socket.connect(self.addr)
         self.stream = zmq.eventloop.zmqstream.ZMQStream(self.socket, io_loop=self.io_loop)
-
-    def _set_tcp_keepalive(self):
-        '''
-        Ensure that TCP keepalives are set for the ReqServer.
-
-        Warning: Failure to set TCP keepalives can result in frequent or unexpected
-        disconnects!
-        '''
-        if hasattr(zmq, 'TCP_KEEPALIVE') and self.opts:
-            if 'tcp_keepalive' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
-                )
-            if 'tcp_keepalive_idle' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
-                )
-            if 'tcp_keepalive_cnt' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
-                )
-            if 'tcp_keepalive_intvl' in self.opts:
-                self.socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
-                )
 
     @tornado.gen.coroutine
     def _internal_send_recv(self):

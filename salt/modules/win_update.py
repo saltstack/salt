@@ -2,6 +2,9 @@
 '''
 Module for running windows updates.
 
+This module is being deprecated and will be removed in Salt Fluorine. Please use
+the ``win_wua`` module instead.
+
 :depends:   - win32com
         - win32con
         - win32api
@@ -61,6 +64,7 @@ import logging
 
 # Import 3rd-party libs
 # pylint: disable=import-error
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=no-name-in-module,redefined-builtin
 try:
     import win32com.client
@@ -82,6 +86,11 @@ def __virtual__():
     Only works on Windows systems
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
+        salt.utils.warn_until(
+            'Fluorine',
+            'The \'win_update\' module is being deprecated and will be removed '
+            'in Salt {version}. Please use the \'win_wua\' module instead.'
+        )
         return True
     return (False, "Module win_update: module has failed dependencies or is not on Windows client")
 
@@ -416,8 +425,8 @@ class PyWinUpdater(object):
     def SetSkips(self, skips):
         if skips:
             for i in skips:
-                value = i[next(i.iterkeys())]
-                skip = next(i.iterkeys())
+                value = i[next(six.iterkeys(i))]
+                skip = next(six.iterkeys(i))
                 self.SetSkip(skip, value)
                 log.debug('was asked to set {0} to {1}'.format(skip, value))
 

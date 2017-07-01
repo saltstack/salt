@@ -4,10 +4,16 @@
 Orchestrate Runner
 ==================
 
-Orchestration is accomplished in salt primarily through the :ref:`Orchestrate
-Runner <orchestrate-runner>`. Added in version 0.17.0, this Salt :ref:`Runner
-<runners>` can use the full suite of :ref:`requisites` available in states,
-and can also execute states/functions using salt-ssh.
+Executing states or highstate on a minion is perfect when you want to ensure that
+minion configured and running the way you want. Sometimes however you want to 
+configure a set of minions all at once.
+
+For example, if you want to set up a load balancer in front of a cluster of web 
+servers you can ensure the load balancer is set up first, and then the same
+matching configuration is applied consistently across the whole cluster.
+
+Orchestration is the way to do this.
+
 
 The Orchestrate Runner
 ----------------------
@@ -23,12 +29,10 @@ The Orchestrate Runner
     used.
   * The states/functions will also work on salt-ssh minions.
 
-  The Orchestrate Runner was added with the intent to eventually deprecate the
-  OverState system, however the OverState will still be maintained until Salt
-  2015.8.0.
+  The Orchestrate Runner replaced the OverState system in Salt 2015.8.0.
 
 The orchestrate runner generalizes the Salt state system to a Salt master
-context.  Whereas the ``state.sls``, ``state.highstate``, et al functions are
+context.  Whereas the ``state.sls``, ``state.highstate``, et al. functions are
 concurrently and independently executed on each Salt minion, the
 ``state.orchestrate`` runner is executed on the master, giving it a
 master-level view and control over requisites, such as state ordering and
@@ -37,13 +41,21 @@ application of states on different minions that must not happen simultaneously,
 or for halting the state run on all minions if a minion fails one of its
 states.
 
-If you want to setup a load balancer in front of a cluster of web servers, for
-example, you can ensure the load balancer is setup before the web servers or
-stop the state run altogether if one of the minions does not set up correctly.
-
-The ``state.sls``, ``state.highstate``, et al functions allow you to statefully
+The ``state.sls``, ``state.highstate``, et al. functions allow you to statefully
 manage each minion and the ``state.orchestrate`` runner allows you to
 statefully manage your entire infrastructure.
+
+Writing SLS Files
+~~~~~~~~~~~~~~~~~
+
+Orchestrate SLS files are stored in the same location as State SLS files. This
+means that both ``file_roots`` and ``gitfs_remotes`` impact what SLS files are
+available to the reactor and orchestrator.
+
+It is recommended to keep reactor and orchestrator SLS files in their own
+uniquely named subdirectories such as ``_orch/``, ``orch/``, ``_orchestrate/``,
+``react/``, ``_reactor/``, etc. This will avoid duplicate naming and will help
+prevent confusion.
 
 Executing the Orchestrate Runner
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -51,8 +63,8 @@ Executing the Orchestrate Runner
 The Orchestrate Runner command format is the same as for the ``state.sls``
 function, except that since it is a runner, it is executed with ``salt-run``
 rather than ``salt``.  Assuming you have a state.sls file called
-``/srv/salt/orch/webserver.sls`` the following command run on the master will
-apply the states defined in that file.
+``/srv/salt/orch/webserver.sls`` the following command, run on the master,
+will apply the states defined in that file.
 
 .. code-block:: bash
 
@@ -159,6 +171,55 @@ To run a highstate, set ``highstate: True`` in your state config:
 .. code-block:: bash
 
     salt-run state.orchestrate orch.web_setup
+
+Runner
+^^^^^^
+
+To execute another runner, use :mod:`salt.runner <salt.states.saltmod.runner>`.
+For example to use the ``cloud.profile`` runner in your orchestration state
+additional options to replace values in the configured profile, use this:
+
+.. code-block:: yaml
+
+    # /srv/salt/orch/deploy.sls
+    create_instance:
+      salt.runner:
+        - name: cloud.profile
+        - prof: cloud-centos
+        - provider: cloud
+        - instances:
+          - server1
+        - opts:
+            minion:
+              master: master1
+
+To get a more dynamic state, use jinja variables together with
+``inline pillar data``.
+Using the same example but passing on pillar data, the state would be like
+this.
+
+.. code-block:: yaml
+
+    # /srv/salt/orch/deploy.sls
+    {% set servers = salt['pillar.get']('servers', 'test') %}
+    {% set master = salt['pillat.get']('master', 'salt') %}
+    create_instance:
+      salt.runner:
+        - name: cloud.profile
+        - prof: cloud-centos
+        - provider: cloud
+        - instances:
+          - {{ servers }}
+        - opts:
+            minion:
+              master: {{ master }}
+
+To execute with pillar data.
+
+.. code-block:: bash
+
+    salt-run state.orch orch.deploy pillar='{"servers": "newsystem1",
+    "master": "mymaster"}'
 
 
 More Complex Orchestration
