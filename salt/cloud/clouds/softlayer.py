@@ -519,7 +519,7 @@ def list_nodes_full(mask='mask[id]', call=None):
     conn = get_conn(service='SoftLayer_Account')
     response = conn.getVirtualGuests()
     for node_id in response:
-        hostname = node_id['hostname'].split('.')[0]
+        hostname = node_id['hostname']
         ret[hostname] = node_id
     __utils__['cloud.cache_node_list'](ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
@@ -604,9 +604,6 @@ def destroy(name, call=None):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-
-    # If the VM was created with use_fqdn, the short hostname will be used instead.
-    name = name.split('.')[0]
 
     node = show_instance(name, call='action')
     conn = get_conn()

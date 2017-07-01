@@ -537,9 +537,6 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
-    # If the VM was created with use_fqdn, the short hostname will be used instead.
-    name = name.split('.')[0]
-
     node = show_instance(name, call='action')
     conn = get_conn(service='SoftLayer_Ticket')
     response = conn.createCancelServerTicket(
