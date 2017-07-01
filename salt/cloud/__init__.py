@@ -732,7 +732,7 @@ class Cloud(object):
                 for vm_name, details in six.iteritems(vms):
                     # XXX: The logic below can be removed once the aws driver
                     # is removed
-                    elif vm_name not in names:
+                    if vm_name not in names:
                         continue
 
                     elif driver == 'ec2' and 'aws' in handled_drivers and \
