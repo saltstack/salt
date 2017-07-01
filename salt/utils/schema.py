@@ -515,7 +515,7 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
                 'Please pass all arguments as named arguments. Un-named '
                 'arguments are not supported'
             )
-        for key in kwargs.copy().keys():
+        for key in kwargs.copy():
             # Store the kwarg keys as the instance attributes for the
             # serialization step
             if key == 'name':
@@ -622,16 +622,20 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         if properties:
             serialized['properties'] = properties
 
-        # Update the serialized object with any items to include after properties
+        # Update the serialized object with any items to include after properties.
+        # Do not overwrite properties already existing in the serialized dict.
         if cls.after_items_update:
             after_items_update = {}
             for entry in cls.after_items_update:
-                name, data = next(six.iteritems(entry))
-                if name in after_items_update:
-                    after_items_update[name].extend(data)
-                else:
-                    after_items_update[name] = data
-            serialized.update(after_items_update)
+                for name, data in six.iteritems(entry):
+                    if name in after_items_update:
+                        if isinstance(after_items_update[name], list):
+                            after_items_update[name].extend(data)
+                    else:
+                        after_items_update[name] = data
+            if after_items_update:
+                after_items_update.update(serialized)
+                serialized = after_items_update
 
         if required:
             # Only include required if not empty
@@ -1376,10 +1380,10 @@ class OneOfItem(SchemaItem):
 
     items = None
 
-    def __init__(self, items=None):
+    def __init__(self, items=None, required=None):
         if items is not None:
             self.items = items
-        super(OneOfItem, self).__init__()
+        super(OneOfItem, self).__init__(required=required)
 
     def __validate_attributes__(self):
         if not self.items:
@@ -1457,32 +1461,38 @@ class ComplexSchemaItem(BaseSchemaItem):
     .. versionadded:: 2016.11.0
 
     Complex Schema Item
-
-    This item can contain other schema items as attributes; the names of all
-    attributes need to be included in the _``_complex_attributes`` attribute
     '''
 
     # This attribute is populated by the metaclass, but pylint fails to see it
     # and assumes it's not an iterable
     _attributes = []
-    _complex_attributes = []
     _definition_name = None
 
-    def __init__(self, definition_name=None):
-        super(ComplexSchemaItem, self).__init__()
+    def __init__(self, definition_name=None, required=None):
+        super(ComplexSchemaItem, self).__init__(required=required)
         self.__type__ = 'object'
         self._definition_name = definition_name if definition_name else \
                 self.__class__.__name__
-        if self._complex_attributes:
-            for complex_attr in self._complex_attributes:
-                if complex_attr not in self._attributes:
-                    self._attributes.append(complex_attr)
+        # Schema attributes might have been added as class attributes so we
+        # and they must be added to the _attributes attr
+        self._add_missing_schema_attributes()
+
+    def _add_missing_schema_attributes(self):
+        '''
+        Adds any missed schema attributes to the _attributes list
+
+        The attributes can be class attributes and they won't be
+        included in the _attributes list automatically
+        '''
+        for attr in [attr for attr in dir(self) if not attr.startswith('__')]:
+            attr_val = getattr(self, attr)
+            if isinstance(getattr(self, attr), SchemaItem) and \
+               attr not in self._attributes:
+
+                self._attributes.append(attr)
 
     @property
     def definition_name(self):
-        '''
-        Definition name property
-        '''
         return self._definition_name
 
     def serialize(self):
@@ -1531,7 +1541,7 @@ class DefinitionsSchema(Schema):
     '''
     .. versionadded:: 2016.11.0
 
-    JSON schema classs that supports ComplexSchemaItem objects by adding
+    JSON schema class that supports ComplexSchemaItem objects by adding
     a definitions section to the JSON schema, containing the item definitions.
 
     All references to ComplexSchemaItems are built using schema inline
@@ -1542,17 +1552,33 @@ class DefinitionsSchema(Schema):
     def serialize(cls, id_=None):
         # Get the initial serialization
         serialized = super(DefinitionsSchema, cls).serialize(id_)
-
+        complex_items = []
         # Augment the serializations with the definitions of all complex items
-        complex_items = [config for config in six.itervalues(cls._items)
-                         if isinstance(config, ComplexSchemaItem)]
-        aux_items = complex_items[:]
+        aux_items = cls._items.values()
+
+        # Convert dict_view object to a list on Python 3
+        if six.PY3:
+            aux_items = list(aux_items)
+
         while aux_items:
             item = aux_items.pop(0)
-            # Recursively add complex attributes
-            new_items = item.get_complex_attrs()
-            complex_items.extend(new_items)
-            aux_items.extend(new_items)
+            # Add complex attributes
+            if isinstance(item, ComplexSchemaItem):
+                complex_items.append(item)
+                aux_items.extend(item.get_complex_attrs())
+
+            # Handle container items
+            if isinstance(item, OneOfItem):
+                aux_items.extend(item.items)
+            elif isinstance(item, ArrayItem):
+                aux_items.append(item.items)
+            elif isinstance(item, DictItem):
+                if item.properties:
+                    aux_items.extend(item.properties.values())
+                if item.additional_properties and \
+                   isinstance(item.additional_properties, SchemaItem):
+
+                    aux_items.append(item.additional_properties)
 
         definitions = OrderedDict()
         for config in complex_items:

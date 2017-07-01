@@ -60,26 +60,29 @@ def _fire_args(tag_data):
         )
 
 
-def state(
-        name,
+def state(name,
         tgt,
         ssh=False,
-        tgt_type=None,
+        tgt_type='glob',
         expr_form=None,
         ret='',
+        ret_config=None,
+        ret_kwargs=None,
         highstate=None,
         sls=None,
         top=None,
         saltenv=None,
         test=False,
         pillar=None,
-        expect_minions=False,
+        pillarenv=None,
+        expect_minions=True,
         fail_minions=None,
         allow_fail=0,
         concurrent=False,
         timeout=None,
         batch=None,
         queue=False,
+        subset=None,
         orchestration_jid=None):
     '''
     Invoke a state run on a given target
@@ -95,11 +98,21 @@ def state(
         Masterless support: When running on a masterless minion, the ``tgt``
         is ignored and will always be the local minion.
 
-    tgt_type | expr_form
-        The target type to resolve, defaults to glob
+    tgt_type
+        The target type to resolve, defaults to ``glob``
+
+    expr_form
+        .. deprecated:: 2017.7.0
+            Use tgt_type instead
 
     ret
         Optionally set a single or a list of returners to use
+
+    ret_config
+        Use an alternative returner configuration
+
+    ret_kwargs
+        Override individual returner configuration items
 
     highstate
         Defaults to None, if set to True the target systems will ignore any
@@ -119,6 +132,11 @@ def state(
 
     pillar
         Pass the ``pillar`` kwarg through to the state function
+
+    pillarenv
+        The pillar environment to grab pillars from
+
+        .. versionadded:: 2017.7.0
 
     saltenv
         The default salt environment to pull sls files from
@@ -154,6 +172,11 @@ def state(
 
         .. versionadded:: 2016.3.0
 
+    subset
+        Number of minions from the targeted set to randomly use
+
+        .. versionadded:: 2017.7.0
+
     Examples:
 
     Run a list of sls files via :py:func:`state.sls <salt.state.sls>` on target
@@ -183,6 +206,12 @@ def state(
     '''
     cmd_kw = {'arg': [], 'kwarg': {}, 'ret': ret, 'timeout': timeout}
 
+    if ret_config:
+        cmd_kw['ret_config'] = ret_config
+
+    if ret_kwargs:
+        cmd_kw['ret_kwargs'] = ret_kwargs
+
     state_ret = {'name': name,
                  'changes': {},
                  'comment': '',
@@ -195,18 +224,18 @@ def state(
         state_ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
         return state_ret
 
-    if expr_form and tgt_type:
-        state_ret.setdefault('warnings', []).append(
-            'Please only use \'tgt_type\' or \'expr_form\' not both. '
-            'Preferring \'tgt_type\' over \'expr_form\''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
         )
-        expr_form = None
-    elif expr_form and not tgt_type:
         tgt_type = expr_form
-    elif not tgt_type and not expr_form:
-        tgt_type = 'glob'
 
-    cmd_kw['expr_form'] = tgt_type
+    cmd_kw['tgt_type'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
     if highstate:
@@ -230,6 +259,13 @@ def state(
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
 
+    # If pillarenv is directly defined, use it
+    if pillarenv:
+        cmd_kw['kwarg']['pillarenv'] = pillarenv
+    # Use pillarenv if it's passed from __opts__ (via state.orchestrate for example)
+    elif __opts__.get('pillarenv'):
+        cmd_kw['kwarg']['pillarenv'] = __opts__['pillarenv']
+
     cmd_kw['kwarg']['saltenv'] = saltenv if saltenv is not None else __env__
     cmd_kw['kwarg']['queue'] = queue
 
@@ -242,6 +278,8 @@ def state(
 
     if batch is not None:
         cmd_kw['batch'] = str(batch)
+    if subset is not None:
+        cmd_kw['subset'] = subset
 
     masterless = __opts__['__role'] == 'minion' and \
                  __opts__['file_client'] == 'local'
@@ -281,6 +319,11 @@ def state(
             'string. Ignored.'
         )
         fail_minions = ()
+
+    if not cmd_ret and expect_minions:
+        state_ret['result'] = False
+        state_ret['comment'] = 'No minions returned'
+        return state_ret
 
     for minion, mdata in six.iteritems(cmd_ret):
         if mdata.get('out', '') != 'highstate':
@@ -353,16 +396,19 @@ def function(
         name,
         tgt,
         ssh=False,
-        tgt_type=None,
+        tgt_type='glob',
         expr_form=None,
         ret='',
+        ret_config=None,
+        ret_kwargs=None,
         expect_minions=False,
         fail_minions=None,
         fail_function=None,
         arg=None,
         kwarg=None,
         timeout=None,
-        batch=None):
+        batch=None,
+        subset=None):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
 
@@ -372,8 +418,12 @@ def function(
     tgt
         The target specification, aka '*' for all minions
 
-    tgt_type | expr_form
-        The target type, defaults to glob
+    tgt_type
+        The target type, defaults to ``glob``
+
+    expr_form
+        .. deprecated:: 2017.7.0
+            Use tgt_type instead
 
     arg
         The list of arguments to pass into the function
@@ -383,6 +433,12 @@ def function(
 
     ret
         Optionally set a single or a list of returners to use
+
+    ret_config
+        Use an alternative returner configuration
+
+    ret_kwargs
+        Override individual returner configuration items
 
     expect_minions
         An optional boolean for failing if some minions do not respond
@@ -396,6 +452,15 @@ def function(
 
     ssh
         Set to `True` to use the ssh client instead of the standard salt client
+
+    batch
+        Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
+
+    subset
+        Number of minions from the targeted set to randomly use
+
+        .. versionadded:: 2017.7.0
+
     '''
     func_ret = {'name': name,
            'changes': {},
@@ -411,24 +476,33 @@ def function(
 
     cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
 
-    if expr_form and tgt_type:
-        func_ret['warnings'] = [
-            'Please only use \'tgt_type\' or \'expr_form\' not both. '
-            'Preferring \'tgt_type\' over \'expr_form\''
-        ]
-        expr_form = None
-    elif expr_form and not tgt_type:
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
         tgt_type = expr_form
-    elif not tgt_type and not expr_form:
-        tgt_type = 'glob'
 
     if batch is not None:
         cmd_kw['batch'] = str(batch)
+    if subset is not None:
+        cmd_kw['subset'] = subset
 
-    cmd_kw['expr_form'] = tgt_type
+    cmd_kw['tgt_type'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
     cmd_kw['_cmd_meta'] = True
+
+    if ret_config:
+        cmd_kw['ret_config'] = ret_config
+
+    if ret_kwargs:
+        cmd_kw['ret_kwargs'] = ret_kwargs
+
     fun = name
     if __opts__['test'] is True:
         func_ret['comment'] = (
@@ -589,6 +663,8 @@ def wait_for_event(
 
         if fnmatch.fnmatch(event['tag'], name):
             val = event['data'].get(event_id)
+            if val is None and 'data' in event['data']:
+                val = event['data']['data'].get(event_id)
 
             if val is not None:
                 try:

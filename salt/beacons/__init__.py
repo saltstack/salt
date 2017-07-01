@@ -13,6 +13,7 @@ import salt.loader
 import salt.utils
 import salt.utils.minion
 from salt.ext.six.moves import map
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -30,12 +31,14 @@ class Beacon(object):
     def process(self, config, grains):
         '''
         Process the configured beacons
+
         The config must be a list and looks like this in yaml
-        code_block:: yaml
+
+        .. code_block:: yaml
             beacons:
-                inotify:
-                    - /etc/fstab: {}
-                    - /var/cache/foo: {}
+              inotify:
+                - /etc/fstab: {}
+                - /var/cache/foo: {}
         '''
         ret = []
         b_config = copy.deepcopy(config)
@@ -51,10 +54,6 @@ class Beacon(object):
                 current_beacon_config = {}
                 list(map(current_beacon_config.update, config[mod]))
             elif isinstance(config[mod], dict):
-                salt.utils.warn_until(
-                    'Nitrogen',
-                    'Beacon configuration should be a list instead of a dictionary.'
-                )
                 current_beacon_config = config[mod]
 
             if 'enabled' in current_beacon_config:
@@ -108,7 +107,7 @@ class Beacon(object):
                 if runonce:
                     self.disable_beacon(mod)
             else:
-                log.debug('Unable to process beacon {0}'.format(mod))
+                log.warning('Unable to process beacon {0}'.format(mod))
         return ret
 
     def _trim_config(self, b_config, mod, key):

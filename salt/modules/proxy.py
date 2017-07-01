@@ -82,7 +82,7 @@ def _get_proxy_windows(types=None):
     if len(types) == 1:
         return ret[types[0]]
     else:
-        for key in ret.keys():
+        for key in ret:
             if key not in types:
                 del ret[key]
 

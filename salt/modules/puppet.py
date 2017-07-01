@@ -5,7 +5,7 @@ Execute puppet routines
 
 # Import python libs
 from __future__ import absolute_import
-from distutils import version
+from distutils import version  # pylint: disable=no-name-in-module
 import logging
 import os
 import datetime

@@ -40,6 +40,7 @@ Module to provide Citrix Netscaler compatibility to Salt (compatible with netsca
         salt-call netscaler.server_exists server_name netscaler_host=1.2.3.4 netscaler_user=username netscaler_pass=password
         salt-call netscaler.server_exists server_name netscaler_host=1.2.3.5 netscaler_user=username2 netscaler_pass=password2
         salt-call netscaler.server_enable server_name2 netscaler_host=1.2.3.5
+        salt-call netscaler.server_up server_name3 netscaler_host=1.2.3.6 netscaler_useSSL=False
 
 '''
 from __future__ import absolute_import
@@ -81,7 +82,7 @@ def _connect(**kwargs):
     connargs = dict()
 
     # Shamelessy ripped from the mysql module
-    def __connarg(name, key=None):
+    def __connarg(name, key=None, default=None):
         '''
         Add key to connargs, only if name exists in our kwargs or as
         netscaler.<name> in __opts__ or __pillar__ Evaluate in said order - kwargs,
@@ -103,14 +104,15 @@ def _connect(**kwargs):
             val = __salt__['config.option']('netscaler.{0}'.format(name), None)
             if val is not None:
                 connargs[key] = val
+            elif default is not None:
+                connargs[key] = default
 
     __connarg('netscaler_host', 'host')
     __connarg('netscaler_user', 'user')
     __connarg('netscaler_pass', 'pass')
-    # useSSL = True will be enforced
-    #_connarg('connection_useSSL', 'useSSL')
+    __connarg('netscaler_useSSL', 'useSSL', True)
 
-    nitro = NSNitro(connargs['host'], connargs['user'], connargs['pass'], True)
+    nitro = NSNitro(connargs['host'], connargs['user'], connargs['pass'], connargs['useSSL'])
     try:
         nitro.login()
     except NSNitroError as error:

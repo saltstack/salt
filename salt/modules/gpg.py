@@ -14,7 +14,6 @@ Sign, encrypt and sign plus encrypt text and files.
 
 # Import python libs
 from __future__ import absolute_import
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 import functools
 import logging
 import os
@@ -23,8 +22,8 @@ import time
 
 # Import salt libs
 import salt.utils
-import salt.syspaths
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -97,7 +96,7 @@ def __virtual__():
         return (False, 'The gpg execution module cannot be loaded: '
                 'gpg binary is not in the path.')
     if HAS_LIBS:
-        gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
+        gnupg_version = _LooseVersion(gnupg.__version__)
         if gnupg_version >= '1.3.1':
             global GPG_1_3_1
             GPG_1_3_1 = True
@@ -133,7 +132,7 @@ def _get_user_gnupghome(user):
     Return default GnuPG home directory path for a user
     '''
     if user == 'salt':
-        gnupghome = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+        gnupghome = os.path.join(__salt__['config.get']('config_dir'), 'gpgkeys')
     else:
         gnupghome = os.path.join(_get_user_info(user)['home'], '.gnupg')
 
@@ -163,7 +162,7 @@ def _restore_ownership(func):
                 __salt__['file.chown'](path, run_user['name'], group)
 
         # Filter special kwargs
-        for key in kwargs.keys():
+        for key in list(kwargs):
             if key.startswith('__'):
                 del kwargs[key]
 
@@ -905,10 +904,7 @@ def trust_key(keyid=None,
 
     if not fingerprint:
         if keyid:
-            if user:
-                key = get_key(keyid, user=user)
-            else:
-                key = get_key(keyid)
+            key = get_key(keyid, user=user)
             if key:
                 if 'fingerprint' not in key:
                     ret['res'] = False
@@ -932,7 +928,7 @@ def trust_key(keyid=None,
     _user = user
 
     if user == 'salt':
-        homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+        homeDir = os.path.join(__salt__['config.get']('config_dir'), 'gpgkeys')
         cmd.extend([' --homedir', homeDir])
         _user = 'root'
     res = __salt__['cmd.run_all'](cmd,
@@ -1016,7 +1012,7 @@ def sign(user=None,
 
     # Check for at least one secret key to sign with
 
-    gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
+    gnupg_version = _LooseVersion(gnupg.__version__)
     if text:
         if gnupg_version >= '1.3.1':
             signed_data = gpg.sign(text, default_key=keyid, passphrase=gpg_passphrase)
@@ -1039,7 +1035,8 @@ def sign(user=None,
 def verify(text=None,
            user=None,
            filename=None,
-           gnupghome=None):
+           gnupghome=None,
+           signature=None):
     '''
     Verify a message or file
 
@@ -1057,6 +1054,10 @@ def verify(text=None,
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    signature
+        Specify the filename of a detached signature.
+    .. versionadded:: Nitrogen
+
     CLI Example:
 
     .. code-block:: bash
@@ -1073,8 +1074,14 @@ def verify(text=None,
     if text:
         verified = gpg.verify(text)
     elif filename:
-        with salt.utils.flopen(filename, 'rb') as _fp:
-            verified = gpg.verify_file(_fp)
+        if signature:
+            # need to call with fopen instead of flopen due to:
+            # https://bitbucket.org/vinay.sajip/python-gnupg/issues/76/verify_file-closes-passed-file-handle
+            with salt.utils.fopen(signature, 'rb') as _fp:
+                verified = gpg.verify_file(_fp, filename)
+        else:
+            with salt.utils.flopen(filename, 'rb') as _fp:
+                verified = gpg.verify_file(_fp)
     else:
         raise SaltInvocationError('filename or text must be passed.')
 

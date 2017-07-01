@@ -166,7 +166,7 @@ def _get_rsa_key(path):
     retrieve the key from disk.
     '''
     log.debug('salt.crypt._get_rsa_key: Loading private key')
-    return _get_key_with_evict(path, os.path.getmtime(path))
+    return _get_key_with_evict(path, str(os.path.getmtime(path)))
 
 
 def sign_message(privkey_path, message):
@@ -332,9 +332,10 @@ class MasterKeys(dict):
                             name + '.pub')
         if not os.path.isfile(path):
             key = self.__get_keys()
-            with salt.utils.fopen(path, 'wb+') as f:
-                f.write(key.publickey().exportKey('PEM'))
-        return salt.utils.fopen(path).read()
+            with salt.utils.fopen(path, 'wb+') as wfh:
+                wfh.write(key.publickey().exportKey('PEM'))
+        with salt.utils.fopen(path) as rfh:
+            return rfh.read()
 
     def get_mkey_paths(self):
         return self.pub_path, self.rsa_path
@@ -624,7 +625,7 @@ class AsyncAuth(object):
                             'minion.\nOr restart the Salt Master in open mode to '
                             'clean out the keys. The Salt Minion will now exit.'
                         )
-                        sys.exit(salt.defaults.exitcodes.EX_OK)
+                        sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 # has the master returned that its maxed out with minions?
                 elif payload['load']['ret'] == 'full':
                     raise tornado.gen.Return('full')
@@ -1166,7 +1167,7 @@ class SAuth(AsyncAuth):
                             'minion.\nOr restart the Salt Master in open mode to '
                             'clean out the keys. The Salt Minion will now exit.'
                         )
-                        sys.exit(salt.defaults.exitcodes.EX_OK)
+                        sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 # has the master returned that its maxed out with minions?
                 elif payload['load']['ret'] == 'full':
                     return 'full'
@@ -1265,6 +1266,8 @@ class Crypticle(object):
         aes_key, hmac_key = self.keys
         sig = data[-self.SIG_SIZE:]
         data = data[:-self.SIG_SIZE]
+        if six.PY3 and not isinstance(data, bytes):
+            data = salt.utils.to_bytes(data)
         mac_bytes = hmac.new(hmac_key, data, hashlib.sha256).digest()
         if len(mac_bytes) != len(sig):
             log.debug('Failed to authenticate message')

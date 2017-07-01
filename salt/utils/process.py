@@ -688,6 +688,12 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
             msg += 'SIGTERM'
         msg += '. Exiting'
         log.debug(msg)
+        if HAS_PSUTIL:
+            process = psutil.Process(self.pid)
+            if hasattr(process, 'children'):
+                for child in process.children(recursive=True):
+                    if child.is_running():
+                        child.terminate()
         sys.exit(salt.defaults.exitcodes.EX_OK)
 
     def start(self):

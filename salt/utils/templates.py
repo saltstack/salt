@@ -8,7 +8,6 @@ from __future__ import absolute_import
 # Import python libs
 import codecs
 import os
-import imp
 import logging
 import tempfile
 import traceback
@@ -17,19 +16,31 @@ import sys
 # Import third party libs
 import jinja2
 import jinja2.ext
+import salt.ext.six as six
+
+if sys.version_info[:2] >= (3, 5):
+    import importlib.machinery  # pylint: disable=no-name-in-module,import-error
+    import importlib.util  # pylint: disable=no-name-in-module,import-error
+    USE_IMPORTLIB = True
+else:
+    import imp
+    USE_IMPORTLIB = False
 
 # Import salt libs
 import salt.utils
+import salt.utils.http
+import salt.utils.files
 import salt.utils.yamlencoding
 import salt.utils.locales
+import salt.utils.hashutils
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
 import salt.utils.jinja
+import salt.utils.network
 from salt.utils.odict import OrderedDict
+from salt.utils.decorators import JinjaFilter, JinjaTest
 from salt import __path__ as saltpath
-from salt.ext.six import string_types
-import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -39,18 +50,6 @@ TEMPLATE_DIRNAME = os.path.join(saltpath[0], 'templates')
 # FIXME: also in salt/template.py
 SLS_ENCODING = 'utf-8'  # this one has no BOM.
 SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
-
-ALIAS_WARN = (
-        'Starting in 2015.5, cmd.run uses python_shell=False by default, '
-        'which doesn\'t support shellisms (pipes, env variables, etc). '
-        'cmd.run is currently aliased to cmd.shell to prevent breakage. '
-        'Please switch to cmd.shell or set python_shell=True to avoid '
-        'breakage in the future, when this aliasing is removed.'
-)
-ALIASES = {
-        'cmd.run': 'cmd.shell',
-        'cmd': {'run': 'shell'},
-}
 
 
 class AliasedLoader(object):
@@ -69,18 +68,10 @@ class AliasedLoader(object):
         self.wrapped = wrapped
 
     def __getitem__(self, name):
-        if name in ALIASES:
-            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
-            return self.wrapped[ALIASES[name]]
-        else:
-            return self.wrapped[name]
+        return self.wrapped[name]
 
     def __getattr__(self, name):
-        if name in ALIASES:
-            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
-            return AliasedModule(getattr(self.wrapped, name), ALIASES[name])
-        else:
-            return getattr(self.wrapped, name)
+        return getattr(self.wrapped, name)
 
 
 class AliasedModule(object):
@@ -96,11 +87,7 @@ class AliasedModule(object):
         self.wrapped = wrapped
 
     def __getattr__(self, name):
-        if name in self.aliases:
-            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
-            return getattr(self.wrapped, self.aliases[name])
-        else:
-            return getattr(self.wrapped, name)
+        return getattr(self.wrapped, name)
 
 
 def wrap_tmpl_func(render_str):
@@ -148,7 +135,7 @@ def wrap_tmpl_func(render_str):
             context['sls_path'] = slspath.replace('/', '_')
             context['slspath'] = slspath
 
-        if isinstance(tmplsrc, string_types):
+        if isinstance(tmplsrc, six.string_types):
             if from_str:
                 tmplstr = tmplsrc
             else:
@@ -176,6 +163,8 @@ def wrap_tmpl_func(render_str):
             tmplsrc.close()
         try:
             output = render_str(tmplstr, context, tmplpath)
+            if six.PY2:
+                output = output.encode(SLS_ENCODING)
             if salt.utils.is_windows():
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
@@ -190,7 +179,9 @@ def wrap_tmpl_func(render_str):
             if to_str:  # then render as string
                 return dict(result=True, data=output)
             with tempfile.NamedTemporaryFile('wb', delete=False, prefix=salt.utils.files.TEMPFILE_PREFIX) as outf:
-                outf.write(SLS_ENCODER(output)[0])
+                if six.PY3:
+                    output = output.encode(SLS_ENCODING)
+                outf.write(output)
                 # Note: If nothing is replaced or added by the rendering
                 #       function, then the contents of the output file will
                 #       be exactly the same as the input.
@@ -305,14 +296,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     if not saltenv:
         if tmplpath:
-            # i.e., the template is from a file outside the state tree
-            #
-            # XXX: FileSystemLoader is not being properly instantiated here is
-            # it? At least it ain't according to:
-            #
-            #   http://jinja.pocoo.org/docs/api/#jinja2.FileSystemLoader
-            loader = jinja2.FileSystemLoader(
-                context, os.path.dirname(tmplpath))
+            loader = jinja2.FileSystemLoader(os.path.dirname(tmplpath))
     else:
         loader = salt.utils.jinja.SaltCacheLoader(opts, saltenv, pillar_rend=context.get('_pillar_rend', False))
 
@@ -343,12 +327,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined,
                                        **env_args)
 
-    jinja_env.filters['strftime'] = salt.utils.date_format
-    jinja_env.filters['sequence'] = salt.utils.jinja.ensure_sequence_filter
-    jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
-    jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
-    jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
+    jinja_env.tests.update(JinjaTest.salt_jinja_tests)
+    jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
 
+    # globals
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = salt.utils.jinja.show_full_context
 
@@ -356,7 +338,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     decoded_context = {}
     for key, value in six.iteritems(context):
-        if not isinstance(value, string_types):
+        if not isinstance(value, six.string_types):
             decoded_context[key] = value
             continue
 
@@ -422,6 +404,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     return output
 
 
+# pylint: disable=3rd-party-module-not-gated
 def render_mako_tmpl(tmplstr, context, tmplpath=None):
     import mako.exceptions
     from mako.template import Template
@@ -492,6 +475,7 @@ def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
     '''
     from Cheetah.Template import Template
     return str(Template(tmplstr, searchList=[context]))
+# pylint: enable=3rd-party-module-not-gated
 
 
 def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
@@ -506,10 +490,22 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
     if not os.path.isfile(sfn):
         return {}
 
-    mod = imp.load_source(
-            os.path.basename(sfn).split('.')[0],
-            sfn
-            )
+    base_fname = os.path.basename(sfn)
+    name = base_fname.split('.')[0]
+
+    if USE_IMPORTLIB:
+        # pylint: disable=no-member
+        loader = importlib.machinery.SourceFileLoader(name, sfn)
+        spec = importlib.util.spec_from_file_location(name, sfn, loader=loader)
+        if spec is None:
+            raise ImportError()
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        # pylint: enable=no-member
+        sys.modules[name] = mod
+    else:
+        mod = imp.load_source(name, sfn)
+
     # File templates need these set as __var__
     if '__env__' not in kwargs and 'saltenv' in kwargs:
         setattr(mod, '__env__', kwargs['saltenv'])
@@ -526,7 +522,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
         if string:
             return {'result': True,
                     'data': data}
-        tgt = salt.utils.mkstemp()
+        tgt = salt.utils.files.mkstemp()
         with salt.utils.fopen(tgt, 'w+') as target:
             target.write(data)
         return {'result': True,

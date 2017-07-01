@@ -199,6 +199,7 @@ from collections import defaultdict
 # pylint: disable=import-error
 import cgi
 import yaml
+import tornado.escape
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
@@ -499,7 +500,8 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         ignore the data passed in and just get the args from wherever they are
         '''
         data = {}
-        for key, val in six.iteritems(self.request.arguments):
+        for key in self.request.arguments:
+            val = self.get_arguments(key)
             if len(val) == 1:
                 data[key] = val[0]
             else:
@@ -523,7 +525,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
             # Use cgi.parse_header to correctly separate parameters from value
             header = cgi.parse_header(self.request.headers['Content-Type'])
             value, parameters = header
-            return ct_in_map[value](data)
+            return ct_in_map[value](tornado.escape.native_str(data))
         except KeyError:
             self.send_error(406)
         except ValueError:
@@ -538,7 +540,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         data = self.deserialize(self.request.body)
         self.raw_data = copy(data)
 
-        if 'arg' in data and not isinstance(data['arg'], list):
+        if data and 'arg' in data and not isinstance(data['arg'], list):
             data['arg'] = [data['arg']]
 
         if not isinstance(data, list):
@@ -928,7 +930,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
 
         job_not_running = self.job_not_running(pub_data['jid'],
                                                chunk['tgt'],
-                                               f_call['kwargs']['expr_form'],
+                                               f_call['kwargs']['tgt_type'],
                                                minions_remaining=minions_remaining
                                                )
 
@@ -994,7 +996,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         ping_pub_data = yield self.saltclients['local'](tgt,
                                                         'saltutil.find_job',
                                                         [jid],
-                                                        expr_form=tgt_type)
+                                                        tgt_type=tgt_type)
         ping_tag = tagify([ping_pub_data['jid'], 'ret'], 'job')
 
         minion_running = False
@@ -1011,7 +1013,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
                     ping_pub_data = yield self.saltclients['local'](tgt,
                                                                     'saltutil.find_job',
                                                                     [jid],
-                                                                    expr_form=tgt_type)
+                                                                    tgt_type=tgt_type)
                     ping_tag = tagify([ping_pub_data['jid'], 'ret'], 'job')
                     minion_running = False
                     continue
@@ -1059,7 +1061,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
 
     # salt.utils.format_call doesn't work for functions having the annotation tornado.gen.coroutine
     def _format_call_run_job_async(self, chunk):
-        f_call = salt.utils.format_call(salt.client.LocalClient.run_job, chunk)
+        f_call = salt.utils.format_call(salt.client.LocalClient.run_job, chunk, is_class_method=True)
         f_call.get('kwargs', {})['io_loop'] = tornado.ioloop.IOLoop.current()
         return f_call
 
@@ -1632,9 +1634,15 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             opts=self.application.opts,
             listen=False)
 
+        arguments = {}
+        for argname in self.request.query_arguments:
+            value = self.get_arguments(argname)
+            if len(value) == 1:
+                value = value[0]
+            arguments[argname] = value
         ret = self.event.fire_event({
             'post': self.raw_data,
-            'get': dict(self.request.query_arguments),
+            'get': arguments,
             # In Tornado >= v4.0.3, the headers come
             # back as an HTTPHeaders instance, which
             # is a dictionary. We must cast this as

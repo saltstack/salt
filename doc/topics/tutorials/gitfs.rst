@@ -26,21 +26,17 @@ Branches and tags become Salt fileserver environments.
 Installing Dependencies
 =======================
 
-Beginning with version 2014.7.0, both pygit2_ and Dulwich_ are supported as
-alternatives to GitPython_. The desired provider can be configured using the
-:conf_master:`gitfs_provider` parameter in the master config file.
-
-If :conf_master:`gitfs_provider` is not configured, then Salt will prefer
-pygit2_ if a suitable version is available, followed by GitPython_ and
-Dulwich_.
+Both pygit2_ and GitPython_ are supported Python interfaces to git. If
+compatible versions of both are installed, pygit2_ will preferred. In these
+cases, GitPython_ can be forced using the :conf_master:`gitfs_provider`
+parameter in the master config file.
 
 .. note::
     It is recommended to always run the most recent version of any the below
-    dependencies. Certain features of gitfs may not be available without
+    dependencies. Certain features of GitFS may not be available without
     the most recent version of the chosen library.
 
 .. _pygit2: https://github.com/libgit2/pygit2
-.. _Dulwich: https://www.samba.org/~jelmer/dulwich/
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 
 pygit2
@@ -74,6 +70,10 @@ packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
 <pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
 libraries to be present before libgit2_ is built. On some Debian-based distros
 ``pkg-config`` is also required to link libgit2_ with libssh2.
+.. note::
+    If you are receiving the error "Unsupported URL Protocol" in the Salt Master
+    log when making a connection using SSH, review the libssh2 details listed
+    above.
 
 Additionally, version 0.21.0 of pygit2 introduced a dependency on python-cffi_,
 which in turn depends on newer releases of libffi_. Upgrading libffi_ is not
@@ -201,49 +201,6 @@ install GitPython`` (or ``easy_install GitPython``) as root.
             - name: 'GitPython < 2.0.9'
 
 
-Dulwich
--------
-
-Dulwich 0.9.4 or newer is required to use Dulwich as backend for gitfs.
-
-Dulwich is available in EPEL, and can be easily installed on the master using
-yum:
-
-.. code-block:: bash
-
-    # yum install python-dulwich
-
-For APT-based distros such as Ubuntu and Debian:
-
-.. code-block:: bash
-
-    # apt-get install python-dulwich
-
-.. important::
-
-    If switching to Dulwich from GitPython/pygit2, or switching from
-    GitPython/pygit2 to Dulwich, it is necessary to clear the gitfs cache to
-    avoid unpredictable behavior. This is probably a good idea whenever
-    switching to a new :conf_master:`gitfs_provider`, but it is less important
-    when switching between GitPython and pygit2.
-
-    Beginning in version 2015.5.0, the gitfs cache can be easily cleared using
-    the :mod:`fileserver.clear_cache <salt.runners.fileserver.clear_cache>`
-    runner.
-
-    .. code-block:: bash
-
-        salt-run fileserver.clear_cache backend=git
-
-    If the Master is running an earlier version, then the cache can be cleared
-    by removing the ``gitfs`` and ``file_lists/gitfs`` directories (both paths
-    relative to the master cache directory, usually
-    ``/var/cache/salt/master``).
-
-    .. code-block:: bash
-
-        rm -rf /var/cache/salt/master{,/file_lists}/gitfs
-
 Simple Configuration
 ====================
 
@@ -277,14 +234,6 @@ master:
 
    Information on how to authenticate to SSH remotes can be found :ref:`here
    <gitfs-authentication>`.
-
-   .. note::
-
-       Dulwich does not recognize ``ssh://`` URLs, ``git+ssh://`` must be used
-       instead. Salt version 2015.5.0 and later will automatically add the
-       ``git+`` to the beginning of these URLs before fetching, but earlier
-       Salt versions will fail to fetch unless the URL is specified using
-       ``git+ssh://``.
 
 3. Restart the master to load the new configuration.
 
@@ -360,7 +309,6 @@ is executed. For example:
     cache directory (``/var/cache/salt/master/gitfs``) before restarting the
     salt-master service.
 
-
 .. _gitfs-per-remote-config:
 
 Per-remote Configuration Parameters
@@ -381,6 +329,9 @@ configured gitfs remotes):
 * :conf_master:`gitfs_pubkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_privkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_passphrase` (**pygit2 only**, new in 2014.7.0)
+* :conf_master:`gitfs_refspecs` (new in 2017.7.0)
+* :conf_master:`gitfs_disable_saltenv_mapping` (new in Oxygen)
+* :conf_master:`gitfs_ref_types` (new in Oxygen)
 
 .. note::
     pygit2 only supports disabling SSL verification in versions 0.23.2 and
@@ -406,11 +357,19 @@ tremendous amount of customization. Here's some example usage:
         - root: other/salt
         - mountpoint: salt://other/bar
         - base: salt-base
+        - ref_types:
+          - branch
       - http://foo.com/baz.git:
         - root: salt/states
         - user: joe
         - password: mysupersecretpassword
         - insecure_auth: True
+        - disable_saltenv_mapping: True
+        - saltenv:
+          - foo:
+            - ref: foo
+      - http://foo.com/quux.git:
+        - all_saltenvs: master
 
 .. important::
 
@@ -422,7 +381,10 @@ tremendous amount of customization. Here's some example usage:
 
     2. Per-remote configuration parameters are named like the global versions,
        with the ``gitfs_`` removed from the beginning. The exception being the
-       ``name`` parameter which is only available to per-remote configurations.
+       ``name``, ``saltenv``, and ``all_saltenvs`` parameters, which are only
+       available to per-remote configurations.
+
+    The ``all_saltenvs`` parameter is new in the Oxygen release.
 
 In the example configuration above, the following is true:
 
@@ -437,17 +399,31 @@ In the example configuration above, the following is true:
    will only serve files from the ``salt/states`` directory (and its
    subdirectories).
 
-3. The first and fourth remotes will have files located under the root of the
+3. The third remote will only serve files from branches, and not from tags or
+   SHAs.
+
+4. The fourth remote will only have two saltenvs available: ``base`` (pointed
+   at ``develop``), and ``foo`` (pointed at ``foo``).
+
+5. The first and fourth remotes will have files located under the root of the
    Salt fileserver namespace (``salt://``). The files from the second remote
    will be located under ``salt://bar``, while the files from the third remote
    will be located under ``salt://other/bar``.
 
-4. The second and third remotes reference the same repository and unique names
+6. The second and third remotes reference the same repository and unique names
    need to be declared for duplicate gitfs remotes.
 
-5. The fourth remote overrides the default behavior of :ref:`not authenticating
+7. The fourth remote overrides the default behavior of :ref:`not authenticating
    to insecure (non-HTTPS) remotes <gitfs-insecure-auth>`.
 
+8. Because ``all_saltenvs`` is configured for the fifth remote, files from the
+   branch/tag ``master`` will appear in every fileserver environment.
+
+   .. note::
+       The use of ``http://`` (instead of ``https://``) is permitted here
+       *only* because authentication is not being used. Otherwise, the
+       ``insecure_auth`` parameter must be used (as in the fourth remote) to
+       force Salt to authenticate to an ``http://`` remote.
 
 .. _gitfs-per-saltenv-config:
 
@@ -504,10 +480,90 @@ Given the above configuration, the following is true:
    ``salt`` directory (and its subdirectories).
 
 
+.. _gitfs-custom-refspecs:
+
+Custom Refspecs
+===============
+
+.. versionadded:: 2017.7.0
+
+GitFS will by default fetch remote branches and tags. However, sometimes it can
+be useful to fetch custom refs (such as those created for `GitHub pull
+requests`__). To change the refspecs GitFS fetches, use the
+:conf_master:`gitfs_refspecs` config option:
+
+.. __: https://help.github.com/articles/checking-out-pull-requests-locally/
+
+.. code-block:: yaml
+
+    gitfs_refspecs:
+      - '+refs/heads/*:refs/remotes/origin/*'
+      - '+refs/tags/*:refs/tags/*'
+      - '+refs/pull/*/head:refs/remotes/origin/pr/*'
+      - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
+In the above example, in addition to fetching remote branches and tags,
+GitHub's custom refs for pull requests and merged pull requests will also be
+fetched. These special ``head`` refs represent the head of the branch which is
+requesting to be merged, and the ``merge`` refs represent the result of the
+base branch after the merge.
+
+.. important::
+    When using custom refspecs, the destination of the fetched refs *must* be
+    under ``refs/remotes/origin/``, preferably in a subdirectory like in the
+    example above. These custom refspecs will map as environment names using
+    their relative path underneath ``refs/remotes/origin/``. For example,
+    assuming the configuration above, the head branch for pull request 12345
+    would map to fileserver environment ``pr/12345`` (slash included).
+
+Refspecs can be configured on a :ref:`per-remote basis
+<gitfs-per-remote-config>`. For example, the below configuration would only
+alter the default refspecs for the *second* GitFS remote. The first remote
+would only fetch branches and tags (the default).
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - https://domain.tld/foo.git
+      - https://domain.tld/bar.git:
+        - refspecs:
+          - '+refs/heads/*:refs/remotes/origin/*'
+          - '+refs/tags/*:refs/tags/*'
+          - '+refs/pull/*/head:refs/remotes/origin/pr/*'
+          - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
+
+.. _gitfs-global-remotes:
+
+Global Remotes
+==============
+
+.. versionadded:: Oxygen
+
+The ``all_saltenvs`` per-remote configuration parameter overrides the logic
+Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This
+allows a single branch/tag to appear in *all* saltenvs.
+
+This is very useful in particular when working with :ref:`salt formulas
+<conventions-formula>`. Prior to the addition of this feature, it was necessary
+to push a branch/tag to the remote repo for each saltenv in which that formula
+was to be used. If the formula needed to be updated, this update would need to
+be reflected in all of the other branches/tags. This is both inconvenient and
+not scalable.
+
+With ``all_saltenvs``, it is now possible to define your formula once, in a
+single branch.
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://foo.com/quux.git:
+        - all_saltenvs: anything
+
 Configuration Order of Precedence
 =================================
 
-The order of precedence for gitfs configuration is as follows (each level
+The order of precedence for GitFS configuration is as follows (each level
 overrides all levels below it):
 
 1. Per-saltenv configuration (defined under a per-remote ``saltenv``
@@ -544,6 +600,17 @@ overrides all levels below it):
 
        gitfs_mountpoint: salt://bar
 
+.. note::
+    The one exception to the above is when :ref:`all_saltenvs
+    <gitfs-global-remotes>` is used. This value overrides all logic for mapping
+    branches/tags to fileserver environments. So, even if
+    :conf_master:`gitfs_saltenv` is used to globally override the mapping for a
+    given saltenv, :ref:`all_saltenvs <gitfs-global-remotes>` would take
+    precedence for any remote which uses it.
+
+    It's important to note however that any ``root`` and ``mountpoint`` values
+    configured in :conf_master:`gitfs_saltenv` (or :ref:`per-saltenv
+    configuration <gitfs-per-saltenv-config>`) would be unaffected by this.
 
 .. _gitfs-walkthrough-root:
 
@@ -600,7 +667,7 @@ of the Salt fileserver.
 Before the addition of this feature, if a file being served up via gitfs was
 deeply nested within the root directory (for example,
 ``salt://webapps/foo/files/foo.conf``, it would be necessary to ensure that the
-file was properly located in the remote repository, and that all of the the
+file was properly located in the remote repository, and that all of the
 parent directories were present (for example, the directories
 ``webapps/foo/files/`` would need to exist at the root of the repository).
 
@@ -642,7 +709,7 @@ master, each configured git remote will be searched.
 Branches, Environments, and Top Files
 =====================================
 
-When using the gitfs backend, branches, and tags will be mapped to environments
+When using the GitFS backend, branches, and tags will be mapped to environments
 using the branch/tag name as an identifier.
 
 There is one exception to this rule: the ``master`` branch is implicitly mapped
@@ -680,16 +747,16 @@ Environment Whitelist/Blacklist
 
 .. versionadded:: 2014.7.0
 
-The :conf_master:`gitfs_env_whitelist` and :conf_master:`gitfs_env_blacklist`
-parameters allow for greater control over which branches/tags are exposed as
-fileserver environments. Exact matches, globs, and regular expressions are
-supported, and are evaluated in that order. If using a regular expression,
-``^`` and ``$`` must be omitted, and the expression must match the entire
-branch/tag.
+The :conf_master:`gitfs_saltenv_whitelist` and
+:conf_master:`gitfs_saltenv_blacklist` parameters allow for greater control
+over which branches/tags are exposed as fileserver environments. Exact matches,
+globs, and regular expressions are supported, and are evaluated in that order.
+If using a regular expression, ``^`` and ``$`` must be omitted, and the
+expression must match the entire branch/tag.
 
 .. code-block:: yaml
 
-    gitfs_env_whitelist:
+    gitfs_saltenv_whitelist:
       - base
       - v1.*
       - 'mybranch\d+'
@@ -703,11 +770,12 @@ branch/tag.
 The behavior of the blacklist/whitelist will differ depending on which
 combination of the two options is used:
 
-* If only :conf_master:`gitfs_env_whitelist` is used, then **only** branches/tags
-  which match the whitelist will be available as environments
+* If only :conf_master:`gitfs_saltenv_whitelist` is used, then **only**
+  branches/tags which match the whitelist will be available as environments
 
-* If only :conf_master:`gitfs_env_blacklist` is used, then the branches/tags
-  which match the blacklist will **not** be available as environments
+* If only :conf_master:`gitfs_saltenv_blacklist` is used, then the
+  branches/tags which match the blacklist will **not** be available as
+  environments
 
 * If both are used, then the branches/tags which match the whitelist, but do
   **not** match the blacklist, will be available as environments.
@@ -1009,8 +1077,9 @@ steps to this process:
          #!/usr/bin/env sh
          sudo -u root salt-call event.fire_master update salt/fileserver/gitfs/update
 
-4. If using sudo in the git hook (above), the policy must be changed to permit all users to fire the event.
-   Add the following policy to the sudoers file on the git server.
+4. If using sudo in the git hook (above), the policy must be changed to permit
+   all users to fire the event.  Add the following policy to the sudoers file
+   on the git server.
 
    .. code-block:: bash
 

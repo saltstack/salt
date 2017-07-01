@@ -5,11 +5,12 @@ ACME / Let's Encrypt module
 
 .. versionadded: 2016.3
 
-This module currently uses letsencrypt-auto, which needs to be available in the path or in /opt/letsencrypt/.
-
-.. note::
-
-    Currently only the webroot authentication is tested/implemented.
+This module currently looks for certbot script in the $PATH as
+- certbot,
+- lestsencrypt,
+- certbot-auto,
+- letsencrypt-auto
+eventually falls back to /opt/letsencrypt/letsencrypt-auto
 
 .. note::
 
@@ -34,7 +35,9 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-LEA = salt.utils.which_bin(['letsencrypt-auto', '/opt/letsencrypt/letsencrypt-auto'])
+LEA = salt.utils.which_bin(['certbot', 'letsencrypt',
+                            'certbot-auto', 'letsencrypt-auto',
+                            '/opt/letsencrypt/letsencrypt-auto'])
 LE_LIVE = '/etc/letsencrypt/live/'
 
 
@@ -97,20 +100,22 @@ def cert(name,
          keysize=None,
          server=None,
          owner='root',
-         group='root'):
+         group='root',
+         certname=None):
     '''
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
 
     :param name: Common Name of the certificate (DNS name of certificate)
     :param aliases: subjectAltNames (Additional DNS names on certificate)
     :param email: e-mail address for interaction with ACME provider
-    :param webroot: True or full path to webroot used for authentication
+    :param webroot: True or a full path to use to use webroot. Otherwise use standalone mode
     :param test_cert: Request a certificate from the Happy Hacker Fake CA (mutually exclusive with 'server')
     :param renew: True/'force' to force a renewal, or a window of renewal before expiry in days
     :param keysize: RSA key bits
     :param server: API endpoint to talk to
     :param owner: owner of private key
     :param group: group of private key
+    :param certname: Name of the certificate to save
     :return: dict with 'result' True/False/None, 'comment' and certificate's expiry date ('not_after')
 
     CLI example:
@@ -120,7 +125,7 @@ def cert(name,
         salt 'gitlab.example.com' acme.cert dev.example.com "[gitlab.example.com]" test_cert=True renew=14 webroot=/opt/gitlab/embedded/service/gitlab-rails/public
     '''
 
-    cmd = [LEA, 'certonly']
+    cmd = [LEA, 'certonly', '--quiet']
 
     cert_file = _cert_file(name, 'cert')
     if not __salt__['file.file_exists'](cert_file):
@@ -130,15 +135,11 @@ def cert(name,
         log.debug('Certificate {0} will be renewed'.format(cert_file))
         cmd.append('--renew-by-default')
         renew = True
-    else:
-        return {
-            'result': None,
-            'comment': 'Certificate {0} does not need renewal'.format(cert_file),
-            'not_after': expires(name)
-        }
-
     if server:
         cmd.append('--server {0}'.format(server))
+
+    if certname:
+        cmd.append('--cert-name {0}'.format(certname))
 
     if test_cert:
         if server:
@@ -149,6 +150,8 @@ def cert(name,
         cmd.append('--authenticator webroot')
         if webroot is not True:
             cmd.append('--webroot-path {0}'.format(webroot))
+    else:
+        cmd.append('--authenticator standalone')
 
     if email:
         cmd.append('--email {0}'.format(email))
@@ -165,6 +168,11 @@ def cert(name,
 
     if res['retcode'] != 0:
         return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
+
+    if 'no action taken' in res['stdout']:
+        return {'result': None,
+                'comment': 'No action taken on certificate {0}'.format(cert_file),
+                'not_after': expires(name)}
 
     if renew:
         comment = 'Certificate {0} renewed'.format(name)

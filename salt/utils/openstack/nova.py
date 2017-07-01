@@ -5,7 +5,6 @@ Nova class
 
 # Import Python libs
 from __future__ import absolute_import, with_statement
-from distutils.version import LooseVersion
 import inspect
 import logging
 import time
@@ -39,6 +38,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltCloudSystemExit
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -64,9 +64,9 @@ CLIENT_BDM2_KEYS = {
 
 def check_nova():
     if HAS_NOVA:
-        novaclient_ver = LooseVersion(novaclient.__version__)
-        min_ver = LooseVersion(NOVACLIENT_MINVER)
-        max_ver = LooseVersion(NOVACLIENT_MAXVER)
+        novaclient_ver = _LooseVersion(novaclient.__version__)
+        min_ver = _LooseVersion(NOVACLIENT_MINVER)
+        max_ver = _LooseVersion(NOVACLIENT_MAXVER)
         if novaclient_ver >= min_ver and novaclient_ver <= max_ver:
             return HAS_NOVA
         elif novaclient_ver > max_ver:

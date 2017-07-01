@@ -108,3 +108,4 @@ the world. The following links should get you started:
 
 `<https://docs.saltstack.com/en/latest/topics/development/index.html>`_
 
+`<https://docs.saltstack.com/en/develop/topics/development/pull_requests.html>`_

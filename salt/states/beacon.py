@@ -173,7 +173,7 @@ def disabled(name, **kwargs):
     Disable a beacon.
 
     name
-        The name of the beacon to enable.
+        The name of the beacon to disable.
 
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but

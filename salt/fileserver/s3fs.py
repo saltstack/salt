@@ -228,6 +228,8 @@ def serve_file(load, fnd):
     with salt.utils.fopen(cached_file_path, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
+        if data and six.PY3 and not salt.utils.is_bin_file(cached_file_path):
+            data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
             ret['gzip'] = gzip
@@ -327,8 +329,14 @@ def _get_s3_key():
     location = __opts__['s3.location'] \
         if 's3.location' in __opts__ \
         else None
+    path_style = __opts__['s3.path_style'] \
+        if 's3.path_style' in __opts__ \
+        else None
+    https_enable = __opts__['s3.https_enable'] \
+        if 's3.https_enable' in __opts__ \
+        else None
 
-    return key, keyid, service_url, verify_ssl, kms_keyid, location
+    return key, keyid, service_url, verify_ssl, kms_keyid, location, path_style, https_enable
 
 
 def _init():
@@ -398,17 +406,23 @@ def _refresh_buckets_cache_file(cache_file):
 
     log.debug('Refreshing buckets cache file')
 
-    key, keyid, service_url, verify_ssl, kms_keyid, location = _get_s3_key()
+    key, keyid, service_url, verify_ssl, kms_keyid, location, path_style, https_enable = _get_s3_key()
     metadata = {}
 
     # helper s3 query function
     def __get_s3_meta(bucket, key=key, keyid=keyid):
         ret, marker = [], ''
         while True:
-            tmp = __utils__['s3.query'](key=key, keyid=keyid, kms_keyid=keyid,
-                                        bucket=bucket, service_url=service_url,
+            tmp = __utils__['s3.query'](key=key,
+                                        keyid=keyid,
+                                        kms_keyid=keyid,
+                                        bucket=bucket,
+                                        service_url=service_url,
                                         verify_ssl=verify_ssl,
-                                        location=location, return_bin=False,
+                                        location=location,
+                                        return_bin=False,
+                                        path_style=path_style,
+                                        https_enable=https_enable,
                                         params={'marker': marker})
             headers = []
             for header in tmp:
@@ -617,7 +631,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
     Checks the local cache for the file, if it's old or missing go grab the
     file from S3 and update the cache
     '''
-    key, keyid, service_url, verify_ssl, kms_keyid, location = _get_s3_key()
+    key, keyid, service_url, verify_ssl, kms_keyid, location, path_style, https_enable = _get_s3_key()
 
     # check the local cache...
     if os.path.isfile(cached_file_path):
@@ -656,7 +670,9 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         location=location,
                         path=_quote(path),
                         local_file=cached_file_path,
-                        full_headers=True
+                        full_headers=True,
+                        path_style=path_style,
+                        https_enable=https_enable
                     )
                     if ret is not None:
                         for header_name, header_value in ret['headers'].items():
@@ -685,7 +701,9 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
         verify_ssl=verify_ssl,
         location=location,
         path=_quote(path),
-        local_file=cached_file_path
+        local_file=cached_file_path,
+        path_style=path_style,
+        https_enable=https_enable,
     )
 
 

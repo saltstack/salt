@@ -6,28 +6,25 @@ Return/control aspects of the grains data
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
-import copy
-import math
 import random
 import logging
 import operator
 import collections
 import json
-import fnmatch
+import math
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # Import 3rd-party libs
 import yaml
 import salt.utils.compat
-from salt.utils.odict import OrderedDict
 import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 import salt.utils
-import salt.utils.dictupdate
+import salt.utils.yamldumper
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
+from salt.ext.six.moves import range
 
 __proxyenabled__ = ['*']
 
@@ -254,23 +251,7 @@ def setvals(grains, destructive=False):
         else:
             grains[key] = val
             __grains__[key] = val
-    # Cast defaultdict to dict; is there a more central place to put this?
-    try:
-        yaml_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_representers)
-        yaml_multi_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_multi_representers)
-    except (TypeError, NameError):
-        # This likely means we are running under Python 2.6 which cannot deepcopy
-        # bound methods. Fallback to a modification of deepcopy which can support
-        # this behavior.
-        yaml_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_representers)
-        yaml_multi_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_multi_representers)
-    yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
-            yaml.representer.SafeRepresenter.represent_dict)
-    yaml.representer.SafeRepresenter.add_representer(OrderedDict,
-            yaml.representer.SafeRepresenter.represent_dict)
-    cstr = yaml.safe_dump(grains, default_flow_style=False)
-    yaml.representer.SafeRepresenter.yaml_representers = yaml_reps
-    yaml.representer.SafeRepresenter.yaml_multi_representers = yaml_multi_reps
+    cstr = salt.utils.yamldumper.safe_dump(grains, default_flow_style=False)
     try:
         with salt.utils.fopen(gfn, 'w+') as fp_:
             fp_.write(cstr)
@@ -415,11 +396,31 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     return setval(key, grains)
 
 
+def delkey(key):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Remove a grain completely from the grain system, this will remove the
+    grain key and value
+
+    key
+        The grain key from which to delete the value.
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' grains.delkey key
+    '''
+    setval(key, None, destructive=True)
+
+
 def delval(key, destructive=False):
     '''
     .. versionadded:: 0.17.0
 
-    Delete a grain from the grains config file
+    Delete a grain value from the grains config file. This will just set the
+    grain value to `None`. To completely remove the grain run `grains.delkey`
+    of pass `destructive=True` to `grains.delval`.
 
     key
         The grain key from which to delete the value.
@@ -433,7 +434,6 @@ def delval(key, destructive=False):
 
         salt '*' grains.delval key
     '''
-
     setval(key, None, destructive=destructive)
 
 
@@ -553,46 +553,12 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         salt '*' grains.filter_by '{default: {A: {B: C}, D: E}, F: {A: {B: G}}, H: {D: I}}' 'xxx' '{D: J}' 'F' 'default'
         # next same as above when default='H' instead of 'F' renders {A: {B: C}, D: J}
     '''
-
-    ret = None
-    # Default value would be an empty list if grain not found
-    val = salt.utils.traverse_dict_and_list(__grains__, grain, [])
-
-    # Iterate over the list of grain values to match against patterns in the lookup_dict keys
-    for each in val if isinstance(val, list) else [val]:
-        for key in sorted(lookup_dict):
-            test_key = key if isinstance(key, six.string_types) else str(key)
-            test_each = each if isinstance(each, six.string_types) else str(each)
-            if fnmatch.fnmatchcase(test_each, test_key):
-                ret = lookup_dict[key]
-                break
-        if ret is not None:
-            break
-
-    if ret is None:
-        ret = lookup_dict.get(default, None)
-
-    if base and base in lookup_dict:
-        base_values = lookup_dict[base]
-        if ret is None:
-            ret = base_values
-
-        elif isinstance(base_values, collections.Mapping):
-            if not isinstance(ret, collections.Mapping):
-                raise SaltException(
-                    'filter_by default and look-up values must both be dictionaries.')
-            ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
-
-    if merge:
-        if not isinstance(merge, collections.Mapping):
-            raise SaltException('filter_by merge argument must be a dictionary.')
-
-        if ret is None:
-            ret = merge
-        else:
-            salt.utils.dictupdate.update(ret, copy.deepcopy(merge))
-
-    return ret
+    return salt.utils.filter_by(lookup_dict=lookup_dict,
+                                lookup=grain,
+                                traverse=__grains__,
+                                merge=merge,
+                                default=default,
+                                base=base)
 
 
 def _dict_from_path(path, val, delimiter=DEFAULT_TARGET_DELIM):
@@ -774,6 +740,24 @@ def set(key,
         ret['comment'] = _setval_ret
         ret['result'] = False
     return ret
+
+
+def equals(key, value):
+    '''
+    Used to make sure the minion's grain key/value matches.
+
+    Returns ``True`` if matches otherwise ``False``.
+
+    .. versionadded:: 2017.7.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grains.equals fqdn <expected_fqdn>
+        salt '*' grains.equals systemd:version 219
+    '''
+    return str(value) == str(get(key))
 
 
 # Provide a jinja function call compatible get aliased as fetch

@@ -17,6 +17,7 @@ be used.
 The directories are prepended with an underscore:
 
 - :file:`_beacons`
+- :file:`_clouds`
 - :file:`_engines`
 - :file:`_grains`
 - :file:`_modules`
@@ -25,6 +26,7 @@ The directories are prepended with an underscore:
 - :file:`_renderers`
 - :file:`_returners`
 - :file:`_states`
+- :file:`_tops`
 - :file:`_utils`
 
 The contents of these directories need to be synced over to the minions after

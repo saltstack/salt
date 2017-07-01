@@ -8,7 +8,7 @@ Windows Software Repository
     In 2015.8.0 and later, the Windows Software Repository cache is compiled on
     the Salt Minion, which enables pillar, grains and other things to be
     available during compilation time. To support this new functionality,
-    a next-generation (ng) package repository was created. See See the
+    a next-generation (ng) package repository was created. See the
     :ref:`Changes in Version 2015.8.0 <2015-8-0-winrepo-changes>` for details.
 
 The SaltStack Windows Software Repository provides a package manager and software
@@ -82,11 +82,12 @@ You can query the available version of a package using the Salt pkg module.
 
 .. code-block:: bash
 
-    salt winminion pkg.available_version firefox
+    salt winminion pkg.list_available firefox
 
-    {'firefox': {'15.0.1': 'Mozilla Firefox 15.0.1 (x86 en-US)',
-                 '16.0.2': 'Mozilla Firefox 16.0.2 (x86 en-US)',
-                 '17.0.1': 'Mozilla Firefox 17.0.1 (x86 en-US)'}}
+    winminion:
+        - 15.0.1
+        - 16.0.2
+        - 17.0.1
 
 As you can see, there are three versions of Firefox available for installation.
 You can refer a software package by its ``name`` or its ``full_name`` surround

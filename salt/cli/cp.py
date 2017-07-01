@@ -19,6 +19,7 @@ import sys
 # Import salt libs
 import salt.client
 import salt.utils.gzip_util
+import salt.utils.itertools
 import salt.utils.minions
 from salt.utils import parsers, to_bytes
 from salt.utils.verify import verify_log
@@ -121,7 +122,7 @@ class SaltCP(object):
 
         minions = salt.utils.minions.CkMinions(self.opts).check_minions(
             tgt,
-            expr_form=selected_target_option or 'glob')
+            tgt_type=selected_target_option or 'glob')
 
         local = salt.client.get_local_client(self.opts['conf_file'])
 

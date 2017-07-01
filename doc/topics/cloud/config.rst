@@ -97,7 +97,7 @@ Using the example configuration above:
 
 .. note::
 
-    Salt Cloud provider configurations within ``/etc/cloud.provider.d/ should not
+    Salt Cloud provider configurations within ``/etc/cloud.provider.d/`` should not
     specify the ``providers`` starting key.
 
 It is also possible to have multiple cloud configuration blocks within the same alias block.

@@ -1,6 +1,30 @@
 # -*- coding: utf-8 -*-
 '''
 Support for iptables
+
+Configuration Options
+---------------------
+
+The following options can be set in the :ref:`minion config
+<configuration-salt-minion>`, :ref:`minion grains<configuration-minion-grains>`
+, :ref:`minion pillar<configuration-minion-pillar>`, or
+`master config<configuration-salt-master>`.
+
+- ``iptables.save_filters``: List of REGEX strings to FILTER OUT matching lines
+
+    This is useful for filtering out chains, rules, etc that you do not
+    wish to persist, such as ephemeral Docker rules.
+
+    The default is to not filter out anything.
+
+    .. code-block:: yaml
+
+        iptables.save_filters:
+           - "-j CATTLE_PREROUTING"
+           - "-j DOCKER"
+           - "-A POSTROUTING"
+           - "-A CATTLE_POSTROUTING"
+           - "-A FORWARD"
 '''
 from __future__ import absolute_import
 
@@ -80,13 +104,73 @@ def _conf(family='ipv4'):
             return '/var/lib/ip6tables/rules-save'
         else:
             return '/var/lib/iptables/rules-save'
-    elif __grains__['os_family'] == 'SUSE':
+    elif __grains__['os_family'] == 'Suse':
         # SuSE does not seem to use separate files for IPv4 and IPv6
         return '/etc/sysconfig/scripts/SuSEfirewall2-custom'
+    elif __grains__['os_family'] == 'Void':
+        if family == 'ipv6':
+            return '/etc/iptables/iptables.rules'
+        else:
+            return '/etc/iptables/ip6tables.rules'
+    elif __grains__['os'] == 'Alpine':
+        if family == 'ipv6':
+            return '/etc/iptables/rules6-save'
+        else:
+            return '/etc/iptables/rules-save'
     else:
         raise SaltException('Saving iptables to file is not' +
                             ' supported on {0}.'.format(__grains__['os']) +
                             ' Please file an issue with SaltStack')
+
+
+def _conf_save_filters():
+    '''
+    Return array of strings from `save_filters` in config.
+
+    This array will be pulled from minion config, minion grains,
+    minion pillar, or master config.  The default value returned is [].
+
+    .. code-block:: python
+
+        _conf_save_filters()
+    '''
+    config = __salt__['config.option']('iptables.save_filters', [])
+    return config
+
+
+def _regex_iptables_save(cmd_output, filters=None):
+    '''
+    Return string with `save_filter` regex entries removed.  For example:
+
+    If `filters` is not provided, it will be pulled from minion config,
+    minion grains, minion pillar, or master config. Default return value
+    if no filters found is the original cmd_output string.
+
+    .. code-block:: python
+
+        _regex_iptables_save(cmd_output, ['-A DOCKER*'])
+    '''
+    # grab RE compiled filters from context for performance
+    if 'iptables.save_filters' not in __context__:
+        __context__['iptables.save_filters'] = []
+        for pattern in filters or _conf_save_filters():
+            try:
+                __context__['iptables.save_filters']\
+                    .append(re.compile(pattern))
+            except re.error as e:
+                log.warning('Skipping regex rule: \'{0}\': {1}'
+                            .format(pattern, e))
+                continue
+
+    if len(__context__['iptables.save_filters']) > 0:
+        # line by line get rid of any regex matches
+        _filtered_cmd_output = \
+            [line for line in cmd_output.splitlines(True)
+             if not any(reg.search(line) for reg
+                        in __context__['iptables.save_filters'])]
+        return ''.join(_filtered_cmd_output)
+
+    return cmd_output
 
 
 def version(family='ipv4'):
@@ -121,6 +205,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     If a position is required (as with `-I` or `-D`), it may be specified as
     `position`. This will only be useful if `full` is True.
 
+    If `state` is passed, it will be ignored, use `connstate`.
     If `connstate` is passed in, it will automatically be changed to `state`.
 
     To pass in jump options that doesn't take arguments, pass in an empty
@@ -134,19 +219,19 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             connstate=RELATED,ESTABLISHED jump=ACCEPT
 
         salt '*' iptables.build_rule filter INPUT command=I position=3 \\
-            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
+            full=True match=state connstate=RELATED,ESTABLISHED jump=ACCEPT
 
         salt '*' iptables.build_rule filter INPUT command=A \\
-            full=True match=state state=RELATED,ESTABLISHED \\
+            full=True match=state connstate=RELATED,ESTABLISHED \\
             source='127.0.0.1' jump=ACCEPT
 
         .. Invert Rules
         salt '*' iptables.build_rule filter INPUT command=A \\
-            full=True match=state state=RELATED,ESTABLISHED \\
-            source='! 127.0.0.1' jump=ACCEPT
+            full=True match=state connstate=RELATED,ESTABLISHED \\
+            source='!127.0.0.1' jump=ACCEPT
 
         salt '*' iptables.build_rule filter INPUT command=A \\
-            full=True match=state state=RELATED,ESTABLISHED \\
+            full=True match=state connstate=RELATED,ESTABLISHED \\
             destination='not 127.0.0.1' jump=ACCEPT
 
         IPv6:
@@ -154,7 +239,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             connstate=RELATED,ESTABLISHED jump=ACCEPT \\
             family=ipv6
         salt '*' iptables.build_rule filter INPUT command=I position=3 \\
-            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT \\
+            full=True match=state connstate=RELATED,ESTABLISHED jump=ACCEPT \\
             family=ipv6
 
     '''
@@ -207,8 +292,9 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             match_value = match_value.split(',')
         for match in match_value:
             rule.append('-m {0}'.format(match))
-            if 'name' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
-                rule.append('--name {0}'.format(kwargs['name']))
+            if 'name_' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
+                rule.append('--name {0}'.format(kwargs['name_']))
+                del kwargs['name_']
         del kwargs['match']
 
     if 'match-set' in kwargs:
@@ -413,16 +499,15 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
                 after_jump.append('--{0} {1}'.format(after_jump_argument, value))
             del kwargs[after_jump_argument]
 
-    for item in kwargs:
-        rule.append(maybe_add_negation(item))
-        if len(item) == 1:
-            rule.append('-{0} {1}'.format(item, kwargs[item]))
-        else:
-            rule.append('--{0} {1}'.format(item, kwargs[item]))
+    for key, value in kwargs.items():
+        negation = maybe_add_negation(key)
+        flag = '-' if len(key) == 1 else '--'
+        value = '' if value in (None, '') else ' {0}'.format(value)
+        rule.append('{0}{1}{2}{3}'.format(negation, flag, key, value))
 
     rule += after_jump
 
-    if full in ['True', 'true']:
+    if full:
         if not table:
             return 'Error: Table needs to be specified'
         if not chain:
@@ -575,6 +660,11 @@ def save(filename=None, family='ipv4'):
         os.makedirs(parent_dir)
     cmd = '{0}-save'.format(_iptables_cmd(family))
     ipt = __salt__['cmd.run'](cmd)
+
+    # regex out the output if configured with filters
+    if len(_conf_save_filters()) > 0:
+        ipt = _regex_iptables_save(ipt)
+
     out = __salt__['file.write'](filename, ipt)
     return out
 

@@ -236,7 +236,7 @@ class LocalClient(object):
         pub_data = self.run_job(tgt,
                                 'saltutil.find_job',
                                 arg=[jid],
-                                expr_form=tgt_type,
+                                tgt_type=tgt_type,
                                 timeout=timeout,
                                 **kwargs
                                )
@@ -291,7 +291,7 @@ class LocalClient(object):
             tgt,
             fun,
             arg=(),
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             timeout=None,
             jid='',
@@ -312,6 +312,15 @@ class LocalClient(object):
             >>> local.run_job('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         arg = salt.utils.args.condition_input(arg, kwarg)
 
         try:
@@ -319,7 +328,7 @@ class LocalClient(object):
                 tgt,
                 fun,
                 arg,
-                expr_form,
+                tgt_type,
                 ret,
                 jid=jid,
                 timeout=self._get_timeout(timeout),
@@ -336,13 +345,16 @@ class LocalClient(object):
 
         return self._check_pub_data(pub_data)
 
+    def gather_minions(self, tgt, expr_form):
+        return salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
+
     @tornado.gen.coroutine
     def run_job_async(
             self,
             tgt,
             fun,
             arg=(),
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             timeout=None,
             jid='',
@@ -364,6 +376,15 @@ class LocalClient(object):
             >>> local.run_job_async('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         arg = salt.utils.args.condition_input(arg, kwarg)
 
         try:
@@ -371,7 +392,7 @@ class LocalClient(object):
                   tgt,
                   fun,
                   arg,
-                  expr_form,
+                  tgt_type,
                   ret,
                   jid=jid,
                   timeout=self._get_timeout(timeout),
@@ -394,7 +415,7 @@ class LocalClient(object):
             tgt,
             fun,
             arg=(),
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             jid='',
             kwarg=None,
@@ -412,11 +433,20 @@ class LocalClient(object):
             >>> local.cmd_async('*', 'test.sleep', [300])
             '20131219215921857715'
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         arg = salt.utils.args.condition_input(arg, kwarg)
         pub_data = self.run_job(tgt,
                                 fun,
                                 arg,
-                                expr_form,
+                                tgt_type,
                                 ret,
                                 jid=jid,
                                 **kwargs)
@@ -430,7 +460,7 @@ class LocalClient(object):
             tgt,
             fun,
             arg=(),
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             kwarg=None,
             sub=3,
@@ -450,8 +480,20 @@ class LocalClient(object):
             >>> SLC.cmd_subset('*', 'test.ping', sub=1)
             {'jerry': True}
         '''
-        minion_ret = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form, **kwargs)
-        minions = minion_ret.keys()
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
+        minion_ret = self.cmd(tgt,
+                              'sys.list_functions',
+                              tgt_type=tgt_type,
+                              **kwargs)
+        minions = list(minion_ret)
         random.shuffle(minions)
         f_tgt = []
         for minion in minions:
@@ -466,7 +508,7 @@ class LocalClient(object):
                 f_tgt,
                 fun,
                 arg,
-                expr_form='list',
+                tgt_type='list',
                 ret=ret,
                 kwarg=kwarg,
                 progress=progress,
@@ -477,7 +519,7 @@ class LocalClient(object):
             tgt,
             fun,
             arg=(),
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             kwarg=None,
             batch='10%',
@@ -501,14 +543,24 @@ class LocalClient(object):
             {'dave': {...}}
             {'stewart': {...}}
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         import salt.cli.batch
         arg = salt.utils.args.condition_input(arg, kwarg)
         opts = {'tgt': tgt,
                 'fun': fun,
                 'arg': arg,
-                'expr_form': expr_form,
+                'tgt_type': tgt_type,
                 'ret': ret,
                 'batch': batch,
+                'failhard': kwargs.get('failhard', False),
                 'raw': kwargs.get('raw', False)}
 
         if 'timeout' in kwargs:
@@ -533,15 +585,15 @@ class LocalClient(object):
         for ret in batch.run():
             yield ret
 
-    def cmd(
-            self,
+    def cmd(self,
             tgt,
             fun,
             arg=(),
             timeout=None,
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             jid='',
+            full_return=False,
             kwarg=None,
             **kwargs):
         '''
@@ -582,7 +634,7 @@ class LocalClient(object):
                 ])
 
         :param tgt: Which minions to target for the execution. Default is shell
-            glob. Modified by the ``expr_form`` option.
+            glob. Modified by the ``tgt_type`` option.
         :type tgt: string or list
 
         :param fun: The module and function to call on the specified minions of
@@ -608,7 +660,7 @@ class LocalClient(object):
         :param timeout: Seconds to wait after the last minion returns but
             before all minions return.
 
-        :param expr_form: The type of ``tgt``. Allowed values:
+        :param tgt_type: The type of ``tgt``. Allowed values:
 
             * ``glob`` - Bash glob completion - Default
             * ``pcre`` - Perl style regular expression
@@ -622,11 +674,17 @@ class LocalClient(object):
             * ``compound`` - Pass a compound match string
             * ``ipcidr`` - Match based on Subnet (CIDR notation) or IPv4 address.
 
+            .. versionchanged:: 2017.7.0
+                Renamed from ``expr_form`` to ``tgt_type``
+
         :param ret: The returner to use. The value passed can be single
             returner, or a comma delimited list of returners to call in order
             on the minions
 
         :param kwarg: A dictionary with keyword arguments for the function.
+
+        :param full_return: Output the job return only (default) or the full
+            return including exit code and other job metadata.
 
         :param kwargs: Optional keyword arguments.
             Authentication credentials may be passed when using
@@ -641,6 +699,15 @@ class LocalClient(object):
             minion ID. A compound command will return a sub-dictionary keyed by
             function name.
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
@@ -648,7 +715,7 @@ class LocalClient(object):
             pub_data = self.run_job(tgt,
                                     fun,
                                     arg,
-                                    expr_form,
+                                    tgt_type,
                                     ret,
                                     timeout,
                                     jid,
@@ -664,12 +731,16 @@ class LocalClient(object):
                     pub_data['minions'],
                     self._get_timeout(timeout),
                     tgt,
-                    expr_form,
+                    tgt_type,
                     **kwargs):
 
                 if fn_ret:
                     for mid, data in six.iteritems(fn_ret):
-                        ret[mid] = data.get('ret', {})
+                        ret[mid] = (data if full_return
+                                else data.get('ret', {}))
+
+            for failed in list(set(pub_data['minions']) ^ set(ret)):
+                ret[failed] = False
             return ret
         finally:
             if not was_listening:
@@ -681,7 +752,7 @@ class LocalClient(object):
             fun,
             arg=(),
             timeout=None,
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             verbose=False,
             kwarg=None,
@@ -697,6 +768,15 @@ class LocalClient(object):
         :param verbose: Print extra information about the running command
         :returns: A generator
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
@@ -705,7 +785,7 @@ class LocalClient(object):
                 tgt,
                 fun,
                 arg,
-                expr_form,
+                tgt_type,
                 ret,
                 timeout,
                 listen=True,
@@ -720,7 +800,7 @@ class LocalClient(object):
                             self.pub_data['minions'],
                             self._get_timeout(timeout),
                             tgt,
-                            expr_form,
+                            tgt_type,
                             verbose,
                             progress,
                             **kwargs):
@@ -750,7 +830,7 @@ class LocalClient(object):
             fun,
             arg=(),
             timeout=None,
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             kwarg=None,
             **kwargs):
@@ -771,6 +851,15 @@ class LocalClient(object):
             {'dave': {'ret': True}}
             {'stewart': {'ret': True}}
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
@@ -779,7 +868,7 @@ class LocalClient(object):
                 tgt,
                 fun,
                 arg,
-                expr_form,
+                tgt_type,
                 ret,
                 timeout,
                 listen=True,
@@ -794,7 +883,7 @@ class LocalClient(object):
                                                     pub_data['minions'],
                                                     timeout=self._get_timeout(timeout),
                                                     tgt=tgt,
-                                                    tgt_type=expr_form,
+                                                    tgt_type=tgt_type,
                                                     **kwargs):
                     if not fn_ret:
                         continue
@@ -810,7 +899,7 @@ class LocalClient(object):
             fun,
             arg=(),
             timeout=None,
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             kwarg=None,
             show_jid=False,
@@ -838,6 +927,15 @@ class LocalClient(object):
             None
             {'stewart': {'ret': True}}
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
@@ -846,7 +944,7 @@ class LocalClient(object):
                 tgt,
                 fun,
                 arg,
-                expr_form,
+                tgt_type,
                 ret,
                 timeout,
                 listen=True,
@@ -859,11 +957,11 @@ class LocalClient(object):
                                                     pub_data['minions'],
                                                     timeout=timeout,
                                                     tgt=tgt,
-                                                    tgt_type=expr_form,
+                                                    tgt_type=tgt_type,
                                                     block=False,
                                                     **kwargs):
                     if fn_ret and any([show_jid, verbose]):
-                        for minion in fn_ret.keys():
+                        for minion in fn_ret:
                             fn_ret[minion]['jid'] = pub_data['jid']
                     yield fn_ret
 
@@ -878,7 +976,7 @@ class LocalClient(object):
             fun,
             arg=(),
             timeout=None,
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             verbose=False,
             kwarg=None,
@@ -886,6 +984,15 @@ class LocalClient(object):
         '''
         Execute a salt command and return
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
@@ -894,7 +1001,7 @@ class LocalClient(object):
                 tgt,
                 fun,
                 arg,
-                expr_form,
+                tgt_type,
                 ret,
                 timeout,
                 listen=True,
@@ -907,7 +1014,7 @@ class LocalClient(object):
                                                       pub_data['minions'],
                                                       timeout,
                                                       tgt,
-                                                      expr_form,
+                                                      tgt_type,
                                                       verbose))
         finally:
             if not was_listening:
@@ -928,6 +1035,15 @@ class LocalClient(object):
 
         :returns: all of the information for the JID
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         if verbose:
             msg = 'Executing job with jid {0}'.format(jid)
             print(msg)
@@ -998,6 +1114,15 @@ class LocalClient(object):
 
         :returns: all of the information for the JID
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         if not isinstance(minions, set):
             if isinstance(minions, six.string_types):
                 minions = set([minions])
@@ -1432,6 +1557,15 @@ class LocalClient(object):
         '''
         log.trace('func get_cli_event_returns()')
 
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         if verbose:
             msg = 'Executing job with jid {0}'.format(jid)
             print(msg)
@@ -1451,6 +1585,7 @@ class LocalClient(object):
                                          expect_minions=(verbose or show_timeout),
                                          **kwargs
                                          ):
+            log.debug('return event: %s', ret)
             return_count = return_count + 1
             if progress:
                 for id_, min_ret in six.iteritems(ret):
@@ -1519,7 +1654,7 @@ class LocalClient(object):
                   tgt,
                   fun,
                   arg,
-                  expr_form,
+                  tgt_type,
                   ret,
                   jid,
                   timeout,
@@ -1527,7 +1662,7 @@ class LocalClient(object):
         '''
         Set up the payload_kwargs to be sent down to the master
         '''
-        if expr_form == 'nodegroup':
+        if tgt_type == 'nodegroup':
             if tgt not in self.opts['nodegroups']:
                 conf_file = self.opts.get(
                     'conf_file', 'the master config file'
@@ -1539,13 +1674,13 @@ class LocalClient(object):
                 )
             tgt = salt.utils.minions.nodegroup_comp(tgt,
                                                     self.opts['nodegroups'])
-            expr_form = 'compound'
+            tgt_type = 'compound'
 
         # Convert a range expression to a list of nodes and change expression
         # form to list
-        if expr_form == 'range' and HAS_RANGE:
+        if tgt_type == 'range' and HAS_RANGE:
             tgt = self._convert_range_to_list(tgt)
-            expr_form = 'list'
+            tgt_type = 'list'
 
         # If an external job cache is specified add it to the ret list
         if self.opts.get('ext_job_cache'):
@@ -1563,7 +1698,7 @@ class LocalClient(object):
                           'fun': fun,
                           'arg': arg,
                           'key': self.key,
-                          'tgt_type': expr_form,
+                          'tgt_type': tgt_type,
                           'ret': ret,
                           'jid': jid}
 
@@ -1587,7 +1722,7 @@ class LocalClient(object):
             tgt,
             fun,
             arg=(),
-            expr_form='glob',
+            tgt_type='glob',
             ret='',
             jid='',
             timeout=5,
@@ -1614,6 +1749,15 @@ class LocalClient(object):
             minions:
                 A set, the targets that the tgt passed should match.
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         # Make sure the publisher is running by checking the unix socket
         if (self.opts.get('ipc_mode', '') != 'tcp' and
                 not os.path.exists(os.path.join(self.opts['sock_dir'],
@@ -1628,7 +1772,7 @@ class LocalClient(object):
                 tgt,
                 fun,
                 arg,
-                expr_form,
+                tgt_type,
                 ret,
                 jid,
                 timeout,
@@ -1648,9 +1792,13 @@ class LocalClient(object):
             payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(
-                'Salt request timed out. The master is not responding. '
-                'If this error persists after verifying the master is up, '
-                'worker_threads may need to be increased.'
+                'Salt request timed out. The master is not responding. You '
+                'may need to run your command with `--async` in order to '
+                'bypass the congested event bus. With `--async`, the CLI tool '
+                'will print the job id (jid) and exit immediately without '
+                'listening for responses. You can then use '
+                '`salt-run jobs.lookup_jid` to look up the results of the job '
+                'in the job cache later.'
             )
 
         if not payload:
@@ -1681,7 +1829,7 @@ class LocalClient(object):
                   tgt,
                   fun,
                   arg=(),
-                  expr_form='glob',
+                  tgt_type='glob',
                   ret='',
                   jid='',
                   timeout=5,
@@ -1709,6 +1857,15 @@ class LocalClient(object):
             minions:
                 A set, the targets that the tgt passed should match.
         '''
+        if 'expr_form' in kwargs:
+            salt.utils.warn_until(
+                'Fluorine',
+                'The target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = kwargs.pop('expr_form')
+
         # Make sure the publisher is running by checking the unix socket
         if (self.opts.get('ipc_mode', '') != 'tcp' and
                 not os.path.exists(os.path.join(self.opts['sock_dir'],
@@ -1723,7 +1880,7 @@ class LocalClient(object):
                 tgt,
                 fun,
                 arg,
-                expr_form,
+                tgt_type,
                 ret,
                 jid,
                 timeout,
@@ -1744,9 +1901,13 @@ class LocalClient(object):
             payload = yield channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(
-                'Salt request timed out. The master is not responding. '
-                'If this error persists after verifying the master is up, '
-                'worker_threads may need to be increased.'
+                'Salt request timed out. The master is not responding. You '
+                'may need to run your command with `--async` in order to '
+                'bypass the congested event bus. With `--async`, the CLI tool '
+                'will print the job id (jid) and exit immediately without '
+                'listening for responses. You can then use '
+                '`salt-run jobs.lookup_jid` to look up the results of the job '
+                'in the job cache later.'
             )
 
         if not payload:

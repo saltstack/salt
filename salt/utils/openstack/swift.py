@@ -177,7 +177,7 @@ class SaltSwift(object):
                 dirpath = dirname(local_file)
                 if dirpath and not isdir(dirpath):
                     mkdirs(dirpath)
-                fp = salt.utils.fopen(local_file, 'wb')
+                fp = salt.utils.fopen(local_file, 'wb')  # pylint: disable=resource-leakage
 
             read_length = 0
             for chunk in body:

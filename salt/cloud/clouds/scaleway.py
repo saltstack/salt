@@ -215,20 +215,11 @@ def create(server_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in server_:
-        server_['driver'] = server_.pop('provider')
-
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(server_['name']),
-        args={
-            'name': server_['name'],
-            'profile': server_['profile'],
-            'provider': server_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', server_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -254,7 +245,9 @@ def create(server_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(server_['name']),
-        args={'kwargs': kwargs},
+        args={
+            'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, list(kwargs)),
+        },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -319,11 +312,7 @@ def create(server_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(server_['name']),
-        args={
-            'name': server_['name'],
-            'profile': server_['profile'],
-            'provider': server_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', server_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )

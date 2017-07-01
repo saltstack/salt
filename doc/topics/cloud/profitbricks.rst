@@ -11,7 +11,7 @@ and disk size without being tied to a particular server size.
 Dependencies
 ============
 
-* profitbricks >= 2.3.4
+* profitbricks >= 3.0.0
 
 Configuration
 =============
@@ -117,7 +117,8 @@ Here is an example of a profile:
           disk_size: 500
         db_log:
           disk_size: 50
-          disk_type: SSD
+          disk_type: HDD
+          disk_availability_zone: ZONE_3
 
 The following list explains some of the important properties.
 
@@ -143,6 +144,9 @@ disk_type
     This option allow the disk type to be set to HDD or SSD. The default is
     HDD.
 
+disk_availability_zone
+    This option will provision the volume in the specified availability_zone.
+
 cores
     This option allows you to override the number of CPU cores as defined by
     the size.
@@ -151,6 +155,10 @@ ram
     This option allows you to override the amount of RAM defined by the size.
     The value must be a multiple of 256, e.g. 256, 512, 768, 1024, and so
     forth.
+
+availability_zone
+    This options specifies in which availability zone the server should be
+    built. Zones include ZONE_1 and ZONE_2. The default is AUTO.
 
 public_lan
     This option will connect the server to the specified public LAN. If no
@@ -171,6 +179,9 @@ public_firewall_rules
       icmp_type: <icmp-type>
       icmp_code: <icmp-code>
     
+nat
+    This option will enable NAT on the private NIC.
+
 private_lan
     This option will connect the server to the specified private LAN. If no
     LAN exists, then a new private LAN will be created. The value accepts a LAN
@@ -198,7 +209,7 @@ ssh_public_key
 
 ssh_interface
     This option will use the private LAN IP for node connections (such as
-    as bootstrapping the node) instead of the public LAN IP. The value accepts
+    bootstrapping the node) instead of the public LAN IP. The value accepts
     'private_lan'.
 
 cpu_family

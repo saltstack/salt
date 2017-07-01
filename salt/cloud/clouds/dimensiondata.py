@@ -18,6 +18,8 @@ using the existing Libcloud driver for Dimension Data.
       region: dd-na
       driver: dimensiondata
 
+:maintainer: Anthony Shaw <anthonyshaw@apache.org>
+:depends: libcloud >= 1.2.1
 '''
 
 # Import python libs
@@ -25,7 +27,7 @@ from __future__ import absolute_import
 import logging
 import socket
 import pprint
-from distutils.version import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import libcloud
 try:
@@ -207,20 +209,11 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -229,25 +222,55 @@ def create(vm_):
     conn = get_conn()
     rootPw = NodeAuthPassword(vm_['auth'])
 
+    location = conn.ex_get_location_by_id(vm_['location'])
+    images = conn.list_images(location=location)
+    image = [x for x in images if x.id == vm_['image']][0]
+    network_domains = conn.ex_list_network_domains(location=location)
     try:
-        location = conn.ex_get_location_by_id(vm_['location'])
-        images = conn.list_images(location=location)
-        image = [x for x in images if x.id == vm_['image']][0]
-        networks = conn.ex_list_network_domains(location=location)
-        network_domain = [y for y in networks if y.name ==
-                          vm_['network_domain']][0]
+        network_domain = [y for y in network_domains
+                          if y.name == vm_['network_domain']][0]
+    except IndexError:
+        network_domain = conn.ex_create_network_domain(
+            location=location,
+            name=vm_['network_domain'],
+            plan='ADVANCED',
+            description=''
+        )
+
+    try:
+        vlan = [y for y in conn.ex_list_vlans(
+            location=location,
+            network_domain=network_domain)
+                if y.name == vm_['vlan']][0]
+    except (IndexError, KeyError):
         # Use the first VLAN in the network domain
-        vlan = conn.ex_list_vlans(location=location,
-                                  network_domain=network_domain)[0]
-        kwargs = {
-            'name': vm_['name'],
-            'image': image,
-            'auth': rootPw,
-            'ex_description': vm_['description'],
-            'ex_network_domain': network_domain,
-            'ex_vlan': vlan,
-            'ex_is_started': vm_['is_started']
-        }
+        vlan = conn.ex_list_vlans(
+            location=location,
+            network_domain=network_domain)[0]
+
+    kwargs = {
+        'name': vm_['name'],
+        'image': image,
+        'auth': rootPw,
+        'ex_description': vm_['description'],
+        'ex_network_domain': network_domain,
+        'ex_vlan': vlan,
+        'ex_is_started': vm_['is_started']
+    }
+
+    event_data = kwargs.copy()
+    del event_data['auth']
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'requesting instance',
+        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        args=__utils__['cloud.filter_event']('requesting', event_data, list(event_data)),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
         log.error(
@@ -320,11 +343,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )

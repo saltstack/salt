@@ -12,13 +12,9 @@ Setting a GitHub pull request
 This is the preferred method for contributions, simply create a GitHub
 fork, commit your changes to the fork, and then open up a pull request.
 
-Posting patches to the mailing list
------------------------------------
+Please review the following questions when creating a pull request:
 
-If you have a patch for Salt, please format it via :command:`git format-patch`
-and send it to the Salt users mailing list. This allows the patch to give you
-the contributor the credit for your patch, and gives the Salt community an
-archive of the patch and a place for discussion.
+`<https://docs.saltstack.com/en/develop/topics/development/pull_requests.html>`_
 
 Contributions Welcome!
 ----------------------
@@ -88,7 +84,7 @@ On Debian and derivative systems such as Ubuntu, system requirements can be
 installed by running::
 
     apt-get install -y build-essential libssl-dev python-dev python-m2crypto \
-      python-pip python-virtualenv swig virtualenvwrapper
+      python-pip python-virtualenv virtualenvwrapper
 
 RedHat-based systems
 ````````````````````
@@ -97,18 +93,6 @@ If you are developing using one of these releases, you will want to create your
 virtualenv using the ``--system-site-packages`` option so that these modules
 are available in the virtualenv.
 
-M2Crypto also supplies a fedora_setup.sh script you may use as well if you get
-the following error::
-
-    This openssl-devel package does not work your architecture?. Use the -cpperraswarn option to continue swig processing.
-
-You can use it doing the following::
-
-    cd <path-to-your-venv>/build/M2Crypto
-    chmod u+x fedora_setup.sh
-    ./fedora_setup.sh build
-    ./fedora_setup.sh install
-
 
 Installing dependencies on macOS
 ````````````````````````````````
@@ -116,7 +100,6 @@ Installing dependencies on macOS
 One simple way to get all needed dependencies on macOS is to use homebrew,
 and install the following packages::
 
-    brew install swig
     brew install zmq
 
 Afterward the pip commands should run without a hitch. Also be sure to set
@@ -170,14 +153,6 @@ ZeroMQ Transport:
     pip install -r requirements/zeromq.txt
     pip install psutil
     pip install -e .
-
-.. note:: Installing M2Crypto
-
-    You may need ``swig`` and ``libssl-dev`` to build M2Crypto. If you
-    encounter the error ``command 'swig' failed with exit status 1``
-    while installing M2Crypto, try installing it with the following command::
-
-        env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl" pip install M2Crypto
 
 
 RAET Transport:
@@ -267,6 +242,7 @@ path. This can be done in a couple different ways:
 
 ``NOTE:`` The socket path is limited to 107 characters on Solaris and Linux,
 and 103 characters on BSD-based systems.
+
 File descriptor limit
 ~~~~~~~~~~~~~~~~~~~~~
 

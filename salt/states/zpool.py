@@ -30,6 +30,22 @@ Management zpool
               /dev/disk2
               /dev/disk3
 
+    partitionpool:
+      zpool.present:
+        - config:
+            import: false
+            force: true
+        - properties:
+            comment: disk partition salty storage pool
+            ashift: '12'
+            feature@lz4_compress: enabled
+        - filesystem_properties:
+            compression: lz4
+            atime: on
+            relatime: on
+        - layout:
+            - /dev/disk/by-uuid/3e43ce94-77af-4f52-a91b-6cdbb0b0f41b
+
     simplepool:
       zpool.present:
         - config:
@@ -73,7 +89,7 @@ def __virtual__():
     else:
         return (
             False,
-            '{0} state module can only be loaded on illumos, Solaris, SmartOS, FreeBSD, ...'.format(
+            '{0} state module can only be loaded on illumos, Solaris, SmartOS, FreeBSD, Linux, ...'.format(
                 __virtualname__
             )
         )
@@ -138,10 +154,9 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
 
             zpool create mypool mirror /tmp/vdisk0 /tmp/vdisk1 /tmp/vdisk2
 
-        Creating a 3-way mirror! Why you probably expect it to be mirror root vdev with 2 devices + a root vdev of 1 device!
+        Creating a 3-way mirror! While you probably expect it to be mirror root vdev with 2 devices + a root vdev of 1 device!
 
     '''
-    name = name.lower()
     ret = {'name': name,
            'changes': {},
            'result': None,
@@ -165,7 +180,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
     # parse layout
     if layout:
         for root_dev in layout:
-            if '-' not in root_dev:
+            if root_dev.count('-') != 1:
                 continue
             layout[root_dev] = layout[root_dev].keys() if isinstance(layout[root_dev], OrderedDict) else layout[root_dev].split(' ')
 
@@ -242,7 +257,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
                     params = []
                     params.append(name)
                     for root_dev in layout:
-                        if '-' in root_dev:  # special device
+                        if root_dev.count('-') == 1:  # special device
                             # NOTE: accomidate non existing 'disk' vdev
                             if root_dev.split('-')[0] != 'disk':
                                 params.append(root_dev.split('-')[0])  # add the type by stripping the ID
@@ -283,7 +298,6 @@ def absent(name, export=False, force=False):
         force destroy or export
 
     '''
-    name = name.lower()
     ret = {'name': name,
            'changes': {},
            'result': None,

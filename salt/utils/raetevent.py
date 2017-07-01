@@ -4,6 +4,7 @@ Manage events
 
 This module is used to manage events via RAET
 '''
+# pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
 from __future__ import absolute_import

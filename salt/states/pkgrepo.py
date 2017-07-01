@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Management of APT/YUM package repos
+Management of APT/RPM package repos
 ===================================
 
-Package repositories for APT-based and YUM-based distros can be managed with
+Package repositories for APT-based and RPM-based distros(openSUSE/SUSE, CentOS/Fedora/Redhat) can be managed with
 these states. Here is some example SLS:
 
 .. code-block:: yaml
@@ -96,6 +96,7 @@ from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 import salt.utils
 import salt.utils.pkg.deb
+import salt.utils.pkg.rpm
 
 
 def __virtual__():
@@ -403,6 +404,12 @@ def managed(name, ppa=None, **kwargs):
                         salt.utils.pkg.deb.combine_comments(kwargs['comments'])
                     if pre_comments != post_comments:
                         break
+            elif kwarg == 'comments' and os_family == 'redhat':
+                precomments = salt.utils.pkg.rpm.combine_comments(pre[kwarg])
+                kwargcomments = salt.utils.pkg.rpm.combine_comments(
+                        sanitizedkwargs[kwarg])
+                if precomments != kwargcomments:
+                    break
             else:
                 if os_family in ('redhat', 'suse') \
                         and any(isinstance(x, bool) for x in

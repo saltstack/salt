@@ -209,7 +209,6 @@ def extracted(name,
                 - source: salt://apps/src/myapp-16.2.4.tar.gz
                 - user: www
                 - group: www
-                - tar_options: --strip-components=1
 
         With the rewrite for 2016.11.0, these workarounds are no longer
         necessary. ``if_missing`` is still a supported argument, but it is no
@@ -376,7 +375,7 @@ def extracted(name,
 
         .. versionadded:: 2016.11.0
 
-    source_hash_update
+    source_hash_update : False
         Set this to ``True`` if archive should be extracted if source_hash has
         changed. This would extract regardless of the ``if_missing`` parameter.
 
@@ -414,8 +413,6 @@ def extracted(name,
         ``tar``/``unzip`` implementation on the minion's OS.
 
         .. versionadded:: 2016.11.0
-            The ``tar_options`` and ``zip_options`` parameters have been
-            deprecated in favor of a single argument name.
         .. versionchanged:: 2015.8.11,2016.3.2
             XZ-compressed tar archives no longer require ``J`` to manually be
             set in the ``options``, they are now detected automatically and
@@ -426,15 +423,6 @@ def extracted(name,
         .. note::
             For tar archives, main operators like ``-x``, ``--extract``,
             ``--get``, ``-c`` and ``-f``/``--file`` should *not* be used here.
-
-    tar_options
-        .. deprecated:: 2016.11.0
-            Use ``options`` instead.
-
-    zip_options
-        .. versionadded:: 2016.3.1
-        .. deprecated:: 2016.11.0
-            Use ``options`` instead.
 
     list_options
         **For tar archives only.** This state uses :py:func:`archive.list
@@ -763,21 +751,6 @@ def extracted(name,
         )
         return ret
 
-    tar_options = kwargs.pop('tar_options', None)
-    zip_options = kwargs.pop('zip_options', None)
-    if tar_options:
-        msg = ('The \'tar_options\' argument has been deprecated, please use '
-               '\'options\' instead.')
-        salt.utils.warn_until('Oxygen', msg)
-        ret.setdefault('warnings', []).append(msg)
-        options = tar_options
-    elif zip_options:
-        msg = ('The \'zip_options\' argument has been deprecated, please use '
-               '\'options\' instead.')
-        salt.utils.warn_until('Oxygen', msg)
-        ret.setdefault('warnings', []).append(msg)
-        options = zip_options
-
     if options is not None and not isinstance(options, six.string_types):
         options = str(options)
 
@@ -871,10 +844,10 @@ def extracted(name,
     if source_hash:
         try:
             source_sum = __salt__['file.get_source_sum'](
-                 source=source_match,
-                 source_hash=source_hash,
-                 source_hash_name=source_hash_name,
-                 saltenv=__env__)
+                source=source_match,
+                source_hash=source_hash,
+                source_hash_name=source_hash_name,
+                saltenv=__env__)
         except CommandExecutionError as exc:
             ret['comment'] = exc.strerror
             return ret
@@ -895,7 +868,7 @@ def extracted(name,
             # Prevent a traceback from attempting to read from a directory path
             salt.utils.rm_rf(cached_source)
 
-    existing_cached_source_sum = _read_cached_checksum(cached_source) \
+    existing_cached_source_sum = _read_cached_checksum(cached_source)
 
     if source_is_local:
         # No need to download archive, it's local to the minion
@@ -962,14 +935,15 @@ def extracted(name,
                 )
                 return file_result
 
-        if source_hash:
-            _update_checksum(cached_source)
-
     else:
         log.debug(
             'Archive %s is already in cache',
             salt.utils.url.redact_http_basic_auth(source_match)
         )
+
+    if source_hash and source_hash_update and not skip_verify:
+        # Create local hash sum file if we're going to track sum update
+        _update_checksum(cached_source)
 
     if archive_format == 'zip' and not password:
         log.debug('Checking %s to see if it is password-protected',
@@ -1174,6 +1148,15 @@ def extracted(name,
     created_destdir = False
 
     if extraction_needed:
+        if source_is_local and source_hash and not skip_verify:
+            ret['result'] = __salt__['file.check_hash'](source_match, source_sum['hsum'])
+            if not ret['result']:
+                ret['comment'] = \
+                    '{0} does not match the desired source_hash {1}'.format(
+                        source_match, source_sum['hsum']
+                    )
+                return ret
+
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = \
@@ -1256,7 +1239,7 @@ def extracted(name,
                     except tarfile.ReadError:
                         if salt.utils.which('xz'):
                             if __salt__['cmd.retcode'](
-                                    ['xz', '-l', cached_source],
+                                    ['xz', '-t', cached_source],
                                     python_shell=False,
                                     ignore_retcode=True) == 0:
                                 # XZ-compressed data

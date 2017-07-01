@@ -81,9 +81,3 @@ levels of symlinks (defaults to 64), an error is always raised.
 
 For some functions, this behavior is different to the behavior on Unix
 platforms. In general, avoid symlink loops on either platform.
-
-
-Modifying security properties (ACLs) on files
-=============================================
-There is no support in Salt for modifying ACLs, and therefore no support for
-changing file permissions, besides modifying the owner/user.

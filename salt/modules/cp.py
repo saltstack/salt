@@ -15,6 +15,7 @@ import fnmatch
 import salt.minion
 import salt.fileclient
 import salt.utils
+import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.url
 import salt.crypt
@@ -48,7 +49,7 @@ def _gather_pillar(pillarenv, pillar_override):
         __grains__,
         __opts__['id'],
         __opts__['environment'],
-        pillar=pillar_override,
+        pillar_override=pillar_override,
         pillarenv=pillarenv
     )
     ret = pillar.compile_pillar()
@@ -85,7 +86,7 @@ def recv(dest, chunk, append=False, compressed=True, mode=None):
 
     open_mode = 'ab' if append else 'wb'
     try:
-        fh_ = salt.utils.fopen(dest, open_mode)
+        fh_ = salt.utils.fopen(dest, open_mode)  # pylint: disable=W8470
     except (IOError, OSError) as exc:
         if exc.errno != errno.ENOENT:
             # Parent dir does not exist, we need to create it
@@ -95,7 +96,7 @@ def recv(dest, chunk, append=False, compressed=True, mode=None):
         except (IOError, OSError) as makedirs_exc:
             # Failed to make directory
             return _error(makedirs_exc.__str__())
-        fh_ = salt.utils.fopen(dest, open_mode)
+        fh_ = salt.utils.fopen(dest, open_mode)  # pylint: disable=W8470
 
     try:
         # Write the chunk to disk
@@ -176,7 +177,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
         temp file, rendering that file, and returning the result.
         '''
         # write out path to temp file
-        tmp_path_fn = salt.utils.mkstemp()
+        tmp_path_fn = salt.utils.files.mkstemp()
         with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](
@@ -208,6 +209,9 @@ def get_file(path,
              gzip=None,
              **kwargs):
     '''
+    .. versionchanged:: Oxygen
+        ``dest`` can now be a directory
+
     Used to get a single file from the salt master
 
     CLI Example:
@@ -319,6 +323,9 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, **kwargs):
 
 def get_url(path, dest='', saltenv='base', makedirs=False):
     '''
+    .. versionchanged:: Oxygen
+        ``dest`` can now be a directory
+
     Used to get a single file from a URL.
 
     path
@@ -383,9 +390,11 @@ def get_file_str(path, saltenv='base'):
     '''
     fn_ = cache_file(path, saltenv)
     if isinstance(fn_, six.string_types):
-        with salt.utils.fopen(fn_, 'r') as fp_:
-            data = fp_.read()
-        return data
+        try:
+            with salt.utils.fopen(fn_, 'r') as fp_:
+                return fp_.read()
+        except IOError:
+            return False
     return fn_
 
 

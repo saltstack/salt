@@ -40,7 +40,7 @@ def __virtual__():
 
         # CherryPy wasn't imported; explain why
         if cpy_error:
-            from distutils.version import LooseVersion as V  # pylint: disable=E0611
+            from salt.utils.versions import LooseVersion as V
 
             if 'cherrypy' in globals() and V(cherrypy.__version__) < V(cpy_min):
                 error_msg = ("Required version of CherryPy is {0} or "

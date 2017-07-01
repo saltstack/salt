@@ -13,6 +13,8 @@ import logging
 import functools
 import threading
 import traceback
+import signal
+import functools
 from random import randint
 
 # Import salt libs
@@ -96,9 +98,13 @@ def minion_process():
     '''
     import salt.utils
     import salt.cli.daemons
+
     # salt_minion spawns this function in a new process
 
     salt.utils.appendproctitle('KeepAlive')
+
+    def handle_hup(manager, sig, frame):
+        manager.minion.reload()
 
     def suicide_when_without_parent(parent_pid):
         '''
@@ -124,6 +130,9 @@ def minion_process():
         thread.start()
 
     minion = salt.cli.daemons.Minion()
+    signal.signal(signal.SIGHUP,
+                  functools.partial(handle_hup,
+                                    minion))
 
     try:
         minion.start()
@@ -184,6 +193,9 @@ def salt_minion():
                           functools.partial(escalate_signal_to_process,
                                             process.pid))
             signal.signal(signal.SIGINT,
+                          functools.partial(escalate_signal_to_process,
+                                            process.pid))
+            signal.signal(signal.SIGHUP,
                           functools.partial(escalate_signal_to_process,
                                             process.pid))
         except Exception:  # pylint: disable=broad-except
@@ -418,21 +430,21 @@ def salt_cloud():
     '''
     The main function for salt-cloud
     '''
+    # Define 'salt' global so we may use it after ImportError. Otherwise,
+    # UnboundLocalError will be raised.
+    global salt  # pylint: disable=W0602
+
     try:
         # Late-imports for CLI performance
         import salt.cloud
         import salt.cloud.cli
-        has_saltcloud = True
     except ImportError as e:
-        log.error("Error importing salt cloud {0}".format(e))
         # No salt cloud on Windows
-        has_saltcloud = False
-    if '' in sys.path:
-        sys.path.remove('')
-
-    if not has_saltcloud:
+        log.error("Error importing salt cloud {0}".format(e))
         print('salt-cloud is not available in this system')
         sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
+    if '' in sys.path:
+        sys.path.remove('')
 
     client = salt.cloud.cli.SaltCloud()
     _install_signal_handlers(client)

@@ -622,7 +622,7 @@ class CkMinions(object):
 
     def check_minions(self,
                       expr,
-                      expr_form='glob',
+                      tgt_type='glob',
                       delimiter=DEFAULT_TARGET_DELIM,
                       greedy=True):
         '''
@@ -634,8 +634,8 @@ class CkMinions(object):
         try:
             if expr is None:
                 expr = ''
-            check_func = getattr(self, '_check_{0}_minions'.format(expr_form), None)
-            if expr_form in ('grain',
+            check_func = getattr(self, '_check_{0}_minions'.format(tgt_type), None)
+            if tgt_type in ('grain',
                              'grain_pcre',
                              'pillar',
                              'pillar_pcre',
@@ -648,7 +648,7 @@ class CkMinions(object):
         except Exception:
             log.exception(
                     'Failed matching available minions with {0} pattern: {1}'
-                    .format(expr_form, expr))
+                    .format(tgt_type, expr))
             minions = []
         return minions
 
@@ -672,14 +672,27 @@ class CkMinions(object):
 
         return set(self.check_minions(v_expr, v_matcher))
 
-    def validate_tgt(self, valid, expr, expr_form, minions=None):
+    def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
         '''
         Return a Bool. This function returns if the expression sent in is
         within the scope of the valid expression
         '''
+        # remember to remove the expr_form argument from this function when
+        # performing the cleanup on this deprecation.
+        if expr_form is not None:
+            salt.utils.warn_until(
+                'Fluorine',
+                'the target type should be passed using the \'tgt_type\' '
+                'argument instead of \'expr_form\'. Support for using '
+                '\'expr_form\' will be removed in Salt Fluorine.'
+            )
+            tgt_type = expr_form
+
         v_minions = self._expand_matching(valid)
         if minions is None:
-            minions = set(self.check_minions(expr, expr_form))
+            minions = set(self.check_minions(expr, tgt_type))
+        else:
+            minions = set(minions)
         d_bool = not bool(minions.difference(v_minions))
         if len(v_minions) == len(minions) and d_bool:
             return True
@@ -801,7 +814,7 @@ class CkMinions(object):
                     log.info('Malformed ACL: {0}'.format(auth_list_entry))
                     continue
             allowed_minions.update(set(auth_list_entry.keys()))
-            for key in auth_list_entry.keys():
+            for key in auth_list_entry:
                 for match in self._expand_matching(key):
                     if match in auth_dictionary:
                         auth_dictionary[match].extend(auth_list_entry[key])
@@ -839,7 +852,8 @@ class CkMinions(object):
                    tgt_type='glob',
                    groups=None,
                    publish_validate=False,
-                   minions=None):
+                   minions=None,
+                   whitelist=None):
         '''
         Returns a bool which defines if the requested function is authorized.
         Used to evaluate the standard structure under external master
@@ -867,6 +881,8 @@ class CkMinions(object):
             args = [args]
         try:
             for num, fun in enumerate(funs):
+                if whitelist and fun in whitelist:
+                    return True
                 for ind in auth_list:
                     if isinstance(ind, six.string_types):
                         # Allowed for all minions
@@ -967,24 +983,6 @@ class CkMinions(object):
                 if group_name.rstrip("%") in user_groups:
                     for matcher in auth_provider[group_name]:
                         auth_list.append(matcher)
-        return auth_list
-
-    def fill_auth_list_from_ou(self, auth_list, opts=None):
-        '''
-        Query LDAP, retrieve list of minion_ids from an OU or other search.
-        For each minion_id returned from the LDAP search, copy the perms
-        matchers into the auth dictionary
-        :param auth_list:
-        :param opts: __opts__ for when __opts__ is not injected
-        :return: Modified auth list.
-        '''
-        ou_names = []
-        for item in auth_list:
-            if isinstance(item, six.string_types):
-                continue
-            ou_names.extend([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
-        if ou_names:
-            auth_list = salt.auth.ldap.expand_ldap_entries(auth_list, opts)
         return auth_list
 
     def wheel_check(self, auth_list, fun):

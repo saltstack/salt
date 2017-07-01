@@ -56,7 +56,8 @@ def managed(name,
             pip_upgrade=False,
             pip_pkgs=None,
             pip_no_cache_dir=False,
-            pip_cache_dir=None):
+            pip_cache_dir=None,
+            process_dependency_links=False):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -109,6 +110,11 @@ def managed(name,
         As an alternative to `requirements`, pass a list of pip packages that
         should be installed.
 
+    process_dependency_links: False
+        Run pip install with the --process_dependency_links flag.
+
+        .. versionadded:: 2017.7.0
+
     Also accepts any kwargs that the virtualenv module will. However, some
     kwargs, such as the ``pip`` option, require ``- distribute: True``.
 
@@ -118,6 +124,8 @@ def managed(name,
           virtualenv.managed:
             - system_site_packages: False
             - requirements: salt://REQUIREMENTS.txt
+            - env_vars:
+                PATH_VAR: '/usr/local/bin/'
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -179,7 +187,7 @@ def managed(name,
 
     if not venv_exists or (venv_exists and clear):
         try:
-            _ret = __salt__['virtualenv.create'](
+            venv_ret = __salt__['virtualenv.create'](
                 name,
                 venv_bin=venv_bin,
                 system_site_packages=system_site_packages,
@@ -197,9 +205,9 @@ def managed(name,
             ret['comment'] = 'Failed to create virtualenv: {0}'.format(err)
             return ret
 
-        if _ret['retcode'] != 0:
+        if venv_ret['retcode'] != 0:
             ret['result'] = False
-            ret['comment'] = _ret['stdout'] + _ret['stderr']
+            ret['comment'] = venv_ret['stdout'] + venv_ret['stderr']
             return ret
 
         ret['result'] = True
@@ -260,9 +268,10 @@ def managed(name,
             if req_canary != os.path.abspath(req_canary):
                 cwd = os.path.dirname(os.path.abspath(req_canary))
 
-        _ret = __salt__['pip.install'](
+        pip_ret = __salt__['pip.install'](
             pkgs=pip_pkgs,
             requirements=requirements,
+            process_dependency_links=process_dependency_links,
             bin_env=name,
             use_wheel=use_wheel,
             no_use_wheel=no_use_wheel,
@@ -284,11 +293,11 @@ def managed(name,
             no_cache_dir=pip_no_cache_dir,
             cache_dir=pip_cache_dir
         )
-        ret['result'] &= _ret['retcode'] == 0
-        if _ret['retcode'] > 0:
+        ret['result'] &= pip_ret['retcode'] == 0
+        if pip_ret['retcode'] > 0:
             ret['comment'] = '{0}\n{1}\n{2}'.format(ret['comment'],
-                                                    _ret['stdout'],
-                                                    _ret['stderr'])
+                                                    pip_ret['stdout'],
+                                                    pip_ret['stderr'])
 
         after = set(__salt__['pip.freeze'](bin_env=name))
 

@@ -15,8 +15,9 @@ import random
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.ext.six.moves import range
-
+from salt.utils.locales import sdecode
 
 TAG = '# Lines below here are managed by Salt, do not edit\n'
 SALT_CRON_IDENTIFIER = 'SALT_CRON_IDENTIFIER'
@@ -129,7 +130,7 @@ def _render_tab(lst):
             comment = '#'
             if cron['comment']:
                 comment += ' {0}'.format(
-                    cron['comment'].rstrip().replace('\n', '\n# '))
+                    cron['comment'].replace('\n', '\n# '))
             if cron['identifier']:
                 comment += ' {0}:{1}'.format(SALT_CRON_IDENTIFIER,
                                              cron['identifier'])
@@ -155,12 +156,18 @@ def _get_cron_cmdstr(path, user=None):
     '''
     Returns a format string, to be used to build a crontab command.
     '''
-    cmd = 'crontab'
-
-    if user and __grains__.get('os_family') not in ('Solaris', 'AIX'):
-        cmd += ' -u {0}'.format(user)
-
+    if user:
+        cmd = 'crontab -u {0}'.format(user)
+    else:
+        cmd = 'crontab'
     return '{0} {1}'.format(cmd, path)
+
+
+def _check_instance_uid_match(user):
+    '''
+    Returns true if running instance's UID matches the specified user UID
+    '''
+    return os.geteuid() == __salt__['file.user_to_uid'](user)
 
 
 def write_cron_file(user, path):
@@ -177,11 +184,10 @@ def write_cron_file(user, path):
 
     .. note::
 
-        Solaris and AIX require that `path` is readable by `user`
+        Some OS' do not support specifying user via the `crontab` command i.e. (Solaris, AIX)
     '''
-    appUser = __opts__['user']
-    if __grains__.get('os_family') in ('Solaris', 'AIX') and appUser != user:
-        return __salt__['cmd.retcode'](_get_cron_cmdstr(path, user),
+    if _check_instance_uid_match(user) or __grains__.get('os_family') in ('Solaris', 'AIX'):
+        return __salt__['cmd.retcode'](_get_cron_cmdstr(path),
                                        runas=user,
                                        python_shell=False) == 0
     else:
@@ -203,11 +209,10 @@ def write_cron_file_verbose(user, path):
 
     .. note::
 
-        Solaris and AIX require that `path` is readable by `user`
+        Some OS' do not support specifying user via the `crontab` command i.e. (Solaris, AIX)
     '''
-    appUser = __opts__['user']
-    if __grains__.get('os_family') in ('Solaris', 'AIX') and appUser != user:
-        return __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
+    if _check_instance_uid_match(user) or __grains__.get('os_family') in ('Solaris', 'AIX'):
+        return __salt__['cmd.run_all'](_get_cron_cmdstr(path),
                                        runas=user,
                                        python_shell=False)
     else:
@@ -219,13 +224,12 @@ def _write_cron_lines(user, lines):
     '''
     Takes a list of lines to be committed to a user's crontab and writes it
     '''
-    appUser = __opts__['user']
-    path = salt.utils.mkstemp()
-    if __grains__.get('os_family') in ('Solaris', 'AIX') and appUser != user:
-        # on solaris/aix we change to the user before executing the commands
+    path = salt.utils.files.mkstemp()
+    if _check_instance_uid_match(user) or __grains__.get('os_family') in ('Solaris', 'AIX'):
+        # In some cases crontab command should be executed as user rather than root
         with salt.utils.fpopen(path, 'w+', uid=__salt__['file.user_to_uid'](user), mode=0o600) as fp_:
             fp_.writelines(lines)
-        ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
+        ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path),
                                       runas=user,
                                       python_shell=False)
     else:
@@ -233,7 +237,6 @@ def _write_cron_lines(user, lines):
             fp_.writelines(lines)
         ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
                                       python_shell=False)
-
     os.remove(path)
     return ret
 
@@ -258,28 +261,20 @@ def raw_cron(user):
 
         salt '*' cron.raw_cron root
     '''
-
-    appUser = __opts__['user']
-    if __grains__.get('os_family') in ('Solaris', 'AIX'):
-        if appUser == user:
-            cmd = 'crontab -l'
-        else:
-            cmd = 'crontab -l {0}'.format(user)
+    if _check_instance_uid_match(user) or __grains__.get('os_family') in ('Solaris', 'AIX'):
+        cmd = 'crontab -l'
         # Preserve line endings
-        lines = __salt__['cmd.run_stdout'](cmd,
+        lines = sdecode(__salt__['cmd.run_stdout'](cmd,
                                            runas=user,
                                            rstrip=False,
-                                           python_shell=False).splitlines(True)
+                                           python_shell=False)).splitlines(True)
     else:
-        if appUser == user:
-            cmd = 'crontab -l'
-        else:
-            cmd = 'crontab -l -u {0}'.format(user)
+        cmd = 'crontab -u {0} -l'.format(user)
         # Preserve line endings
-        lines = __salt__['cmd.run_stdout'](cmd,
-                                           ignore_retcode=True,
+        lines = sdecode(__salt__['cmd.run_stdout'](cmd,
                                            rstrip=False,
-                                           python_shell=False).splitlines(True)
+                                           python_shell=False)).splitlines(True)
+
     if len(lines) != 0 and lines[0].startswith('# DO NOT EDIT THIS FILE - edit the master and reinstall.'):
         del lines[0:3]
     return ''.join(lines)
@@ -413,6 +408,10 @@ def _get_cron_date_time(**kwargs):
         value = str(kwargs.get(param, '1')).lower()
         if value == 'random':
             ret[param] = str(random.sample(range_max[param], 1)[0])
+        elif len(value.split(':')) == 2:
+            cron_range = sorted(value.split(':'))
+            start, end = int(cron_range[0]), int(cron_range[1])
+            ret[param] = str(random.randint(start, end))
         else:
             ret[param] = value
 
@@ -605,10 +604,10 @@ def rm_job(user,
     if rm_ is not None:
         lst['crons'].pop(rm_)
         ret = 'removed'
-    comdat = _write_cron_lines(user, _render_tab(lst))
-    if comdat['retcode']:
-        # Failed to commit, return the error
-        return comdat['stderr']
+        comdat = _write_cron_lines(user, _render_tab(lst))
+        if comdat['retcode']:
+            # Failed to commit, return the error
+            return comdat['stderr']
     return ret
 
 rm = salt.utils.alias_function(rm_job, 'rm')

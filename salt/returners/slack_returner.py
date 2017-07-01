@@ -82,10 +82,10 @@ from __future__ import absolute_import
 import yaml
 import pprint
 import logging
-import urllib
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six.moves.http_client
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Libs
@@ -168,7 +168,7 @@ def _post_message(channel,
                                     api_key=api_key,
                                     method='POST',
                                     header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
-                                    data=urllib.urlencode(parameters))
+                                    data=_urlencode(parameters))
 
     log.debug('result {0}'.format(result))
     if result:
