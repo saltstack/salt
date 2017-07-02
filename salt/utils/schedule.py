@@ -1090,23 +1090,35 @@ class Schedule(object):
                                 log.error('Invalid date string {0}. '
                                           'Ignoring job {1}.'.format(i, job))
                                 continue
-                        when = int(time.mktime(when__.timetuple()))
-                        if when >= now:
-                            _when.append(when)
+                        _when.append(int(time.mktime(when__.timetuple())))
+
+                    # Sort the list of "whens" from earlier to later schedules
                     _when.sort()
+
+                    for i in _when:
+                        if i < now and len(_when) > 1:
+                            # Remove all missed schedules except the latest one.
+                            # We need it to detect if it was triggered previously.
+                            _when.remove(i)
+
                     if _when:
-                        # Grab the first element
-                        # which is the next run time
+                        # Grab the first element, which is the next run time or
+                        # last scheduled time in the past.
                         when = _when[0]
 
                         # If we're switching to the next run in a list
-                        # ensure the job can run
-                        if '_when' in data and data['_when'] != when:
+                        # ensure the job can run.
+                        if '_when' in data and \
+                                (data['_when'] != when or len(_when) == 1):
                             data['_when_run'] = True
-                            data['_when'] = when
-                        seconds = when - now
+                            # Calculate time to previously scheduled job
+                            # (which has not been run yet), or it should be
+                            # the last time definition in the list.
+                            seconds = data['_when'] - now
+                        else:
+                            seconds = when - now
 
-                        # scheduled time is in the past and the run was not triggered before
+                        # Scheduled time is in the past and the run was not triggered before
                         if seconds < 0 and not data.get('_when_run', False):
                             continue
 
@@ -1121,6 +1133,9 @@ class Schedule(object):
                         if when > data['_when']:
                             data['_when'] = when
                             data['_when_run'] = True
+                        # At last scheduled time, we disable all subsequent job runs
+                        elif len(_when) == 1:
+                            del data['_when']
 
                     else:
                         continue
