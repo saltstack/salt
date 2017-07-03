@@ -21,6 +21,7 @@ import platform
 import logging
 import locale
 import uuid
+import datetime
 import salt.exceptions
 from salt.ext.six.moves import range
 
