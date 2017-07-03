@@ -1024,7 +1024,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         version_num = ''
         if options:
             version_num = options.get('version', '')
-            #  The user user salt cmdline with version=5.3 might be interpreted
+            #  Using the salt cmdline with version=5.3 might be interpreted
             #  as a float it must be converted to a string in order for
             #  string matching to work.
             if not isinstance(version_num, six.string_types) and version_num is not None:
@@ -1360,7 +1360,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             continue
 
         if version_num is not None:
-            #  The user user salt cmdline with version=5.3 might be interpreted
+            #  Using the salt cmdline with version=5.3 might be interpreted
             #  as a float it must be converted to a string in order for
             #  string matching to work.
             if not isinstance(version_num, six.string_types) and version_num is not None:
