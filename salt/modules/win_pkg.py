@@ -1027,7 +1027,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             #  The user user salt cmdline with version=5.3 might be interpreted
             #  as a float it must be converted to a string in order for
             #  string matching to work.
-            if not isinstance(version, six.string_types):
+            if not isinstance(version_num, six.string_types):
                 version_num = str(version_num)
 
         if not version_num:
@@ -1363,7 +1363,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             #  The user user salt cmdline with version=5.3 might be interpreted
             #  as a float it must be converted to a string in order for
             #  string matching to work.
-            if not isinstance(version, six.string_types):
+            if not isinstance(version_num, six.string_types):
                 version_num = str(version_num)
             if version_num not in pkginfo and 'latest' in pkginfo:
                 version_num = 'latest'
