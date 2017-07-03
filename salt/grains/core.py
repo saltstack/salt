@@ -1688,12 +1688,14 @@ def ip_fqdn():
             ret[key] = []
         else:
             try:
+                start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list(set(item[4][0] for item in info))
             except socket.error:
-                if __opts__['__role'] == 'master':
-                    log.warning('Unable to find IPv{0} record for "{1}" causing a 10 second timeout when rendering grains. '
-                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn))
+                timediff = datetime.datetime.utcnow() - start_time
+                if timediff.seconds > 5 and __opts__['__role'] == 'master':
+                    log.warning('Unable to find IPv{0} record for "{1}" causing a {2} second timeout when rendering grains. '
+                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn, timediff))
                 ret[key] = []
 
     return ret
