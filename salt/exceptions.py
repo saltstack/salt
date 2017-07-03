@@ -383,6 +383,12 @@ class NotImplemented(SaltException):
     '''
 
 
+class TemplateError(SaltException):
+    '''
+    Used when a custom error is triggered in a template
+    '''
+
+
 # VMware related exceptions
 class VMwareSaltError(CommandExecutionError):
     '''
