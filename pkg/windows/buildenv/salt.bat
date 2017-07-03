@@ -1,6 +1,6 @@
 @ echo off
-:: Script for starting the Salt
-:: Accepts all parameters that Salt
+:: Script for starting the Salt CLI
+:: Accepts all parameters that Salt CLI accepts
 
 :: Define Variables
 Set SaltDir=%~dp0
