@@ -68,10 +68,11 @@ If not Exist "%PyDir%\python.exe" (
 )
 
 Set "CurDir=%~dp0"
+Set "BldDir=%CurDir%\buildenv"
 Set "BinDir=%CurDir%\buildenv\bin"
+Set "CnfDir=%CurDir%\buildenv\conf"
 Set "InsDir=%CurDir%\installer"
 Set "PreDir=%CurDir%\prereqs"
-Set "CnfDir=%CurDir%\buildenv\conf"
 for /f "delims=" %%a in ('git rev-parse --show-toplevel') do @set "SrcDir=%%a"
 
 :: Find the NSIS Installer
@@ -545,12 +546,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\zpool.py"^
 :: Remove Unneeded Components
 If Exist "%BinDir%\Lib\site-packages\salt\cloud"^
     rd /S /Q "%BinDir%\Lib\site-packages\salt\cloud" 1>nul
-If Exist "%BinDir%\Scripts\salt-key*"^
-    del /Q "%BinDir%\Scripts\salt-key*" 1>nul
-If Exist "%BinDir%\Scripts\salt-master*"^
-    del /Q "%BinDir%\Scripts\salt-master*" 1>nul
-If Exist "%BinDir%\Scripts\salt-run*"^
-    del /Q "%BinDir%\Scripts\salt-run*" 1>nul
 If Exist "%BinDir%\Scripts\salt-unity*"^
     del /Q "%BinDir%\Scripts\salt-unity*" 1>nul
 
@@ -558,6 +553,36 @@ If Exist "%BinDir%\Scripts\salt-unity*"^
 
 @echo Building the installer...
 @echo ----------------------------------------------------------------------
+:: Make the Master installer if the nullsoft script exists
+If Exist "%InsDir%\Salt-Setup.nsi"^
+    makensis.exe /DSaltVersion=%Version% /DPythonVersion=%Python% "%InsDir%\Salt-Setup.nsi"
+
+:: Remove files not needed for Salt Minion
+:: salt
+:: salt has to be removed individually (can't wildcard it)
+If Exist "%BinDir%\Scripts\salt"^
+    del /Q "%BinDir%\Scripts\salt" 1>nul
+If Exist "%BinDir%\Scripts\salt.exe"^
+    del /Q "%BinDir%\Scripts\salt.exe" 1>nul
+If Exist "%BldDir%\salt.bat"^
+    del /Q "%BldDir%\salt.bat" 1>nul
+:: salt-key
+If Exist "%BinDir%\Scripts\salt-key*"^
+    del /Q "%BinDir%\Scripts\salt-key*" 1>nul
+If Exist "%BldDir%\salt-key.bat"^
+    del /Q "%BldDir%\salt-key.bat" 1>nul
+:: salt-master
+If Exist "%BinDir%\Scripts\salt-master*"^
+    del /Q "%BinDir%\Scripts\salt-master*" 1>nul
+If Exist "%BldDir%\salt-master.bat"^
+    del /Q "%BldDir%\salt-master.bat" 1>nul
+:: salt-run
+If Exist "%BinDir%\Scripts\salt-run*"^
+    del /Q "%BinDir%\Scripts\salt-run*" 1>nul
+If Exist "%BldDir%\salt-run.bat"^
+    del /Q "%BldDir%\salt-run.bat" 1>nul
+
+:: Make the Salt Minion Installer
 makensis.exe /DSaltVersion=%Version% /DPythonVersion=%Python% "%InsDir%\Salt-Minion-Setup.nsi"
 @echo.
 
