@@ -2442,7 +2442,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
                 ret['result'] = result
                 return ret
 
-    ret['result'] = None if __opts__['test'] else True
+    ret['result'] = True
     ret['comment'] = 'Volume \'{0}\' already exists.'.format(name)
     return ret
 
