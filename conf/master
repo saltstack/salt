@@ -91,6 +91,10 @@
 # Set the default outputter used by the salt command. The default is "nested".
 #output: nested
 
+# To set a list of additional directories to search for salt outputters, set the
+# outputter_dirs option.
+#outputter_dirs: []
+
 # Set the default output file used by the salt command. Default is to output
 # to the CLI and not to a file. Functions the same way as the "--out-file"
 # CLI option, only sets this to a single file for all salt commands.
@@ -98,6 +102,9 @@
 
 # Return minions that timeout when running commands like test.ping
 #show_timeout: True
+
+# Tell the client to display the jid when a job is published.
+#show_jid: False
 
 # By default, output is colored. To disable colored output, set the color value
 # to False.
@@ -454,6 +461,27 @@
 # - /etc/salt/roster.d
 # - /opt/salt/some/more/rosters
 
+# The ssh password to log in with.
+#ssh_passwd: ''
+
+#The target system's ssh port number.
+#ssh_port: 22
+
+# Comma-separated list of ports to scan.
+#ssh_scan_ports: 22
+
+# Scanning socket timeout for salt-ssh.
+#ssh_scan_timeout: 0.01
+
+# Boolean to run command via sudo.
+#ssh_sudo: False
+
+# Number of seconds to wait for a response when establishing an SSH connection.
+#ssh_timeout: 60
+
+# The user to log in as.
+#ssh_user: root
+
 # The log file of the salt-ssh command:
 #ssh_log_file: /var/log/salt/ssh
 
@@ -466,6 +494,18 @@
 # Set this to True to default to using ~/.ssh/id_rsa for salt-ssh
 # authentication with minions
 #ssh_use_home_key: False
+
+# Set this to True to default salt-ssh to run with ``-o IdentitiesOnly=yes``.
+# This option is intended for situations where the ssh-agent offers many
+# different identities and allows ssh to ignore those identities and use the
+# only one specified in options.
+#ssh_identities_only: False
+
+# List-only nodegroups for salt-ssh. Each group must be formed as either a
+# comma-separated list, or a YAML list. This option is useful to group minions
+# into easy-to-target groups when using salt-ssh. These groups can then be
+# targeted with the normal -N argument to salt-ssh.
+#ssh_list_nodegroups: {}
 
 #####    Master Module Management    #####
 ##########################################
@@ -535,6 +575,11 @@
 # If set to 'changes', the output will be full unless the state didn't change.
 #state_output: full
 
+# The state_output_diff setting changes whether or not the output from
+# successful states is returned. Useful when even the terse output of these
+# states is cluttering the logs. Set it to True to ignore them.
+#state_output_diff: False
+
 # Automatically aggregate all states that have support for mod_aggregate by
 # setting to 'True'. Or pass a list of state module names to automatically
 # aggregate just those types.
@@ -574,6 +619,10 @@
 #  base:
 #    - /srv/salt
 #
+
+# The master_roots setting configures a master-only copy of the file_roots dictionary,
+# used by the state compiler.
+#master_roots: /srv/salt-master
 
 # When using multiple environments, each with their own top file, the
 # default behaviour is an unordered merge. To prevent top files from

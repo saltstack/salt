@@ -448,7 +448,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         if self.options.coverage and any((
                     self.options.name,
-                    is_admin,
+                    not is_admin,
                     not self.options.run_destructive)) \
                 and self._check_enabled_suites(include_unit=True):
             self.error(

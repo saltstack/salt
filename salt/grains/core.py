@@ -1117,10 +1117,11 @@ _OS_NAME_MAP = {
     'nilrt': 'NILinuxRT',
     'nilrt-xfce': 'NILinuxRT-XFCE',
     'manjaro': 'Manjaro',
+    'manjarolin': 'Manjaro',
     'antergos': 'Antergos',
     'sles': 'SUSE',
-    'slesexpand': 'RES',
     'void': 'Void',
+    'slesexpand': 'RES',
     'linuxmint': 'Mint',
     'neon': 'KDE neon',
 }

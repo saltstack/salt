@@ -15,6 +15,8 @@ except ImportError:
     from yaml import Dumper
     from yaml import SafeDumper
 
+import yaml
+import collections
 from salt.utils.odict import OrderedDict
 
 try:
@@ -44,6 +46,23 @@ def represent_ordereddict(dumper, data):
 OrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 SafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 
+OrderedDumper.add_representer(
+    collections.defaultdict,
+    yaml.representer.SafeRepresenter.represent_dict
+)
+SafeOrderedDumper.add_representer(
+    collections.defaultdict,
+    yaml.representer.SafeRepresenter.represent_dict
+)
+
 if HAS_IOFLO:
     OrderedDumper.add_representer(odict, represent_ordereddict)
     SafeOrderedDumper.add_representer(odict, represent_ordereddict)
+
+
+def safe_dump(data, stream=None, **kwargs):
+    '''
+    Use a custom dumper to ensure that defaultdict and OrderedDict are
+    represented properly
+    '''
+    return yaml.dump(data, stream, Dumper=SafeOrderedDumper, **kwargs)
