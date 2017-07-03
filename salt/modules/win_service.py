@@ -844,7 +844,7 @@ def enable(name, start_type='auto', start_delayed=False, **kwargs):
 
     modify(name, start_type=start_type, start_delayed=start_delayed)
     svcstat = info(name)
-    if start_type == 'auto':
+    if start_type.lower() == 'auto':
         return svcstat['StartType'].lower() == start_type.lower() and svcstat['StartTypeDelayed'] == start_delayed
     else:
         return svcstat['StartType'].lower() == start_type.lower()
