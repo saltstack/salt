@@ -106,17 +106,26 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def test_proper_path_joining(self):
         fpath = tempfile.mktemp()
+        temp_config = 'root_dir: /\n'\
+                      'key_logfile: key\n'
+        if salt.utils.is_windows():
+            temp_config = 'root_dir: c:\\\n'\
+                          'key_logfile: key\n'
         try:
             with salt.utils.fopen(fpath, 'w') as fp_:
-                fp_.write(
-                    'root_dir: /\n'
-                    'key_logfile: key\n'
-                )
+                fp_.write(temp_config)
+
             config = sconfig.master_config(fpath)
+            expect_path_join = os.path.join('/', 'key')
+            expect_sep_join = '//key'
+            if salt.utils.is_windows():
+                expect_path_join = os.path.join('c:\\', 'key')
+                expect_sep_join = 'c:\\\\key'
+
             # os.path.join behavior
-            self.assertEqual(config['key_logfile'], os.path.join('/', 'key'))
+            self.assertEqual(config['key_logfile'], expect_path_join)
             # os.sep.join behavior
-            self.assertNotEqual(config['key_logfile'], '//key')
+            self.assertNotEqual(config['key_logfile'], expect_sep_join)
         finally:
             if os.path.isfile(fpath):
                 os.unlink(fpath)
@@ -138,6 +147,28 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
+    def test_default_root_dir_included_in_config_root_dir(self):
+        os.makedirs(os.path.join(TMP, 'tmp2'))
+        tempdir = tempfile.mkdtemp(dir=os.path.join(TMP, 'tmp2'))
+        try:
+            root_dir = os.path.join(tempdir, 'foo', 'bar')
+            os.makedirs(root_dir)
+            fpath = os.path.join(root_dir, 'config')
+            with salt.utils.fopen(fpath, 'w') as fp_:
+                fp_.write(
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(root_dir, fpath)
+                )
+            with patch('salt.syspaths.ROOT_DIR', TMP):
+                config = sconfig.master_config(fpath)
+            self.assertEqual(config['log_file'], fpath)
+        finally:
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
+    @skipIf(
+        salt.utils.is_windows(),
+        'You can\'t set an environment dynamically in Windows')
     def test_load_master_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
@@ -182,6 +213,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
+    @skipIf(
+        salt.utils.is_windows(),
+        'You can\'t set an environment dynamically in Windows')
     def test_load_minion_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
@@ -570,6 +604,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             search_paths = sconfig.cloud_config('/etc/salt/cloud').get('deploy_scripts_search_path')
             etc_deploy_path = '/salt/cloud.deploy.d'
             deploy_path = '/salt/cloud/deploy'
+            if salt.utils.is_windows():
+                etc_deploy_path = '/salt\\cloud.deploy.d'
+                deploy_path = '\\salt\\cloud\\deploy'
 
             # Check cloud.deploy.d path is the first element in the search_paths tuple
             self.assertTrue(search_paths[0].endswith(etc_deploy_path))
@@ -988,6 +1025,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     # other cloud configuration tests
 
+    @skipIf(
+        salt.utils.is_windows(),
+        'You can\'t set an environment dynamically in Windows')
     def test_load_cloud_config_from_environ_var(self):
         original_environ = os.environ.copy()
 

@@ -973,12 +973,27 @@ class Single(object):
         # roster, pillar, master config (in that order)
         if self.mine:
             mine_args = None
+            mine_fun_data = None
+            mine_fun = self.fun
+
             if self.mine_functions and self.fun in self.mine_functions:
-                mine_args = self.mine_functions[self.fun]
+                mine_fun_data = self.mine_functions[self.fun]
             elif opts['pillar'] and self.fun in opts['pillar'].get('mine_functions', {}):
-                mine_args = opts['pillar']['mine_functions'][self.fun]
+                mine_fun_data = opts['pillar']['mine_functions'][self.fun]
             elif self.fun in self.context['master_opts'].get('mine_functions', {}):
-                mine_args = self.context['master_opts']['mine_functions'][self.fun]
+                mine_fun_data = self.context['master_opts']['mine_functions'][self.fun]
+
+            if isinstance(mine_fun_data, dict):
+                mine_fun = mine_fun_data.pop('mine_function', mine_fun)
+                mine_args = mine_fun_data
+            elif isinstance(mine_fun_data, list):
+                for item in mine_fun_data[:]:
+                    if isinstance(item, dict) and 'mine_function' in item:
+                        mine_fun = item['mine_function']
+                        mine_fun_data.pop(mine_fun_data.index(item))
+                mine_args = mine_fun_data
+            else:
+                mine_args = mine_fun_data
 
             # If we found mine_args, replace our command's args
             if isinstance(mine_args, dict):
@@ -990,7 +1005,7 @@ class Single(object):
 
         try:
             if self.mine:
-                result = wrapper[self.fun](*self.args, **self.kwargs)
+                result = wrapper[mine_fun](*self.args, **self.kwargs)
             else:
                 result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
@@ -1088,7 +1103,7 @@ ARGS = {10}\n'''.format(self.minion_config,
         # Copy shim to target system, under $HOME/.<randomized name>
         target_shim_file = '.{0}.{1}'.format(binascii.hexlify(os.urandom(6)), extension)
         if self.winrm:
-            target_shim_file = saltwinshell.get_target_shim_file(self)
+            target_shim_file = saltwinshell.get_target_shim_file(self, target_shim_file)
         self.shell.send(shim_tmp_file.name, target_shim_file, makedirs=True)
 
         # Remove our shim file
@@ -1104,7 +1119,7 @@ ARGS = {10}\n'''.format(self.minion_config,
             if not self.winrm:
                 ret = self.shell.exec_cmd('/bin/sh \'$HOME/{0}\''.format(target_shim_file))
             else:
-                ret = saltwinshell.call_python(self)
+                ret = saltwinshell.call_python(self, target_shim_file)
 
         # Remove shim from target system
         if not self.winrm:

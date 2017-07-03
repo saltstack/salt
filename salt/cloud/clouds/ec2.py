@@ -2863,6 +2863,8 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             volume_dict['iops'] = volume['iops']
         if 'encrypted' in volume:
             volume_dict['encrypted'] = volume['encrypted']
+        if 'kmskeyid' in volume:
+            volume_dict['kmskeyid'] = volume['kmskeyid']
 
         if 'volume_id' not in volume_dict:
             created_volume = create_volume(volume_dict, call='function', wait_to_finish=wait_to_finish)
@@ -3612,7 +3614,8 @@ def list_nodes_select(call=None):
 
 def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     '''
-    Show the details from EC2 concerning an AMI
+    Show the details from EC2 concerning an instance's termination protection state
+
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -3648,6 +3651,51 @@ def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     return disable_protect
 
 
+def show_detailed_monitoring(name=None, instance_id=None, call=None, quiet=False):
+    '''
+    Show the details from EC2 regarding cloudwatch detailed monitoring.
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_detailed_monitoring action must be called with -a or --action.'
+        )
+    location = get_location()
+    if str(name).startswith('i-') and (len(name) == 10 or len(name) == 19):
+        instance_id = name
+
+    if not name and not instance_id:
+        raise SaltCloudSystemExit(
+            'The show_detailed_monitoring action must be provided with a name or instance\
+ ID'
+        )
+    matched = _get_node(name=name, instance_id=instance_id, location=location)
+    log.log(
+        logging.DEBUG if quiet is True else logging.INFO,
+        'Detailed Monitoring is {0} for {1}'.format(matched['monitoring'], name)
+    )
+    return matched['monitoring']
+
+
+def _toggle_term_protect(name, value):
+    '''
+    Enable or Disable termination protection on a node
+
+    '''
+    instance_id = _get_node(name)['instanceId']
+    params = {'Action': 'ModifyInstanceAttribute',
+              'InstanceId': instance_id,
+              'DisableApiTermination.Value': value}
+
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       return_root=True,
+                       opts=__opts__,
+                       sigver='4')
+
+    return show_term_protect(name=name, instance_id=instance_id, call='action')
+
+
 def enable_term_protect(name, call=None):
     '''
     Enable termination protection on a node
@@ -3667,39 +3715,21 @@ def enable_term_protect(name, call=None):
     return _toggle_term_protect(name, 'true')
 
 
-def disable_term_protect(name, call=None):
+def disable_detailed_monitoring(name, call=None):
     '''
-    Disable termination protection on a node
+    Enable/disable detailed monitoring on a node
 
     CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a disable_term_protect mymachine
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The disable_term_protect action must be called with '
+            'The enable_term_protect action must be called with '
             '-a or --action.'
         )
 
-    return _toggle_term_protect(name, 'false')
-
-
-def _toggle_term_protect(name, value):
-    '''
-    Disable termination protection on a node
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a disable_term_protect mymachine
-    '''
     instance_id = _get_node(name)['instanceId']
-    params = {'Action': 'ModifyInstanceAttribute',
-              'InstanceId': instance_id,
-              'DisableApiTermination.Value': value}
+    params = {'Action': 'UnmonitorInstances',
+              'InstanceId.1': instance_id}
 
     result = aws.query(params,
                        location=get_location(),
@@ -3708,7 +3738,34 @@ def _toggle_term_protect(name, value):
                        opts=__opts__,
                        sigver='4')
 
-    return show_term_protect(name=name, instance_id=instance_id, call='action')
+    return show_detailed_monitoring(name=name, instance_id=instance_id, call='action')
+
+
+def enable_detailed_monitoring(name, call=None):
+    '''
+    Enable/disable detailed monitoring on a node
+
+    CLI Example:
+
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The enable_term_protect action must be called with '
+            '-a or --action.'
+        )
+
+    instance_id = _get_node(name)['instanceId']
+    params = {'Action': 'MonitorInstances',
+              'InstanceId.1': instance_id}
+
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       return_root=True,
+                       opts=__opts__,
+                       sigver='4')
+
+    return show_detailed_monitoring(name=name, instance_id=instance_id, call='action')
 
 
 def show_delvol_on_destroy(name, kwargs=None, call=None):
@@ -4043,6 +4100,13 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
     # You can't set `encrypted` if you pass a snapshot
     if 'encrypted' in kwargs and 'snapshot' not in kwargs:
         params['Encrypted'] = kwargs['encrypted']
+        if 'kmskeyid' in kwargs:
+            params['KmsKeyId'] = kwargs['kmskeyid']
+    if 'kmskeyid' in kwargs and 'encrypted' not in kwargs:
+        log.error(
+            'If a KMS Key ID is specified, encryption must be enabled'
+        )
+        return False
 
     log.debug(params)
 

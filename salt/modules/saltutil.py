@@ -15,6 +15,8 @@ import logging
 import os
 import signal
 import sys
+import time
+import shutil
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -76,7 +78,8 @@ def _get_top_file_envs():
         return __context__['saltutil._top_file_envs']
     except KeyError:
         try:
-            st_ = salt.state.HighState(__opts__)
+            st_ = salt.state.HighState(__opts__,
+                                       initial_pillar=__pillar__)
             top = st_.get_top()
             if top:
                 envs = list(st_.top_matches(top).keys()) or 'base'
@@ -187,9 +190,13 @@ def sync_beacons(saltenv=None, refresh=True, extmod_whitelist=None, extmod_black
 
     Sync beacons from ``salt://_beacons`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for beacons to sync. If no top files are
+        found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available beacons on the minion. This refresh
@@ -222,9 +229,13 @@ def sync_sdb(saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
 
     Sync sdb modules from ``salt://_sdb`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for sdb modules to sync. If no top files
+        are found, then the ``base`` environment will be synced.
 
     refresh : False
         This argument has no affect and is included for consistency with the
@@ -254,9 +265,13 @@ def sync_modules(saltenv=None, refresh=True, extmod_whitelist=None, extmod_black
 
     Sync execution modules from ``salt://_modules`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for execution modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -306,9 +321,13 @@ def sync_states(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
 
     Sync state modules from ``salt://_states`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for state modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available states on the minion. This refresh
@@ -374,9 +393,13 @@ def sync_grains(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
 
     Sync grains modules from ``salt://_grains`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for grains modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules and recompile
@@ -411,9 +434,13 @@ def sync_renderers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_bla
 
     Sync renderers from ``salt://_renderers`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for renderers to sync. If no top files
+        are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -447,9 +474,13 @@ def sync_returners(saltenv=None, refresh=True, extmod_whitelist=None, extmod_bla
 
     Sync beacons from ``salt://_returners`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for returners to sync. If no top files
+        are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -481,9 +512,13 @@ def sync_proxymodules(saltenv=None, refresh=False, extmod_whitelist=None, extmod
 
     Sync proxy modules from ``salt://_proxy`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for proxy modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -516,9 +551,13 @@ def sync_engines(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blac
 
     Sync engine modules from ``salt://_engines`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for engines to sync. If no top files are
+        found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -548,9 +587,13 @@ def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
     '''
     Sync outputters from ``salt://_output`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for outputters to sync. If no top files
+        are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -620,9 +663,13 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackli
 
     Sync utility modules from ``salt://_utils`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for utility modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -679,9 +726,13 @@ def sync_log_handlers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_
 
     Sync log handlers from ``salt://_log_handlers`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for log handlers to sync. If no top files
+        are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -941,6 +992,36 @@ def clear_cache():
                 os.remove(os.path.join(root, name))
             except OSError as exc:
                 log.error('Attempt to clear cache with saltutil.clear_cache FAILED with: {0}'.format(exc))
+                return False
+    return True
+
+
+def clear_job_cache(hours=24):
+    '''
+    Forcibly removes job cache folders and files on a minion.
+
+    .. versionadded:: Oxygen
+
+    WARNING: The safest way to clear a minion cache is by first stopping
+    the minion and then deleting the cache files before restarting it.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.clear_job_cache hours=12
+    '''
+    threshold = time.time() - hours * 3600
+    for root, dirs, files in salt.utils.safe_walk(os.path.join(__opts__['cachedir'], 'minion_jobs'),
+                                                  followlinks=False):
+        for name in dirs:
+            try:
+                directory = os.path.join(root, name)
+                mtime = os.path.getmtime(directory)
+                if mtime < threshold:
+                    shutil.rmtree(directory)
+            except OSError as exc:
+                log.error('Attempt to clear cache with saltutil.clear_job_cache FAILED with: %s', exc)
                 return False
     return True
 

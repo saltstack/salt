@@ -3384,14 +3384,6 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         search_global=False,
         default='management.core.windows.net'
     )
-    requests_lib = config.get_cloud_config_value(
-        'requests_lib',
-        get_configured_provider(), __opts__, search_global=False
-    )
-    if requests_lib is not None:
-        salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
-                                        'please change your config')
-
     backend = config.get_cloud_config_value(
         'backend',
         get_configured_provider(), __opts__, search_global=False
@@ -3416,7 +3408,6 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         port=443,
         text=True,
         cert=certificate_path,
-        requests_lib=requests_lib,
         backend=backend,
         decode=decode,
         decode_type='xml',

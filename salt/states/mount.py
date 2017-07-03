@@ -24,6 +24,16 @@ Mount any type of mountable filesystem with the mounted function:
         - pass_num: 2
         - persist: True
         - mkmnt: True
+
+    /var/lib/bigdata:
+      mount.mounted:
+        - device: /srv/bigdata
+        - fstype: none
+        - opts: bind
+        - dump: 0
+        - pass_num: 0
+        - persist: True
+        - mkmnt: True
 '''
 from __future__ import absolute_import
 

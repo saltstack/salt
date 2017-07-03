@@ -1154,8 +1154,6 @@ def upgrade(*names, **kwargs):
         opts += 'n'
     if not dryrun:
         opts += 'y'
-    if opts:
-        opts = '-' + opts
 
     cmd = _pkg(jail, chroot, root)
     cmd.append('upgrade')

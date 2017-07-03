@@ -185,11 +185,12 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                 )
                                 with patch.object(core, 'linux_distribution', distro_mock):
                                     with patch.object(core, '_linux_gpu_data', empty_mock):
-                                        with patch.object(core, '_linux_cpudata', empty_mock):
-                                            with patch.object(core, '_virtual', empty_mock):
-                                                # Mock the osarch
-                                                with patch.dict(core.__salt__, {'cmd.run': osarch_mock}):
-                                                    os_grains = core.os_data()
+                                        with patch.object(core, '_hw_data', empty_mock):
+                                            with patch.object(core, '_linux_cpudata', empty_mock):
+                                                with patch.object(core, '_virtual', empty_mock):
+                                                    # Mock the osarch
+                                                    with patch.dict(core.__salt__, {'cmd.run': osarch_mock}):
+                                                        os_grains = core.os_data()
 
         self.assertEqual(os_grains.get('os_family'), 'Suse')
         self.assertEqual(os_grains.get('os'), 'SUSE')

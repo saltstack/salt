@@ -128,16 +128,6 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-# load is the published job
-LOAD_P = '.load.p'
-# the list of minions that the job is targeted to (best effort match on the
-# master side)
-MINIONS_P = '.minions.p'
-# return is the "return" from the minion data
-RETURN_P = 'return.p'
-# out is the "out" from the minion data
-OUT_P = 'out.p'
-
 __virtualname__ = 'postgres_local_cache'
 
 
@@ -243,11 +233,16 @@ def returner(load):
     sql = '''INSERT INTO salt_returns
             (fun, jid, return, id, success)
             VALUES (%s, %s, %s, %s, %s)'''
+    job_ret = {'return': six.text_type(str(load['return']), 'utf-8', 'replace')}
+    if 'retcode' in load:
+        job_ret['retcode'] = load['retcode']
+    if 'success' in load:
+        job_ret['success'] = load['success']
     cur.execute(
         sql, (
             load['fun'],
             load['jid'],
-            json.dumps(six.text_type(str(load['return']), 'utf-8', 'replace')),
+            json.dumps(job_ret),
             load['id'],
             load.get('success'),
         )
@@ -377,8 +372,12 @@ def get_jid(jid):
     ret = {}
     if data:
         for minion, full_ret in data:
-            ret[minion] = {}
-            ret[minion]['return'] = json.loads(full_ret)
+            ret_data = json.loads(full_ret)
+            if not isinstance(ret_data, dict) or 'return' not in ret_data:
+                # Convert the old format in which the return contains the only return data to the
+                # new that is dict containing 'return' and optionally 'retcode' and 'success'.
+                ret_data = {'return': ret_data}
+            ret[minion] = ret_data
     _close_conn(conn)
     return ret
 

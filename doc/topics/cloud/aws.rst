@@ -57,7 +57,7 @@ parameters are discussed in more detail below.
       id: 'use-instance-role-credentials'
       key: 'use-instance-role-credentials'
 
-      # Make sure this key is owned by root with permissions 0400.
+      # Make sure this key is owned by corresponding user (default 'salt') with permissions 0400.
       #
       private_key: /etc/salt/my_test_key.pem
       keyname: my_test_key
@@ -609,7 +609,7 @@ just instances:
 
     salt-cloud -f get_tags my_ec2 resource_id=af5467ba
     salt-cloud -f set_tags my_ec2 resource_id=af5467ba tag1=somestuff
-    salt-cloud -f del_tags my_ec2 resource_id=af5467ba tag1,tag2,tag3
+    salt-cloud -f del_tags my_ec2 resource_id=af5467ba tags=tag1,tag2,tag3
 
 
 Rename EC2 Instances

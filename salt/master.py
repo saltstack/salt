@@ -56,7 +56,6 @@ import salt.runner
 import salt.auth
 import salt.wheel
 import salt.minion
-import salt.search
 import salt.key
 import salt.acl
 import salt.engines
@@ -199,8 +198,6 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
         # Init any values needed by the git ext pillar
         self.git_pillar = salt.daemons.masterapi.init_git_pillar(self.opts)
-        # Set up search object
-        self.search = salt.search.Search(self.opts)
 
         self.presence_events = False
         if self.opts.get('presence_events', False):
@@ -238,7 +235,6 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
-            self.handle_search(now, last)
             self.handle_git_pillar()
             self.handle_schedule()
             self.handle_key_cache()
@@ -248,14 +244,6 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
             time.sleep(self.loop_interval)
-
-    def handle_search(self, now, last):
-        '''
-        Update the search index
-        '''
-        if self.opts.get('search'):
-            if now - last >= self.opts['search_index_interval']:
-                self.search.index()
 
     def handle_key_cache(self):
         '''
@@ -1128,7 +1116,7 @@ class AESFuncs(object):
 
         return load
 
-    def _ext_nodes(self, load):
+    def _master_tops(self, load):
         '''
         Return the results from an external node classifier if one is
         specified
@@ -1139,7 +1127,7 @@ class AESFuncs(object):
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
             return {}
-        return self.masterapi._ext_nodes(load, skip_verify=True)
+        return self.masterapi._master_tops(load, skip_verify=True)
 
     def _master_opts(self, load):
         '''
@@ -1343,7 +1331,7 @@ class AESFuncs(object):
             load['id'],
             load.get('saltenv', load.get('env')),
             ext=load.get('ext'),
-            pillar=load.get('pillar_override', {}),
+            pillar_override=load.get('pillar_override', {}),
             pillarenv=load.get('pillarenv'))
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         self.fs_.update_opts()
@@ -2165,6 +2153,9 @@ class ClearFuncs(object):
 
             if 'module_executors' in clear_load['kwargs']:
                 load['module_executors'] = clear_load['kwargs'].get('module_executors')
+
+            if 'executor_opts' in clear_load['kwargs']:
+                load['executor_opts'] = clear_load['kwargs'].get('executor_opts')
 
             if 'ret_kwargs' in clear_load['kwargs']:
                 load['ret_kwargs'] = clear_load['kwargs'].get('ret_kwargs')

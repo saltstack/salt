@@ -92,7 +92,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         empty_line = '\n'
         comment_line = '# this is a comment \n'
         # Write out the authorized key to a temporary file
-        temp_file = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+        temp_file = tempfile.NamedTemporaryFile(delete=False)
         # Add comment
         temp_file.write(comment_line)
         # Add empty line for #41335

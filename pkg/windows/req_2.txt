@@ -2,4 +2,3 @@
 
 lxml==3.6.0
 pypiwin32==219
-win-unicode-console==0.5

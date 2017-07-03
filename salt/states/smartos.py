@@ -171,6 +171,9 @@ def _parse_vmconfig(config, instances):
                 for instance in config[prop]:
                     instance_config = config[prop][instance]
                     instance_config[instances[prop]] = instance
+                    ## some property are lowercase
+                    if 'mac' in instance_config:
+                        instance_config['mac'] = instance_config['mac'].lower()
                     vmconfig[prop].append(instance_config)
     else:
         log.error('smartos.vm_present::parse_vmconfig - failed to parse')
@@ -188,7 +191,7 @@ def _get_instance_changes(current, state):
 
     # compare configs
     changed = salt.utils.compare_dicts(current, state)
-    for change in changed:
+    for change in salt.utils.compare_dicts(current, state):
         if change in changed and changed[change]['old'] == "":
             del changed[change]
         if change in changed and changed[change]['new'] == "":

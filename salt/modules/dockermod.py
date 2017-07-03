@@ -83,14 +83,14 @@ in the ``docker-registries`` Pillar key, as well as any key ending in
         username: foo
         password: s3cr3t
 
-To login to the configured registries, use the :py:func:`dockerng.login
-<salt.modules.dockerng.login>` function. This only needs to be done once for a
+To login to the configured registries, use the :py:func:`docker.login
+<salt.modules.dockermod.login>` function. This only needs to be done once for a
 given registry, and it will store/update the credentials in
 ``~/.docker/config.json``.
 
 .. note::
-    For Salt releases before 2016.3.7 and 2016.11.4, :py:func:`dockerng.login
-    <salt.modules.dockerng.login>` is not available. Instead, Salt will try to
+    For Salt releases before 2016.3.7 and 2016.11.4, :py:func:`docker.login
+    <salt.modules.dockermod.login>` is not available. Instead, Salt will try to
     authenticate using each of your configured registries for each push/pull,
     behavior which is not correct and has been resolved in newer releases.
 
@@ -185,7 +185,6 @@ import copy
 import fnmatch
 import functools
 import gzip
-import io
 import json
 import logging
 import os
@@ -343,7 +342,8 @@ def _get_client(timeout=NOTSET, **kwargs):
             ['docker-machine', 'inspect', docker_machine],
             python_shell=False)
         try:
-            docker_machine_json = json.loads(docker_machine_json)
+            docker_machine_json = \
+                json.loads(salt.utils.to_str(docker_machine_json))
             docker_machine_tls = \
                 docker_machine_json['HostOptions']['AuthOptions']
             docker_machine_ip = docker_machine_json['Driver']['IPAddress']
@@ -619,7 +619,7 @@ def _client_wrapper(attr, *args, **kwargs):
             api_events = []
             try:
                 for event in ret:
-                    api_events.append(json.loads(event))
+                    api_events.append(json.loads(salt.utils.to_str(event)))
             except Exception as exc:
                 raise CommandExecutionError(
                     'Unable to interpret API event: \'{0}\''.format(event),
@@ -927,9 +927,9 @@ def login(*registries):
 
     .. code-block:: bash
 
-        salt myminion dockerng.login
-        salt myminion dockerng.login hub
-        salt myminion dockerng.login hub https://mydomain.tld/registry/
+        salt myminion docker.login
+        salt myminion docker.login hub
+        salt myminion docker.login hub https://mydomain.tld/registry/
     '''
     # NOTE: This function uses the "docker login" CLI command so that login
     # information is added to the config.json, since docker-py isn't designed
@@ -1867,19 +1867,49 @@ def create(image,
 
     binds
         Files/directories to bind mount. Each bind mount should be passed in
-        the format ``<host_path>:<container_path>:<read_only>``, where
-        ``<read_only>`` is one of ``rw`` (for read-write access) or ``ro`` (for
-        read-only access).  Optionally, the read-only information can be left
-        off the end and the bind mount will be assumed to be read-write.
+        one of the following formats:
+
+        - ``<host_path>:<container_path>`` - ``host_path`` is mounted within
+          the container as ``container_path`` with read-write access.
+        - ``<host_path>:<container_path>:<selinux_context>`` - ``host_path`` is
+          mounted within the container as ``container_path`` with read-write
+          access. Additionally, the specified selinux context will be set
+          within the container.
+        - ``<host_path>:<container_path>:<read_only>`` - ``host_path`` is
+          mounted within the container as ``container_path``, with the
+          read-only or read-write setting explicitly defined.
+        - ``<host_path>:<container_path>:<read_only>,<selinux_context>`` -
+          ``host_path`` is mounted within the container as ``container_path``,
+          with the read-only or read-write setting explicitly defined.
+          Additionally, the specified selinux context will be set within the
+          container.
+
+        ``<read_only>`` can be either ``ro`` for read-write access, or ``ro``
+        for read-only access. When omitted, it is assumed to be read-write.
+
+        ``<selinux_context>`` can be ``z`` if the volume is shared between
+        multiple containers, or ``Z`` if the volume should be private.
+
+        .. note::
+            When both ``<read_only>`` and ``<selinux_context>`` are specified,
+            there must be a comma before ``<selinux_context>``.
+
+        Binds can be expressed as a comma-separated list or a Python list,
+        however in cases where both ro/rw and an selinux context are specified,
+        the binds *must* be specified as a Python list.
 
         Examples:
 
         - ``binds=/srv/www:/var/www:ro``
         - ``binds=/srv/www:/var/www:rw``
         - ``binds=/srv/www:/var/www``
+        - ``binds="['/srv/www:/var/www:ro,Z']"``
+        - ``binds="['/srv/www:/var/www:rw,Z']"``
+        - ``binds=/srv/www:/var/www:Z``
 
         .. note::
-            The second and third examples above are equivalent.
+            The second and third examples above are equivalent to each other,
+            as are the last two examples.
 
     blkio_weight
         Block IO weight (relative weight), accepts a weight value between 10
@@ -1898,15 +1928,20 @@ def create(image,
         comma-separated list or a Python list. Requires Docker 1.2.0 or
         newer.
 
-        Example: ``cap_add=SYS_ADMIN,MKNOD``, ``cap_add="[SYS_ADMIN, MKNOD]"``
+        Examples:
+
+        - ``cap_add=SYS_ADMIN,MKNOD``
+        - ``cap_add="[SYS_ADMIN, MKNOD]"``
 
     cap_drop
         List of capabilities to drop within the container. Can be passed as a
         comma-separated string or a Python list. Requires Docker 1.2.0 or
         newer.
 
-        Example: ``cap_drop=SYS_ADMIN,MKNOD``,
-        ``cap_drop="[SYS_ADMIN, MKNOD]"``
+        Examples:
+
+        - ``cap_drop=SYS_ADMIN,MKNOD``,
+        - ``cap_drop="[SYS_ADMIN, MKNOD]"``
 
     command (or *cmd*)
         Command to run in the container
@@ -2030,8 +2065,10 @@ def create(image,
         List of DNS search domains. Can be passed as a comma-separated list
         or a Python list.
 
-        Example: ``dns_search=foo1.domain.tld,foo2.domain.tld`` or
-        ``dns_search="[foo1.domain.tld, foo2.domain.tld]"``
+        Examples:
+
+        - ``dns_search=foo1.domain.tld,foo2.domain.tld``
+        - ``dns_search="[foo1.domain.tld, foo2.domain.tld]"``
 
     domainname
         Set custom DNS search domains
@@ -2672,6 +2709,8 @@ def copy_to(name,
 
         salt myminion docker.copy_to mycontainer /tmp/foo /root/foo
     '''
+    if exec_driver is None:
+        exec_driver = _get_exec_driver()
     return __salt__['container_resource.copy_to'](
         name,
         __salt__['container_resource.cache_file'](source),
@@ -3054,7 +3093,9 @@ def build(path=None,
 
     stream_data = []
     for line in response:
-        stream_data.extend(json.loads(line, cls=DockerJSONDecoder))
+        stream_data.extend(
+            json.loads(salt.utils.to_str(line), cls=DockerJSONDecoder)
+        )
     errors = []
     # Iterate through API response and collect information
     for item in stream_data:
@@ -3955,7 +3996,9 @@ def networks(names=None, ids=None):
     return response
 
 
-def create_network(name, driver=None):
+def create_network(name,
+                   driver=None,
+                   driver_opts=None):
     '''
     Create a new network
 
@@ -3965,13 +4008,21 @@ def create_network(name, driver=None):
     driver
         Driver of the network
 
+    driver_opts
+        Options for the network driver.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion docker.create_network web_network driver=bridge
     '''
-    response = _client_wrapper('create_network', name, driver=driver)
+    response = _client_wrapper('create_network',
+                               name,
+                               driver=driver,
+                               options=driver_opts,
+                               check_duplicate=True)
+
     _clear_context()
     # Only non-error return case is a True return, so just return the response
     return response
@@ -5121,7 +5172,7 @@ def _gather_pillar(pillarenv, pillar_override, **grains):
         # Not sure if these two are correct
         __opts__['id'],
         __opts__['environment'],
-        pillar=pillar_override,
+        pillar_override=pillar_override,
         pillarenv=pillarenv
     )
     ret = pillar.compile_pillar()
@@ -5157,7 +5208,7 @@ def call(name, function, *args, **kwargs):
     thin_dest_path = _generate_tmp_path()
     mkdirp_thin_argv = ['mkdir', '-p', thin_dest_path]
 
-    # put_archive reqires the path to exist
+    # make thin_dest_path in the container
     ret = run_all(name, subprocess.list2cmdline(mkdirp_thin_argv))
     if ret['retcode'] != 0:
         return {'result': False, 'comment': ret['stderr']}
@@ -5169,14 +5220,25 @@ def call(name, function, *args, **kwargs):
     thin_path = salt.utils.thin.gen_thin(__opts__['cachedir'],
                                          extra_mods=__salt__['config.option']("thin_extra_mods", ''),
                                          so_mods=__salt__['config.option']("thin_so_mods", ''))
-    with io.open(thin_path, 'rb') as file:
-        _client_wrapper('put_archive', name, thin_dest_path, file)
+    ret = copy_to(name, thin_path, os.path.join(thin_dest_path, os.path.basename(thin_path)))
+
+    # untar archive
+    untar_cmd = ["python", "-c", (
+                     "import tarfile; "
+                     "tarfile.open(\"{0}/{1}\").extractall(path=\"{0}\")"
+                 ).format(thin_dest_path, os.path.basename(thin_path))]
+    ret = run_all(name, subprocess.list2cmdline(untar_cmd))
+    if ret['retcode'] != 0:
+        return {'result': False, 'comment': ret['stderr']}
+
     try:
         salt_argv = [
             'python',
             os.path.join(thin_dest_path, 'salt-call'),
             '--metadata',
             '--local',
+            '--log-file', os.path.join(thin_dest_path, 'log'),
+            '--cachedir', os.path.join(thin_dest_path, 'cache'),
             '--out', 'json',
             '-l', 'quiet',
             '--',

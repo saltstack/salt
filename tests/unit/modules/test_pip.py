@@ -1124,7 +1124,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_run = MagicMock(return_value='pip 1.4.1 /path/to/site-packages/pip')
         mock_run_all = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run': mock_run,
+        with patch.dict(pip.__salt__, {'cmd.run_stdout': mock_run,
                                        'cmd.run_all': mock_run_all}):
             with patch('salt.modules.pip._get_pip_bin',
                        MagicMock(return_value='pip')):

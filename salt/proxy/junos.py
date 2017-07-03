@@ -116,6 +116,15 @@ def conn():
     return thisproxy['conn']
 
 
+def alive(opts):
+    '''
+    Return the connection status with the remote device.
+
+    .. versionadded:: Oxygen
+    '''
+    return thisproxy['conn'].connected
+
+
 def proxytype():
     '''
     Returns the name of this proxy

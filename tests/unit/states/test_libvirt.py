@@ -72,3 +72,126 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {'servercert': 'new'}})
                         self.assertDictEqual(virt.keys(name, basepath=self.pki_dir), ret)
+
+    def test_keys_with_expiration_days(self):
+        '''
+        Test to manage libvirt keys.
+        '''
+        with patch('os.path.isfile', MagicMock(return_value=False)):
+            name = 'sunrise'
+
+            ret = {'name': name,
+                   'result': True,
+                   'comment': '',
+                   'changes': {}}
+
+            mock = MagicMock(side_effect=[[], ['libvirt.servercert.pem'],
+                                          {'libvirt.servercert.pem': 'A'}])
+            with patch.dict(virt.__salt__, {'pillar.ext': mock}):
+                comt = ('All keys are correct')
+                ret.update({'comment': comt})
+                self.assertDictEqual(virt.keys(name,
+                                               basepath=self.pki_dir,
+                                               expiration_days=700), ret)
+
+                with patch.dict(virt.__opts__, {'test': True}):
+                    comt = ('Libvirt keys are set to be updated')
+                    ret.update({'comment': comt, 'result': None})
+                    self.assertDictEqual(virt.keys(name,
+                                                   basepath=self.pki_dir,
+                                                   expiration_days=700), ret)
+
+                with patch.dict(virt.__opts__, {'test': False}):
+                    with patch.object(salt.utils, 'fopen', MagicMock(mock_open())):
+                        comt = ('Updated libvirt certs and keys')
+                        ret.update({'comment': comt, 'result': True,
+                                    'changes': {'servercert': 'new'}})
+                        self.assertDictEqual(virt.keys(name,
+                                                       basepath=self.pki_dir,
+                                                       expiration_days=700), ret)
+
+    def test_keys_with_state(self):
+        '''
+        Test to manage libvirt keys.
+        '''
+        with patch('os.path.isfile', MagicMock(return_value=False)):
+            name = 'sunrise'
+
+            ret = {'name': name,
+                   'result': True,
+                   'comment': '',
+                   'changes': {}}
+
+            mock = MagicMock(side_effect=[[], ['libvirt.servercert.pem'],
+                                          {'libvirt.servercert.pem': 'A'}])
+            with patch.dict(virt.__salt__, {'pillar.ext': mock}):
+                comt = ('All keys are correct')
+                ret.update({'comment': comt})
+                self.assertDictEqual(virt.keys(name,
+                                               basepath=self.pki_dir,
+                                               st='California'), ret)
+
+                with patch.dict(virt.__opts__, {'test': True}):
+                    comt = ('Libvirt keys are set to be updated')
+                    ret.update({'comment': comt, 'result': None})
+                    self.assertDictEqual(virt.keys(name,
+                                                   basepath=self.pki_dir,
+                                                   st='California'), ret)
+
+                with patch.dict(virt.__opts__, {'test': False}):
+                    with patch.object(salt.utils, 'fopen', MagicMock(mock_open())):
+                        comt = ('Updated libvirt certs and keys')
+                        ret.update({'comment': comt, 'result': True,
+                                    'changes': {'servercert': 'new'}})
+                        self.assertDictEqual(virt.keys(name,
+                                                       basepath=self.pki_dir,
+                                                       st='California'), ret)
+
+    def test_keys_with_all_options(self):
+        '''
+        Test to manage libvirt keys.
+        '''
+        with patch('os.path.isfile', MagicMock(return_value=False)):
+            name = 'sunrise'
+
+            ret = {'name': name,
+                   'result': True,
+                   'comment': '',
+                   'changes': {}}
+
+            mock = MagicMock(side_effect=[[], ['libvirt.servercert.pem'],
+                                          {'libvirt.servercert.pem': 'A'}])
+            with patch.dict(virt.__salt__, {'pillar.ext': mock}):
+                comt = ('All keys are correct')
+                ret.update({'comment': comt})
+                self.assertDictEqual(virt.keys(name,
+                                               basepath=self.pki_dir,
+                                               country='USA',
+                                               st='California',
+                                               locality='Los_Angeles',
+                                               organization='SaltStack',
+                                               expiration_days=700), ret)
+
+                with patch.dict(virt.__opts__, {'test': True}):
+                    comt = ('Libvirt keys are set to be updated')
+                    ret.update({'comment': comt, 'result': None})
+                    self.assertDictEqual(virt.keys(name,
+                                                   basepath=self.pki_dir,
+                                                   country='USA',
+                                                   st='California',
+                                                   locality='Los_Angeles',
+                                                   organization='SaltStack',
+                                                   expiration_days=700), ret)
+
+                with patch.dict(virt.__opts__, {'test': False}):
+                    with patch.object(salt.utils, 'fopen', MagicMock(mock_open())):
+                        comt = ('Updated libvirt certs and keys')
+                        ret.update({'comment': comt, 'result': True,
+                                    'changes': {'servercert': 'new'}})
+                        self.assertDictEqual(virt.keys(name,
+                                                       basepath=self.pki_dir,
+                                                       country='USA',
+                                                       st='California',
+                                                       locality='Los_Angeles',
+                                                       organization='SaltStack',
+                                                       expiration_days=700), ret)

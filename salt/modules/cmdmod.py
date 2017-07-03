@@ -214,7 +214,7 @@ def _gather_pillar(pillarenv, pillar_override):
         __grains__,
         __opts__['id'],
         __opts__['environment'],
-        pillar=pillar_override,
+        pillar_override=pillar_override,
         pillarenv=pillarenv
     )
     ret = pillar.compile_pillar()
@@ -1524,6 +1524,7 @@ def run_all(cmd,
             use_vt=False,
             redirect_stderr=False,
             password=None,
+            encoded_cmd=False,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
@@ -1619,6 +1620,11 @@ def run_all(cmd,
       ``env`` represents the environment variables for the command, and
       should be formatted as a dict, or a YAML string which resolves to a dict.
 
+    :param bool encoded_cmd: Specify if the supplied command is encoded.
+      Only applies to shell 'powershell'.
+
+      .. versionadded:: Nitrogen
+
     :param bool redirect_stderr: If set to ``True``, then stderr will be
       redirected to stdout. This is helpful for cases where obtaining both the
       retcode and output is desired, but it is not desired to have the output
@@ -1681,6 +1687,7 @@ def run_all(cmd,
                saltenv=saltenv,
                use_vt=use_vt,
                password=password,
+               encoded_cmd=encoded_cmd,
                **kwargs)
 
     log_callback = _check_cb(log_callback)
@@ -2889,7 +2896,8 @@ def powershell(cmd,
     '''
     Execute the passed PowerShell command and return the output as a dictionary.
 
-    Other ``cmd.*`` functions return the raw text output of the command. This
+    Other ``cmd.*`` functions (besides ``cmd.powershell_all``)
+    return the raw text output of the command. This
     function appends ``| ConvertTo-JSON`` to the command and then parses the
     JSON into a Python dictionary. If you want the raw textual result of your
     PowerShell command you should use ``cmd.run`` with the ``shell=powershell``
@@ -3084,6 +3092,329 @@ def powershell(cmd,
     except Exception:
         log.error("Error converting PowerShell JSON return", exc_info=True)
         return {}
+
+
+def powershell_all(cmd,
+                   cwd=None,
+                   stdin=None,
+                   runas=None,
+                   shell=DEFAULT_SHELL,
+                   env=None,
+                   clean_env=False,
+                   template=None,
+                   rstrip=True,
+                   umask=None,
+                   output_loglevel='debug',
+                   quiet=False,
+                   timeout=None,
+                   reset_system_locale=True,
+                   ignore_retcode=False,
+                   saltenv='base',
+                   use_vt=False,
+                   password=None,
+                   depth=None,
+                   encode_cmd=False,
+                   force_list=False,
+                   **kwargs):
+    '''
+    Execute the passed PowerShell command and return a dictionary with a result field
+    representing the output of the command, as well as other fields
+    showing us what the PowerShell invocation wrote to ``stderr``, the process id,
+    and the exit code of the invocation.
+
+    This function appends ``| ConvertTo-JSON`` to the command before actually invoking powershell.
+
+    An unquoted empty string is not valid JSON, but it's very normal for the Powershell
+    output to be exactly that. Therefore, we do not attempt to
+    parse empty Powershell output (which would
+    result in an exception). Instead we treat this as a special case and one of two things
+    will happen:
+       * If the value of the ``force_list`` paramater
+         is ``True`` then the ``result`` field of the return dictionary will be an empty list.
+       * If the value of the ``force_list`` paramater is ``False``, then the return dictionary
+         **will not have a result key added to it**. We aren't setting ``result`` to ``None`` in this
+         case, because ``None`` is the Python representation of "null" in JSON. (We likewise can't use
+         ``False`` for the equivalent reason.)
+
+    If Powershell's output is not an empty string and Python cannot parse its content,
+    then a ``CommandExecutionError`` exception will be raised.
+
+    If Powershell's output is not an empty string, Python is able to parse its content,
+    and the type of the resulting Python object is other than ``list`` then one of two things
+    will happen:
+        * If the value of the ``force_list`` paramater is ``True``, then the ``result`` field
+          will be a singleton list
+          with the Python object as its sole member.
+        * If the value of the ``force_list`` paramater is ``False``, then the value of
+          ``result`` will be
+          the unmodified Python object.
+
+    If Powershell's output is not an empty string, Python is able to parse its content,
+    and the type of the resulting Python object is ``list``, then the value of ``result``
+    will be the unmodified Python object. The ``force_list`` paramater has no effect in this case.
+
+    .. Note::
+         An example of why the ``force_list`` paramater is useful is as follows: The
+         Powershell command
+         ``dir x | Convert-ToJson`` results in
+
+             * no output when x is an empty directory.
+             * a dictionary object when x contains just one item.
+             * a list of dictionary objects when x contains multiple items.
+
+         By setting ``force_list`` to ``True`` we will always end up with a list of dictionary items,
+         representing files,
+         no matter how many files x contains.
+         Conversely, if ``force_list`` is ``False``, we will end up with no ``result`` key in our
+         return dictionary
+         when x is an
+         empty directory, and a dictionary object when x contains just one file.
+
+    If you want a similar function but with a raw
+    textual result instead of a Python dictionary,
+    you should use ``cmd.run_all`` in combination with ``shell=powershell``.
+
+    The remaining fields in the return dictionary are described in more detail
+    in the ``Returns`` section.
+
+    Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run_all '$PSVersionTable.CLRVersion' shell=powershell
+        salt '*' cmd.run_all 'Get-NetTCPConnection' shell=powershell
+
+    .. versionadded:: Nitrogen
+
+    .. warning::
+
+        This passes the cmd argument directly to PowerShell
+        without any further processing! Be absolutely sure that you
+        have properly sanitized the command passed to this function
+        and do not use untrusted inputs.
+
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
+
+    In addition to the normal ``cmd.run`` parameters, this command offers the
+    ``depth`` parameter to change the Windows default depth for the
+    ``ConvertTo-JSON`` powershell command. The Windows default is 2. If you need
+    more depth, set that here.
+
+    .. note::
+        For some commands, setting the depth to a value greater than 4 greatly
+        increases the time it takes for the command to return and in many cases
+        returns useless data.
+
+    :param str cmd: The powershell command to run.
+
+    :param str cwd: The current working directory to execute the command in.
+      Defaults to the home directory of the user specified by ``runas``.
+
+    :param str stdin: A string of standard input can be specified for the
+      command to be run using the ``stdin`` parameter. This can be useful in cases
+      where sensitive information must be read from standard input.:
+
+    :param str runas: User to run command as. If running on a Windows minion you
+      must also pass a password. The target user account must be in the
+      Administrators group.
+
+    :param str password: Windows only. Required when specifying ``runas``. This
+      parameter will be ignored on non-Windows platforms.
+
+    :param str shell: Shell to execute under. Defaults to the system default
+      shell.
+
+    :param bool python_shell: If False, let python handle the positional
+      arguments. Set to True to use shell features, such as pipes or redirection
+
+    :param list env: A list of environment variables to be set prior to
+      execution.
+
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
+
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            salt://scripts/bar.sh:
+              cmd.script:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: jinja
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+    :param bool clean_env: Attempt to clean out all other shell environment
+      variables and set only those provided in the 'env' argument to this
+      function.
+
+    :param str template: If this setting is applied then the named templating
+      engine will be used to render the downloaded file. Currently jinja, mako,
+      and wempy are supported
+
+    :param bool rstrip: Strip all whitespace off the end of output before it is
+      returned.
+
+    :param str umask: The umask (in octal) to use when running the command.
+
+    :param str output_loglevel: Control the loglevel at which the output from
+      the command is logged. Note that the command being run will still be logged
+      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+
+    :param int timeout: A timeout in seconds for the executed process to return.
+
+    :param bool use_vt: Use VT utils (saltstack) to stream the command output
+      more interactively to the console and the logs. This is experimental.
+
+    :param bool reset_system_locale: Resets the system locale
+
+    :param bool ignore_retcode: Ignore the return code
+
+    :param str saltenv: The salt environment to use. Default is 'base'
+
+    :param int depth: The number of levels of contained objects to be included.
+        Default is 2. Values greater than 4 seem to greatly increase the time
+        it takes for the command to complete for some commands. eg: ``dir``
+
+    :param bool encode_cmd: Encode the command before executing. Use in cases
+      where characters may be dropped or incorrectly converted when executed.
+      Default is False.
+
+    :param bool force_list: The purpose of this paramater is described in the preamble
+      of this function's documentation. Default value is False.
+
+    :return: A dictionary with the following entries:
+
+        result
+            For a complete description of this field, please refer to this
+            function's preamble. **This key will not be added to the dictionary
+            when force_list is False and Powershell's output
+            is the empty string.**
+        stderr
+            What the PowerShell invocation wrote to ``stderr``.
+        pid
+            The process id of the PowerShell invocation
+        retcode
+            This is the exit code of the invocation of PowerShell.
+            If the final execution status (in PowerShell) of our command
+            (with ``| ConvertTo-JSON`` appended) is ``False`` this should be non-0.
+            Likewise if PowerShell exited with ``$LASTEXITCODE`` set to some
+            non-0 value, then ``retcode`` will end up with this value.
+
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.powershell_all "$PSVersionTable.CLRVersion"
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.powershell_all "dir mydirectory" force_list=True
+    '''
+    if 'python_shell' in kwargs:
+        python_shell = kwargs.pop('python_shell')
+    else:
+        python_shell = True
+
+    # Append PowerShell Object formatting
+    cmd += ' | ConvertTo-JSON'
+    if depth is not None:
+        cmd += ' -Depth {0}'.format(depth)
+
+    if encode_cmd:
+        # Convert the cmd to UTF-16LE without a BOM and base64 encode.
+        # Just base64 encoding UTF-8 or including a BOM is not valid.
+        log.debug('Encoding PowerShell command \'{0}\''.format(cmd))
+        cmd_utf16 = cmd.decode('utf-8').encode('utf-16le')
+        cmd = base64.standard_b64encode(cmd_utf16)
+        encoded_cmd = True
+    else:
+        encoded_cmd = False
+
+    # Retrieve the response, while overriding shell with 'powershell'
+    response = run_all(cmd,
+                   cwd=cwd,
+                   stdin=stdin,
+                   runas=runas,
+                   shell='powershell',
+                   env=env,
+                   clean_env=clean_env,
+                   template=template,
+                   rstrip=rstrip,
+                   umask=umask,
+                   output_loglevel=output_loglevel,
+                   quiet=quiet,
+                   timeout=timeout,
+                   reset_system_locale=reset_system_locale,
+                   ignore_retcode=ignore_retcode,
+                   saltenv=saltenv,
+                   use_vt=use_vt,
+                   python_shell=python_shell,
+                   password=password,
+                   encoded_cmd=encoded_cmd,
+                   **kwargs)
+    stdoutput = response['stdout']
+
+    # if stdoutput is the empty string and force_list is True we return an empty list
+    # Otherwise we return response with no result key
+    if not stdoutput:
+        response.pop('stdout')
+        if force_list:
+            response['result'] = []
+        return response
+
+    # If we fail to parse stdoutput we will raise an exception
+    try:
+        result = json.loads(stdoutput)
+    except Exception:
+        err_msg = "cmd.powershell_all " + \
+                  "cannot parse the Powershell output."
+        response["cmd"] = cmd
+        raise CommandExecutionError(
+            message=err_msg,
+            info=response
+        )
+
+    response.pop("stdout")
+
+    if type(result) is not list:
+        if force_list:
+            response['result'] = [result]
+        else:
+            response['result'] = result
+    else:
+        # result type is list so the force_list param has no effect
+        response['result'] = result
+    return response
 
 
 def run_bg(cmd,

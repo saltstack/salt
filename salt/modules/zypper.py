@@ -15,12 +15,12 @@ Package support for openSUSE via the zypper package manager
 # Import python libs
 from __future__ import absolute_import
 import copy
+import fnmatch
 import logging
 import re
 import os
 import time
 import datetime
-import fnmatch
 from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
@@ -450,9 +450,9 @@ def info_installed(*names, **kwargs):
             summary, description.
 
     :param errors:
-        Handle RPM field errors (true|false). By default, various mistakes in the textual fields are simply ignored and
-        omitted from the data. Otherwise a field with a mistake is not returned, instead a 'N/A (bad UTF-8)'
-        (not available, broken) text is returned.
+        Handle RPM field errors. If 'ignore' is chosen, then various mistakes are simply ignored and omitted
+        from the texts or strings. If 'report' is chonen, then a field with a mistake is not returned, instead
+        a 'N/A (broken)' (not available, broken) text is placed.
 
         Valid attributes are:
             ignore, report
@@ -465,7 +465,8 @@ def info_installed(*names, **kwargs):
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
         salt '*' pkg.info_installed <package1> attr=version,vendor
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor
-        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=true
+        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=ignore
+        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=report
     '''
     ret = dict()
     for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
@@ -479,7 +480,7 @@ def info_installed(*names, **kwargs):
                 else:
                     value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
                 if value != value_:
-                    value = kwargs.get('errors') and value_ or 'N/A (invalid UTF-8)'
+                    value = kwargs.get('errors', 'ignore') == 'ignore' and value_ or 'N/A (invalid UTF-8)'
                     log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
             if key == 'source_rpm':
                 t_nfo['source'] = value
@@ -1087,27 +1088,29 @@ def install(name=None,
     version_num = Wildcard(__zypper__)(name, version)
     if pkg_type == 'repository':
         targets = []
-        problems = []
         for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
+                log.debug('targeting package: %s', param)
                 targets.append(param)
             else:
-                match = re.match(r'^([<>])?(=)?([^<>=]+)$', version_num)
-                if match:
-                    gt_lt, equal, verstr = match.groups()
-                    targets.append('{0}{1}{2}'.format(param, ((gt_lt or '') + (equal or '')) or '=', verstr))
-                    log.debug(targets)
-                else:
-                    msg = ('Invalid version string \'{0}\' for package \'{1}\''.format(version_num, name))
-                    problems.append(msg)
-        if problems:
-            for problem in problems:
-                log.error(problem)
-            return {}
+                prefix, verstr = salt.utils.pkg.split_comparison(version_num)
+                if not prefix:
+                    prefix = '='
+                target = '{0}{1}{2}'.format(param, prefix, verstr)
+                log.debug('targeting package: %s', target)
+                targets.append(target)
+    elif pkg_type == 'advisory':
+        targets = []
+        cur_patches = list_patches()
+        for advisory_id in pkg_params:
+            if advisory_id not in cur_patches:
+                raise CommandExecutionError('Advisory id "{0}" not found'.format(advisory_id))
+            else:
+                targets.append(advisory_id)
     else:
         targets = pkg_params
 
-    old = list_pkgs()
+    old = list_pkgs() if not downloadonly else list_downloaded()
     downgrades = []
     if fromrepo:
         fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
@@ -1125,6 +1128,8 @@ def install(name=None,
         cmd_install.extend(fromrepoopt)
 
     errors = []
+    if pkg_type == 'advisory':
+        targets = ["patch:{0}".format(t) for t in targets]
 
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
@@ -1143,18 +1148,22 @@ def install(name=None,
         __zypper__(no_repo_failure=ignore_repo_failure).call(*cmd)
 
     __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
+    new = list_pkgs() if not downloadonly else list_downloaded()
 
     # Handle packages which report multiple new versions
     # (affects only kernel packages at this point)
-    for pkg in new:
-        new[pkg] = new[pkg].split(',')[-1]
+    for pkg_name in new:
+        pkg_data = new[pkg_name]
+        if isinstance(pkg_data, six.string_types):
+            new[pkg_name] = pkg_data.split(',')[-1]
 
     ret = salt.utils.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
-            'Problem encountered installing package(s)',
+            'Problem encountered {0} package(s)'.format(
+                'downloading' if downloadonly else 'installing'
+            ),
             info={'errors': errors, 'changes': ret}
         )
 
@@ -1857,6 +1866,35 @@ def download(*packages, **kwargs):
     )
 
 
+def list_downloaded():
+    '''
+    .. versionadded:: 2017.7.0
+
+    List prefetched packages downloaded by Zypper in the local disk.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_downloaded
+    '''
+    CACHE_DIR = '/var/cache/zypp/packages/'
+
+    ret = {}
+    for root, dirnames, filenames in os.walk(CACHE_DIR):
+        for filename in fnmatch.filter(filenames, '*.rpm'):
+            package_path = os.path.join(root, filename)
+            pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)
+            pkg_timestamp = int(os.path.getctime(package_path))
+            ret.setdefault(pkg_info['name'], {})[pkg_info['version']] = {
+                'path': package_path,
+                'size': os.path.getsize(package_path),
+                'creation_date_time_t': pkg_timestamp,
+                'creation_date_time': datetime.datetime.utcfromtimestamp(pkg_timestamp).isoformat(),
+            }
+    return ret
+
+
 def diff(*paths):
     '''
     Return a formatted diff between current files and original in a package.
@@ -1894,3 +1932,57 @@ def diff(*paths):
                 ) or 'Unchanged'
 
     return ret
+
+
+def _get_patches(installed_only=False):
+    '''
+    List all known patches in repos.
+    '''
+    patches = {}
+    for element in __zypper__.nolock.xml.call('se', '-t', 'patch').getElementsByTagName('solvable'):
+        installed = element.getAttribute('status') == 'installed'
+        if (installed_only and installed) or not installed_only:
+            patches[element.getAttribute('name')] = {
+                'installed': installed,
+                'summary': element.getAttribute('summary'),
+            }
+
+    return patches
+
+
+def list_patches(refresh=False):
+    '''
+    .. versionadded:: 2017.7.0
+
+    List all known advisory patches from available repos.
+
+    refresh
+        force a refresh if set to True.
+        If set to False (default) it depends on zypper if a refresh is
+        executed.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_patches
+    '''
+    if refresh:
+        refresh_db()
+
+    return _get_patches()
+
+
+def list_installed_patches():
+    '''
+    .. versionadded:: 2017.7.0
+
+    List installed advisory patches on the system.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_installed_patches
+    '''
+    return _get_patches(installed_only=True)

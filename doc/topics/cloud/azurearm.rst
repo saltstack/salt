@@ -223,10 +223,24 @@ subnet
 Optional. The subnet inside the virtual network that the VM will be spun up in.
 Default is ``default``.
 
+load_balancer
+-------------
+Optional. The load-balancer for the VM's network interface to join. If
+specified the backend_pool option need to be set.
+
+backend_pool
+------------
+Optional. Required if the load_balancer option is set. The load-balancer's
+Backend Pool the VM's network interface will join.
+
 iface_name
 ----------
 Optional. The name to apply to the VM's network interface. If not supplied, the
 value will be set to ``<VM name>-iface0``.
+
+availability_set
+----------------
+Optional. If set, the VM will be added to the specified availability set.
 
 cleanup_disks
 -------------

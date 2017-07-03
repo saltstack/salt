@@ -722,6 +722,34 @@ class UtilsTestCase(TestCase):
                                 'run',
                                 {'order': 10004}]},
                 }
+            ),  # order is different
+            'test_onfail_simple_rev': (
+                OrderedDict([
+                    ('host1',
+                     OrderedDict([
+                         ('test_vstate0', {'result':  False}),
+                         ('test_vstate1', {'result': True}),
+                     ])),
+                ]),
+                {
+                    'test_vstate0': {
+                        '__env__': 'base',
+                        '__sls__': u'a',
+                        'cmd': [OrderedDict([('name', '/bin/true')]),
+                                'run',
+                                {'order': 10002}]},
+                    'test_vstate1': {
+                        '__env__': 'base',
+                        '__sls__': u'a',
+                        'cmd': [OrderedDict([('name', '/bin/true')]),
+                                OrderedDict([
+                                    ('onfail',
+                                     [OrderedDict([('cmd', 'test_vstate0')])])
+                                ]),
+                                OrderedDict([('onfail_stop', False)]),
+                                'run',
+                                {'order': 10004}]},
+                }
             )
         }
         for test, testdata in six.iteritems(test_valid_true_ht_states):

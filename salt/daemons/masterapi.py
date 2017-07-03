@@ -26,7 +26,6 @@ import salt.runner
 import salt.auth
 import salt.wheel
 import salt.minion
-import salt.search
 import salt.key
 import salt.fileserver
 import salt.utils.args
@@ -522,10 +521,9 @@ class RemoteFuncs(object):
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
 
-    def _ext_nodes(self, load, skip_verify=False):
+    def _master_tops(self, load, skip_verify=False):
         '''
-        Return the results from an external node classifier if one is
-        specified
+        Return the results from master_tops if configured
         '''
         if not skip_verify:
             if 'id' not in load:
@@ -716,7 +714,7 @@ class RemoteFuncs(object):
                 load.get('saltenv', load.get('env')),
                 load.get('ext'),
                 self.mminion.functions,
-                pillar=load.get('pillar_override', {}))
+                pillar_override=load.get('pillar_override', {}))
         pillar_dirs = {}
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         if self.opts.get('minion_data_cache', False):

@@ -53,6 +53,7 @@ class TestModulesGrains(ModuleCase):
             'host',
             'kernel',
             'kernelrelease',
+            'kernelversion',
             'localhost',
             'mem_total',
             'num_cpus',

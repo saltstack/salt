@@ -773,13 +773,23 @@ class TestDaemon(TestProgram):
         if six.PY3:
             cmdline = ' '.join(cmdline)
             for proc in psutils.process_iter():
-                for item in proc.cmdline():
-                    if cmdline in item:
-                        ret.append(proc)
+                try:
+                    for item in proc.cmdline():
+                        if cmdline in item:
+                            ret.append(proc)
+                except psutils.NoSuchProcess:
+                    # Process exited between when process_iter was invoked and
+                    # when we tried to invoke this instance's cmdline() func.
+                    continue
         else:
             cmd_len = len(cmdline)
             for proc in psutils.process_iter():
-                proc_cmdline = proc.cmdline()
+                try:
+                    proc_cmdline = proc.cmdline()
+                except psutils.NoSuchProcess:
+                    # Process exited between when process_iter was invoked and
+                    # when we tried to invoke this instance's cmdline() func.
+                    continue
                 if any((cmdline == proc_cmdline[n:n + cmd_len])
                         for n in range(len(proc_cmdline) - cmd_len + 1)):
                     ret.append(proc)

@@ -20,6 +20,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.odict
 import salt.modules.state as state
 from salt.exceptions import SaltInvocationError
 
@@ -37,7 +38,11 @@ class MockState(object):
         '''
         flag = None
 
-        def __init__(self, opts, pillar=False, pillar_enc=None):
+        def __init__(self,
+                     opts,
+                     pillar_override=False,
+                     pillar_enc=None,
+                     initial_pillar=None):
             pass
 
         def verify_data(self, data):
@@ -135,10 +140,10 @@ class MockState(object):
         opts = {'state_top': '',
                 'pillar': {}}
 
-        def __init__(self, opts, pillar=None, *args, **kwargs):
-            self.building_highstate = {}
+        def __init__(self, opts, pillar_override=None, *args, **kwargs):
+            self.building_highstate = salt.utils.odict.OrderedDict
             self.state = MockState.State(opts,
-                                         pillar=pillar)
+                                         pillar_override=pillar_override)
 
         def render_state(self, sls, saltenv, mods, matches, local=False):
             '''
@@ -342,7 +347,15 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         patcher = patch('salt.modules.state.salt.state', MockState())
         patcher.start()
         self.addCleanup(patcher.stop)
-        return {state: {'__opts__': {'cachedir': '/D'}}}
+        return {
+            state: {
+                '__opts__': {
+                    'cachedir': '/D',
+                    'environment': None,
+                    '__cli': 'salt',
+                },
+            },
+        }
 
     def test_running(self):
         '''
@@ -605,7 +618,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(state.sls_id("apache", "http"), "A")
 
             with patch.dict(state.__opts__, {"test": "A"}):
-                mock = MagicMock(return_value={'test': True})
+                mock = MagicMock(
+                    return_value={'test': True,
+                                  'environment': None}
+                )
                 with patch.object(state, '_get_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
@@ -629,7 +645,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(state.show_low_sls("foo"), "A")
 
             with patch.dict(state.__opts__, {"test": "A"}):
-                mock = MagicMock(return_value={'test': True})
+                mock = MagicMock(
+                    return_value={'test': True,
+                                  'environment': None}
+                )
                 with patch.object(state, '_get_opts', mock):
                     MockState.State.flag = True
                     MockState.HighState.flag = True
@@ -648,7 +667,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(state.show_sls("foo"), "A")
 
             with patch.dict(state.__opts__, {"test": "A"}):
-                mock = MagicMock(return_value={'test': True})
+                mock = MagicMock(
+                    return_value={'test': True,
+                                  'environment': None}
+                )
                 with patch.object(state, '_get_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
@@ -829,7 +851,6 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                      state.sls("core,edit.vim dev",
                                                None,
                                                None,
-                                               None,
                                                True),
                                      ["A"])
 
@@ -844,11 +865,11 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                             self.assertListEqual(state.sls("core,edit.vim dev",
                                                            None,
                                                            None,
-                                                           None,
                                                            True), ret)
 
                     with patch.dict(state.__opts__, {"test": None}):
-                        mock = MagicMock(return_value={"test": ""})
+                        mock = MagicMock(return_value={"test": "",
+                                                       "environment": None})
                         with patch.object(state, '_get_opts', mock):
                             mock = MagicMock(return_value=True)
                             with patch.object(salt.utils,
@@ -858,7 +879,6 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                   SaltInvocationError,
                                                   state.sls,
                                                   "core,edit.vim dev",
-                                                  None,
                                                   None,
                                                   None,
                                                   True,
@@ -879,7 +899,6 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                             state.sls(arg,
                                                                       None,
                                                                       None,
-                                                                      None,
                                                                       True,
                                                                       cache
                                                                       =True
@@ -889,7 +908,6 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                     MockState.HighState.flag = True
                                     self.assertTrue(state.sls("core,edit"
                                                               ".vim dev",
-                                                              None,
                                                               None,
                                                               None,
                                                               True)
@@ -928,14 +946,13 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                               ".vim dev",
                                                               None,
                                                               None,
-                                                              None,
                                                               True))
 
     def test_pkg(self):
         '''
             Test to execute a packaged state run
         '''
-        mock = MagicMock(side_effect=[False, True, True, True, True, True])
+        mock = MagicMock(side_effect=[False, True, True, True, True, True, True, True])
         with patch.object(os.path, 'isfile', mock), \
                 patch('salt.modules.state.tarfile', MockTarFile), \
                 patch('salt.modules.state.json', MockJson()):
