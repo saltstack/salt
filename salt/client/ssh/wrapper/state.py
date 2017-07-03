@@ -48,6 +48,7 @@ def _thin_dir():
     Get the thin_dir from the master_opts if not in __opts__
     '''
     thin_dir = __opts__.get('thin_dir', __opts__['__master_opts__']['thin_dir'])
+    return thin_dir
 
 
 def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
