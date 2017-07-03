@@ -20,6 +20,7 @@ import re
 import platform
 import logging
 import locale
+import datetime
 import salt.exceptions
 
 __proxyenabled__ = ['*']
