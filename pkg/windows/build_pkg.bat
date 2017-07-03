@@ -67,10 +67,12 @@ If not Exist "%PyDir%\python.exe" (
     exit /b 1
 )
 
-Set "CurrDir=%cd%"
-Set "BinDir=%cd%\buildenv\bin"
-Set "InsDir=%cd%\installer"
-Set "PreDir=%cd%\prereqs"
+Set "CurDir=%~dp0"
+Set "BinDir=%CurDir%\buildenv\bin"
+Set "InsDir=%CurDir%\installer"
+Set "PreDir=%CurDir%\prereqs"
+Set "CnfDir=%CurDir%\buildenv\conf"
+for /f "delims=" %%a in ('git rev-parse --show-toplevel') do @set "SrcDir=%%a"
 
 :: Find the NSIS Installer
 If Exist "C:\Program Files\NSIS\" (
@@ -101,6 +103,15 @@ If Exist "%BinDir%\" (
 xcopy /E /Q "%PyDir%" "%BinDir%\"
 @echo.
 
+:: Copy the default master and minion configs to buildenv\conf
+@echo Copying configs to buildenv\conf...
+@echo ----------------------------------------------------------------------
+@echo xcopy /E /Q "%SrcDir%\conf\master" "%CnfDir%\"
+xcopy /Q "%SrcDir%\conf\master" "%CnfDir%\"
+@echo xcopy /E /Q "%SrcDir%\conf\minion" "%CnfDir%\"
+xcopy /Q "%SrcDir%\conf\minion" "%CnfDir%\"
+@echo.
+
 @echo Copying VCRedist to Prerequisites
 @echo ----------------------------------------------------------------------
 :: Make sure the "prereq" directory exists
@@ -127,12 +138,12 @@ If Defined ProgramFiles(x86) (
 :: Remove the fixed path in .exe files
 @echo Removing fixed path from .exe files
 @echo ----------------------------------------------------------------------
-"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
-"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install-%PyVerMajor%.%PyVerMinor%.exe"
-"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
-"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.%PyVerMinor%.exe"
-"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.exe"
-"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\wheel.exe"
+"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
+"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install-%PyVerMajor%.%PyVerMinor%.exe"
+"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
+"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.%PyVerMinor%.exe"
+"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.exe"
+"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\wheel.exe"
 @echo.
 
 @echo Cleaning up unused files and directories...
