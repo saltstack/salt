@@ -53,11 +53,13 @@ import re
 import pprint
 import logging
 import msgpack
+import traceback
 from ast import literal_eval
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 # pylint: disable=import-error
+LIBCLOUD_IMPORT_ERRORS = []
 try:
     import libcloud
     from libcloud.compute.types import Provider
@@ -78,6 +80,9 @@ try:
         libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBCLOUD = True
 except ImportError:
+    LIBCLOUD_IMPORT_ERRORS.append("Failure importing libcloud!")
+    for line in traceback.format_exc().split("\n"):
+        LIBCLOUD_IMPORT_ERRORS.append(line)
     HAS_LIBCLOUD = False
 # pylint: enable=import-error
 
@@ -154,6 +159,8 @@ def get_dependencies():
     '''
     Warn if dependencies aren't met.
     '''
+    for line in LIBCLOUD_IMPORT_ERRORS:
+        log.error(line)
     return config.check_driver_dependencies(
         __virtualname__,
         {'libcloud': HAS_LIBCLOUD}
