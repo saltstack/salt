@@ -151,6 +151,9 @@ def _replace_auth_key(
         # open the file for both reading AND writing
         with salt.utils.fopen(full, 'r') as _fh:
             for line in _fh:
+                # We don't need any whitespace-only containing lines or arbitrary newlines
+                line = line.strip()
+
                 if line.startswith('#'):
                     # Commented Line
                     lines.append(line)
@@ -181,6 +184,9 @@ def _validate_keys(key_file, fingerprint_hash_type):
     try:
         with salt.utils.fopen(key_file, 'r') as _fh:
             for line in _fh:
+                # We don't need any whitespace-only containing lines or arbitrary newlines
+                line = line.strip()
+
                 if line.startswith('#'):
                     # Commented Line
                     continue
@@ -570,6 +576,9 @@ def rm_auth_key(user,
             # and then write out the correct one. Open the file once
             with salt.utils.fopen(full, 'r') as _fh:
                 for line in _fh:
+                    # We don't need any whitespace-only containing lines or arbitrary newlines
+                    line = line.strip()
+
                     if line.startswith('#'):
                         # Commented Line
                         lines.append(line)
@@ -777,6 +786,9 @@ def _parse_openssh_output(lines, fingerprint_hash_type=None):
     and yield dict with keys information, one by one.
     '''
     for line in lines:
+        # We don't need any whitespace-only containing lines or arbitrary newlines
+        line = line.strip()
+
         if line.startswith('#'):
             continue
         try:
