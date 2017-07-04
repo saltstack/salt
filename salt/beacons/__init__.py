@@ -97,7 +97,8 @@ class Beacon(object):
                 # Update __grains__ on the beacon
                 self.beacons[fun_str].__globals__['__grains__'] = grains
 
-                # Run the validate function
+                # Run the validate function if it's available,
+                # otherwise there is a warning about it being missing
                 if validate_str in self.beacons:
                     valid, vcomment = self.beacons[validate_str](b_config[mod])
 

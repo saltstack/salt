@@ -31,14 +31,14 @@ def __virtual__():
         return __virtualname__
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
     # Configuration for memusage beacon should be a list of dicts
-    if not isinstance(config, dict):
+    if not isinstance(config, list):
         return False, ('Configuration for memusage '
-                       'beacon must be a dictionary.')
+                       'beacon must be a list.')
     return True, 'Valid beacon configuration'
 
 
@@ -58,6 +58,7 @@ def beacon(config):
     for memusage in config:
         mount = memusage.keys()[0]
         _current_usage = psutil.virtual_memory()
+        log.debug('_current_usage {}'.format(_current_usage))
 
         current_usage = _current_usage.percent
         monitor_usage = memusage[mount]

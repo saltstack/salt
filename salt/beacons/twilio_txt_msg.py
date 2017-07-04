@@ -9,7 +9,11 @@ import logging
 
 # Import 3rd Party libs
 try:
-    from twilio.rest import TwilioRestClient
+    import twilio
+    if twilio.__version__ > 5:
+        from twilio.rest import Client as TwilioRestClient
+    else:
+        from twilio.rest import TwilioRestClient
     HAS_TWILIO = True
 except ImportError:
     HAS_TWILIO = False
@@ -33,7 +37,18 @@ def validate(config):
     # Configuration for twilio_txt_msg beacon should be a list of dicts
     if not isinstance(config, list):
         return False, ('Configuration for twilio_txt_msg beacon '
-                       'must be a dictionary.')
+                       'must be a list.')
+    else:
+        _config = {}
+        list(map(_config.update, config))
+
+        log.debug('_config {}'.format(_config))
+        if not all(x in _config for x in ('account_sid',
+                                          'auth_token',
+                                          'twilio_number')):
+            return False, ('Configuration for twilio_txt_msg beacon '
+                           'must contain account_sid, auth_token '
+                           'and twilio_number items.')
     return True, 'Valid beacon configuration'
 
 
