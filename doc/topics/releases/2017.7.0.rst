@@ -587,7 +587,7 @@ The new release is also fully IPv4 and IPv6 enabled and even has support for CID
 Salt-SSH Default Options
 ========================
 
-Defaults for rosters can now be set, so that they don't have to be set on ever
+Defaults for rosters can now be set, so that they don't have to be set on every
 entry in a roster or specified from the commandline.
 
 The new option is :ref:`roster_defaults<roster-defaults>` and is specified in
@@ -611,7 +611,7 @@ The following configuration options have been added for the master:
 - :conf_master:`extmod_whitelist`
 - :conf_master:`extmod_blacklist`
 
-and for the minion
+and for the minion:
 
 - :conf_minion:`extmod_whitelist`
 - :conf_minion:`extmod_blacklist`
