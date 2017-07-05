@@ -100,6 +100,7 @@ import salt.defaults.exitcodes
 import salt.cli.daemons
 import salt.log.setup
 
+import salt.utils.dictupdate
 from salt.config import DEFAULT_MINION_OPTS
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.executors import FUNCTION_EXECUTORS
@@ -3118,8 +3119,11 @@ class ProxyMinion(Minion):
         if 'proxy' not in self.opts:
             self.opts['proxy'] = self.opts['pillar']['proxy']
 
-        # update opts, to override data with pillar data
-        self.opts.update(self.opts['pillar'])
+        if self.opts.get('proxy_merge_pillar_in_opts'):
+            self.opts = salt.utils.dictupdate.merge(self.opts,
+                                                    self.opts['pillar'],
+                                                    strategy=self.opts.get('proxy_merge_pillar_in_opts_strategy'),
+                                                    merge_lists=self.opts.get('proxy_deep_merge_pillar_in_opts', False))
 
         fq_proxyname = self.opts['proxy']['proxytype']
 
