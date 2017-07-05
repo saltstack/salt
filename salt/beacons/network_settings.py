@@ -118,12 +118,16 @@ def beacon(config):
 
         beacons:
           network_settings:
-            coalesce: True
-            eth0:
-              ipaddr:
-              promiscuity:
+            - coalesce: True
+            - interfaces:
+                eth0:
+                  ipaddr:
+                  promiscuity:
 
     '''
+    _config = {}
+    list(map(_config.update, config))
+
     ret = []
     interfaces = []
     expanded_config = {}
@@ -137,7 +141,7 @@ def beacon(config):
     if not LAST_STATS:
         LAST_STATS = _stats
 
-    if 'coalesce' in config and config['coalesce']:
+    if 'coalesce' in _config and _config['coalesce']:
         coalesce = True
         changes = {}
 
