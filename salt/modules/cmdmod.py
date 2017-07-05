@@ -543,10 +543,25 @@ def _run(cmd,
         try:
             proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
         except (OSError, IOError) as exc:
-            raise CommandExecutionError(
+            msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
-                'reason: {2}'.format(cmd, kwargs, exc)
+                'reason: '.format(
+                    cmd if _check_loglevel(output_loglevel) is not None
+                        else 'REDACTED',
+                    kwargs
+                )
             )
+            try:
+                if exc.filename is None:
+                    msg += 'command not found'
+                else:
+                    msg += '{0}: {1}'.format(exc, exc.filename)
+            except AttributeError:
+                # Both IOError and OSError have the filename attribute, so this
+                # is a precaution in case the exception classes in the previous
+                # try/except are changed.
+                msg += 'unknown'
+            raise CommandExecutionError(msg)
 
         try:
             proc.run()
