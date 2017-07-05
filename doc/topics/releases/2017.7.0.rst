@@ -584,6 +584,21 @@ Using the new ``roster_order`` configuration syntax it's now possible to compose
 of grains, pillar and mine data and even Salt SDB URLs.
 The new release is also fully IPv4 and IPv6 enabled and even has support for CIDR ranges.
 
+Blacklist or Whitelist Extmod Sync
+==================================
+
+The modules that are synced to minions can now be limited.
+
+The following configuration options have been added for the master:
+
+- :conf_master:`extmod_whitelist`
+- :conf_master:`extmod_blacklist`
+
+and for the minion
+
+- :conf_minion:`extmod_whitelist`
+- :conf_minion:`extmod_blacklist`
+
 Additional Features
 ===================
 
