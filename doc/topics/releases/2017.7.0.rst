@@ -34,6 +34,17 @@ The following salt-cloud drivers have known issues running with Python 3. These 
   Users using the `C` locale are advised to switch to a UTF-aware locale to ensure proper functionality with Salt with Python 3.
 
 
+Remember to update the Salt Master first
+========================================
+Salt's policy has always been that when upgrading, the minion should never be
+on a newer version than the master.  Specifically with this update, because of
+changes in the fileclient, the 2017.7 minion requires a 2017.7 master.
+
+Backwards compatiblity is still maintained, so older minions can still be used.
+
+More information can be found in the :ref:`Salt FAQ<which-version>`
+
+
 States Added for Management of systemd Unit Masking
 ===================================================
 
