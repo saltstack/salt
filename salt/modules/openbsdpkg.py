@@ -19,6 +19,7 @@ Package support for OpenBSD
       - rsync
       - vim--no_x11
       - ruby%2.3
+      - postfix-3.3.20170218-mysql
 
 '''
 from __future__ import absolute_import
@@ -194,9 +195,13 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
         # A special case for OpenBSD package "branches" is also required in
         # salt/states/pkg.py
         if pkg_type == 'repository':
-            stem, branch = (pkg.split('%') + [''])[:2]
-            base, flavor = (stem.split('--') + [''])[:2]
-            pkg = '{0}--{1}%{2}'.format(base, flavor, branch)
+            stem, branch = (pkg.split('%') + [None])[:2]
+            base, flavor = (stem.split('--') + [None])[:2]
+            pkg = base
+            if flavor:
+                pkg = '{0}--{1}'.format(pkg, flavor)
+            if branch:
+                pkg = '{0}%{1}'.format(pkg, branch)
         cmd = 'pkg_add -x -I {0}'.format(pkg)
         out = __salt__['cmd.run_all'](
             cmd,

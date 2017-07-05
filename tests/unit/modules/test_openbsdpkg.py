@@ -103,9 +103,9 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 self.assertDictEqual(added, expected)
         expected_calls = [
-            call('pkg_add -x -I png--%', output_loglevel='trace', python_shell=False),
-            call('pkg_add -x -I ruby--%2.3', output_loglevel='trace', python_shell=False),
-            call('pkg_add -x -I vim--gtk2%', output_loglevel='trace', python_shell=False),
+            call('pkg_add -x -I png', output_loglevel='trace', python_shell=False),
+            call('pkg_add -x -I ruby%2.3', output_loglevel='trace', python_shell=False),
+            call('pkg_add -x -I vim--gtk2', output_loglevel='trace', python_shell=False),
         ]
         run_all_mock.assert_has_calls(expected_calls, any_order=True)
         self.assertEqual(run_all_mock.call_count, 3)
