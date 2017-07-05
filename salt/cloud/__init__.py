@@ -1187,7 +1187,7 @@ class Cloud(object):
             'minion', vm_, self.opts, default={}
         )
 
-        alias, driver = vm_['driver'].split(':')
+        alias, driver = vm_['provider'].split(':')
         fun = '{0}.create'.format(driver)
         if fun not in self.clouds:
             log.error(
