@@ -72,12 +72,6 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Make sure there are no files in the directory before continuing
         self.assertEqual(jid_file, None)
 
-        # Windows needs some time to release the file handles to the new temp
-        # dir before trying to clean the job cache to avoid a race condition
-        if salt.utils.is_windows():
-            import time
-            time.sleep(1)
-
         # Call clean_old_jobs function, patching the keep_jobs value with a
         # very small value to force the call to clean the job.
         with patch.dict(local_cache.__opts__, {'keep_jobs': 0.00000001}):
