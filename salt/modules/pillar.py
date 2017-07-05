@@ -110,7 +110,7 @@ def get(key,
             default = ''
     opt_merge_lists = __opts__.get('pillar_merge_lists', False) if \
         merge_nested_lists is None else merge_nested_lists
-    pillar_dict = __pillar__ if saltenv is None else items(saltenv=saltenv)
+    pillar_dict = __pillar__ if saltenv is None else items(pillarenv=saltenv)
 
     if merge:
         if isinstance(default, dict):
