@@ -1211,14 +1211,23 @@ class Schedule(object):
                     log.error('Missing python-croniter. Ignoring job {0}'.format(job))
                     continue
 
-                if not data['_next_fire_time'] or \
-                        data['_next_fire_time'] < now:
+                if data['_next_fire_time'] is None:
+                    # Get next time frame for a "cron" job if it has been never
+                    # executed before or already executed in the past.
                     try:
                         data['_next_fire_time'] = int(
                             croniter.croniter(data['cron'], now).get_next())
                     except (ValueError, KeyError):
                         log.error('Invalid cron string. Ignoring')
                         continue
+
+                    # If next job run is scheduled more than 1 minute ahead and
+                    # configured loop interval is longer than that, we should
+                    # shorten it to get our job executed closer to the beginning
+                    # of desired time.
+                    interval = now - data['_next_fire_time']
+                    if interval >= 60 and interval < self.loop_interval:
+                        self.loop_interval = interval
 
             else:
                 continue
@@ -1232,6 +1241,11 @@ class Schedule(object):
                     run = True
                 elif 'when' in data and data['_run']:
                     data['_run'] = False
+                    run = True
+                elif 'cron' in data:
+                    # Reset next scheduled time because it is in the past now,
+                    # and we should trigger the job run, then wait for the next one.
+                    data['_next_fire_time'] = None
                     run = True
                 elif seconds == 0:
                     run = True
