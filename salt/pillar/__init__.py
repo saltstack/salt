@@ -27,7 +27,6 @@ from salt.template import compile_template
 from salt.utils.dictupdate import merge
 from salt.utils.odict import OrderedDict
 from salt.version import __version__
-from salt.utils.locales import decode_recursively
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -168,7 +167,7 @@ class RemotePillar(object):
                 '{1}'.format(type(ret_pillar).__name__, ret_pillar)
             )
             return {}
-        return decode_recursively(ret_pillar)
+        return ret_pillar
 
 
 class PillarCache(object):
