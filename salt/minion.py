@@ -3125,7 +3125,7 @@ class ProxyMinion(Minion):
                                                     self.opts['pillar'],
                                                     strategy=self.opts.get('proxy_merge_pillar_in_opts_strategy'),
                                                     merge_lists=self.opts.get('proxy_deep_merge_pillar_in_opts', False))
-        else:
+        elif self.opts.get('proxy_mines_pillar'):
             # Even when not required, some details such as mine configuration
             # should be merged anyway whenever possible.
             if 'mine_interval' in self.opts['pillar']:

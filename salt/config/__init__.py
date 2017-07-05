@@ -583,6 +583,9 @@ VALID_OPTS = {
     # Considered only when `proxy_merge_pillar_in_opts` is True.
     'proxy_merge_pillar_in_opts_strategy': str,
 
+    # Allow enabling mine details using pillar data.
+    'proxy_mines_pillar': bool,
+
     # In some particular cases, always alive proxies are not beneficial.
     # This option can be used in those less dynamic environments:
     # the user can request the connection
@@ -1654,6 +1657,8 @@ DEFAULT_PROXY_MINION_OPTS = {
     'proxy_merge_pillar_in_opts': False,
     'proxy_deep_merge_pillar_in_opts': False,
     'proxy_merge_pillar_in_opts_strategy': 'smart',
+
+    'proxy_mines_pillar': True,
 
     # By default, proxies will preserve the connection.
     # If this option is set to False,
