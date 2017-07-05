@@ -187,6 +187,16 @@ VALID_OPTS = {
     # A unique identifier for this daemon
     'id': str,
 
+    # Use a module function to determine the unique identifier. If this is
+    # set and 'id' is not set, it will allow invocation of a module function
+    # to determine the value of 'id'. For simple invocations without function
+    # arguments, this may be a string that is the function name. For
+    # invocations with function arguments, this may be a dictionary with the
+    # key being the function name, and the value being an embedded dictionary
+    # where each key is a function argument name and each value is the
+    # corresponding argument value.
+    'id_function': (dict, str),
+
     # The directory to store all cache files.
     'cachedir': str,
 
@@ -858,13 +868,6 @@ VALID_OPTS = {
     # Always generate minion id in lowercase.
     'minion_id_lowercase': bool,
 
-    # The behavior when generating a minion ID. Can specify 'str' or 'func'.
-    # If 'str' is specified (the default), the 'id' option should be set to
-    # the minion ID or left unspecified for default minion ID generation
-    # behavior. If 'func' is specified, the 'id' option should be set to an
-    # exec module function to run to determine the minion ID.
-    'minion_id_type': str,
-
     # If set, the master will sign all publications before they are sent out
     'sign_pub_messages': bool,
 
@@ -1110,6 +1113,7 @@ DEFAULT_MINION_OPTS = {
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': '',
+    'id_function': {},
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
     'append_minionid_config_dirs': [],
     'cache_jobs': False,
@@ -1306,7 +1310,6 @@ DEFAULT_MINION_OPTS = {
     'grains_refresh_every': 0,
     'minion_id_caching': True,
     'minion_id_lowercase': False,
-    'minion_id_type': 'str',
     'keysize': 2048,
     'transport': 'zeromq',
     'auth_timeout': 5,
@@ -3344,38 +3347,52 @@ def _cache_id(minion_id, cache_file):
         log.error('Could not cache minion ID: {0}'.format(exc))
 
 
-def eval_minion_id_func(opts):
+def eval_id_function(opts):
     '''
-    Evaluate minion ID function if 'minion_id_type' is 'func'
-    and return the result
+    Evaluate the function that determines the ID if the 'id_function'
+    option is set and return the result
     '''
-    if '__minion_id_func_evaluated' in opts:
+    if opts.get('id'):
         return opts['id']
 
     # Import 'salt.loader' here to avoid a circular dependency
     import salt.loader as loader
 
+    if isinstance(opts['id_function'], str):
+        mod_fun = opts['id_function']
+        fun_kwargs = {}
+    elif isinstance(opts['id_function'], dict):
+        mod_fun, fun_kwargs = six.next(six.iteritems(opts['id_function']))
+        if fun_kwargs is None:
+            fun_kwargs = {}
+    else:
+        log.error('\'id_function\' option is not a string nor a dictionary')
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+
     # split module and function and try loading the module
-    mod_fun = opts['id']
     mod, fun = mod_fun.split('.')
     if not opts.get('grains'):
         # Get grains for use by the module
         opts['grains'] = loader.grains(opts)
 
     try:
-        minion_id_mod = loader.raw_mod(opts, mod, fun)
-        if not minion_id_mod:
+        id_mod = loader.raw_mod(opts, mod, fun)
+        if not id_mod:
             raise KeyError
         # we take whatever the module returns as the minion ID
-        newid = minion_id_mod[mod_fun]()
+        newid = id_mod[mod_fun](**fun_kwargs)
         if not isinstance(newid, str):
             log.error('{0} returned from {1} is not a string'.format(
                 newid, mod_fun)
             )
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-        opts['__minion_id_func_evaluated'] = True
         log.info('Evaluated minion ID from module: {0}'.format(mod_fun))
         return newid
+    except TypeError:
+        log.error('Function arguments {0} are incorrect for function {1}'.format(
+            fun_kwargs, mod_fun)
+        )
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
     except KeyError:
         log.error('Failed to load module {0}'.format(mod_fun))
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
@@ -3422,8 +3439,8 @@ def get_id(opts, cache_minion_id=False):
         log.debug('Guessing ID. The id can be explicitly set in {0}'
                   .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
-    if opts.get('minion_id_type', 'str') == 'func':
-        newid = eval_minion_id_func(opts)
+    if opts.get('id_function'):
+        newid = eval_id_function(opts)
     else:
         newid = salt.utils.network.generate_minion_id()
 
@@ -3432,7 +3449,7 @@ def get_id(opts, cache_minion_id=False):
         log.debug('Changed minion id {0} to lowercase.'.format(newid))
     if '__role' in opts and opts.get('__role') == 'minion':
         log.debug('Found minion id from {0}(): {1}'.format(
-            opts.get('minion_id_type') == 'func' and 'eval_minion_id_func' or
+            opts.get('id_function') and 'eval_id_function' or
             'generate_minion_id', newid))
     if cache_minion_id and opts.get('minion_id_caching', True):
         _cache_id(newid, id_cache)
@@ -3502,7 +3519,7 @@ def apply_minion_config(overrides=None,
 
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
-    if not opts.get('id') or opts.get('minion_id_type', 'str') == 'func':
+    if not opts.get('id'):
         if minion_id:
             opts['id'] = minion_id
         else:
@@ -3676,7 +3693,7 @@ def apply_master_config(overrides=None, defaults=None):
         opts['ipc_write_buffer'] = 0
     using_ip_for_id = False
     append_master = False
-    if not opts.get('id') or opts.get('minion_id_type', 'str') == 'func':
+    if not opts.get('id'):
         opts['id'], using_ip_for_id = get_id(
                 opts,
                 cache_minion_id=None)
