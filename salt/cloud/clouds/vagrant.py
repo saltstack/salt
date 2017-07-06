@@ -232,10 +232,10 @@ def create(vm_):
         if len(tokens) == 2:
             ssh_config[tokens[0]] = tokens[1]
     log.debug('ssh_config=%s', repr(ssh_config))
-    vm_['key_filename'] = ssh_config['IdentityFile']
-    vm_['ssh_username'] = ssh_config['User']
-    vm_['ssh_port'] = ssh_config['Port']
-    vm_['ssh_host'] = ssh_config['HostName']
+    vm_.setdefault('key_filename', ssh_config['IdentityFile'])
+    vm_.setdefault('ssh_username', ssh_config['User'])
+    vm_.setdefault('ssh_port', ssh_config['Port'])
+    vm_.setdefault('ssh_host', ssh_config['HostName'])
 
     deploy_config = config.get_cloud_config_value(
         'deploy', vm_, __opts__, default=True)
