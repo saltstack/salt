@@ -3347,7 +3347,7 @@ def _cache_id(minion_id, cache_file):
         log.error('Could not cache minion ID: {0}'.format(exc))
 
 
-def eval_id_function(opts):
+def call_id_function(opts):
     '''
     Evaluate the function that determines the ID if the 'id_function'
     option is set and return the result
@@ -3366,7 +3366,7 @@ def eval_id_function(opts):
         if fun_kwargs is None:
             fun_kwargs = {}
     else:
-        log.error('\'id_function\' option is not a string nor a dictionary')
+        log.error('\'id_function\' option is neither a string nor a dictionary')
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     # split module and function and try loading the module
@@ -3381,9 +3381,9 @@ def eval_id_function(opts):
             raise KeyError
         # we take whatever the module returns as the minion ID
         newid = id_mod[mod_fun](**fun_kwargs)
-        if not isinstance(newid, str):
-            log.error('{0} returned from {1} is not a string'.format(
-                newid, mod_fun)
+        if not isinstance(newid, str) or not newid:
+            log.error('Function {0} returned value "{1}" of type {2} instead of string'.format(
+                mod_fun, newid, type(newid))
             )
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         log.info('Evaluated minion ID from module: {0}'.format(mod_fun))
@@ -3440,7 +3440,7 @@ def get_id(opts, cache_minion_id=False):
                   .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
     if opts.get('id_function'):
-        newid = eval_id_function(opts)
+        newid = call_id_function(opts)
     else:
         newid = salt.utils.network.generate_minion_id()
 
@@ -3448,9 +3448,12 @@ def get_id(opts, cache_minion_id=False):
         newid = newid.lower()
         log.debug('Changed minion id {0} to lowercase.'.format(newid))
     if '__role' in opts and opts.get('__role') == 'minion':
-        log.debug('Found minion id from {0}(): {1}'.format(
-            opts.get('id_function') and 'eval_id_function' or
-            'generate_minion_id', newid))
+        if opts.get('id_function'):
+            log.debug('Found minion id from external function {0}: {1}'.format(
+                opts['id_function'], newid))
+        else:
+            log.debug('Found minion id from generate_minion_id(): {0}'.format(
+                newid))
     if cache_minion_id and opts.get('minion_id_caching', True):
         _cache_id(newid, id_cache)
     is_ipv4 = salt.utils.network.is_ipv4(newid)
