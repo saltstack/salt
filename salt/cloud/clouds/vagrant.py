@@ -243,19 +243,11 @@ def create(vm_):
     deploy_config = config.get_cloud_config_value(
         'deploy', vm_, __opts__, default=True)
     if deploy_config:
-        log.info('Provisioning machine %s', vm_['name'])
+        log.info('Provisioning machine %s as node %s', machine, vm_['name'])
         ret = __utils__['cloud.bootstrap'](vm_, __opts__)
     else:
         ret = _verify(vm_)
     log.debug('reponse ==> %s', ret)
-
-    log.info('setting grains for machine %s on %s', machine, host)
-    cmd['arg'] = ['salt-cloud']
-    cmd['kwarg'] = {'machine': machine, 'host': host}
-    cmd['fun'] = 'grains.set'
-    cmd['tgt'] = vm_['name']
-    ret = local.run(cmd)
-    log.debug('response ==> %s', repr(ret))
 
     return ret
 
@@ -401,17 +393,15 @@ def destroy(name, call=None):
     cmd.update(_get_connection_info())
     vm_ = cmd['vm']
     my_info = local.run(cmd)
-    try:
-        vm_.update(my_info[name])  # use profile name to get config values
-    except (IndexError, TypeError):
-        pass
-    machine = vm_['machine']
-    host = vm_['host']
-    cwd = config.get_cloud_config_value(
-        'cwd', vm_, __opts__, default='/')
+    vm_.update(my_info[name])  # use profile name to get config values
+    profile_name = my_info[name]['profile']
+    profile = vm_['profiles'][profile_name]
+    machine = profile['machine']
+    host = profile['host']
+    cwd = profile['cwd']
     log.info('sending \'vagrant destroy %s\' command to %s', machine, host)
 
-    local = salt.netapi.NetapiClient(__opts__)
+    local = salt.netapi.NetapiClient(opts)
 
     args = ['vagrant destroy {} -f'.format(machine)]
     kwargs = {'cwd': cwd}
@@ -458,8 +448,7 @@ def reboot(name, call=None):
             'The reboot action must be called with -a or --action.'
         )
 
-
-    local = salt.netapi.NetapiClient(opts)
+    local = salt.netapi.NetapiClient(__opts__)
     cmd = {'client': 'local',
            'tgt': name,
            'fun': 'grains.get',
@@ -468,28 +457,21 @@ def reboot(name, call=None):
     cmd.update(_get_connection_info())
     vm_ = cmd['vm']
     my_info = local.run(cmd)
-    try:
-        vm_.update(my_info[name])  # use profile name to get config values
-    except (IndexError, TypeError):
-        pass
-    machine = vm_['machine']
-    host = vm_['host']
-    cwd = config.get_cloud_config_value(
-        'cwd', vm_, __opts__, default='/')
-    log.info('sending \'vagrant reload %s\' command to %s', machine, host)
+    vm_.update(my_info[name])  # get config values
+    profile_name = my_info[name]['profile']
+    profile = vm_['profiles'][profile_name]
+    machine = profile['machine']
+    host = profile['host']
+    cwd = profile['cwd']
 
-    local = salt.netapi.NetapiClient(__opts__)
+    log.info('sending \'vagrant reload %s\' command to %s', machine, host)
 
     args = ['vagrant reload {}'.format(machine)]
     kwargs = {'cwd': cwd}
-    cmd = {'client': 'local',
-           'tgt': host,
-           'fun': 'cmd.run',
-           'arg': args,
-           'kwarg': kwargs,
-           'tgt_type': 'glob',
-           }
-    cmd.update(_get_connection_info())
+    cmd['tgt'] = host
+    cmd['fun'] = 'cmd.run'
+    cmd['arg'] = args
+    cmd['kwarg'] = kwargs
     ret = local.run(cmd)
     log.debug('response ==>%s', ret)
 
