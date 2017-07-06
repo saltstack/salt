@@ -168,11 +168,14 @@ def describe_hosted_zones(zone_id=None, domain_name=None, region=None,
                     marker = r['ListHostedZonesResponse'].get('NextMarker', '')
             return ret if ret else []
         except DNSServerError as e:
-            # if rate limit, retry:
-            if retries and 'Throttling' == e.code:
-                log.debug('Throttled by AWS API.')
+            if retries:
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
                 time.sleep(3)
-                tries -= 1
+                retries -= 1
                 continue
             log.error('Could not list zones: {0}'.format(e.message))
             return []
@@ -255,12 +258,15 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
             return bool(conn.get_zone(zone))
 
         except DNSServerError as e:
-            # if rate limit, retry:
-            if retry_on_rate_limit and 'Throttling' == e.code:
-                log.debug('Throttled by AWS API.')
-                time.sleep(2)
+            if retry_on_rate_limit:
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
+                time.sleep(3)
                 rate_limit_retries -= 1
-                continue  # the while True; try again if not out of retries
+                continue
             raise e
 
 
@@ -385,12 +391,15 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
             break  # the while True
 
         except DNSServerError as e:
-            # if rate limit, retry:
-            if retry_on_rate_limit and 'Throttling' == e.code:
-                log.debug('Throttled by AWS API.')
-                time.sleep(2)
+            if retry_on_rate_limit:
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
+                time.sleep(3)
                 rate_limit_retries -= 1
-                continue  # the while True; try again if not out of retries
+                continue
             raise e
 
     if _record:
@@ -443,12 +452,15 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
             break
 
         except DNSServerError as e:
-            # if rate limit, retry:
-            if retry_on_rate_limit and 'Throttling' == e.code:
-                log.debug('Throttled by AWS API.')
-                time.sleep(2)
+            if retry_on_rate_limit:
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
+                time.sleep(3)
                 rate_limit_retries -= 1
-                continue  # the while True; try again if not out of retries
+                continue
             raise e
 
     _value = _munge_value(value, _type)
@@ -461,12 +473,15 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
             return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
-            # if rate limit, retry:
-            if retry_on_rate_limit and 'Throttling' == e.code:
-                log.debug('Throttled by AWS API.')
-                time.sleep(2)
+            if retry_on_rate_limit:
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
+                time.sleep(3)
                 rate_limit_retries -= 1
-                continue  # the while True; try again if not out of retries
+                continue
             raise e
 
 
@@ -506,12 +521,15 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
             return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
-            # if rate limit, retry:
-            if retry_on_rate_limit and 'Throttling' == e.code:
-                log.debug('Throttled by AWS API.')
-                time.sleep(2)
+            if retry_on_rate_limit:
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
+                time.sleep(3)
                 rate_limit_retries -= 1
-                continue  # the while True; try again if not out of retries
+                continue
             raise e
 
 
@@ -550,12 +568,15 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
             return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
-            # if rate limit, retry:
-            if retry_on_rate_limit and 'Throttling' == e.code:
-                log.debug('Throttled by AWS API.')
-                time.sleep(2)
+            if retry_on_rate_limit:
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
+                time.sleep(3)
                 rate_limit_retries -= 1
-                continue  # the while True; try again if not out of retries
+                continue
             raise e
 
 
@@ -693,8 +714,12 @@ def create_hosted_zone(domain_name, caller_ref=None, comment='',
                     'CreateHostedZoneResponse') else {}
             return r.get('parent', {}).get('CreateHostedZoneResponse')
         except DNSServerError as e:
-            if retries and 'Throttling' == e.code:
-                log.debug('Throttled by AWS API.')
+            if retries:
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
                 time.sleep(3)
                 retries -= 1
                 continue
