@@ -56,9 +56,12 @@ def _get_connection_info():
     vm_ = get_configured_provider()
 
     try:
-        ret = {'username': vm_['username'],
-               'password': vm_['password'],
-               'eauth': vm_['eauth'],
+        ret = {'username': config.get_cloud_config_value(
+                    'username', vm_, __opts__, default=None),
+               'password': config.get_cloud_config_value(
+                    'password', vm_, __opts__, default=None),
+               'eauth': config.get_cloud_config_value(
+                    'eauth', vm_, __opts__, default=''),
                'vm': vm_,
                }
     except IndexError:
@@ -201,19 +204,38 @@ def create(vm_):
         'host', vm_, __opts__, default=NotImplemented)
     cwd = config.get_cloud_config_value(
         'cwd', vm_, __opts__, default='/')
-    log.info('sending \'vagrant up %s\' command to %s:%s', machine, host, cwd)
+    log.info('sending \'vagrant up %s\' command to %s', machine, host)
 
     local = salt.netapi.NetapiClient(__opts__)
 
-    args = {'cwd': cwd, 'name': 'vagrant up {}'.format(machine)}
+    args = ['vagrant up {}'.format(machine)]
+    kwargs = {'cwd': cwd}
     cmd = {'client': 'local',
            'tgt': host,
            'fun': 'cmd.run',
            'arg': args,
-           'tgt_type': 'grain',
+           'kwarg': kwargs,
+           'tgt_type': 'glob',
            }
     cmd.update(_get_connection_info())
     ret = local.run(cmd)
+    log.debug(repr(ret))
+
+    log.info('requesting ssh-config from %s', machine)
+    cmd['arg'] = ['vagrant ssh-config {}'.format(machine)]
+    ret = local.run(cmd)
+    log.debug('response ==> %s', repr(ret))
+    reply = ret[host]
+    ssh_config = {}
+    for line in reply.split('\n'):  # build a dictionary of the text reply
+        tokens = line.strip().split()
+        if len(tokens) == 2:
+            ssh_config[tokens[0]] = tokens[1]
+    log.debug('ssh_config=%s', repr(ssh_config))
+    vm_['key_filename'] = ssh_config['IdentityFile']
+    vm_['ssh_username'] = ssh_config['User']
+    vm_['ssh_port'] = ssh_config['Port']
+    vm_['ssh_host'] = ssh_config['HostName']
 
     deploy_config = config.get_cloud_config_value(
         'deploy', vm_, __opts__, default=True)
