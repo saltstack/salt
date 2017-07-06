@@ -212,6 +212,7 @@ def _list_nodes_full(call=None):
     return local.run(cmd)
 
 
+
 def list_nodes_select(call=None):
     '''
     Return a list of the minions that have salt-cloud grains, with
