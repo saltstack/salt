@@ -856,7 +856,7 @@ def _parse_network_settings(opts, current):
         _raise_error_network('hostname', ['server1.example.com'])
 
     if 'nozeroconf' in opts:
-        nozeroconf = salt.utils.dequote(opts['nozerconf'])
+        nozeroconf = salt.utils.dequote(opts['nozeroconf'])
         if nozeroconf in valid:
             if nozeroconf in _CONFIG_TRUE:
                 result['nozeroconf'] = true_val
