@@ -124,7 +124,7 @@ def _build_required_items(nodes):
 
             ret[name] = {
                 'id': grains['id'],
-                'image': grains['salt-cloud:profile'],
+                'image': grains['salt-cloud']['profile'],
                 'private_ips': private_ips,
                 'public_ips': public_ips,
                 'size': '',
@@ -139,7 +139,9 @@ def list_nodes_full(call=None):
     List the nodes, ask all 'vagrant' minions, return dict of grains (enhanced).
     '''
     ret = _list_nodes_full(call)
-    ret.update(_build_required_items(ret))
+    reqs = _build_required_items(ret)
+    for name in ret:
+        ret[name].update(reqs[name])
     return ret
 
 
@@ -183,7 +185,7 @@ def show_instance(name, call=None):
     '''
     local = salt.netapi.NetapiClient(__opts__)
     cmd = {'client': 'local',
-           'tgt': 'name',
+           'tgt': name,
            'fun': 'grains.items',
            'arg': '',
            'tgt_type': 'glob',
@@ -234,16 +236,26 @@ def create(vm_):
     log.debug('ssh_config=%s', repr(ssh_config))
     vm_.setdefault('key_filename', ssh_config['IdentityFile'])
     vm_.setdefault('ssh_username', ssh_config['User'])
-    vm_.setdefault('ssh_port', ssh_config['Port'])
-    vm_.setdefault('ssh_host', ssh_config['HostName'])
+    if not 'ssh_host' in vm_:  # do not use Vagrant automatic ssh port if user has defined a host name
+        vm_['ssh_host'] = ssh_config['HostName']
+        vm_.setdefault('ssh_port', ssh_config['Port'])
 
     deploy_config = config.get_cloud_config_value(
         'deploy', vm_, __opts__, default=True)
     if deploy_config:
-        log.info('Provisioning existing machine %s', vm_['name'])
+        log.info('Provisioning machine %s', vm_['name'])
         ret = __utils__['cloud.bootstrap'](vm_, __opts__)
     else:
         ret = _verify(vm_)
+    log.debug('reponse ==> %s', ret)
+
+    log.info('setting grains for machine %s on %s', machine, host)
+    cmd['arg'] = ['salt-cloud']
+    cmd['kwarg'] = {'machine': machine, 'host': host}
+    cmd['fun'] = 'grains.set'
+    cmd['tgt'] = vm_['name']
+    ret = local.run(cmd)
+    log.debug('response ==> %s', repr(ret))
 
     return ret
 
@@ -390,44 +402,29 @@ def destroy(name, call=None):
     vm_ = cmd['vm']
     my_info = local.run(cmd)
     try:
-        vm_.update(my_info[name])  # get profile name to get config value
+        vm_.update(my_info[name])  # use profile name to get config values
     except (IndexError, TypeError):
         pass
-    if config.get_cloud_config_value(
-           'remove_config_on_destroy', vm_, opts, default=True
-            ):
-        cmd.update({'fun': 'service.disable', 'arg': ['salt-minion']})
-        ret = local.run(cmd)  # prevent generating new keys on restart
-        if ret and ret[name]:
-            log.info('disabled salt-minion service on %s', name)
-        cmd.update({'fun': 'config.get', 'arg': ['conf_file']})
-        ret = local.run(cmd)
-        if ret and ret[name]:
-            confile = ret[name]
-            cmd.update({'fun': 'file.remove', 'arg': [confile]})
-            ret = local.run(cmd)
-            if ret and ret[name]:
-                log.info('removed minion %s configuration file %s',
-                         name, confile)
-        cmd.update({'fun': 'config.get', 'arg': ['pki_dir']})
-        ret = local.run(cmd)
-        if ret and ret[name]:
-            pki_dir = ret[name]
-            cmd.update({'fun': 'file.remove', 'arg': [pki_dir]})
-            ret = local.run(cmd)
-            if ret and ret[name]:
-                log.info(
-                    'removed minion %s key files in %s',
-                    name,
-                    pki_dir)
+    machine = vm_['machine']
+    host = vm_['host']
+    cwd = config.get_cloud_config_value(
+        'cwd', vm_, __opts__, default='/')
+    log.info('sending \'vagrant destroy %s\' command to %s', machine, host)
 
-    if config.get_cloud_config_value(
-        'shutdown_on_destroy', vm_, opts, default=False
-        ):
-        cmd.update({'fun': 'system.shutdown', 'arg': ''})
-        ret = local.run(cmd)
-        if ret and ret[name]:
-            log.info('system.shutdown for minion %s successful', name)
+    local = salt.netapi.NetapiClient(__opts__)
+
+    args = ['vagrant destroy {} -f'.format(machine)]
+    kwargs = {'cwd': cwd}
+    cmd = {'client': 'local',
+           'tgt': host,
+           'fun': 'cmd.run',
+           'arg': args,
+           'kwarg': kwargs,
+           'tgt_type': 'glob',
+           }
+    cmd.update(_get_connection_info())
+    ret = local.run(cmd)
+    log.debug('response ==>%s', ret)
 
     __utils__['cloud.fire_event'](
         'event',
@@ -461,13 +458,39 @@ def reboot(name, call=None):
             'The reboot action must be called with -a or --action.'
         )
 
-    local = salt.netapi.NetapiClient(__opts__)
+
+    local = salt.netapi.NetapiClient(opts)
     cmd = {'client': 'local',
            'tgt': name,
-           'fun': 'system.reboot',
-           'arg': '',
+           'fun': 'grains.get',
+           'arg': ['salt-cloud'],
+           }
+    cmd.update(_get_connection_info())
+    vm_ = cmd['vm']
+    my_info = local.run(cmd)
+    try:
+        vm_.update(my_info[name])  # use profile name to get config values
+    except (IndexError, TypeError):
+        pass
+    machine = vm_['machine']
+    host = vm_['host']
+    cwd = config.get_cloud_config_value(
+        'cwd', vm_, __opts__, default='/')
+    log.info('sending \'vagrant reload %s\' command to %s', machine, host)
+
+    local = salt.netapi.NetapiClient(__opts__)
+
+    args = ['vagrant reload {}'.format(machine)]
+    kwargs = {'cwd': cwd}
+    cmd = {'client': 'local',
+           'tgt': host,
+           'fun': 'cmd.run',
+           'arg': args,
+           'kwarg': kwargs,
+           'tgt_type': 'glob',
            }
     cmd.update(_get_connection_info())
     ret = local.run(cmd)
+    log.debug('response ==>%s', ret)
 
     return ret
