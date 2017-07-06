@@ -547,7 +547,7 @@ class Compiler(object):
                 continue
             for state, run in six.iteritems(body):
                 funcs = set()
-                names = set()
+                names = []
                 if state.startswith('__'):
                     continue
                 chunk = {'state': state,
@@ -564,7 +564,9 @@ class Compiler(object):
                     if isinstance(arg, dict):
                         for key, val in six.iteritems(arg):
                             if key == 'names':
-                                names.update(val)
+                                for _name in val:
+                                    if _name not in names:
+                                        names.append(_name)
                                 continue
                             else:
                                 chunk.update(arg)
@@ -1287,7 +1289,7 @@ class State(object):
                 continue
             for state, run in six.iteritems(body):
                 funcs = set()
-                names = set()
+                names = []
                 if state.startswith('__'):
                     continue
                 chunk = {'state': state,
@@ -1306,7 +1308,9 @@ class State(object):
                     if isinstance(arg, dict):
                         for key, val in six.iteritems(arg):
                             if key == 'names':
-                                names.update(val)
+                                for _name in val:
+                                    if _name not in names:
+                                        names.append(_name)
                             elif key == 'state':
                                 # Don't pass down a state override
                                 continue
