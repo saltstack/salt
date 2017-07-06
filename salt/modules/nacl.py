@@ -54,7 +54,7 @@ You have two option, `sealedbox` or `secretbox`.
 
 SecretBox is data encrypted using private key `pk`. Sealedbox is encrypted using public key `pk`.
 
-We recomend using Sealedbox one way encryption because this allows an admin to share a public key with developers to encrypt data in source control but not decrypt.
+Recommend using Sealedbox because the one way encryption permits developers to encrypt data for source control but not decrypt.
 Sealedbox only has one key that is for both encryption and decryption.
 
 .. code-block:: bash
@@ -109,7 +109,7 @@ Pillar files can include protected data that the salt master decrypts:
 Larger files like certificates can be encrypted with:
 
 .. code-block:: bash
-    
+
     salt-call nacl.enc_file /tmp/cert.crt out=/tmp/cert.nacl
     # or more advanced
     cert=$(cat /tmp/cert.crt)
@@ -141,7 +141,7 @@ Optional small program to encrypt data without needing salt modules.
     pk = base64.b64decode('YOURPUBKEY')
     b = libnacl.sealed.SealedBox(pk)
     data = sys.stdin.buffer.read()
-    return base64.b64encode(b.encrypt(data)).decode()
+    print(base64.b64encode(b.encrypt(data)).decode())
 
 .. code-block:: bash
 
