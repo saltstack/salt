@@ -9,9 +9,23 @@ Module for handling kubernetes calls.
         kubernetes.user: admin
         kubernetes.password: verybadpass
         kubernetes.api_url: 'http://127.0.0.1:8080'
+        kubernetes.certificate-authority-data: '...'
+        kubernetes.client-certificate-data: '....n
+        kubernetes.client-key-data: '...'
+        kubernetes.certificate-authority-file: '/path/to/ca.crt'
+        kubernetes.client-certificate-file: '/path/to/client.crt'
+        kubernetes.client-key-file: '/path/to/client.key'
+
 
 These settings can be also overrided by adding `api_url`, `api_user`,
-or `api_password` parameters when calling a function:
+`api_password`, `api_certificate_authority_file`, `api_client_certificate_file`
+or `api_client_key_file` parameters when calling a function:
+
+The data format for `kubernetes.*-data` values is the same as provided in `kubeconfig`.
+It's base64 encoded certificates/keys in one line.
+
+For an item only one field should be provided. Either a `data` or a `file` entry.
+In case both are provided the `file` entry is prefered.
 
 .. code-block:: bash
     salt '*' kubernetes.nodes api_url=http://k8s-api-server:port api_user=myuser api_password=pass
@@ -20,9 +34,11 @@ or `api_password` parameters when calling a function:
 
 # Import Python Futures
 from __future__ import absolute_import
+import os.path
 import base64
 import logging
 import yaml
+import tempfile
 
 from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
@@ -64,16 +80,31 @@ def _setup_conn(**kwargs):
                                      'http://localhost:8080')
     username = __salt__['config.option']('kubernetes.user')
     password = __salt__['config.option']('kubernetes.password')
+    ca_cert = __salt__['config.option']('kubernetes.certificate-authority-data')
+    client_cert = __salt__['config.option']('kubernetes.client-certificate-data')
+    client_key = __salt__['config.option']('kubernetes.client-key-data')
+    ca_cert_file = __salt__['config.option']('kubernetes.certificate-authority-file')
+    client_cert_file = __salt__['config.option']('kubernetes.client-certificate-file')
+    client_key_file = __salt__['config.option']('kubernetes.client-key-file')
 
     # Override default API settings when settings are provided
-    if kwargs.get('api_url'):
-        host = kwargs['api_url']
+    if 'api_url' in kwargs:
+        host = kwargs.get('api_url')
 
-    if kwargs.get('api_user'):
-        username = kwargs['api_user']
+    if 'api_user' in kwargs:
+        username = kwargs.get('api_user')
 
-    if kwargs.get('api_password'):
-        password = kwargs['api_password']
+    if 'api_password' in kwargs:
+        password = kwargs.get('api_password')
+
+    if 'api_certificate_authority_file' in kwargs:
+        ca_cert_file = kwargs.get('api_certificate_authority_file')
+
+    if 'api_client_certificate_file' in kwargs:
+        client_cert_file = kwargs.get('api_client_certificate_file')
+
+    if 'api_client_key_file' in kwargs:
+        client_key_file = kwargs.get('api_client_key_file')
 
     if (
             kubernetes.client.configuration.host != host or
@@ -85,6 +116,45 @@ def _setup_conn(**kwargs):
     kubernetes.client.configuration.host = host
     kubernetes.client.configuration.user = username
     kubernetes.client.configuration.passwd = password
+
+    if ca_cert_file:
+        kubernetes.client.configuration.ssl_ca_cert = ca_cert_file
+    elif ca_cert:
+        with tempfile.NamedTemporaryFile(prefix='salt-kube-', delete=False) as ca:
+            ca.write(base64.b64decode(ca_cert))
+            kubernetes.client.configuration.ssl_ca_cert = ca.name
+    else:
+        kubernetes.client.configuration.ssl_ca_cert = None
+
+    if client_cert_file:
+        kubernetes.client.configuration.cert_file = client_cert_file
+    elif client_cert:
+        with tempfile.NamedTemporaryFile(prefix='salt-kube-', delete=False) as c:
+            c.write(base64.b64decode(client_cert))
+            kubernetes.client.configuration.cert_file = c.name
+    else:
+        kubernetes.client.configuration.cert_file = None
+
+    if client_key_file:
+        kubernetes.client.configuration.key_file = client_key_file
+    if client_key:
+        with tempfile.NamedTemporaryFile(prefix='salt-kube-', delete=False) as k:
+            k.write(base64.b64decode(client_key))
+            kubernetes.client.configuration.key_file = k.name
+    else:
+        kubernetes.client.configuration.key_file = None
+
+
+def _cleanup(**kwargs):
+    ca = kubernetes.client.configuration.ssl_ca_cert
+    cert = kubernetes.client.configuration.cert_file
+    key = kubernetes.client.configuration.key_file
+    if cert and os.path.exists(cert) and os.path.basename(cert).startswith('salt-kube-'):
+        salt.utils.safe_rm(cert)
+    if key and os.path.exists(key) and os.path.basename(key).startswith('salt-kube-'):
+        salt.utils.safe_rm(key)
+    if ca and os.path.exists(ca) and os.path.basename(ca).startswith('salt-kube-'):
+        salt.utils.safe_rm(ca)
 
 
 def ping(**kwargs):
@@ -127,6 +197,8 @@ def nodes(**kwargs):
                 'Exception when calling CoreV1Api->list_node: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def node(name, **kwargs):
@@ -149,6 +221,8 @@ def node(name, **kwargs):
                 'Exception when calling CoreV1Api->list_node: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
     for k8s_node in api_response.items:
         if k8s_node.metadata.name == name:
@@ -203,6 +277,8 @@ def node_add_label(node_name, label_name, label_value, **kwargs):
                 'Exception when calling CoreV1Api->patch_node: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
     return None
 
@@ -236,6 +312,8 @@ def node_remove_label(node_name, label_name, **kwargs):
                 'Exception when calling CoreV1Api->patch_node: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
     return None
 
@@ -264,6 +342,8 @@ def namespaces(**kwargs):
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def deployments(namespace='default', **kwargs):
@@ -291,6 +371,8 @@ def deployments(namespace='default', **kwargs):
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def services(namespace='default', **kwargs):
@@ -317,6 +399,8 @@ def services(namespace='default', **kwargs):
                 'CoreV1Api->list_namespaced_service: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def pods(namespace='default', **kwargs):
@@ -343,6 +427,8 @@ def pods(namespace='default', **kwargs):
                 'CoreV1Api->list_namespaced_pod: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def secrets(namespace='default', **kwargs):
@@ -369,6 +455,8 @@ def secrets(namespace='default', **kwargs):
                 'CoreV1Api->list_namespaced_secret: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def configmaps(namespace='default', **kwargs):
@@ -395,6 +483,8 @@ def configmaps(namespace='default', **kwargs):
                 'CoreV1Api->list_namespaced_config_map: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def show_deployment(name, namespace='default', **kwargs):
@@ -422,6 +512,8 @@ def show_deployment(name, namespace='default', **kwargs):
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def show_service(name, namespace='default', **kwargs):
@@ -448,6 +540,8 @@ def show_service(name, namespace='default', **kwargs):
                 'CoreV1Api->read_namespaced_service: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def show_pod(name, namespace='default', **kwargs):
@@ -474,6 +568,8 @@ def show_pod(name, namespace='default', **kwargs):
                 'CoreV1Api->read_namespaced_pod: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def show_namespace(name, **kwargs):
@@ -499,6 +595,8 @@ def show_namespace(name, **kwargs):
                 'CoreV1Api->read_namespace: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def show_secret(name, namespace='default', decode=False, **kwargs):
@@ -534,6 +632,8 @@ def show_secret(name, namespace='default', decode=False, **kwargs):
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def show_configmap(name, namespace='default', **kwargs):
@@ -563,6 +663,8 @@ def show_configmap(name, namespace='default', **kwargs):
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def delete_deployment(name, namespace='default', **kwargs):
@@ -594,6 +696,8 @@ def delete_deployment(name, namespace='default', **kwargs):
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def delete_service(name, namespace='default', **kwargs):
@@ -623,6 +727,8 @@ def delete_service(name, namespace='default', **kwargs):
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def delete_pod(name, namespace='default', **kwargs):
@@ -654,6 +760,8 @@ def delete_pod(name, namespace='default', **kwargs):
                 'CoreV1Api->delete_namespaced_pod: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def delete_namespace(name, **kwargs):
@@ -682,6 +790,8 @@ def delete_namespace(name, **kwargs):
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def delete_secret(name, namespace='default', **kwargs):
@@ -713,6 +823,8 @@ def delete_secret(name, namespace='default', **kwargs):
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def delete_configmap(name, namespace='default', **kwargs):
@@ -745,6 +857,8 @@ def delete_configmap(name, namespace='default', **kwargs):
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def create_deployment(
@@ -789,6 +903,8 @@ def create_deployment(
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def create_pod(
@@ -833,6 +949,8 @@ def create_pod(
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def create_service(
@@ -876,6 +994,8 @@ def create_service(
                 'CoreV1Api->create_namespaced_service: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def create_secret(
@@ -921,6 +1041,8 @@ def create_secret(
                 'CoreV1Api->create_namespaced_secret: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def create_configmap(
@@ -962,6 +1084,8 @@ def create_configmap(
                 'CoreV1Api->create_namespaced_config_map: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def create_namespace(
@@ -996,6 +1120,8 @@ def create_namespace(
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def replace_deployment(name,
@@ -1040,6 +1166,8 @@ def replace_deployment(name,
                 '{0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def replace_service(name,
@@ -1089,6 +1217,8 @@ def replace_service(name,
                 'CoreV1Api->replace_namespaced_service: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def replace_secret(name,
@@ -1134,6 +1264,8 @@ def replace_secret(name,
                 'CoreV1Api->replace_namespaced_secret: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def replace_configmap(name,
@@ -1173,6 +1305,8 @@ def replace_configmap(name,
                 'CoreV1Api->replace_namespaced_configmap: {0}'.format(exc)
             )
             raise CommandExecutionError(exc)
+    finally:
+        _cleanup()
 
 
 def __create_object_body(kind,
