@@ -241,6 +241,7 @@ def supports_proxies(*proxy_types):
         Arbitrary list of strings with the supported types of proxies
     '''
     def _supports_proxies(fn):
+        @wraps(fn)
         def __supports_proxies(*args, **kwargs):
             proxy_type = get_proxy_type()
             if proxy_type not in proxy_types:
