@@ -42,7 +42,7 @@ def deserialize(stream_or_string, **options):
     :param options: options given to lower yaml module.
     '''
 
-    options.setdefault('Loader', BaseLoader)
+    options.setdefault('Loader', Loader)
     try:
         return yaml.load(stream_or_string, **options)
     except ScannerError as error:
