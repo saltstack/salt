@@ -343,10 +343,15 @@ def gets_service_instance_via_proxy(fn):
     return _gets_service_instance_via_proxy
 
 
+@depends(HAS_PYVMOMI)
 @supports_proxies('esxi')
 def get_service_instance_via_proxy(service_instance=None):
     '''
     Returns a service instance to the proxied endpoint (vCenter/ESXi host).
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
 
     Note:
         Should be used by state functions not invoked directly.
@@ -3878,6 +3883,7 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
     return ret_dict
 
 
+@depends(HAS_PYVMOMI)
 @ignores_kwargs('credstore')
 def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
                     dvs_name, target_portgroup_name, uplink_portgroup_name,
