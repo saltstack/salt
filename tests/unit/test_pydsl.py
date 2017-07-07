@@ -267,16 +267,18 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             '''))
         self.assertEqual(len(result), 3)
         self.assertEqual(result['A']['cmd'][0], 'run')
-        self.assertEqual(result['A']['cmd'][1]['name'], 'echo hello')
-        self.assertEqual(result['A']['cmd'][2]['cwd'], '/')
-        self.assertEqual(result['A']['cmd'][3]['name'], 'echo hello world')
+        self.assertIn({'name': 'echo hello'}, result['A']['cmd'])
+        self.assertIn({'cwd': '/'}, result['A']['cmd'])
+        self.assertIn({'name': 'echo hello world'}, result['A']['cmd'])
+        self.assertEqual(len(result['A']['cmd']), 4)
 
         self.assertEqual(len(result['B']['pkg']), 1)
         self.assertEqual(result['B']['pkg'][0], 'installed')
 
         self.assertEqual(result['B']['service'][0], 'running')
-        self.assertEqual(result['B']['service'][1]['require'][0]['pkg'], 'B')
-        self.assertEqual(result['B']['service'][2]['watch'][0]['cmd'], 'A')
+        self.assertIn({'require': [{'pkg': 'B'}]}, result['B']['service'])
+        self.assertIn({'watch': [{'cmd': 'A'}]}, result['B']['service'])
+        self.assertEqual(len(result['B']['service']), 3)
 
     def test_ordered_states(self):
         result = self.render_sls(textwrap.dedent('''

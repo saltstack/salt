@@ -18,6 +18,7 @@ Support for YUM/DNF
 from __future__ import absolute_import
 import contextlib
 import copy
+import datetime
 import fnmatch
 import itertools
 import logging
@@ -924,6 +925,35 @@ def list_upgrades(refresh=True, **kwargs):
 list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
 
 
+def list_downloaded():
+    '''
+    .. versionadded:: 2017.7.0
+
+    List prefetched packages downloaded by Yum in the local disk.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_downloaded
+    '''
+    CACHE_DIR = os.path.join('/var/cache/', _yum())
+
+    ret = {}
+    for root, dirnames, filenames in os.walk(CACHE_DIR):
+        for filename in fnmatch.filter(filenames, '*.rpm'):
+            package_path = os.path.join(root, filename)
+            pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)
+            pkg_timestamp = int(os.path.getctime(package_path))
+            ret.setdefault(pkg_info['name'], {})[pkg_info['version']] = {
+                'path': package_path,
+                'size': os.path.getsize(package_path),
+                'creation_date_time_t': pkg_timestamp,
+                'creation_date_time': datetime.datetime.fromtimestamp(pkg_timestamp).isoformat(),
+            }
+    return ret
+
+
 def info_installed(*names):
     '''
     .. versionadded:: 2015.8.1
@@ -1199,10 +1229,19 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    old = list_pkgs(versions_as_list=False)
+    version_num = kwargs.get('version')
+    if version_num:
+        if pkgs is None and sources is None:
+            # Allow "version" to work for single package target
+            pkg_params = {name: version_num}
+        else:
+            log.warning('"version" parameter will be ignored for multiple '
+                        'package targets')
+
+    old = list_pkgs(versions_as_list=False) if not downloadonly else list_downloaded()
     # Use of __context__ means no duplicate work here, just accessing
     # information already in __context__ from the previous call to list_pkgs()
-    old_as_list = list_pkgs(versions_as_list=True)
+    old_as_list = list_pkgs(versions_as_list=True) if not downloadonly else list_downloaded()
 
     to_install = []
     to_downgrade = []
@@ -1228,6 +1267,16 @@ def install(name=None,
                          if y is not None and '*' in y]
         _available = list_repo_pkgs(*has_wildcards, byrepo=False, **kwargs)
         pkg_params_items = six.iteritems(pkg_params)
+    elif pkg_type == 'advisory':
+        pkg_params_items = []
+        cur_patches = list_patches()
+        for advisory_id in pkg_params:
+            if advisory_id not in cur_patches:
+                raise CommandExecutionError(
+                    'Advisory id "{0}" not found'.format(advisory_id)
+                )
+            else:
+                pkg_params_items.append(advisory_id)
     else:
         pkg_params_items = []
         for pkg_source in pkg_params:
@@ -1252,6 +1301,9 @@ def install(name=None,
     for pkg_item_list in pkg_params_items:
         if pkg_type == 'repository':
             pkgname, version_num = pkg_item_list
+        elif pkg_type == 'advisory':
+            pkgname = pkg_item_list
+            version_num = None
         else:
             try:
                 pkgname, pkgpath, version_num = pkg_item_list
@@ -1266,6 +1318,8 @@ def install(name=None,
                     to_reinstall.append((pkgname, pkgname))
                 else:
                     to_install.append((pkgname, pkgname))
+            elif pkg_type == 'advisory':
+                to_install.append((pkgname, pkgname))
             else:
                 to_install.append((pkgname, pkgpath))
         else:
@@ -1428,6 +1482,8 @@ def install(name=None,
     targets = []
     with _temporarily_unhold(to_install, targets):
         if targets:
+            if pkg_type == 'advisory':
+                targets = ["--advisory={0}".format(t) for t in targets]
             cmd = []
             if salt.utils.systemd.has_scope(__context__) \
                 and __salt__['config.get']('systemd.scope', True):
@@ -1436,7 +1492,7 @@ def install(name=None,
             if _yum() == 'dnf':
                 cmd.extend(['--best', '--allowerasing'])
             _add_common_args(cmd)
-            cmd.append('install')
+            cmd.append('install' if pkg_type is not 'advisory' else 'update')
             cmd.extend(targets)
             out = __salt__['cmd.run_all'](
                 cmd,
@@ -1488,7 +1544,7 @@ def install(name=None,
                 errors.append(out['stdout'])
 
     __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs(versions_as_list=False)
+    new = list_pkgs(versions_as_list=False) if not downloadonly else list_downloaded()
 
     ret = salt.utils.compare_dicts(old, new)
 
@@ -2478,8 +2534,9 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         if stanza == repo:
             continue
         comments = ''
-        if 'comments' in filerepos[stanza]:
-            comments = '\n'.join(filerepos[stanza]['comments'])
+        if 'comments' in six.iterkeys(filerepos[stanza]):
+            comments = salt.utils.pkg.rpm.combine_comments(
+                    filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
         for line in filerepos[stanza]:
@@ -2614,7 +2671,8 @@ def mod_repo(repo, basedir=None, **kwargs):
     for stanza in six.iterkeys(filerepos):
         comments = ''
         if 'comments' in six.iterkeys(filerepos[stanza]):
-            comments = '\n'.join(filerepos[stanza]['comments'])
+            comments = salt.utils.pkg.rpm.combine_comments(
+                    filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
         for line in six.iterkeys(filerepos[stanza]):
@@ -2906,3 +2964,64 @@ def diff(*paths):
                     local_pkgs[pkg]['path'], path) or 'Unchanged'
 
     return ret
+
+
+def _get_patches(installed_only=False):
+    '''
+    List all known patches in repos.
+    '''
+    patches = {}
+
+    cmd = [_yum(), '--quiet', 'updateinfo', 'list', 'all']
+    ret = __salt__['cmd.run_stdout'](
+        cmd,
+        python_shell=False
+    )
+    for line in salt.utils.itertools.split(ret, os.linesep):
+        inst, advisory_id, sev, pkg = re.match(r'([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)',
+                                               line).groups()
+        if inst != 'i' and installed_only:
+            continue
+        patches[advisory_id] = {
+            'installed': True if inst == 'i' else False,
+            'summary': pkg
+        }
+    return patches
+
+
+def list_patches(refresh=False):
+    '''
+    .. versionadded:: 2017.7.0
+
+    List all known advisory patches from available repos.
+
+    refresh
+        force a refresh if set to True.
+        If set to False (default) it depends on yum if a refresh is
+        executed.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_patches
+    '''
+    if refresh:
+        refresh_db()
+
+    return _get_patches()
+
+
+def list_installed_patches():
+    '''
+    .. versionadded:: 2017.7.0
+
+    List installed advisory patches on the system.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_installed_patches
+    '''
+    return _get_patches(installed_only=True)

@@ -177,6 +177,7 @@ class TestCase(_TestCase):
 
     def run(self, result=None):
         self._prerun_instance_attributes = dir(self)
+        self.maxDiff = None
         outcome = super(TestCase, self).run(result=result)
         for attr in dir(self):
             if attr == '_prerun_instance_attributes':
@@ -304,6 +305,16 @@ class TestCase(_TestCase):
             'instead.'.format('failIfAlmostEqual', 'assertNotAlmostEqual')
         )
         # return _TestCase.failIfAlmostEqual(self, *args, **kwargs)
+
+    @staticmethod
+    def assert_called_once(mock):
+        '''
+        mock.assert_called_once only exists in PY3 in 3.6 and newer
+        '''
+        try:
+            mock.assert_called_once()
+        except AttributeError:
+            log.warning('assert_called_once invoked, but not available')
 
     if six.PY2:
         def assertRegexpMatches(self, *args, **kwds):

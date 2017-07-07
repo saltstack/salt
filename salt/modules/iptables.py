@@ -104,7 +104,7 @@ def _conf(family='ipv4'):
             return '/var/lib/ip6tables/rules-save'
         else:
             return '/var/lib/iptables/rules-save'
-    elif __grains__['os_family'] == 'SUSE':
+    elif __grains__['os_family'] == 'Suse':
         # SuSE does not seem to use separate files for IPv4 and IPv6
         return '/etc/sysconfig/scripts/SuSEfirewall2-custom'
     elif __grains__['os'] == 'Alpine':

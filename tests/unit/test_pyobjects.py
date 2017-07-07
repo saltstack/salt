@@ -2,9 +2,12 @@
 
 # Import Pytohn libs
 from __future__ import absolute_import
+import jinja2
+import logging
 import os
 import shutil
 import tempfile
+import textwrap
 import uuid
 
 # Import Salt Testing libs
@@ -19,6 +22,9 @@ from salt.template import compile_template
 from salt.utils.odict import OrderedDict
 from salt.utils.pyobjects import (StateFactory, State, Registry,
                                   SaltObject, InvalidFunction, DuplicateState)
+
+log = logging.getLogger(__name__)
+
 File = StateFactory('file')
 Service = StateFactory('service')
 
@@ -58,32 +64,36 @@ Service = StateFactory('service')
 Service.running(extend('apache'), watch=[{'file': '/etc/file'}])
 '''
 
-map_template = '''#!pyobjects
+map_prefix = '''\
+#!pyobjects
 from salt.utils.pyobjects import StateFactory
 Service = StateFactory('service')
 
-
+{% macro priority(value) %}
+    priority = {{ value }}
+{% endmacro %}
 class Samba(Map):
-    __merge__ = 'samba:lookup'
+'''
 
-    class Debian:
-        server = 'samba'
-        client = 'samba-client'
-        service = 'samba'
-
-    class RougeChapeau:
-        __match__ = 'RedHat'
-        server = 'samba'
-        client = 'samba'
-        service = 'smb'
-
-    class Ubuntu:
-        __grain__ = 'os'
-        service = 'smbd'
-
+map_suffix = '''
 with Pkg.installed("samba", names=[Samba.server, Samba.client]):
     Service.running("samba", name=Samba.service)
 '''
+
+map_data = {
+    'debian': "    class Debian:\n"
+              "        server = 'samba'\n"
+              "        client = 'samba-client'\n"
+              "        service = 'samba'\n",
+    'centos': "    class RougeChapeau:\n"
+              "        __match__ = 'RedHat'\n"
+              "        server = 'samba'\n"
+              "        client = 'samba'\n"
+              "        service = 'smb'\n",
+    'ubuntu': "    class Ubuntu:\n"
+              "        __grain__ = 'os'\n"
+              "        service = 'smbd'\n"
+}
 
 import_template = '''#!pyobjects
 import salt://map.sls
@@ -138,6 +148,24 @@ Service = StateFactory('service')
 with Pkg.installed("pkg"):
     Service.running("service", watch=File("file"), require=Cmd("cmd"))
 '''
+
+
+class MapBuilder(object):
+    def build_map(self, template=None):
+        '''
+        Build from a specific template or just use a default if no template
+        is passed to this function.
+        '''
+        if template is None:
+            template = textwrap.dedent('''\
+                {{ ubuntu }}
+                {{ centos }}
+                {{ debian }}
+                ''')
+        full_template = map_prefix + template + map_suffix
+        ret = jinja2.Template(full_template).render(**map_data)
+        log.debug('built map: \n%s', ret)
+        return ret
 
 
 class StateTests(TestCase):
@@ -292,7 +320,7 @@ class RendererMixin(object):
                                 state.opts['renderer_whitelist'])
 
 
-class RendererTests(RendererMixin, StateTests):
+class RendererTests(RendererMixin, StateTests, MapBuilder):
     def test_basic(self):
         ret = self.render(basic_template)
         self.assertEqual(ret, OrderedDict([
@@ -350,7 +378,7 @@ class RendererTests(RendererMixin, StateTests):
                 })
             ]))
 
-        self.write_template_file("map.sls", map_template)
+        self.write_template_file("map.sls", self.build_map())
         render_and_assert(import_template)
         render_and_assert(from_import_template)
         render_and_assert(import_as_template)
@@ -359,7 +387,7 @@ class RendererTests(RendererMixin, StateTests):
         render_and_assert(recursive_import_template)
 
     def test_import_scope(self):
-        self.write_template_file("map.sls", map_template)
+        self.write_template_file("map.sls", self.build_map())
         self.write_template_file("recursive_map.sls", recursive_map_template)
 
         def do_render():
@@ -401,32 +429,97 @@ class RendererTests(RendererMixin, StateTests):
         ]))
 
 
-class MapTests(RendererMixin, TestCase):
-    def test_map(self):
-        def samba_with_grains(grains):
-            return self.render(map_template, {'grains': grains})
+class MapTests(RendererMixin, TestCase, MapBuilder):
+    maxDiff = None
 
-        def assert_ret(ret, server, client, service):
-            self.assertEqual(ret, OrderedDict([
-                ('samba', {
-                    'pkg.installed': [
-                        {'names': [server, client]}
-                    ],
-                    'service.running': [
-                        {'name': service},
-                        {'require': [{'pkg': 'samba'}]}
-                    ]
-                })
+    debian_grains = {'os_family': 'Debian', 'os': 'Debian'}
+    ubuntu_grains = {'os_family': 'Debian', 'os': 'Ubuntu'}
+    centos_grains = {'os_family': 'RedHat', 'os': 'CentOS'}
+
+    debian_attrs = ('samba', 'samba-client', 'samba')
+    ubuntu_attrs = ('samba', 'samba-client', 'smbd')
+    centos_attrs = ('samba', 'samba', 'smb')
+
+    def samba_with_grains(self, template, grains):
+        return self.render(template, {'grains': grains})
+
+    def assert_equal(self, ret, server, client, service):
+        self.assertDictEqual(ret, OrderedDict([
+            ('samba', OrderedDict([
+                ('pkg.installed', [
+                    {'names': [server, client]}
+                ]),
+                ('service.running', [
+                    {'name': service},
+                    {'require': [{'pkg': 'samba'}]}
+                ])
             ]))
+        ]))
 
-        ret = samba_with_grains({'os_family': 'Debian', 'os': 'Debian'})
-        assert_ret(ret, 'samba', 'samba-client', 'samba')
+    def assert_not_equal(self, ret, server, client, service):
+        try:
+            self.assert_equal(ret, server, client, service)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('both dicts are equal')
 
-        ret = samba_with_grains({'os_family': 'Debian', 'os': 'Ubuntu'})
-        assert_ret(ret, 'samba', 'samba-client', 'smbd')
+    def test_map(self):
+        '''
+        Test declarative ordering
+        '''
+        # With declarative ordering, the ubuntu-specfic service name should
+        # override the one inherited from debian.
+        template = self.build_map(textwrap.dedent('''\
+            {{ debian }}
+            {{ centos }}
+            {{ ubuntu }}
+            '''))
 
-        ret = samba_with_grains({'os_family': 'RedHat', 'os': 'CentOS'})
-        assert_ret(ret, 'samba', 'samba', 'smb')
+        ret = self.samba_with_grains(template, self.debian_grains)
+        self.assert_equal(ret, *self.debian_attrs)
+
+        ret = self.samba_with_grains(template, self.ubuntu_grains)
+        self.assert_equal(ret, *self.ubuntu_attrs)
+
+        ret = self.samba_with_grains(template, self.centos_grains)
+        self.assert_equal(ret, *self.centos_attrs)
+
+        # Switching the order, debian should still work fine but ubuntu should
+        # no longer match, since the debian service name should override the
+        # ubuntu one.
+        template = self.build_map(textwrap.dedent('''\
+            {{ ubuntu }}
+            {{ debian }}
+            '''))
+
+        ret = self.samba_with_grains(template, self.debian_grains)
+        self.assert_equal(ret, *self.debian_attrs)
+
+        ret = self.samba_with_grains(template, self.ubuntu_grains)
+        self.assert_not_equal(ret, *self.ubuntu_attrs)
+
+    def test_map_with_priority(self):
+        '''
+        With declarative ordering, the debian service name would override the
+        ubuntu one since debian comes second. This will test overriding this
+        behavior using the priority attribute.
+        '''
+        template = self.build_map(textwrap.dedent('''\
+            {{ priority(('os_family', 'os')) }}
+            {{ ubuntu }}
+            {{ centos }}
+            {{ debian }}
+            '''))
+
+        ret = self.samba_with_grains(template, self.debian_grains)
+        self.assert_equal(ret, *self.debian_attrs)
+
+        ret = self.samba_with_grains(template, self.ubuntu_grains)
+        self.assert_equal(ret, *self.ubuntu_attrs)
+
+        ret = self.samba_with_grains(template, self.centos_grains)
+        self.assert_equal(ret, *self.centos_attrs)
 
 
 class SaltObjectTests(TestCase):
