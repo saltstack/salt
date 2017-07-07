@@ -48,6 +48,7 @@ from saltstack.com:
 
 .. __: https://repo.saltstack.com/windows/
 
+.. _new-pywinrm:
 
 Self Signed Certificates with WinRM
 ===================================
