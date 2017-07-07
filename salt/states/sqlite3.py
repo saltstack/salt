@@ -147,9 +147,13 @@ def row_absent(name, db, table, where_sql, where_args=None):
                 changes['changes']['old'] = rows[0]
 
             else:
-                cursor = conn.execute("DELETE FROM `" +
-                                      table + "` WHERE " + where_sql,
-                                      where_args)
+                if where_args is None:
+                    cursor = conn.execute("DELETE FROM `" +
+                                          table + "` WHERE " + where_sql)
+                else:
+                    cursor = conn.execute("DELETE FROM `" +
+                                          table + "` WHERE " + where_sql,
+                                          where_args)
                 conn.commit()
                 if cursor.rowcount == 1:
                     changes['result'] = True
