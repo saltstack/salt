@@ -73,6 +73,7 @@ def state(
         saltenv=None,
         test=False,
         pillar=None,
+        pillarenv=None,
         expect_minions=False,
         fail_minions=None,
         allow_fail=0,
@@ -230,7 +231,12 @@ def state(
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
 
-    cmd_kw['kwarg']['saltenv'] = saltenv if saltenv is not None else __env__
+    if pillarenv is not None:
+        cmd_kw['kwarg']['pillarenv'] = pillarenv
+
+    if saltenv is not None:
+        cmd_kw['kwarg']['saltenv'] = saltenv
+
     cmd_kw['kwarg']['queue'] = queue
 
     if isinstance(concurrent, bool):
