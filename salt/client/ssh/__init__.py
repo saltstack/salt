@@ -946,6 +946,20 @@ class Single(object):
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
 
+        # If salt-thin is set to be wiped, a 'test.ping' command is executed
+        # after running the wfunc in order to trigger the salt-thin cleanup
+        # done by SHIM on the client
+        if 'ssh_wipe' in self.opts:
+            single = Single(self.opts,
+                            "test.ping",
+                            self.target['host'],
+                            fsclient=self.fsclient,
+                            thin=self.thin,
+                            **self.target)
+            stdout, stderr, retcode = single.cmd_block()
+            if salt.defaults.exitcodes.EX_OK != retcode:
+                log.error("ERROR when trying to wipe salt-thin on client")
+
         # We're running in the mine, need to fetch the arguments from the
         # roster, pillar, master config (in that order)
         if self.mine:
