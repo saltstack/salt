@@ -75,19 +75,6 @@ Set "InsDir=%CurDir%\installer"
 Set "PreDir=%CurDir%\prereqs"
 for /f "delims=" %%a in ('git rev-parse --show-toplevel') do @set "SrcDir=%%a"
 
-:: Find the NSIS Installer
-If Exist "C:\Program Files\NSIS\" (
-    Set "NSIS=C:\Program Files\NSIS\"
-) Else (
-    Set "NSIS=C:\Program Files (x86)\NSIS\"
-)
-If not Exist "%NSIS%NSIS.exe" (
-    @echo "NSIS not found in %NSIS%"
-    exit /b 1
-)
-
-:: Add NSIS to the Path
-Set "PATH=%NSIS%;%PATH%"
 @echo.
 
 :: Check for existing bin directory and remove
@@ -564,41 +551,7 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\zpool.py"^
 
 @echo Building the installer...
 @echo ----------------------------------------------------------------------
-:: Make the Master installer if the nullsoft script exists
-If Exist "%InsDir%\Salt-Setup.nsi"^
-    makensis.exe /DSaltVersion=%Version% /DPythonVersion=%Python% "%InsDir%\Salt-Setup.nsi"
 
-:: Remove files not needed for Salt Minion
-:: salt
-:: salt has to be removed individually (can't wildcard it)
-If Exist "%BinDir%\Scripts\salt"^
-    del /Q "%BinDir%\Scripts\salt" 1>nul
-If Exist "%BinDir%\Scripts\salt.exe"^
-    del /Q "%BinDir%\Scripts\salt.exe" 1>nul
-If Exist "%BldDir%\salt.bat"^
-    del /Q "%BldDir%\salt.bat" 1>nul
-:: salt-key
-If Exist "%BinDir%\Scripts\salt-key*"^
-    del /Q "%BinDir%\Scripts\salt-key*" 1>nul
-If Exist "%BldDir%\salt-key.bat"^
-    del /Q "%BldDir%\salt-key.bat" 1>nul
-:: salt-master
-If Exist "%BinDir%\Scripts\salt-master*"^
-    del /Q "%BinDir%\Scripts\salt-master*" 1>nul
-If Exist "%BldDir%\salt-master.bat"^
-    del /Q "%BldDir%\salt-master.bat" 1>nul
-:: salt-run
-If Exist "%BinDir%\Scripts\salt-run*"^
-    del /Q "%BinDir%\Scripts\salt-run*" 1>nul
-If Exist "%BldDir%\salt-run.bat"^
-    del /Q "%BldDir%\salt-run.bat" 1>nul
-
-:: Remove the master config file
-if Exist "%CnfDir%\master"^
-    del /Q "%CnfDir%\master" 1>nul
-
-:: Make the Salt Minion Installer
-makensis.exe /DSaltVersion=%Version% /DPythonVersion=%Python% "%InsDir%\Salt-Minion-Setup.nsi"
 @echo.
 
 @echo.
