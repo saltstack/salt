@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 import os
 import logging
+import time
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -90,7 +91,7 @@ def beacon(config):
         ret_dict['service_name'] = service
         ret_dict['tag'] = service
         currtime = time.time()
-        
+
         # If no options is given to the service, we fall back to the defaults
         # assign a False value to oncleanshutdown and onchangeonly. Those
         # key:values are then added to the service dictionary.
@@ -101,8 +102,8 @@ def beacon(config):
         if 'onchangeonly' not in config[service]:
             config[service]['onchangeonly'] = False
         if 'delay' not in config[service]:
-		    config[service]['delay'] = 0
-			
+            config[service]['delay'] = 0
+
         # We only want to report the nature of the shutdown
         # if the current running status is False
         # as well as if the config for the beacon asks for it
