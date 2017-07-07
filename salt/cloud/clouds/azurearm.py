@@ -1293,7 +1293,7 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        args={'name': name },
+        args={'name': name},
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1395,7 +1395,7 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        args={'name': name },
+        args={'name': name},
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
