@@ -885,9 +885,10 @@ class Schedule(object):
             ret['success'] = False
             ret['retcode'] = 254
         finally:
-            # Only attempt to return data to the master
-            # if the scheduled job is running on a minion.
-            if '__role' in self.opts and self.opts['__role'] == 'minion':
+            # Only attempt to return data to the master if the scheduled job is running
+            # on a master itself or a minion.
+            if '__role' in self.opts and self.opts['__role'] in ('master', 'minion'):
+                # The 'return_job' option is enabled by default even if not set
                 if 'return_job' in data and not data['return_job']:
                     pass
                 else:
@@ -915,6 +916,7 @@ class Schedule(object):
                         log.exception("Unhandled exception firing event: {0}".format(exc))
 
             log.debug('schedule.handle_func: Removing {0}'.format(proc_fn))
+
             try:
                 os.unlink(proc_fn)
             except OSError as exc:
@@ -1209,14 +1211,23 @@ class Schedule(object):
                     log.error('Missing python-croniter. Ignoring job {0}'.format(job))
                     continue
 
-                if not data['_next_fire_time'] or \
-                        data['_next_fire_time'] < now:
+                if data['_next_fire_time'] is None:
+                    # Get next time frame for a "cron" job if it has been never
+                    # executed before or already executed in the past.
                     try:
                         data['_next_fire_time'] = int(
                             croniter.croniter(data['cron'], now).get_next())
                     except (ValueError, KeyError):
                         log.error('Invalid cron string. Ignoring')
                         continue
+
+                    # If next job run is scheduled more than 1 minute ahead and
+                    # configured loop interval is longer than that, we should
+                    # shorten it to get our job executed closer to the beginning
+                    # of desired time.
+                    interval = now - data['_next_fire_time']
+                    if interval >= 60 and interval < self.loop_interval:
+                        self.loop_interval = interval
 
             else:
                 continue
@@ -1230,6 +1241,11 @@ class Schedule(object):
                     run = True
                 elif 'when' in data and data['_run']:
                     data['_run'] = False
+                    run = True
+                elif 'cron' in data:
+                    # Reset next scheduled time because it is in the past now,
+                    # and we should trigger the job run, then wait for the next one.
+                    data['_next_fire_time'] = None
                     run = True
                 elif seconds == 0:
                     run = True

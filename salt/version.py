@@ -7,6 +7,7 @@ Set up the version of Salt
 from __future__ import absolute_import, print_function
 import re
 import sys
+import locale
 import platform
 
 # linux_distribution depreacted in py3.7
@@ -96,9 +97,9 @@ class SaltStackVersion(object):
         'Nitrogen'      : (2017, 7),
         'Oxygen'        : (MAX_SIZE - 101, 0),
         'Fluorine'      : (MAX_SIZE - 100, 0),
+        'Neon'          :  (MAX_SIZE - 99, 0),
+        'Sodium'        :  (MAX_SIZE - 98, 0),
         # pylint: disable=E8265
-        #'Neon'         : (MAX_SIZE - 99 , 0),
-        #'Sodium'       : (MAX_SIZE - 98 , 0),
         #'Magnesium'    : (MAX_SIZE - 97 , 0),
         #'Aluminium'    : (MAX_SIZE - 96 , 0),
         #'Silicon'      : (MAX_SIZE - 95 , 0),
@@ -672,6 +673,7 @@ def system_information():
         ('release', release),
         ('machine', platform.machine()),
         ('version', version),
+        ('locale', locale.getpreferredencoding()),
     ]
 
     for name, attr in system:

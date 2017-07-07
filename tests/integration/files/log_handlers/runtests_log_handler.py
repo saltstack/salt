@@ -23,6 +23,7 @@ from multiprocessing import Queue
 import msgpack
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.log.setup
 
 log = logging.getLogger(__name__)
@@ -33,6 +34,8 @@ __virtualname__ = 'runtests_log_handler'
 def __virtual__():
     if 'runtests_log_port' not in __opts__:
         return False, "'runtests_log_port' not in options"
+    if six.PY3:
+        return False, "runtests external logging handler is temporarily disabled for Python 3 tests"
     return True
 
 

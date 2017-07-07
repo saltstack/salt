@@ -74,6 +74,10 @@ state modules
     dellchassis
     disk
     docker
+    docker_container
+    docker_image
+    docker_network
+    docker_volume
     drac
     elasticsearch
     elasticsearch_index
