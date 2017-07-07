@@ -185,6 +185,10 @@ class CloudClient(object):
         else:
             self.opts = salt.config.cloud_config(path)
 
+        # Check the cache-dir exists. If not, create it.
+        if not os.path.exists(self.opts['cachedir']):
+            os.makedirs(self.opts['cachedir'])
+
         if pillars:
             for name, provider in six.iteritems(pillars.pop('providers', {})):
                 driver = provider['driver']
