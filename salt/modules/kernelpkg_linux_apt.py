@@ -3,10 +3,13 @@
 Manage Linux kernel packages on APT-based systems
 '''
 from __future__ import absolute_import
+import functools
 import logging
 import re
 
-# Import 3rd-party libs
+# Import Salt libs
+import salt.ext.six as six
+
 try:
     from salt.utils.versions import LooseVersion as _LooseVersion
     from salt.ext.six.moves import filter  # pylint: disable=import-error,redefined-builtin
@@ -73,7 +76,11 @@ def list_installed():
         return []
 
     prefix_len = len(_package_prefix()) + 1
-    return sorted([pkg[prefix_len:] for pkg in result], cmp=_cmp_version)
+
+    if six.PY2:
+        return sorted([pkg[prefix_len:] for pkg in result], cmp=_cmp_version)
+    else:
+        return sorted([pkg[prefix_len:] for pkg in result], key=functools.cmp_to_key(_cmp_version))
 
 
 def latest_available():
