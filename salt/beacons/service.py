@@ -122,12 +122,14 @@ def beacon(config):
                 LAST_STATUS[service] = ret_dict[service]
                 if config[service]['delay'] > 0:
                     LAST_STATUS[service]['time'] = currtime
+                else:
+                    ret.append(ret_dict)
 
             if 'time' in LAST_STATUS[service]:
-				elapsedtime = int(round(currtime - LAST_STATUS[service]['time']))
-				if elapsedtime > config[service]['delay']:
-					del LAST_STATUS[service]['time']
-					ret.append(ret_dict)
+                elapsedtime = int(round(currtime - LAST_STATUS[service]['time']))
+                if elapsedtime > config[service]['delay']:
+                    del LAST_STATUS[service]['time']
+                    ret.append(ret_dict)
         else:
             ret.append(ret_dict)
 
