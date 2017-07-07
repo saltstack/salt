@@ -226,11 +226,11 @@ def _get_pk(**kwargs):
 
 def keygen(sk_file=None, pk_file=None):
     '''
-    Use libnacl to generate a keypair
+    Use libnacl to generate a keypair.
 
     If no `sk_file` is defined return a keypair.
 
-    If only the `sk_file` is defined `pk_file` will use a postfix of `.pub` on the `sk_file`.
+    If only the `sk_file` is defined `pk_file` will use the same name with a postfix `.pub`.
 
     When the `sk_file` is already existing, but `pk_file` is not. The `pk_file` will be generated
     using the `sk_file`.
@@ -256,6 +256,8 @@ def keygen(sk_file=None, pk_file=None):
             kp = libnacl.public.SecretKey()
             with salt.utils.fopen(sk_file, 'w') as keyf:
                 keyf.write(base64.b64encode(kp.sk))
+            if not salt.utils.is_windows():
+                os.chmod(sk_file, 1536) # 0600
             return 'saved sk_file: {0}'.format(sk_file)
         else:
             raise Exception('sk_file:{0} already exist.'.format(sk_file))
@@ -279,6 +281,8 @@ def keygen(sk_file=None, pk_file=None):
     kp = libnacl.public.SecretKey()
     with salt.utils.fopen(sk_file, 'w') as keyf:
         keyf.write(base64.b64encode(kp.sk))
+    if not salt.utils.is_windows():
+        os.chmod(sk_file, 1536) # 0600
     with salt.utils.fopen(pk_file, 'w') as keyf:
         keyf.write(base64.b64encode(kp.pk))
     return 'saved sk_file:{0}  pk_file: {1}'.format(sk_file, pk_file)
@@ -286,7 +290,7 @@ def keygen(sk_file=None, pk_file=None):
 
 def enc(data, **kwargs):
     '''
-    Alias to `box_type``encrypt`
+    Alias to `{box_type}_encrypt`
 
     box_type: secretbox, sealedbox(default)
     '''
@@ -304,7 +308,7 @@ def enc_file(name, out=None, **kwargs):
 
     You can provide an optional output file using `out`
 
-    `name` can be a local file or when not run using `salt-run` can be a url like `salt://`, `https://` etc.
+    `name` can be a local file or when not using `salt-run` can be a url like `salt://`, `https://` etc.
 
     CLI Examples:
 
@@ -333,7 +337,7 @@ def enc_file(name, out=None, **kwargs):
 
 def dec(data, **kwargs):
     '''
-    Alias to `box_type``_decrypt`
+    Alias to `{box_type}_decrypt`
 
     box_type: secretbox, sealedbox(default)
     '''
@@ -351,7 +355,7 @@ def dec_file(name, out=None, **kwargs):
 
     You can provide an optional output file using `out`
 
-    `name` can be a local file or when not run using `salt-run` can be a url like `salt://`, `https://` etc.
+    `name` can be a local file or when not using `salt-run` can be a url like `salt://`, `https://` etc.
 
     CLI Examples:
 
@@ -380,8 +384,8 @@ def dec_file(name, out=None, **kwargs):
 
 def sealedbox_encrypt(data, **kwargs):
     '''
-    Encrypt data using a public key generated from `nacl.keygen_pub`.
-    The encryptd data can be decrypted using `nacl.dec_pub` with the private key.
+    Encrypt data using a public key generated from `nacl.keygen`.
+    The encryptd data can be decrypted using `nacl.sealedbox_decrypt` only with the secret key.
 
     CLI Examples:
 
@@ -398,7 +402,7 @@ def sealedbox_encrypt(data, **kwargs):
 
 def sealedbox_decrypt(data, **kwargs):
     '''
-    Decrypt data that was encrypted using `nacl.enc_pub` using a
+    Decrypt data using a secret key that was encrypted using a public key with `nacl.sealedbox_encrypt`.
 
     CLI Examples:
 
@@ -418,8 +422,8 @@ def sealedbox_decrypt(data, **kwargs):
 
 def secretbox_encrypt(data, **kwargs):
     '''
-    Encrypt data using a key generated from `nacl.keygen`.
-    The same key can be used to decrypt the data!
+    Encrypt data using a secret key generated from `nacl.keygen`.
+    The same secret key can be used to decrypt the data using `nacl.secretbox_decrypt`.
 
     CLI Examples:
 
@@ -436,7 +440,7 @@ def secretbox_encrypt(data, **kwargs):
 
 def secretbox_decrypt(data, **kwargs):
     '''
-    Decrypt data that was encrypted using `nacl.enc` using the key
+    Decrypt data that was encrypted using `nacl.secretbox_encrypt` using the secret key
     that was generated from `nacl.keygen`.
 
     CLI Examples:
