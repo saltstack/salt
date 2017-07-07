@@ -849,6 +849,13 @@ Example:
 
   {{ 'wall of text' | to_bytes }}
 
+.. note::
+
+    This option may have adverse effects when using the default renderer, ``yaml_jinja``.
+    This is due to the fact that YAML requires proper handling in regard to special
+    characters. Please see the section on :ref:`YAML ASCII support <yaml_plain_ascii>`
+    in the :ref:`YAML Idiosyncracies <yaml-idiosyncrasies>` documentation for more
+    information.
 
 .. jinja_ref:: json_decode_list
 
@@ -1308,6 +1315,13 @@ Example:
 
   {{ '00:11:22:33:44:55' | mac_str_to_bytes }}
 
+.. note::
+
+    This option may have adverse effects when using the default renderer, ``yaml_jinja``.
+    This is due to the fact that YAML requires proper handling in regard to special
+    characters. Please see the section on :ref:`YAML ASCII support <yaml_plain_ascii>`
+    in the :ref:`YAML Idiosyncracies <yaml-idiosyncrasies>` documentation for more
+    information.
 
 .. jinja_ref:: dns_check
 
