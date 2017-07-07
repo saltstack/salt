@@ -190,6 +190,8 @@ PATH using a :mod:`file.symlink <salt.states.file.symlink>` state.
       file.symlink:
         - target: /usr/local/bin/foo
 
+.. _which-version:
+
 Can I run different versions of Salt on my Master and Minion?
 -------------------------------------------------------------
 
