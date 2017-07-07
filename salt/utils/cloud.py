@@ -499,6 +499,9 @@ def bootstrap(vm_, opts):
         deploy_kwargs['winrm_port'] = salt.config.get_cloud_config_value(
             'winrm_port', vm_, opts, default=5986
         )
+        deploy_kwargs['winrm_verify_ssl'] = salt.config.get_cloud_config_value(
+            'winrm_verify_ssl', vm_, opts, default=True
+        )
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
@@ -823,7 +826,7 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
             )
 
 
-def wait_for_winrm(host, port, username, password, timeout=900):
+def wait_for_winrm(host, port, username, password, timeout=900, verify=True):
     '''
     Wait until WinRM connection can be established.
     '''
@@ -837,7 +840,13 @@ def wait_for_winrm(host, port, username, password, timeout=900):
     while True:
         trycount += 1
         try:
-            s = winrm.Session(host, auth=(username, password), transport='ssl')
+            winrm_kwargs = {'target': host,
+                            'auth': (username, password),
+                            'transport': 'ssl'}
+            if not verify:
+                log.debug("SSL validation for WinRM disabled.")
+                winrm_kwargs['server_cert_validation'] = 'ignore'
+            s = winrm.Session(**winrm_kwargs)
             if hasattr(s.protocol, 'set_timeout'):
                 s.protocol.set_timeout(15)
             log.trace('WinRM endpoint url: {0}'.format(s.url))
@@ -984,6 +993,7 @@ def deploy_windows(host,
                    master_sign_pub_file=None,
                    use_winrm=False,
                    winrm_port=5986,
+                   winrm_verify_ssl=True,
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
@@ -1009,8 +1019,9 @@ def deploy_windows(host,
 
     if HAS_WINRM and use_winrm:
         winrm_session = wait_for_winrm(host=host, port=winrm_port,
-                                           username=username, password=password,
-                                           timeout=port_timeout * 60)
+                                       username=username, password=password,
+                                       timeout=port_timeout * 60,
+                                       verify=winrm_verify_ssl)
         if winrm_session is not None:
             service_available = True
     else:
