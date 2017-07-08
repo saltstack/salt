@@ -1352,6 +1352,9 @@ below.
     providers:
       service: systemd
 
+.. conf_minion:: extmod_whitelist
+.. conf_minion:: extmod_blacklist
+
 ``extmod_whitelist/extmod_blacklist``
 -------------------------------------
 
