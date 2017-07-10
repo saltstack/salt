@@ -34,6 +34,9 @@ import os
 # Import salt libs
 import salt.utils
 
+# Impot salt exceptions
+from salt.exceptions import CommandExecutionError
+
 # Import 3rd-party libs
 import salt.ext.six as six
 
@@ -57,6 +60,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
     ret = {'name': name,
            'result': True,
            'changes': {},
+           'pchanges': {},
            'comment': ''}
 
     _octal = {'r': 4, 'w': 2, 'x': 1, '-': 0}
@@ -114,11 +118,16 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
                                     perms),
                                 'result': None, 'pchanges': changes})
                     return ret
-
-                __salt__['acl.modfacl'](acl_type, acl_name, perms, name, recursive=recurse)
-                ret.update({'comment': 'Updated permissions for '
-                            '{0}'.format(acl_name),
-                            'result': True, 'changes': changes})
+                try:
+                    __salt__['acl.modfacl'](acl_type, acl_name, perms, name,
+                                            recursive=recurse, raise_err=True)
+                    ret.update({'comment': 'Updated permissions for '
+                                '{0}'.format(acl_name),
+                                'result': True, 'changes': changes})
+                except CommandExecutionError as exc:
+                    ret.update({'comment': 'Error updating permissions for '
+                                '{0}: {1}'.format(acl_name, exc.strerror),
+                                'result': False})
         else:
             changes = {'new': {'acl_name': acl_name,
                                'acl_type': acl_type,
@@ -131,10 +140,16 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
                 ret['result'] = None
                 return ret
 
-            __salt__['acl.modfacl'](acl_type, acl_name, perms, name, recursive=recurse)
-            ret.update({'comment': 'Updated permissions for '
-                        '{0}'.format(acl_name),
-                        'result': True, 'changes': changes})
+            try:
+                __salt__['acl.modfacl'](acl_type, acl_name, perms, name,
+                                        recursive=recurse, raise_err=True)
+                ret.update({'comment': 'Applied new permissions for '
+                            '{0}'.format(acl_name),
+                            'result': True, 'changes': changes})
+            except CommandExecutionError as exc:
+                ret.update({'comment': 'Error updating permissions for {0}: '
+                            '{1}'.format(acl_name, exc.strerror),
+                            'result': False})
 
     else:
         ret['comment'] = 'ACL Type does not exist'
