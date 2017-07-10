@@ -43,14 +43,6 @@ def _merge_extra_filerefs(*args):
     return ','.join(ret)
 
 
-def _thin_dir():
-    '''
-    Get the thin_dir from the master_opts if not in __opts__
-    '''
-    thin_dir = __opts__.get('thin_dir', __opts__['__master_opts__']['thin_dir'])
-    return thin_dir
-
-
 def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
     '''
     Create the seed file for a state.sls run
@@ -108,7 +100,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
             roster_grains)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
-            _thin_dir(),
+            __opts__['thin_dir'],
             test,
             trans_tar_sum,
             __opts__['hash_type'])
@@ -120,7 +112,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
             **st_kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(_thin_dir()))
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
 
     # Clean up our tar
@@ -185,7 +177,7 @@ def low(data, **kwargs):
             roster_grains)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
-            _thin_dir(),
+            __opts__['thin_dir'],
             trans_tar_sum,
             __opts__['hash_type'])
     single = salt.client.ssh.Single(
@@ -196,7 +188,7 @@ def low(data, **kwargs):
             **st_kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(_thin_dir()))
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
 
     # Clean up our tar
@@ -258,7 +250,7 @@ def high(data, **kwargs):
             roster_grains)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
-            _thin_dir(),
+            __opts__['thin_dir'],
             trans_tar_sum,
             __opts__['hash_type'])
     single = salt.client.ssh.Single(
@@ -269,7 +261,7 @@ def high(data, **kwargs):
             **st_kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(_thin_dir()))
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
 
     # Clean up our tar
@@ -361,7 +353,7 @@ def highstate(test=None, **kwargs):
             roster_grains)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
-            _thin_dir(),
+            __opts__['thin_dir'],
             test,
             trans_tar_sum,
             __opts__['hash_type'])
@@ -373,7 +365,7 @@ def highstate(test=None, **kwargs):
             **st_kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(_thin_dir()))
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
 
     # Clean up our tar
@@ -441,7 +433,7 @@ def top(topfn, test=None, **kwargs):
             roster_grains)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
-            _thin_dir(),
+            __opts__['thin_dir'],
             test,
             trans_tar_sum,
             __opts__['hash_type'])
@@ -453,7 +445,7 @@ def top(topfn, test=None, **kwargs):
             **st_kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(_thin_dir()))
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
 
     # Clean up our tar
@@ -705,7 +697,7 @@ def single(fun, name, test=None, **kwargs):
 
     # We use state.pkg to execute the "state package"
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
-            _thin_dir(),
+            __opts__['thin_dir'],
             test,
             trans_tar_sum,
             __opts__['hash_type'])
@@ -721,7 +713,7 @@ def single(fun, name, test=None, **kwargs):
     # Copy the tar down
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(_thin_dir()))
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
 
     # Run the state.pkg command on the target
     stdout, stderr, _ = single.cmd_block()
