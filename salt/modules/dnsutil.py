@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Compendium of generic DNS utilities
+Compendium of generic DNS utilities.
+
+.. note:
+    Some functions in the `dnsutil` execution module depend on `dig`.
 '''
 from __future__ import absolute_import
 
