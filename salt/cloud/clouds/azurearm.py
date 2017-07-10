@@ -914,7 +914,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     dns_settings = None
     if kwargs.get('dns_servers') is not None:
-        if type(kwargs['dns_servers']) == list:
+        if isinstance(kwargs['dns_servers'], list):
             dns_settings = NetworkInterfaceDnsSettings(
                 dns_servers=kwargs['dns_servers'],
                 applied_dns_servers=kwargs['dns_servers'],
