@@ -20,7 +20,13 @@ class HAProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        return {haproxy: {}}
+        return {
+            haproxy: {
+                '__context__': {},
+                '__salt__': {},
+            }
+        }
+
 
     def test_non_list_config(self):
         config = {}
