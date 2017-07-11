@@ -1265,6 +1265,7 @@ def hash_known_hosts(user=None, config=None):
         salt '*' ssh.hash_known_hosts
 
     '''
+    config = salt.utils.expanduser(config)
     full = _get_known_hosts_file(config=config, user=user)
 
     if isinstance(full, dict):

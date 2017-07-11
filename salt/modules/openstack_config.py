@@ -69,7 +69,7 @@ def set_(filename, section, parameter, value):
         salt-call openstack_config.set /etc/keystone/keystone.conf sql connection foo
     '''
 
-    filename = _quote(filename)
+    filename = _quote(salt.utils.expanduser(filename))
     section = _quote(section)
     parameter = _quote(parameter)
     value = _quote(str(value))
@@ -109,7 +109,7 @@ def get(filename, section, parameter):
 
     '''
 
-    filename = _quote(filename)
+    filename = _quote(salt.utils.expanduser(filename))
     section = _quote(section)
     parameter = _quote(parameter)
 
@@ -146,8 +146,7 @@ def delete(filename, section, parameter):
 
         salt-call openstack_config.delete /etc/keystone/keystone.conf sql connection
     '''
-
-    filename = _quote(filename)
+    filename = _quote(salt.utils.expanduser(filename))
     section = _quote(section)
     parameter = _quote(parameter)
 

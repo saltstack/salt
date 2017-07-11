@@ -439,6 +439,7 @@ def diff(package, path):
 
         salt '*' lowpkg.diff apache2 /etc/apache2/httpd.conf
     '''
+    path = salt.utils.expanduser(path)
 
     cmd = "rpm2cpio {0} " \
           "| cpio -i --quiet --to-stdout .{1} " \

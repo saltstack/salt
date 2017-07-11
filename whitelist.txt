@@ -212,8 +212,8 @@ states.htpasswd.user_absent:htpasswd_file 	Path to the htpasswd file
 states.htpasswd.user_exists:htpasswd_file 	Path to the htpasswd file
 states.pip_state.installed:requirements 	Path to a pip requirements file. If the path begins with salt://the file will be transferred from the master file server.
 states.selinux.module_install:name 	Path to file with module to install
-modules.chef.client:logfile 	Set the log file location
-modules.chef.solo:logfile 	Set the log file location
+# modules.chef.client:logfile 	Set the log file location
+# modules.chef.solo:logfile 	Set the log file location
 modules.composer.did_composer_install:dir 	Directory location of the composer.json file
 modules.composer.install:directory 	Directory location of the composer.json file.
 modules.composer.update:directory 	Directory location of the composer.json file.
@@ -226,9 +226,9 @@ modules.genesis.bootstrap:pkg_cache 	This points to a directory containing a cac
 modules.gentoolkitmod.revdep_rebuild:lib 	Search for reverse dependencies for a particular library ratherthan every library on the system. It can be a full path to alibrary or basic regular expression.
 # modules.jboss7.deploy:source_file 	Source file to deploy from
 modules.mac_keychain.set_default_keychain:keychain 	The location of the keychain to set as default
-modules.openstack_config.delete:filename 	The full path to the configuration file
-modules.openstack_config.get:filename 	The full path to the configuration file
-modules.openstack_config.set_:filename 	The full path to the configuration file
+# modules.openstack_config.delete:filename 	The full path to the configuration file
+# modules.openstack_config.get:filename 	The full path to the configuration file
+# modules.openstack_config.set_:filename 	The full path to the configuration file
 modules.pcs.cib_create:cibfile 	name/path of the file containing the CIB
 modules.pcs.cib_push:cibfile 	name/path of the file containing the CIB
 modules.pcs.config_show:cibfile 	name/path of the file containing the CIB
@@ -357,7 +357,7 @@ modules.pillar.file_exists:path 	The path to the file in question. Will be treat
 modules.postgres.datadir_exists:name 	Name of the directory to check
 modules.postgres.datadir_init:name 	The name of the directory to initialize
 modules.rpm.bin_pkg_info:path 	Path to the file. Can either be an absolute path to a file on theminion, or a salt fileserver URL (e.g. ``salt://path/to/file.rpm``).If a salt fileserver URL is passed, the file will be cached to theminion so that it can be examined.
-modules.rpm.diff:path 	Full path to the installed file
+# modules.rpm.diff:path 	Full path to the installed file
 modules.rvm.do:cwd 	The directory from which to run the rvm command. Defaults to the user'shome directory.
 # modules.solaris_user.chhome:home 	New home directory to set
 modules.vbox_guest.additions_umount:mount_point 	directory VirtualBox Guest Additions is mounted to
@@ -399,17 +399,17 @@ modules.acme.cert:webroot 	True or a full path to use to use webroot. Otherwise 
 # modules.aptpkg.install:name 	The name of the package to be installed. Note that this parameter isignored if either "pkgs" or "sources" is passed. Additionally, pleasenote that this option can only be used to install packages from asoftware repository. To install a package file manually, use the"sources" option.
 modules.aptpkg.install:debconf 	Provide the path to a debconf answers file, processed beforeinstallation.
 modules.aptpkg.install:sources 	A list of DEB packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.  Dependencies are automatically resolvedand marked as auto-installed.
-modules.archive.cmd_unzip:zip_file 	Path of zip file to be unpacked
-modules.archive.cmd_unzip:dest 	The destination directory into which the file should be unpacked
-modules.archive.cmd_zip:zip_file 	Path of zip file to be created
+# modules.archive.cmd_unzip:zip_file 	Path of zip file to be unpacked
+# modules.archive.cmd_unzip:dest 	The destination directory into which the file should be unpacked
+# modules.archive.cmd_zip:zip_file 	Path of zip file to be created
 modules.archive.is_encrypted:name 	The path / URL of the archive to check.
-modules.archive.rar:rarfile 	Path of rar file to be created
-modules.archive.tar:dest 	The destination directory into which to **unpack** the tarfile
-modules.archive.unrar:rarfile 	Name of rar file to be unpacked
-modules.archive.unrar:dest 	The destination directory into which to **unpack** the rar file
-modules.archive.unzip:zip_file 	Path of zip file to be unpacked
-modules.archive.unzip:dest 	The destination directory into which the file should be unpacked
-modules.archive.zip_:zip_file 	Path of zip file to be created
+# modules.archive.rar:rarfile 	Path of rar file to be created
+# modules.archive.tar:dest 	The destination directory into which to **unpack** the tarfile
+# modules.archive.unrar:rarfile 	Name of rar file to be unpacked
+# modules.archive.unrar:dest 	The destination directory into which to **unpack** the rar file
+# modules.archive.unzip:zip_file 	Path of zip file to be unpacked
+# modules.archive.unzip:dest 	The destination directory into which the file should be unpacked
+# modules.archive.zip_:zip_file 	Path of zip file to be created
 # modules.cisconso.get_data:path 	The device path to set the value at, a list of element names in order, / separated
 # modules.cisconso.set_data_value:path 	The device path to set the value at, a list of element names in order, / separated
 # modules.cisconso.set_data_value:data 	The new value at the given path
@@ -630,7 +630,7 @@ modules.rsync.rsync:src 	The source location where files will be rsynced from.
 modules.rsync.rsync:dst 	The destination location where files will be rsynced to.
 modules.rsync.rsync:passwordfile 	A file that contains a password for accessing anrsync daemon.  The file should contain just thepassword.
 modules.runit.add_svc_avail_path:path 	directory to add to AVAIL_SVR_DIRS
-modules.ssh.hash_known_hosts:config 	path to known hosts file: can be absolute or relative to user's homedirectory
+# modules.ssh.hash_known_hosts:config 	path to known hosts file: can be absolute or relative to user's homedirectory
 # modules.ssh.set_known_host:user 	The user who owns the ssh authorized keys file to modify
 # modules.ssh.set_known_host:config 	The location of the authorized keys file relative to the user's homedirectory, defaults to ".ssh/known_hosts". If no user is specified,defaults to "/etc/ssh/ssh_known_hosts". If present, must be anabsolute path when a user is not specified.
 # modules.state.event:sock_dir 	path to the Salt master
@@ -760,11 +760,11 @@ modules.namecheap_ssl.parse_csr:csr_file 	string  Certificate Signing Request Fi
 modules.napalm_snmp.remove_config:location 	Location
 modules.napalm_snmp.update_config:location 	Location
 modules.rpm.bin_pkg_info:path 	Path to the file. Can either be an absolute path to a file on theminion, or a salt fileserver URL (e.g. ``salt://path/to/file.rpm``).If a salt fileserver URL is passed, the file will be cached to theminion so that it can be examined.
-modules.archive.cmd_unzip:zip_file 	Path of zip file to be unpacked
-modules.archive.cmd_zip:zip_file 	Path of zip file to be created
-modules.archive.rar:rarfile 	Path of rar file to be created
-modules.archive.unzip:zip_file 	Path of zip file to be unpacked
-modules.archive.zip_:zip_file 	Path of zip file to be created
+# modules.archive.cmd_unzip:zip_file 	Path of zip file to be unpacked
+# modules.archive.cmd_zip:zip_file 	Path of zip file to be created
+# modules.archive.rar:rarfile 	Path of rar file to be created
+# modules.archive.unzip:zip_file 	Path of zip file to be unpacked
+# modules.archive.zip_:zip_file 	Path of zip file to be created
 modules.cmdmod.run_chroot:root 	Path to the root of the jail to use.
 modules.dockermod.build:path 	Path to directory on the Minion containing a Dockerfile
 modules.dockermod.build:dockerfile 	Allows for an alternative Dockerfile to be specified.  Path to alternativeDockefile is relative to the build path for the Docker container.
