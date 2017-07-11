@@ -205,6 +205,9 @@ VALID_OPTS = {
     # The directory containing unix sockets for things like the event bus
     'sock_dir': str,
 
+    # The pool size of unix sockets, it is necessary to avoid blocking waiting for zeromq and tcp communications.
+    'sock_pool_size': int,
+
     # Specifies how the file server should backup files, if enabled. The backups
     # live in the cache dir.
     'backup_mode': str,
@@ -611,7 +614,9 @@ VALID_OPTS = {
     'gitfs_ssl_verify': bool,
     'gitfs_global_lock': bool,
     'gitfs_saltenv': list,
+    'gitfs_ref_types': list,
     'gitfs_refspecs': list,
+    'gitfs_disable_saltenv_mapping': bool,
     'hgfs_remotes': list,
     'hgfs_mountpoint': str,
     'hgfs_root': str,
@@ -923,7 +928,7 @@ VALID_OPTS = {
 
     'queue_dirs': list,
 
-    # Instructs the minion to ping its master(s) ever n number of seconds. Used
+    # Instructs the minion to ping its master(s) every n number of seconds. Used
     # primarily as a mitigation technique against minion disconnects.
     'ping_interval': int,
 
@@ -1097,6 +1102,7 @@ DEFAULT_MINION_OPTS = {
     'grains_deep_merge': False,
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'minion'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
+    'sock_pool_size': 1,
     'backup_mode': '',
     'renderer': 'yaml_jinja',
     'renderer_whitelist': [],
@@ -1180,7 +1186,9 @@ DEFAULT_MINION_OPTS = {
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'gitfs_saltenv': [],
+    'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_refspecs': _DFLT_REFSPECS,
+    'gitfs_disable_saltenv_mapping': False,
     'hash_type': 'sha256',
     'disable_modules': [],
     'disable_returners': [],
@@ -1345,6 +1353,7 @@ DEFAULT_MASTER_OPTS = {
     'user': _MASTER_USER,
     'worker_threads': 5,
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'master'),
+    'sock_pool_size': 1,
     'ret_port': 4506,
     'timeout': 5,
     'keep_jobs': 24,
@@ -1410,7 +1419,9 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'gitfs_saltenv': [],
+    'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_refspecs': _DFLT_REFSPECS,
+    'gitfs_disable_saltenv_mapping': False,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -2305,6 +2316,7 @@ def syndic_config(master_config_path,
         'sock_dir': os.path.join(
             opts['cachedir'], opts.get('syndic_sock_dir', opts['sock_dir'])
         ),
+        'sock_pool_size': master_opts['sock_pool_size'],
         'cachedir': master_opts['cachedir'],
     }
     opts.update(syndic_opts)

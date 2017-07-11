@@ -30,12 +30,15 @@ import salt.utils
 import salt.transport.server
 import salt.transport.client
 import salt.exceptions
+from salt.ext.six.moves import range
+from salt.transport.zeromq import AsyncReqMessageClientPool
 
 # Import test support libs
 from tests.support.paths import TMP_CONF_DIR
 from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import flaky, get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
+from tests.support.mock import MagicMock, patch
 from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin
 
 ON_SUSE = False
@@ -271,3 +274,34 @@ class AsyncPubChannelTest(BaseZMQPubCase, PubChannelMixin):
     '''
     def get_new_ioloop(self):
         return zmq.eventloop.ioloop.ZMQIOLoop()
+
+
+class AsyncReqMessageClientPoolTest(TestCase):
+    def setUp(self):
+        super(AsyncReqMessageClientPoolTest, self).setUp()
+        sock_pool_size = 5
+        with patch('salt.transport.zeromq.AsyncReqMessageClient.__init__', MagicMock(return_value=None)):
+            self.message_client_pool = AsyncReqMessageClientPool({'sock_pool_size': sock_pool_size},
+                                                                 args=({}, ''))
+        self.original_message_clients = self.message_client_pool.message_clients
+        self.message_client_pool.message_clients = [MagicMock() for _ in range(sock_pool_size)]
+
+    def tearDown(self):
+        with patch('salt.transport.zeromq.AsyncReqMessageClient.destroy', MagicMock(return_value=None)):
+            del self.original_message_clients
+        super(AsyncReqMessageClientPoolTest, self).tearDown()
+
+    def test_send(self):
+        for message_client_mock in self.message_client_pool.message_clients:
+            message_client_mock.send_queue = [0, 0, 0]
+            message_client_mock.send.return_value = []
+
+        self.assertEqual([], self.message_client_pool.send())
+
+        self.message_client_pool.message_clients[2].send_queue = [0]
+        self.message_client_pool.message_clients[2].send.return_value = [1]
+        self.assertEqual([1], self.message_client_pool.send())
+
+    def test_destroy(self):
+        self.message_client_pool.destroy()
+        self.assertEqual([], self.message_client_pool.message_clients)

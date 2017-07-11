@@ -91,8 +91,13 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         email = 'github.com'
         empty_line = '\n'
         comment_line = '# this is a comment \n'
+
         # Write out the authorized key to a temporary file
-        temp_file = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+        if salt.utils.is_windows():
+            temp_file = tempfile.NamedTemporaryFile(delete=False)
+        else:
+            temp_file = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+
         # Add comment
         temp_file.write(comment_line)
         # Add empty line for #41335

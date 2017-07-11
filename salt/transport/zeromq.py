@@ -118,8 +118,9 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                 # copied. The reason is the same as the io_loop skip above.
                 setattr(result, key,
                         AsyncReqMessageClientPool(result.opts,
-                                              self.master_uri,
-                                              io_loop=result._io_loop))
+                                                  args=(result.opts, self.master_uri,),
+                                                  kwargs={'io_loop': self._io_loop}))
+
                 continue
             setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
         return result
@@ -156,9 +157,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             # we don't need to worry about auth as a kwarg, since its a singleton
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self._io_loop)
         self.message_client = AsyncReqMessageClientPool(self.opts,
-                                                    self.master_uri,
-                                                    io_loop=self._io_loop,
-                                                    )
+                                                        args=(self.opts, self.master_uri,),
+                                                        kwargs={'io_loop': self._io_loop})
 
     def __del__(self):
         '''
@@ -847,32 +847,24 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         context.term()
 
 
-# TODO: unit tests!
-class AsyncReqMessageClientPool(object):
-    def __init__(self, opts, addr, linger=0, io_loop=None, socket_pool=1):
-        self.opts = opts
-        self.addr = addr
-        self.linger = linger
-        self.io_loop = io_loop
-        self.socket_pool = socket_pool
-        self.message_clients = []
+class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
+    '''
+    Wrapper class of AsyncReqMessageClientPool to avoid blocking waiting while writing data to socket.
+    '''
+    def __init__(self, opts, args=None, kwargs=None):
+        super(AsyncReqMessageClientPool, self).__init__(AsyncReqMessageClient, opts, args=args, kwargs=kwargs)
+
+    def __del__(self):
+        self.destroy()
 
     def destroy(self):
         for message_client in self.message_clients:
             message_client.destroy()
         self.message_clients = []
 
-    def __del__(self):
-        self.destroy()
-
-    def send(self, message, timeout=None, tries=3, future=None, callback=None, raw=False):
-        if len(self.message_clients) < self.socket_pool:
-            message_client = AsyncReqMessageClient(self.opts, self.addr, self.linger, self.io_loop)
-            self.message_clients.append(message_client)
-            return message_client.send(message, timeout, tries, future, callback, raw)
-        else:
-            available_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
-            return available_clients[0].send(message, timeout, tries, future, callback, raw)
+    def send(self, *args, **kwargs):
+        message_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
+        return message_clients[0].send(*args, **kwargs)
 
 
 # TODO: unit tests!
