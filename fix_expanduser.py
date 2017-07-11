@@ -46,6 +46,8 @@ def main():
                 except IOError:
                     print('Failed to find source code for %s.%s, probably decorated' % (
                         function.__module__, function.__name__))
+                except ValueError as e:
+                    print(e)
 
         for line_number, (function, function_parameters) in sorted(start_line_to_function.items(), reverse=True):
             add_expanduser_call(function, function_parameters, line_number)
@@ -109,7 +111,6 @@ def add_import_statement(module):
             ideal_import_location = line_number + 1
 
     if salt_imports:
-        print('adding import to %s with existing salt imports' % module_path)
         salt_imports.append('import salt.utils')
         def line_sorter(line):
             import_type, rest_of_import = line.split(' ', 1)
@@ -176,9 +177,6 @@ def find_function_first_line(function):
                 line_number += line_offset
                 break
     else:
-        for line in sourcelines:
-            print(line, end='')
-        # import pdb; pdb.set_trace()
         raise ValueError("Didn't find end marker for %s.%s" % (function.__module__,
             function.__name__))
     return line_number
