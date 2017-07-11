@@ -28,6 +28,7 @@ hit `Enter`. Also, you can convert tabs to 2 spaces by these commands in Vim:
 
 Indentation
 ===========
+
 The suggested syntax for YAML files is to use 2 spaces for indentation,
 but YAML will follow whatever indentation system that the individual file
 uses. Indentation of two spaces works very well for SLS files given the
@@ -112,8 +113,19 @@ PyYAML will load these values as boolean ``True`` or ``False``. Un-capitalized
 versions will also be loaded as booleans (``true``, ``false``, ``yes``, ``no``,
 ``on``, and ``off``). This can be especially problematic when constructing
 Pillar data. Make sure that your Pillars which need to use the string versions
-of these values are enclosed in quotes.  Pillars will be parsed twice by salt,
-so you'll need to wrap your values in multiple quotes, for example '"false"'.
+of these values are enclosed in quotes. Pillars will be parsed twice by salt,
+so you'll need to wrap your values in multiple quotes, including double quotation
+marks (``" "``) and single quotation marks (``' '``). note that spaces are included
+in the quotation type examples for clarity.
+
+Multiple quoting examples looks like this:
+
+.. code-block:: yaml
+
+    - '"false"'
+    - "'True'"
+    - "'YES'"
+    - '"No"'
 
 The '%' Sign
 ============
