@@ -2,8 +2,9 @@
 '''
 Compendium of generic DNS utilities.
 
-.. note:
-    Some functions in the `dnsutil` execution module depend on `dig`.
+.. note::
+
+    Some functions in the ``dnsutil`` execution module depend on ``dig``.
 '''
 from __future__ import absolute_import
 
@@ -245,7 +246,7 @@ def check_ip(ip_addr):
 
 def A(host, nameserver=None):
     '''
-    Return the A record(s) for `host`.
+    Return the A record(s) for ``host``.
 
     Always returns a list.
 
@@ -270,7 +271,7 @@ def A(host, nameserver=None):
 
 def AAAA(host, nameserver=None):
     '''
-    Return the AAAA record(s) for `host`.
+    Return the AAAA record(s) for ``host``.
 
     Always returns a list.
 
