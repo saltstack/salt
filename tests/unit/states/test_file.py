@@ -710,10 +710,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         '''
         Test to ensure that a named directory is present and has the right perms
         '''
-        if salt.utils.is_windows():
-            name = 'C:\\Windows\\temp\\grub_test'
-        else:
-            name = '/etc/grub.conf'
+        name = '/etc/grub.conf'
         user = 'salt'
         group = 'saltstack'
 
@@ -810,15 +807,15 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             comt = 'The directory "{0}" will be changed' \
                                    ''.format(name)
                             p_chg = {'directory': 'new'}
-                            ret.update({
-                                'comment': comt,
-                                'result': None,
-                                'pchanges': p_chg
-                            })
                         else:
                             comt = ('The following files will be changed:\n{0}:'
                                     ' directory - new\n'.format(name))
-                            ret.update({'comment': comt, 'result': None, 'pchanges': {'/etc/grub.conf': {'directory': 'new'}}})
+                            p_chg = {'/etc/grub.conf': {'directory': 'new'}}
+                        ret.update({
+                            'comment': comt,
+                            'result': None,
+                            'pchanges': p_chg
+                        })
                         self.assertDictEqual(filestate.directory(name,
                                                                  user=user,
                                                                  group=group),
@@ -986,10 +983,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.states.file._load_accumulators',
                    MagicMock(return_value=([], []))):
-            if salt.utils.is_windows():
-                name = 'C:\\Windows\\System32\\drivers\\etc\\hosts'
-            else:
-                name = '/etc/hosts'
+            name = '/etc/hosts'
 
             ret = {'name': name,
                    'result': False,
@@ -1008,7 +1002,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': comt, 'name': name})
                 self.assertDictEqual(filestate.blockreplace(name), ret)
 
-            with patch.object(os.path, 'isabs', mock_t):
+            with patch.object(os.path, 'isabs', mock_t), \
+                    patch.object(os.path, 'exists', mock_t):
                 with patch.dict(filestate.__salt__, {'file.blockreplace': mock_t}):
                     with patch.dict(filestate.__opts__, {'test': True}):
                         comt = ('Changes would be made')
