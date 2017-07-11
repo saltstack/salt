@@ -157,7 +157,7 @@ def _get_session():
         default=False,
         search_global=False
     )
-    session = XenAPI.Session(url,ignore_ssl=ignore_ssl)
+    session = XenAPI.Session(url, ignore_ssl=ignore_ssl)
     log.debug('url: {} user: {} password: {}, originator: {}'.format(
         url,
         user,
