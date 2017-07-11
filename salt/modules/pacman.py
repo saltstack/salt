@@ -515,6 +515,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
+    sources = salt.utils.expanduser(sources)
     refresh = salt.utils.is_true(refresh)
     sysupgrade = salt.utils.is_true(sysupgrade)
 

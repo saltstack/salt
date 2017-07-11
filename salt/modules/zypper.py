@@ -1150,6 +1150,7 @@ def install(name=None,
                 'version': '<new-version>',
                 'arch': '<new-arch>'}}}
     '''
+    sources = salt.utils.expanduser(sources)
     if refresh:
         refresh_db()
 
@@ -1987,6 +1988,7 @@ def diff(*paths):
 
         salt '*' pkg.diff /etc/apache2/httpd.conf /etc/sudoers
     '''
+    path = salt.utils.expanduser(path)
     ret = {}
 
     pkg_to_paths = {}

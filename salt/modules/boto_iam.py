@@ -45,6 +45,7 @@ import yaml
 
 # Import salt libs
 import salt.ext.six as six
+import salt.utils
 import salt.utils.compat
 import salt.utils.odict as odict
 
@@ -1548,6 +1549,7 @@ def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=
     :param profile: The profile that contains a dict of region, key, keyid
     :return: True / False
     '''
+    path = salt.utils.expanduser(path)
 
     exists = get_server_certificate(cert_name, region, key, keyid, profile)
     if exists:

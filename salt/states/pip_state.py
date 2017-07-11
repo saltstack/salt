@@ -509,6 +509,7 @@ def installed(name,
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
+    requirements, log, cwd, cert = salt.utils.expanduser(requirements, log, cwd, cert)
 
     if pip_bin and not bin_env:
         bin_env = pip_bin

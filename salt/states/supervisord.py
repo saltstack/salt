@@ -17,6 +17,7 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import salt.ext.six as six
+import salt.utils
 
 
 log = logging.getLogger(__name__)
@@ -81,6 +82,7 @@ def running(name,
         installed
 
     '''
+    conf_file, bin_env = salt.utils.expanduser(conf_file, bin_env)
     if name.endswith(':*'):
         name = name[:-1]
 
@@ -296,6 +298,7 @@ def dead(name,
         installed
 
     '''
+    conf_file, bin_env = salt.utils.expanduser(conf_file, bin_env)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     if __opts__['test']:

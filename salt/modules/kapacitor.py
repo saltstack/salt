@@ -132,6 +132,7 @@ def define_task(name,
 
         salt '*' kapacitor.define_task cpu salt://kapacitor/cpu.tick database=telegraf
     '''
+    tick_script = salt.utils.expanduser(tick_script)
     if version() < '0.13':
         cmd = 'kapacitor define -name {0}'.format(name)
     else:

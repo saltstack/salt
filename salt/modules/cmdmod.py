@@ -2589,6 +2589,7 @@ def run_chroot(root,
 
         salt '*' cmd.run_chroot /var/lib/lxc/container_name/rootfs 'sh /tmp/bootstrap.sh'
     '''
+    root, cwd = salt.utils.expanduser(root, cwd)
     __salt__['mount.mount'](
         os.path.join(root, 'dev'),
         'udev',

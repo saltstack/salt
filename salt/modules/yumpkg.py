@@ -1225,6 +1225,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
+    sources = salt.utils.expanduser(sources)
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
     branch_arg = _get_branch_option(**kwargs)
@@ -2983,6 +2984,7 @@ def diff(*paths):
 
         salt '*' pkg.diff /etc/apache2/httpd.conf /etc/sudoers
     '''
+    path = salt.utils.expanduser(path)
     ret = {}
 
     pkg_to_paths = {}

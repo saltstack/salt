@@ -1865,6 +1865,7 @@ def create(name,
 
         .. versionadded:: 2015.8.0
     '''
+    config = salt.utils.expanduser(config)
     # Required params for 'download' template
     download_template_deps = ('dist', 'release', 'arch')
 
@@ -2123,6 +2124,7 @@ def ls_(active=None, cache=True, path=None):
         salt '*' lxc.ls
         salt '*' lxc.ls active=True
     '''
+    path = salt.utils.expanduser(path)
     contextvar = 'lxc.ls{0}'.format(path)
     if active:
         contextvar += '.active'
@@ -2172,6 +2174,7 @@ def list_(extra=False, limit=None, path=None):
         salt '*' lxc.list extra=True
         salt '*' lxc.list limit=running
     '''
+    path = salt.utils.expanduser(path)
     ctnrs = ls_(path=path)
 
     if extra:
@@ -2367,6 +2370,7 @@ def restart(name, path=None, lxc_config=None, force=False):
 
         salt myminion lxc.restart name
     '''
+    path, lxc_config = salt.utils.expanduser(path, lxc_config)
     _ensure_exists(name, path=path)
     orig_state = state(name, path=path)
     if orig_state != 'stopped':
@@ -2461,6 +2465,7 @@ def stop(name, kill=False, path=None, use_vt=None):
 
         salt myminion lxc.stop name
     '''
+    path = salt.utils.expanduser(path)
     _ensure_exists(name, path=path)
     orig_state = state(name, path=path)
     if orig_state == 'frozen' and not kill:
@@ -2546,6 +2551,7 @@ def unfreeze(name, path=None, use_vt=None):
 
         salt '*' lxc.unfreeze name
     '''
+    path = salt.utils.expanduser(path)
     _ensure_exists(name, path=path)
     if state(name, path=path) == 'stopped':
         raise CommandExecutionError(
@@ -2587,6 +2593,7 @@ def destroy(name, stop=False, path=None):
         salt '*' lxc.destroy foo
         salt '*' lxc.destroy foo stop=True
     '''
+    path = salt.utils.expanduser(path)
     _ensure_exists(name, path=path)
     if not stop and state(name, path=path) != 'stopped':
         raise CommandExecutionError(
@@ -2614,6 +2621,7 @@ def exists(name, path=None):
 
         salt '*' lxc.exists name
     '''
+    path = salt.utils.expanduser(path)
 
     _exists = name in ls_(path=path)
     # container may be just created but we did cached earlier the
@@ -2638,6 +2646,7 @@ def state(name, path=None):
 
         salt '*' lxc.state name
     '''
+    path = salt.utils.expanduser(path)
     # Don't use _ensure_exists() here, it will mess with _change_state()
 
     cachekey = 'lxc.state.{0}{1}'.format(name, path)
@@ -2684,6 +2693,7 @@ def get_parameter(name, parameter, path=None):
 
         salt '*' lxc.get_parameter container_name memory.limit_in_bytes
     '''
+    path = salt.utils.expanduser(path)
     _ensure_exists(name, path=path)
     cmd = 'lxc-cgroup'
     if path:
@@ -2713,6 +2723,7 @@ def set_parameter(name, parameter, value, path=None):
 
         salt '*' lxc.set_parameter name parameter value
     '''
+    path = salt.utils.expanduser(path)
     if not exists(name, path=path):
         return None
 
@@ -2743,6 +2754,7 @@ def info(name, path=None):
 
         salt '*' lxc.info name
     '''
+    path = salt.utils.expanduser(path)
     cachekey = 'lxc.info.{0}{1}'.format(name, path)
     try:
         return __context__[cachekey]
@@ -2909,6 +2921,7 @@ def set_password(name, users, password, encrypted=True, path=None):
         salt '*' lxc.set_pass container-name root foo encrypted=False
 
     '''
+    path = salt.utils.expanduser(path)
     def _bad_user_input():
         raise SaltInvocationError('Invalid input for \'users\' parameter')
 
@@ -2960,6 +2973,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
                 lxc_conf_unset="['lxc.utsname']"
 
     '''
+    path = salt.utils.expanduser(path)
     _ensure_exists(name, path=path)
     cpath = get_root_path(path)
     lxc_conf_p = os.path.join(cpath, name, 'config')
@@ -3156,6 +3170,7 @@ def running_systemd(name, cache=True, path=None):
         salt '*' lxc.running_systemd ubuntu
 
     '''
+    path = salt.utils.expanduser(path)
     k = 'lxc.systemd.test.{0}{1}'.format(name, path)
     ret = __context__.get(k, None)
     if ret is None or not cache:
@@ -3234,6 +3249,7 @@ def systemd_running_state(name, path=None):
         salt myminion lxc.systemd_running_state ubuntu
 
     '''
+    path = salt.utils.expanduser(path)
     try:
         ret = run_all(name,
                       'systemctl is-system-running',
@@ -3264,6 +3280,7 @@ def test_sd_started_state(name, path=None):
         salt myminion lxc.test_sd_started_state ubuntu
 
     '''
+    path = salt.utils.expanduser(path)
     qstate = systemd_running_state(name, path=path)
     if qstate in ('initializing', 'starting'):
         return False
@@ -3292,6 +3309,7 @@ def test_bare_started_state(name, path=None):
         salt myminion lxc.test_bare_started_state ubuntu
 
     '''
+    path = salt.utils.expanduser(path)
     try:
         ret = run_all(
             name, 'ls', path=path, ignore_retcode=True
@@ -3322,6 +3340,7 @@ def wait_started(name, path=None, timeout=300):
         salt myminion lxc.wait_started ubuntu
 
     '''
+    path = salt.utils.expanduser(path)
     if not exists(name, path=path):
         raise CommandExecutionError(
             'Container {0} does does exists'.format(name))
@@ -3446,6 +3465,7 @@ def bootstrap(name,
                 [approve_key=(True|False)] [install=(True|False)]
 
     '''
+    path = salt.utils.expanduser(path)
     wait_started(name, path=path)
     if bootstrap_delay is not None:
         try:
@@ -3592,6 +3612,7 @@ def attachable(name, path=None):
 
         salt 'minion' lxc.attachable ubuntu
     '''
+    path = salt.utils.expanduser(path)
     cachekey = 'lxc.attachable{0}{1}'.format(name, path)
     try:
         return __context__[cachekey]
@@ -3757,6 +3778,7 @@ def run(name,
 
         salt myminion lxc.run mycontainer 'ifconfig -a'
     '''
+    path = salt.utils.expanduser(path)
     return _run(name,
                 cmd,
                 path=path,
@@ -3846,6 +3868,7 @@ def run_stdout(name,
 
         salt myminion lxc.run_stdout mycontainer 'ifconfig -a'
     '''
+    path = salt.utils.expanduser(path)
     return _run(name,
                 cmd,
                 path=path,
@@ -3933,6 +3956,7 @@ def run_stderr(name,
 
         salt myminion lxc.run_stderr mycontainer 'ip addr show'
     '''
+    path = salt.utils.expanduser(path)
     return _run(name,
                 cmd,
                 path=path,
@@ -4022,6 +4046,7 @@ def retcode(name,
 
         salt myminion lxc.retcode mycontainer 'ip addr show'
     '''
+    path = salt.utils.expanduser(path)
     return _run(name,
                 cmd,
                 output='retcode',
@@ -4115,6 +4140,7 @@ def run_all(name,
 
         salt myminion lxc.run_all mycontainer 'ip addr show'
     '''
+    path = salt.utils.expanduser(path)
     return _run(name,
                 cmd,
                 output='all',
@@ -4192,6 +4218,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False, path=None):
         salt 'minion' lxc.copy_to /tmp/foo /root/foo
         salt 'minion' lxc.cp /tmp/foo /root/foo
     '''
+    source, path = salt.utils.expanduser(source, path)
     _ensure_running(name, no_start=True, path=path)
     return __salt__['container_resource.copy_to'](
         name,
@@ -4445,6 +4472,7 @@ def reboot(name, path=None):
         salt 'minion' lxc.reboot myvm
 
     '''
+    path = salt.utils.expanduser(path)
     ret = {'result': True,
            'changes': {},
            'comment': '{0} rebooted'.format(name)}
@@ -4541,6 +4569,7 @@ def reconfigure(name,
         salt-call -lall mc_lxc_fork.reconfigure foobar nic_opts="{'eth1': {'mac': '00:16:3e:dd:ee:44'}}" memory=4
 
     '''
+    path = salt.utils.expanduser(path)
     changes = {}
     cpath = get_root_path(path)
     path = os.path.join(cpath, name, 'config')
@@ -4635,6 +4664,7 @@ def apply_network_profile(name, network_profile, nic_opts=None, path=None):
         salt 'minion' lxc.apply_network_profile web1 centos \\
                 "{eth0: {disable: true}}"
     '''
+    path = salt.utils.expanduser(path)
     cpath = get_root_path(path)
     cfgpath = os.path.join(cpath, name, 'config')
 

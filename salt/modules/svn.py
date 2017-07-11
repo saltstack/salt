@@ -108,6 +108,7 @@ def info(cwd,
 
         salt '*' svn.info /path/to/svn/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     opts = list()
     if fmt == 'xml':
         opts.append('--xml')
@@ -166,6 +167,7 @@ def checkout(cwd,
 
         salt '*' svn.checkout /path/to/repo svn://remote/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     opts += (remote,)
     if target:
         opts += (target,)
@@ -205,6 +207,7 @@ def switch(cwd, remote, target=None, user=None, username=None,
 
         salt '*' svn.switch /path/to/repo svn://remote/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     opts += (remote,)
     if target:
         opts += (target,)
@@ -240,6 +243,7 @@ def update(cwd, targets=None, user=None, username=None, password=None, *opts):
 
         salt '*' svn.update /path/to/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     if targets:
         opts += tuple(salt.utils.shlex_split(targets))
     return _run_svn('update', cwd, user, username, password, opts)
@@ -274,6 +278,7 @@ def diff(cwd, targets=None, user=None, username=None, password=None, *opts):
 
         salt '*' svn.diff /path/to/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     if targets:
         opts += tuple(salt.utils.shlex_split(targets))
     return _run_svn('diff', cwd, user, username, password, opts)
@@ -317,6 +322,7 @@ def commit(cwd,
 
         salt '*' svn.commit /path/to/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     if msg:
         opts += ('-m', msg)
     if targets:
@@ -351,6 +357,7 @@ def add(cwd, targets, user=None, username=None, password=None, *opts):
 
         salt '*' svn.add /path/to/repo /path/to/new/file
     '''
+    cwd = salt.utils.expanduser(cwd)
     if targets:
         opts += tuple(salt.utils.shlex_split(targets))
     return _run_svn('add', cwd, user, username, password, opts)
@@ -392,6 +399,7 @@ def remove(cwd,
 
         salt '*' svn.remove /path/to/repo /path/to/repo/remove
     '''
+    cwd = salt.utils.expanduser(cwd)
     if msg:
         opts += ('-m', msg)
     if targets:
@@ -428,6 +436,7 @@ def status(cwd, targets=None, user=None, username=None, password=None, *opts):
 
         salt '*' svn.status /path/to/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     if targets:
         opts += tuple(salt.utils.shlex_split(targets))
     return _run_svn('status', cwd, user, username, password, opts)
@@ -471,6 +480,7 @@ def export(cwd,
 
         salt '*' svn.export /path/to/repo svn://remote/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     opts += (remote,)
     if target:
         opts += (target,)

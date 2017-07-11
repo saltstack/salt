@@ -57,6 +57,7 @@ def task_present(name,
     enable
         Whether to enable the task or not. Defaults to True.
     '''
+    tick_script = salt.utils.expanduser(tick_script)
     comments = []
     changes = []
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}

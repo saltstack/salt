@@ -23,6 +23,9 @@ data directory.
 '''
 from __future__ import absolute_import
 
+# Import Salt Libs
+import salt.utils
+
 
 def __virtual__():
     '''
@@ -64,6 +67,7 @@ def present(name,
     runas
         The system user the operation should be performed on behalf of
     '''
+    name = salt.utils.expanduser(name)
     _cmt = 'Postgres data directory {0} is already present'.format(name)
     ret = {
         'name': name,

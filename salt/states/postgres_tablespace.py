@@ -20,6 +20,7 @@ A module used to create and manage PostgreSQL tablespaces.
 from __future__ import absolute_import
 
 # Import salt libs
+import salt.utils
 from salt.utils import dictupdate
 
 # Import 3rd-party libs
@@ -92,6 +93,7 @@ def present(name,
     db_port
         Database port if different from config or default
     '''
+    directory = salt.utils.expanduser(directory)
     ret = {'name': name,
            'changes': {},
            'result': True,

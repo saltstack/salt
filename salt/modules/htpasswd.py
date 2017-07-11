@@ -65,6 +65,7 @@ def useradd(pwfile, user, password, opts='', runas=None):
         salt '*' webutil.useradd /etc/httpd/htpasswd larry badpassword
         salt '*' webutil.useradd /etc/httpd/htpasswd larry badpass opts=ns
     '''
+    pwfile = salt.utils.expanduser(pwfile)
     if not os.path.exists(pwfile):
         opts += 'c'
 
@@ -94,6 +95,7 @@ def userdel(pwfile, user, runas=None, all_results=False):
 
         salt '*' webutil.userdel /etc/httpd/htpasswd larry
     '''
+    pwfile = salt.utils.expanduser(pwfile)
     if not os.path.exists(pwfile):
         return 'Error: The specified htpasswd file does not exist'
 
@@ -140,6 +142,7 @@ def verify(pwfile, user, password, opts='', runas=None):
         salt '*' webutil.verify /etc/httpd/htpasswd larry maybepassword
         salt '*' webutil.verify /etc/httpd/htpasswd larry maybepassword opts=ns
     '''
+    pwfile = salt.utils.expanduser(pwfile)
     if not os.path.exists(pwfile):
         return False
 

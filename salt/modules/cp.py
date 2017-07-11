@@ -363,6 +363,7 @@ def get_url(path, dest='', saltenv='base', makedirs=False):
         salt '*' cp.get_url salt://my/file /tmp/this_file_is_mine
         salt '*' cp.get_url http://www.slashdot.org /tmp/index.html
     '''
+    dest = salt.utils.expanduser(dest)
     if isinstance(dest, six.string_types):
         result = _client().get_url(path, dest, makedirs, saltenv)
     else:

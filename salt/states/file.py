@@ -6109,6 +6109,7 @@ def decode(name,
             - encoded_data: |
                 {{ salt.pillar.get('path:to:data') | indent(8) }}
     '''
+    name = salt.utils.expanduser(name)
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     if not (encoded_data or contents_pillar):
@@ -6228,6 +6229,7 @@ def shortcut(
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
     '''
+    icon_location = salt.utils.expanduser(icon_location)
     user = _test_owner(kwargs, user=user)
     ret = {'name': name,
            'changes': {},

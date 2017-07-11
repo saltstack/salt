@@ -564,6 +564,7 @@ def make_repo(repodir,
         salt '*' pkgbuild.make_repo /var/www/html
 
     '''
+    repodir = salt.utils.expanduser(repodir)
     res = {'retcode': 1,
             'stdout': '',
             'stderr': 'initialization value'}

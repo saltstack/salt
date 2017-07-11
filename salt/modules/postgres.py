@@ -3132,6 +3132,7 @@ def datadir_init(name,
     runas
         The system user the operation should be performed on behalf of
     '''
+    name = salt.utils.expanduser(name)
     if datadir_exists(name):
         log.info('%s already exists', name)
         return False
@@ -3162,6 +3163,7 @@ def datadir_exists(name):
     name
         Name of the directory to check
     '''
+    name = salt.utils.expanduser(name)
     _version_file = os.path.join(name, 'PG_VERSION')
     _config_file = os.path.join(name, 'postgresql.conf')
 

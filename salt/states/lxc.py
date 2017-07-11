@@ -149,6 +149,7 @@ def present(name,
         Name of a pool volume that will be used for thin-provisioning this
         container. Only applicable if ``backing`` is set to ``lvm``.
     '''
+    path = salt.utils.expanduser(path)
     ret = {'name': name,
            'result': True,
            'comment': 'Container \'{0}\' already exists'.format(name),
@@ -356,6 +357,7 @@ def absent(name, stop=False, path=None):
         web01:
           lxc.absent
     '''
+    path = salt.utils.expanduser(path)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -417,6 +419,7 @@ def running(name, restart=False, path=None):
           lxc.running:
             - restart: True
     '''
+    path = salt.utils.expanduser(path)
     ret = {'name': name,
            'result': True,
            'comment': 'Container \'{0}\' is already running'.format(name),
@@ -516,6 +519,7 @@ def frozen(name, start=True, path=None):
           lxc.frozen:
             - start: False
     '''
+    path = salt.utils.expanduser(path)
     ret = {'name': name,
            'result': True,
            'comment': 'Container \'{0}\' is already frozen'.format(name),
@@ -602,6 +606,7 @@ def stopped(name, kill=False, path=None):
         web01:
           lxc.stopped
     '''
+    path = salt.utils.expanduser(path)
     ret = {'name': name,
            'result': True,
            'comment': 'Container \'{0}\' is already stopped'.format(name),

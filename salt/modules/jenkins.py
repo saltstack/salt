@@ -253,6 +253,7 @@ def create_job(name=None,
         salt '*' jenkins.create_job jobname config_xml='salt://jenkins/config.xml'
 
     '''
+    config_xml = salt.utils.expanduser(config_xml)
     if not name:
         raise SaltInvocationError('Required parameter `name` is missing.')
 
@@ -295,6 +296,7 @@ def update_job(name=None,
         salt '*' jenkins.update_job jobname config_xml='salt://jenkins/config.xml'
 
     '''
+    config_xml = salt.utils.expanduser(config_xml)
     if not name:
         raise SaltInvocationError('Required parameter `name` is missing.')
 

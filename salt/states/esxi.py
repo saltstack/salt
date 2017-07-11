@@ -700,6 +700,7 @@ def ssh_configured(name,
             - certificate_verify: True
 
     '''
+    ssh_key_file = salt.utils.expanduser(ssh_key_file)
     ret = {'name': name,
            'result': False,
            'changes': {},

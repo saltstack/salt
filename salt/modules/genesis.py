@@ -143,6 +143,7 @@ def bootstrap(
             flavor=wheezy static_qemu=/usr/bin/qemu-x86_64-static
 
     '''
+    root, static_qemu, mount_dir, pkg_cache = salt.utils.expanduser(root, static_qemu, mount_dir, pkg_cache)
     if img_format not in ('dir', 'sparse'):
         raise SaltInvocationError('The img_format must be "sparse" or "dir"')
 

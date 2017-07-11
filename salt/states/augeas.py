@@ -255,6 +255,7 @@ def change(name, context=None, changes=None, lens=None,
     http://augeas.net/docs/references/lenses/files/services-aug.html#Services.record
 
     '''
+    context = salt.utils.expanduser(context)
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
 
     if not changes or not isinstance(changes, list):

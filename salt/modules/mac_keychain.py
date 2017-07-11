@@ -206,6 +206,7 @@ def set_default_keychain(keychain, domain="user", user=None):
 
         salt '*' keychain.set_keychain /Users/fred/Library/Keychains/login.keychain
     '''
+    keychain = salt.utils.expanduser(keychain)
     cmd = "security default-keychain -d {0} -s {1}".format(domain, keychain)
     return __salt__['cmd.run'](cmd, runas=user)
 

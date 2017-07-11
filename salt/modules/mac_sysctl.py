@@ -148,6 +148,7 @@ def persist(name, value, config='/etc/sysctl.conf', apply_change=False):
         salt '*' sysctl.persist net.inet.icmp.icmplim 50
         salt '*' sysctl.persist coretemp_load NO config=/etc/sysctl.conf
     '''
+    config = salt.utils.expanduser(config)
     nlines = []
     edited = False
     value = str(value)

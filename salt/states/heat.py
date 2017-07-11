@@ -154,6 +154,7 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
         Profile to use
 
     '''
+    template, enviroment = salt.utils.expanduser(template, enviroment)
     log.debug('Deployed with(' +
               '{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})'
               .format(name, template, enviroment, params, poll, rollback,

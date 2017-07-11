@@ -21,6 +21,7 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
 
 # Import salt libs
 from __future__ import absolute_import
+import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
@@ -91,6 +92,7 @@ def installed(name,
     force_reinstall
         Install the package even if it is already installed
     '''
+    dir = salt.utils.expanduser(dir)
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     pkg_list = pkgs if pkgs else [name]
@@ -229,6 +231,7 @@ def removed(name, dir=None, user=None):
 
         .. versionadded:: 0.17.0
     '''
+    dir = salt.utils.expanduser(dir)
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     try:

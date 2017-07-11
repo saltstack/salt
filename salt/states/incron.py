@@ -42,6 +42,8 @@ then a new cron job will be added to the user's crontab.
 
 '''
 
+# Import Salt Libs
+import salt.utils
 
 def _check_cron(user,
                 path,
@@ -114,6 +116,7 @@ def present(name,
         The cmd that should be executed
 
     '''
+    path = salt.utils.expanduser(path)
     mask = ',' . join(mask)
 
     ret = {'changes': {},
@@ -184,6 +187,7 @@ def absent(name,
         The cmd that should be executed
 
     '''
+    path = salt.utils.expanduser(path)
 
     mask = ',' . join(mask)
 

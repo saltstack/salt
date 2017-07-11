@@ -7,6 +7,9 @@ from __future__ import absolute_import
 
 import os
 
+# Import Salt Libs
+import salt.utils
+
 HAS_GENTOOLKIT = False
 
 # Import third party libs
@@ -45,6 +48,7 @@ def revdep_rebuild(lib=None):
 
         salt '*' gentoolkit.revdep_rebuild
     '''
+    lib = salt.utils.expanduser(lib)
     cmd = 'revdep-rebuild -i --quiet --no-progress'
     if lib is not None:
         cmd += ' --library={0}'.format(lib)
@@ -123,6 +127,7 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
 
         salt '*' gentoolkit.eclean_dist destructive=True
     '''
+    exclude_file = salt.utils.expanduser(exclude_file)
     if exclude_file is None:
         exclude = None
     else:
@@ -195,6 +200,7 @@ def eclean_pkg(destructive=False, package_names=False, time_limit=0,
 
         salt '*' gentoolkit.eclean_pkg destructive=True
     '''
+    exclude_file = salt.utils.expanduser(exclude_file)
     if exclude_file is None:
         exclude = None
     else:

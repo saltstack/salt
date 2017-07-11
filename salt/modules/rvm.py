@@ -461,6 +461,7 @@ def do(ruby, command, runas=None, cwd=None, env=None):  # pylint: disable=C0103
 
         salt '*' rvm.do 2.0.0 <command>
     '''
+    cwd = salt.utils.expanduser(cwd)
     try:
         command = salt.utils.shlex_split(command)
     except AttributeError:

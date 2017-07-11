@@ -318,6 +318,7 @@ def create_config(name=None,
       salt '*' snapper.create_config name=myconfig subvolume=/foo/bar/ fstype=btrfs template="default"
       salt '*' snapper.create_config name=myconfig subvolume=/foo/bar/ fstype=btrfs extra_opts='{"NUMBER_CLEANUP": False}'
     '''
+    subvolume = salt.utils.expanduser(subvolume)
     def raise_arg_error(argname):
         raise CommandExecutionError(
             'You must provide a "{0}" for the new configuration'.format(argname)

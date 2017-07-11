@@ -88,8 +88,9 @@ on the IAM role to be persistent. This functionality was added in 2015.8.0.
 '''
 from __future__ import absolute_import
 import logging
-import salt.utils.dictupdate as dictupdate
 import salt.ext.six as six
+import salt.utils
+import salt.utils.dictupdate as dictupdate
 
 log = logging.getLogger(__name__)
 
@@ -173,6 +174,7 @@ def present(
 
         .. versionadded:: 2015.8.0
     '''
+    path = salt.utils.expanduser(path)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     # Build up _policy_document
     _policy_document = {}

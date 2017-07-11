@@ -502,6 +502,7 @@ def create_stack(name=None, template_file=None, enviroment=None,
                  poll=5 rollback=False timeout=60 profile=openstack1
 
     '''
+    template_file, enviroment = salt.utils.expanduser(template_file, enviroment)
     h_client = _auth(profile)
     ret = {
         'result': True,
@@ -687,6 +688,7 @@ def update_stack(name=None, template_file=None, enviroment=None,
                  poll=5 rollback=False timeout=60 profile=openstack1
 
     '''
+    template_file, enviroment = salt.utils.expanduser(template_file, enviroment)
     h_client = _auth(profile)
     ret = {
         'result': True,

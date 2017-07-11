@@ -1846,6 +1846,7 @@ def mediatype_create(name, mediatype, **connection_args):
         salt '*' zabbix.mediatype_create 'Email' 0 smtp_email='noreply@example.com'
         smtp_server='mailserver.example.com' smtp_helo='zabbix.example.com'
     '''
+    exec_path, gsm_modem = salt.utils.expanduser(exec_path, gsm_modem)
     conn_args = _login(**connection_args)
     ret = False
     try:

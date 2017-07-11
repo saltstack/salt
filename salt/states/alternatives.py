@@ -27,6 +27,9 @@ Control the alternatives system
 
 '''
 
+# Import Salt Libs
+import salt.utils
+
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {
     'set_': 'set'
@@ -61,6 +64,7 @@ def install(name, link, path, priority):
         is an integer; options with higher numbers have higher priority in
         automatic mode.
     '''
+    path = salt.utils.expanduser(path)
     ret = {'name': name,
            'link': link,
            'path': path,
@@ -113,6 +117,7 @@ def remove(name, path):
         is the location of one of the alternative target files.
         (e.g. /usr/bin/less)
     '''
+    path = salt.utils.expanduser(path)
     ret = {'name': name,
            'path': path,
            'result': True,
@@ -202,6 +207,7 @@ def set_(name, path):
         is the location of one of the alternative target files.
         (e.g. /usr/bin/less)
     '''
+    path = salt.utils.expanduser(path)
     ret = {'name': name,
            'path': path,
            'result': True,

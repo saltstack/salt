@@ -42,6 +42,7 @@ import os.path
 import re
 
 # Import salt libs
+import salt.utils
 from salt.ext.six import string_types
 
 import logging
@@ -191,6 +192,7 @@ def mounted(name,
 
         .. versionadded:: 2015.8.2
     '''
+    name, config = salt.utils.expanduser(name, config)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -723,6 +725,7 @@ def unmounted(name,
         The user to own the mount; this defaults to the user salt is
         running as on the minion
     '''
+    name, config = salt.utils.expanduser(name, config)
     ret = {'name': name,
            'changes': {},
            'result': True,

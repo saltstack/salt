@@ -127,6 +127,7 @@ def install(pkg=None,
         salt '*' npm.install coffee-script@1.0.1
 
     '''
+    dir = salt.utils.expanduser(dir)
     # Protect against injection
     if pkg:
         pkgs = [_cmd_quote(pkg)]
@@ -227,6 +228,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
         salt '*' npm.uninstall coffee-script
 
     '''
+    dir = salt.utils.expanduser(dir)
     # Protect against injection
     if pkg:
         pkg = _cmd_quote(pkg)
@@ -290,6 +292,7 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
         salt '*' npm.list
 
     '''
+    dir = salt.utils.expanduser(dir)
     env = env or {}
 
     if runas:

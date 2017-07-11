@@ -46,6 +46,7 @@ def installed(name, enabled=True):
         Should assistive access be enabled on this application?
 
     '''
+    name = salt.utils.expanduser(name)
     ret = {'name': name,
            'result': True,
            'comment': '',

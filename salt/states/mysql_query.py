@@ -86,6 +86,7 @@ def run_file(name,
 
     .. versionadded:: 2017.7.0
     '''
+    query_file, output = salt.utils.expanduser(query_file, output)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -237,6 +238,7 @@ def run(name,
     overwrite:
         The file or grain will be overwritten if it already exists (default)
     '''
+    output = salt.utils.expanduser(output)
     ret = {'name': name,
            'changes': {},
            'result': True,

@@ -9,6 +9,7 @@ Management of the GPG keychains
 
 
 from __future__ import absolute_import
+import salt.utils
 from salt.ext.six import string_types
 
 import logging
@@ -64,6 +65,7 @@ def present(name,
 
 
     '''
+    gnupghome = salt.utils.expanduser(gnupghome)
 
     ret = {'name': name,
            'result': True,
@@ -157,6 +159,7 @@ def absent(name,
         Override GNUPG Home directory
 
     '''
+    gnupghome = salt.utils.expanduser(gnupghome)
 
     ret = {'name': name,
            'result': True,

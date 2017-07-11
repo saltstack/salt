@@ -86,6 +86,7 @@ def latest(name,
         .. versionadded:: 2017.7.0
 
     '''
+    target = salt.utils.expanduser(target)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     if not target:

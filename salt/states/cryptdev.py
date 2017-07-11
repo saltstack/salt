@@ -31,6 +31,10 @@ Ensure that an encrypted device is mapped with the `mapped` function:
 from __future__ import absolute_import
 
 import logging
+
+# Import Salt Libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -79,6 +83,7 @@ def mapped(name,
         parameter. If the desired configuration requires two devices mapped to
         the same name, supply a list of parameters to match on.
     '''
+    keyfile, config = salt.utils.expanduser(keyfile, config)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -154,6 +159,7 @@ def unmapped(name,
     immediate
         Set if the device should be unmapped immediately. Default is ``False``.
     '''
+    config = salt.utils.expanduser(config)
     ret = {'name': name,
            'changes': {},
            'result': True,

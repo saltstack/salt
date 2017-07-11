@@ -128,6 +128,7 @@ def create(path,
 
         salt '*' virtualenv.create /path/to/new/virtualenv
     '''
+    path, venv_bin = salt.utils.expanduser(path, venv_bin)
     if venv_bin is None:
         venv_bin = __opts__.get('venv_bin') or __pillar__.get('venv_bin')
 
@@ -313,6 +314,7 @@ def get_site_packages(venv):
 
         salt '*' virtualenv.get_site_packages /path/to/my/venv
     '''
+    venv = salt.utils.expanduser(venv)
     bin_path = _verify_virtualenv(venv)
 
     ret = __salt__['cmd.exec_code_all'](
@@ -345,6 +347,7 @@ def get_distribution_path(venv, distribution):
 
         salt '*' virtualenv.get_distribution_path /path/to/my/venv my_distribution
     '''
+    venv = salt.utils.expanduser(venv)
     _verify_safe_py_code(distribution)
     bin_path = _verify_virtualenv(venv)
 
@@ -389,6 +392,7 @@ def get_resource_path(venv,
 
         salt '*' virtualenv.get_resource_path /path/to/my/venv my_package my/resource.xml
     '''
+    venv = salt.utils.expanduser(venv)
     _verify_safe_py_code(package, resource)
     bin_path = _verify_virtualenv(venv)
 
@@ -434,6 +438,7 @@ def get_resource_content(venv,
 
         salt '*' virtualenv.get_resource_content /path/to/my/venv my_package my/resource.xml
     '''
+    venv = salt.utils.expanduser(venv)
     _verify_safe_py_code(package, resource)
     bin_path = _verify_virtualenv(venv)
 

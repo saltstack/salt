@@ -123,6 +123,7 @@ def uninstalled(name, password, keychain="/Library/Keychains/System.keychain", k
         before running the import
 
     '''
+    name = salt.utils.expanduser(name)
     ret = {'name': name,
            'result': True,
            'comment': '',

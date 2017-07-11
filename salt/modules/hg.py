@@ -51,6 +51,7 @@ def revision(cwd, rev='tip', short=False, user=None):
 
         salt '*' hg.revision /path/to/repo mybranch
     '''
+    cwd = salt.utils.expanduser(cwd)
     cmd = [
             'hg',
             'id',
@@ -90,6 +91,7 @@ def describe(cwd, rev='tip', user=None):
 
         salt '*' hg.describe /path/to/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     cmd = [
             'hg',
             'log',
@@ -139,6 +141,7 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
 
         salt '*' hg.archive /path/to/repo output=/tmp/archive.tgz fmt=tgz
     '''
+    cwd, output = salt.utils.expanduser(cwd, output)
     cmd = [
             'hg',
             'archive',
@@ -182,6 +185,7 @@ def pull(cwd, opts=None, user=None, identity=None, repository=None):
 
         salt '*' hg.pull /path/to/repo opts=-u
     '''
+    cwd = salt.utils.expanduser(cwd)
     cmd = ['hg', 'pull']
     if identity:
         cmd.extend(_ssh_flag(identity))
@@ -222,6 +226,7 @@ def update(cwd, rev, force=False, user=None):
 
         salt devserver1 hg.update /path/to/repo somebranch
     '''
+    cwd = salt.utils.expanduser(cwd)
     cmd = ['hg', 'update', '{0}'.format(rev)]
     if force:
         cmd.append('-C')
@@ -262,6 +267,7 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
 
         salt '*' hg.clone /path/to/repo https://bitbucket.org/birkenfeld/sphinx
     '''
+    cwd = salt.utils.expanduser(cwd)
     cmd = ['hg', 'clone', '{0}'.format(repository), '{0}'.format(cwd)]
     if opts:
         for opt in opts.split():
@@ -297,6 +303,7 @@ def status(cwd, opts=None, user=None):
 
         salt '*' hg.status /path/to/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     def _status(cwd):
         cmd = ['hg', 'status']
         if opts:

@@ -49,6 +49,7 @@ import logging
 import os
 
 # Import salt libs
+import salt.utils
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -162,6 +163,7 @@ def built(name,
 
         .. versionadded:: 2015.8.2
     '''
+    dest_dir, spec = salt.utils.expanduser(dest_dir, spec)
     ret = {'name': name,
            'changes': {},
            'comment': '',
@@ -345,6 +347,7 @@ def repo(name,
         Timeout in seconds to wait for the prompt for inputting the passphrase.
 
     '''
+    name = salt.utils.expanduser(name)
     ret = {'name': name,
            'changes': {},
            'comment': '',

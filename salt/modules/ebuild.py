@@ -569,6 +569,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
+    sources = salt.utils.expanduser(sources)
     log.debug('Called modules.pkg.install: {0}'.format(
         {
             'name': name,

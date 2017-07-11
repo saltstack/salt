@@ -29,6 +29,9 @@ See also the module documentation
 from __future__ import absolute_import
 import logging
 
+# Import Salt Libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -65,6 +68,7 @@ def cert(name,
     :param group: group of private key
     :param certname: Name of the certificate to save
     '''
+    webroot = salt.utils.expanduser(webroot)
 
     if __opts__['test']:
         ret = {

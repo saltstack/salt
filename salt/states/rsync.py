@@ -124,6 +124,7 @@ def synchronized(name, source,
 
         .. versionadded:: Oxygen
     '''
+    passwordfile, excludefrom = salt.utils.expanduser(passwordfile, excludefrom)
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 

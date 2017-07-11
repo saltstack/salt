@@ -138,6 +138,7 @@ def rsync(src,
 
         salt '*' rsync.rsync {src} {dst} {delete=True} {excludefrom=/xx.ini} additional_opts='["--partial", "--bwlimit=5000"]'
     '''
+    src, dst, passwordfile = salt.utils.expanduser(src, dst, passwordfile)
     if not src:
         src = __salt__['config.option']('rsync.src')
     if not dst:

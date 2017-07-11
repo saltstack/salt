@@ -287,6 +287,7 @@ def list_keys(user=None, gnupghome=None):
         salt '*' gpg.list_keys
 
     '''
+    gnupghome = salt.utils.expanduser(gnupghome)
     _keys = []
     for _key in _list_keys(user, gnupghome):
         tmp = {'keyid': _key['keyid'],
@@ -334,6 +335,7 @@ def list_secret_keys(user=None, gnupghome=None):
         salt '*' gpg.list_secret_keys
 
     '''
+    gnupghome = salt.utils.expanduser(gnupghome)
     _keys = []
     for _key in _list_keys(user, gnupghome, secret=True):
         tmp = {'keyid': _key['keyid'],
@@ -522,6 +524,7 @@ def delete_key(keyid=None,
         salt '*' gpg.delete_key keyid=3FAD9F1E user=username delete_secret=True
 
     '''
+    gnupghome = salt.utils.expanduser(gnupghome)
     ret = {
            'res': True,
            'message': ''
@@ -590,6 +593,7 @@ def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
         salt '*' gpg.get_key keyid=3FAD9F1E user=username
 
     '''
+    gnupghome = salt.utils.expanduser(gnupghome)
     tmp = {}
     for _key in _list_keys(user, gnupghome):
         if (_key['fingerprint'] == fingerprint or
@@ -652,6 +656,7 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
         salt '*' gpg.get_secret_key keyid=3FAD9F1E user=username
 
     '''
+    gnupghome = salt.utils.expanduser(gnupghome)
     tmp = {}
     for _key in _list_keys(user, gnupghome, secret=True):
         if (_key['fingerprint'] == fingerprint or
@@ -793,6 +798,7 @@ def export_key(keyids=None, secret=False, user=None, gnupghome=None):
         salt '*' gpg.export_key keyids="['3FAD9F1E','3FBD8F1E']" user=username
 
     '''
+    gnupghome = salt.utils.expanduser(gnupghome)
     gpg = _create_gpg(user, gnupghome)
 
     if isinstance(keyids, six.string_types):
@@ -1003,6 +1009,7 @@ def sign(user=None,
         salt '*' gpg.sign filename='/path/to/important.file' use_passphrase=True
 
     '''
+    output, gnupghome = salt.utils.expanduser(output, gnupghome)
     gpg = _create_gpg(user, gnupghome)
     if use_passphrase:
         gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
@@ -1070,6 +1077,7 @@ def verify(text=None,
         salt '*' gpg.verify filename='/path/to/important.file' use_passphrase=True
 
     '''
+    gnupghome = salt.utils.expanduser(gnupghome)
     gpg = _create_gpg(user)
 
     if text:
@@ -1154,6 +1162,7 @@ def encrypt(user=None,
         salt '*' gpg.encrypt filename='/path/to/important.file' use_passphrase=True
 
     '''
+    output, gnupghome = salt.utils.expanduser(output, gnupghome)
     ret = {
         'res': True,
         'comment': ''
@@ -1249,6 +1258,7 @@ def decrypt(user=None,
         salt '*' gpg.decrypt filename='/path/to/important.file.gpg' use_passphrase=True
 
     '''
+    gnupghome = salt.utils.expanduser(gnupghome)
     ret = {
         'res': True,
         'comment': ''

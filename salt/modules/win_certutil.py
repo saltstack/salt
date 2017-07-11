@@ -42,6 +42,7 @@ def get_cert_serial(cert_file):
 
         salt '*' certutil.get_cert_serial <certificate name>
     '''
+    cert_file = salt.utils.expanduser(cert_file)
     cmd = "certutil.exe -silent -verify {0}".format(cert_file)
     out = __salt__['cmd.run'](cmd)
     # match serial number by paragraph to work with multiple languages
@@ -93,6 +94,7 @@ def add_store(source, store, saltenv='base'):
 
         salt '*' certutil.add_store salt://cert.cer TrustedPublisher
     '''
+    source = salt.utils.expanduser(source)
     cert_file = __salt__['cp.cache_file'](source, saltenv)
     cmd = "certutil.exe -addstore {0} {1}".format(store, cert_file)
     return __salt__['cmd.run'](cmd)
@@ -119,6 +121,7 @@ def del_store(source, store, saltenv='base'):
 
         salt '*' certutil.del_store salt://cert.cer TrustedPublisher
     '''
+    source = salt.utils.expanduser(source)
     cert_file = __salt__['cp.cache_file'](source, saltenv)
     serial = get_cert_serial(cert_file)
     cmd = "certutil.exe -delstore {0} {1}".format(store, serial)

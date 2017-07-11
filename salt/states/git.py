@@ -571,6 +571,7 @@ def latest(name,
                   - pkg: git
                   - ssh_known_hosts: gitlab.example.com
     '''
+    target, identity = salt.utils.expanduser(target, identity)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     kwargs = salt.utils.clean_kwargs(**kwargs)
@@ -1917,6 +1918,7 @@ def present(name,
     .. _`git-init(1)`: http://git-scm.com/docs/git-init
     .. _`worktree`: http://git-scm.com/docs/git-worktree
     '''
+    name = salt.utils.expanduser(name)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     # If the named directory is a git repo return True
@@ -2104,6 +2106,7 @@ def detached(name,
         passed to the ``unless`` option returns false
 
     '''
+    target, identity = salt.utils.expanduser(target, identity)
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -2588,6 +2591,7 @@ def config_unset(name,
             - name: foo.bar
             - global: True
     '''
+    repo = salt.utils.expanduser(repo)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -2833,6 +2837,7 @@ def config_set(name,
             - user: foo
             - global: True
     '''
+    repo = salt.utils.expanduser(repo)
     ret = {'name': name,
            'changes': {},
            'result': True,

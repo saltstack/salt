@@ -1121,6 +1121,7 @@ def is_encrypted(name, clean=False, saltenv='base'):
             salt '*' archive.is_encrypted https://domain.tld/myfile.zip clean=True
             salt '*' archive.is_encrypted ftp://10.1.2.3/foo.zip
     '''
+    name = salt.utils.expanduser(name)
     cached = __salt__['cp.cache_file'](name, saltenv)
     if not cached:
         raise CommandExecutionError('Failed to cache {0}'.format(name))

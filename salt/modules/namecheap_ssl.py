@@ -561,6 +561,7 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
 
         salt 'my-minion' namecheap_ssl.parse_csr my-csr-file PremiumSSL
     '''
+    csr_file = salt.utils.expanduser(csr_file)
     valid_certs = set(['QuickSSL Premium',
                        'RapidSSL',
                        'RapidSSL Wildcard',

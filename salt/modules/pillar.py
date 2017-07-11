@@ -530,6 +530,7 @@ def file_exists(path, saltenv=None):
 
         salt '*' pillar.file_exists foo/bar.sls
     '''
+    path = salt.utils.expanduser(path)
     pillar_roots = __opts__.get('pillar_roots')
     if not pillar_roots:
         raise CommandExecutionError('No pillar_roots found. Are you running '

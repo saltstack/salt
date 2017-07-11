@@ -13,6 +13,9 @@ import os
 import re
 import tempfile
 
+# Import Salt Libs
+import salt.utils
+
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'vbox_guest'
@@ -65,6 +68,7 @@ def additions_umount(mount_point):
     :param mount_point: directory VirtualBox Guest Additions is mounted to
     :return: True or an string with error
     '''
+    mount_point = salt.utils.expanduser(mount_point)
     ret = __salt__['mount.umount'](mount_point)
     if ret:
         os.rmdir(mount_point)

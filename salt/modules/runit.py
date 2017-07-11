@@ -309,6 +309,7 @@ def add_svc_avail_path(path):
     path
         directory to add to AVAIL_SVR_DIRS
     '''
+    path = salt.utils.expanduser(path)
     if os.path.exists(path):
         if path not in AVAIL_SVR_DIRS:
             AVAIL_SVR_DIRS.append(path)

@@ -161,6 +161,7 @@ import os
 
 # Import Salt lobs
 import salt.ext.six as six
+import salt.utils
 from salt.exceptions import CommandExecutionError
 
 # Get logging started
@@ -705,6 +706,7 @@ def firmware_update(hosts=None, directory=''):
                 salt://firmware.exe
             directory: /opt/firmwares
     '''
+    directory = salt.utils.expanduser(directory)
     ret = {}
     ret.changes = {}
     success = True

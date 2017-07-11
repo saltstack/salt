@@ -740,6 +740,7 @@ def get_source_sum(file_name='',
         salt '*' file.get_source_sum /tmp/foo.tar.gz source=http://mydomain.tld/foo.tar.gz source_hash=https://mydomain.tld/hashes.md5
         salt '*' file.get_source_sum /tmp/foo.tar.gz source=http://mydomain.tld/foo.tar.gz source_hash=https://mydomain.tld/hashes.md5 source_hash_name=./dir2/foo.tar.gz
     '''
+    file_name = salt.utils.expanduser(file_name)
     def _invalid_source_hash_format():
         '''
         DRY helper for reporting invalid source_hash input
@@ -857,6 +858,8 @@ def check_hash(path, file_hash):
         salt '*' file.check_hash /etc/fstab e138491e9d5b97023cea823fe17bac22
         salt '*' file.check_hash /etc/fstab md5:e138491e9d5b97023cea823fe17bac22
     '''
+    path = salt.utils.expanduser(path)
+    path = salt.utils.expanduser(path)
     path = salt.utils.expanduser(path)
 
     if not isinstance(file_hash, six.string_types):
@@ -2466,6 +2469,7 @@ def blockreplace(path,
 
     '''
     path = salt.utils.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.exists(path):
         raise SaltInvocationError('File not found: {0}'.format(path))
@@ -2687,6 +2691,7 @@ def patch(originalfile, patchfile, options='', dry_run=False):
 
     .. code-block:: bash
 
+    originalfile, patchfile = salt.utils.expanduser(originalfile, patchfile)
         salt '*' file.patch /opt/file.txt /tmp/file.txt.patch
     '''
     patchpath = salt.utils.which('patch')
@@ -2864,6 +2869,7 @@ def append(path, *args, **kwargs):
             salt '*' file.append /etc/motd args="['cheese=spam','spam=cheese']"
 
     '''
+    path = salt.utils.expanduser(path)
     path = salt.utils.expanduser(path)
 
     # Largely inspired by Fabric's contrib.files.append()
@@ -3914,6 +3920,7 @@ def get_managed(
     CLI Example:
 
     .. code-block:: bash
+    name = salt.utils.expanduser(name)
 
         salt '*' file.get_managed /etc/httpd/conf.d/httpd.conf jinja salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' None root root '755' base None None
     '''
@@ -4646,9 +4653,11 @@ def check_file_meta(
     saltenv
         Salt environment used to resolve source files
 
+    name = salt.utils.expanduser(name)
     contents
         File contents
     '''
+    name, contents = salt.utils.expanduser(name, contents)
     changes = {}
     if not source_sum:
         source_sum = dict()
@@ -5958,6 +5967,7 @@ def grep(path,
     .. code-block:: bash
 
         salt '*' file.grep /etc/passwd nobody
+    path = salt.utils.expanduser(path)
         salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr -- -i
         salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr -- -i -B2
         salt '*' file.grep "/etc/sysconfig/network-scripts/*" ipaddr -- -i -l

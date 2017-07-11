@@ -8,6 +8,8 @@ For documentation on setting up the cisconso proxy minion look in the documentat
 for :mod:`salt.proxy.cisconso <salt.proxy.cisconso>`.
 '''
 
+# Import Salt Libs
+import salt.utils
 
 def __virtual__():
     return 'cisconso.set_data_value' in __salt__
@@ -46,6 +48,7 @@ def value_present(name, datastore, path, config):
                     "list-name": foobar
 
     '''
+    path, config = salt.utils.expanduser(path, config)
     ret = {'name': name,
            'result': False,
            'changes': {},

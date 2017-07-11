@@ -36,6 +36,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+import salt.utils
 import salt.utils.compat
 from salt.utils import clean_kwargs
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -280,6 +281,7 @@ def download_object(container_name, object_name, destination_path, profile,
         salt myminion libcloud_storage.download_object MyFolder me.jpg /tmp/me.jpg profile1
 
     '''
+    destination_path = salt.utils.expanduser(destination_path)
     conn = _get_driver(profile=profile)
     obj = conn.get_object(container_name, object_name)
     libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
@@ -327,6 +329,7 @@ def upload_object(file_path, container_name, object_name, profile, extra=None,
         salt myminion libcloud_storage.upload_object /file/to/me.jpg MyFolder me.jpg profile1
 
     '''
+    file_path = salt.utils.expanduser(file_path)
     conn = _get_driver(profile=profile)
     libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     container = conn.get_container(container_name)

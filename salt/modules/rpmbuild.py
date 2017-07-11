@@ -419,6 +419,7 @@ def make_repo(repodir,
         salt '*' pkgbuild.make_repo /var/www/html/
 
     '''
+    repodir = salt.utils.expanduser(repodir)
     SIGN_PROMPT_RE = re.compile(r'Enter pass phrase: ', re.M)
 
     define_gpg_name = ''

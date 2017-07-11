@@ -86,6 +86,7 @@ def keys(name, basepath='/etc/pki', **kwargs):
         .. versionadded:: Oxygen
 
     '''
+    basepath = salt.utils.expanduser(basepath)
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
     # Grab all kwargs to make them available as pillar values

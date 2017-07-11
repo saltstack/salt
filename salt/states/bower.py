@@ -33,6 +33,7 @@ Example:
 from __future__ import absolute_import
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
@@ -85,6 +86,7 @@ def installed(name,
         state function.
 
     '''
+    dir = salt.utils.expanduser(dir)
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     if pkgs is not None:
@@ -201,6 +203,7 @@ def removed(name, dir, user=None):
         The user to run Bower with
 
     '''
+    dir = salt.utils.expanduser(dir)
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     try:

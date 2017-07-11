@@ -289,6 +289,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
+    sources = salt.utils.expanduser(sources)
     refreshdb = salt.utils.is_true(refresh)
     pkg_to_install = []
 
