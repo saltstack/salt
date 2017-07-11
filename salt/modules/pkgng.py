@@ -1739,7 +1739,7 @@ def updating(name,
              root=None,
              filedate=None,
              filename=None):
-    ''''
+    '''
     Displays UPDATING entries of software packages
 
     CLI Example:
