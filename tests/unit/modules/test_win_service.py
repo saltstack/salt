@@ -214,7 +214,8 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             Test to enable the named service to start at boot
         '''
         mock_modify = MagicMock(return_value=True)
-        mock_info = MagicMock(return_value={'StartType': 'Auto'})
+        mock_info = MagicMock(return_value={'StartType': 'Auto',
+                                            'StartTypeDelayed': False})
         with patch.object(win_service, 'modify', mock_modify):
             with patch.object(win_service, 'info', mock_info):
                 self.assertTrue(win_service.enable('spongebob'))

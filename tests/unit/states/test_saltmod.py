@@ -146,7 +146,17 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         del ret['__jid__']
         with patch.dict(saltmod.__opts__, {'test': False}):
             with patch.dict(saltmod.__salt__, {'saltutil.cmd': MagicMock(return_value=test_batch_return)}):
-                self.assertDictEqual(saltmod.state(name, tgt, highstate=True), ret)
+                state_run = saltmod.state(name, tgt, highstate=True)
+
+                # Test return without checking the comment contents. Comments are tested later.
+                comment = state_run.pop('comment')
+                ret.pop('comment')
+                self.assertDictEqual(state_run, ret)
+
+                # Check the comment contents in a non-order specific way (ordering fails sometimes on PY3)
+                self.assertIn('States ran successfully. No changes made to', comment)
+                for minion in ['minion1', 'minion2', 'minion3']:
+                    self.assertIn(minion, comment)
 
     # 'function' function tests: 1
 

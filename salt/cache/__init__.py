@@ -77,6 +77,7 @@ class Cache(object):
         self.serial = Serial(opts)
         self._modules = None
         self._kwargs = kwargs
+        self._kwargs['cachedir'] = self.cachedir
 
     def __lazy_init(self):
         self._modules = salt.loader.cache(self.opts, self.serial)
