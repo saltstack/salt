@@ -238,6 +238,20 @@ iface_name
 Optional. The name to apply to the VM's network interface. If not supplied, the
 value will be set to ``<VM name>-iface0``.
 
+dns_servers
+-----------
+Optional. A **list** of the DNS servers to configure for the network interface
+(will be set on the VM by the DHCP of the VNET).
+
+.. code-block:: yaml
+
+    my-azurearm-profile:
+      provider: azurearm-provider
+      network: mynetwork
+      dns_servers:
+        - 10.1.1.4
+        - 10.1.1.5
+
 availability_set
 ----------------
 Optional. If set, the VM will be added to the specified availability set.

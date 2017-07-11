@@ -1370,12 +1370,21 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             (importlib.machinery.SourcelessFileLoader, importlib.machinery.BYTECODE_SUFFIXES),
                             (importlib.machinery.ExtensionFileLoader, importlib.machinery.EXTENSION_SUFFIXES),
                         ]
-                        file_finder = importlib.machinery.FileFinder(fpath, *loader_details)
+                        file_finder = importlib.machinery.FileFinder(
+                            fpath_dirname,
+                            *loader_details
+                        )
                         spec = file_finder.find_spec(mod_namespace)
                         if spec is None:
                             raise ImportError()
-                        mod = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mod)
+                        # TODO: Get rid of load_module in favor of
+                        # exec_module below. load_module is deprecated, but
+                        # loading using exec_module has been causing odd things
+                        # with the magic dunders we pack into the loaded
+                        # modules, most notably with salt-ssh's __opts__.
+                        mod = spec.loader.load_module()
+                        # mod = importlib.util.module_from_spec(spec)
+                        # spec.loader.exec_module(mod)
                         # pylint: enable=no-member
                         sys.modules[mod_namespace] = mod
                     else:
@@ -1392,8 +1401,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         )
                         if spec is None:
                             raise ImportError()
-                        mod = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mod)
+                        # TODO: Get rid of load_module in favor of
+                        # exec_module below. load_module is deprecated, but
+                        # loading using exec_module has been causing odd things
+                        # with the magic dunders we pack into the loaded
+                        # modules, most notably with salt-ssh's __opts__.
+                        mod = spec.loader.load_module()
+                        #mod = importlib.util.module_from_spec(spec)
+                        #spec.loader.exec_module(mod)
                         # pylint: enable=no-member
                         sys.modules[mod_namespace] = mod
                     else:
