@@ -1052,7 +1052,7 @@ def remove(path, force=False):
     # Symlinks. The shutil.rmtree function will remove the contents of
     # the Symlink source in windows.
 
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     # Does the file/folder exists
     if not os.path.exists(path):
@@ -1277,7 +1277,7 @@ def mkdir(path,
     if not os.path.isdir(drive):
         raise CommandExecutionError('Drive {0} is not mapped'.format(drive))
 
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
     path = os.path.expandvars(path)
 
     if not os.path.isdir(path):
@@ -1365,7 +1365,7 @@ def makedirs_(path,
         # Specify advanced attributes with a list
         salt '*' file.makedirs C:\\Temp\\ Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder_only'}}"
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     # walk up the directory structure until we find the first existing
     # directory
@@ -1466,7 +1466,7 @@ def makedirs_perms(path,
         salt '*' file.makedirs_perms C:\\Temp\\ Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'this_folder_files'}}"
     '''
     # Expand any environment variables
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
     path = os.path.expandvars(path)
 
     # Get parent directory (head)
@@ -1556,7 +1556,7 @@ def check_perms(path,
         # Specify advanced attributes with a list
         salt '*' file.check_perms C:\\Temp\\ Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'files_only'}}"
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not ret:
         ret = {'name': path,
