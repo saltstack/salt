@@ -618,7 +618,8 @@ def extracted(name,
                - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
                - source_hash_update: True
     '''
-    name, source_hash_name, if_missing, enforce_ownership_on = salt.utils.expanduser(name, source_hash_name, if_missing, enforce_ownership_on)
+    name, source_hash_name, if_missing, enforce_ownership_on = salt.utils.expanduser(
+        name, source_hash_name, if_missing, enforce_ownership_on)
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
 
     # Remove pub kwargs as they're irrelevant here.
