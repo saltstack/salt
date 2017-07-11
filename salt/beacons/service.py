@@ -25,15 +25,22 @@ def validate(config):
     if not isinstance(config, list):
         return False, ('Configuration for service beacon must be a list.')
     else:
-        for config_item in config:
-            if not isinstance(config_item, dict):
-                return False, ('Configuration for service beacon must '
-                               'be a list of dictionaries.')
-            else:
-                for dict_item in config_item:
-                    if not isinstance(config_item, dict):
-                        return False, ('Configuration for service beacon must '
-                                       'be a list of dictionaries.')
+        _config = {}
+        list(map(_config.update, config))
+
+        if 'services' not in _config:
+            return False, ('Configuration for service beacon'
+                           ' requires services.')
+        else:
+            for config_item in _config['services']:
+                if not isinstance(config_item, dict):
+                    return False, ('Configuration for service beacon must '
+                                   'be a list of dictionaries.')
+                else:
+                    for dict_item in config_item:
+                        if not isinstance(config_item, dict):
+                            return False, ('Configuration for service beacon '
+                                           'must be a list of dictionaries.')
 
     return True, 'Valid beacon configuration'
 
@@ -48,8 +55,9 @@ def beacon(config):
 
         beacons:
           service:
-            - salt-master:
-            - mysql:
+            - service:
+                salt-master:
+                mysql:
 
     The config above sets up beacons to check for
     the salt-master and mysql services.
@@ -92,15 +100,19 @@ def beacon(config):
 
         beacons:
           service:
-            - nginx:
-                onchangeonly: True
-                uncleanshutdown: /run/nginx.pid
+            - services:
+                nginx:
+                  onchangeonly: True
+                  uncleanshutdown: /run/nginx.pid
     '''
     ret = []
-    for service_config in config:
+    _config = {}
+    list(map(_config.update, config))
+
+    for service in _config.get('services', {}):
         ret_dict = {}
 
-        service = service_config.keys()[0]
+        service_config = _config['services'][service]
 
         ret_dict[service] = {'running': __salt__['service.status'](service)}
         ret_dict['service_name'] = service

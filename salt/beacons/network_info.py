@@ -91,16 +91,16 @@ def beacon(config):
         beacons:
           network_info:
             - interfaces:
-                - eth0:
-                    type: equal
-                    bytes_sent: 100000
-                    bytes_recv: 100000
-                    packets_sent: 100000
-                    packets_recv: 100000
-                    errin: 100
-                    errout: 100
-                    dropin: 100
-                    dropout: 100
+                eth0:
+                  type: equal
+                  bytes_sent: 100000
+                  bytes_recv: 100000
+                  packets_sent: 100000
+                  packets_recv: 100000
+                  errin: 100
+                  errout: 100
+                  dropin: 100
+                  dropout: 100
 
     Emit beacon when any values are greater
     than configured values.
@@ -110,16 +110,16 @@ def beacon(config):
         beacons:
           network_info:
             - interfaces:
-                - eth0:
-                    type: greater
-                    bytes_sent: 100000
-                    bytes_recv: 100000
-                    packets_sent: 100000
-                    packets_recv: 100000
-                    errin: 100
-                    errout: 100
-                    dropin: 100
-                    dropout: 100
+                eth0:
+                  type: greater
+                  bytes_sent: 100000
+                  bytes_recv: 100000
+                  packets_sent: 100000
+                  packets_recv: 100000
+                  errin: 100
+                  errout: 100
+                  dropin: 100
+                  dropout: 100
 
 
     '''
