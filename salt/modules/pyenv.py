@@ -15,6 +15,9 @@ import os
 import re
 import logging
 
+# Import salt libs
+import salt.utils
+
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
@@ -74,7 +77,7 @@ def _pyenv_path(runas=None):
     else:
         path = __salt__['config.option']('pyenv.root') or '~{0}/.pyenv'.format(runas)
 
-    return os.path.expanduser(path)
+    return salt.utils.expanduser(path)
 
 
 def _install_pyenv(path, runas=None):
@@ -113,7 +116,7 @@ def install(runas=None, path=None):
         salt '*' pyenv.install
     '''
     path = path or _pyenv_path(runas)
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
     return _install_pyenv(path, runas)
 
 
@@ -128,7 +131,7 @@ def update(runas=None, path=None):
         salt '*' pyenv.update
     '''
     path = path or _pyenv_path(runas)
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     return _update_pyenv(path, runas)
 
