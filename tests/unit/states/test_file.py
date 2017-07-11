@@ -550,7 +550,10 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                               'G12', 'G12', 'G12', 'G12', 'G12'])
             mock_if = MagicMock(side_effect=[True, False, False, False, False,
                                              False, False, False])
-            mock_ret = MagicMock(return_value=ret)
+            if salt.utils.is_windows():
+                mock_ret = MagicMock(return_value=ret)
+            else:
+                mock_ret = MagicMock(return_value=(ret, None))
             mock_dict = MagicMock(return_value={})
             mock_cp = MagicMock(side_effect=[Exception, True])
             mock_ex = MagicMock(side_effect=[Exception, {'changes': {name: name}},
