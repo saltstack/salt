@@ -50,54 +50,54 @@ states.docker_image.present:build 	Path to directory on the Minion containing a 
 states.docker_image.present:dockerfile 	Allows for an alternative Dockerfile to be specified.  Path to alternativeDockefile is relative to the build path for the Docker container.
 # states.esxi.ssh_configured:ssh_key 	Public SSH key to added to the authorized_keys file on the ESXi host. You canuse ``ssh_key`` or ``ssh_key_file``, but not both.
 # states.esxi.ssh_configured:ssh_key_file 	File containing the public SSH key to be added to the authorized_keys file onthe ESXi host. You can use ``ssh_key_file`` or ``ssh_key``, but not both.
-states.file.absent:name 	The path which should be deleted
-states.file.append:name 	The location of the file to append to.
+# states.file.absent:name 	The path which should be deleted
+# states.file.append:name 	The location of the file to append to.
 # states.file.append:source 	A single source file to append. This source file can be hosted on eitherthe salt master server, or on an HTTP or FTP server. Both HTTPS andHTTP are supported as well as downloading directly from Amazon S3compatible URLs with both pre-configured and automatic IAM credentials(see s3.get state documentation). File retrieval from Openstack Swiftobject storage is supported via swift://container/object_path URLs(see swift.get documentation).
 # states.file.append:source_hash 	This can be one of the following:1. a source hash string2. the URI of a file that contains source hash strings
-states.file.blockreplace:name 	Filesystem path to the file to be edited
+# states.file.blockreplace:name 	Filesystem path to the file to be edited
 # states.file.blockreplace:source 	The source file to download to the minion, this source file can behosted on either the salt master server, or on an HTTP or FTP server.Both HTTPS and HTTP are supported as well as downloading directlyfrom Amazon S3 compatible URLs with both pre-configured and automaticIAM credentials. (see s3.get state documentation)File retrieval from Openstack Swift object storage is supported viaswift://container/object_path URLs, see swift.get documentation.For files hosted on the salt file server, if the file is located onthe master in the directory named spam, and is called eggs, the sourcestring is salt://spam/eggs. If source is left blank or None(use ~ in YAML), the file will be created as an empty file andthe content will not be managed. This is also the case when a filealready exists and the source is undefined; the contents of the filewill not be changed or managed.
 # states.file.blockreplace:source_hash 	This can be one of the following:1. a source hash string2. the URI of a file that contains source hash strings
 # states.file.blockreplace:backup 	The file extension to use for a backup of the file if any edit is made.Set this to ``False`` to skip making a backup.
-states.file.comment:name 	The full path to the file to be edited
-states.file.copy:name 	The location of the file to copy to
-states.file.copy:source 	The location of the file to copy to the location specified with name
+# states.file.comment:name 	The full path to the file to be edited
+# states.file.copy:name 	The location of the file to copy to
+# states.file.copy:source 	The location of the file to copy to the location specified with name
 states.file.decode:name 	Path of the file to be written.
 # states.file.decode:contents_pillar 	A Pillar path to the encoded file. Uses the same path syntax as:py:func:`pillar.get <salt.modules.pillar.get>`. The:py:func:`hashutil.base64_encodefile<salt.modules.hashutil.base64_encodefile>` function can load encodedcontent into Pillar. Either this option or ``encoded_data`` must bespecified.
-states.file.directory:name 	The location to create or manage a directory
+# states.file.directory:name 	The location to create or manage a directory
 # states.file.directory:recurse 	Enforce user/group ownership and mode of directory recursively. Acceptsa list of strings representing what you would like to recurse.  If``mode`` is defined, will recurse on both ``file_mode`` and ``dir_mode`` ifthey are defined.  If ``ignore_files`` or ``ignore_dirs`` is included, files ordirectories will be left unchanged respectively.Example:
-states.file.directory:backupname 	If the name of the directory exists and is not a directory, it will berenamed to the backupname. If the backupname alreadyexists and force is False, the state will fail. Otherwise, thebackupname will be removed first.
-states.file.exists:name 	Absolute path which must exist
-states.file.line:name 	Filesystem path to the file to be edited.
+# states.file.directory:backupname 	If the name of the directory exists and is not a directory, it will berenamed to the backupname. If the backupname alreadyexists and force is False, the state will fail. Otherwise, thebackupname will be removed first.
+# states.file.exists:name 	Absolute path which must exist
+# states.file.line:name 	Filesystem path to the file to be edited.
 # states.file.line:location 	Defines where to place content in the line. Note this option is onlyused when ``mode=insert`` is specified. If a location is passed in, ittakes precedence over both the ``before`` and ``after`` kwargs. Validlocations are:
-states.file.line:create 	Create an empty file if doesn
-states.file.managed:name 	The location of the file to manage
+# states.file.line:create 	Create an empty file if doesn
+# states.file.managed:name 	The location of the file to manage
 # states.file.managed:source 	The source file to download to the minion, this source file can behosted on either the salt master server (``salt://``), the salt minionlocal file system (``/``), or on an HTTP or FTP server (``http(s)://``,``ftp://``).
 # states.file.managed:source_hash 	This can be one of the following:1. a source hash string2. the URI of a file that contains source hash strings
-states.file.managed:source_hash_name 	When ``source_hash`` refers to a hash file, Salt will try to find thecorrect hash by matching the filename/URI associated with that hash. Bydefault, Salt will look for the filename being managed. When managing afile at path ``/tmp/foo.txt``, then the following line in a hash filewould match:
+# states.file.managed:source_hash_name 	When ``source_hash`` refers to a hash file, Salt will try to find thecorrect hash by matching the filename/URI associated with that hash. Bydefault, Salt will look for the filename being managed. When managing afile at path ``/tmp/foo.txt``, then the following line in a hash filewould match:
 # states.file.managed:encoding 	Encoding used for the file, e.g. ```UTF-8```, ```base64```.Default is None, which means str() will be applied to contents toensure an ascii encoded file and backwards compatibility.See https://docs.python.org/3/library/codecs.html#standard-encodingsfor available encodings.
 # states.file.managed:tmp_ext 	Suffix for temp file created by ``check_cmd``. Useful for checkersdependent on config file extension (e.g. the init-checkconf upstartconfig checker).
-states.file.missing:name 	Absolute path which must NOT exist
-states.file.mknod:name 	name of the file
-states.file.patch:name 	The file or directory to which the patch will be applied.
+# states.file.missing:name 	Absolute path which must NOT exist
+# states.file.mknod:name 	name of the file
+# states.file.patch:name 	The file or directory to which the patch will be applied.
 # states.file.patch:source 	The source patch to download to the minion, this source file must behosted on the salt master server. If the file is located in thedirectory named spam, and is called eggs, the source string issalt://spam/eggs. A source is required.
-states.file.recurse:name 	The directory to set the recursion in
+# states.file.recurse:name 	The directory to set the recursion in
 # states.file.recurse:source 	The source directory, this directory is located on the salt master fileserver and is specified with the salt:// protocol. If the directory islocated on the master in the directory named spam, and is called eggs,the source string is salt://spam/eggs
-states.file.rename:name 	The location of the file to rename to
-states.file.rename:source 	The location of the file to move to the location specified with name
-states.file.replace:name 	Filesystem path to the file to be edited. If a symlink is specified, itwill be resolved to its target.
+# states.file.rename:name 	The location of the file to rename to
+# states.file.rename:source 	The location of the file to move to the location specified with name
+# states.file.replace:name 	Filesystem path to the file to be edited. If a symlink is specified, itwill be resolved to its target.
 # states.file.replace:backup 	The file extension to use for a backup of the file before editing. Setto ``False`` to skip making a backup.
-states.file.retention_schedule:name 	The filesystem path to the directory containing backups to be managed.
-states.file.serialize:name 	The location of the file to create
+# states.file.retention_schedule:name 	The filesystem path to the directory containing backups to be managed.
+# states.file.serialize:name 	The location of the file to create
 # states.file.serialize:dataset_pillar 	Operates like ``dataset``, but draws from a value stored in pillar,using the pillar path syntax used in :mod:`pillar.get<salt.modules.pillar.get>`. This is useful when the pillar valuecontains newlines, as referencing a pillar variable using a jinja/makotemplate can result in YAML formatting issues due to the newlinescausing indentation mismatches.
-states.file.shortcut:name 	The location of the shortcut to create. Must end with either".lnk" or ".url"
-states.file.shortcut:target 	The location that the shortcut points to
-states.file.shortcut:working_dir 	Working directory in which to execute target
-states.file.symlink:name 	The location of the symlink to create
-states.file.symlink:target 	The location that the symlink points to
-states.file.touch:name 	name of the file
+# states.file.shortcut:name 	The location of the shortcut to create. Must end with either".lnk" or ".url"
+# states.file.shortcut:target 	The location that the shortcut points to
+# states.file.shortcut:working_dir 	Working directory in which to execute target
+# states.file.symlink:name 	The location of the symlink to create
+# states.file.symlink:target 	The location that the symlink points to
+# states.file.touch:name 	name of the file
 # states.file.touch:atime 	atime of the file
 # states.file.touch:mtime 	mtime of the file
-states.file.uncomment:name 	The full path to the file to be edited
+# states.file.uncomment:name 	The full path to the file to be edited
 states.git.detached:target 	Name of the target directory where repository is about to be cloned.
 states.git.detached:identity 	A path on the minion (or a SaltStack fileserver URL, e.g.``salt://path/to/identity_file``) to a private key to use for SSHauthentication.
 states.git.latest:target 	Name of the target directory where repository is about to be cloned
@@ -427,8 +427,8 @@ modules.dockermod.save:path 	Absolute path on the Minion where the image will be
 modules.dockermod.script:source 	Path to the script. Can be a local path on the Minion or a remote filefrom the Salt fileserver.
 modules.dockermod.script_retcode:source 	Path to the script. Can be a local path on the Minion or a remote filefrom the Salt fileserver.
 modules.ebuild.install:sources 	A list of tbz2 packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
-modules.file.append:path 	path to file
-modules.file.blockreplace:path 	Filesystem path to the file to be edited
+# modules.file.append:path 	path to file
+# modules.file.blockreplace:path 	Filesystem path to the file to be edited
 # modules.file.blockreplace:backup 	The file extension to use for a backup of the file if any edit is made.Set to ``False`` to skip making a backup.
 modules.file.check_file_meta:name 	Path to file destination
 # modules.file.check_file_meta:sfn 	Template-processed source file contents
@@ -436,60 +436,60 @@ modules.file.check_file_meta:name 	Path to file destination
 # modules.file.check_file_meta:user 	Destination file user owner
 # modules.file.check_file_meta:group 	Destination file group owner
 # modules.file.check_file_meta:mode 	Destination file permissions mode
-modules.file.check_hash:path 	Path to a file local to the minion.
-modules.file.chgrp:path 	path to the file or directory
-modules.file.chown:path 	path to the file or directory
-modules.file.comment:path 	The full path to the file to be edited
-modules.file.comment_line:path 	string The full path to the text file.
+# modules.file.check_hash:path 	Path to a file local to the minion.
+# modules.file.chgrp:path 	path to the file or directory
+# modules.file.chown:path 	path to the file or directory
+# modules.file.comment:path 	The full path to the file to be edited
+# modules.file.comment_line:path 	string The full path to the text file.
 # modules.file.comment_line:char 	string The character used to comment a line in the type of file you
 # modules.file.comment_line:backup 	string The file extension to give the backup file. Default is
-modules.file.delete_backup:path 	The path on the minion to check for backups
-modules.file.get_gid:path 	file or directory of which to get the gid
-modules.file.get_group:path 	file or directory of which to get the group
-modules.file.get_hash:path 	path to the file or directory
+# modules.file.delete_backup:path 	The path on the minion to check for backups
+# modules.file.get_gid:path 	file or directory of which to get the gid
+# modules.file.get_group:path 	file or directory of which to get the group
+# modules.file.get_hash:path 	path to the file or directory
 modules.file.get_managed:name 	location where the file lives on the server
 # modules.file.get_managed:source 	managed source file
 # modules.file.get_managed:source_hash 	hash of the source file
 # modules.file.get_managed:user 	Owner of file
 # modules.file.get_managed:group 	Group owner of file
 # modules.file.get_managed:mode 	Permissions of file
-modules.file.get_mode:path 	file or directory of which to get the mode
+# modules.file.get_mode:path 	file or directory of which to get the mode
 modules.file.get_source_sum:file_name 	Optional file name being managed, for matching with:py:func:`file.extract_hash <salt.modules.file.extract_hash>`.
 # modules.file.get_source_sum:source 	Source file, as used in :py:mod:`file <salt.states.file>` and otherstates. If ``source_hash`` refers to a file containing hashes, thenthis filename will be used to match a filename in that file. If the``source_hash`` is a hash expression, then this argument will beignored.
 # modules.file.get_source_sum:source_hash 	Hash file/expression, as used in :py:mod:`file <salt.states.file>` andother states. If this value refers to a remote URL or absolute path toa local file, it will be cached and :py:func:`file.extract_hash<salt.modules.file.extract_hash>` will be used to obtain a hash fromit.
 # modules.file.get_source_sum:source_hash_name 	Specific file name to look for when ``source_hash`` refers to a remotefile, used to disambiguate ambiguous matches.
-modules.file.get_sum:path 	path to the file or directory
-modules.file.get_uid:path 	file or directory of which to get the uid
-modules.file.get_user:path 	file or directory of which to get the user
-modules.file.grep:path 	Path to the file to be searched
-modules.file.lchown:path 	path to the file or directory
-modules.file.line:path 	Filesystem path to the file to be edited.
+# modules.file.get_sum:path 	path to the file or directory
+# modules.file.get_uid:path 	file or directory of which to get the uid
+# modules.file.get_user:path 	file or directory of which to get the user
+# modules.file.grep:path 	Path to the file to be searched
+# modules.file.lchown:path 	path to the file or directory
+# modules.file.line:path 	Filesystem path to the file to be edited.
 # modules.file.line:location 	Defines where to place content in the line. Note this option is onlyused when ``mode=insert`` is specified. If a location is passed in, ittakes precedence over both the ``before`` and ``after`` kwargs. Validlocations are:
-modules.file.list_backup:path 	The path on the minion to check for backups
-modules.file.list_backups:path 	The path on the minion to check for backups
-modules.file.list_backups_dir:path 	The directory on the minion to check for backups
-modules.file.manage_file:name 	location to place the file
-modules.file.manage_file:sfn 	location of cached file on the minion
+# modules.file.list_backup:path 	The path on the minion to check for backups
+# modules.file.list_backups:path 	The path on the minion to check for backups
+# modules.file.list_backups_dir:path 	The directory on the minion to check for backups
+# modules.file.manage_file:name 	location to place the file
+# modules.file.manage_file:sfn 	location of cached file on the minion
 # modules.file.manage_file:source 	file reference on the master
 modules.file.patch:originalfile 	The full path to the file or directory to be patched
 modules.file.patch:patchfile 	A patch file to apply to ``originalfile``
-modules.file.prepend:path 	path to file
-modules.file.psed:path 	The full path to the file to be edited
-modules.file.remove_backup:path 	The path on the minion to check for backups
-modules.file.replace:path 	Filesystem path to the file to be edited. If a symlink is specified, itwill be resolved to its target.
-modules.file.restore_backup:path 	The path on the minion to check for backups
-modules.file.sed:path 	The full path to the file to be edited
-modules.file.seek_read:path 	path to file
+# modules.file.prepend:path 	path to file
+# modules.file.psed:path 	The full path to the file to be edited
+# modules.file.remove_backup:path 	The path on the minion to check for backups
+# modules.file.replace:path 	Filesystem path to the file to be edited. If a symlink is specified, itwill be resolved to its target.
+# modules.file.restore_backup:path 	The path on the minion to check for backups
+# modules.file.sed:path 	The full path to the file to be edited
+# modules.file.seek_read:path 	path to file
 # modules.file.seek_read:offset 	offset to start into the file
-modules.file.seek_write:path 	path to file
+# modules.file.seek_write:path 	path to file
 # modules.file.seek_write:data 	data to write to file
 # modules.file.seek_write:offset 	position in file to start writing
-modules.file.set_mode:path 	file or directory of which to set the mode
+# modules.file.set_mode:path 	file or directory of which to set the mode
 # modules.file.set_mode:mode 	mode to set the path to
-modules.file.truncate:path 	path to file
+# modules.file.truncate:path 	path to file
 # modules.file.truncate:length 	offset into file to truncate
-modules.file.uncomment:path 	The full path to the file to be edited
-modules.file.write:path 	path to file
+# modules.file.uncomment:path 	The full path to the file to be edited
+# modules.file.write:path 	path to file
 modules.freebsdpkg.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
 modules.git.add:cwd 	The path to the git checkout
 # modules.git.add:filename 	The location of the file/directory to add, relative to ``cwd``
@@ -667,44 +667,44 @@ modules.win_file.check_file_meta:name 	Path to file destination
 # modules.win_file.check_file_meta:user 	Destination file user owner
 # modules.win_file.check_file_meta:group 	Destination file group owner
 # modules.win_file.check_file_meta:mode 	Destination file permissions mode
-modules.win_file.check_hash:path 	Path to a file local to the minion.
-modules.win_file.comment:path 	The full path to the file to be edited
-modules.win_file.comment_line:path 	string The full path to the text file.
+# modules.win_file.check_hash:path 	Path to a file local to the minion.
+# modules.win_file.comment:path 	The full path to the file to be edited
+# modules.win_file.comment_line:path 	string The full path to the text file.
 # modules.win_file.comment_line:char 	string The character used to comment a line in the type of file you
 # modules.win_file.comment_line:backup 	string The file extension to give the backup file. Default is
-modules.win_file.delete_backup:path 	The path on the minion to check for backups
-modules.win_file.get_hash:path 	path to the file or directory
-modules.win_file.get_managed:name 	location where the file lives on the server
+# modules.win_file.delete_backup:path 	The path on the minion to check for backups
+# modules.win_file.get_hash:path 	path to the file or directory
+# modules.win_file.get_managed:name 	location where the file lives on the server
 # modules.win_file.get_managed:source 	managed source file
 # modules.win_file.get_managed:source_hash 	hash of the source file
 # modules.win_file.get_managed:user 	Owner of file
 # modules.win_file.get_managed:group 	Group owner of file
 # modules.win_file.get_managed:mode 	Permissions of file
-modules.win_file.get_source_sum:file_name 	Optional file name being managed, for matching with:py:func:`file.extract_hash <salt.modules.file.extract_hash>`.
+# modules.win_file.get_source_sum:file_name 	Optional file name being managed, for matching with:py:func:`file.extract_hash <salt.modules.file.extract_hash>`.
 # modules.win_file.get_source_sum:source 	Source file, as used in :py:mod:`file <salt.states.file>` and otherstates. If ``source_hash`` refers to a file containing hashes, thenthis filename will be used to match a filename in that file. If the``source_hash`` is a hash expression, then this argument will beignored.
 # modules.win_file.get_source_sum:source_hash 	Hash file/expression, as used in :py:mod:`file <salt.states.file>` andother states. If this value refers to a remote URL or absolute path toa local file, it will be cached and :py:func:`file.extract_hash<salt.modules.file.extract_hash>` will be used to obtain a hash fromit.
 # modules.win_file.get_source_sum:source_hash_name 	Specific file name to look for when ``source_hash`` refers to a remotefile, used to disambiguate ambiguous matches.
-modules.win_file.get_sum:path 	path to the file or directory
-modules.win_file.line:path 	Filesystem path to the file to be edited.
+# modules.win_file.get_sum:path 	path to the file or directory
+# modules.win_file.line:path 	Filesystem path to the file to be edited.
 # modules.win_file.line:location 	Defines where to place content in the line. Note this option is onlyused when ``mode=insert`` is specified. If a location is passed in, ittakes precedence over both the ``before`` and ``after`` kwargs. Validlocations are:
-modules.win_file.list_backups:path 	The path on the minion to check for backups
-modules.win_file.list_backups_dir:path 	The directory on the minion to check for backups
-modules.win_file.manage_file:name 	location to place the file
+# modules.win_file.list_backups:path 	The path on the minion to check for backups
+# modules.win_file.list_backups_dir:path 	The directory on the minion to check for backups
+# modules.win_file.manage_file:name 	location to place the file
 # modules.win_file.manage_file:sfn 	location of cached file on the minion
 # modules.win_file.manage_file:source 	file reference on the master
-modules.win_file.prepend:path 	path to file
-modules.win_file.psed:path 	The full path to the file to be edited
-modules.win_file.replace:path 	Filesystem path to the file to be edited. If a symlink is specified, itwill be resolved to its target.
-modules.win_file.restore_backup:path 	The path on the minion to check for backups
-modules.win_file.seek_read:path 	path to file
+# modules.win_file.prepend:path 	path to file
+# modules.win_file.psed:path 	The full path to the file to be edited
+# modules.win_file.replace:path 	Filesystem path to the file to be edited. If a symlink is specified, itwill be resolved to its target.
+# modules.win_file.restore_backup:path 	The path on the minion to check for backups
+# modules.win_file.seek_read:path 	path to file
 # modules.win_file.seek_read:offset 	offset to start into the file
-modules.win_file.seek_write:path 	path to file
+# modules.win_file.seek_write:path 	path to file
 # modules.win_file.seek_write:data 	data to write to file
 # modules.win_file.seek_write:offset 	position in file to start writing
-modules.win_file.truncate:path 	path to file
+# modules.win_file.truncate:path 	path to file
 # modules.win_file.truncate:length 	offset into file to truncate
-modules.win_file.uncomment:path 	The full path to the file to be edited
-modules.win_file.write:path 	path to file
+# modules.win_file.uncomment:path 	The full path to the file to be edited
+# modules.win_file.write:path 	path to file
 modules.xbpspkg.add_repo:conffile 	path to xbps conf file to add this repodefault: /usr/share/xbps.d/15-saltstack.conf
 modules.xbpspkg.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
 modules.yumpkg.diff:path 	Full path to the installed file
