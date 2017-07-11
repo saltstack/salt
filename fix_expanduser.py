@@ -41,7 +41,11 @@ def main():
                             break
 
             if function_parameters:
-                start_line_to_function[find_function_first_line(function)] = (function, function_parameters)
+                try:
+                    start_line_to_function[find_function_first_line(function)] = (function, function_parameters)
+                except IOError:
+                    print('Failed to find source code for %s.%s, probably decorated' % (
+                        function.__module__, function.__name__))
 
         for line_number, (function, function_parameters) in sorted(start_line_to_function.items(), reverse=True):
             add_expanduser_call(function, function_parameters, line_number)
