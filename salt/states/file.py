@@ -1246,7 +1246,7 @@ def symlink(
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = salt.utils.normalize_mode(mode)
@@ -1414,7 +1414,7 @@ def absent(name):
     name
         The path which should be deleted
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name,
            'changes': {},
@@ -1474,7 +1474,7 @@ def exists(name):
     name
         Absolute path which must exist
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name,
            'changes': {},
@@ -1498,7 +1498,7 @@ def missing(name):
     name
         Absolute path which must NOT exist
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name,
            'changes': {},
@@ -2078,7 +2078,7 @@ def managed(name,
             )
         kwargs.pop('env')
 
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'changes': {},
            'pchanges': {},
@@ -2761,7 +2761,7 @@ def directory(name,
                   perms: full_control
             - win_inheritance: False
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
     ret = {'name': name,
            'changes': {},
            'pchanges': {},
@@ -3211,7 +3211,7 @@ def recurse(name,
             )
         kwargs.pop('env')
 
-    name = os.path.expanduser(sdecode(name))
+    name = salt.utils.expanduser(sdecode(name))
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
@@ -3505,7 +3505,7 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
             - timezone: None
 
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
     ret = {'name': name,
            'changes': {'retained': [], 'deleted': [], 'ignored': []},
            'pchanges': {'retained': [], 'deleted': [], 'ignored': []},
@@ -3754,7 +3754,7 @@ def line(name, content=None, match=None, mode=None, location=None,
            - before: somekey.*?
 
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
     ret = {'name': name,
            'changes': {},
            'pchanges': {},
@@ -3929,7 +3929,7 @@ def replace(name,
        also use that syntax in the ``repl:`` part, or you might loose line
        feeds.
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name,
            'changes': {},
@@ -4161,7 +4161,7 @@ def blockreplace(
         text 4
         # END managed zone 42 --
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name,
            'changes': {},
@@ -4283,7 +4283,7 @@ def comment(name, regex, char='#', backup='.bak'):
 
     .. versionadded:: 0.9.5
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name,
            'changes': {},
@@ -4393,7 +4393,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
 
     .. versionadded:: 0.9.5
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name,
            'changes': {},
@@ -4615,7 +4615,7 @@ def append(name,
     if not name:
         return _error(ret, 'Must provide name to file.append')
 
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     if sources is None:
         sources = []
@@ -4799,7 +4799,7 @@ def prepend(name,
 
     .. versionadded:: 2014.7.0
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name,
            'changes': {},
@@ -5016,7 +5016,7 @@ def patch(name,
             )
         kwargs.pop('env')
 
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
     if not name:
@@ -5106,7 +5106,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
 
     .. versionadded:: 0.9.5
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {
         'name': name,
@@ -5219,8 +5219,7 @@ def copy(
         <salt.states.file.recurse>`.
 
     '''
-    name = os.path.expanduser(name)
-    source = os.path.expanduser(source)
+    name, source = salt.utils.expanduser(name, source)
 
     ret = {
         'name': name,
@@ -5364,8 +5363,7 @@ def rename(name, source, force=False, makedirs=False):
         If the target subdirectories don't exist create them
 
     '''
-    name = os.path.expanduser(name)
-    source = os.path.expanduser(source)
+    name, source = salt.utils.expanduser(name, source)
 
     ret = {
         'name': name,
@@ -5674,7 +5672,7 @@ def serialize(name,
             )
         kwargs.pop('env')
 
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     default_serializer_opts = {'yaml.serialize': {'default_flow_style': False},
                               'json.serialize': {'indent': 2,
@@ -5877,7 +5875,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
     .. versionadded:: 0.17.0
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name,
            'changes': {},
@@ -6244,13 +6242,13 @@ def shortcut(
 
     # Normalize paths; do this after error checks to avoid invalid input
     # getting expanded, e.g. '' turning into '.'
-    name = os.path.realpath(os.path.expanduser(name))
+    name = os.path.realpath(salt.utils.expanduser(name))
     if name.endswith('.lnk'):
-        target = os.path.realpath(os.path.expanduser(target))
+        target = os.path.realpath(salt.utils.expanduser(target))
     if working_dir:
-        working_dir = os.path.realpath(os.path.expanduser(working_dir))
+        working_dir = os.path.realpath(salt.utils.expanduser(working_dir))
     if icon_location:
-        icon_location = os.path.realpath(os.path.expanduser(icon_location))
+        icon_location = os.path.realpath(salt.utils.expanduser(icon_location))
 
     if user is None:
         user = __opts__['user']
