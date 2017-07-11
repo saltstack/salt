@@ -1718,6 +1718,8 @@ def diff(cwd,
             command.append(value)
 
     if paths:
+        paths = paths.split(';') if isinstance(paths, six.string_types) else paths
+        paths = salt.utils.expanduser(paths)
         command.append('--')
         command.extend(paths)
 
