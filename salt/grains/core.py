@@ -824,7 +824,7 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in model:
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'OpenBSD':
-        if osdata['manufacturer'] == 'QEMU':
+        if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
             grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'SunOS':
         # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
