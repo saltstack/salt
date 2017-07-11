@@ -1246,7 +1246,7 @@ def symlink(
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
     '''
-    name = salt.utils.expanduser(name)
+    name, target = salt.utils.expanduser(name, target)
 
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = salt.utils.normalize_mode(mode)
@@ -2078,7 +2078,7 @@ def managed(name,
             )
         kwargs.pop('env')
 
-    name = salt.utils.expanduser(name)
+    name, source_hash_name = salt.utils.expanduser(name, source_hash_name)
 
     ret = {'changes': {},
            'pchanges': {},
@@ -2761,7 +2761,7 @@ def directory(name,
                   perms: full_control
             - win_inheritance: False
     '''
-    name = salt.utils.expanduser(name)
+    name, backupname = salt.utils.expanduser(name, backupname)
     ret = {'name': name,
            'changes': {},
            'pchanges': {},

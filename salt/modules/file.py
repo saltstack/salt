@@ -3149,7 +3149,7 @@ def link(src, path):
 
         salt '*' file.link /path/to/file /path/to/link
     '''
-    src = salt.utils.expanduser(src)
+    src, path = salt.utils.expanduser(src, path)
 
     if not os.path.isabs(src):
         raise SaltInvocationError('File path must be absolute.')
@@ -3190,7 +3190,7 @@ def symlink(src, path):
 
         salt '*' file.symlink /path/to/file /path/to/link
     '''
-    path = salt.utils.expanduser(path)
+    src, path = salt.utils.expanduser(src, path)
 
     try:
         if os.path.normpath(os.readlink(path)) == os.path.normpath(src):
@@ -4897,7 +4897,7 @@ def manage_file(name,
         ``follow_symlinks`` option added
 
     '''
-    name = salt.utils.expanduser(name)
+    name, sfn = salt.utils.expanduser(name, sfn)
 
     if not ret:
         ret = {'name': name,
