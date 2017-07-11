@@ -105,7 +105,7 @@ class GCETestCase(TestCase, LoaderModuleMockMixin):
             get_deps = gce.get_dependencies()
             self.assertEqual(get_deps, True)
             if LooseVersion(mock_version) >= LooseVersion('2.0.0'):
-                p.assert_called_once()
+                self.assert_called_once(p)
 
     def test_provider_matches(self):
         """
