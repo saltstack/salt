@@ -521,8 +521,7 @@ def quote_identifier(identifier, for_grants=False):
         salt '*' mysql.quote_identifier 'foo`bar'
     '''
     if for_grants:
-        return '`' + identifier.replace('`', '``').replace('_', r'\_') \
-            .replace('%', r'\%%') + '`'
+        return '`' + identifier.replace('%', r'%%') + '`'
     else:
         return '`' + identifier.replace('`', '``').replace('%', '%%') + '`'
 
@@ -539,7 +538,6 @@ def _execute(cur, qry, args=None):
     this wrapper ensure this escape is not made if no arguments are used.
     '''
     if args is None or args == {}:
-        qry = qry.replace('%%', '%')
         log.debug('Doing query: {0}'.format(qry))
         return cur.execute(qry)
     else:
