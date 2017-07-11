@@ -184,7 +184,7 @@ def load_whitelist(whitelist_path):
     # The whitelist should hold module:parameter pairs, then optionally the documentation for the parameter
     # We filter by a regex to enable commenting out lines, adding whitespace, etc
     whitelist = set()
-    valid_line_re = re.compile(r'^(\w+\.\w+:\w+).*')
+    valid_line_re = re.compile(r'^((?:modules|states)\.\w+\.\w+:\w+).*')
     with open(whitelist_path) as fh:
         for line in fh:
             valid_match = valid_line_re.match(line)
