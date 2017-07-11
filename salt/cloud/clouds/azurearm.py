@@ -1289,6 +1289,15 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
             '-a or --action.'
         )
 
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroying instance',
+        'salt/cloud/{0}/destroying'.format(name),
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
     global compconn  # pylint: disable=global-statement,invalid-name
     if not compconn:
         compconn = get_conn()
@@ -1381,6 +1390,15 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
                     call='function',
                 )
             )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroyed instance',
+        'salt/cloud/{0}/destroyed'.format(name),
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
     return ret
 

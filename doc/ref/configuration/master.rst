@@ -248,6 +248,9 @@ each of Salt's module types such as ``runners``, ``output``, ``wheel``,
 
     extension_modules: /root/salt_extmods
 
+.. conf_master:: extmod_whitelist
+.. conf_master:: extmod_blacklist
+
 ``extmod_whitelist/extmod_blacklist``
 -------------------------------------
 
