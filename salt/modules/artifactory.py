@@ -62,7 +62,7 @@ def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, pack
            Artifactory username. Optional parameter.
        password
            Artifactory password. Optional parameter.
-       '''
+    '''
     log.debug("======================== MODULE FUNCTION: artifactory.get_latest_snapshot, artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
                     artifactory_url, repository, group_id, artifact_id, packaging, target_dir, classifier)
 
@@ -103,7 +103,7 @@ def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, 
            Artifactory username. Optional parameter.
        password
            Artifactory password. Optional parameter.
-       '''
+    '''
     log.debug('======================== MODULE FUNCTION: artifactory.get_snapshot(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)',
               artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir, classifier)
     headers = {}
@@ -139,7 +139,7 @@ def get_latest_release(artifactory_url, repository, group_id, artifact_id, packa
            Artifactory username. Optional parameter.
        password
            Artifactory password. Optional parameter.
-       '''
+    '''
     log.debug('======================== MODULE FUNCTION: artifactory.get_latest_release(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)',
               artifactory_url, repository, group_id, artifact_id, packaging, target_dir, classifier)
     headers = {}
@@ -178,7 +178,7 @@ def get_release(artifactory_url, repository, group_id, artifact_id, packaging, v
            Artifactory username. Optional parameter.
        password
            Artifactory password. Optional parameter.
-       '''
+    '''
     log.debug('======================== MODULE FUNCTION: artifactory.get_release(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)',
               artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir, classifier)
     headers = {}
