@@ -322,7 +322,7 @@ def _call_function(name, returner=None, **kwargs):
             func_args.append(funcset)
 
     missing = []
-    for arg in argspec.args:
+    for arg in argspec.args[len(func_args):]:
         if arg not in func_kw:
             missing.append(arg)
     if missing:
