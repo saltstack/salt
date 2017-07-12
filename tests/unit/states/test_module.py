@@ -131,7 +131,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(module.__salt__, {CMD: _mocked_func_named}):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
-                ret = module.run(**{CMD: [{'name': 'Fred'}]})
+                ret = module.run(**{CMD: ['Fred']})
                 assert ret['comment'] == '{0}: Success'.format(CMD)
                 assert ret['result']
 
