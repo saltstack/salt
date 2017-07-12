@@ -139,6 +139,23 @@ State Module Changes
             - my_other_param
 
   In a rare case you have a function that needs to be called several times but
+  with the different parameters, an additional feature of "tagging" is to the
+  rescue. In order to tag a function, use a colon delimeter. For example
+
+  .. code-block:: yaml
+
+      run_something:
+        module.run:
+          - mymodule.same_function:1:
+          - mymodule.same_function:2:
+            - myparam
+            - my_other_param
+          - mymodule.same_function:3:
+            - foo: bar
+
+  The example above will run `mymodule.same_function` three times with the
+  different parameters.
+
   To enable the new behavior for :py:func:`module.run <salt.states.module.run>`,
   add the following to the minion config file:
 
@@ -146,6 +163,7 @@ State Module Changes
 
       use_superseded:
         - module.run
+
 - The default for the ``fingerprint_hash_type`` option used in the ``present``
   function in the :mod:`ssh <salt.states.ssh_know_hosts>` state changed from
   ``md5`` to ``sha256``.
