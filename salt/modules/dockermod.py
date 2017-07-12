@@ -3091,7 +3091,9 @@ def build(path=None,
 
     stream_data = []
     for line in response:
-        stream_data.extend(json.loads(line, cls=DockerJSONDecoder))
+        stream_data.extend(
+            json.loads(salt.utils.to_str(line), cls=DockerJSONDecoder)
+        )
     errors = []
     # Iterate through API response and collect information
     for item in stream_data:
