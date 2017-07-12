@@ -49,6 +49,12 @@ environments (i.e. ``saltenvs``) have been added:
    ignore all tags and use branches only, and also to keep SHAs from being made
    available as saltenvs.
 
+Salt Cloud and Newer PyWinRM Versions
+-------------------------------------
+
+Versions of ``pywinrm>=0.2.1`` are finally able to disable validation of self
+signed certificates.  :ref:`Here<new-pywinrm>` for more information.
+
 Configuration Option Deprecations
 ---------------------------------
 
