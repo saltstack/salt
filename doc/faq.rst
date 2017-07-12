@@ -332,7 +332,7 @@ The following example works on UNIX-like operating systems:
           - pkg: Upgrade Salt Minion
     {%- endif %}
 
-Note that restarting the salt-minion service on Windows operating systems is
+Note that restarting the ``salt-minion`` service on Windows operating systems is
 not always necessary when performing an upgrade. The installer stops the
 ``salt-minion`` service, removes it, deletes the contents of the ``\salt\bin``
 directory, installs the new code, re-creates the ``salt-minion`` service, and
