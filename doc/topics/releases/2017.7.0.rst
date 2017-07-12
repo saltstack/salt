@@ -113,12 +113,11 @@ State Module Changes
       # After
       run_something:
         module.run:
-          mymodule.something:
+          - mymodule.something:
             - name: some name
             - first_arg: one
             - second_arg: two
             - do_stuff: True
-
 
   Since a lot of users are already using :py:func:`module.run
   <salt.states.module.run>` states, this new behavior must currently be
