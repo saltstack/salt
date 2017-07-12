@@ -238,7 +238,8 @@ def list_all_zones_by_id(region=None, key=None, keyid=None, profile=None):
 
 
 def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
-                retry_on_rate_limit=True, rate_limit_retries=5):
+                retry_on_rate_limit=None, rate_limit_retries=None,
+                retry_on_errors=True, error_retries=5):
     '''
     Check for the existence of a Route53 hosted zone.
 
@@ -253,19 +254,32 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    while rate_limit_retries > 0:
+    if retry_on_rate_limit or rate_limit_retries is not None:
+        salt.utils.warn_until(
+            'Oxygen',
+            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
+            'have been deprecated in favor of \'retry_on_errors\' and '
+            '\'error_retries\' respectively. Their functionality will be '
+            'removed, as such, their usage is no longer required.'
+        )
+        if retry_on_rate_limit is not None:
+            retry_on_errors = retry_on_rate_limit
+        if rate_limit_retries is not None:
+            error_retries = rate_limit_retries
+
+    while error_retries > 0:
         try:
             return bool(conn.get_zone(zone))
 
         except DNSServerError as e:
-            if retry_on_rate_limit:
+            if retry_on_errors:
                 if 'Throttling' == e.code:
                     log.debug('Throttled by AWS API.')
                 elif 'PriorRequestNotComplete' == e.code:
                     log.debug('The request was rejected by AWS API.\
                               Route 53 was still processing a prior request')
                 time.sleep(3)
-                rate_limit_retries -= 1
+                error_retries -= 1
                 continue
             raise e
 
@@ -358,7 +372,8 @@ def _decode_name(name):
 
 def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
                keyid=None, profile=None, split_dns=False, private_zone=False,
-               identifier=None, retry_on_rate_limit=True, rate_limit_retries=5):
+               identifier=None, retry_on_rate_limit=None,
+               rate_limit_retries=None, retry_on_errors=True, error_retries=5):
     '''
     Get a record from a zone.
 
@@ -371,7 +386,20 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    while rate_limit_retries > 0:
+    if retry_on_rate_limit or rate_limit_retries is not None:
+        salt.utils.warn_until(
+            'Oxygen',
+            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
+            'have been deprecated in favor of \'retry_on_errors\' and '
+            '\'error_retries\' respectively. Their functionality will be '
+            'removed, as such, their usage is no longer required.'
+        )
+        if retry_on_rate_limit is not None:
+            retry_on_errors = retry_on_rate_limit
+        if rate_limit_retries is not None:
+            error_retries = rate_limit_retries
+
+    while error_retries > 0:
         try:
             if split_dns:
                 _zone = _get_split_zone(zone, conn, private_zone)
@@ -391,14 +419,14 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
             break  # the while True
 
         except DNSServerError as e:
-            if retry_on_rate_limit:
+            if retry_on_errors:
                 if 'Throttling' == e.code:
                     log.debug('Throttled by AWS API.')
                 elif 'PriorRequestNotComplete' == e.code:
                     log.debug('The request was rejected by AWS API.\
                               Route 53 was still processing a prior request')
                 time.sleep(3)
-                rate_limit_retries -= 1
+                error_retries -= 1
                 continue
             raise e
 
@@ -425,7 +453,8 @@ def _munge_value(value, _type):
 def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                region=None, key=None, keyid=None, profile=None,
                wait_for_sync=True, split_dns=False, private_zone=False,
-               retry_on_rate_limit=True, rate_limit_retries=5):
+               retry_on_rate_limit=None, rate_limit_retries=None,
+               retry_on_errors=True, error_retries=5):
     '''
     Add a record to a zone.
 
@@ -438,7 +467,20 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    while rate_limit_retries > 0:
+    if retry_on_rate_limit or rate_limit_retries is not None:
+        salt.utils.warn_until(
+            'Oxygen',
+            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
+            'have been deprecated in favor of \'retry_on_errors\' and '
+            '\'error_retries\' respectively. Their functionality will be '
+            'removed, as such, their usage is no longer required.'
+        )
+        if retry_on_rate_limit is not None:
+            retry_on_errors = retry_on_rate_limit
+        if rate_limit_retries is not None:
+            error_retries = rate_limit_retries
+
+    while error_retries > 0:
         try:
             if split_dns:
                 _zone = _get_split_zone(zone, conn, private_zone)
@@ -452,19 +494,19 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
             break
 
         except DNSServerError as e:
-            if retry_on_rate_limit:
+            if retry_on_errors:
                 if 'Throttling' == e.code:
                     log.debug('Throttled by AWS API.')
                 elif 'PriorRequestNotComplete' == e.code:
                     log.debug('The request was rejected by AWS API.\
                               Route 53 was still processing a prior request')
                 time.sleep(3)
-                rate_limit_retries -= 1
+                error_retries -= 1
                 continue
             raise e
 
     _value = _munge_value(value, _type)
-    while rate_limit_retries > 0:
+    while error_retries > 0:
         try:
             # add_record requires a ttl value, annoyingly.
             if ttl is None:
@@ -473,14 +515,14 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
             return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
-            if retry_on_rate_limit:
+            if retry_on_errors:
                 if 'Throttling' == e.code:
                     log.debug('Throttled by AWS API.')
                 elif 'PriorRequestNotComplete' == e.code:
                     log.debug('The request was rejected by AWS API.\
                               Route 53 was still processing a prior request')
                 time.sleep(3)
-                rate_limit_retries -= 1
+                error_retries -= 1
                 continue
             raise e
 
@@ -488,7 +530,8 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
 def update_record(name, value, zone, record_type, identifier=None, ttl=None,
                   region=None, key=None, keyid=None, profile=None,
                   wait_for_sync=True, split_dns=False, private_zone=False,
-                  retry_on_rate_limit=True, rate_limit_retries=5):
+                  retry_on_rate_limit=None, rate_limit_retries=None,
+                  retry_on_errors=True, error_retries=5):
     '''
     Modify a record in a zone.
 
@@ -511,8 +554,21 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
         return False
     _type = record_type.upper()
 
+    if retry_on_rate_limit or rate_limit_retries is not None:
+        salt.utils.warn_until(
+            'Oxygen',
+            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
+            'have been deprecated in favor of \'retry_on_errors\' and '
+            '\'error_retries\' respectively. Their functionality will be '
+            'removed, as such, their usage is no longer required.'
+        )
+        if retry_on_rate_limit is not None:
+            retry_on_errors = retry_on_rate_limit
+        if rate_limit_retries is not None:
+            error_retries = rate_limit_retries
+
     _value = _munge_value(value, _type)
-    while rate_limit_retries > 0:
+    while error_retries > 0:
         try:
             old_record = _zone.find_records(name, _type, identifier=identifier)
             if not old_record:
@@ -521,14 +577,14 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
             return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
-            if retry_on_rate_limit:
+            if retry_on_errors:
                 if 'Throttling' == e.code:
                     log.debug('Throttled by AWS API.')
                 elif 'PriorRequestNotComplete' == e.code:
                     log.debug('The request was rejected by AWS API.\
                               Route 53 was still processing a prior request')
                 time.sleep(3)
-                rate_limit_retries -= 1
+                error_retries -= 1
                 continue
             raise e
 
@@ -536,7 +592,8 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
 def delete_record(name, zone, record_type, identifier=None, all_records=False,
                   region=None, key=None, keyid=None, profile=None,
                   wait_for_sync=True, split_dns=False, private_zone=False,
-                  retry_on_rate_limit=True, rate_limit_retries=5):
+                  retry_on_rate_limit=None, rate_limit_retries=None,
+                  retry_on_errors=True, error_retries=5):
     '''
     Modify a record in a zone.
 
@@ -559,7 +616,20 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
         return False
     _type = record_type.upper()
 
-    while rate_limit_retries > 0:
+    if retry_on_rate_limit or rate_limit_retries is not None:
+        salt.utils.warn_until(
+            'Oxygen',
+            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
+            'have been deprecated in favor of \'retry_on_errors\' and '
+            '\'error_retries\' respectively. Their functionality will be '
+            'removed, as such, their usage is no longer required.'
+        )
+        if retry_on_rate_limit is not None:
+            retry_on_errors = retry_on_rate_limit
+        if rate_limit_retries is not None:
+            error_retries = rate_limit_retries
+
+    while error_retries > 0:
         try:
             old_record = _zone.find_records(name, _type, all=all_records, identifier=identifier)
             if not old_record:
@@ -568,14 +638,14 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
             return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
-            if retry_on_rate_limit:
+            if retry_on_errors:
                 if 'Throttling' == e.code:
                     log.debug('Throttled by AWS API.')
                 elif 'PriorRequestNotComplete' == e.code:
                     log.debug('The request was rejected by AWS API.\
                               Route 53 was still processing a prior request')
                 time.sleep(3)
-                rate_limit_retries -= 1
+                error_retries -= 1
                 continue
             raise e
 
