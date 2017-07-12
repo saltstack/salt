@@ -3,9 +3,12 @@
 Manage Linux kernel packages on YUM-based systems
 '''
 from __future__ import absolute_import
+import functools
 import logging
 
-# Import 3rd-party libs
+# Import Salt libs
+import salt.ext.six as six
+
 try:
     from salt.utils.versions import LooseVersion as _LooseVersion
     HAS_REQUIRED_LIBS = True
@@ -65,7 +68,10 @@ def list_installed():
     if result is None:
         return []
 
-    return sorted(result, cmp=_cmp_version)
+    if six.PY2:
+        return sorted(result, cmp=_cmp_version)
+    else:
+        return sorted(result, key=functools.cmp_to_key(_cmp_version))
 
 
 def latest_available():

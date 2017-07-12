@@ -306,6 +306,16 @@ class TestCase(_TestCase):
         )
         # return _TestCase.failIfAlmostEqual(self, *args, **kwargs)
 
+    @staticmethod
+    def assert_called_once(mock):
+        '''
+        mock.assert_called_once only exists in PY3 in 3.6 and newer
+        '''
+        try:
+            mock.assert_called_once()
+        except AttributeError:
+            log.warning('assert_called_once invoked, but not available')
+
     if six.PY2:
         def assertRegexpMatches(self, *args, **kwds):
             raise DeprecationWarning(
