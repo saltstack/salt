@@ -126,6 +126,19 @@ State Module Changes
   the next feature release of Salt (Oxygen) and the old usage will no longer be
   supported at that time.
 
+  Another feature of the new :py:func:`module.run <salt.states.module.run>` is that
+  it allows to call many functions in a single batch, such as:
+
+  .. code-block:: yaml
+
+      run_something:
+        module.run:
+          - mymodule.function_without_parameters:
+          - mymodule.another_function:
+            - myparam
+            - my_other_param
+
+  In a rare case you have a function that needs to be called several times but
   To enable the new behavior for :py:func:`module.run <salt.states.module.run>`,
   add the following to the minion config file:
 
