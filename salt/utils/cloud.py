@@ -1016,177 +1016,184 @@ def deploy_windows(host,
     log.debug('Deploying {0} at {1} (Windows)'.format(host, starttime))
     log.trace('HAS_WINRM: {0}, use_winrm: {1}'.format(HAS_WINRM, use_winrm))
 
-    port_available = wait_for_port(host=host, port=port, timeout=port_timeout * 60)
+    count = 0
+    while True:
+        count = count + 1
+        log.debug("Attempting "+str(count))
+        try:
+            port_available = wait_for_port(host=host, port=port, timeout=port_timeout * 60)
 
-    if not port_available:
-        return False
+            if not port_available:
+                return False
 
-    service_available = False
-    winrm_session = None
+            service_available = False
+            winrm_session = None
 
-    if HAS_WINRM and use_winrm:
-        winrm_session = wait_for_winrm(host=host, port=winrm_port,
-                                       username=username, password=password,
-                                       timeout=port_timeout * 60, use_ssl=winrm_use_ssl,
-                                       verify=winrm_verify_ssl)
-        if winrm_session is not None:
-            service_available = True
-    else:
-        service_available = wait_for_winexesvc(host=host, port=port,
-                                               username=username, password=password,
-                                               timeout=port_timeout * 60)
-
-    if port_available and service_available:
-        log.debug('SMB port {0} on {1} is available'.format(port, host))
-        log.debug(
-            'Logging into {0}:{1} as {2}'.format(
-                host, port, username
-            )
-        )
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-
-        smb_conn = salt.utils.smb.get_conn(host, username, password)
-        if smb_conn is False:
-            log.error('Please install impacket to enable SMB functionality')
-            return False
-
-        creds = "-U '{0}%{1}' //{2}".format(
-            username,
-            password,
-            host
-        )
-        logging_creds = "-U '{0}%XXX-REDACTED-XXX' //{1}".format(
-            username,
-            host
-        )
-
-        salt.utils.smb.mkdirs('salttemp', conn=smb_conn)
-        salt.utils.smb.mkdirs('salt/conf/pki/minion', conn=smb_conn)
-        #  minion_pub, minion_pem
-        kwargs = {'hostname': host,
-                  'creds': creds}
-
-        if minion_pub:
-            salt.utils.smb.put_str(minion_pub, 'salt\\conf\\pki\\minion\\minion.pub', conn=smb_conn)
-
-        if minion_pem:
-            salt.utils.smb.put_str(minion_pem, 'salt\\conf\\pki\\minion\\minion.pem', conn=smb_conn)
-
-        if master_sign_pub_file:
-            # Read master-sign.pub file
-            log.debug("Copying master_sign.pub file from {0} to minion".format(master_sign_pub_file))
-            try:
-                with salt.utils.fopen(master_sign_pub_file, 'rb') as master_sign_fh:
-                    smb_conn.putFile('C$', 'salt\\conf\\pki\\minion\\master_sign.pub', master_sign_fh.read)
-            except Exception as e:
-                log.debug("Exception copying master_sign.pub file {0} to minion".format(master_sign_pub_file))
-
-        # Copy over win_installer
-        # win_installer refers to a file such as:
-        # /root/Salt-Minion-0.17.0-win32-Setup.exe
-        # ..which exists on the same machine as salt-cloud
-        comps = win_installer.split('/')
-        local_path = '/'.join(comps[:-1])
-        installer = comps[-1]
-        with salt.utils.fopen(win_installer, 'rb') as inst_fh:
-            smb_conn.putFile('C$', 'salttemp/{0}'.format(installer), inst_fh.read)
-
-        if use_winrm:
-            winrm_cmd(winrm_session, 'c:\\salttemp\\{0}'.format(installer), ['/S', '/master={0}'.format(master),
-                                                                             '/minion-name={0}'.format(name)]
-            )
-        else:
-            # Shell out to winexe to execute win_installer
-            #  We don't actually need to set the master and the minion here since
-            #  the minion config file will be set next via impacket
-            cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
-                creds,
-                installer,
-                master,
-                name
-            )
-            logging_cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
-                logging_creds,
-                installer,
-                master,
-                name
-            )
-            win_cmd(cmd, logging_command=logging_cmd)
-
-        # Copy over minion_conf
-        if minion_conf:
-            if not isinstance(minion_conf, dict):
-                # Let's not just fail regarding this change, specially
-                # since we can handle it
-                raise DeprecationWarning(
-                    '`salt.utils.cloud.deploy_windows` now only accepts '
-                    'dictionaries for its `minion_conf` parameter. '
-                    'Loading YAML...'
-                )
-            minion_grains = minion_conf.pop('grains', {})
-            if minion_grains:
-                salt.utils.smb.put_str(
-                    salt_config_to_yaml(minion_grains, line_break='\r\n'),
-                    'salt\\conf\\grains',
-                    conn=smb_conn
-                )
-            # Add special windows minion configuration
-            # that must be in the minion config file
-            windows_minion_conf = {
-                'ipc_mode': 'tcp',
-                'root_dir': 'c:\\salt',
-                'pki_dir': '/conf/pki/minion',
-                'multiprocessing': False,
-            }
-            minion_conf = dict(minion_conf, **windows_minion_conf)
-            salt.utils.smb.put_str(
-                salt_config_to_yaml(minion_conf, line_break='\r\n'),
-                'salt\\conf\\minion',
-                conn=smb_conn
-            )
-        # Delete C:\salttmp\ and installer file
-        # Unless keep_tmp is True
-        if not keep_tmp:
-            if use_winrm:
-                winrm_cmd(winrm_session, 'rmdir', ['/Q', '/S', 'C:\\salttemp\\'])
+            if HAS_WINRM and use_winrm:
+                winrm_session = wait_for_winrm(host=host, port=winrm_port,
+                                            username=username, password=password,
+                                            timeout=port_timeout * 60, use_ssl=winrm_use_ssl,
+                                            verify=winrm_verify_ssl)
+                if winrm_session is not None:
+                    service_available = True
             else:
-                smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
-                smb_conn.deleteDirectory('C$', 'salttemp')
-        # Shell out to winexe to ensure salt-minion service started
-        if use_winrm:
-            winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
-            time.sleep(5)
-            winrm_cmd(winrm_session, 'sc', ['start', 'salt-minion'])
-        else:
-            stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
-                creds
-            )
-            logging_stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
-                logging_creds
-            )
-            win_cmd(stop_cmd, logging_command=logging_stop_cmd)
+                service_available = wait_for_winexesvc(host=host, port=port,
+                                                    username=username, password=password,
+                                                    timeout=port_timeout * 60)
 
-            time.sleep(5)
+            if port_available and service_available:
+                log.debug('SMB port {0} on {1} is available'.format(port, host))
+                log.debug(
+                    'Logging into {0}:{1} as {2}'.format(
+                        host, port, username
+                    )
+                )
+                newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
 
-            start_cmd = 'winexe {0} "sc start salt-minion"'.format(creds)
-            logging_start_cmd = 'winexe {0} "sc start salt-minion"'.format(
-                logging_creds
-            )
-            win_cmd(start_cmd, logging_command=logging_start_cmd)
+                smb_conn = salt.utils.smb.get_conn(host, username, password)
+                if smb_conn is False:
+                    log.error('Please install impacket to enable SMB functionality')
+                    continue
 
-        # Fire deploy action
-        fire_event(
-            'event',
-            '{0} has been deployed at {1}'.format(name, host),
-            'salt/cloud/{0}/deploy_windows'.format(name),
-            args={'name': name},
-            sock_dir=opts.get(
-                'sock_dir',
-                os.path.join(__opts__['sock_dir'], 'master')),
-            transport=opts.get('transport', 'zeromq')
-        )
+                creds = "-U '{0}%{1}' //{2}".format(
+                    username,
+                    password,
+                    host
+                )
+                logging_creds = "-U '{0}%XXX-REDACTED-XXX' //{1}".format(
+                    username,
+                    host
+                )
 
-        return True
+                salt.utils.smb.mkdirs('salttemp', conn=smb_conn)
+                salt.utils.smb.mkdirs('salt/conf/pki/minion', conn=smb_conn)
+                #  minion_pub, minion_pem
+                kwargs = {'hostname': host,
+                        'creds': creds}
+
+                if minion_pub:
+                    salt.utils.smb.put_str(minion_pub, 'salt\\conf\\pki\\minion\\minion.pub', conn=smb_conn)
+
+                if minion_pem:
+                    salt.utils.smb.put_str(minion_pem, 'salt\\conf\\pki\\minion\\minion.pem', conn=smb_conn)
+
+                if master_sign_pub_file:
+                    # Read master-sign.pub file
+                    log.debug("Copying master_sign.pub file from {0} to minion".format(master_sign_pub_file))
+                    try:
+                        with salt.utils.fopen(master_sign_pub_file, 'rb') as master_sign_fh:
+                            smb_conn.putFile('C$', 'salt\\conf\\pki\\minion\\master_sign.pub', master_sign_fh.read)
+                    except Exception as e:
+                        log.debug("Exception copying master_sign.pub file {0} to minion".format(master_sign_pub_file))
+
+                # Copy over win_installer
+                # win_installer refers to a file such as:
+                # /root/Salt-Minion-0.17.0-win32-Setup.exe
+                # ..which exists on the same machine as salt-cloud
+                comps = win_installer.split('/')
+                local_path = '/'.join(comps[:-1])
+                installer = comps[-1]
+                with salt.utils.fopen(win_installer, 'rb') as inst_fh:
+                    smb_conn.putFile('C$', 'salttemp/{0}'.format(installer), inst_fh.read)
+
+                if use_winrm:
+                    winrm_cmd(winrm_session, 'c:\\salttemp\\{0}'.format(installer), ['/S', '/master={0}'.format(master),
+                                                                                    '/minion-name={0}'.format(name)]
+                    )
+                else:
+                    # Shell out to winexe to execute win_installer
+                    #  We don't actually need to set the master and the minion here since
+                    #  the minion config file will be set next via impacket
+                    cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
+                        creds,
+                        installer,
+                        master,
+                        name
+                    )
+                    logging_cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
+                        logging_creds,
+                        installer,
+                        master,
+                        name
+                    )
+                    win_cmd(cmd, logging_command=logging_cmd)
+
+                # Copy over minion_conf
+                if minion_conf:
+                    if not isinstance(minion_conf, dict):
+                        # Let's not just fail regarding this change, specially
+                        # since we can handle it
+                        raise DeprecationWarning(
+                            '`salt.utils.cloud.deploy_windows` now only accepts '
+                            'dictionaries for its `minion_conf` parameter. '
+                            'Loading YAML...'
+                        )
+                    minion_grains = minion_conf.pop('grains', {})
+                    if minion_grains:
+                        salt.utils.smb.put_str(
+                            salt_config_to_yaml(minion_grains, line_break='\r\n'),
+                            'salt\\conf\\grains',
+                            conn=smb_conn
+                        )
+                    # Add special windows minion configuration
+                    # that must be in the minion config file
+                    windows_minion_conf = {
+                        'ipc_mode': 'tcp',
+                        'root_dir': 'c:\\salt',
+                        'pki_dir': '/conf/pki/minion',
+                        'multiprocessing': False,
+                    }
+                    minion_conf = dict(minion_conf, **windows_minion_conf)
+                    salt.utils.smb.put_str(
+                        salt_config_to_yaml(minion_conf, line_break='\r\n'),
+                        'salt\\conf\\minion',
+                        conn=smb_conn
+                    )
+                # Delete C:\salttmp\ and installer file
+                # Unless keep_tmp is True
+                if not keep_tmp:
+                    if use_winrm:
+                        winrm_cmd(winrm_session, 'rmdir', ['/Q', '/S', 'C:\\salttemp\\'])
+                    else:
+                        smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
+                        smb_conn.deleteDirectory('C$', 'salttemp')
+                # Shell out to winexe to ensure salt-minion service started
+                if use_winrm:
+                    winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
+                    time.sleep(5)
+                    winrm_cmd(winrm_session, 'sc', ['start', 'salt-minion'])
+                else:
+                    stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
+                        creds
+                    )
+                    logging_stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
+                        logging_creds
+                    )
+                    win_cmd(stop_cmd, logging_command=logging_stop_cmd)
+
+                    time.sleep(5)
+
+                    start_cmd = 'winexe {0} "sc start salt-minion"'.format(creds)
+                    logging_start_cmd = 'winexe {0} "sc start salt-minion"'.format(
+                        logging_creds
+                    )
+                    win_cmd(start_cmd, logging_command=logging_start_cmd)
+
+                # Fire deploy action
+                fire_event(
+                    'event',
+                    '{0} has been deployed at {1}'.format(name, host),
+                    'salt/cloud/{0}/deploy_windows'.format(name),
+                    args={'name': name},
+                    sock_dir=opts.get(
+                        'sock_dir',
+                        os.path.join(__opts__['sock_dir'], 'master')),
+                    transport=opts.get('transport', 'zeromq')
+                )
+                return True
+        except:
+            log.debug("Failed deploying, try again...")
+            continue
     return False
 
 
