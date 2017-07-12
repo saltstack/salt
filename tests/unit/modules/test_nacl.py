@@ -14,14 +14,14 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-import salt.ext.six as six
-from salt.utils.odict import OrderedDict
+#import salt.ext.six as six
+#from salt.utils.odict import OrderedDict
 import salt.modules.nacl as nacl
 import salt.modules.test as test
 import salt.config
 
 
-sk='SVWut5SqNpuPeNzb1b9y6b2eXg2PLIog43GBzp48Sow='
+sk = 'SVWut5SqNpuPeNzb1b9y6b2eXg2PLIog43GBzp48Sow='
 pk = '/kfGX7PbWeu099702PBbKWLpG/9p06IQRswkdWHCDk0=',
 _config = salt.config.minion_config(None)
 _config['nacl.config'] = {
@@ -29,8 +29,9 @@ _config['nacl.config'] = {
     'pk': pk
 }
 
-clrtext='blabol'
+clrtext = 'blabol'
 pillar_value_dec = dict(a=None, b='very unencrypted', c=clrtext)
+
 
 class NaclModuleTestCase(TestCase, LoaderModuleMockMixin):
 
@@ -48,21 +49,27 @@ class NaclModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_nacl(self):
-      """Test NACL encryption and decription
+      '''
+      Test NACL encryption and decription
       - encryption key passed as attribute
-      - decryption key is read from configuration"""
+      - decryption key is read from configuration
+      '''
       with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=clrtext)}):
-        self.assertEqual(nacl.dec(nacl.enc(clrtext, sk=sk)), 'blabol')
+          self.assertEqual(nacl.dec(nacl.enc(clrtext, sk=sk)), 'blabol')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_nacl_dec_none(self):
-      "Test NACL decryption with None on input"
+      '''
+      Test NACL decryption with None on input
+      '''
       with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=clrtext)}):
-        self.assertEqual(nacl.dec(None, sk=sk), None)
+          self.assertEqual(nacl.dec(None, sk=sk), None)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_nacl_dec_clrtext(self):
-      "Test NACL decryption"
+      '''
+      Test NACL decryption
+      '''
       with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=clrtext)}):
-        self.assertEqual(test.try_(module='nacl.dec', data=clrtext), None)
+          self.assertEqual(test.try_(module='nacl.dec', data=clrtext), None)
 
