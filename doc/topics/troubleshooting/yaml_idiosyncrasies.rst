@@ -115,7 +115,7 @@ versions will also be loaded as booleans (``true``, ``false``, ``yes``, ``no``,
 Pillar data. Make sure that your Pillars which need to use the string versions
 of these values are enclosed in quotes. Pillars will be parsed twice by salt,
 so you'll need to wrap your values in multiple quotes, including double quotation
-marks (``" "``) and single quotation marks (``' '``). note that spaces are included
+marks (``" "``) and single quotation marks (``' '``). Note that spaces are included
 in the quotation type examples for clarity.
 
 Multiple quoting examples looks like this:
@@ -126,6 +126,11 @@ Multiple quoting examples looks like this:
     - "'True'"
     - "'YES'"
     - '"No"'
+
+.. note::
+
+    When using multiple quotes in this manner, they must be different. Using ``"" ""``
+    or ``'' ''`` won't work in this case (spaces are included in examples for clarity).
 
 The '%' Sign
 ============
