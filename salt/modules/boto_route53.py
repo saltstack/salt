@@ -256,7 +256,7 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
 
     if retry_on_rate_limit or rate_limit_retries is not None:
         salt.utils.warn_until(
-            'Oxygen',
+            'Neon',
             'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
             'have been deprecated in favor of \'retry_on_errors\' and '
             '\'error_retries\' respectively. Their functionality will be '
@@ -388,7 +388,7 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
 
     if retry_on_rate_limit or rate_limit_retries is not None:
         salt.utils.warn_until(
-            'Oxygen',
+            'Neon',
             'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
             'have been deprecated in favor of \'retry_on_errors\' and '
             '\'error_retries\' respectively. Their functionality will be '
@@ -469,7 +469,7 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
 
     if retry_on_rate_limit or rate_limit_retries is not None:
         salt.utils.warn_until(
-            'Oxygen',
+            'Neon',
             'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
             'have been deprecated in favor of \'retry_on_errors\' and '
             '\'error_retries\' respectively. Their functionality will be '
@@ -556,7 +556,7 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
 
     if retry_on_rate_limit or rate_limit_retries is not None:
         salt.utils.warn_until(
-            'Oxygen',
+            'Neon',
             'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
             'have been deprecated in favor of \'retry_on_errors\' and '
             '\'error_retries\' respectively. Their functionality will be '
@@ -618,7 +618,7 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
 
     if retry_on_rate_limit or rate_limit_retries is not None:
         salt.utils.warn_until(
-            'Oxygen',
+            'Neon',
             'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
             'have been deprecated in favor of \'retry_on_errors\' and '
             '\'error_retries\' respectively. Their functionality will be '
