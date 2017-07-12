@@ -262,6 +262,7 @@ def run(**kwargs):
     missing = []
     tests = []
     for func in functions:
+        func = func.split(':')[0]
         if func not in __salt__:
             missing.append(func)
         elif __opts__['test']:
@@ -284,8 +285,9 @@ def run(**kwargs):
         failures = []
         success = []
         for func in functions:
+            _func = func.split(':')[0]
             try:
-                func_ret = _call_function(func, returner=kwargs.get('returner'),
+                func_ret = _call_function(_func, returner=kwargs.get('returner'),
                                           func_args=kwargs.get(func))
                 if not _get_result(func_ret, ret['changes'].get('ret', {})):
                     if isinstance(func_ret, dict):
