@@ -5,7 +5,7 @@ Beacon to fire events at login of users as registered in the wtmp file
 .. code-block:: yaml
 
     beacons:
-      wtmp: {}
+      wtmp: []
 '''
 
 # Import Python libs
@@ -60,8 +60,8 @@ def __validate__(config):
     Validate the beacon configuration
     '''
     # Configuration for wtmp beacon should be a list of dicts
-    if not isinstance(config, dict):
-        return False, ('Configuration for wtmp beacon must be a dictionary.')
+    if not isinstance(config, list):
+        return False, ('Configuration for wtmp beacon must be a list.')
     return True, 'Valid beacon configuration'
 
 
@@ -73,7 +73,7 @@ def beacon(config):
     .. code-block:: yaml
 
         beacons:
-          wtmp: {}
+          wtmp: []
     '''
     ret = []
     with salt.utils.files.fopen(WTMP, 'rb') as fp_:
