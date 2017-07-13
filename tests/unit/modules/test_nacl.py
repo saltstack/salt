@@ -72,4 +72,3 @@ class NaclModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=clrtext)}):
             self.assertEqual(test.try_(module='nacl.dec', data=clrtext), None)
-
