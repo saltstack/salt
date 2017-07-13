@@ -308,7 +308,7 @@ def put(consul_url=None, key=None, value=None, **kwargs):
                     return ret
 
             else:
-                ret['message'] = '{0} is not a valid session.'.format(kwargs['acquire'])
+                ret['message'] = '{0} is not a valid session.'.format(kwargs['release'])
                 ret['res'] = False
         else:
             log.error('Key {0} does not exist. Skipping release.')
