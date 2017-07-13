@@ -15,7 +15,7 @@ the minion config:
 .. code-block:: yaml
 
     beacons:
-      status: {}
+      status: []
 
 By default, all of the information from the following execution module
 functions will be returned:
