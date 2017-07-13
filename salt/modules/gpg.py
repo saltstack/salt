@@ -1056,7 +1056,7 @@ def verify(text=None,
 
     signature
         Specify the filename of a detached signature.
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     CLI Example:
 
