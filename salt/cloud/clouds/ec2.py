@@ -2328,6 +2328,9 @@ def wait_for_instance(
         use_winrm = config.get_cloud_config_value(
             'use_winrm', vm_, __opts__, default=False
         )
+        winrm_verify_ssl = config.get_cloud_config_value(
+            'winrm_verify_ssl', vm_, __opts__, default=True
+        )
 
         if win_passwd and win_passwd == 'auto':
             log.debug('Waiting for auto-generated Windows EC2 password')
@@ -2399,7 +2402,8 @@ def wait_for_instance(
                                                           winrm_port,
                                                           username,
                                                           win_passwd,
-                                                          timeout=ssh_connect_timeout):
+                                                          timeout=ssh_connect_timeout,
+                                                          verify=winrm_verify_ssl):
                 raise SaltCloudSystemExit(
                     'Failed to authenticate against remote windows host'
                 )
