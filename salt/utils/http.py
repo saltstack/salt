@@ -124,6 +124,7 @@ def __decompressContent(coding, pgctnt):
     log.trace("Content size after decompression: %s", len(pgctnt))
     return pgctnt
 
+
 @jinja_filter('http_query')
 def query(url,
           method='GET',
