@@ -127,7 +127,7 @@ State Module Changes
   supported at that time.
 
   Another feature of the new :py:func:`module.run <salt.states.module.run>` is that
-  it allows to call many functions in a single batch, such as:
+  it allows calling many functions in a single batch, such as:
 
   .. code-block:: yaml
 
@@ -138,9 +138,9 @@ State Module Changes
             - myparam
             - my_other_param
 
-  In a rare case you have a function that needs to be called several times but
+  In a rare case that you have a function that needs to be called several times but
   with the different parameters, an additional feature of "tagging" is to the
-  rescue. In order to tag a function, use a colon delimeter. For example
+  rescue. In order to tag a function, use a colon delimeter. For example:
 
   .. code-block:: yaml
 
