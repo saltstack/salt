@@ -227,6 +227,8 @@ def query(url,
     log_url = sanitize_url(url_full, hide_fields)
 
     log.debug('Requesting URL {0} using {1} method'.format(log_url, method))
+    log.debug("Using backend: %s", backend)
+
     if method == 'POST' and log.isEnabledFor(logging.TRACE):
         # Make sure no secret fields show up in logs
         if isinstance(data, dict):
@@ -575,10 +577,13 @@ def query(url,
     log.debug('Response Status Code: {0}'.format(result_status_code))
     log.trace('Response Headers: {0}'.format(result_headers))
     log.trace('Response Cookies: {0}'.format(sess_cookies))
+    # log.trace("Content: %s", result_text)
 
     coding = result_headers.get('Content-Encoding', "identity")
 
-    result_text = __decompressContent(coding, result_text)
+    # Requests will always decompress the content, and working around that is annoying.
+    if backend != 'requests':
+        result_text = __decompressContent(coding, result_text)
 
     try:
         log.trace('Response Text: {0}'.format(result_text))
