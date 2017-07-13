@@ -10,7 +10,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
-import salt.beacons.service as service
+import salt.beacons.service as service_beacon
 
 PATCH_OPTS = dict(autospec=True, spec_set=True)
 
@@ -25,7 +25,7 @@ class ServiceBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         return {
-            service: {
+            service_beacon: {
                 '__context__': {},
                 '__salt__': {},
             }
@@ -34,41 +34,41 @@ class ServiceBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def test_non_list_config(self):
         config = {}
 
-        ret = service.validate(config)
+        ret = service_beacon.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for ps beacon must'
+        self.assertEqual(ret, (False, 'Configuration for service beacon must'
                                       ' be a list.'))
 
     def test_empty_config(self):
         config = [{}]
 
-        ret = service.validate(config)
+        ret = service_beacon.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for ps '
-                                      'beacon requires processes.'))
+        self.assertEqual(ret, (False, 'Configuration for service '
+                                      'beacon requires services.'))
 
     def test_service_running(self):
-        with patch.dict(service.__salt__,
-                        {'service.status': TEMPERATURE_MOCK}):
-            config = [{'processes': {'salt-master': 'running'}}]
+        with patch.dict(service_beacon.__salt__,
+                        {'service.status': MagicMock(return_value=True)}):
+            config = [{'services': {'salt-master': {}}}]
 
-            ret = service.validate(config)
+            ret = service_beacon.validate(config)
 
             self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
-            ret = service.beacon(config)
-            self.assertEqual(ret, [{'salt-master': 'Running'}])
+            ret = service_beacon.beacon(config)
+            self.assertEqual(ret, [{'service_name': 'salt-master',
+                                    'salt-master': {'running': True}}])
 
     def test_service_not_running(self):
-        with patch('psutil.process_iter', **PATCH_OPTS) as mock_process_iter:
-            mock_process_iter.return_value = [FakeProcess(cmdline=['salt-master'], pid=3),
-                                              FakeProcess(cmdline=['salt-minion'], pid=4)]
-            config = [{'processes': {'mysql': 'stopped'}}]
+        with patch.dict(service_beacon.__salt__,
+                        {'service.status': MagicMock(return_value=False)}):
+            config = [{'services': {'salt-master': {}}}]
 
-            ret = service.validate(config)
+            ret = service_beacon.validate(config)
 
             self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
-            ret = service.beacon(config)
-            self.assertEqual(ret, [{'mysql': 'Stopped'}])
-
+            ret = service_beacon.beacon(config)
+            self.assertEqual(ret, [{'service_name': 'salt-master',
+                                    'salt-master': {'running': False}}])

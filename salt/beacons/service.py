@@ -32,13 +32,14 @@ def validate(config):
             return False, ('Configuration for service beacon'
                            ' requires services.')
         else:
+            log.debug('config {}'.format(config))
             for config_item in _config['services']:
-                if not isinstance(config_item, dict):
+                if not isinstance(_config['services'][config_item], dict):
                     return False, ('Configuration for service beacon must '
                                    'be a list of dictionaries.')
                 else:
-                    for dict_item in config_item:
-                        if not isinstance(config_item, dict):
+                    for dict_item in _config['services'][config_item]:
+                        if not isinstance(_config['services'][config][dict_item], dict):
                             return False, ('Configuration for service beacon '
                                            'must be a list of dictionaries.')
 
@@ -55,7 +56,7 @@ def beacon(config):
 
         beacons:
           service:
-            - service:
+            - services:
                 salt-master:
                 mysql:
 
@@ -115,6 +116,7 @@ def beacon(config):
         service_config = _config['services'][service]
 
         ret_dict[service] = {'running': __salt__['service.status'](service)}
+        log.debug('ret {}'.format(ret_dict))
         ret_dict['service_name'] = service
         ret_dict['tag'] = service
         currtime = time.time()
@@ -122,25 +124,25 @@ def beacon(config):
         # If no options is given to the service, we fall back to the defaults
         # assign a False value to oncleanshutdown and onchangeonly. Those
         # key:values are then added to the service dictionary.
-        if not service_config[service]:
-            service_config[service] = {}
-        if 'oncleanshutdown' not in service_config[service]:
-            service_config[service]['oncleanshutdown'] = False
-        if 'emitatstartup' not in service_config[service]:
-            service_config[service]['emitatstartup'] = True
-        if 'onchangeonly' not in service_config[service]:
-            service_config[service]['onchangeonly'] = False
+        if not service_config:
+            service_config = {}
+        if 'oncleanshutdown' not in service_config:
+            service_config['oncleanshutdown'] = False
+        if 'emitatstartup' not in service_config:
+            service_config['emitatstartup'] = True
+        if 'onchangeonly' not in service_config:
+            service_config['onchangeonly'] = False
 
         # We only want to report the nature of the shutdown
         # if the current running status is False
         # as well as if the config for the beacon asks for it
-        if 'uncleanshutdown' in service_config[service] and not ret_dict[service]['running']:
-            filename = service_config[service]['uncleanshutdown']
+        if 'uncleanshutdown' in service_config and not ret_dict[service]['running']:
+            filename = service_config['uncleanshutdown']
             ret_dict[service]['uncleanshutdown'] = True if os.path.exists(filename) else False
-        if 'onchangeonly' in service_config[service] and service_config[service]['onchangeonly'] is True:
+        if 'onchangeonly' in service_config and service_config['onchangeonly'] is True:
             if service not in LAST_STATUS:
                 LAST_STATUS[service] = ret_dict[service]
-                if not service_config[service]['emitatstartup']:
+                if not service_config['emitatstartup']:
                     continue
                 else:
                     ret.append(ret_dict)
