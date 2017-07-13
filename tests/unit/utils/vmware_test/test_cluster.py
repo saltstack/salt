@@ -178,6 +178,18 @@ class CreateClusterTestCase(TestCase):
         self.mock_create_cluster_ex.assert_called_once_with(
            'fake_cluster', self.mock_cluster_spec)
 
+    def test_create_cluster_raise_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        self.mock_dc.hostFolder.CreateClusterEx = MagicMock(
+            side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            vmware.create_cluster(self.mock_dc, 'fake_cluster',
+                                  self.mock_cluster_spec)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
     def test_create_cluster_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
@@ -233,6 +245,17 @@ class UpdateClusterTestCase(TestCase):
         vmware.update_cluster(self.mock_cluster, self.mock_cluster_spec)
         self.mock_reconfigure_compute_resource_task.assert_called_once_with(
             self.mock_cluster_spec, modify=True)
+
+    def test_reconfigure_compute_resource_raise_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        self.mock_cluster.ReconfigureComputeResource_Task = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            vmware.update_cluster(self.mock_cluster, self.mock_cluster_spec)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
 
     def test_reconfigure_compute_resource_raise_vim_fault(self):
         exc = vim.fault.VimFault()
