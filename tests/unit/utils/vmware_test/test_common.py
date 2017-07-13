@@ -42,6 +42,19 @@ class WaitForTaskTestCase(TestCase):
             patcher = patch(mod, mock)
             patcher.start()
             self.addCleanup(patcher.stop)
+    
+    def test_first_task_info_raise_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        mock_task = MagicMock()
+        type(mock_task).info = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
 
     def test_first_task_info_raise_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -64,6 +77,22 @@ class WaitForTaskTestCase(TestCase):
                                             'fake_instance_name',
                                             'task_type')
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_inner_loop_task_info_raise_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        mock_task = MagicMock()
+        mock_info1 = MagicMock()
+        type(mock_task).info = PropertyMock(
+            side_effect=[mock_info1, exc])
+        type(mock_info1).state = PropertyMock(side_effect=['running', 'bad'])
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
 
     def test_inner_loop_task_info_raise_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -160,6 +189,22 @@ class WaitForTaskTestCase(TestCase):
                                             'fake_instance_name',
                                             'task_type')
         self.assertEqual(str(excinfo.exception), 'error exc')
+
+    def test_info_error_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        mock_task = MagicMock()
+        prop_mock_state = PropertyMock(return_value='error')
+        prop_mock_error = PropertyMock(side_effect=exc)
+        type(mock_task.info).state = prop_mock_state
+        type(mock_task.info).error = prop_mock_error
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.wait_for_task(mock_task,
+                                            'fake_instance_name',
+                                            'task_type')
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
 
     def test_info_error_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -658,6 +703,19 @@ class GetContentTestCase(TestCase):
         # check destroy is called
         self.assertEqual(self.destroy_mock.call_count, 1)
 
+    def test_create_container_view_raise_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        self.si_mock.content.viewManager.CreateContainerView = \
+                MagicMock(side_effect=exc)
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with self.assertRaises(excs.VMwareApiError) as excinfo:
+                salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
     def test_create_container_view_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
@@ -679,6 +737,19 @@ class GetContentTestCase(TestCase):
             with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_destroy_raise_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        self.si_mock.content.viewManager.CreateContainerView = MagicMock(
+            return_value=MagicMock(Destroy=MagicMock(side_effect=exc)))
+        with patch('salt.utils.vmware.get_root_folder',
+                   self.get_root_folder_mock):
+            with self.assertRaises(excs.VMwareApiError) as excinfo:
+                salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
 
     def test_destroy_raise_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -745,6 +816,17 @@ class GetContentTestCase(TestCase):
             [self.filter_spec_ret_mock])
         self.assertEqual(ret, self.result_mock)
 
+    def test_retrieve_contents_raise_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        self.si_mock.content.propertyCollector.RetrieveContents = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
     def test_retrieve_contents_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
@@ -788,6 +870,16 @@ class GetRootFolderTestCase(TestCase):
         self.mock_content = MagicMock(rootFolder=self.mock_root_folder)
         self.mock_si = MagicMock(
             RetrieveContent=MagicMock(return_value=self.mock_content))
+
+    def test_raise_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        type(self.mock_content).rootFolder = PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.get_root_folder(self.mock_si)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
 
     def test_raise_vim_fault(self):
         exc = vim.fault.VimFault()
