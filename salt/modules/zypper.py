@@ -650,7 +650,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
     return __salt__['lowpkg.version_cmp'](ver1, ver2, ignore_epoch=ignore_epoch)
 
 
-def list_pkgs(versions_as_list=False, **kwargs):
+def list_pkgs(versions_as_list=False, attr=None, **kwargs):
     '''
     List the packages currently installed as a dict with versions
     as a comma separated string::
@@ -681,28 +681,53 @@ def list_pkgs(versions_as_list=False, **kwargs):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
-        if versions_as_list:
-            return __context__['pkg.list_pkgs']
-        else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
-            __salt__['pkg_resource.stringify'](ret)
-            return ret
+        return _format_pkg_list(__context__['pkg.list_pkgs'], versions_as_list, attr)
 
-    cmd = ['rpm', '-qa', '--queryformat', '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%|EPOCH?{%{EPOCH}}:{}|\\n']
+    cmd = ['rpm', '-qa', '--queryformat', (
+        "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-"
+        "%|EPOCH?{%{EPOCH}}:{}|_|-%{INSTALLTIME}\\n")]
     ret = {}
     for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
-        name, pkgver, rel, epoch = line.split('_|-')
+        name, pkgver, rel, arch, epoch, install_time = line.split('_|-')
         if epoch:
             pkgver = '{0}:{1}'.format(epoch, pkgver)
         if rel:
             pkgver += '-{0}'.format(rel)
-        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+        install_time = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
 
-    __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+        all_attr = {'version': pkgver, 'arch': arch, 'install_date': install_time}
+        __salt__['pkg_resource.add_pkg'](ret, name, all_attr)
+
+    for pkgname in ret:
+        ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
+
+    __context__['pkg.list_pkgs'] = ret
+
+    return _format_pkg_list(ret, versions_as_list, attr)
+
+
+def _format_pkg_list(packages, versions_as_list, attr):
+    '''
+    Formats packages according to parameters.
+    '''
+    ret = copy.deepcopy(packages)
+    if attr:
+        requested_attr = set(attr + ['version']) & set(['version', 'arch', 'install_date'])
+
+        for name in ret:
+            versions = []
+            for all_attr in ret[name]:
+                filtered_attr = {}
+                for key in requested_attr:
+                    filtered_attr[key] = all_attr[key]
+                versions.append(filtered_attr)
+            ret[name] = versions
+        return ret
+
+    for name in ret:
+        ret[name] = [d['version'] for d in ret[name]]
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
-
     return ret
 
 
@@ -985,6 +1010,7 @@ def install(name=None,
             skip_verify=False,
             version=None,
             ignore_repo_failure=False,
+            diff_attr=None,
             **kwargs):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -1111,7 +1137,7 @@ def install(name=None,
     else:
         targets = pkg_params
 
-    old = list_pkgs() if not downloadonly else list_downloaded()
+    old = list_pkgs(attr=diff_attr) if not downloadonly else list_downloaded()
     downgrades = []
     if fromrepo:
         fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
@@ -1149,7 +1175,7 @@ def install(name=None,
         __zypper__(no_repo_failure=ignore_repo_failure).call(*cmd)
 
     __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs() if not downloadonly else list_downloaded()
+    new = list_pkgs(attr=diff_attr) if not downloadonly else list_downloaded()
 
     # Handle packages which report multiple new versions
     # (affects only kernel packages at this point)
