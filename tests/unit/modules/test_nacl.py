@@ -49,27 +49,27 @@ class NaclModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_nacl(self):
-      '''
-      Test NACL encryption and decription
-      - encryption key passed as attribute
-      - decryption key is read from configuration
-      '''
-      with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=clrtext)}):
-          self.assertEqual(nacl.dec(nacl.enc(clrtext, sk=sk)), 'blabol')
+        '''
+        Test NACL encryption and decription
+        - encryption key passed as attribute
+        - decryption key is read from configuration
+        '''
+        with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=clrtext)}):
+            self.assertEqual(nacl.dec(nacl.enc(clrtext, sk=sk)), 'blabol')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_nacl_dec_none(self):
-      '''
-      Test NACL decryption with None on input
-      '''
-      with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=clrtext)}):
-          self.assertEqual(nacl.dec(None, sk=sk), None)
+        '''
+        Test NACL decryption with None on input
+        '''
+        with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=clrtext)}):
+            self.assertEqual(nacl.dec(None, sk=sk), None)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_nacl_dec_clrtext(self):
-      '''
-      Test NACL decryption
-      '''
-      with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=clrtext)}):
-          self.assertEqual(test.try_(module='nacl.dec', data=clrtext), None)
+        '''
+        Test NACL decryption
+        '''
+        with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=clrtext)}):
+            self.assertEqual(test.try_(module='nacl.dec', data=clrtext), None)
 
