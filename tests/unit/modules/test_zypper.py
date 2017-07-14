@@ -489,12 +489,12 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             data.setdefault(key, []).append(value)
 
         rpm_out = [
-            'protobuf-java_|-2.6.1_|-3.1.develHead_|-',
-            'yast2-ftp-server_|-3.1.8_|-8.1_|-',
-            'jose4j_|-0.4.4_|-2.1.develHead_|-',
-            'apache-commons-cli_|-1.2_|-1.233_|-',
-            'jakarta-commons-discovery_|-0.4_|-129.686_|-',
-            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-',
+            'protobuf-java_|-2.6.1_|-3.1.develHead_|-noarch_|-_|-1499257756',
+            'yast2-ftp-server_|-3.1.8_|-8.1_|-x86_64_|-_|-1499257798',
+            'jose4j_|-0.4.4_|-2.1.develHead_|-noarch_|-_|-1499257756',
+            'apache-commons-cli_|-1.2_|-1.233_|-noarch_|-_|-1498636510',
+            'jakarta-commons-discovery_|-0.4_|-129.686_|-noarch_|-_|-1498636511',
+            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-noarch_|-_|-1498636510',
         ]
         with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}):
             with patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}):
