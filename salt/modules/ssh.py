@@ -151,8 +151,11 @@ def _replace_auth_key(
         # open the file for both reading AND writing
         with salt.utils.fopen(full, 'r') as _fh:
             for line in _fh:
-                # We don't need any whitespace-only containing lines or arbitrary newlines
+                # We don't need any whitespace-only containing lines or arbitrary doubled newlines
                 line = line.strip()
+                if line == '':
+                    continue
+                line += '\n'
 
                 if line.startswith('#'):
                     # Commented Line
@@ -160,6 +163,7 @@ def _replace_auth_key(
                     continue
                 comps = re.findall(r'((.*)\s)?(ssh-[a-z0-9-]+|ecdsa-[a-z0-9-]+)\s([a-zA-Z0-9+/]+={0,2})(\s(.*))?', line)
                 if len(comps) > 0 and len(comps[0]) > 3 and comps[0][3] == key:
+                    # Found our key, replace it
                     lines.append(auth_line)
                 else:
                     lines.append(line)
@@ -184,8 +188,11 @@ def _validate_keys(key_file, fingerprint_hash_type):
     try:
         with salt.utils.fopen(key_file, 'r') as _fh:
             for line in _fh:
-                # We don't need any whitespace-only containing lines or arbitrary newlines
+                # We don't need any whitespace-only containing lines or arbitrary doubled newlines
                 line = line.strip()
+                if line == '':
+                    continue
+                line += '\n'
 
                 if line.startswith('#'):
                     # Commented Line
@@ -576,8 +583,11 @@ def rm_auth_key(user,
             # and then write out the correct one. Open the file once
             with salt.utils.fopen(full, 'r') as _fh:
                 for line in _fh:
-                    # We don't need any whitespace-only containing lines or arbitrary newlines
+                    # We don't need any whitespace-only containing lines or arbitrary doubled newlines
                     line = line.strip()
+                    if line == '':
+                        continue
+                    line += '\n'
 
                     if line.startswith('#'):
                         # Commented Line
@@ -786,8 +796,11 @@ def _parse_openssh_output(lines, fingerprint_hash_type=None):
     and yield dict with keys information, one by one.
     '''
     for line in lines:
-        # We don't need any whitespace-only containing lines or arbitrary newlines
+        # We don't need any whitespace-only containing lines or arbitrary doubled newlines
         line = line.strip()
+        if line == '':
+            continue
+        line += '\n'
 
         if line.startswith('#'):
             continue
