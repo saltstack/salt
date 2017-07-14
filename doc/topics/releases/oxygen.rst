@@ -67,6 +67,13 @@ Module Deprecations
 The ``blockdev`` execution module has been removed. Its functions were merged
 with the ``disk`` module. Please use the ``disk`` execution module instead.
 
+The ``lxc`` execution module had the following changes:
+
+- The ``dnsservers`` option to the ``cloud_init_interface`` function no longer
+  defaults to ``4.4.4.4`` and ``8.8.8.8``.
+- The ``dns_via_dhcp`` option to the ``cloud_init_interface`` function defaults
+  to ``True`` now instead of ``False``.
+
 The ``win_psget`` module had the following changes:
 
 - The ``psversion`` function was removed. Please use ``cmd.shell_info`` instead.
