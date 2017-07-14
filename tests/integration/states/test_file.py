@@ -545,6 +545,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test file.managed passing a basic check_cmd kwarg. See Issue #38111.
         '''
+        r_group = 'root'
+        if salt.utils.is_darwin():
+            r_group = 'wheel'
         if not salt.utils.which('visudo'):
             self.fail('sudo is missing')
         try:
@@ -552,7 +555,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 'file.managed',
                 name='/tmp/sudoers',
                 user='root',
-                group='root',
+                group=r_group,
                 mode=440,
                 check_cmd='visudo -c -s -f'
             )
@@ -2031,16 +2034,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertSaltTrueReturn({name: step})
             with salt.utils.fopen(testcase_filedest) as fp_:
                 contents = fp_.read().split(os.linesep)
-            self.assertEqual(
-                ['#',
-                 '#-- start managed zone PLEASE, DO NOT EDIT',
-                 'bar',
-                 '',
-                 'baz',
-                 '#-- end managed zone',
-                 ''],
-                contents
-            )
+
+            begin = contents.index(
+                '#-- start managed zone PLEASE, DO NOT EDIT') + 1
+            end = contents.index('#-- end managed zone')
+            block_contents = contents[begin:end]
+            for item in ('', 'bar', 'baz'):
+                block_contents.remove(item)
+            self.assertEqual(block_contents, [])
         finally:
             if os.path.isdir(testcase_filedest):
                 os.unlink(testcase_filedest)

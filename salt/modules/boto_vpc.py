@@ -4,6 +4,11 @@ Connection module for Amazon VPC
 
 .. versionadded:: 2014.7.0
 
+:depends:
+
+- boto >= 2.8.0
+- boto3 >= 1.2.6
+
 :configuration: This module accepts explicit VPC credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
@@ -68,8 +73,6 @@ Connection module for Amazon VPC
 
         error:
           message: error message
-
-:depends: boto
 
 .. versionadded:: 2016.11.0
 

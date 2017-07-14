@@ -18,12 +18,19 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.config
+import salt.utils
 
 MOCK_MASTER_DEFAULT_OPTS = {
     'log_file': '/var/log/salt/master',
     'pidfile': '/var/run/salt-master.pid',
     'root_dir': '/'
 }
+if salt.utils.is_windows():
+    MOCK_MASTER_DEFAULT_OPTS = {
+        'log_file': 'c:\\salt\\var\\log\\salt\\master',
+        'pidfile': 'c:\\salt\\var\\run\\salt-master.pid',
+        'root_dir': 'c:\\salt'
+    }
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -46,8 +53,13 @@ class APIConfigTestCase(TestCase):
         the DEFAULT_API_OPTS 'api_logfile' value.
         '''
         with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+
+            expected = '/var/log/salt/api'
+            if salt.utils.is_windows():
+                expected = 'c:\\salt\\var\\log\\salt\\api'
+
             ret = salt.config.api_config('/some/fake/path')
-            self.assertEqual(ret['log_file'], '/var/log/salt/api')
+            self.assertEqual(ret['log_file'], expected)
 
     def test_api_config_pidfile_values(self):
         '''
@@ -56,8 +68,13 @@ class APIConfigTestCase(TestCase):
         the DEFAULT_API_OPTS 'api_pidfile' value.
         '''
         with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+
+            expected = '/var/run/salt-api.pid'
+            if salt.utils.is_windows():
+                expected = 'c:\\salt\\var\\run\\salt-api.pid'
+
             ret = salt.config.api_config('/some/fake/path')
-            self.assertEqual(ret['pidfile'], '/var/run/salt-api.pid')
+            self.assertEqual(ret['pidfile'], expected)
 
     @destructiveTest
     def test_master_config_file_overrides_defaults(self):
@@ -68,6 +85,10 @@ class APIConfigTestCase(TestCase):
         '''
         foo_dir = '/foo/bar/baz'
         hello_dir = '/hello/world'
+        if salt.utils.is_windows():
+            foo_dir = 'c:\\foo\\bar\\baz'
+            hello_dir = 'c:\\hello\\world'
+
         mock_master_config = {
             'api_pidfile': foo_dir,
             'api_logfile': hello_dir,
@@ -97,6 +118,11 @@ class APIConfigTestCase(TestCase):
 
         mock_master_config = MOCK_MASTER_DEFAULT_OPTS.copy()
         mock_master_config['root_dir'] = '/mock/root/'
+
+        if salt.utils.is_windows():
+            mock_log = 'c:\\mock\\root\\var\\log\\salt\\api'
+            mock_pid = 'c:\\mock\\root\\var\\run\\salt-api.pid'
+            mock_master_config['root_dir'] = 'c:\\mock\\root'
 
         with patch('salt.config.client_config',
                    MagicMock(return_value=mock_master_config)):

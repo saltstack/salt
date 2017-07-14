@@ -6,14 +6,24 @@ import os
 import uuid
 import shutil
 import hashlib
+import logging
+import psutil
+import shutil
+import signal
+import tempfile
+import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import get_unused_localhost_port, skip_if_not_root
+from tests.support.unit import skipIf
 import tests.support.paths as paths
 
 # Import salt libs
 import salt.ext.six as six
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 class CPModuleTest(ModuleCase):
@@ -32,6 +42,22 @@ class CPModuleTest(ModuleCase):
                     tgt,
                 ])
         with salt.utils.fopen(tgt, 'r') as scene:
+            data = scene.read()
+            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn('bacon', data)
+
+    def test_get_file_to_dir(self):
+        '''
+        cp.get_file
+        '''
+        tgt = os.path.join(paths.TMP, '')
+        self.run_function(
+                'cp.get_file',
+                [
+                    'salt://grail/scene33',
+                    tgt,
+                ])
+        with salt.utils.fopen(tgt + 'scene33', 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
@@ -225,6 +251,22 @@ class CPModuleTest(ModuleCase):
             ])
         self.assertEqual(ret, False)
 
+    def test_get_url_to_dir(self):
+        '''
+        cp.get_url with salt:// source
+        '''
+        tgt = os.path.join(paths.TMP, '')
+        self.run_function(
+                'cp.get_url',
+                [
+                    'salt://grail/scene33',
+                    tgt,
+                ])
+        with salt.utils.fopen(tgt + 'scene33', 'r') as scene:
+            data = scene.read()
+            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn('bacon', data)
+
     def test_get_url_https(self):
         '''
         cp.get_url with https:// source given
@@ -414,6 +456,83 @@ class CPModuleTest(ModuleCase):
                 [src])
         with salt.utils.fopen(ret, 'r') as cp_:
             self.assertEqual(cp_.read(), 'foo')
+
+    @skipIf(not salt.utils.which('nginx'), 'nginx not installed')
+    @skip_if_not_root
+    def test_cache_remote_file(self):
+        '''
+        cp.cache_file
+        '''
+        nginx_port = get_unused_localhost_port()
+        url_prefix = 'http://localhost:{0}/'.format(nginx_port)
+        temp_dir = tempfile.mkdtemp(dir=paths.TMP)
+        self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)
+        nginx_root_dir = os.path.join(temp_dir, 'root')
+        nginx_conf_dir = os.path.join(temp_dir, 'conf')
+        nginx_conf = os.path.join(nginx_conf_dir, 'nginx.conf')
+        nginx_pidfile = os.path.join(nginx_conf_dir, 'nginx.pid')
+        file_contents = 'Hello world!'
+
+        for dirname in (nginx_root_dir, nginx_conf_dir):
+            os.mkdir(dirname)
+
+        # Write the temp file
+        with salt.utils.fopen(os.path.join(nginx_root_dir, 'actual_file'), 'w') as fp_:
+            fp_.write(file_contents)
+
+        # Write the nginx config
+        with salt.utils.fopen(nginx_conf, 'w') as fp_:
+            fp_.write(textwrap.dedent(
+                '''\
+                user root;
+                worker_processes 1;
+                error_log {nginx_conf_dir}/server_error.log;
+                pid {nginx_pidfile};
+
+                events {{
+                    worker_connections 1024;
+                }}
+
+                http {{
+                    include       /etc/nginx/mime.types;
+                    default_type  application/octet-stream;
+
+                    access_log {nginx_conf_dir}/access.log;
+                    error_log {nginx_conf_dir}/error.log;
+
+                    server {{
+                        listen {nginx_port} default_server;
+                        server_name cachefile.local;
+                        root {nginx_root_dir};
+
+                        location ~ ^/301$ {{
+                            return 301 /actual_file;
+                        }}
+
+                        location ~ ^/302$ {{
+                            return 302 /actual_file;
+                        }}
+                    }}
+                }}'''.format(**locals())
+            ))
+
+        self.run_function(
+            'cmd.run',
+            [['nginx', '-c', nginx_conf]],
+            python_shell=False
+        )
+        with salt.utils.fopen(nginx_pidfile) as fp_:
+            nginx_pid = int(fp_.read().strip())
+            nginx_proc = psutil.Process(pid=nginx_pid)
+            self.addCleanup(nginx_proc.send_signal, signal.SIGQUIT)
+
+        for code in ('', '301', '302'):
+            url = url_prefix + (code or 'actual_file')
+            log.debug('attempting to cache %s', url)
+            ret = self.run_function('cp.cache_file', [url])
+            with salt.utils.fopen(ret) as fp_:
+                cached_contents = fp_.read()
+                self.assertEqual(cached_contents, file_contents)
 
     def test_list_states(self):
         '''

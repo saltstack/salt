@@ -239,7 +239,7 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
             }
         }
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     Returns {created: true} if the function was created and returns
     {created: False} if the function was not created.
@@ -384,7 +384,7 @@ def update_function_config(FunctionName, Role=None, Handler=None,
             }
         }
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     Returns {updated: true} if the function was updated and returns
     {updated: False} if the function was not updated.

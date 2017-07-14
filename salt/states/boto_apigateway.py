@@ -225,13 +225,13 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
             '#end\n'
             '  ]\n'
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     response_template
         String value that defines the response template mapping applied in case of success (including OPTIONS method)
         If set to None, empty ({}) template is assumed, which will transfer response from the lambda function as is.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
     '''
     ret = {'name': name,
            'result': True,
@@ -1674,7 +1674,7 @@ def usage_plan_present(name, plan_name, description=None, throttle=None, quota=N
     '''
     Ensure the spcifieda usage plan with the corresponding metrics is deployed
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     name
         name of the state
@@ -1814,7 +1814,7 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
     '''
     Ensures usage plan identified by name is no longer present
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     name
         name of the state
@@ -1880,7 +1880,7 @@ def usage_plan_association_present(name, plan_name, api_stages, region=None, key
     '''
     Ensures usage plan identified by name is added to provided api_stages
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     name
         name of the state
@@ -1975,7 +1975,7 @@ def usage_plan_association_absent(name, plan_name, api_stages, region=None, key=
     If a plan is associated to stages not listed in api_stages parameter,
     those associations remain intact.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     name
         name of the state

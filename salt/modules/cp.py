@@ -49,7 +49,7 @@ def _gather_pillar(pillarenv, pillar_override):
         __grains__,
         __opts__['id'],
         __opts__['environment'],
-        pillar=pillar_override,
+        pillar_override=pillar_override,
         pillarenv=pillarenv
     )
     ret = pillar.compile_pillar()
@@ -209,6 +209,9 @@ def get_file(path,
              gzip=None,
              **kwargs):
     '''
+    .. versionchanged:: Oxygen
+        ``dest`` can now be a directory
+
     Used to get a single file from the salt master
 
     CLI Example:
@@ -320,6 +323,9 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, **kwargs):
 
 def get_url(path, dest='', saltenv='base', makedirs=False):
     '''
+    .. versionchanged:: Oxygen
+        ``dest`` can now be a directory
+
     Used to get a single file from a URL.
 
     path

@@ -32,7 +32,7 @@ __func_alias__ = {
 
 def grains(tgt=None, tgt_type='glob', **kwargs):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -63,7 +63,7 @@ def grains(tgt=None, tgt_type='glob', **kwargs):
 
 def pillar(tgt=None, tgt_type='glob', **kwargs):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -96,7 +96,7 @@ def pillar(tgt=None, tgt_type='glob', **kwargs):
 
 def mine(tgt=None, tgt_type='glob', **kwargs):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -152,7 +152,7 @@ def _clear_cache(tgt=None,
 
 def clear_pillar(tgt=None, tgt_type='glob', expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -180,7 +180,7 @@ def clear_pillar(tgt=None, tgt_type='glob', expr_form=None):
 
 def clear_grains(tgt=None, tgt_type='glob', expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -208,7 +208,7 @@ def clear_grains(tgt=None, tgt_type='glob', expr_form=None):
 
 def clear_mine(tgt=None, tgt_type='glob', expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -239,7 +239,7 @@ def clear_mine_func(tgt=None,
                     clear_mine_func_flag=None,
                     expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -256,7 +256,7 @@ def clear_mine_func(tgt=None,
 
 def clear_all(tgt=None, tgt_type='glob', expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 

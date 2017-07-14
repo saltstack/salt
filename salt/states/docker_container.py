@@ -2,7 +2,7 @@
 '''
 Management of Docker containers
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends: docker_ Python module
 
@@ -28,9 +28,9 @@ Management of Docker containers
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 
 These states were moved from the :mod:`docker <salt.states.docker>` state
-module (formerly called **dockerng**) in the Nitrogen release. When running the
+module (formerly called **dockerng**) in the 2017.7.0 release. When running the
 :py:func:`docker_container.running <salt.states.docker_container.running>`
-state for the first time after upgrading to Nitrogen, your container(s) may be
+state for the first time after upgrading to 2017.7.0, your container(s) may be
 replaced. The changes may show diffs for certain parameters which say that the
 old value was an empty string, and the new value is ``None``. This is due to
 the fact that in prior releases Salt was passing empty strings for these values
@@ -254,7 +254,7 @@ def running(name,
         <salt.modules.dockermod.stop>` as the ``timeout`` value, telling Docker
         how long to wait for a graceful shutdown before killing the container.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             This option was renamed from ``stop_timeout`` to
             ``shutdown_timeout`` to acommodate the ``stop_timeout`` container
             configuration setting.
@@ -283,10 +283,35 @@ def running(name,
 
     binds
         Files/directories to bind mount. Each bind mount should be passed in
-        the format ``<host_path>:<container_path>:<read_only>``, where
-        ``<read_only>`` is one of ``rw`` (for read-write access) or ``ro`` (for
-        read-only access). Can be expressed as a comma-separated list or a YAML
-        list. The below two examples are equivalent:
+        one of the following formats:
+
+        - ``<host_path>:<container_path>`` - ``host_path`` is mounted within
+          the container as ``container_path`` with read-write access.
+        - ``<host_path>:<container_path>:<selinux_context>`` - ``host_path`` is
+          mounted within the container as ``container_path`` with read-write
+          access. Additionally, the specified selinux context will be set
+          within the container.
+        - ``<host_path>:<container_path>:<read_only>`` - ``host_path`` is
+          mounted within the container as ``container_path``, with the
+          read-only or read-write setting explicitly defined.
+        - ``<host_path>:<container_path>:<read_only>,<selinux_context>`` -
+          ``host_path`` is mounted within the container as ``container_path``,
+          with the read-only or read-write setting explicitly defined.
+          Additionally, the specified selinux context will be set within the
+          container.
+
+        ``<read_only>`` can be either ``ro`` for read-write access, or ``ro``
+        for read-only access. When omitted, it is assumed to be read-write.
+
+        ``<selinux_context>`` can be ``z`` if the volume is shared between
+        multiple containers, or ``Z`` if the volume should be private.
+
+        .. note::
+            When both ``<read_only>`` and ``<selinux_context>`` are specified,
+            there must be a comma before ``<selinux_context>``.
+
+        Binds can be expressed as a comma-separated list or a YAML list. The
+        below two examples are equivalent:
 
         .. code-block:: yaml
 
@@ -304,9 +329,8 @@ def running(name,
                   - /srv/www:/var/www:ro
                   - /home/myuser/conf/foo.conf:/etc/foo.conf:rw
 
-        Optionally, the read-only information can be left off the end and the
-        bind mount will be assumed to be read-write. The example below is
-        equivalent to the one above:
+        However, in cases where both ro/rw and an selinux context are combined,
+        the only option is to use a YAML list, like so:
 
         .. code-block:: yaml
 
@@ -314,8 +338,20 @@ def running(name,
               docker_container.running:
                 - image: bar/baz:latest
                 - binds:
-                  - /srv/www:/var/www:ro
-                  - /home/myuser/conf/foo.conf:/etc/foo.conf
+                  - /srv/www:/var/www:ro,Z
+                  - /home/myuser/conf/foo.conf:/etc/foo.conf:rw,Z
+
+        Since the second bind in the previous example is mounted read-write,
+        the ``rw`` and comma can be dropped. For example:
+
+        .. code-block:: yaml
+
+            foo:
+              docker_container.running:
+                - image: bar/baz:latest
+                - binds:
+                  - /srv/www:/var/www:ro,Z
+                  - /home/myuser/conf/foo.conf:/etc/foo.conf:Z
 
     blkio_weight
         Block IO weight (relative weight), accepts a weight value between 10
@@ -1322,7 +1358,7 @@ def running(name,
                 - stop_timeout: 5
 
         .. note::
-            In releases prior to Nitrogen, this option was not set in the
+            In releases prior to 2017.7.0, this option was not set in the
             container configuration, but rather this timeout was enforced only
             when shutting down an existing container to replace it. To remove
             the ambiguity, and to allow for the container to have a stop

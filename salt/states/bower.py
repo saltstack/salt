@@ -275,7 +275,7 @@ def bootstrap(name, user=None):
 
 def pruned(name, user=None, env=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Cleans up local bower_components directory.
 

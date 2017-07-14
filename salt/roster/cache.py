@@ -3,7 +3,7 @@
 The `cache` roster provides a flexible interface to the Salt Masters' minion cache
 to access regular minions over ``salt-ssh``.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
     - grains, pillar, mine data matching
     - SDB URLs

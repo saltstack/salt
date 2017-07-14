@@ -133,6 +133,24 @@ name) is set in the :conf_minion:`master` configuration setting.
 
     master_uri_format: ip_only
 
+.. conf_minion:: master_tops_first
+
+``master_tops_first``
+---------------------
+
+.. versionadded:: Oxygen
+
+Default: ``False``
+
+SLS targets defined using the :ref:`Master Tops <master-tops-system>` system
+are normally executed *after* any matches defined in the :ref:`Top File
+<states-top>`. Set this option to ``True`` to have the minion execute the
+:ref:`Master Tops <master-tops-system>` states first.
+
+.. code-block:: yaml
+
+    master_tops_first: True
+
 .. conf_minion:: master_type
 
 ``master_type``
@@ -319,7 +337,7 @@ The user to run the Salt processes
 .. conf_minion:: sudo_user
 
 ``sudo_user``
---------------
+-------------
 
 Default: ``''``
 
@@ -610,6 +628,26 @@ With ``grains_deep_merge``, the result will be:
       k1: v1
       k2: v2
 
+.. conf_minion:: grains_refresh_every
+
+``grains_refresh_every``
+------------------------
+
+Default: ``0``
+
+The ``grains_refresh_every`` setting allows for a minion to periodically
+check its grains to see if they have changed and, if so, to inform the master
+of the new grains. This operation is moderately expensive, therefore care
+should be taken not to set this value too low.
+
+Note: This value is expressed in minutes.
+
+A value of 10 minutes is a reasonable default.
+
+.. code-block:: yaml
+
+    grains_refresh_every: 0
+
 .. conf_minion:: mine_enabled
 
 ``mine_enabled``
@@ -643,7 +681,7 @@ return for the job cache.
     mine_return_job: False
 
 ``mine_functions``
--------------------
+------------------
 
 Default: Empty
 
@@ -661,6 +699,18 @@ Note these can be defined in the pillar for a minion as well.
         interface: eth0
         cidr: '10.0.0.0/8'
 
+.. conf_minion:: mine_interval
+
+``mine_interval``
+-----------------
+
+Default: ``60``
+
+The number of seconds a mine update runs.
+
+.. code-block:: yaml
+
+    mine_interval: 60
 
 .. conf_minion:: sock_dir
 
@@ -674,6 +724,19 @@ The directory where Unix sockets will be kept.
 .. code-block:: yaml
 
     sock_dir: /var/run/salt/minion
+
+.. conf_minion:: outputter_dirs
+
+``outputter_dirs``
+------------------
+
+Default: ``[]``
+
+A list of additional directories to search for salt outputters in.
+
+.. code-block:: yaml
+
+    outputter_dirs: []
 
 .. conf_minion:: backup_mode
 
@@ -816,6 +879,20 @@ restart.
 .. code-block:: yaml
 
     auth_safemode: False
+
+.. conf_minion:: ping_interval
+
+``ping_interval``
+-----------------
+
+Default: ``0``
+
+Instructs the minion to ping its master(s) every n number of seconds. Used
+primarily as a mitigation technique against minion disconnects.
+
+.. code-block:: yaml
+
+    ping_interval: 0
 
 .. conf_minion:: recon_default
 
@@ -1275,10 +1352,13 @@ below.
     providers:
       service: systemd
 
-``extmod_whitelist/extmod_blacklist``
---------------------
+.. conf_minion:: extmod_whitelist
+.. conf_minion:: extmod_blacklist
 
-.. versionadded:: Nitrogen
+``extmod_whitelist/extmod_blacklist``
+-------------------------------------
+
+.. versionadded:: 2017.7.0
 
 By using this dictionary, the modules that are synced to the minion's extmod cache using `saltutil.sync_*` can be
 limited.  If nothing is set to a specific type, then all modules are accepted.  To block all modules of a specific type,
@@ -1503,6 +1583,22 @@ the output will be shortened to a single line.
 .. code-block:: yaml
 
     state_output: full
+
+
+.. conf_minion:: state_output_diff
+
+``state_output_diff``
+---------------------
+
+Default: ``False``
+
+The state_output_diff setting changes whether or not the output from
+successful states is returned. Useful when even the terse output of these
+states is cluttering the logs. Set it to True to ignore them.
+
+.. code-block:: yaml
+
+    state_output_diff: False
 
 .. conf_minion:: autoload_dynamic_modules
 
@@ -1747,7 +1843,7 @@ the pillar environments.
 ``on_demand_ext_pillar``
 ------------------------
 
-.. versionadded:: 2016.3.6,2016.11.3,Nitrogen
+.. versionadded:: 2016.3.6,2016.11.3,2017.7.0
 
 Default: ``['libvirt', 'virtkey']``
 
@@ -1776,7 +1872,7 @@ external pillars are permitted to be used on-demand using :py:func:`pillar.ext
 ``decrypt_pillar``
 ------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``[]``
 
@@ -1798,7 +1894,7 @@ specified by :conf_minion:`decrypt_pillar_default` will be used.
 ``decrypt_pillar_delimiter``
 ----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``:``
 
@@ -1817,7 +1913,7 @@ The delimiter used to distinguish nested data structures in the
 ``decrypt_pillar_default``
 --------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``gpg``
 
@@ -1833,7 +1929,7 @@ pillar key in :conf_minion:`decrypt_pillar`.
 ``decrypt_pillar_renderers``
 ----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``['gpg']``
 
@@ -1864,7 +1960,7 @@ the environment setting, but for pillar instead of states.
 ``pillarenv_from_saltenv``
 --------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``False``
 

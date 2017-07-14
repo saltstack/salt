@@ -15,7 +15,7 @@ Dependencies
 - :mod:`NAPALM proxy minion <salt.proxy.napalm>`
 - :mod:`Network-related basic features execution module <salt.modules.napalm_network>`
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 '''
 
 from __future__ import absolute_import
@@ -62,7 +62,7 @@ def _update_config(template_name,
                    template_mode='755',
                    saltenv=None,
                    template_engine='jinja',
-                   skip_verify=True,
+                   skip_verify=False,
                    defaults=None,
                    test=False,
                    commit=True,

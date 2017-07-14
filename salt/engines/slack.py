@@ -56,7 +56,7 @@ the saltmaster's minion pillar.
 
     :configuration: Example configuration using the "default" group and a non-default group and a pillar that will be merged in
         If the user is '*' (without the quotes) then the group's users or commands will match all users as appropriate
-    .. versionadded: Nitrogen
+    .. versionadded: 2017.7.0
 
         engines:
             slack:

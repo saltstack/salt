@@ -657,26 +657,37 @@ class State(object):
     def __init__(
             self,
             opts,
-            pillar=None,
+            pillar_override=None,
             jid=None,
             pillar_enc=None,
             proxy=None,
             context=None,
             mocked=False,
-            loader='states'):
+            loader='states',
+            initial_pillar=None):
         self.states_loader = loader
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.proxy = proxy
-        self._pillar_override = pillar
+        self._pillar_override = pillar_override
         if pillar_enc is not None:
             try:
                 pillar_enc = pillar_enc.lower()
             except AttributeError:
                 pillar_enc = str(pillar_enc).lower()
         self._pillar_enc = pillar_enc
-        self.opts['pillar'] = self._gather_pillar()
+        if initial_pillar is not None:
+            self.opts['pillar'] = initial_pillar
+            if self._pillar_override:
+                self.opts['pillar'] = salt.utils.dictupdate.merge(
+                    self.opts['pillar'],
+                    self._pillar_override,
+                    self.opts.get('pillar_source_merging_strategy', 'smart'),
+                    self.opts.get('renderer', 'yaml'),
+                    self.opts.get('pillar_merge_lists', False))
+        else:
+            self.opts['pillar'] = self._gather_pillar()
         self.state_con = context or {}
         self.load_modules()
         self.active = set()
@@ -727,7 +738,7 @@ class State(object):
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['environment'],
-                pillar=self._pillar_override,
+                pillar_override=self._pillar_override,
                 pillarenv=self.opts.get('pillarenv'))
         return pillar.compile_pillar()
 
@@ -759,7 +770,7 @@ class State(object):
             agg_opt = low['aggregate']
         if agg_opt is True:
             agg_opt = [low['state']]
-        else:
+        elif not isinstance(agg_opt, list):
             return low
         if low['state'] in agg_opt and not low.get('__agg__'):
             agg_fun = '{0}.mod_aggregate'.format(low['state'])
@@ -890,7 +901,8 @@ class State(object):
                                 self.functions[f_key] = funcs[func]
         self.serializers = salt.loader.serializers(self.opts)
         self._load_states()
-        self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
+        self.rend = salt.loader.render(self.opts, self.functions,
+                                       states=self.states, proxy=self.proxy)
 
     def module_refresh(self):
         '''
@@ -983,9 +995,12 @@ class State(object):
             errors.append('Missing "name" data')
         if data['name'] and not isinstance(data['name'], six.string_types):
             errors.append(
-                'ID \'{0}\' in SLS \'{1}\' is not formed as a string, but is '
-                'a {2}'.format(
-                    data['name'], data['__sls__'], type(data['name']).__name__)
+                'ID \'{0}\' {1}is not formed as a string, but is a {2}'.format(
+                    data['name'],
+                    'in SLS \'{0}\' '.format(data['__sls__'])
+                        if '__sls__' in data else '',
+                    type(data['name']).__name__
+                )
             )
         if errors:
             return errors
@@ -2802,9 +2817,11 @@ class BaseHighState(object):
                 )
 
         if found == 0:
-            log.error('No contents found in top file. Please verify '
-                'that the \'file_roots\' specified in \'etc/master\' are '
-                'accessible: {0}'.format(repr(self.state.opts['file_roots']))
+            log.debug(
+                'No contents found in top file. If this is not expected, '
+                'verify that the \'file_roots\' specified in \'etc/master\' '
+                'are accessible. The \'file_roots\' configuration is: %s',
+                repr(self.state.opts['file_roots'])
             )
 
         # Search initial top files for includes
@@ -3119,23 +3136,26 @@ class BaseHighState(object):
                                     matches[env_key] = []
                                 matches[env_key].append(inc_sls)
                 _filter_matches(match, data, self.opts['nodegroups'])
-        ext_matches = self._ext_nodes()
+        ext_matches = self._master_tops()
         for saltenv in ext_matches:
-            if saltenv in matches:
-                matches[saltenv] = list(
-                    set(ext_matches[saltenv]).union(matches[saltenv]))
+            top_file_matches = matches.get(saltenv, [])
+            if self.opts['master_tops_first']:
+                first = ext_matches[saltenv]
+                second = top_file_matches
             else:
-                matches[saltenv] = ext_matches[saltenv]
+                first = top_file_matches
+                second = ext_matches[saltenv]
+            matches[saltenv] = first + [x for x in second if x not in first]
+
         # pylint: enable=cell-var-from-loop
         return matches
 
-    def _ext_nodes(self):
+    def _master_tops(self):
         '''
-        Get results from an external node classifier.
-        Override it if the execution of the external node clasifier
-        needs customization.
+        Get results from the master_tops system. Override this function if the
+        execution of the master_tops needs customization.
         '''
-        return self.client.ext_nodes()
+        return self.client.master_tops()
 
     def load_dynamic(self, matches):
         '''
@@ -3625,7 +3645,7 @@ class BaseHighState(object):
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         if not matches:
-            msg = 'No Top file or external nodes data matches found.'
+            msg = 'No Top file or master_tops data matches found.'
             ret[tag_name]['comment'] = msg
             return ret
         matches = self.matches_whitelist(matches, whitelist)
@@ -3759,24 +3779,26 @@ class HighState(BaseHighState):
     def __init__(
             self,
             opts,
-            pillar=None,
+            pillar_override=None,
             jid=None,
             pillar_enc=None,
             proxy=None,
             context=None,
             mocked=False,
-            loader='states'):
+            loader='states',
+            initial_pillar=None):
         self.opts = opts
         self.client = salt.fileclient.get_file_client(self.opts)
         BaseHighState.__init__(self, opts)
         self.state = State(self.opts,
-                           pillar,
+                           pillar_override,
                            jid,
                            pillar_enc,
                            proxy=proxy,
                            context=context,
                            mocked=mocked,
-                           loader=loader)
+                           loader=loader,
+                           initial_pillar=initial_pillar)
         self.matcher = salt.minion.Matcher(self.opts)
         self.proxy = proxy
 

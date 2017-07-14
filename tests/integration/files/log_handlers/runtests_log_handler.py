@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2016 by the SaltStack Team, see AUTHORS for more details.
+    :copyright: Copyright 2016 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 
 
@@ -23,6 +23,7 @@ from multiprocessing import Queue
 import msgpack
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.log.setup
 
 log = logging.getLogger(__name__)
@@ -33,6 +34,8 @@ __virtualname__ = 'runtests_log_handler'
 def __virtual__():
     if 'runtests_log_port' not in __opts__:
         return False, "'runtests_log_port' not in options"
+    if six.PY3:
+        return False, "runtests external logging handler is temporarily disabled for Python 3 tests"
     return True
 
 
@@ -47,7 +50,10 @@ def setup_handlers():
             log.warning('Failed to connect to log server')
             return
     finally:
-        sock.shutdown(socket.SHUT_RDWR)
+        try:
+            sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
         sock.close()
 
     queue = Queue()

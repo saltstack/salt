@@ -155,627 +155,904 @@ Filters
 
 Saltstack extends `builtin filters`_ with these custom filters:
 
-strftime
-  Converts any time related object into a time based string. It requires a
-  valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An
-  :ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in
-  the official Python documentation.
+.. jinja_ref:: strftime
 
-  .. code-block:: jinja
+``strftime``
+------------
 
-      {% set curtime = None | strftime() %}
+Converts any time related object into a time based string. It requires a
+valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An
+:ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in
+the official Python documentation.
 
-  Fuzzy dates require the `timelib`_ Python module is installed.
+.. code-block:: jinja
 
-  .. code-block:: jinja
+    {% set curtime = None | strftime() %}
 
-      {{ "2002/12/25"|strftime("%y") }}
-      {{ "1040814000"|strftime("%Y-%m-%d") }}
-      {{ datetime|strftime("%u") }}
-      {{ "tomorrow"|strftime }}
+Fuzzy dates require the `timelib`_ Python module is installed.
 
-sequence
-  Ensure that parsed data is a sequence.
+.. code-block:: jinja
 
-yaml_encode
-  Serializes a single object into a YAML scalar with any necessary
-  handling for escaping special characters.  This will work for any
-  scalar YAML data type: ints, floats, timestamps, booleans, strings,
-  unicode.  It will *not* work for multi-objects such as sequences or
-  maps.
+    {{ "2002/12/25"|strftime("%y") }}
+    {{ "1040814000"|strftime("%Y-%m-%d") }}
+    {{ datetime|strftime("%u") }}
+    {{ "tomorrow"|strftime }}
 
-  .. code-block:: jinja
 
-      {%- set bar = 7 %}
-      {%- set baz = none %}
-      {%- set zip = true %}
-      {%- set zap = 'The word of the day is "salty"' %}
+.. jinja_ref:: sequence
 
-      {%- load_yaml as foo %}
-      bar: {{ bar|yaml_encode }}
-      baz: {{ baz|yaml_encode }}
-      baz: {{ zip|yaml_encode }}
-      baz: {{ zap|yaml_encode }}
-      {%- endload %}
+``sequence``
+------------
 
-  In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
-  identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
-  identical.
+Ensure that parsed data is a sequence.
 
-yaml_dquote
-  Serializes a string into a properly-escaped YAML double-quoted
-  string.  This is useful when the contents of a string are unknown
-  and may contain quotes or unicode that needs to be preserved.  The
-  resulting string will be emitted with opening and closing double
-  quotes.
 
-  .. code-block:: jinja
+.. jinja_ref:: yaml_encode
 
-      {%- set bar = '"The quick brown fox . . ."' %}
-      {%- set baz = 'The word of the day is "salty".' %}
+``yaml_encode``
+---------------
 
-      {%- load_yaml as foo %}
-      bar: {{ bar|yaml_dquote }}
-      baz: {{ baz|yaml_dquote }}
-      {%- endload %}
+Serializes a single object into a YAML scalar with any necessary
+handling for escaping special characters.  This will work for any
+scalar YAML data type: ints, floats, timestamps, booleans, strings,
+unicode.  It will *not* work for multi-objects such as sequences or
+maps.
 
-  In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
-  identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
-  identical.  If variable contents are not guaranteed to be a string
-  then it is better to use ``yaml_encode`` which handles all YAML
-  scalar types.
+.. code-block:: jinja
 
-yaml_squote
-   Similar to the ``yaml_dquote`` filter but with single quotes.  Note
-   that YAML only allows special escapes inside double quotes so
-   ``yaml_squote`` is not nearly as useful (viz. you likely want to
-   use ``yaml_encode`` or ``yaml_dquote``).
+    {%- set bar = 7 %}
+    {%- set baz = none %}
+    {%- set zip = true %}
+    {%- set zap = 'The word of the day is "salty"' %}
 
-to_bool
-  Returns the logical value of an element.
+    {%- load_yaml as foo %}
+    bar: {{ bar|yaml_encode }}
+    baz: {{ baz|yaml_encode }}
+    baz: {{ zip|yaml_encode }}
+    baz: {{ zap|yaml_encode }}
+    {%- endload %}
 
-  Example:
+In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
+identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
+identical.
 
-  .. code-block:: jinja
 
-      {{ 'yes' | to_bool }}
-      {{ 'true' | to_bool }}
-      {{ 1 | to_bool }}
-      {{ 'no' | to_bool }}
+.. jinja_ref:: yaml_dquote
 
-  Will be rendered as:
+``yaml_dquote``
+---------------
 
-  .. code-block:: python
+Serializes a string into a properly-escaped YAML double-quoted
+string.  This is useful when the contents of a string are unknown
+and may contain quotes or unicode that needs to be preserved.  The
+resulting string will be emitted with opening and closing double
+quotes.
 
-    True
-    True
-    True
-    False
+.. code-block:: jinja
 
-exactly_n_true
-  Tests that exactly N items in an iterable are "truthy" (neither None, False, nor 0).
+    {%- set bar = '"The quick brown fox . . ."' %}
+    {%- set baz = 'The word of the day is "salty".' %}
 
-  Example:
+    {%- load_yaml as foo %}
+    bar: {{ bar|yaml_dquote }}
+    baz: {{ baz|yaml_dquote }}
+    {%- endload %}
 
-  .. code-block:: jinja
+In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
+identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
+identical.  If variable contents are not guaranteed to be a string
+then it is better to use ``yaml_encode`` which handles all YAML
+scalar types.
 
-    {{ ['yes', 0, False, 'True'] | exactly_n_true(2) }}
 
-  Returns:
+.. jinja_ref:: yaml_squote
 
-  .. code-block:: python
+``yaml_squote``
+---------------
 
-    True
+Similar to the ``yaml_dquote`` filter but with single quotes.  Note
+that YAML only allows special escapes inside double quotes so
+``yaml_squote`` is not nearly as useful (viz. you likely want to
+use ``yaml_encode`` or ``yaml_dquote``).
 
-exactly_one_true
-  Tests that exactly one item in an iterable is "truthy" (neither None, False, nor 0).
 
-  Example:
+.. jinja_ref:: to_bool
 
-  .. code-block:: jinja
+``to_bool``
+-----------
 
-    {{ ['yes', False, 0, None] | exactly_one_true }}
+.. versionadded:: 2017.7.0
 
-  Returns:
+Returns the logical value of an element.
 
-  .. code-block:: python
+Example:
 
-    True
+.. code-block:: jinja
 
-quote
-  Wraps a text around quoutes.
+    {{ 'yes' | to_bool }}
+    {{ 'true' | to_bool }}
+    {{ 1 | to_bool }}
+    {{ 'no' | to_bool }}
 
-regex_search
-  Scan through string looking for a location where this regular expression
-  produces a match. Returns ``None`` in case there were no matches found
+Will be rendered as:
 
-  Example:
+.. code-block:: python
 
-  .. code-block:: jinja
+  True
+  True
+  True
+  False
 
-    {{ 'abcdefabcdef' | regex_search('BC(.*)', ignorecase=True) }}
 
-  Returns:
+.. jinja_ref:: exactly_n_true
 
-  .. code-block:: python
+``exactly_n_true``
+------------------
 
-    ('defabcdef',)
+.. versionadded:: 2017.7.0
 
-regex_match
-  If zero or more characters at the beginning of string match this regular
-  expression, otherwise returns ``None``.
+Tests that exactly N items in an iterable are "truthy" (neither None, False, nor 0).
 
-  Example:
+Example:
 
-  .. code-block:: jinja
+.. code-block:: jinja
 
-    {{ 'abcdefabcdef' | regex_match('BC(.*)', ignorecase=True) }}
+  {{ ['yes', 0, False, 'True'] | exactly_n_true(2) }}
 
-  Returns:
+Returns:
 
-  .. code-block:: text
+.. code-block:: python
 
-    None
+  True
 
-uuid
-  Return a UUID.
 
-  Example:
+.. jinja_ref:: exactly_one_true
 
-  .. code-block:: jinja
+``exactly_one_true``
+--------------------
 
-    {{ 'random' | uuid }}
+.. versionadded:: 2017.7.0
 
-  Returns:
+Tests that exactly one item in an iterable is "truthy" (neither None, False, nor 0).
 
-  .. code-block:: text
+Example:
 
-    3652b285-26ad-588e-a5dc-c2ee65edc804
+.. code-block:: jinja
 
-is_list
-  Return if an object is list.
+  {{ ['yes', False, 0, None] | exactly_one_true }}
 
-  Example:
+Returns:
 
-  .. code-block:: jinja
+.. code-block:: python
 
-    {{ [1, 2, 3] | is_list }}
+  True
 
-  Returns:
 
-  .. code-block:: python
+.. jinja_ref:: quote
 
-    True
+``quote``
+---------
 
-is_iter
-  Return if an object is iterable.
+.. versionadded:: 2017.7.0
 
-  Example:
+Wraps a text around quoutes.
 
-  .. code-block:: jinja
 
-    {{ [1, 2, 3] | is_iter }}
+.. jinja_ref:: regex_search
 
-  Returns:
+``regex_search``
+----------------
 
-  .. code-block:: python
+.. versionadded:: 2017.7.0
 
-    True
+Scan through string looking for a location where this regular expression
+produces a match. Returns ``None`` in case there were no matches found
 
-min
-  Return the minimum value from a list.
+Example:
 
-  Example:
+.. code-block:: jinja
 
-  .. code-block:: jinja
+  {{ 'abcdefabcdef' | regex_search('BC(.*)', ignorecase=True) }}
 
-    {{ [1, 2, 3] | min }}
+Returns:
 
-  Returns:
+.. code-block:: python
 
-  .. code-block:: text
+  ('defabcdef',)
 
-    1
 
-max
-  Returns the maximum value from a list.
+.. jinja_ref:: regex_match
 
-  Example:
+``regex_match``
+---------------
 
-  .. code-block:: jinja
+.. versionadded:: 2017.7.0
 
-    {{ [1, 2, 3] | max }}
+If zero or more characters at the beginning of string match this regular
+expression, otherwise returns ``None``.
 
-  Returns:
+Example:
 
-  .. code-block:: text
+.. code-block:: jinja
 
-    3
+  {{ 'abcdefabcdef' | regex_match('BC(.*)', ignorecase=True) }}
 
-avg
-  Returns the average value of the elements of a list
+Returns:
 
-  Example:
+.. code-block:: text
 
-  .. code-block:: jinja
+  None
 
-    {{ [1, 2, 3] | avg }}
 
-  Returns:
+.. jinja_ref:: uuid
 
-  .. code-block:: text
+``uuid``
+--------
 
-    2
+.. versionadded:: 2017.7.0
 
-union
-  Return the union of two lists.
+Return a UUID.
 
-  Example:
+Example:
 
-  .. code-block:: jinja
+.. code-block:: jinja
 
-    {{ [1, 2, 3] | union([2, 3, 4]) | join(', ') }}
+  {{ 'random' | uuid }}
 
-  Returns:
+Returns:
 
-  .. code-block:: text
+.. code-block:: text
 
-    1, 2, 3, 4
+  3652b285-26ad-588e-a5dc-c2ee65edc804
 
-intersect
-  Return the intersection of two lists.
 
-  Example:
+.. jinja_ref:: is_list
 
-  .. code-block:: jinja
+``is_list``
+-----------
 
-    {{ [1, 2, 3] | intersect([2, 3, 4]) | join(', ') }}
+.. versionadded:: 2017.7.0
 
-  Returns:
+Return if an object is list.
 
-  .. code-block:: text
+Example:
 
-    2, 3
+.. code-block:: jinja
 
-difference
-  Return the difference of two lists.
+  {{ [1, 2, 3] | is_list }}
 
-  Example:
+Returns:
 
-  .. code-block:: jinja
+.. code-block:: python
 
-    {{ [1, 2, 3] | difference([2, 3, 4]) | join(', ') }}
+  True
 
-  Returns:
 
-  .. code-block:: text
+.. jinja_ref:: is_iter
 
-    1
+``is_iter``
+-----------
 
-symmetric_difference
-  Return the symmetric difference of two lists.
+.. versionadded:: 2017.7.0
 
-  Example:
+Return if an object is iterable.
 
-  .. code-block:: jinja
+Example:
 
-    {{ [1, 2, 3] | symmetric_difference([2, 3, 4]) | join(', ') }}
+.. code-block:: jinja
 
-  Returns:
+  {{ [1, 2, 3] | is_iter }}
 
-  .. code-block:: text
+Returns:
 
-    1, 4
+.. code-block:: python
 
-is_sorted
-  Return is an iterable object is already sorted.
+  True
 
-  Example:
 
-  .. code-block:: jinja
+.. jinja_ref:: min
 
-    {{ [1, 2, 3] | is_sorted }}
+``min``
+-------
 
-  Returns:
+.. versionadded:: 2017.7.0
 
-  .. code-block:: python
+Return the minimum value from a list.
 
-    True
+Example:
 
-compare_lists
-  Compare two lists and return a dictionary with the changes.
+.. code-block:: jinja
 
-  Example:
+  {{ [1, 2, 3] | min }}
 
-  .. code-block:: jinja
+Returns:
 
-    {{ [1, 2, 3] | compare_lists([1, 2, 4]) }}
+.. code-block:: text
 
-  Returns:
+  1
 
-  .. code-block:: python
 
-    {'new': 4, 'old': 3}
+.. jinja_ref:: max
 
-compare_dicts
-  Compare two dictionaries and return a dictionary with the changes.
+``max``
+-------
 
-  Example:
+.. versionadded:: 2017.7.0
 
-  .. code-block:: jinja
+Returns the maximum value from a list.
 
-    {{ {'a': 'b'} | compare_lists({'a': 'c'}) }}
+Example:
 
-  Returns:
+.. code-block:: jinja
 
-  .. code-block:: python
+  {{ [1, 2, 3] | max }}
 
-    {'a': {'new': 'c', 'old': 'b'}}
+Returns:
 
-is_hex
-  Return True if the value is hexazecimal.
+.. code-block:: text
 
-  Example:
+  3
 
-  .. code-block:: jinja
 
-    {{ '0xabcd' | is_hex }}
-    {{ 'xyzt' | is_hex }}
+.. jinja_ref:: avg
 
-  Returns:
+``avg``
+-------
 
-  .. code-block:: python
+.. versionadded:: 2017.7.0
 
-    True
-    False
+Returns the average value of the elements of a list
 
-contains_whitespace
-  Return True if a text contains whitespaces.
+Example:
 
-  Example:
+.. code-block:: jinja
 
-  .. code-block:: jinja
+  {{ [1, 2, 3] | avg }}
 
-    {{ 'abcd' | contains_whitespace }}
-    {{ 'ab cd' | contains_whitespace }}
+Returns:
 
-  Returns:
+.. code-block:: text
 
-  .. code-block:: python
+  2
 
-    False
-    True
 
-substring_in_list
-  Return is a substring is found in a list of string values.
+.. jinja_ref:: union
 
-  Example:
+``union``
+---------
 
-  .. code-block:: jinja
+.. versionadded:: 2017.7.0
 
-    {{ 'abcd' | substring_in_list(['this', 'is', 'an abcd example']) }}
+Return the union of two lists.
 
-  Returns:
+Example:
 
-  .. code-block:: python
+.. code-block:: jinja
 
-    True
+  {{ [1, 2, 3] | union([2, 3, 4]) | join(', ') }}
 
-check_whitelist_blacklist
-  Check a whitelist and/or blacklist to see if the value matches it.
+Returns:
 
-  Example:
+.. code-block:: text
 
-  .. code-block:: jinja
+  1, 2, 3, 4
 
-    {{ 5 | check_whitelist_blacklist(whitelist=[5, 6, 7]) }}
-    {{ 5 | check_whitelist_blacklist(blacklist=[5, 6, 7]) }}
 
-  Returns:
+.. jinja_ref:: intersect
 
-  .. code-block:: python
+``intersect``
+-------------
 
-    True
+.. versionadded:: 2017.7.0
 
-date_format
-  Converts unix timestamp into human-readable string.
+Return the intersection of two lists.
 
-  Example:
+Example:
 
-  .. code-block:: jinja
+.. code-block:: jinja
 
-    {{ 1457456400 | date_format }}
-    {{ 1457456400 | date_format('%d.%m.%Y %H:%M') }}
+  {{ [1, 2, 3] | intersect([2, 3, 4]) | join(', ') }}
 
-  Returns:
+Returns:
 
-  .. code-block:: text
+.. code-block:: text
 
-    2017-03-08
-    08.03.2017 17:00
+  2, 3
 
-str_to_num
-  Converts a string to its numerical value.
 
-  Example:
+.. jinja_ref:: difference
 
-  .. code-block:: jinja
+``difference``
+--------------
 
-    {{ '5' | str_to_num }}
+.. versionadded:: 2017.7.0
 
-  Returns:
+Return the difference of two lists.
 
-  .. code-block:: python
+Example:
 
-    5
+.. code-block:: jinja
 
-to_bytes
-  Converts string-type object to bytes.
+  {{ [1, 2, 3] | difference([2, 3, 4]) | join(', ') }}
 
-  Example:
+Returns:
 
-  .. code-block:: jinja
+.. code-block:: text
 
-    {{ 'wall of text' | to_bytes }}
+  1
 
-json_decode_list
-  JSON decodes as unicode, Jinja needs bytes.
 
-  Example:
 
-  .. code-block:: jinja
+.. jinja_ref:: symmetric_difference
 
-    {{ [1, 2, 3] | json_decode_list }}
+``symmetric_difference``
+------------------------
 
-  Returns:
+.. versionadded:: 2017.7.0
 
-  .. code-block:: python
+Return the symmetric difference of two lists.
 
-    [1, 2, 3]
+Example:
 
-json_decode_dict
-  JSON decodes as unicode, Jinja needs bytes.
+.. code-block:: jinja
 
-  Example:
+  {{ [1, 2, 3] | symmetric_difference([2, 3, 4]) | join(', ') }}
 
-  .. code-block:: jinja
+Returns:
 
-    {{ {'a': 'b'} | json_decode_dict }}
+.. code-block:: text
 
-  Returns:
+  1, 4
 
-  .. code-block:: python
 
-    {'a': 'b'}
+.. jinja_ref:: is_sorted
 
-rand_str
-  Generate a random string and applies a hash. Default hashing: md5.
+``is_sorted``
+-------------
 
-  Example:
+.. versionadded:: 2017.7.0
 
-  .. code-block:: jinja
+Return is an iterable object is already sorted.
 
-    {% set passwd_length = 17 %}
-    {{ passwd_length | rand_str }}
-    {{ passwd_length | rand_str('sha512') }}
+Example:
 
-  Returns:
+.. code-block:: jinja
 
-  .. code-block:: text
+  {{ [1, 2, 3] | is_sorted }}
 
-    43ec517d68b6edd3015b3edc9a11367b
-    d94a45acd81f8e3107d237dbc0d5d195f6a52a0d188bc0284c0763ece1eac9f9496fb6a531a296074c87b3540398dace1222b42e150e67c9301383fde3d66ae5
+Returns:
 
-md5
-  Return the md5 digest of a string.
+.. code-block:: python
 
-  Example:
+  True
 
-  .. code-block:: jinja
 
-    {{ 'random' | md5 }}
+.. jinja_ref:: compare_lists
 
-  Returns:
+``compare_lists``
+-----------------
 
-  .. code-block:: text
+.. versionadded:: 2017.7.0
 
-    7ddf32e17a6ac5ce04a8ecbf782ca509
+Compare two lists and return a dictionary with the changes.
 
-sha256
-  Return the sha256 digest of a string.
+Example:
 
-  Example:
+.. code-block:: jinja
 
-  .. code-block:: jinja
+  {{ [1, 2, 3] | compare_lists([1, 2, 4]) }}
 
-    {{ 'random' | sha256 }}
+Returns:
 
-  Returns:
+.. code-block:: python
 
-  .. code-block:: text
+  {'new': 4, 'old': 3}
 
-    a441b15fe9a3cf56661190a0b93b9dec7d04127288cc87250967cf3b52894d11
 
-sha512
-  Return the sha512 digest of a string.
+.. jinja_ref:: compare_dicts
 
-  Example:
+``compare_dicts``
+-----------------
 
-  .. code-block:: jinja
+.. versionadded:: 2017.7.0
 
-    {{ 'random' | sha512 }}
+Compare two dictionaries and return a dictionary with the changes.
 
-  Returns:
+Example:
 
-  .. code-block:: text
+.. code-block:: jinja
 
-    811a90e1c8e86c7b4c0eef5b2c0bf0ec1b19c4b1b5a242e6455be93787cb473cb7bc9b0fdeb960d00d5c6881c2094dd63c5c900ce9057255e2a4e271fc25fef1
+  {{ {'a': 'b'} | compare_lists({'a': 'c'}) }}
 
-base64_encode
-  Encode a string as base64.
+Returns:
 
-  Example:
+.. code-block:: python
 
-  .. code-block:: jinja
+  {'a': {'new': 'c', 'old': 'b'}}
 
-    {{ 'random' | base64_encode }}
 
-  Returns:
+.. jinja_ref:: is_hex
 
-  .. code-block:: text
+``is_hex``
+----------
 
-    cmFuZG9t
+.. versionadded:: 2017.7.0
 
-base64_decode
-  Decode a base64-encoded string.
+Return True if the value is hexazecimal.
 
-  .. code-block:: jinja
+Example:
 
-    {{ 'Z2V0IHNhbHRlZA==' | base64_decode }}
+.. code-block:: jinja
 
-  Returns:
+  {{ '0xabcd' | is_hex }}
+  {{ 'xyzt' | is_hex }}
 
-  .. code-block:: text
+Returns:
 
-    get salted
+.. code-block:: python
 
-hmac
-  Verify a challenging hmac signature against a string / shared-secret. Returns
-  a boolean value.
+  True
+  False
 
-  Example:
 
-  .. code-block:: jinja
+.. jinja_ref:: contains_whitespace
 
-    {{ 'get salted' | hmac('shared secret', 'eBWf9bstXg+NiP5AOwppB5HMvZiYMPzEM9W5YMm/AmQ=') }}
+``contains_whitespace``
+-----------------------
 
-  Returns:
+.. versionadded:: 2017.7.0
 
-  .. code-block:: python
+Return True if a text contains whitespaces.
 
-    True
+Example:
 
-http_query
-  Return the HTTP reply object from a URL.
+.. code-block:: jinja
 
-  Example:
+  {{ 'abcd' | contains_whitespace }}
+  {{ 'ab cd' | contains_whitespace }}
 
-  .. code-block:: jinja
+Returns:
 
-    {{ 'http://jsonplaceholder.typicode.com/posts/1' | http_query }}
+.. code-block:: python
 
-  Returns:
+  False
+  True
 
-  .. code-block:: python
 
-    {
-      'body': '{
-        "userId": 1,
-        "id": 1,
-        "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
-        "body": "quia et suscipit\\nsuscipit recusandae consequuntur expedita et cum\\nreprehenderit molestiae ut ut quas totam\\nnostrum rerum est autem sunt rem eveniet architecto"
-      }'
-    }
+.. jinja_ref:: substring_in_list
+
+``substring_in_list``
+---------------------
+
+.. versionadded:: 2017.7.0
+
+Return is a substring is found in a list of string values.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 'abcd' | substring_in_list(['this', 'is', 'an abcd example']) }}
+
+Returns:
+
+.. code-block:: python
+
+  True
+
+
+.. jinja_ref:: check_whitelist_blacklist
+
+``check_whitelist_blacklist``
+-----------------------------
+
+.. versionadded:: 2017.7.0
+
+Check a whitelist and/or blacklist to see if the value matches it.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 5 | check_whitelist_blacklist(whitelist=[5, 6, 7]) }}
+  {{ 5 | check_whitelist_blacklist(blacklist=[5, 6, 7]) }}
+
+Returns:
+
+.. code-block:: python
+
+  True
+
+
+.. jinja_ref:: date_format
+
+``date_format``
+---------------
+
+.. versionadded:: 2017.7.0
+
+Converts unix timestamp into human-readable string.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 1457456400 | date_format }}
+  {{ 1457456400 | date_format('%d.%m.%Y %H:%M') }}
+
+Returns:
+
+.. code-block:: text
+
+  2017-03-08
+  08.03.2017 17:00
+
+
+.. jinja_ref:: str_to_num
+
+``str_to_num``
+--------------
+
+.. versionadded:: 2017.7.0
+
+Converts a string to its numerical value.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ '5' | str_to_num }}
+
+Returns:
+
+.. code-block:: python
+
+  5
+
+
+.. jinja_ref:: to_bytes
+
+``to_bytes``
+------------
+
+.. versionadded:: 2017.7.0
+
+Converts string-type object to bytes.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 'wall of text' | to_bytes }}
+
+
+.. jinja_ref:: json_decode_list
+
+``json_decode_list``
+--------------------
+
+.. versionadded:: 2017.7.0
+
+JSON decodes as unicode, Jinja needs bytes.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ [1, 2, 3] | json_decode_list }}
+
+Returns:
+
+.. code-block:: python
+
+  [1, 2, 3]
+
+
+.. jinja_ref:: json_decode_dict
+
+``json_decode_dict``
+--------------------
+
+.. versionadded:: 2017.7.0
+
+JSON decodes as unicode, Jinja needs bytes.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ {'a': 'b'} | json_decode_dict }}
+
+Returns:
+
+.. code-block:: python
+
+  {'a': 'b'}
+
+
+.. jinja_ref:: rand_str
+
+``rand_str``
+------------
+
+.. versionadded:: 2017.7.0
+
+Generate a random string and applies a hash. Default hashing: md5.
+
+Example:
+
+.. code-block:: jinja
+
+  {% set passwd_length = 17 %}
+  {{ passwd_length | rand_str }}
+  {{ passwd_length | rand_str('sha512') }}
+
+Returns:
+
+.. code-block:: text
+
+  43ec517d68b6edd3015b3edc9a11367b
+  d94a45acd81f8e3107d237dbc0d5d195f6a52a0d188bc0284c0763ece1eac9f9496fb6a531a296074c87b3540398dace1222b42e150e67c9301383fde3d66ae5
+
+
+.. jinja_ref:: md5
+
+``md5``
+-------
+
+.. versionadded:: 2017.7.0
+
+Return the md5 digest of a string.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 'random' | md5 }}
+
+Returns:
+
+.. code-block:: text
+
+  7ddf32e17a6ac5ce04a8ecbf782ca509
+
+
+.. jinja_ref:: sha256
+
+``sha256``
+----------
+
+.. versionadded:: 2017.7.0
+
+Return the sha256 digest of a string.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 'random' | sha256 }}
+
+Returns:
+
+.. code-block:: text
+
+  a441b15fe9a3cf56661190a0b93b9dec7d04127288cc87250967cf3b52894d11
+
+
+.. jinja_ref:: sha512
+
+``sha512``
+----------
+
+.. versionadded:: 2017.7.0
+
+Return the sha512 digest of a string.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 'random' | sha512 }}
+
+Returns:
+
+.. code-block:: text
+
+  811a90e1c8e86c7b4c0eef5b2c0bf0ec1b19c4b1b5a242e6455be93787cb473cb7bc9b0fdeb960d00d5c6881c2094dd63c5c900ce9057255e2a4e271fc25fef1
+
+
+.. jinja_ref:: base64_encode
+
+``base64_encode``
+-----------------
+
+.. versionadded:: 2017.7.0
+
+Encode a string as base64.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 'random' | base64_encode }}
+
+Returns:
+
+.. code-block:: text
+
+  cmFuZG9t
+
+
+.. jinja_ref:: base64_decode
+
+``base64_decode``
+-----------------
+
+.. versionadded:: 2017.7.0
+
+Decode a base64-encoded string.
+
+.. code-block:: jinja
+
+  {{ 'Z2V0IHNhbHRlZA==' | base64_decode }}
+
+Returns:
+
+.. code-block:: text
+
+  get salted
+
+
+.. jinja_ref:: hmac
+
+``hmac``
+--------
+
+.. versionadded:: 2017.7.0
+
+Verify a challenging hmac signature against a string / shared-secret. Returns
+a boolean value.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 'get salted' | hmac('shared secret', 'eBWf9bstXg+NiP5AOwppB5HMvZiYMPzEM9W5YMm/AmQ=') }}
+
+Returns:
+
+.. code-block:: python
+
+  True
+
+
+.. jinja_ref:: http_query
+
+``http_query``
+--------------
+
+.. versionadded:: 2017.7.0
+
+Return the HTTP reply object from a URL.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 'http://jsonplaceholder.typicode.com/posts/1' | http_query }}
+
+Returns:
+
+.. code-block:: python
+
+  {
+    'body': '{
+      "userId": 1,
+      "id": 1,
+      "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+      "body": "quia et suscipit\\nsuscipit recusandae consequuntur expedita et cum\\nreprehenderit molestiae ut ut quas totam\\nnostrum rerum est autem sunt rem eveniet architecto"
+    }'
+  }
 
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
@@ -785,292 +1062,488 @@ Networking Filters
 
 The following networking-related filters are supported:
 
-is_ip
-  Return if a string is a valid IP Address.
 
-  .. code-block:: jinja
+.. jinja_ref:: is_ip
 
-    {{ '192.168.0.1' | is_ip }}
+``is_ip``
+---------
 
-  Additionally accepts the following options:
+.. versionadded:: 2017.7.0
 
-  - global
-  - link-local
-  - loopback
-  - multicast
-  - private
-  - public
-  - reserved
-  - site-local
-  - unspecified
+Return if a string is a valid IP Address.
 
-  Example - test if a string is a valid loopback IP address.
+.. code-block:: jinja
 
-  .. code-block:: jinja
+  {{ '192.168.0.1' | is_ip }}
 
-    {{ '192.168.0.1' | is_ip(options='loopback') }}
+Additionally accepts the following options:
 
-is_ipv4
-  Returns if a string is a valid IPv4 address. Supports the same options
-  as ``is_ip``.
+- global
+- link-local
+- loopback
+- multicast
+- private
+- public
+- reserved
+- site-local
+- unspecified
 
-  .. code-block:: jinja
+Example - test if a string is a valid loopback IP address.
 
-    {{ '192.168.0.1' | is_ipv4 }}
+.. code-block:: jinja
 
-is_ip6
-  Returns if a string is a valid IPv6 address. Supports the same options
-  as ``is_ip``.
+  {{ '192.168.0.1' | is_ip(options='loopback') }}
 
-  .. code-block:: jinja
 
-    {{ 'fe80::' | is_ipv6 }}
 
-ipaddr
-  From a list, returns only valid IP entries. Supports the same options
-  as ``is_ip``. The list can contains also IP interfaces/networks.
+.. jinja_ref:: is_ipv4
 
-  Example:
+``is_ipv4``
+-----------
 
-  .. code-block:: jinja
+.. versionadded:: 2017.7.0
 
-    {{ ['192.168.0.1', 'foo', 'bar', 'fe80::'] | ipaddr }}
+Returns if a string is a valid IPv4 address. Supports the same options
+as ``is_ip``.
 
-  Returns:
+.. code-block:: jinja
 
-  .. code-block:: python
+  {{ '192.168.0.1' | is_ipv4 }}
 
-    ['192.168.0.1', 'fe80::']
 
-ipv4
-  From a list, returns only valid IPv4 entries. Supports the same options
-  as ``is_ip``. The list can contains also IP interfaces/networks.
+.. jinja_ref:: is_ipv6
 
-  Example:
+``is_ipv6``
+-----------
 
-  .. code-block:: jinja
+.. versionadded:: 2017.7.0
 
-    {{ ['192.168.0.1', 'foo', 'bar', 'fe80::'] | ipv4 }}
+Returns if a string is a valid IPv6 address. Supports the same options
+as ``is_ip``.
 
-  Returns:
+.. code-block:: jinja
 
-  .. code-block:: python
+  {{ 'fe80::' | is_ipv6 }}
 
-    ['192.168.0.1']
 
-ipv6
-  From a list, returns only valid IPv6 entries. Supports the same options
-  as ``is_ip``. The list can contains also IP interfaces/networks.
+.. jinja_ref:: ipaddr
 
-  Example:
+``ipaddr``
+----------
 
-  .. code-block:: jinja
+.. versionadded:: 2017.7.0
 
-    {{ ['192.168.0.1', 'foo', 'bar', 'fe80::'] | ipv4 }}
+From a list, returns only valid IP entries. Supports the same options
+as ``is_ip``. The list can contains also IP interfaces/networks.
 
-  Returns:
+Example:
 
-  .. code-block:: python
+.. code-block:: jinja
 
-    ['fe80::']
+  {{ ['192.168.0.1', 'foo', 'bar', 'fe80::'] | ipaddr }}
 
-network_hosts
-  Return the list of hosts within a networks.
+Returns:
 
-  Example:
+.. code-block:: python
 
-  .. code-block:: jinja
+  ['192.168.0.1', 'fe80::']
 
-    {{ '192.168.0.1/30' | network_hosts }}
 
-  Returns:
+.. jinja_ref:: ipv4
 
-  .. code-block:: python
+``ipv4``
+--------
 
-    ['192.168.0.1', '192.168.0.2']
+.. versionadded:: 2017.7.0
 
-network_size
-  Return the size of the network.
+From a list, returns only valid IPv4 entries. Supports the same options
+as ``is_ip``. The list can contains also IP interfaces/networks.
 
-  Example:
+Example:
 
-  .. code-block:: jinja
+.. code-block:: jinja
 
-    {{ '192.168.0.1/8' | network_size }}
+  {{ ['192.168.0.1', 'foo', 'bar', 'fe80::'] | ipv4 }}
 
-  Returns:
+Returns:
 
-  .. code-block:: python
+.. code-block:: python
 
-    16777216
+  ['192.168.0.1']
 
-gen_mac
-  Generates a MAC address with the defined OUI prefix.
 
-  Common prefixes:
+.. jinja_ref:: ipv6
 
-  - ``00:16:3E`` -- Xen
-  - ``00:18:51`` -- OpenVZ
-  - ``00:50:56`` -- VMware (manually generated)
-  - ``52:54:00`` -- QEMU/KVM
-  - ``AC:DE:48`` -- PRIVATE
+``ipv6``
+--------
 
-  Example:
+.. versionadded:: 2017.7.0
 
-  .. code-block:: jinja
+From a list, returns only valid IPv6 entries. Supports the same options
+as ``is_ip``. The list can contains also IP interfaces/networks.
 
-    {{ '00:50' | gen_mac }}
+Example:
 
-  Returns:
+.. code-block:: jinja
 
-  .. code-block:: text
+  {{ ['192.168.0.1', 'foo', 'bar', 'fe80::'] | ipv4 }}
 
-    00:50:71:52:1C
+Returns:
 
-mac_str_to_bytes
-  Converts a string representing a valid MAC address to bytes.
+.. code-block:: python
 
-  Example:
+  ['fe80::']
 
-  .. code-block:: jinja
 
-    {{ '00:11:22:33:44:55' | mac_str_to_bytes }}
+.. jinja_ref:: network_hosts
 
-dns_check
-  Return the ip resolved by dns, but do not exit on failure, only raise an
-  exception. Obeys system preference for IPv4/6 address resolution.
+``network_hosts``
+-----------------
 
-  Example:
+.. versionadded:: 2017.7.0
 
-  .. code-block:: jinja
+Return the list of hosts within a networks.
 
-    {{ 'www.google.com' | dns_check }}
+Example:
 
-  Returns:
+.. code-block:: jinja
 
-  .. code-block:: text
+  {{ '192.168.0.1/30' | network_hosts }}
 
-    '172.217.3.196'
+Returns:
+
+.. code-block:: python
+
+  ['192.168.0.1', '192.168.0.2']
+
+
+.. jinja_ref:: network_size
+
+``network_size``
+----------------
+
+.. versionadded:: 2017.7.0
+
+Return the size of the network.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ '192.168.0.1/8' | network_size }}
+
+Returns:
+
+.. code-block:: python
+
+  16777216
+
+
+.. jinja_ref:: gen_mac
+
+``gen_mac``
+-----------
+
+.. versionadded:: 2017.7.0
+
+Generates a MAC address with the defined OUI prefix.
+
+Common prefixes:
+
+- ``00:16:3E`` -- Xen
+- ``00:18:51`` -- OpenVZ
+- ``00:50:56`` -- VMware (manually generated)
+- ``52:54:00`` -- QEMU/KVM
+- ``AC:DE:48`` -- PRIVATE
+
+Example:
+
+.. code-block:: jinja
+
+  {{ '00:50' | gen_mac }}
+
+Returns:
+
+.. code-block:: text
+
+  00:50:71:52:1C
+
+
+.. jinja_ref:: mac_str_to_bytes
+
+``mac_str_to_bytes``
+--------------------
+
+.. versionadded:: 2017.7.0
+
+Converts a string representing a valid MAC address to bytes.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ '00:11:22:33:44:55' | mac_str_to_bytes }}
+
+
+.. jinja_ref:: dns_check
+
+``dns_check``
+-------------
+
+.. versionadded:: 2017.7.0
+
+Return the ip resolved by dns, but do not exit on failure, only raise an
+exception. Obeys system preference for IPv4/6 address resolution.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 'www.google.com' | dns_check }}
+
+Returns:
+
+.. code-block:: text
+
+  '172.217.3.196'
 
 File filters
 ------------
 
-is_text_file
-  Return if a file is text.
+.. jinja_ref:: is_text_file
 
-  Uses heuristics to guess whether the given file is text or binary,
-  by reading a single block of bytes from the file.
-  If more than 30% of the chars in the block are non-text, or there
-  are NUL ('\x00') bytes in the block, assume this is a binary file.
+``is_text_file``
+----------------
 
-  Example:
+.. versionadded:: 2017.7.0
 
-  .. code-block:: jinja
+Return if a file is text.
 
-    {{ '/etc/salt/master' | is_text_file }}
+Uses heuristics to guess whether the given file is text or binary,
+by reading a single block of bytes from the file.
+If more than 30% of the chars in the block are non-text, or there
+are NUL ('\x00') bytes in the block, assume this is a binary file.
 
-  Returns:
+Example:
 
-  .. code-block:: python
+.. code-block:: jinja
 
-    True
+  {{ '/etc/salt/master' | is_text_file }}
 
-is_binary_file
-  Return if a file is binary.
+Returns:
 
-  Detects if the file is a binary, returns bool. Returns True if the file is
-  a bin, False if the file is not and None if the file is not available.
+.. code-block:: python
 
-  Example:
+  True
 
-  .. code-block:: jinja
 
-    {{ '/etc/salt/master' | is_binary_file }}
+.. jinja_ref:: is_binary_file
 
-  Returns:
+``is_binary_file``
+------------------
 
-  .. code-block:: python
+.. versionadded:: 2017.7.0
 
-    False
+Return if a file is binary.
 
-is_empty_file
-  Return if a file is empty.
+Detects if the file is a binary, returns bool. Returns True if the file is
+a bin, False if the file is not and None if the file is not available.
 
-  Example:
+Example:
 
-  .. code-block:: jinja
+.. code-block:: jinja
 
-    {{ '/etc/salt/master' | is_empty_file }}
+  {{ '/etc/salt/master' | is_binary_file }}
 
-  Returns:
+Returns:
 
-  .. code-block:: python
+.. code-block:: python
 
-    False
+  False
 
-file_hashsum
-  Return the hashsum of a file.
 
-  Example:
+.. jinja_ref:: is_empty_file
 
-  .. code-block:: jinja
+``is_empty_file``
+-----------------
 
-    {{ '/etc/salt/master' | file_hashsum }}
+.. versionadded:: 2017.7.0
 
-  Returns:
+Return if a file is empty.
 
-  .. code-block:: text
+Example:
 
-    02d4ef135514934759634f10079653252c7ad594ea97bd385480c532bca0fdda
+.. code-block:: jinja
 
-list_files
-  Return a recursive list of files under a specific path.
+  {{ '/etc/salt/master' | is_empty_file }}
 
-  Example:
+Returns:
 
-  .. code-block:: jinja
+.. code-block:: python
 
-    {{ '/etc/salt/' | list_files | join('\n') }}
+  False
 
-  Returns:
 
-  .. code-block:: text
+.. jinja_ref:: file_hashsum
 
-    /etc/salt/master
-    /etc/salt/proxy
-    /etc/salt/minion
-    /etc/salt/pillar/top.sls
-    /etc/salt/pillar/device1.sls
+``file_hashsum``
+----------------
 
-path_join
-  Joins absolute paths.
+.. versionadded:: 2017.7.0
 
-  Example:
+Return the hashsum of a file.
 
-  .. code-block:: jinja
+Example:
 
-    {{ '/etc/salt/' | path_join('pillar', 'device1.sls') }}
+.. code-block:: jinja
 
-  Returns:
+  {{ '/etc/salt/master' | file_hashsum }}
 
-  .. code-block:: text
+Returns:
 
-    /etc/salt/pillar/device1.sls
+.. code-block:: text
 
-which
-  Python clone of /usr/bin/which.
+  02d4ef135514934759634f10079653252c7ad594ea97bd385480c532bca0fdda
 
-  Example:
 
-  .. code-block:: jinja
+.. jinja_ref:: list_files
 
-    {{ 'salt-master' | which }}
+``list_files``
+--------------
 
-  Returns:
+.. versionadded:: 2017.7.0
 
-  .. code-block:: text
+Return a recursive list of files under a specific path.
 
-    /usr/local/salt/virtualenv/bin/salt-master
+Example:
+
+.. code-block:: jinja
+
+  {{ '/etc/salt/' | list_files | join('\n') }}
+
+Returns:
+
+.. code-block:: text
+
+  /etc/salt/master
+  /etc/salt/proxy
+  /etc/salt/minion
+  /etc/salt/pillar/top.sls
+  /etc/salt/pillar/device1.sls
+
+
+.. jinja_ref:: path_join
+
+``path_join``
+-------------
+
+.. versionadded:: 2017.7.0
+
+Joins absolute paths.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ '/etc/salt/' | path_join('pillar', 'device1.sls') }}
+
+Returns:
+
+.. code-block:: text
+
+  /etc/salt/pillar/device1.sls
+
+
+.. jinja_ref:: which
+
+``which``
+---------
+
+.. versionadded:: 2017.7.0
+
+Python clone of /usr/bin/which.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 'salt-master' | which }}
+
+Returns:
+
+.. code-block:: text
+
+  /usr/local/salt/virtualenv/bin/salt-master
+
+
+Tests
+=====
+
+Saltstack extends `builtin tests`_ with these custom tests:
+
+.. _`builtin tests`: http://jinja.pocoo.org/docs/templates/#builtin-tests
+
+.. jinja_ref:: equalto
+
+``equalto``
+-----------
+
+Tests the equality between two values.
+
+Can be used in an ``if`` statement directly:
+
+.. code-block:: jinja
+
+    {% if 1 is equalto(1) %}
+        < statements >
+    {% endif %}
+
+If clause evaluates to ``True``
+
+or with the ``selectattr`` filter:
+
+.. code-block:: jinja
+
+    {{ [{'value': 1}, {'value': 2} , {'value': 3}] | selectattr('value', 'equalto', 3) | list }}
+
+Returns:
+
+.. code-block:: python
+
+    [{'value': 3}]
+
+.. jinja_ref:: match
+
+``match``
+---------
+
+Tests that a string matches the regex passed as an argument.
+
+Can be used in a ``if`` statement directly:
+
+.. code-block:: jinja
+
+    {% if 'a' is match('[a-b]') %}
+        < statements >
+    {% endif %}
+
+If clause evaluates to ``True``
+
+or with the ``selectattr`` filter:
+
+.. code-block:: jinja
+
+    {{ [{'value': 'a'}, {'value': 'b'}, {'value': 'c'}] | selectattr('value', 'match', '[b-e]') | list }}
+
+Returns:
+
+.. code-block:: python
+
+    [{'value': 'b'}, {'value': 'c'}]
+
+
+Test supports additional optional arguments: ``ignorecase``, ``multiline``
+
 
 Jinja in Files
 ==============
@@ -1108,6 +1581,8 @@ external template file.
     starting with one or more underscores, and should be managed by one of the
     following tags: `macro`, `set`, `load_yaml`, `load_json`, `import_yaml` and
     `import_json`.
+
+.. jinja_ref:: escaping-jinja
 
 Escaping Jinja
 ==============
@@ -1157,6 +1632,8 @@ escaped:
 
 .. _`Escaping`: http://jinja.pocoo.org/docs/dev/templates/#escaping
 
+.. jinja_ref:: calling-salt-functions
+
 Calling Salt Functions
 ======================
 
@@ -1171,6 +1648,8 @@ dictionary of :term:`execution function <Execution Function>`.
     {{ salt['cmd.run']('whoami') }}
     {{ salt.cmd.run('whoami') }}
 
+.. jinja_ref:: debugging
+
 Debugging
 =========
 
@@ -1183,10 +1662,12 @@ in the current Jinja context.
 
     Context is: {{ show_full_context() }}
 
+.. jinja_ref:: logs
+
 Logs
 ----
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Yes, in Salt, one is able to debug a complex Jinja template using the logs.
 For example, making the call:
@@ -1200,6 +1681,8 @@ Will insert the following message in the minion logs:
 .. code-block:: text
 
     2017-02-01 01:24:40,728 [salt.module.logmod][ERROR   ][3779] testing jinja logging
+
+.. jinja_ref:: custom-execution-modules
 
 Custom Execution Modules
 ========================
@@ -1218,6 +1701,8 @@ module dictionary just like the built-in execution modules:
 
 - :ref:`How to Convert Jinja Logic to an Execution Module <tutorial-jinja_to_execution-module>`
 - :ref:`Writing Execution Modules <writing-execution-modules>`
+
+.. jinja_ref:: custom-jinja-filters
 
 Custom Jinja filters
 ====================

@@ -2,7 +2,7 @@
 '''
 Module for working with the Grafana v4 API
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends: requests
 

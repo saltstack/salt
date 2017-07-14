@@ -15,7 +15,6 @@ from __future__ import absolute_import
 import copy
 import fnmatch
 import logging
-import re
 import os.path
 
 # Import salt libs
@@ -529,15 +528,6 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version_num = kwargs.get('version')
-    if version_num:
-        if pkgs is None and sources is None:
-            # Allow 'version' to work for single package target
-            pkg_params = {name: version_num}
-        else:
-            log.warning('\'version\' parameter will be ignored for multiple '
-                        'package targets')
-
     if 'root' in kwargs:
         pkg_params['-r'] = kwargs['root']
 
@@ -564,29 +554,20 @@ def install(name=None,
             if version_num is None:
                 targets.append(param)
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
-                if match:
-                    gt_lt, eq, verstr = match.groups()
-                    prefix = gt_lt or ''
-                    prefix += eq or ''
-                    # If no prefix characters were supplied, use '='
-                    prefix = prefix or '='
-                    if '*' in verstr:
-                        if prefix == '=':
-                            wildcards.append((param, verstr))
-                        else:
-                            errors.append(
-                                'Invalid wildcard for {0}{1}{2}'.format(
-                                    param, prefix, verstr
-                                )
+                prefix, verstr = salt.utils.pkg.split_comparison(version_num)
+                if not prefix:
+                    prefix = '='
+                if '*' in verstr:
+                    if prefix == '=':
+                        wildcards.append((param, verstr))
+                    else:
+                        errors.append(
+                            'Invalid wildcard for {0}{1}{2}'.format(
+                                param, prefix, verstr
                             )
-                        continue
-                    targets.append('{0}{1}{2}'.format(param, prefix, verstr))
-                else:
-                    errors.append(
-                        'Invalid version string \'{0}\' for package '
-                        '\'{1}\''.format(version_num, name)
-                    )
+                        )
+                    continue
+                targets.append('{0}{1}{2}'.format(param, prefix, verstr))
 
     if wildcards:
         # Resolve wildcard matches

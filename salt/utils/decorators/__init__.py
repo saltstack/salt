@@ -245,6 +245,14 @@ def memoize(func):
 
     @wraps(func)
     def _memoize(*args, **kwargs):
+        str_args = []
+        for arg in args:
+            if not isinstance(arg, six.string_types):
+                str_args.append(str(arg))
+            else:
+                str_args.append(arg)
+        args = str_args
+
         args_ = ','.join(list(args) + ['{0}={1}'.format(k, kwargs[k]) for k in sorted(kwargs)])
         if args_ not in cache:
             cache[args_] = func(*args, **kwargs)
@@ -658,3 +666,28 @@ class JinjaFilter(object):
 
 
 jinja_filter = JinjaFilter
+
+
+class JinjaTest(object):
+    '''
+    This decorator is used to specify that a function is to be loaded as a
+    Jinja test.
+    '''
+    salt_jinja_tests = {}
+
+    def __init__(self, name=None):
+        '''
+        '''
+        self.name = name
+
+    def __call__(self, function):
+        '''
+        '''
+        name = self.name or function.__name__
+        if name not in self.salt_jinja_tests:
+            log.debug('Marking "{0}" as a jinja test'.format(name))
+            self.salt_jinja_tests[name] = function
+        return function
+
+
+jinja_test = JinjaTest

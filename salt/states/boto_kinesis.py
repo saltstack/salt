@@ -3,7 +3,7 @@
 Manage Kinesis Streams
 ======================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Create and destroy Kinesis streams. Be aware that this interacts with Amazon's
 services, and so may incur charges.

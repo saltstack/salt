@@ -174,7 +174,7 @@ def _talk2modjk(name, lbn, target, action, profile='default', tgt_type='glob'):
 
 def stop(name, lbn, target, profile='default', tgt_type='glob', expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -208,7 +208,7 @@ def stop(name, lbn, target, profile='default', tgt_type='glob', expr_form=None):
 
 def activate(name, lbn, target, profile='default', tgt_type='glob', expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -242,7 +242,7 @@ def activate(name, lbn, target, profile='default', tgt_type='glob', expr_form=No
 
 def disable(name, lbn, target, profile='default', tgt_type='glob', expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 

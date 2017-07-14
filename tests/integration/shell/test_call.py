@@ -426,6 +426,21 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             # Restore umask
             os.umask(current_umask)
 
+    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    def test_42116_cli_pillar_override(self):
+        ret = self.run_call(
+            'state.apply issue-42116-cli-pillar-override '
+            'pillar=\'{"myhost": "localhost"}\''
+        )
+        for line in ret:
+            line = line.lstrip()
+            if line == 'Comment: Command "ping -c 2 localhost" run':
+                # Successful test
+                break
+        else:
+            log.debug('salt-call output:\n\n%s', '\n'.join(ret))
+            self.fail('CLI pillar override not found in pillar data')
+
     def tearDown(self):
         '''
         Teardown method to remove installed packages

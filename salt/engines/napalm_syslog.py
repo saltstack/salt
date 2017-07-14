@@ -3,7 +3,7 @@
 NAPALM syslog engine
 ====================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 An engine that takes syslog messages structured in
 OpenConfig_ or IETF format
@@ -123,7 +123,8 @@ changes on the device(s) firing the event, one is able to
 identify the minion ID, using one of the following alternatives, but not limited to:
 
 - :mod:`Host grains <salt.grains.napalm.host>` to match the event tag
-- :mod:`Hostname grains <salt.grains.napalm.hostname>` to match the IP address in the event data
+- :mod:`Host DNS grain <salt.grains.napalm.host_dns>` to match the IP address in the event data
+- :mod:`Hostname grains <salt.grains.napalm.hostname>` to match the event tag
 - :ref:`Define static grains <static-custom-grains>`
 - :ref:`Write a grains module <writing-grains>`
 - :ref:`Targeting minions using pillar data <targeting-pillar>` -- the user
@@ -311,9 +312,10 @@ def start(transport='zmq',
         if not certificate:
             log.critical('Please use a certificate, or disable the security.')
             return
-        priv_key, verify_key = napalm_logs.utils.authenticate(certificate,
-                                                              address=auth_address,
-                                                              port=auth_port)
+        auth = napalm_logs.utils.ClientAuth(certificate,
+                                            address=auth_address,
+                                            port=auth_port)
+
     transport_recv_fun = _get_transport_recv(name=transport,
                                              address=address,
                                              port=port)
@@ -329,7 +331,7 @@ def start(transport='zmq',
         log.debug('Received from napalm-logs:')
         log.debug(raw_object)
         if not disable_security:
-            dict_object = napalm_logs.utils.decrypt(raw_object, verify_key, priv_key)
+            dict_object = auth.decrypt(raw_object)
         else:
             dict_object = napalm_logs.utils.unserialize(raw_object)
         try:

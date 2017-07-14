@@ -475,6 +475,19 @@ class Client(object):
         url_path = os.path.join(
                 url_data.netloc, url_data.path).rstrip(os.sep)
 
+        # If dest is a directory, rewrite dest with filename
+        if dest is not None \
+                and (os.path.isdir(dest) or dest.endswith(('/', '\\'))):
+            if url_data.query or len(url_data.path) > 1 and not url_data.path.endswith('/'):
+                strpath = url.split('/')[-1]
+            else:
+                strpath = 'index.html'
+
+            if salt.utils.is_windows():
+                strpath = salt.utils.sanitize_win_path_string(strpath)
+
+            dest = os.path.join(dest, strpath)
+
         if url_scheme and url_scheme.lower() in string.ascii_lowercase:
             url_path = ':'.join((url_scheme, url_path))
             url_scheme = 'file'
@@ -592,20 +605,37 @@ class Client(object):
         destfp = None
         try:
             # Tornado calls streaming_callback on redirect response bodies.
-            # But we need streaming to support fetching large files (> RAM avail).
-            # Here we working this around by disabling recording the body for redirections.
-            # The issue is fixed in Tornado 4.3.0 so on_header callback could be removed
-            # when we'll deprecate Tornado<4.3.0.
-            # See #27093 and #30431 for details.
+            # But we need streaming to support fetching large files (> RAM
+            # avail). Here we are working around this by disabling recording
+            # the body for redirections. The issue is fixed in Tornado 4.3.0
+            # so on_header callback could be removed when we'll deprecate
+            # Tornado<4.3.0. See #27093 and #30431 for details.
 
-            # Use list here to make it writable inside the on_header callback. Simple bool doesn't
-            # work here: on_header creates a new local variable instead. This could be avoided in
-            # Py3 with 'nonlocal' statement. There is no Py2 alternative for this.
+            # Use list here to make it writable inside the on_header callback.
+            # Simple bool doesn't work here: on_header creates a new local
+            # variable instead. This could be avoided in Py3 with 'nonlocal'
+            # statement. There is no Py2 alternative for this.
+            #
+            # write_body[0] is used by the on_chunk callback to tell it whether
+            #   or not we need to write the body of the request to disk. For
+            #   30x redirects we set this to False because we don't want to
+            #   write the contents to disk, as we will need to wait until we
+            #   get to the redirected URL.
+            #
+            # write_body[1] will contain a tornado.httputil.HTTPHeaders
+            #   instance that we will use to parse each header line. We
+            #   initialize this to False, and after we parse the status line we
+            #   will replace it with the HTTPHeaders instance. If/when we have
+            #   found the encoding used in the request, we set this value to
+            #   False to signify that we are done parsing.
+            #
+            # write_body[2] is where the encoding will be stored
             write_body = [None, False, None]
 
             def on_header(hdr):
                 if write_body[1] is not False and write_body[2] is None:
-                    # Try to find out what content type encoding is used if this is a text file
+                    # Try to find out what content type encoding is used if
+                    # this is a text file
                     write_body[1].parse_line(hdr)  # pylint: disable=no-member
                     if 'Content-Type' in write_body[1]:
                         content_type = write_body[1].get('Content-Type')  # pylint: disable=no-member
@@ -621,17 +651,22 @@ class Client(object):
                             # We have found our encoding. Stop processing headers.
                             write_body[1] = False
 
-                if write_body[0] is not None:
-                    # We already parsed the first line. No need to run the code below again
-                    return
+                        # If write_body[0] is False, this means that this
+                        # header is a 30x redirect, so we need to reset
+                        # write_body[0] to None so that we parse the HTTP
+                        # status code from the redirect target.
+                        if write_body[0] is write_body[1] is False:
+                            write_body[0] = None
 
-                try:
-                    hdr = parse_response_start_line(hdr)
-                except HTTPInputError:
-                    # Not the first line, do nothing
-                    return
-                write_body[0] = hdr.code not in [301, 302, 303, 307]
-                write_body[1] = HTTPHeaders()
+                # Check the status line of the HTTP request
+                if write_body[0] is None:
+                    try:
+                        hdr = parse_response_start_line(hdr)
+                    except HTTPInputError:
+                        # Not the first line, do nothing
+                        return
+                    write_body[0] = hdr.code not in [301, 302, 303, 307]
+                    write_body[1] = HTTPHeaders()
 
             if no_cache:
                 result = []
@@ -966,7 +1001,7 @@ class LocalClient(Client):
             ret.append(saltenv)
         return ret
 
-    def ext_nodes(self):
+    def master_tops(self):
         '''
         Originally returned information via the external_nodes subsystem.
         External_nodes was deprecated and removed in
@@ -1036,6 +1071,14 @@ class RemoteClient(Client):
                 path, saltenv
             )
             return False
+
+        # If dest is a directory, rewrite dest with filename
+        if dest is not None \
+                and (os.path.isdir(dest) or dest.endswith(('/', '\\'))):
+            dest = os.path.join(dest, os.path.basename(path))
+            log.debug(
+                'In saltenv \'%s\', \'%s\' is a directory. Changing dest to '
+                '\'%s\'', saltenv, os.path.dirname(dest), dest)
 
         # Hash compare local copy with master and skip download
         # if no difference found.
@@ -1284,12 +1327,11 @@ class RemoteClient(Client):
         load = {'cmd': '_master_opts'}
         return self.channel.send(load)
 
-    def ext_nodes(self):
+    def master_tops(self):
         '''
-        Return the metadata derived from the external nodes system on the
-        master.
+        Return the metadata derived from the master_tops system
         '''
-        load = {'cmd': '_ext_nodes',
+        load = {'cmd': '_master_tops',
                 'id': self.opts['id'],
                 'opts': self.opts}
         if self.auth:

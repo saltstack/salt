@@ -278,7 +278,9 @@ def create(vm_):
     if ip_source not in set(['ip-learning', 'qemu-agent']):
         raise SaltCloudSystemExit("'ip_source' must be one of qemu-agent or ip-learning. Got '{0}'".format(ip_source))
 
-    log.info("Cloning machine '{0}' with strategy '{1}'".format(vm_['name'], clone_strategy))
+    validate_xml = vm_.get('validate_xml') if vm_.get('validate_xml') is not None else True
+
+    log.info("Cloning machine '{0}' with strategy '{1}' validate_xml='{2}'".format(vm_['name'], clone_strategy, validate_xml))
 
     try:
         # Check for required profile parameters before sending any API calls.
@@ -339,7 +341,7 @@ def create(vm_):
                 'requesting instance',
                 'salt/cloud/{0}/requesting'.format(name),
                 args={
-                    'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, kwargs.keys()),
+                    'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, list(kwargs)),
                 },
                 sock_dir=__opts__['sock_dir'],
                 transport=__opts__['transport']
@@ -409,10 +411,12 @@ def create(vm_):
                 else:
                     raise SaltCloudExecutionFailure("Disk type '{0}' not supported".format(disk_type))
 
-            log.debug("Clone XML '{0}'".format(domain_xml))
             clone_xml = ElementTree.tostring(domain_xml)
+            log.debug("Clone XML '{0}'".format(clone_xml))
 
-            clone_domain = conn.defineXMLFlags(clone_xml, libvirt.VIR_DOMAIN_DEFINE_VALIDATE)
+            validate_flags = libvirt.VIR_DOMAIN_DEFINE_VALIDATE if validate_xml else 0
+            clone_domain = conn.defineXMLFlags(clone_xml, validate_flags)
+
             cleanup.append({'what': 'domain', 'item': clone_domain})
             clone_domain.createWithFlags(libvirt.VIR_DOMAIN_START_FORCE_BOOT)
 

@@ -3,7 +3,7 @@
 NET Finder
 ==========
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 A runner to find network details easily and fast.
 It's smart enough to know what you are looking for.
@@ -38,24 +38,24 @@ Configuration
     By default the following options can be configured on the master.
     They are not necessary, but available in case the user has different requirements.
 
-    target: '*'
-        From what minions will collect the mine data. Default: `*`  - will collect from all minions.
+    target: ``*``
+        From what minions will collect the mine data. Default: ``*`` (collect from all minions).
 
-    expr_form: 'glob'
-        Minion matching expression form. Default: `glob`.
+    expr_form: ``glob``
+        Minion matching expression form. Default: ``glob``.
 
-    ignore_interfaces: []
+    ignore_interfaces
         A list of interfaces name to ignore. By default will consider all interfaces.
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True`` (return on the CLI).
 
-    outputter: table
-        Specify the outputter name when displaying on the CLI. Default: `table`.
+    outputter: ``table``
+        Specify the outputter name when displaying on the CLI. Default: :mod:`table <salt.output.napalm_bgp>`.
 
     Configuration example:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         runners:
           net.find:
@@ -269,12 +269,12 @@ def interfaces(device=None,
     ipnet
         Return interfaces whose IP networks associated include this IP network.
 
-    best: True
-        When `ipnet` is specified, this argument says if the runner should return only the best match
-        (the output will contain at most one row). Default: `True`, return only the best match.
+    best: ``True``
+        When ``ipnet`` is specified, this argument says if the runner should return only the best match
+        (the output will contain at most one row). Default: ``True`` (return only the best match).
 
     display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+        Display on the screen or return structured object? Default: ``True`` (return on the CLI).
 
     title
         Display a custom title for the table.
@@ -348,6 +348,9 @@ def interfaces(device=None,
 
     if device:
         all_interfaces = {device: all_interfaces.get(device, {})}
+
+    if ipnet and not isinstance(ipnet, IPNetwork):
+        ipnet = _get_network_obj(ipnet)
 
     best_row = {}
     best_net_match = None
@@ -454,8 +457,8 @@ def findarp(device=None,
     ip
         Search using a specific IP Address.
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True``, will return on the CLI.
 
     CLI Example:
 
@@ -540,8 +543,8 @@ def findmac(device=None, mac=None, interface=None, vlan=None, display=_DEFAULT_D
     vlan
         Search using a VLAN ID.
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True``, will return on the CLI.
 
     CLI Example:
 
@@ -641,11 +644,11 @@ def lldp(device=None,
     chassis
         Search using a specific Chassis ID.
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True`` (return on the CLI).
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True`` (return on the CLI).
 
     title
         Display a custom title for the table.
@@ -767,12 +770,12 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
 
     Optional arguments:
 
-    best: True
+    best: ``True``
         Return only the best match with the interfaces IP networks
         when the saerching pattern is a valid IP Address or Network.
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True``(return on the CLI).
 
     CLI Example:
 
@@ -894,12 +897,12 @@ def multi_find(*patterns, **kwargs):
 
     Optional arguments:
 
-    best: True
+    best: ``True``
         Return only the best match with the interfaces IP networks
         when the saerching pattern is a valid IP Address or Network.
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: `True` (return on the CLI).
 
 
     CLI Example:

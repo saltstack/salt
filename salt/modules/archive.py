@@ -6,6 +6,7 @@ A module to wrap (non-Windows) archive calls
 '''
 from __future__ import absolute_import
 import contextlib  # For < 2.7 compat
+import copy
 import errno
 import glob
 import logging
@@ -249,13 +250,16 @@ def list_(name,
                         else:
                             files.append(path)
 
-                for path in files:
+                _files = copy.deepcopy(files)
+                for path in _files:
                     # ZIP files created on Windows do not add entries
                     # to the archive for directories. So, we'll need to
                     # manually add them.
                     dirname = ''.join(path.rpartition('/')[:2])
                     if dirname:
                         dirs.add(dirname)
+                        if dirname in files:
+                            files.remove(dirname)
             return list(dirs), files, links
         except zipfile.BadZipfile:
             raise CommandExecutionError('{0} is not a ZIP file'.format(name))
@@ -477,7 +481,7 @@ def tar(options, tarfile, sources=None, dest=None,
         Comma delimited list of files to **pack** into the tarfile. Can also be
         passed as a Python list.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             Globbing is now supported for this argument
 
     dest
@@ -502,7 +506,7 @@ def tar(options, tarfile, sources=None, dest=None,
 
         # Create a tarfile
         salt '*' archive.tar -cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
-        # Create a tarfile using globbing (Nitrogen and later)
+        # Create a tarfile using globbing (2017.7.0 and later)
         salt '*' archive.tar -cjvf /tmp/tarfile.tar.bz2 '/tmp/file_*'
         # Unpack a tarfile
         salt '*' archive.tar xf foo.tar dest=/target/directory
@@ -628,7 +632,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
         Comma-separated list of sources to include in the zip file. Sources can
         also be passed in a Python list.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             Globbing is now supported for this argument
 
     template : None
@@ -665,7 +669,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
     .. code-block:: bash
 
         salt '*' archive.cmd_zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
-        # Globbing for sources (Nitrogen and later)
+        # Globbing for sources (2017.7.0 and later)
         salt '*' archive.cmd_zip /tmp/zipfile.zip '/tmp/sourcefile*'
     '''
     cmd = ['zip', '-r']
@@ -697,7 +701,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
         Comma-separated list of sources to include in the zip file. Sources can
         also be passed in a Python list.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             Globbing is now supported for this argument
 
     template : None
@@ -730,7 +734,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     .. code-block:: bash
 
         salt '*' archive.zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
-        # Globbing for sources (Nitrogen and later)
+        # Globbing for sources (2017.7.0 and later)
         salt '*' archive.zip /tmp/zipfile.zip '/tmp/sourcefile*'
     '''
     if runas:
@@ -1055,7 +1059,15 @@ def unzip(zip_file,
                             continue
                     zfile.extract(target, dest, password)
                     if extract_perms:
-                        os.chmod(os.path.join(dest, target), zfile.getinfo(target).external_attr >> 16)
+                        perm = zfile.getinfo(target).external_attr >> 16
+                        if perm == 0:
+                            umask_ = os.umask(0)
+                            os.umask(umask_)
+                            if target.endswith('/'):
+                                perm = 0o777 & ~umask_
+                            else:
+                                perm = 0o666 & ~umask_
+                        os.chmod(os.path.join(dest, target), perm)
     except Exception as exc:
         if runas:
             os.seteuid(euid)
@@ -1151,7 +1163,7 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
         Comma-separated list of sources to include in the rar file. Sources can
         also be passed in a Python list.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             Globbing is now supported for this argument
 
     cwd : None
@@ -1176,7 +1188,7 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
     .. code-block:: bash
 
         salt '*' archive.rar /tmp/rarfile.rar /tmp/sourcefile1,/tmp/sourcefile2
-        # Globbing for sources (Nitrogen and later)
+        # Globbing for sources (2017.7.0 and later)
         salt '*' archive.rar /tmp/rarfile.rar '/tmp/sourcefile*'
     '''
     cmd = ['rar', 'a', '-idp', '{0}'.format(rarfile)]

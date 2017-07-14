@@ -35,7 +35,7 @@ please refer to the `NAPALM Read the Docs page`_.
 .. _`NAPALM Read the Docs page`: https://napalm.readthedocs.io/en/latest/#supported-network-operating-systems
 .. _`optional arguments`: http://napalm.readthedocs.io/en/latest/support/index.html#list-of-supported-optional-arguments
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 * always_alive: in certain less dynamic environments, maintaining the remote connection permanently
     open with the network device is not always beneficial. In that case, the user can
@@ -136,7 +136,7 @@ def alive(opts):
     '''
     Return the connection status with the remote device.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     '''
     if salt.utils.napalm.not_always_alive(opts):
         return True  # don't force reconnection for not-always alive proxies

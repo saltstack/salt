@@ -2,7 +2,7 @@
 '''
 Management of Docker networks
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends: docker_ Python module
 
@@ -28,7 +28,7 @@ Management of Docker networks
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 
 These states were moved from the :mod:`docker <salt.states.docker>` state
-module (formerly called **dockerng**) in the Nitrogen release.
+module (formerly called **dockerng**) in the 2017.7.0 release.
 '''
 from __future__ import absolute_import
 import logging
@@ -124,6 +124,10 @@ def present(name,
             ret['result'] = result
 
     else:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = ('The network \'{0}\' will be created'.format(name))
+            return ret
         try:
             ret['changes']['created'] = __salt__['docker.create_network'](
                 name,
@@ -172,6 +176,11 @@ def absent(name, driver=None):
     if not networks:
         ret['result'] = True
         ret['comment'] = 'Network \'{0}\' already absent'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = ('The network \'{0}\' will be removed'.format(name))
         return ret
 
     for container in networks[0]['Containers']:

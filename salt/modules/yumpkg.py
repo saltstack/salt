@@ -642,7 +642,7 @@ def list_repo_pkgs(*args, **kwargs):
         <salt.modules.yumpkg.hold>` will only show the currently-installed
         version, as locking a package will make other versions appear
         unavailable to yum/dnf.
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         By default, the versions for each package are no longer organized by
         repository. To get results organized by repository, use
         ``byrepo=True``.
@@ -714,26 +714,26 @@ def list_repo_pkgs(*args, **kwargs):
         Specify a disabled package repository (or repositories) to enable.
         (e.g., ``yum --enablerepo='somerepo'``)
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     disablerepo (ignored if ``fromrepo`` is specified)
         Specify an enabled package repository (or repositories) to disable.
         (e.g., ``yum --disablerepo='somerepo'``)
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     byrepo : False
         When ``True``, the return data for each package will be organized by
         repository.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     cacheonly : False
         When ``True``, the repo information will be retrieved from the cached
         repo metadata. This is equivalent to passing the ``-C`` option to
         yum/dnf.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     CLI Examples:
 
@@ -927,7 +927,7 @@ list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
 
 def list_downloaded():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List prefetched packages downloaded by Yum in the local disk.
 
@@ -1074,6 +1074,7 @@ def install(name=None,
             reinstall=False,
             normalize=True,
             update_holds=False,
+            ignore_epoch=False,
             **kwargs):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -1136,6 +1137,10 @@ def install(name=None,
         Install a specific version of the package, e.g. 1.2.3-4.el5. Ignored
         if "pkgs" or "sources" is passed.
 
+        .. versionchanged:: Oxygen
+            version can now contain comparison operators (e.g. ``>1.2.3``,
+            ``<=2.0``, etc.)
+
     update_holds : False
         If ``True``, and this function would update the package version, any
         packages held using the yum/dnf "versionlock" plugin will be unheld so
@@ -1165,6 +1170,14 @@ def install(name=None,
         (e.g., ``yum --disableexcludes='main'``)
 
         .. versionadded:: 2014.7.0
+
+    ignore_epoch : False
+        Only used when the version of a package is specified using a comparison
+        operator (e.g. ``>4.1``). If set to ``True``, then the epoch will be
+        ignored when comparing the currently-installed version to the desired
+        version.
+
+        .. versionadded:: Oxygen
 
 
     Multiple Package Installation Options:
@@ -1230,13 +1243,6 @@ def install(name=None,
         return {}
 
     version_num = kwargs.get('version')
-    if version_num:
-        if pkgs is None and sources is None:
-            # Allow "version" to work for single package target
-            pkg_params = {name: version_num}
-        else:
-            log.warning('"version" parameter will be ignored for multiple '
-                        'package targets')
 
     old = list_pkgs(versions_as_list=False) if not downloadonly else list_downloaded()
     # Use of __context__ means no duplicate work here, just accessing
@@ -1261,11 +1267,21 @@ def install(name=None,
     #
     # The reason that we need both items is to be able to modify the installed
     # version of held packages.
-
     if pkg_type == 'repository':
-        has_wildcards = [x for x, y in six.iteritems(pkg_params)
-                         if y is not None and '*' in y]
-        _available = list_repo_pkgs(*has_wildcards, byrepo=False, **kwargs)
+        has_wildcards = []
+        has_comparison = []
+        for pkgname, pkgver in six.iteritems(pkg_params):
+            try:
+                if '*' in pkgver:
+                    has_wildcards.append(pkgname)
+                elif pkgver.startswith('<') or pkgver.startswith('>'):
+                    has_comparison.append(pkgname)
+            except (TypeError, ValueError):
+                continue
+        _available = list_repo_pkgs(
+            *has_wildcards + has_comparison,
+            byrepo=False,
+            **kwargs)
         pkg_params_items = six.iteritems(pkg_params)
     elif pkg_type == 'advisory':
         pkg_params_items = []
@@ -1286,10 +1302,9 @@ def install(name=None,
                 rpm_info = None
             if rpm_info is None:
                 log.error(
-                    'pkg.install: Unable to get rpm information for {0}. '
+                    'pkg.install: Unable to get rpm information for %s. '
                     'Version comparisons will be unavailable, and return '
-                    'data may be inaccurate if reinstall=True.'
-                    .format(pkg_source)
+                    'data may be inaccurate if reinstall=True.', pkg_source
                 )
                 pkg_params_items.append([pkg_source])
             else:
@@ -1328,6 +1343,29 @@ def install(name=None,
             # not None, since the only way version_num is not None is if RPM
             # metadata parsing was successful.
             if pkg_type == 'repository':
+                # yum/dnf does not support comparison operators. If the version
+                # starts with an equals sign, ignore it.
+                version_num = version_num.lstrip('=')
+                if pkgname in has_comparison:
+                    candidates = _available.get(pkgname, [])
+                    target = salt.utils.pkg.match_version(
+                        version_num,
+                        candidates,
+                        cmp_func=version_cmp,
+                        ignore_epoch=ignore_epoch,
+                    )
+                    if target is None:
+                        errors.append(
+                            'No version matching \'{0}{1}\' could be found '
+                            '(available: {2})'.format(
+                                pkgname,
+                                version_num,
+                                ', '.join(candidates) if candidates else None
+                            )
+                        )
+                        continue
+                    else:
+                        version_num = target
                 if _yum() == 'yum':
                     # yum install does not support epoch without the arch, and
                     # we won't know what the arch will be when it's not
@@ -2534,8 +2572,9 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         if stanza == repo:
             continue
         comments = ''
-        if 'comments' in filerepos[stanza]:
-            comments = '\n'.join(filerepos[stanza]['comments'])
+        if 'comments' in six.iterkeys(filerepos[stanza]):
+            comments = salt.utils.pkg.rpm.combine_comments(
+                    filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
         for line in filerepos[stanza]:
@@ -2670,7 +2709,8 @@ def mod_repo(repo, basedir=None, **kwargs):
     for stanza in six.iterkeys(filerepos):
         comments = ''
         if 'comments' in six.iterkeys(filerepos[stanza]):
-            comments = '\n'.join(filerepos[stanza]['comments'])
+            comments = salt.utils.pkg.rpm.combine_comments(
+                    filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
         for line in six.iterkeys(filerepos[stanza]):
@@ -2989,7 +3029,7 @@ def _get_patches(installed_only=False):
 
 def list_patches(refresh=False):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List all known advisory patches from available repos.
 
@@ -3012,7 +3052,7 @@ def list_patches(refresh=False):
 
 def list_installed_patches():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List installed advisory patches on the system.
 

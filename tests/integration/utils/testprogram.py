@@ -26,10 +26,11 @@ import salt.utils.process
 import salt.utils.psutil_compat as psutils
 import salt.defaults.exitcodes as exitcodes
 import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 from tests.support.unit import TestCase
 from tests.support.paths import CODE_DIR
-from tests.support.processes import terminate_process
+from tests.support.processes import terminate_process, terminate_process_list
 
 log = logging.getLogger(__name__)
 
@@ -416,10 +417,10 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         elif sys.platform.lower().startswith('win') and timeout is not None:
             raise RuntimeError('Timeout is not supported under windows')
 
-        argv = [self.program]
-        argv.extend(args)
-        log.debug('TestProgram.run: {0} Environment {1}'.format(argv, env_delta))
-        process = subprocess.Popen(argv, **popen_kwargs)
+        self.argv = [self.program]
+        self.argv.extend(args)
+        log.debug('TestProgram.run: %s Environment %s', self.argv, env_delta)
+        process = subprocess.Popen(self.argv, **popen_kwargs)
         self.process = process
 
         if timeout is not None:
@@ -766,17 +767,63 @@ class TestDaemon(TestProgram):
                 pass
         return ret
 
-    def shutdown(self, signum=signal.SIGTERM, timeout=10):
+    def find_orphans(self, cmdline):
+        '''Find orphaned processes matching the specified cmdline'''
+        ret = []
+        if six.PY3:
+            cmdline = ' '.join(cmdline)
+            for proc in psutils.process_iter():
+                try:
+                    for item in proc.cmdline():
+                        if cmdline in item:
+                            ret.append(proc)
+                except psutils.NoSuchProcess:
+                    # Process exited between when process_iter was invoked and
+                    # when we tried to invoke this instance's cmdline() func.
+                    continue
+        else:
+            cmd_len = len(cmdline)
+            for proc in psutils.process_iter():
+                try:
+                    proc_cmdline = proc.cmdline()
+                except psutils.NoSuchProcess:
+                    # Process exited between when process_iter was invoked and
+                    # when we tried to invoke this instance's cmdline() func.
+                    continue
+                if any((cmdline == proc_cmdline[n:n + cmd_len])
+                        for n in range(len(proc_cmdline) - cmd_len + 1)):
+                    ret.append(proc)
+        return ret
+
+    def shutdown(self, signum=signal.SIGTERM, timeout=10, wait_for_orphans=0):
         '''Shutdown a running daemon'''
         if not self._shutdown:
             try:
                 pid = self.wait_for_daemon_pid(timeout)
-                terminate_process(pid=pid)
+                terminate_process(pid=pid, kill_children=True)
             except TimeoutError:
                 pass
         if self.process:
-            terminate_process(pid=self.process.pid)
+            terminate_process(pid=self.process.pid, kill_children=True)
             self.process.wait()
+            if wait_for_orphans:
+                # NOTE: The process for finding orphans is greedy, it just
+                # looks for processes with the same cmdline which are owned by
+                # PID 1.
+                orphans = self.find_orphans(self.argv)
+                last = time.time()
+                while True:
+                    if orphans:
+                        log.debug(
+                            'Terminating orphaned child processes: %s',
+                            orphans
+                        )
+                        terminate_process_list(orphans)
+                        last = time.time()
+                    if (time.time() - last) >= wait_for_orphans:
+                        break
+                    time.sleep(0.25)
+                    orphans = self.find_orphans(self.argv)
             self.process = None
         self._shutdown = True
 

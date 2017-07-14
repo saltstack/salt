@@ -114,7 +114,7 @@ def _mbcs_to_unicode_wrap(obj, vtype):
         return obj
     if isinstance(obj, list):
         return [_mbcs_to_unicode(x) for x in obj]
-    elif isinstance(obj, int):
+    elif isinstance(obj, six.integer_types):
         return obj
     else:
         return _mbcs_to_unicode(obj)

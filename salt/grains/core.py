@@ -22,6 +22,7 @@ import logging
 import locale
 import uuid
 from errno import EACCES, EPERM
+import datetime
 
 __proxyenabled__ = ['*']
 __FQDN__ = None
@@ -418,7 +419,7 @@ def _memdata(osdata):
                 mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
             if osdata['kernel'] == 'NetBSD' and mem.startswith('-'):
                 mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
-            grains['mem_total'] = int(mem) / 1024 / 1024
+            grains['mem_total'] = int(mem) // 1024 // 1024
     elif osdata['kernel'] == 'SunOS':
         prtconf = '/usr/sbin/prtconf 2>/dev/null'
         for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
@@ -517,7 +518,7 @@ def _virtual(osdata):
                 '\'virtual\' grain.'
             )
     # Check if enable_lspci is True or False
-    if __opts__.get('enable_lspci', True) is False:
+    if __opts__.get('enable_lspci', True) is True:
         # /proc/bus/pci does not exists, lspci will fail
         if os.path.exists('/proc/bus/pci'):
             _cmds += ['lspci']
@@ -823,7 +824,7 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in model:
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'OpenBSD':
-        if osdata['manufacturer'] == 'QEMU':
+        if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
             grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'SunOS':
         # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
@@ -1117,10 +1118,11 @@ _OS_NAME_MAP = {
     'nilrt': 'NILinuxRT',
     'nilrt-xfce': 'NILinuxRT-XFCE',
     'manjaro': 'Manjaro',
+    'manjarolin': 'Manjaro',
     'antergos': 'Antergos',
     'sles': 'SUSE',
-    'slesexpand': 'RES',
     'void': 'Void',
+    'slesexpand': 'RES',
     'linuxmint': 'Mint',
     'neon': 'KDE neon',
 }
@@ -1789,12 +1791,14 @@ def ip_fqdn():
             ret[key] = []
         else:
             try:
+                start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list(set(item[4][0] for item in info))
             except socket.error:
-                if __opts__['__role'] == 'master':
-                    log.warning('Unable to find IPv{0} record for "{1}" causing a 10 second timeout when rendering grains. '
-                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn))
+                timediff = datetime.datetime.utcnow() - start_time
+                if timediff.seconds > 5 and __opts__['__role'] == 'master':
+                    log.warning('Unable to find IPv{0} record for "{1}" causing a {2} second timeout when rendering grains. '
+                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn, timediff))
                 ret[key] = []
 
     return ret

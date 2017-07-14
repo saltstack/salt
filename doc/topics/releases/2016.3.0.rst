@@ -274,7 +274,7 @@ Module Changes
   :mod:`apache_site state module <salt.states.apache_site>`: the ``enable`` and
   ``disable`` functions were renamed to ``enabled`` and ``disabled``,
   respectively.  In :pull:`33562`, these functions were readded and properly
-  deprecated and will be removed in Salt Nitrogen.  This fix will be available
+  deprecated and will be removed in Salt 2017.7.0.  This fix will be available
   in 2016.3.1.  As a workaround, try
 
   .. code-block:: sls

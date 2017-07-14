@@ -500,7 +500,10 @@ def bootstrap(vm_, opts):
             'winrm_port', vm_, opts, default=5986
         )
         deploy_kwargs['winrm_use_ssl'] = salt.config.get_cloud_config_value(
-        'winrm_use_ssl', vm_, opts, default=True
+            'winrm_use_ssl', vm_, opts, default=True
+        )
+        deploy_kwargs['winrm_verify_ssl'] = salt.config.get_cloud_config_value(
+            'winrm_verify_ssl', vm_, opts, default=True
         )
 
     # Store what was used to the deploy the VM
@@ -826,7 +829,7 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
             )
 
 
-def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
+def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True, verify=True):
     '''
     Wait until WinRM connection can be established.
     '''
@@ -836,14 +839,20 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
             host, port
         )
     )
+    transport = 'ssl'
+    if not use_ssl:
+        transport = 'plaintext'
     trycount = 0
     while True:
         trycount += 1
         try:
-            transport = 'ssl'
-            if not use_ssl:
-                transport = 'plaintext'
-            s = winrm.Session(host, auth=(username, password), transport=transport)
+            winrm_kwargs = {'target': host,
+                            'auth': (username, password),
+                            'transport': transport}
+            if not verify:
+                log.debug("SSL validation for WinRM disabled.")
+                winrm_kwargs['server_cert_validation'] = 'ignore'
+            s = winrm.Session(**winrm_kwargs)
             if hasattr(s.protocol, 'set_timeout'):
                 s.protocol.set_timeout(15)
             log.trace('WinRM endpoint url: {0}'.format(s.url))
@@ -991,6 +1000,7 @@ def deploy_windows(host,
                    use_winrm=False,
                    winrm_port=5986,
                    winrm_use_ssl=True,
+                   winrm_verify_ssl=True,
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
@@ -1017,7 +1027,8 @@ def deploy_windows(host,
     if HAS_WINRM and use_winrm:
         winrm_session = wait_for_winrm(host=host, port=winrm_port,
                                        username=username, password=password,
-                                       timeout=port_timeout * 60, use_ssl=winrm_use_ssl)
+                                       timeout=port_timeout * 60, use_ssl=winrm_use_ssl,
+                                       verify=winrm_verify_ssl)
         if winrm_session is not None:
             service_available = True
     else:
@@ -1755,6 +1766,12 @@ def filter_event(tag, data, defaults):
 
     if use_defaults is False:
         defaults = []
+
+    # For PY3, if something like ".keys()" or ".values()" is used on a dictionary,
+    # it returns a dict_view and not a list like in PY2. "defaults" should be passed
+    # in with the correct data type, but don't stack-trace in case it wasn't.
+    if not isinstance(defaults, list):
+        defaults = list(defaults)
 
     defaults = list(set(defaults + keys))
 
@@ -2536,7 +2553,8 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     lock_file(index_file)
 
     if os.path.exists(index_file):
-        with salt.utils.fopen(index_file, 'r') as fh_:
+        mode = 'rb' if six.PY3 else 'r'
+        with salt.utils.fopen(index_file, mode) as fh_:
             index = msgpack.load(fh_)
     else:
         index = {}
@@ -2552,7 +2570,8 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
         }
     })
 
-    with salt.utils.fopen(index_file, 'w') as fh_:
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.fopen(index_file, mode) as fh_:
         msgpack.dump(index, fh_)
 
     unlock_file(index_file)
@@ -2568,7 +2587,8 @@ def cachedir_index_del(minion_id, base=None):
     lock_file(index_file)
 
     if os.path.exists(index_file):
-        with salt.utils.fopen(index_file, 'r') as fh_:
+        mode = 'rb' if six.PY3 else 'r'
+        with salt.utils.fopen(index_file, mode) as fh_:
             index = msgpack.load(fh_)
     else:
         return
@@ -2576,7 +2596,8 @@ def cachedir_index_del(minion_id, base=None):
     if minion_id in index:
         del index[minion_id]
 
-    with salt.utils.fopen(index_file, 'w') as fh_:
+    mode = 'wb' if six.PY3 else 'w'
+    with salt.utils.fopen(index_file, mode) as fh_:
         msgpack.dump(index, fh_)
 
     unlock_file(index_file)

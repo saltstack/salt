@@ -22,6 +22,7 @@ import salt.config
 import re
 
 # Import Salt libs
+import salt.utils.hashutils
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 
@@ -244,7 +245,7 @@ def sig4(method, endpoint, params, prov_dict,
     # Create payload hash (hash of the request body content). For GET
     # requests, the payload is an empty string ('').
     if not payload_hash:
-        payload_hash = hashlib.sha256(data).hexdigest()
+        payload_hash = salt.utils.hashutils.sha256_digest(data)
 
     new_headers['X-Amz-date'] = amzdate
     new_headers['host'] = endpoint
@@ -280,7 +281,7 @@ def sig4(method, endpoint, params, prov_dict,
         algorithm,
         amzdate,
         credential_scope,
-        hashlib.sha256(canonical_request).hexdigest()
+        salt.utils.hashutils.sha256_digest(canonical_request)
     ))
 
     # Create the signing key using the function defined above.

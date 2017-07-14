@@ -103,6 +103,7 @@ try:
     from azure.mgmt.network.models import (
         IPAllocationMethod,
         NetworkInterface,
+        NetworkInterfaceDnsSettings,
         NetworkInterfaceIPConfiguration,
         NetworkSecurityGroup,
         PublicIPAddress,
@@ -911,6 +912,17 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
             )
         ]
 
+    dns_settings = None
+    if kwargs.get('dns_servers') is not None:
+        if isinstance(kwargs['dns_servers'], list):
+            dns_settings = NetworkInterfaceDnsSettings(
+                dns_servers=kwargs['dns_servers'],
+                applied_dns_servers=kwargs['dns_servers'],
+                internal_dns_name_label=None,
+                internal_fqdn=None,
+                internal_domain_name_suffix=None,
+            )
+
     network_security_group = None
     if kwargs.get('security_group') is not None:
         network_security_group = netconn.network_security_groups.get(
@@ -922,6 +934,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         location=kwargs['location'],
         network_security_group=network_security_group,
         ip_configurations=ip_configurations,
+        dns_settings=dns_settings,
     )
 
     poller = netconn.network_interfaces.create_or_update(
@@ -1201,8 +1214,8 @@ def create(vm_):
     def _query_ip_address():
         data = request_instance(kwargs=vm_)
         ifaces = data['network_profile']['network_interfaces']
-        iface = ifaces.keys()[0]
-        ip_name = ifaces[iface]['ip_configurations'].keys()[0]
+        iface = list(ifaces)[0]
+        ip_name = list(ifaces[iface]['ip_configurations'])[0]
 
         if vm_.get('public_ip') is True:
             hostname = ifaces[iface]['ip_configurations'][ip_name]['public_ip_address']
@@ -1288,6 +1301,15 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
             'The destroy action must be called with -d, --destroy, '
             '-a or --action.'
         )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroying instance',
+        'salt/cloud/{0}/destroying'.format(name),
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
     global compconn  # pylint: disable=global-statement,invalid-name
     if not compconn:
@@ -1381,6 +1403,15 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
                     call='function',
                 )
             )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroyed instance',
+        'salt/cloud/{0}/destroyed'.format(name),
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
     return ret
 

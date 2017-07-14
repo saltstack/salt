@@ -34,6 +34,8 @@ def update(tgt,
            clear=False,
            mine_functions=None):
     '''
+    .. versionadded:: 2017.7.0
+
     Update the mine data on a certain group of minions.
 
     tgt

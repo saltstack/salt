@@ -172,7 +172,9 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                         '/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
                         template='jinja'
                     )
-                    self.assertEqual(['tmp/tmpePe8yO', 'tmp/tmpLeSw1A'], ret)
+                    expected = [os.path.join('tmp', 'tmpePe8yO'),
+                                os.path.join('tmp', 'tmpLeSw1A')]
+                    self.assertEqual(expected, ret)
 
     def test_zip_raises_exception_if_not_found(self):
         mock = MagicMock(return_value='salt')

@@ -27,7 +27,6 @@ except Exception:
 
 # pylint: disable=import-error,no-name-in-module
 import salt.ext.six as six
-from salt.ext.six import string_types, text_type
 from salt.ext.six.moves.urllib.parse import urlparse
 # pylint: enable=import-error,no-name-in-module
 
@@ -108,10 +107,10 @@ FLO_DIR = os.path.join(
 
 VALID_OPTS = {
     # The address of the salt master. May be specified as IP address or hostname
-    'master': (string_types, list),
+    'master': (six.string_types, list),
 
     # The TCP/UDP port of the master to connect to in order to listen to publications
-    'master_port': (string_types, int),
+    'master_port': (six.string_types, int),
 
     # The behaviour of the minion when connecting to a master. Can specify 'failover',
     # 'disable' or 'func'. If 'func' is specified, the 'master' option should be set to an
@@ -205,6 +204,9 @@ VALID_OPTS = {
 
     # The directory containing unix sockets for things like the event bus
     'sock_dir': str,
+
+    # The pool size of unix sockets, it is necessary to avoid blocking waiting for zeromq and tcp communications.
+    'sock_pool_size': int,
 
     # Specifies how the file server should backup files, if enabled. The backups
     # live in the cache dir.
@@ -460,7 +462,7 @@ VALID_OPTS = {
 
     # If a minion is running an esky build of salt, upgrades can be performed using the url
     # defined here. See saltutil.update() for additional information
-    'update_url': (bool, string_types),
+    'update_url': (bool, six.string_types),
 
     # If using update_url with saltutil.update(), provide a list of services to be restarted
     # post-install
@@ -489,7 +491,7 @@ VALID_OPTS = {
 
     # Specify one or more returners in which all events will be sent to. Requires that the returners
     # in question have an event_return(event) function!
-    'event_return': (list, string_types),
+    'event_return': (list, six.string_types),
 
     # The number of events to queue up in memory before pushing them down the pipe to an event
     # returner specified by 'event_return'
@@ -612,7 +614,9 @@ VALID_OPTS = {
     'gitfs_ssl_verify': bool,
     'gitfs_global_lock': bool,
     'gitfs_saltenv': list,
+    'gitfs_ref_types': list,
     'gitfs_refspecs': list,
+    'gitfs_disable_saltenv_mapping': bool,
     'hgfs_remotes': list,
     'hgfs_mountpoint': str,
     'hgfs_root': str,
@@ -679,7 +683,7 @@ VALID_OPTS = {
     'ping_on_rotate': bool,
     'peer': dict,
     'preserve_minion_cache': bool,
-    'syndic_master': (string_types, list),
+    'syndic_master': (six.string_types, list),
 
     # The behaviour of the multimaster syndic when connection to a master of masters failed. Can
     # specify 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random
@@ -696,8 +700,8 @@ VALID_OPTS = {
     'token_expire_user_override': (bool, dict),
     'file_recv': bool,
     'file_recv_max_size': int,
-    'file_ignore_regex': (list, string_types),
-    'file_ignore_glob': (list, string_types),
+    'file_ignore_regex': (list, six.string_types),
+    'file_ignore_glob': (list, six.string_types),
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
@@ -723,6 +727,10 @@ VALID_OPTS = {
 
     # A mapping of external systems that can be used to generate topfile data.
     'master_tops': dict,
+
+    # Whether or not matches from master_tops should be executed before or
+    # after those from the top file(s).
+    'master_tops_first': bool,
 
     # A flag that should be set on a top-level master when it is ordering around subordinate masters
     # via the use of a salt syndic
@@ -934,7 +942,7 @@ VALID_OPTS = {
 
     'queue_dirs': list,
 
-    # Instructs the minion to ping its master(s) ever n number of seconds. Used
+    # Instructs the minion to ping its master(s) every n number of seconds. Used
     # primarily as a mitigation technique against minion disconnects.
     'ping_interval': int,
 
@@ -986,7 +994,7 @@ VALID_OPTS = {
     # dictionary.  Otherwise it is assumed that the module calls the grains
     # function in a custom way and returns the data elsewhere
     #
-    # Default to False for 2016.3 and 2016.11. Switch to True for Nitrogen
+    # Default to False for 2016.3 and 2016.11. Switch to True for 2017.7.0
     'proxy_merge_grains_in_module': bool,
 
     # Command to use to restart salt-minion
@@ -1064,6 +1072,19 @@ VALID_OPTS = {
 
     # File chunk size for salt-cp
     'salt_cp_chunk_size': int,
+
+    # Require that the minion sign messages it posts to the master on the event
+    # bus
+    'minion_sign_messages': bool,
+
+    # Have master drop messages from minions for which their signatures do
+    # not verify
+    'drop_messages_signature_fail': bool,
+
+    # Require that payloads from minions have a 'sig' entry
+    # (in other words, require that minions have 'minion_sign_messages'
+    # turned on)
+    'require_minion_sign_messages': bool,
 }
 
 # default configurations
@@ -1095,6 +1116,7 @@ DEFAULT_MINION_OPTS = {
     'grains_deep_merge': False,
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'minion'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
+    'sock_pool_size': 1,
     'backup_mode': '',
     'renderer': 'yaml_jinja',
     'renderer_whitelist': [],
@@ -1178,7 +1200,9 @@ DEFAULT_MINION_OPTS = {
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'gitfs_saltenv': [],
+    'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_refspecs': _DFLT_REFSPECS,
+    'gitfs_disable_saltenv_mapping': False,
     'hash_type': 'sha256',
     'disable_modules': [],
     'disable_returners': [],
@@ -1285,6 +1309,7 @@ DEFAULT_MINION_OPTS = {
     'auth_timeout': 5,
     'auth_tries': 7,
     'master_tries': _MASTER_TRIES,
+    'master_tops_first': False,
     'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
@@ -1330,6 +1355,7 @@ DEFAULT_MINION_OPTS = {
     'salt_cp_chunk_size': 65536,
     'extmod_whitelist': {},
     'extmod_blacklist': {},
+    'minion_sign_messages': False,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1341,6 +1367,7 @@ DEFAULT_MASTER_OPTS = {
     'user': _MASTER_USER,
     'worker_threads': 5,
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'master'),
+    'sock_pool_size': 1,
     'ret_port': 4506,
     'timeout': 5,
     'keep_jobs': 24,
@@ -1406,7 +1433,9 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'gitfs_saltenv': [],
+    'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_refspecs': _DFLT_REFSPECS,
+    'gitfs_disable_saltenv_mapping': False,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -1634,6 +1663,8 @@ DEFAULT_MASTER_OPTS = {
     'django_auth_settings': '',
     'allow_minion_key_revoke': True,
     'salt_cp_chunk_size': 98304,
+    'require_minion_sign_messages': False,
+    'drop_messages_signature_fail': False,
 }
 
 
@@ -1942,7 +1973,7 @@ def _read_conf_file(path):
             else:
                 conf_opts['id'] = sdecode(conf_opts['id'])
         for key, value in six.iteritems(conf_opts.copy()):
-            if isinstance(value, text_type) and six.PY2:
+            if isinstance(value, six.text_type) and six.PY2:
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
         return conf_opts
@@ -2047,7 +2078,7 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
         # defaults, not actually loading the whole configuration.
         return {}
 
-    if isinstance(include, str):
+    if isinstance(include, six.string_types):
         include = [include]
 
     configuration = {}
@@ -2077,7 +2108,9 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
                 else:
                     # Initialize default config if we wish to skip config errors
                     opts = {}
-
+            schedule = opts.get('schedule', {})
+            if schedule and 'schedule' in configuration:
+                configuration['schedule'].update(schedule)
             include = opts.get('include', [])
             if include:
                 opts.update(include_config(include, fn_, verbose))
@@ -2134,7 +2167,7 @@ def insert_system_path(opts, paths):
     '''
     Inserts path into python path taking into consideration 'root_dir' option.
     '''
-    if isinstance(paths, str):
+    if isinstance(paths, six.string_types):
         paths = [paths]
     for path in paths:
         path_options = {'path': path, 'root_dir': opts['root_dir']}
@@ -2301,6 +2334,7 @@ def syndic_config(master_config_path,
         'sock_dir': os.path.join(
             opts['cachedir'], opts.get('syndic_sock_dir', opts['sock_dir'])
         ),
+        'sock_pool_size': master_opts['sock_pool_size'],
         'cachedir': master_opts['cachedir'],
     }
     opts.update(syndic_opts)
@@ -2325,7 +2359,7 @@ def apply_sdb(opts, sdb_opts=None):
     import salt.utils.sdb
     if sdb_opts is None:
         sdb_opts = opts
-    if isinstance(sdb_opts, string_types) and sdb_opts.startswith('sdb://'):
+    if isinstance(sdb_opts, six.string_types) and sdb_opts.startswith('sdb://'):
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
         for key, value in six.iteritems(sdb_opts):
@@ -2420,7 +2454,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         'deploy_scripts_search_path',
         defaults.get('deploy_scripts_search_path', 'cloud.deploy.d')
     )
-    if isinstance(deploy_scripts_search_path, string_types):
+    if isinstance(deploy_scripts_search_path, six.string_types):
         deploy_scripts_search_path = [deploy_scripts_search_path]
 
     # Check the provided deploy scripts search path removing any non existing
@@ -3200,7 +3234,7 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['nova', 'virtualbox', 'libvirt']
+    non_image_drivers = ['nova', 'virtualbox', 'libvirt', 'softlayer']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
@@ -3373,7 +3407,7 @@ def _update_ssl_config(opts):
         val = opts['ssl'].get(key)
         if val is None:
             continue
-        if not isinstance(val, string_types) or not val.startswith(prefix) or not hasattr(ssl, val):
+        if not isinstance(val, six.string_types) or not val.startswith(prefix) or not hasattr(ssl, val):
             message = 'SSL option \'{0}\' must be set to one of the following values: \'{1}\'.' \
                     .format(key, '\', \''.join([val for val in dir(ssl) if val.startswith(prefix)]))
             log.error(message)

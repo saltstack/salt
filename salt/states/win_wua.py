@@ -2,7 +2,7 @@
 '''
 Installation of Windows Updates using the Windows Update Agent
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Salt can manage Windows updates via the "wua" state module. Updates can be
 installed and removed. Update management declarations are as follows:

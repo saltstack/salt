@@ -4,7 +4,7 @@
 :maturity:      new
 :platform:      all
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 States for managing Hashicorp Vault. Currently handles policies. Configuration
 instructions are documented in the execution module docs.

@@ -316,7 +316,7 @@ __zypper__ = _Zypper()
 
 class Wildcard(object):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Converts string wildcard to a zypper query.
     Example:
@@ -450,9 +450,9 @@ def info_installed(*names, **kwargs):
             summary, description.
 
     :param errors:
-        Handle RPM field errors (true|false). By default, various mistakes in the textual fields are simply ignored and
-        omitted from the data. Otherwise a field with a mistake is not returned, instead a 'N/A (bad UTF-8)'
-        (not available, broken) text is returned.
+        Handle RPM field errors. If 'ignore' is chosen, then various mistakes are simply ignored and omitted
+        from the texts or strings. If 'report' is chonen, then a field with a mistake is not returned, instead
+        a 'N/A (broken)' (not available, broken) text is placed.
 
         Valid attributes are:
             ignore, report
@@ -465,7 +465,8 @@ def info_installed(*names, **kwargs):
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
         salt '*' pkg.info_installed <package1> attr=version,vendor
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor
-        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=true
+        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=ignore
+        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=report
     '''
     ret = dict()
     for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
@@ -479,7 +480,7 @@ def info_installed(*names, **kwargs):
                 else:
                     value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
                 if value != value_:
-                    value = kwargs.get('errors') and value_ or 'N/A (invalid UTF-8)'
+                    value = kwargs.get('errors', 'ignore') == 'ignore' and value_ or 'N/A (invalid UTF-8)'
                     log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
             if key == 'source_rpm':
                 t_nfo['source'] = value
@@ -1085,32 +1086,19 @@ def install(name=None,
         return {}
 
     version_num = Wildcard(__zypper__)(name, version)
-    if version_num:
-        if pkgs is None and sources is None:
-            # Allow "version" to work for single package target
-            pkg_params = {name: version_num}
-        else:
-            log.warning("'version' parameter will be ignored for multiple package targets")
-
     if pkg_type == 'repository':
         targets = []
-        problems = []
         for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
+                log.debug('targeting package: %s', param)
                 targets.append(param)
             else:
-                match = re.match(r'^([<>])?(=)?([^<>=]+)$', version_num)
-                if match:
-                    gt_lt, equal, verstr = match.groups()
-                    targets.append('{0}{1}{2}'.format(param, ((gt_lt or '') + (equal or '')) or '=', verstr))
-                    log.debug(targets)
-                else:
-                    msg = ('Invalid version string \'{0}\' for package \'{1}\''.format(version_num, name))
-                    problems.append(msg)
-        if problems:
-            for problem in problems:
-                log.error(problem)
-            return {}
+                prefix, verstr = salt.utils.pkg.split_comparison(version_num)
+                if not prefix:
+                    prefix = '='
+                target = '{0}{1}{2}'.format(param, prefix, verstr)
+                log.debug('targeting package: %s', target)
+                targets.append(target)
     elif pkg_type == 'advisory':
         targets = []
         cur_patches = list_patches()
@@ -1164,15 +1152,18 @@ def install(name=None,
 
     # Handle packages which report multiple new versions
     # (affects only kernel packages at this point)
-    for pkg in new:
-        if isinstance(new[pkg], six.string_types):
-            new[pkg] = new[pkg].split(',')[-1]
+    for pkg_name in new:
+        pkg_data = new[pkg_name]
+        if isinstance(pkg_data, six.string_types):
+            new[pkg_name] = pkg_data.split(',')[-1]
 
     ret = salt.utils.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
-            'Problem encountered installing package(s)',
+            'Problem encountered {0} package(s)'.format(
+                'downloading' if downloadonly else 'installing'
+            ),
             info={'errors': errors, 'changes': ret}
         )
 
@@ -1877,7 +1868,7 @@ def download(*packages, **kwargs):
 
 def list_downloaded():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List prefetched packages downloaded by Zypper in the local disk.
 
@@ -1961,7 +1952,7 @@ def _get_patches(installed_only=False):
 
 def list_patches(refresh=False):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List all known advisory patches from available repos.
 
@@ -1984,7 +1975,7 @@ def list_patches(refresh=False):
 
 def list_installed_patches():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List installed advisory patches on the system.
 

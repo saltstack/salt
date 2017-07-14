@@ -14,8 +14,8 @@ import logging
 import os.path
 import pprint
 import socket
-import urllib
 import yaml
+import re
 
 import ssl
 try:
@@ -55,6 +55,7 @@ import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.parse import splitquery
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module
 
 # Don't need a try/except block, since Salt depends on tornado
@@ -156,6 +157,10 @@ def query(url,
 
     if not backend:
         backend = opts.get('backend', 'tornado')
+
+    match = re.match(r'https?://((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)($|/)', url)
+    if not match:
+        salt.utils.refresh_dns()
 
     if backend == 'requests':
         if HAS_REQUESTS is False:
@@ -438,7 +443,7 @@ def query(url,
                           'not valid: {0}'.format(cert))
 
         if isinstance(data, dict):
-            data = urllib.urlencode(data)
+            data = _urlencode(data)
 
         if verify_ssl:
             req_kwargs['ca_certs'] = ca_bundle

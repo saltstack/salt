@@ -3,7 +3,7 @@
 Display output in a table format
 =================================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 This outputter displays a sequence of rows as table.
 

@@ -45,20 +45,20 @@ Connection module for Amazon SNS
 from __future__ import absolute_import
 
 import logging
-import jmespath
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
+#pylint: disable=unused-import
 try:
-    #pylint: disable=unused-import
     import botocore
     import boto3
-    #pylint: enable=unused-import
+    import jmespath
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+#pylint: enable=unused-import
 
 
 def __virtual__():

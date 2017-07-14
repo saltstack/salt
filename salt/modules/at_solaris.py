@@ -10,7 +10,7 @@ Wrapper for at(1) on Solaris-like systems
 :maturity:      new
 :platform:      solaris,illumos,smartso
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 '''
 from __future__ import absolute_import
 

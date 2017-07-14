@@ -158,16 +158,7 @@ def _get_comparison_spec(pkgver):
     comparison operator was passed, the comparison is assumed to be an "equals"
     comparison, and "==" will be the operator returned.
     '''
-    match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
-    if not match:
-        raise CommandExecutionError(
-            'Invalid version specification \'{0}\'.'.format(pkgver)
-        )
-    gt_lt, eq, verstr = match.groups()
-    oper = gt_lt or ''
-    oper += eq or ''
-    # A comparison operator of "=" is redundant, but possible.
-    # Change it to "==" so that the version comparison works
+    oper, verstr = salt.utils.pkg.split_comparison(pkgver)
     if oper in ('=', ''):
         oper = '=='
     return oper, verstr
@@ -784,10 +775,13 @@ def _find_install_targets(name=None,
             ' and are at the desired version' if version_spec and not sources
             else ''
         )
-        return {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': msg}
+        ret = {'name': name,
+               'changes': {},
+               'result': True,
+               'comment': msg}
+        if warnings:
+            ret.setdefault('warnings', []).extend(warnings)
+        return ret
 
     return (desired, targets, to_unpurge, to_reinstall, altered_files,
             warnings, was_refreshed)
@@ -965,7 +959,7 @@ def installed(
         <salt.modules.yumpkg.list_repo_pkgs>` in 2014.1.0, and was expanded to
         :py:func:`Debian/Ubuntu <salt.modules.aptpkg.list_repo_pkgs>` and
         :py:func:`Arch Linux <salt.modules.pacman.list_repo_pkgs>`-based
-        distros in the Nitrogen release.
+        distros in the 2017.7.0 release.
 
         The version strings returned by either of these functions can be used
         as version specifiers in pkg states.
@@ -987,7 +981,7 @@ def installed(
 
         **WILDCARD VERSIONS**
 
-        As of the Nitrogen release, this state now supports wildcards in
+        As of the 2017.7.0 release, this state now supports wildcards in
         package versions for SUSE SLES/Leap/Tumbleweed, Debian/Ubuntu, RHEL/CentOS,
         Arch Linux, and their derivatives. Using wildcards can be useful for
         packages where the release name is built into the version in some way,
@@ -1277,9 +1271,11 @@ def installed(
                   - baz
 
         Additionally, :mod:`ebuild <salt.modules.ebuild>`, :mod:`pacman
-        <salt.modules.pacman>` and :mod:`zypper <salt.modules.zypper>` support
-        the ``<``, ``<=``, ``>=``, and ``>`` operators for more control over
-        what versions will be installed. For example:
+        <salt.modules.pacman>`, :mod:`zypper <salt.modules.zypper>`,
+        :mod:`yum/dnf <salt.modules.yumpkg>`, and :mod:`apt
+        <salt.modules.aptpkg>` support the ``<``, ``<=``, ``>=``, and ``>``
+        operators for more control over what versions will be installed. For
+        example:
 
         .. code-block:: yaml
 
@@ -1529,7 +1525,7 @@ def installed(
                'result': False,
                'comment': 'lowpkg.unpurge not implemented'}
         if warnings:
-            ret['comment'] += '.' + '. '.join(warnings) + '.'
+            ret.setdefault('warnings', []).extend(warnings)
         return ret
 
     # Remove any targets not returned by _find_install_targets
@@ -1592,7 +1588,7 @@ def installed(
                'result': None,
                'comment': '\n'.join(comment)}
         if warnings:
-            ret['comment'] += '\n' + '. '.join(warnings) + '.'
+            ret.setdefault('warnings', []).extend(warnings)
         return ret
 
     changes = {'installed': {}}
@@ -1615,6 +1611,7 @@ def installed(
                                               reinstall=bool(to_reinstall),
                                               normalize=normalize,
                                               update_holds=update_holds,
+                                              ignore_epoch=ignore_epoch,
                                               **kwargs)
         except CommandExecutionError as exc:
             ret = {'name': name, 'result': False}
@@ -1627,7 +1624,7 @@ def installed(
                 ret['comment'] = ('An error was encountered while installing '
                                   'package(s): {0}'.format(exc))
             if warnings:
-                ret['comment'] += '\n\n' + '. '.join(warnings) + '.'
+                ret.setdefault('warnings', []).extend(warnings)
             return ret
 
         if refresh:
@@ -1662,7 +1659,7 @@ def installed(
                            'result': False,
                            'comment': '\n'.join(comment)}
                     if warnings:
-                        ret['comment'] += '.' + '. '.join(warnings) + '.'
+                        ret.setdefault('warnings', []).extend(warnings)
                     return ret
                 else:
                     if 'result' in hold_ret and not hold_ret['result']:
@@ -1673,7 +1670,7 @@ def installed(
                                           'holding/unholding package(s): {0}'
                                           .format(hold_ret['comment'])}
                         if warnings:
-                            ret['comment'] += '.' + '. '.join(warnings) + '.'
+                            ret.setdefault('warnings', []).extend(warnings)
                         return ret
                     else:
                         modified_hold = [hold_ret[x] for x in hold_ret
@@ -1863,7 +1860,7 @@ def installed(
            'result': result,
            'comment': '\n'.join(comment)}
     if warnings:
-        ret['comment'] += '\n' + '. '.join(warnings) + '.'
+        ret.setdefault('warnings', []).extend(warnings)
     return ret
 
 
@@ -1874,7 +1871,7 @@ def downloaded(name,
                ignore_epoch=None,
                **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     Ensure that the package is downloaded, and that it is the correct version
     (if specified).
@@ -2011,7 +2008,7 @@ def downloaded(name,
 
 def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     Ensure that packages related to certain advisory ids are installed.
 
@@ -2091,7 +2088,7 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
 
 def patch_downloaded(name, advisory_ids=None, **kwargs):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     Ensure that packages related to certain advisory ids are downloaded.
 
