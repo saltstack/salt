@@ -10,23 +10,25 @@ Management of the Salt beacons
     ps:
       beacon.present:
         - enable: False
-        - salt-master: running
-        - apache2: stopped
+        - services:
+            salt-master: running
+            apache2: stopped
 
     sh:
-      beacon.present:
+      beacon.present: []
 
     load:
       beacon.present:
-        - 1m:
-            - 0.0
-            - 2.0
-        - 5m:
-            - 0.0
-            - 1.5
-        - 15m:
-            - 0.1
-            - 1.0
+        - averages:
+            1m:
+              - 0.0
+              - 2.0
+            5m:
+              - 0.0
+              - 1.5
+            15m:
+              - 0.1
+              - 1.0
 
 '''
 from __future__ import absolute_import
@@ -50,7 +52,7 @@ def present(name,
            'comment': []}
 
     current_beacons = __salt__['beacons.list'](return_yaml=False)
-    beacon_data = kwargs
+    beacon_data = [kwargs]
 
     if name in current_beacons:
 
@@ -59,11 +61,11 @@ def present(name,
         else:
             if 'test' in __opts__ and __opts__['test']:
                 kwargs['test'] = True
-                result = __salt__['beacons.modify'](name, beacon_data, **kwargs)
+                result = __salt__['beacons.modify'](name, beacon_data)
                 ret['comment'].append(result['comment'])
                 ret['changes'] = result['changes']
             else:
-                result = __salt__['beacons.modify'](name, beacon_data, **kwargs)
+                result = __salt__['beacons.modify'](name, beacon_data)
                 if not result['result']:
                     ret['result'] = result['result']
                     ret['comment'] = result['comment']
@@ -77,10 +79,10 @@ def present(name,
     else:
         if 'test' in __opts__ and __opts__['test']:
             kwargs['test'] = True
-            result = __salt__['beacons.add'](name, beacon_data, **kwargs)
+            result = __salt__['beacons.add'](name, beacon_data)
             ret['comment'].append(result['comment'])
         else:
-            result = __salt__['beacons.add'](name, beacon_data, **kwargs)
+            result = __salt__['beacons.add'](name, beacon_data)
             if not result['result']:
                 ret['result'] = result['result']
                 ret['comment'] = result['comment']

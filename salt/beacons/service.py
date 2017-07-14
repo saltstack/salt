@@ -32,16 +32,10 @@ def validate(config):
             return False, ('Configuration for service beacon'
                            ' requires services.')
         else:
-            log.debug('config {}'.format(config))
             for config_item in _config['services']:
                 if not isinstance(_config['services'][config_item], dict):
                     return False, ('Configuration for service beacon must '
                                    'be a list of dictionaries.')
-                else:
-                    for dict_item in _config['services'][config_item]:
-                        if not isinstance(_config['services'][config][dict_item], dict):
-                            return False, ('Configuration for service beacon '
-                                           'must be a list of dictionaries.')
 
     return True, 'Valid beacon configuration'
 
