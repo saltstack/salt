@@ -15,6 +15,7 @@ Dependencies
 from __future__ import absolute_import
 import logging
 import time
+from salt.ext.six.moves import map
 
 # Import 3rd Party libs
 try:

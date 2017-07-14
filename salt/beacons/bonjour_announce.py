@@ -9,6 +9,7 @@ import atexit
 import logging
 import select
 import time
+from salt.ext.six.moves import map
 
 # Import 3rd Party libs
 try:
