@@ -2,7 +2,7 @@
 '''
 Manage AWS Application Load Balancer
 
-.. versionadded:: TBD
+.. versionadded:: 2017.7.0
 
 Add and remove targets from an ALB target group.
 
@@ -54,6 +54,8 @@ def __virtual__():
 def targets_registered(name, targets, region=None, key=None, keyid=None,
                        profile=None):
     '''
+    .. versionadded:: 2017.7.0
+
     Add targets to an Application Load Balancer target group. This state will not remove targets.
 
     name
@@ -62,8 +64,6 @@ def targets_registered(name, targets, region=None, key=None, keyid=None,
     targets
         A list of target IDs or a string of a single target that this target group should
         distribute traffic to.
-
-    .. versionadded:: TBD
 
     .. code-block:: yaml
 
