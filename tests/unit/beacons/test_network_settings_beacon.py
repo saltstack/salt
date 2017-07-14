@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NetworkInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
+class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.network_settings
     '''

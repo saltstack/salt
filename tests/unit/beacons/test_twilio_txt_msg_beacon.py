@@ -106,7 +106,7 @@ class MockTwilioRestClient(object):
 
 @skipIf(not HAS_TWILIO, 'twilio.rest is not available')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TwilioMsgTxtTestCase(TestCase, LoaderModuleMockMixin):
+class TwilioMsgTxtBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.twilio_txt_msg
     '''
