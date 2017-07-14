@@ -38,7 +38,7 @@ def validate(config):
     Validate the beacon configuration
     '''
     if not isinstance(config, list):
-        return False, ('Configuration for rest_example beacon must be a list.')
+        return False, ('Configuration for proxy_example beacon must be a list.')
     return True, 'Valid beacon configuration'
 
 

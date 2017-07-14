@@ -23,7 +23,7 @@ __virtualname__ = 'ps'
 
 def __virtual__():
     if not HAS_PSUTIL:
-        return (False, 'cannot load network_info beacon: psutil not available')
+        return (False, 'cannot load ps beacon: psutil not available')
     return __virtualname__
 
 
