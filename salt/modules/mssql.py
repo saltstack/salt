@@ -232,7 +232,7 @@ def role_remove(role, **kwargs):
         return 'Could not create the role: {0}'.format(e)
 
 
-def login_exists(login, **kwargs):
+def login_exists(login, domain=None, **kwargs):
     '''
     Find if a login exists in the MS SQL server.
 
@@ -242,6 +242,8 @@ def login_exists(login, **kwargs):
 
         salt minion mssql.login_exists 'LOGIN'
     '''
+    if domain:
+        login = '{0}\{1}'.format(domain, login)
     try:
         # We should get one, and only one row
         return len(tsql_query(query="SELECT name FROM sys.syslogins WHERE name='{0}'".format(login), **kwargs)) == 1
@@ -250,12 +252,58 @@ def login_exists(login, **kwargs):
         return 'Could not find the login: {0}'.format(e)
 
 
-def user_exists(username, **kwargs):
+def login_create(login, new_login_password=None, new_login_domain=None, new_login_options=[], **kwargs):
+    '''
+    Creates a new login.
+    Does not update password of existing logins.
+    For Windows authentication, provide new_login_domain.
+    For SQL Server authentication, prvide new_login_password.
+    Since hashed passwords are varbinary values, if the
+    new_login_password is 'long', it will be considered
+    to be HASHED.
+    new_login_options can only be a list of strings
+
+    CLI Example:
+    .. code-block:: bash
+        salt minion mssql.login_create LOGIN_NAME database=DBNAME [new_login_password=PASSWORD]
+    '''
+    # One and only one of password and domain should be specifies
+    if bool(new_login_password) == bool(new_login_domain):
+        return False
+    if login_exists(login, new_login_domain, **kwargs):
+        return False
+    if new_login_domain:
+        login = '{0}\{1}'.format(new_login_domain, login)
+
+    sql = "CREATE LOGIN [{0}] ".format(login)
+    if new_login_domain:
+        sql += " FROM WINDOWS "
+    elif type(new_login_password) is long:
+        new_login_options.insert(0, "PASSWORD=0x{0:x} HASHED".format(new_login_password))
+    else:  # Plain test password
+        new_login_options.insert(0, "PASSWORD=N'{0}'".format(new_login_password))
+    if new_login_options:
+        sql += ' WITH ' + ', '.join(new_login_options)
+    conn = None
+    try:
+        conn = _get_connection(**kwargs)
+        conn.autocommit(True)
+        # cur = conn.cursor()
+        # cur.execute(sql)
+        conn.cursor().execute(sql)
+    except Exception as e:
+        return 'Could not create the login: {0}'.format(e)
+    finally:
+        if conn:
+            conn.autocommit(False)
+            conn.close()
+    return True
+
+
+
+def user_exists(username, domain=None, database=None, **kwargs):
     '''
     Find if an user exists in a specific database on the MS SQL server.
-
-    Note:
-        *database* argument is mandatory
 
     CLI Example:
 
@@ -263,10 +311,10 @@ def user_exists(username, **kwargs):
 
         salt minion mssql.user_exists 'USERNAME' [database='DBNAME']
     '''
-    # 'database' argument is mandatory
-    if 'database' not in kwargs:
-        return False
-
+    if domain:
+        username = '{0}\{1}'.format(domain, username)
+    if database:
+        kwargs['database'] = database
     # We should get one, and only one row
     return len(tsql_query(query="SELECT name FROM sysusers WHERE name='{0}'".format(username), **kwargs)) == 1
 
@@ -284,42 +332,52 @@ def user_list(**kwargs):
     return [row[0] for row in tsql_query("SELECT name FROM sysusers where issqluser=1 or isntuser=1", as_dict=False, **kwargs)]
 
 
-def user_create(username, new_login_password=None, **kwargs):
+def user_create(username, login=None, domain=None, database=None, roles=[], options=[], **kwargs):
     '''
     Creates a new user.
-    If new_login_password is not specified, the user will be created without a login.
+    If login is not specified, the user will be created without a login.
+    options can only be a list of strings
 
     CLI Example:
-
     .. code-block:: bash
-
-        salt minion mssql.user_create USERNAME database=DBNAME [new_login_password=PASSWORD]
+        salt minion mssql.user_create USERNAME database=DBNAME
     '''
-    # 'database' argument is mandatory
-    if 'database' not in kwargs:
+    if domain and not login:
+        return 'domain cannot be set without login'
         return False
-    if user_exists(username, **kwargs):
+    if user_exists(username, domain, **kwargs):
+        return 'User {0} already exists'.format(username)
         return False
+    if domain:
+        username = '{0}\{1}'.format(domain, username)
+        login    = '{0}\{1}'.format(domain, login) if login else login
+    if database:
+        kwargs['database'] = database
 
+    sql = "CREATE USER [{0}] ".format(login)
+    if login:
+        # If the login does not exist, user creation will throw
+        # if not login_exists(name, **kwargs):
+        #     return False
+        sql += " FOR LOGIN [{0}]".format(login)
+    else:  # Plain test password
+        sql += " WITHOUT LOGIN"
+    if options:
+        sql += ' WITH ' + ', '.join(options)
+    conn = None
     try:
         conn = _get_connection(**kwargs)
         conn.autocommit(True)
-        cur = conn.cursor()
-
-        if new_login_password:
-            if login_exists(username, **kwargs):
-                conn.close()
-                return False
-            cur.execute("CREATE LOGIN {0} WITH PASSWORD='{1}',check_policy = off".format(username, new_login_password))
-            cur.execute("CREATE USER {0} FOR LOGIN {1}".format(username, username))
-        else:  # new_login_password is not specified
-            cur.execute("CREATE USER {0} WITHOUT LOGIN".format(username))
-
-        conn.autocommit(False)
-        conn.close()
-        return True
+        # cur = conn.cursor()
+        # cur.execute(sql)
+        conn.cursor().execute(sql)
     except Exception as e:
         return 'Could not create the user: {0}'.format(e)
+    finally:
+        if conn:
+            conn.autocommit(False)
+            conn.close()
+    return True
 
 
 def user_remove(username, **kwargs):
