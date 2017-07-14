@@ -511,6 +511,54 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                             self.assertTrue(pkgs.get(pkg_name))
                             self.assertEqual(pkgs[pkg_name], [pkg_version])
 
+    def test_list_pkgs_with_attr(self):
+        '''
+        Test packages listing with the attr parameter
+
+        :return:
+        '''
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        rpm_out = [
+            'protobuf-java_|-2.6.1_|-3.1.develHead_|-noarch_|-_|-1499257756',
+            'yast2-ftp-server_|-3.1.8_|-8.1_|-x86_64_|-_|-1499257798',
+            'jose4j_|-0.4.4_|-2.1.develHead_|-noarch_|-_|-1499257756',
+            'apache-commons-cli_|-1.2_|-1.233_|-noarch_|-_|-1498636510',
+            'jakarta-commons-discovery_|-0.4_|-129.686_|-noarch_|-_|-1498636511',
+            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-noarch_|-_|-1498636510',
+        ]
+        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}):
+            with patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}):
+                pkgs = zypper.list_pkgs(attr=['arch'])
+                for pkg_name, pkg_attr in {
+                    'jakarta-commons-discovery': {
+                        'version': '0.4-129.686',
+                        'arch': 'noarch',
+                    },
+                    'yast2-ftp-server': {
+                        'version': '3.1.8-8.1',
+                        'arch': 'x86_64',
+                    },
+                    'protobuf-java': {
+                        'version': '2.6.1-3.1.develHead',
+                        'arch': 'noarch',
+                    },
+                    'susemanager-build-keys-web': {
+                        'version': '12.0-5.1.develHead',
+                        'arch': 'noarch',
+                    },
+                    'apache-commons-cli': {
+                        'version': '1.2-1.233',
+                        'arch': 'noarch',
+                    },
+                    'jose4j': {
+                        'version': '0.4.4-2.1.develHead',
+                        'arch': 'noarch',
+                    }}.items():
+                    self.assertTrue(pkgs.get(pkg_name))
+                    self.assertEqual(pkgs[pkg_name], [pkg_attr])
+
     def test_list_patches(self):
         '''
         Test advisory patches listing.
