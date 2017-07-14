@@ -90,7 +90,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         options = 'command="/usr/local/lib/ssh-helper"'
         email = 'github.com'
         empty_line = '\n'
-        comment_line = '# this is a comment \n'
+        comment_line = '# this is a comment\n'
 
         # Write out the authorized key to a temporary file
         if salt.utils.is_windows():
