@@ -98,6 +98,7 @@ def beacon(config):
             - services:
                 nginx:
                   onchangeonly: True
+                  delay: 30
                   uncleanshutdown: /run/nginx.pid
     '''
     ret = []
@@ -110,7 +111,6 @@ def beacon(config):
         service_config = _config['services'][service]
 
         ret_dict[service] = {'running': __salt__['service.status'](service)}
-        log.debug('ret {}'.format(ret_dict))
         ret_dict['service_name'] = service
         ret_dict['tag'] = service
         currtime = time.time()
@@ -126,6 +126,8 @@ def beacon(config):
             service_config['emitatstartup'] = True
         if 'onchangeonly' not in service_config:
             service_config['onchangeonly'] = False
+        if 'delay' not in config[service]:
+            service_config['delay'] = 0
 
         # We only want to report the nature of the shutdown
         # if the current running status is False
@@ -136,20 +138,23 @@ def beacon(config):
         if 'onchangeonly' in service_config and service_config['onchangeonly'] is True:
             if service not in LAST_STATUS:
                 LAST_STATUS[service] = ret_dict[service]
-                if not service_config['emitatstartup']:
+                if service_config['delay'] > 0:
+                    LAST_STATUS[service]['time'] = currtime
+                elif not service_config['emitatstartup']:
                     continue
                 else:
                     ret.append(ret_dict)
+
             if LAST_STATUS[service]['running'] != ret_dict[service]['running']:
                 LAST_STATUS[service] = ret_dict[service]
-                if config[service]['delay'] > 0:
+                if service_config['delay'] > 0:
                     LAST_STATUS[service]['time'] = currtime
                 else:
                     ret.append(ret_dict)
 
             if 'time' in LAST_STATUS[service]:
                 elapsedtime = int(round(currtime - LAST_STATUS[service]['time']))
-                if elapsedtime > config[service]['delay']:
+                if elapsedtime > service_config['delay']:
                     del LAST_STATUS[service]['time']
                     ret.append(ret_dict)
         else:
