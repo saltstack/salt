@@ -11,6 +11,7 @@ import logging
 
 # Salt libs
 import salt.utils.path
+from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 

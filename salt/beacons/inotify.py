@@ -23,6 +23,7 @@ import re
 
 # Import salt libs
 import salt.ext.six
+from salt.ext.six.moves import map
 
 # Import third party libs
 try:

@@ -13,6 +13,7 @@ import logging
 # Import salt libs
 import salt.utils.files
 import salt.utils.platform
+from salt.ext.six.moves import map
 
 
 try:

@@ -15,6 +15,7 @@ import logging
 
 # Import salt libs
 import salt.utils.http
+from salt.ext.six.moves import map
 
 # Important: If used with salt-proxy
 # this is required for the beacon to load!!!

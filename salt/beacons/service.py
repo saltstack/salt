@@ -9,6 +9,7 @@ from __future__ import absolute_import
 import os
 import logging
 import time
+from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

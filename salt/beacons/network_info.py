@@ -8,6 +8,7 @@ Beacon to monitor statistics from ethernet adapters
 # Import Python libs
 from __future__ import absolute_import
 import logging
+from salt.ext.six.moves import map
 
 # Import third party libs
 # pylint: disable=import-error

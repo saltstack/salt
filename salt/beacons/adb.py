@@ -10,8 +10,8 @@ from __future__ import absolute_import
 import logging
 
 # Salt libs
-import salt.utils
 import salt.utils.path
+from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 

@@ -11,6 +11,7 @@ of a Raspberry Pi.
 from __future__ import absolute_import
 import logging
 import re
+from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 

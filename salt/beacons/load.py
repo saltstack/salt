@@ -10,6 +10,7 @@ import os
 
 # Import Salt libs
 import salt.utils.platform
+from salt.ext.six.moves import map
 
 # Import Py3 compat
 from salt.ext.six.moves import zip

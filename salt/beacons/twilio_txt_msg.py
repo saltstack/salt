@@ -6,6 +6,7 @@ Beacon to emit Twilio text messages
 # Import Python libs
 from __future__ import absolute_import
 import logging
+from salt.ext.six.moves import map
 
 # Import 3rd Party libs
 try:

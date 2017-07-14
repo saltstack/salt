@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import salt.utils
 import salt.utils.locales
 import salt.ext.six
+from salt.ext.six.moves import map
 
 # Import third party libs
 try:
