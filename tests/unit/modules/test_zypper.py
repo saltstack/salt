@@ -486,7 +486,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         :return:
         '''
         def _add_data(data, key, value):
-            data[key] = value
+            data.setdefault(key, []).append(value)
 
         rpm_out = [
             'protobuf-java_|-2.6.1_|-3.1.develHead_|-',
@@ -509,7 +509,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                             'apache-commons-cli': '1.2-1.233',
                             'jose4j': '0.4.4-2.1.develHead'}.items():
                             self.assertTrue(pkgs.get(pkg_name))
-                            self.assertEqual(pkgs[pkg_name], pkg_version)
+                            self.assertEqual(pkgs[pkg_name], [pkg_version])
 
     def test_list_patches(self):
         '''
