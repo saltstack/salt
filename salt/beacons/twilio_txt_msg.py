@@ -11,7 +11,7 @@ from salt.ext.six.moves import map
 # Import 3rd Party libs
 try:
     import twilio
-    if twilio.__version__ > 5:
+    if twilio.__version_info__ > (5,):
         from twilio.rest import Client as TwilioRestClient
     else:
         from twilio.rest import TwilioRestClient
@@ -43,7 +43,6 @@ def validate(config):
         _config = {}
         list(map(_config.update, config))
 
-        log.debug('_config {}'.format(_config))
         if not all(x in _config for x in ('account_sid',
                                           'auth_token',
                                           'twilio_number')):

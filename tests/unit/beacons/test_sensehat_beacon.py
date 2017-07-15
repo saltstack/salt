@@ -11,11 +11,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 # Salt libs
 import salt.beacons.sensehat as sensehat
 
-HUMIDITY_MOCK = MagicMock(return_value='70%')
-TEMPERATURE_MOCK = MagicMock(return_value=30)
-TEMPERATURE_PRESSURE_MOCK = MagicMock(return_value=30)
-PRESSURE_MOCK = MagicMock(return_value=1500)
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,10 +19,22 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
+
+        self.HUMIDITY_MOCK = MagicMock(return_value='70%')
+        self.TEMPERATURE_MOCK = MagicMock(return_value=30)
+        self.PRESSURE_MOCK = MagicMock(return_value=1500)
+
+        self.addCleanup(delattr, self, 'HUMIDITY_MOCK')
+        self.addCleanup(delattr, self, 'TEMPERATURE_MOCK')
+        self.addCleanup(delattr, self, 'PRESSURE_MOCK')
+
         return {
             sensehat: {
                 '__context__': {},
-                '__salt__': {},
+                '__salt__': {'sensehat.get_humidity': self.HUMIDITY_MOCK,
+                             'sensehat.get_temperature': self.TEMPERATURE_MOCK,
+                             'sensehat.get_pressure': self.PRESSURE_MOCK
+                             },
             }
         }
 
@@ -49,59 +56,49 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_sensehat_humidity_match(self):
 
-        with patch.dict(sensehat.__salt__,
-                        {'sensehat.get_humidity': HUMIDITY_MOCK}):
-            config = [{'sensors': {'humidity': '70%'}}]
+        config = [{'sensors': {'humidity': '70%'}}]
 
-            ret = sensehat.validate(config)
+        ret = sensehat.validate(config)
 
-            ret = sensehat.beacon(config)
-            self.assertEqual(ret, [{'tag': 'sensehat/humidity',
-                                    'humidity': '70%'}])
+        ret = sensehat.beacon(config)
+        self.assertEqual(ret, [{'tag': 'sensehat/humidity',
+                                'humidity': '70%'}])
 
     def test_sensehat_temperature_match(self):
 
-        with patch.dict(sensehat.__salt__,
-                        {'sensehat.get_temperature': TEMPERATURE_MOCK}):
-            config = [{'sensors': {'temperature': 20}}]
+        config = [{'sensors': {'temperature': 20}}]
 
-            ret = sensehat.validate(config)
+        ret = sensehat.validate(config)
 
-            ret = sensehat.beacon(config)
-            self.assertEqual(ret, [{'tag': 'sensehat/temperature',
-                                    'temperature': 30}])
+        ret = sensehat.beacon(config)
+        self.assertEqual(ret, [{'tag': 'sensehat/temperature',
+                                'temperature': 30}])
 
     def test_sensehat_temperature_match_range(self):
 
-        with patch.dict(sensehat.__salt__,
-                        {'sensehat.get_temperature': TEMPERATURE_MOCK}):
-            config = [{'sensors': {'temperature': [20, 29]}}]
+        config = [{'sensors': {'temperature': [20, 29]}}]
 
-            ret = sensehat.validate(config)
+        ret = sensehat.validate(config)
 
-            ret = sensehat.beacon(config)
-            self.assertEqual(ret, [{'tag': 'sensehat/temperature',
-                                    'temperature': 30}])
+        ret = sensehat.beacon(config)
+        self.assertEqual(ret, [{'tag': 'sensehat/temperature',
+                                'temperature': 30}])
 
     def test_sensehat_pressure_match(self):
 
-        with patch.dict(sensehat.__salt__,
-                        {'sensehat.get_pressure': PRESSURE_MOCK}):
-            config = [{'sensors': {'pressure': '1400'}}]
+        config = [{'sensors': {'pressure': '1400'}}]
 
-            ret = sensehat.validate(config)
+        ret = sensehat.validate(config)
 
-            ret = sensehat.beacon(config)
-            self.assertEqual(ret, [{'tag': 'sensehat/pressure',
-                                    'pressure': 1500}])
+        ret = sensehat.beacon(config)
+        self.assertEqual(ret, [{'tag': 'sensehat/pressure',
+                                'pressure': 1500}])
 
     def test_sensehat_no_match(self):
 
-        with patch.dict(sensehat.__salt__,
-                        {'sensehat.get_pressure': PRESSURE_MOCK}):
-            config = [{'sensors': {'pressure': '1600'}}]
+        config = [{'sensors': {'pressure': '1600'}}]
 
-            ret = sensehat.validate(config)
+        ret = sensehat.validate(config)
 
-            ret = sensehat.beacon(config)
-            self.assertEqual(ret, [])
+        ret = sensehat.beacon(config)
+        self.assertEqual(ret, [])

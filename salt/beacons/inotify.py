@@ -112,36 +112,39 @@ def validate(config):
         _config = {}
         list(map(_config.update, config))
 
-        for path in _config.get('files', {}):
+        if 'files' not in _config:
+            return False, 'Configuration for inotify beacon must include files.'
+        else:
+            for path in _config.get('files'):
 
-            if not isinstance(_config['files'][path], dict):
-                return False, ('Configuration for inotify beacon must '
-                               'be a list of dictionaries.')
-            else:
-                if not any(j in ['mask',
-                                 'recurse',
-                                 'auto_add'] for j in _config['files'][path]):
+                if not isinstance(_config['files'][path], dict):
                     return False, ('Configuration for inotify beacon must '
-                                   'contain mask, recurse or auto_add items.')
+                                   'be a list of dictionaries.')
+                else:
+                    if not any(j in ['mask',
+                                     'recurse',
+                                     'auto_add'] for j in _config['files'][path]):
+                        return False, ('Configuration for inotify beacon must '
+                                       'contain mask, recurse or auto_add items.')
 
-                if 'auto_add' in _config['files'][path]:
-                    if not isinstance(_config['files'][path]['auto_add'], bool):
-                        return False, ('Configuration for inotify beacon '
-                                       'auto_add must be boolean.')
-
-                if 'recurse' in _config['files'][path]:
-                    if not isinstance(_config['files'][path]['recurse'], bool):
-                        return False, ('Configuration for inotify beacon '
-                                       'recurse must be boolean.')
-
-                if 'mask' in _config['files'][path]:
-                    if not isinstance(_config['files'][path]['mask'], list):
-                        return False, ('Configuration for inotify beacon '
-                                       'mask must be list.')
-                    for mask in _config['files'][path]['mask']:
-                        if mask not in VALID_MASK:
+                    if 'auto_add' in _config['files'][path]:
+                        if not isinstance(_config['files'][path]['auto_add'], bool):
                             return False, ('Configuration for inotify beacon '
-                                           'invalid mask option {0}.'.format(mask))
+                                           'auto_add must be boolean.')
+
+                    if 'recurse' in _config['files'][path]:
+                        if not isinstance(_config['files'][path]['recurse'], bool):
+                            return False, ('Configuration for inotify beacon '
+                                           'recurse must be boolean.')
+
+                    if 'mask' in _config['files'][path]:
+                        if not isinstance(_config['files'][path]['mask'], list):
+                            return False, ('Configuration for inotify beacon '
+                                           'mask must be list.')
+                        for mask in _config['files'][path]['mask']:
+                            if mask not in VALID_MASK:
+                                return False, ('Configuration for inotify beacon '
+                                               'invalid mask option {0}.'.format(mask))
     return True, 'Valid beacon configuration'
 
 
@@ -269,7 +272,7 @@ def beacon(config):
 
     # Update existing watches and add new ones
     # TODO: make the config handle more options
-    for path in _config.get('files', {}):
+    for path in _config.get('files', ()):
 
         if isinstance(_config['files'][path], dict):
             mask = _config['files'][path].get('mask', DEFAULT_MASK)
