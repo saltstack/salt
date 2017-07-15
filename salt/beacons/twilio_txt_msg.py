@@ -11,7 +11,9 @@ from salt.ext.six.moves import map
 # Import 3rd Party libs
 try:
     import twilio
-    if twilio.__version_info__ > (5,):
+    # Grab version, ensure elements are ints
+    twilio_version = tuple([int(x) for x in twilio.__version_info__])
+    if twilio_version > (5, ):
         from twilio.rest import Client as TwilioRestClient
     else:
         from twilio.rest import TwilioRestClient

@@ -9,7 +9,7 @@ Fire an event when over a specified threshold.
 # Import Python libs
 from __future__ import absolute_import
 import logging
-
+from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 

@@ -104,8 +104,8 @@ class Beacon(object):
                     valid, vcomment = self.beacons[validate_str](b_config[mod])
 
                     if not valid:
-                        log.info('Beacon {0} configuration invalid, '
-                                 'not running.\n{1}'.format(mod, vcomment))
+                        log.info('Beacon %s configuration invalid, '
+                                 'not running.\n%s', mod, vcomment)
                         continue
 
                 # Fire the beacon!

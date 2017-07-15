@@ -5,6 +5,7 @@ Send events covering service status
 
 # Import Python Libs
 from __future__ import absolute_import
+import logging
 
 # Import third party libs
 # pylint: disable=import-error
@@ -13,12 +14,12 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
-# pylint: enable=import-error
-
-import logging
-log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 from salt.ext.six.moves import map
+
+# pylint: enable=import-error
+
+log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 __virtualname__ = 'ps'
 
