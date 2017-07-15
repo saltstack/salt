@@ -2,7 +2,6 @@
 
 # Python libs
 from __future__ import absolute_import
-import datetime
 
 # Salt libs
 from salt.beacons import twilio_txt_msg
@@ -17,10 +16,8 @@ try:
     import twilio
     if twilio.__version__ > 5:
         TWILIO_5 = False
-        from twilio.rest import Client as TwilioRestClient
     else:
         TWILIO_5 = True
-        from twilio.rest import TwilioRestClient
     HAS_TWILIO = True
 except ImportError:
     HAS_TWILIO = False

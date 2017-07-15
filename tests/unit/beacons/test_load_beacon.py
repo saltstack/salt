@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, Mock, MagicMock
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -46,16 +46,16 @@ class LoadBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                       ' for load beacon.'))
 
     def test_load_match(self):
-            with patch('os.getloadavg',
-                       MagicMock(return_value=(1.82, 1.84, 1.56))):
-                config = [{'averages': {'1m': [0.0, 2.0],
-                                        '5m': [0.0, 1.5],
-                                        '15m': [0.0, 1.0]}}]
+        with patch('os.getloadavg',
+                   MagicMock(return_value=(1.82, 1.84, 1.56))):
+            config = [{'averages': {'1m': [0.0, 2.0],
+                                    '5m': [0.0, 1.5],
+                                    '15m': [0.0, 1.0]}}]
 
-                ret = load.validate(config)
+            ret = load.validate(config)
 
-                self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
-                _expected_return = [{'15m': 1.56, '1m': 1.82, '5m': 1.84}]
-                ret = load.beacon(config)
-                self.assertEqual(ret, _expected_return)
+            _expected_return = [{'15m': 1.56, '1m': 1.82, '5m': 1.84}]
+            ret = load.beacon(config)
+            self.assertEqual(ret, _expected_return)

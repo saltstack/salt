@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, Mock
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -42,4 +42,3 @@ class AvahiAnnounceBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, (False, 'Configuration for avahi_announce'
                                       ' beacon must contain servicetype, port'
                                       ' and txt items.'))
-

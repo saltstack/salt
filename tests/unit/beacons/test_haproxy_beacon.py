@@ -2,11 +2,10 @@
 
 # Python libs
 from __future__ import absolute_import
-from collections import namedtuple
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, Mock, MagicMock
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -26,7 +25,6 @@ class HAProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 '__salt__': {},
             }
         }
-
 
     def test_non_list_config(self):
         config = {}
@@ -72,4 +70,3 @@ class HAProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(haproxy.__salt__, {'haproxy.get_sessions': mock}):
             ret = haproxy.beacon(config)
             self.assertEqual(ret, [])
-

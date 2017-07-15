@@ -2,16 +2,14 @@
 
 # Python libs
 from __future__ import absolute_import
-from collections import namedtuple
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
 import salt.beacons.network_settings as network_settings
-from salt.beacons.network_settings import _copy_interfaces_info
 
 import logging
 log = logging.getLogger(__name__)

@@ -19,7 +19,6 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.beacon as beacon
-from salt.utils.event import SaltEvent
 
 SOCK_DIR = os.path.join(TMP, 'test-socks')
 

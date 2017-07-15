@@ -47,7 +47,6 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def test_non_list_config(self):
         config = {}
 
-
         ret = adb.validate(config)
 
         self.assertEqual(ret, (False, 'Configuration for adb beacon must'

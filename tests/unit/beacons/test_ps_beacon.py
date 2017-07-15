@@ -6,7 +6,7 @@ from collections import namedtuple
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -67,4 +67,3 @@ class PSBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = ps.beacon(config)
             self.assertEqual(ret, [{'mysql': 'Stopped'}])
-

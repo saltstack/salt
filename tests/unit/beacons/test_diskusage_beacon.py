@@ -78,7 +78,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=[STUB_DISK_PARTITION])), \
                 patch('psutil.disk_usage',
                       MagicMock(return_value=STUB_DISK_USAGE)):
-            config = [{'^\/': '50%'}]
+            config = [{r'^\/': '50%'}]
 
             ret = diskusage.validate(config)
 

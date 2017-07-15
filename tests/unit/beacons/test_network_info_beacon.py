@@ -55,61 +55,61 @@ class NetworkInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
     def test_network_info_equal(self):
-            with patch('salt.utils.psutil_compat.net_io_counters',
-                       MagicMock(return_value=STUB_NET_IO_COUNTERS)):
-                config = [{'interfaces': {'eth0': {'type': 'equal',
-                                                   'bytes_sent': 914626664,
-                                                   'bytes_recv': 93662618,
-                                                   'packets_sent': 465694,
-                                                   'packets_recv': 903802,
-                                                   'errin': 0,
-                                                   'errout': 0,
-                                                   'dropin': 0,
-                                                   'dropout': 0}}}]
+        with patch('salt.utils.psutil_compat.net_io_counters',
+                   MagicMock(return_value=STUB_NET_IO_COUNTERS)):
+            config = [{'interfaces': {'eth0': {'type': 'equal',
+                                               'bytes_sent': 914626664,
+                                               'bytes_recv': 93662618,
+                                               'packets_sent': 465694,
+                                               'packets_recv': 903802,
+                                               'errin': 0,
+                                               'errout': 0,
+                                               'dropin': 0,
+                                               'dropout': 0}}}]
 
-                ret = network_info.validate(config)
+            ret = network_info.validate(config)
 
-                self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
-                _expected_return = [{'interface': 'eth0',
-                                     'network_info': {'bytes_recv': 914626664,
-                                                      'bytes_sent': 93662618,
-                                                      'dropin': 0,
-                                                      'dropout': 0,
-                                                      'errin': 0,
-                                                      'errout': 0,
-                                                      'packets_recv': 903802,
-                                                      'packets_sent': 465694}}]
+            _expected_return = [{'interface': 'eth0',
+                                 'network_info': {'bytes_recv': 914626664,
+                                                  'bytes_sent': 93662618,
+                                                  'dropin': 0,
+                                                  'dropout': 0,
+                                                  'errin': 0,
+                                                  'errout': 0,
+                                                  'packets_recv': 903802,
+                                                  'packets_sent': 465694}}]
 
-                ret = network_info.beacon(config)
-                self.assertEqual(ret, _expected_return)
+            ret = network_info.beacon(config)
+            self.assertEqual(ret, _expected_return)
 
     def test_network_info_greater_than(self):
-            with patch('salt.utils.psutil_compat.net_io_counters',
-                       MagicMock(return_value=STUB_NET_IO_COUNTERS)):
-                config = [{'interfaces': {'eth0': {'type': 'greater',
-                                                   'bytes_sent': 100000,
-                                                   'bytes_recv': 100000,
-                                                   'packets_sent': 100000,
-                                                   'packets_recv': 100000,
-                                                   'errin': 0,
-                                                   'errout': 0,
-                                                   'dropin': 0,
-                                                   'dropout': 0}}}]
+        with patch('salt.utils.psutil_compat.net_io_counters',
+                   MagicMock(return_value=STUB_NET_IO_COUNTERS)):
+            config = [{'interfaces': {'eth0': {'type': 'greater',
+                                               'bytes_sent': 100000,
+                                               'bytes_recv': 100000,
+                                               'packets_sent': 100000,
+                                               'packets_recv': 100000,
+                                               'errin': 0,
+                                               'errout': 0,
+                                               'dropin': 0,
+                                               'dropout': 0}}}]
 
-                ret = network_info.validate(config)
+            ret = network_info.validate(config)
 
-                self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
-                _expected_return = [{'interface': 'eth0',
-                                     'network_info': {'bytes_recv': 914626664,
-                                                      'bytes_sent': 93662618,
-                                                      'dropin': 0,
-                                                      'dropout': 0,
-                                                      'errin': 0,
-                                                      'errout': 0,
-                                                      'packets_recv': 903802,
-                                                      'packets_sent': 465694}}]
+            _expected_return = [{'interface': 'eth0',
+                                 'network_info': {'bytes_recv': 914626664,
+                                                  'bytes_sent': 93662618,
+                                                  'dropin': 0,
+                                                  'dropout': 0,
+                                                  'errin': 0,
+                                                  'errout': 0,
+                                                  'packets_recv': 903802,
+                                                  'packets_sent': 465694}}]
 
-                ret = network_info.beacon(config)
-                self.assertEqual(ret, _expected_return)
+            ret = network_info.beacon(config)
+            self.assertEqual(ret, _expected_return)

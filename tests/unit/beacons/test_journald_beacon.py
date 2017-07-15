@@ -2,13 +2,12 @@
 
 # Python libs
 from __future__ import absolute_import
-from collections import namedtuple
 import datetime
 from uuid import UUID
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, Mock, MagicMock
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -107,15 +106,15 @@ class JournaldBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
     def test_journald_match(self):
-            config = [{'services': {'sshd': {'SYSLOG_IDENTIFIER': 'sshd',
-                                             'PRIORITY': 6}}}]
+        config = [{'services': {'sshd': {'SYSLOG_IDENTIFIER': 'sshd',
+                                         'PRIORITY': 6}}}]
 
-            ret = journald.validate(config)
+        ret = journald.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
-            _expected_return = salt.utils.simple_types_filter(_STUB_JOURNALD_ENTRY)
-            _expected_return['tag'] = 'sshd'
+        _expected_return = salt.utils.simple_types_filter(_STUB_JOURNALD_ENTRY)
+        _expected_return['tag'] = 'sshd'
 
-            ret = journald.beacon(config)
-            self.assertEqual(ret, [_expected_return])
+        ret = journald.beacon(config)
+        self.assertEqual(ret, [_expected_return])
