@@ -34,10 +34,13 @@ def validate(config):
         return False, ('Configuration for haproxy beacon must '
                        'be a list.')
 
+    _config = {}
+    list(map(_config.update, config))
+
     # Look for servers list
     _servers_found = False
     for config_item in config:
-        for x in config_item.keys():
+        for x in config_item:
             if isinstance(config_item[x], dict) and \
                'servers' in config_item[x]:
                 if isinstance(config_item[x]['servers'], list):
