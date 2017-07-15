@@ -168,9 +168,15 @@ def get_security_groups(conn, vm_):
     '''
     Return a list of security groups to use, defaulting to ['default']
     '''
-    return config.get_cloud_config_value('securitygroup', vm_, __opts__,
-                                         default=['default'])
-
+    securitygroup_enabled = config.get_cloud_config_value(
+        'securitygroup_enabled', vm_, __opts__, default=True
+    )
+    if securitygroup_enabled:
+        return config.get_cloud_config_value(
+            'securitygroup', vm_, __opts__, default=['default']
+        )
+    else:
+        return False
 
 def get_password(vm_):
     '''
@@ -281,8 +287,10 @@ def create(vm_):
         'image': get_image(conn, vm_),
         'size': get_size(conn, vm_),
         'location': get_location(conn, vm_),
-        'ex_security_groups': get_security_groups(conn, vm_)
     }
+
+    if get_security_groups(conn, vm_) is not False:
+        kwargs['ex_security_groups'] = get_security_groups(conn, vm_)
 
     if get_keypair(vm_) is not False:
         kwargs['ex_keyname'] = get_keypair(vm_)
