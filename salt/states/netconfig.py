@@ -109,7 +109,7 @@ def managed(name,
             template_mode='755',
             saltenv=None,
             template_engine='jinja',
-            skip_verify=True,
+            skip_verify=False,
             defaults=None,
             test=False,
             commit=True,
@@ -194,9 +194,11 @@ def managed(name,
         - :mod:`py<salt.renderers.py>`
         - :mod:`wempy<salt.renderers.wempy>`
 
-    skip_verify: True
+    skip_verify: False
         If ``True``, hash verification of remote file sources (``http://``, ``https://``, ``ftp://``) will be skipped,
         and the ``source_hash`` argument will be ignored.
+        
+        .. versionchanged:: 2017.7.1
 
     test: False
         Dry run? If set to ``True``, will apply the config, discard and return the changes. Default: ``False``
