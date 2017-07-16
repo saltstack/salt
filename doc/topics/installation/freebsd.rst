@@ -5,14 +5,14 @@ FreeBSD
 Installation
 ============
 
-Salt is available in binary package form from both the FreeBSD pkgng repository
+Salt is available in binary package form from both the FreeBSD pkg repository
 or directly from SaltStack. The instructions below outline installation via
 both methods:
 
 FreeBSD repo
 ============
 
-The FreeBSD pkgng repository is preconfigured on systems 10.x and above. No
+The FreeBSD pkg repository is preconfigured on systems 10.x and above. No
 configuration is needed to pull from these repositories.
 
 .. code-block:: shell
