@@ -197,7 +197,7 @@ def managed(name,
     skip_verify: False
         If ``True``, hash verification of remote file sources (``http://``, ``https://``, ``ftp://``) will be skipped,
         and the ``source_hash`` argument will be ignored.
-        
+
         .. versionchanged:: 2017.7.1
 
     test: False
