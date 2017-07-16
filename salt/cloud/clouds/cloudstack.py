@@ -178,6 +178,7 @@ def get_security_groups(conn, vm_):
     else:
         return False
 
+
 def get_password(vm_):
     '''
     Return the password to use
