@@ -127,7 +127,7 @@ def beacon(config):
             service_config['emitatstartup'] = True
         if 'onchangeonly' not in service_config:
             service_config['onchangeonly'] = False
-        if 'delay' not in config[service]:
+        if 'delay' not in service_config:
             service_config['delay'] = 0
 
         # We only want to report the nature of the shutdown

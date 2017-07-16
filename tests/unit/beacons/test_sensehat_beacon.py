@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
