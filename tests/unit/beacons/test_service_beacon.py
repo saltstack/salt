@@ -58,6 +58,7 @@ class ServiceBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = service_beacon.beacon(config)
             self.assertEqual(ret, [{'service_name': 'salt-master',
+                                    'tag': 'salt-master',
                                     'salt-master': {'running': True}}])
 
     def test_service_not_running(self):
@@ -71,4 +72,5 @@ class ServiceBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = service_beacon.beacon(config)
             self.assertEqual(ret, [{'service_name': 'salt-master',
+                                    'tag': 'salt-master',
                                     'salt-master': {'running': False}}])
