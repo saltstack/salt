@@ -4597,11 +4597,35 @@ def _lookup_admin_template(policy_name,
         if adml_search_results:
             multiple_adml_entries = False
             suggested_policies = ''
+            adml_to_remove = []
             if len(adml_search_results) > 1:
                 multiple_adml_entries = True
                 for adml_search_result in adml_search_results:
                     if not getattr(adml_search_result, 'text', '').strip() == policy_name:
-                        adml_search_results.remove(adml_search_result)
+                        adml_to_remove.append(adml_search_result)
+                    if hierarchy:
+                        display_name_searchval = '$({0}.{1})'.format(
+                                adml_search_result.tag.split('}')[1],
+                                adml_search_result.attrib['id'])
+                        policy_search_string = '//{0}:policy[@*[local-name() = "displayName"] = "{1}" and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = "{2}") ]'.format(
+                            adml_search_result.prefix,
+                            display_name_searchval,
+                            policy_class)
+                        # this should only be 1 result
+                        admx_search_results = admx_policy_definitions.xpath(policy_search_string, namespaces=adml_search_result.nsmap)
+                        for search_result in admx_search_results:
+                            this_hierarchy = _build_parent_list(search_result,
+                                                                admx_policy_definitions,
+                                                                True,
+                                                                adml_policy_resources)
+                            this_hierarchy.reverse()
+                            if hierarchy != this_hierarchy:
+                                adml_to_remove.append(adml_search_result)
+            for adml in adml_to_remove:
+                if adml in adml_search_results:
+                    adml_search_results.remove(adml)
+            if len(adml_search_results) == 1 and multiple_adml_entries:
+                multiple_adml_entries = False
             for adml_search_result in adml_search_results:
                 dmsg = 'found an ADML entry matching the string! {0} -- {1}'
                 log.debug(dmsg.format(adml_search_result.tag,
