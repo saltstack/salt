@@ -9,6 +9,13 @@ Execution module that processes plain text and extracts data
 using TextFSM templates. The output is presented in JSON serializable
 data, and can be easily re-used in other modules, or directly
 inside the renderer (Jinja, Mako, Genshi, etc.).
+
+:depends:   - textfsm Python library
+
+.. note::
+
+    For Python 2/3 compatibility, it is more recommended to
+    install the ``jtextfsm`` library: ``pip install jtextfsm``.
 '''
 from __future__ import absolute_import
 
@@ -39,7 +46,12 @@ __proxyenabled__ = ['*']
 
 
 def __virtual__():
-    return __virtualname__
+    '''
+    Only load this execution module if TextFSM is installed.
+    '''
+    if HAS_TEXTFSM:
+        return __virtualname__
+    return (False, 'The textfsm execution module failed to load: requires the textfsm library.')
 
 
 def _clitable_to_dict(objects, fsm_handler):
