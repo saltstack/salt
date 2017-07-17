@@ -74,7 +74,7 @@ def _clitable_to_dict(objects, fsm_handler):
 
 
 def extract(template_path, raw_text=None, raw_text_file=None, saltenv='base'):
-    '''
+    r'''
     Extracts the data entities from the unstructured
     raw text sent as input and returns the data
     mapping, processing using the TextFSM template.
@@ -191,7 +191,11 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv='base'):
         return ret
     try:
         log.debug('Reading TextFSM template from cache path: {}'.format(tpl_cached_path))
+        # Disabling pylint W8470 to nto complain about fopen.
+        # Unfortunately textFSM needs the file handle rather than the content...
+        # pylint: disable=W8470
         tpl_file_handle = salt.utils.fopen(tpl_cached_path, 'r')
+        # pylint: disable=W8470
         log.debug(tpl_file_handle.read())
         fsm_handler = textfsm.TextFSM(tpl_file_handle)
     except textfsm.TextFSMTemplateError as tfte:
