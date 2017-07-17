@@ -277,6 +277,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
+        sock_dir=__opts__['sock_dir'],
         args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         transport=__opts__['transport']
     )
@@ -316,6 +317,7 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
+        sock_dir=__opts__['sock_dir'],
         args={
             'kwargs': __utils__['cloud.filter_event'](
                 'requesting',
@@ -339,12 +341,13 @@ def create(vm_):
             if 'VirtualName' not in ex_blockdevicemapping:
                 ex_blockdevicemapping['VirtualName'] = '{0}-{1}'.format(vm_['name'], len(volumes))
             __utils__['cloud.fire_event'](
-              'event',
-              'requesting volume',
-              'salt/cloud/{0}/requesting'.format(ex_blockdevicemapping['VirtualName']),
-              {'kwargs': {'name': ex_blockdevicemapping['VirtualName'],
-                          'device': ex_blockdevicemapping['DeviceName'],
-                          'size': ex_blockdevicemapping['VolumeSize']}},
+                'event',
+                'requesting volume',
+                'salt/cloud/{0}/requesting'.format(ex_blockdevicemapping['VirtualName']),
+                sock_dir=__opts__['sock_dir'],
+                args={'kwargs': {'name': ex_blockdevicemapping['VirtualName'],
+                                 'device': ex_blockdevicemapping['DeviceName'],
+                                 'size': ex_blockdevicemapping['VolumeSize']}},
             )
             try:
                 volumes[ex_blockdevicemapping['DeviceName']] = conn.create_volume(
@@ -418,6 +421,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
+        sock_dir=__opts__['sock_dir'],
         args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         transport=__opts__['transport']
     )
@@ -439,7 +443,8 @@ def destroy(name, conn=None, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        sock_dir=__opts__['sock_dir'],
+        args={'name': name},
     )
 
     if not conn:
@@ -463,7 +468,8 @@ def destroy(name, conn=None, call=None):
             'event',
             'detaching volume',
             'salt/cloud/{0}/detaching'.format(volume.name),
-            {'name': volume.name},
+            sock_dir=__opts__['sock_dir'],
+            args={'name': volume.name},
         )
         if not conn.detach_volume(volume):
             log.error('Failed to Detach volume: {0}'.format(volume.name))
@@ -473,7 +479,8 @@ def destroy(name, conn=None, call=None):
             'event',
             'detached volume',
             'salt/cloud/{0}/detached'.format(volume.name),
-            {'name': volume.name},
+            sock_dir=__opts__['sock_dir'],
+            args={'name': volume.name},
         )
 
         log.info('Destroying volume: {0}'.format(volume.name))
@@ -481,7 +488,8 @@ def destroy(name, conn=None, call=None):
             'event',
             'destroying volume',
             'salt/cloud/{0}/destroying'.format(volume.name),
-            {'name': volume.name},
+            sock_dir=__opts__['sock_dir'],
+            args={'name': volume.name},
         )
         if not conn.destroy_volume(volume):
             log.error('Failed to Destroy volume: {0}'.format(volume.name))
@@ -491,7 +499,8 @@ def destroy(name, conn=None, call=None):
             'event',
             'destroyed volume',
             'salt/cloud/{0}/destroyed'.format(volume.name),
-            {'name': volume.name},
+            sock_dir=__opts__['sock_dir'],
+            args={'name': volume.name},
         )
     log.info('Destroying VM: {0}'.format(name))
     ret = conn.destroy_node(node)
@@ -505,7 +514,8 @@ def destroy(name, conn=None, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        sock_dir=__opts__['sock_dir'],
+        args={'name': name},
     )
     if __opts__['delete_sshkeys'] is True:
         salt.utils.cloud.remove_sshkey(node.public_ips[0])
