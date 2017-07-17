@@ -1092,11 +1092,15 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             ret[pkg_name] = 'Unable to locate package {0}'.format(pkg_name)
             continue
 
-        # Get the version number passed or the latest available
+        # Get the version number passed or the latest available (must be a string)
         version_num = ''
         if options:
-            if options.get('version') is not None:
-                version_num = str(options.get('version'))
+            version_num = options.get('version', '')
+            #  Using the salt cmdline with version=5.3 might be interpreted
+            #  as a float it must be converted to a string in order for
+            #  string matching to work.
+            if not isinstance(version_num, six.string_types) and version_num is not None:
+                version_num = str(version_num)
 
         if not version_num:
             version_num = _get_latest_pkg_version(pkginfo)
@@ -1423,6 +1427,11 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             continue
 
         if version_num is not None:
+            #  Using the salt cmdline with version=5.3 might be interpreted
+            #  as a float it must be converted to a string in order for
+            #  string matching to work.
+            if not isinstance(version_num, six.string_types) and version_num is not None:
+                version_num = str(version_num)
             if version_num not in pkginfo and 'latest' in pkginfo:
                 version_num = 'latest'
         elif 'latest' in pkginfo:
