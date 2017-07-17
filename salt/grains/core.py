@@ -22,6 +22,7 @@ import logging
 import locale
 import uuid
 from errno import EACCES, EPERM
+import datetime
 
 __proxyenabled__ = ['*']
 __FQDN__ = None
@@ -823,7 +824,7 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in model:
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'OpenBSD':
-        if osdata['manufacturer'] == 'QEMU':
+        if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
             grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'SunOS':
         # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
@@ -1790,12 +1791,14 @@ def ip_fqdn():
             ret[key] = []
         else:
             try:
+                start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list(set(item[4][0] for item in info))
             except socket.error:
-                if __opts__['__role'] == 'master':
-                    log.warning('Unable to find IPv{0} record for "{1}" causing a 10 second timeout when rendering grains. '
-                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn))
+                timediff = datetime.datetime.utcnow() - start_time
+                if timediff.seconds > 5 and __opts__['__role'] == 'master':
+                    log.warning('Unable to find IPv{0} record for "{1}" causing a {2} second timeout when rendering grains. '
+                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn, timediff))
                 ret[key] = []
 
     return ret

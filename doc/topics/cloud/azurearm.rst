@@ -6,7 +6,7 @@ Getting Started With Azure ARM
 
 Azure is a cloud service by Microsoft providing virtual machines, SQL services,
 media services, and more. Azure ARM (aka, the Azure Resource Manager) is a next
-generatiom version of the Azure portal and API. This document describes how to
+generation version of the Azure portal and API. This document describes how to
 use Salt Cloud to create a virtual machine on Azure ARM, with Salt installed.
 
 More information about Azure is located at `http://www.windowsazure.com/
@@ -237,6 +237,20 @@ iface_name
 ----------
 Optional. The name to apply to the VM's network interface. If not supplied, the
 value will be set to ``<VM name>-iface0``.
+
+dns_servers
+-----------
+Optional. A **list** of the DNS servers to configure for the network interface
+(will be set on the VM by the DHCP of the VNET).
+
+.. code-block:: yaml
+
+    my-azurearm-profile:
+      provider: azurearm-provider
+      network: mynetwork
+      dns_servers:
+        - 10.1.1.4
+        - 10.1.1.5
 
 availability_set
 ----------------

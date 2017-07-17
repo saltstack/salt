@@ -95,7 +95,8 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(network.__grains__, {'kernel': 'Linux'}):
             with patch.object(network, '_netstat_linux', return_value='A'):
-                self.assertEqual(network.netstat(), 'A')
+                with patch.object(network, '_ss_linux', return_value='A'):
+                    self.assertEqual(network.netstat(), 'A')
 
         with patch.dict(network.__grains__, {'kernel': 'OpenBSD'}):
             with patch.object(network, '_netstat_bsd', return_value='A'):
@@ -340,10 +341,12 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(network.__grains__, {'kernel': 'Linux'}):
             with patch.object(network, '_netstat_route_linux',
                               side_effect=['A', [{'addr_family': 'inet'}]]):
-                self.assertEqual(network.routes(None), 'A')
+                with patch.object(network, '_ip_route_linux',
+                                  side_effect=['A', [{'addr_family': 'inet'}]]):
+                    self.assertEqual(network.routes(None), 'A')
 
-                self.assertListEqual(network.routes('inet'),
-                                     [{'addr_family': 'inet'}])
+                    self.assertListEqual(network.routes('inet'),
+                                         [{'addr_family': 'inet'}])
 
     def test_default_route(self):
         '''

@@ -115,17 +115,3 @@ def normalize_locale(loc):
     comps['codeset'] = comps['codeset'].lower().replace('-', '')
     comps['charmap'] = ''
     return join_locale(comps)
-
-
-def decode_recursively(object_):
-    if isinstance(object_, list):
-        return [decode_recursively(o) for o in object_]
-    if isinstance(object_, tuple):
-        return tuple([decode_recursively(o) for o in object_])
-    if isinstance(object_, dict):
-        return dict([(decode_recursively(key), decode_recursively(value))
-                     for key, value in salt.ext.six.iteritems(object_)])
-    elif isinstance(object_, six.string_types):
-        return sdecode(object_)
-    else:
-        return object_
