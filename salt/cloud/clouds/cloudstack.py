@@ -290,8 +290,9 @@ def create(vm_):
         'location': get_location(conn, vm_),
     }
 
-    if get_security_groups(conn, vm_) is not False:
-        kwargs['ex_security_groups'] = get_security_groups(conn, vm_)
+    sg = get_security_groups(conn, vm_)
+    if sg is not False:
+        kwargs['ex_security_groups'] = sg
 
     if get_keypair(vm_) is not False:
         kwargs['ex_keyname'] = get_keypair(vm_)
