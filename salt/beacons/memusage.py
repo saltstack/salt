@@ -39,6 +39,14 @@ def validate(config):
     if not isinstance(config, list):
         return False, ('Configuration for memusage '
                        'beacon must be a list.')
+    else:
+        _config = {}
+        list(map(_config.update, config))
+
+        if 'percent' not in _config:
+            return False, ('Configuration for memusage beacon '
+                           'requires percent.')
+
     return True, 'Valid beacon configuration'
 
 
@@ -46,7 +54,8 @@ def beacon(config):
     '''
     Monitor the memory usage of the minion
 
-    Specify thresholds for percent used and only emit a beacon if it is exceeded.
+    Specify thresholds for percent used and only emit a beacon
+    if it is exceeded.
 
     .. code-block:: yaml
 
@@ -55,16 +64,17 @@ def beacon(config):
             - percent: 63%
     '''
     ret = []
-    for memusage in config:
-        mount = memusage.keys()[0]
-        _current_usage = psutil.virtual_memory()
-        log.debug('_current_usage {}'.format(_current_usage))
 
-        current_usage = _current_usage.percent
-        monitor_usage = memusage[mount]
-        if '%' in monitor_usage:
-            monitor_usage = re.sub('%', '', monitor_usage)
-        monitor_usage = float(monitor_usage)
-        if current_usage >= monitor_usage:
-            ret.append({'memusage': current_usage})
+    _config = {}
+    list(map(_config.update, config))
+
+    _current_usage = psutil.virtual_memory()
+
+    current_usage = _current_usage.percent
+    monitor_usage = _config['percent']
+    if '%' in monitor_usage:
+        monitor_usage = re.sub('%', '', monitor_usage)
+    monitor_usage = float(monitor_usage)
+    if current_usage >= monitor_usage:
+        ret.append({'memusage': current_usage})
     return ret

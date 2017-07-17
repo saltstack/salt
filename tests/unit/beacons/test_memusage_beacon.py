@@ -40,13 +40,14 @@ class MemUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = memusage.validate(config)
 
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        self.assertEqual(ret, (False, 'Configuration for memusage beacon '
+                                     'requires percent.'))
 
     def test_memusage_match(self):
         with patch('psutil.virtual_memory',
                    MagicMock(return_value=STUB_MEMORY_USAGE)):
 
-            config = [{'percent': '40%'}]
+            config = [{'percent': '40%'}, {'interval': 30}]
 
             ret = memusage.validate(config)
 

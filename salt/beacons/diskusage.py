@@ -86,7 +86,7 @@ def beacon(config):
     parts = psutil.disk_partitions(all=False)
     ret = []
     for mounts in config:
-        mount = mounts.keys()[0]
+        mount = next(iter(mounts))
 
         for part in parts:
             if re.match(mount, part.mountpoint):

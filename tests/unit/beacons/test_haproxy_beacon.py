@@ -40,13 +40,19 @@ class HAProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = haproxy.validate(config)
 
         self.assertEqual(ret, (False, 'Configuration for haproxy beacon '
-                                      'requires a list of backends '
-                                      'and servers'))
+                                      'requires backends.'))
+
+    def test_no_servers(self):
+        config = [{'backends': {'www-backend': {'threshold': 45}}}]
+        ret = haproxy.validate(config)
+
+        self.assertEqual(ret, (False, 'Backends for haproxy '
+                                      'beacon require servers.'))
 
     def test_threshold_reached(self):
-        config = [{'www-backend': {'threshold': 45,
-                                   'servers': ['web1']
-                                   }}]
+        config = [{'backends': {'www-backend': {'threshold': 45,
+                                'servers': ['web1']
+                                   }}}]
         ret = haproxy.validate(config)
 
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
@@ -59,9 +65,9 @@ class HAProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                     'server': 'web1'}])
 
     def test_threshold_not_reached(self):
-        config = [{'www-backend': {'threshold': 100,
-                                   'servers': ['web1']
-                                   }}]
+        config = [{'backends': {'www-backend': {'threshold': 100,
+                                'servers': ['web1']
+                                   }}}]
         ret = haproxy.validate(config)
 
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
