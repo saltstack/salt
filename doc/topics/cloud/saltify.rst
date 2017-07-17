@@ -186,6 +186,7 @@ simple installation.
       shutdown_on_destroy: true  # halt the target on "salt-cloud -d" command
 
 
+
 .. code-block:: yaml
 
     # file /etc/salt/cloud.providers.d/saltify_provider.conf
