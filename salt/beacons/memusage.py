@@ -11,6 +11,7 @@ Beacon to monitor memory usage.
 from __future__ import absolute_import
 import logging
 import re
+from salt.ext.six.moves import map
 
 # Import Third Party Libs
 try:
