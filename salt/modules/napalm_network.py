@@ -408,6 +408,13 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
 
         .. versionadded:: Oxygen
 
+    textfsm_template_dict
+        A dictionary with the mapping between a command
+        and the corresponding TextFSM path to use to extract the data.
+        The TextFSM paths can be specified as in ``textfsm_template``.
+
+        .. versionadded:: Oxygen
+
     platform_grain_name: ``os``
         The name of the grain used to identify the platform name
         in the TextFSM index file. Default: ``os``.
@@ -545,19 +552,26 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                     __pillar__.get('napalm_cli_textfsm_parse', False)
     if not textfsm_parse:
         # No TextFSM parsing required, return raw commands.
+        log.debug('No TextFSM parsing requested.')
         return raw_cli_outputs
     if 'textfsm.extract' not in __salt__ or 'textfsm.index' not in __salt__:
         raw_cli_outputs['comment'] += 'Unable to process: is TextFSM installed?'
+        log.error(raw_cli_outputs['comment'])
         return raw_cli_outputs
     textfsm_template = kwargs.get('textfsm_template')
+    log.debug('textfsm_template: {}'.format(textfsm_template))
     textfsm_path = kwargs.get('textfsm_path') or __opts__.get('textfsm_path') or\
                    __pillar__.get('textfsm_path')
+    log.debug('textfsm_path: {}'.format(textfsm_path))
     index_file = kwargs.get('index_file') or __opts__.get('textfsm_index_file') or\
                  __pillar__.get('textfsm_index_file')
+    log.debug('index_file: {}'.format(index_file))
     platform_grain_name = kwargs.get('platform_grain_name') or __opts__.get('textfsm_platform_grain') or\
-                          __pillar__.get('textfsm_platform_grain')
+                          __pillar__.get('textfsm_platform_grain', 'os')
+    log.debug('platform_grain_name: {}'.format(platform_grain_name))
     platform_column_name = kwargs.get('platform_column_name') or __opts__.get('textfsm_platform_column_name') or\
-                           __pillar__.get('textfsm_platform_column_name')
+                           __pillar__.get('textfsm_platform_column_name', 'Platform')
+    log.debug('platform_column_name: {}'.format(platform_column_name))
     saltenv = kwargs.get('saltenv', 'base')
     include_empty = kwargs.get('include_empty', False)
     include_pat = kwargs.get('include_pat')
@@ -567,10 +581,14 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         'result': raw_cli_outputs['result'],
         'out': {}
     }
+    log.debug('Starting to analyse the raw outputs')
     for command in list(commands):
         command_output = raw_cli_outputs['out'][command]
+        log.debug('Output from command: {}'.format(command))
+        log.debug(command_output)
         processed_command_output = None
         if textfsm_path:
+            log.debug('Using the templates under {}'.format(textfsm_path))
             processed_cli_output = __salt__['textfsm.index'](command,
                                                              platform_grain_name=platform_grain_name,
                                                              platform_column_name=platform_column_name,
@@ -580,23 +598,43 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                                                              include_empty=include_empty,
                                                              include_pat=include_pat,
                                                              exclude_pat=exclude_pat)
+            log.debug('Processed CLI output:')
+            log.debug(processed_cli_output)
             if not processed_cli_output['result']:
+                log.debug('Apparently this didnt work, returnin the raw output')
                 processed_command_output = command_output
                 processed_cli_outputs['comment'] += '\nUnable to process the output from {0}: {1}.'.format(command,
                     processed_cli_output['comment'])
-            else:
+                log.error(processed_cli_outputs['comment'])
+            elif processed_cli_output['out']:
+                log.debug('All good, {} has a nice output!'.format(command))
                 processed_command_output = processed_cli_output['out']
-        elif textfsm_template:
+            else:
+                log.debug('Processing {} didnt fail, but didnt return anything either. Dumping raw.'.format(command))
+                processed_command_output = command_output
+        elif textfsm_template or command in textfsm_template_dict:
+            if command in textfsm_template_dict:
+                textfsm_template = textfsm_template_dict[command]
+            log.debug('Using {0} to process the command: {1}'.format(textfsm_template, command))
             processed_cli_output = __salt__['textfsm.extract'](textfsm_template,
                                                                raw_text=command_output,
                                                                saltenv=saltenv)
+            log.debug('Processed CLI output:')
+            log.debug(processed_cli_output)
             if not processed_cli_output['result']:
+                log.debug('Apparently this didnt work, returnin the raw output')
                 processed_command_output = command_output
                 processed_cli_outputs['comment'] += '\nUnable to process the output from {0}: {1}'.format(command,
                     processed_cli_output['comment'])
-            else:
+                log.error(processed_cli_outputs['comment'])
+            elif processed_cli_output['out']:
+                log.debug('All good, {} has a nice output!'.format(command))
                 processed_command_output = processed_cli_output['out']
+            else:
+                log.debug('Processing {} didnt fail, but didnt return anything either. Dumping raw.'.format(command))
+                processed_command_output = command_output
         else:
+            log.error('No TextFSM template specified, or no TextFSM path defined')
             processed_command_output = command_output
             processed_cli_outputs['comment'] += '\nUnable to process the output from {}.'.format(command)
         processed_cli_outputs['out'][command] = processed_command_output
