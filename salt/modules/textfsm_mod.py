@@ -423,7 +423,7 @@ def index(command,
         'Command': command
     }
     platform_column_name = __opts__.get('textfsm_platform_column_name') or\
-                           __pillar__.get('textfsm_platform_column_name'. 'Platform')
+                           __pillar__.get('textfsm_platform_column_name', 'Platform')
     log.info('Using the TextFSM platform idenfiticator: {}'.format(platform_column_name))
     attrs[platform_column_name] = platform
     log.debug('Processing the TextFSM index file using the attributes: {}'.format(attrs))
