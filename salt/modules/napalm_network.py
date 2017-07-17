@@ -370,6 +370,8 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     textfsm_parse: ``False``
         Try parsing the outputs using the TextFSM templates.
 
+        .. versionadded:: Oxygen
+
         .. note::
             This option can be also specified in the minion configuration
             file or pillar as ``napalm_cli_textfsm_parse``.
@@ -381,6 +383,8 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         either specified using the following URL mschemes: ``file://``,
         ``salt://``, ``http://``, ``https://``, ``ftp://``,
         ``s3://``, ``swift://``.
+
+        .. versionadded:: Oxygen
 
         .. note::
             This needs to be a directory with a flat structure, having an
@@ -402,9 +406,13 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         - ``s3://``
         - ``swift://``
 
+        .. versionadded:: Oxygen
+
     platform_grain_name: ``os``
         The name of the grain used to identify the platform name
         in the TextFSM index file. Default: ``os``.
+
+        .. versionadded:: Oxygen
 
         .. note::
             This option can be also specified in the minion configuration
@@ -414,6 +422,8 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         The column name used to identify the platform,
         exactly as specified in the TextFSM index file.
         Default: ``Platform``.
+
+        .. versionadded:: Oxygen
 
         .. note::
             This is field is case sensitive, make sure
@@ -427,6 +437,8 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     index_file: ``index``
         The name of the TextFSM index file, under the ``textfsm_path``. Default: ``index``.
 
+        .. versionadded:: Oxygen
+
         .. note::
             This option can be also specified in the minion configuration
             file or pillar as ``textfsm_index_file``.
@@ -435,18 +447,26 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         Salt fileserver envrionment from which to retrieve the file.
         Ignored if ``textfsm_path`` is not a ``salt://`` URL.
 
+        .. versionadded:: Oxygen
+
     include_empty: ``False``
         Include empty files under the ``textfsm_path``.
+
+        .. versionadded:: Oxygen
 
     include_pat
         Glob or regex to narrow down the files cached from the given path.
         If matching with a regex, the regex must be prefixed with ``E@``,
         otherwise the expression will be interpreted as a glob.
 
+        .. versionadded:: Oxygen
+
     exclude_pat
         Glob or regex to exclude certain files from being cached from the given path.
         If matching with a regex, the regex must be prefixed with ``E@``,
         otherwise the expression will be interpreted as a glob.
+
+        .. versionadded:: Oxygen
 
         .. note::
             If used with ``include_pat``, files matching this pattern will be
