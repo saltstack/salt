@@ -14,7 +14,15 @@ import salt.beacons.ps as ps
 
 PATCH_OPTS = dict(autospec=True, spec_set=True)
 
-FakeProcess = namedtuple('Process', 'cmdline pid')
+
+class FakeProcess(object):
+
+    def __init__(self, _name, pid):
+        self._name = _name
+        self.pid = pid
+
+    def name(self):
+        return self._name
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -43,9 +51,9 @@ class PSBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                       'beacon requires processes.'))
 
     def test_ps_running(self):
-        with patch('psutil.process_iter', **PATCH_OPTS) as mock_process_iter:
-            mock_process_iter.return_value = [FakeProcess(cmdline=['salt-master'], pid=3),
-                                              FakeProcess(cmdline=['salt-minion'], pid=4)]
+        with patch('salt.utils.psutil_compat.process_iter', **PATCH_OPTS) as mock_process_iter:
+            mock_process_iter.return_value = [FakeProcess(_name='salt-master', pid=3),
+                                              FakeProcess(_name='salt-minion', pid=4)]
             config = [{'processes': {'salt-master': 'running'}}]
 
             ret = ps.validate(config)
@@ -56,9 +64,9 @@ class PSBeaconTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret, [{'salt-master': 'Running'}])
 
     def test_ps_not_running(self):
-        with patch('psutil.process_iter', **PATCH_OPTS) as mock_process_iter:
-            mock_process_iter.return_value = [FakeProcess(cmdline=['salt-master'], pid=3),
-                                              FakeProcess(cmdline=['salt-minion'], pid=4)]
+        with patch('salt.utils.psutil_compat.process_iter', **PATCH_OPTS) as mock_process_iter:
+            mock_process_iter.return_value = [FakeProcess(_name='salt-master', pid=3),
+                                              FakeProcess(_name='salt-minion', pid=4)]
             config = [{'processes': {'mysql': 'stopped'}}]
 
             ret = ps.validate(config)
