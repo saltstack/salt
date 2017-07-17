@@ -668,7 +668,7 @@ def list_pkgs(versions_as_list=False, attr=None, **kwargs):
 
         {'<package_name>': [{'version' : 'version', 'arch' : 'arch'}]}
 
-        Valid attributes are: ``version``, ``arch``, ``install_date``.
+        Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
 
             .. versionadded:: Oxygen
 
@@ -704,9 +704,11 @@ def list_pkgs(versions_as_list=False, attr=None, **kwargs):
             pkgver = '{0}:{1}'.format(epoch, pkgver)
         if rel:
             pkgver += '-{0}'.format(rel)
-        install_time = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
+        install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
+        install_date_time_t = int(install_time)
 
-        all_attr = {'version': pkgver, 'arch': arch, 'install_date': install_time}
+        all_attr = {'version': pkgver, 'arch': arch, 'install_date': install_date,
+                    'install_date_time_t': install_date_time_t}
         __salt__['pkg_resource.add_pkg'](ret, name, all_attr)
 
     for pkgname in ret:
@@ -723,7 +725,9 @@ def _format_pkg_list(packages, versions_as_list, attr):
     '''
     ret = copy.deepcopy(packages)
     if attr:
-        requested_attr = set(attr + ['version']) & set(['version', 'arch', 'install_date'])
+        requested_attr = (set(attr + ['version']) &
+                          set(['version', 'arch', 'install_date',
+                               'install_date_time_t']))
 
         for name in ret:
             versions = []
@@ -1119,7 +1123,7 @@ def install(name=None,
                     'version': '<new-version>',
                     'arch': '<new-arch>'}}}
 
-        Valid attributes are: ``version``, ``arch``, ``install_date``.
+        Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
 
         .. versionadded:: Oxygen
 

@@ -530,31 +530,37 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         ]
         with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}):
             with patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}):
-                pkgs = zypper.list_pkgs(attr=['arch'])
+                pkgs = zypper.list_pkgs(attr=['arch', 'install_date_time_t'])
                 for pkg_name, pkg_attr in {
                     'jakarta-commons-discovery': {
                         'version': '0.4-129.686',
                         'arch': 'noarch',
+                        'install_date_time_t': 1498636511,
                     },
                     'yast2-ftp-server': {
                         'version': '3.1.8-8.1',
                         'arch': 'x86_64',
+                        'install_date_time_t': 1499257798,
                     },
                     'protobuf-java': {
                         'version': '2.6.1-3.1.develHead',
                         'arch': 'noarch',
+                        'install_date_time_t': 1499257756,
                     },
                     'susemanager-build-keys-web': {
                         'version': '12.0-5.1.develHead',
                         'arch': 'noarch',
+                        'install_date_time_t': 1498636510,
                     },
                     'apache-commons-cli': {
                         'version': '1.2-1.233',
                         'arch': 'noarch',
+                        'install_date_time_t': 1498636510,
                     },
                     'jose4j': {
                         'version': '0.4.4-2.1.develHead',
                         'arch': 'noarch',
+                        'install_date_time_t': 1499257756,
                     }}.items():
                     self.assertTrue(pkgs.get(pkg_name))
                     self.assertEqual(pkgs[pkg_name], [pkg_attr])
