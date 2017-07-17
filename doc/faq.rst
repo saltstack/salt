@@ -319,7 +319,27 @@ Restart using states
 ********************
 
 Now we can apply the workaround to restart the Minion in reliable way.
-The following example works on both UNIX-like and Windows operating systems:
+The following example works on UNIX-like operating systems:
+
+.. code-block:: jinja
+
+    {%- if grains['os'] != 'Windows' %
+    Restart Salt Minion:
+      cmd.run:
+        - name: 'salt-call --local service.restart salt-minion'
+        - bg: True
+        - onchanges:
+          - pkg: Upgrade Salt Minion
+    {%- endif %}
+
+Note that restarting the ``salt-minion`` service on Windows operating systems is
+not always necessary when performing an upgrade. The installer stops the
+``salt-minion`` service, removes it, deletes the contents of the ``\salt\bin``
+directory, installs the new code, re-creates the ``salt-minion`` service, and
+starts it (by default). The restart step **would** be necessary during the
+upgrade process, however, if the minion config was edited after the upgrade or
+installation. If a minion restart is necessary, the state above can be edited
+as follows:
 
 .. code-block:: jinja
 
@@ -335,8 +355,8 @@ The following example works on both UNIX-like and Windows operating systems:
           - pkg: Upgrade Salt Minion
 
 However, it requires more advanced tricks to upgrade from legacy version of
-Salt (before ``2016.3.0``), where executing commands in the background is not
-supported:
+Salt (before ``2016.3.0``) on UNIX-like operating systems, where executing
+commands in the background is not supported:
 
 .. code-block:: jinja
 
