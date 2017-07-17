@@ -31,8 +31,9 @@ import salt
 import salt.fileclient
 import salt.utils
 import salt.utils.url
-from salt.utils.decorators import jinja_filter, jinja_test
+from salt.utils.decorators import jinja_filter, jinja_test, jinja_global
 from salt.utils.odict import OrderedDict
+from salt.exceptions import TemplateError
 
 log = logging.getLogger(__name__)
 
@@ -180,6 +181,12 @@ class PrintableDict(OrderedDict):
             # function.
             output.append('{0!r}: {1!r}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
         return '{' + ', '.join(output) + '}'
+
+
+# Additional globals
+@jinja_global('raise')
+def jinja_raise(msg):
+    raise TemplateError(msg)
 
 
 # Additional tests

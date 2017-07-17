@@ -691,3 +691,28 @@ class JinjaTest(object):
 
 
 jinja_test = JinjaTest
+
+
+class JinjaGlobal(object):
+    '''
+    This decorator is used to specify that a function is to be loaded as a
+    Jinja global.
+    '''
+    salt_jinja_globals = {}
+
+    def __init__(self, name=None):
+        '''
+        '''
+        self.name = name
+
+    def __call__(self, function):
+        '''
+        '''
+        name = self.name or function.__name__
+        if name not in self.salt_jinja_globals:
+            log.debug('Marking "{0}" as a jinja global'.format(name))
+            self.salt_jinja_globals[name] = function
+        return function
+
+
+jinja_global = JinjaGlobal
