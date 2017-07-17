@@ -5,7 +5,6 @@ Some of the utils used by salt
 
 # Import python libs
 from __future__ import absolute_import, division, print_function
-import contextlib
 import copy
 import collections
 import datetime
@@ -40,7 +39,6 @@ from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-
 # pylint: disable=redefined-builtin
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
-from stat import S_IMODE
 # pylint: enable=import-error,redefined-builtin
 
 if six.PY3:
@@ -73,13 +71,6 @@ try:
     HAS_PARSEDATETIME = True
 except ImportError:
     HAS_PARSEDATETIME = False
-
-try:
-    import fcntl
-    HAS_FCNTL = True
-except ImportError:
-    # fcntl is not available on windows
-    HAS_FCNTL = False
 
 try:
     import win32api
@@ -127,6 +118,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 import salt.defaults.exitcodes
 import salt.log
 import salt.utils.dictupdate
+import salt.utils.files
 import salt.version
 from salt.utils.decorators import jinja_filter
 from salt.utils.decorators import memoize as real_memoize
@@ -141,28 +133,6 @@ from salt.exceptions import (
 
 log = logging.getLogger(__name__)
 _empty = object()
-
-
-def safe_rm(tgt):
-    '''
-    Safely remove a file
-    '''
-    try:
-        os.remove(tgt)
-    except (IOError, OSError):
-        pass
-
-
-@jinja_filter('is_empty')
-def is_empty(filename):
-    '''
-    Is a file empty?
-    '''
-    try:
-        return os.stat(filename).st_size == 0
-    except OSError:
-        # Non-existent file or permission denied to the parent dir
-        return False
 
 
 @jinja_filter('is_hex')
@@ -186,7 +156,7 @@ def get_color_theme(theme):
     if not os.path.isfile(theme):
         log.warning('The named theme {0} if not available'.format(theme))
     try:
-        with fopen(theme, 'rb') as fp_:
+        with salt.utils.files.fopen(theme, 'rb') as fp_:
             colors = yaml.safe_load(fp_.read())
             ret = {}
             for color in colors:
@@ -442,7 +412,7 @@ def get_master_key(key_user, opts, skip_perm_errors=False):
                                            skip_perm_errors)
 
     try:
-        with salt.utils.fopen(keyfile, 'r') as key:
+        with salt.utils.files.fopen(keyfile, 'r') as key:
             return key.read()
     except (OSError, IOError):
         # Fall back to eauth
@@ -506,7 +476,7 @@ def daemonize(redirect_out=True):
     # not cleanly redirected and the parent process dies when the
     # multiprocessing process attempts to access stdout or err.
     if redirect_out:
-        with fopen('/dev/null', 'r+') as dev_null:
+        with salt.utils.files.fopen('/dev/null', 'r+') as dev_null:
             # Redirect python stdin/out/err
             # and the os stdin/out/err which can be different
             os.dup2(dev_null.fileno(), sys.stdin.fileno())
@@ -660,7 +630,7 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
             ficn = os.path.join(stats_path, '{0}.{1}.stats'.format(id_, date))
             if not os.path.exists(ficp):
                 pr.dump_stats(ficp)
-                with fopen(ficn, 'w') as fic:
+                with salt.utils.files.fopen(ficn, 'w') as fic:
                     pstats.Stats(pr, stream=fic).sort_stats('cumulative')
             log.info('PROFILING: {0} generated'.format(ficp))
             log.info('PROFILING (cumulative): {0} generated'.format(ficn))
@@ -1004,7 +974,7 @@ def pem_finger(path=None, key=None, sum_type='sha256'):
         if not os.path.isfile(path):
             return ''
 
-        with fopen(path, 'rb') as fp_:
+        with salt.utils.files.fopen(path, 'rb') as fp_:
             key = b''.join([x for x in fp_.readlines() if x.strip()][1:-1])
 
     pre = getattr(hashlib, sum_type)(key).hexdigest()
@@ -1237,7 +1207,7 @@ def istextfile(fp_, blocksize=512):
         # This wasn't an open filehandle, so treat it as a file path and try to
         # open the file
         try:
-            with fopen(fp_, 'rb') as fp2_:
+            with salt.utils.files.fopen(fp_, 'rb') as fp2_:
                 block = fp2_.read(blocksize)
         except IOError:
             # Unable to open file, bail out and return false
@@ -1325,122 +1295,6 @@ def str_to_num(text):
             return float(text)
         except ValueError:
             return text
-
-
-def fopen(*args, **kwargs):
-    '''
-    Wrapper around open() built-in to set CLOEXEC on the fd.
-
-    This flag specifies that the file descriptor should be closed when an exec
-    function is invoked;
-    When a file descriptor is allocated (as with open or dup), this bit is
-    initially cleared on the new file descriptor, meaning that descriptor will
-    survive into the new program after exec.
-
-    NB! We still have small race condition between open and fcntl.
-
-    '''
-    # ensure 'binary' mode is always used on Windows in Python 2
-    if ((six.PY2 and is_windows() and 'binary' not in kwargs) or
-            kwargs.pop('binary', False)):
-        if len(args) > 1:
-            args = list(args)
-            if 'b' not in args[1]:
-                args[1] += 'b'
-        elif kwargs.get('mode', None):
-            if 'b' not in kwargs['mode']:
-                kwargs['mode'] += 'b'
-        else:
-            # the default is to read
-            kwargs['mode'] = 'rb'
-    elif six.PY3 and 'encoding' not in kwargs:
-        # In Python 3, if text mode is used and the encoding
-        # is not specified, set the encoding to 'utf-8'.
-        binary = False
-        if len(args) > 1:
-            args = list(args)
-            if 'b' in args[1]:
-                binary = True
-        if kwargs.get('mode', None):
-            if 'b' in kwargs['mode']:
-                binary = True
-        if not binary:
-            kwargs['encoding'] = __salt_system_encoding__
-
-    if six.PY3 and not binary and not kwargs.get('newline', None):
-        kwargs['newline'] = ''
-
-    fhandle = open(*args, **kwargs)  # pylint: disable=resource-leakage
-
-    if is_fcntl_available():
-        # modify the file descriptor on systems with fcntl
-        # unix and unix-like systems only
-        try:
-            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
-        except AttributeError:
-            FD_CLOEXEC = 1                  # pylint: disable=C0103
-        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
-
-    return fhandle
-
-
-@contextlib.contextmanager
-def flopen(*args, **kwargs):
-    '''
-    Shortcut for fopen with lock and context manager
-    '''
-    with fopen(*args, **kwargs) as fhandle:
-        try:
-            if is_fcntl_available(check_sunos=True):
-                fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
-            yield fhandle
-        finally:
-            if is_fcntl_available(check_sunos=True):
-                fcntl.flock(fhandle.fileno(), fcntl.LOCK_UN)
-
-
-@contextlib.contextmanager
-def fpopen(*args, **kwargs):
-    '''
-    Shortcut for fopen with extra uid, gid and mode options.
-
-    Supported optional Keyword Arguments:
-
-      mode: explicit mode to set. Mode is anything os.chmod
-            would accept as input for mode. Works only on unix/unix
-            like systems.
-
-      uid: the uid to set, if not set, or it is None or -1 no changes are
-           made. Same applies if the path is already owned by this
-           uid. Must be int. Works only on unix/unix like systems.
-
-      gid: the gid to set, if not set, or it is None or -1 no changes are
-           made. Same applies if the path is already owned by this
-           gid. Must be int. Works only on unix/unix like systems.
-
-    '''
-    # Remove uid, gid and mode from kwargs if present
-    uid = kwargs.pop('uid', -1)  # -1 means no change to current uid
-    gid = kwargs.pop('gid', -1)  # -1 means no change to current gid
-    mode = kwargs.pop('mode', None)
-    with fopen(*args, **kwargs) as fhandle:
-        path = args[0]
-        d_stat = os.stat(path)
-
-        if hasattr(os, 'chown'):
-            # if uid and gid are both -1 then go ahead with
-            # no changes at all
-            if (d_stat.st_uid != uid or d_stat.st_gid != gid) and \
-                    [i for i in (uid, gid) if i != -1]:
-                os.chown(path, uid, gid)
-
-        if mode is not None:
-            mode_part = S_IMODE(d_stat.st_mode)
-            if mode_part != mode:
-                os.chmod(path, (d_stat.st_mode ^ mode_part) | mode)
-
-        yield fhandle
 
 
 def expr_match(line, expr):
@@ -1834,18 +1688,6 @@ def is_aix():
     Simple function to return if host is AIX or not
     '''
     return sys.platform.startswith('aix')
-
-
-def is_fcntl_available(check_sunos=False):
-    '''
-    Simple function to check if the `fcntl` module is available or not.
-
-    If `check_sunos` is passed as `True` an additional check to see if host is
-    SunOS is also made. For additional information see: http://goo.gl/159FF8
-    '''
-    if check_sunos and is_sunos():
-        return False
-    return HAS_FCNTL
 
 
 def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
@@ -2310,7 +2152,7 @@ def get_hash(path, form='sha256', chunk_size=65536):
     if hash_type is None:
         raise ValueError('Invalid hash type: {0}'.format(form))
 
-    with salt.utils.fopen(path, 'rb') as ifile:
+    with salt.utils.files.fopen(path, 'rb') as ifile:
         hash_obj = hash_type()
         # read the file in in chunks, not the entire file
         for chunk in iter(lambda: ifile.read(chunk_size), b''):
@@ -2814,7 +2656,7 @@ def is_bin_file(path):
     if not os.path.isfile(path):
         return False
     try:
-        with fopen(path, 'rb') as fp_:
+        with salt.utils.files.fopen(path, 'rb') as fp_:
             try:
                 data = fp_.read(2048)
                 if six.PY3:
