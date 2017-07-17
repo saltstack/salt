@@ -196,7 +196,8 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv='base'):
         fsm_handler = textfsm.TextFSM(tpl_file_handle)
     except textfsm.TextFSMTemplateError as tfte:
         log.error('Unable to parse the TextFSM template', exc_info=True)
-        ret['comment'] = 'Unable to parse the TextFSM template from {}. Please check the logs.'.format(template_path)
+        ret['comment'] = 'Unable to parse the TextFSM template from {}: {}. Please check the logs.'.format(
+            template_path, tfte)
         return ret
     if not raw_text and raw_text_file:
         log.debug('Trying to read the raw input from {}'.format(raw_text_file))
@@ -205,7 +206,7 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv='base'):
             ret['comment'] = 'Unable to read from {}. Please specify a valid input file or text.'.format(raw_text_file)
             log.error(ret['comment'])
             return ret
-    else:
+    if not raw_text:
         ret['comment'] = 'Please specify a valid input file or text.'
         log.error(ret['comment'])
         return ret
@@ -331,8 +332,8 @@ def index(command,
     .. code-block:: bash
 
         salt '*' textfsm.index 'sh ver' platform=Juniper output_file=salt://textfsm/juniper_version_example textfsm_path=salt://textfsm/
-        salt '*' textfsm.index 'sh ver' output_file=salt://textfsm/juniper_version_example textfsm_path=ftp://textfsm/ platform_textfsm_key=Vendor
-        salt '*' textfsm.index 'sh ver' output_file=salt://textfsm/juniper_version_example textfsm_path=https://some-server/textfsm/ platform_textfsm_key=Vendor platform_grain_name=vendor
+        salt '*' textfsm.index 'sh ver' output_file=salt://textfsm/juniper_version_example textfsm_path=ftp://textfsm/ platform_column_name=Vendor
+        salt '*' textfsm.index 'sh ver' output_file=salt://textfsm/juniper_version_example textfsm_path=https://some-server/textfsm/ platform_column_name=Vendor platform_grain_name=vendor
 
     TextFSM index file example:
 
@@ -434,7 +435,7 @@ def index(command,
             ret['comment'] = 'Unable to read from {}. Please specify a valid file or text.'.format(output_file)
             log.error(ret['comment'])
             return ret
-    else:
+    if not output:
         ret['comment'] = 'Please specify a valid output text or file'
         log.error(ret['comment'])
         return ret
