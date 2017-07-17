@@ -415,6 +415,10 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
 
         .. versionadded:: Oxygen
 
+        .. note::
+            This option can be also specified in the minion configuration
+            file or pillar as ``napalm_cli_textfsm_template_dict``.
+
     platform_grain_name: ``os``
         The name of the grain used to identify the platform name
         in the TextFSM index file. Default: ``os``.
@@ -563,6 +567,9 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     textfsm_path = kwargs.get('textfsm_path') or __opts__.get('textfsm_path') or\
                    __pillar__.get('textfsm_path')
     log.debug('textfsm_path: {}'.format(textfsm_path))
+    textfsm_template_dict = kwargs.get('textfsm_template_dict') or __opts__.get('napalm_cli_textfsm_template_dict') or\
+                            __pillar__.get('napalm_cli_textfsm_template_dict', {})
+    log.debug('TextFSM command-template mapping: {}'.format(textfsm_template_dict))
     index_file = kwargs.get('index_file') or __opts__.get('textfsm_index_file') or\
                  __pillar__.get('textfsm_index_file')
     log.debug('index_file: {}'.format(index_file))
@@ -610,7 +617,10 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                 log.debug('All good, {} has a nice output!'.format(command))
                 processed_command_output = processed_cli_output['out']
             else:
-                log.debug('Processing {} didnt fail, but didnt return anything either. Dumping raw.'.format(command))
+                comment = '''\nProcessing "{}" didn't fail, but didn't return anything either. Dumping raw.'''.format(
+                    command)
+                processed_cli_outputs['comment'] += comment
+                log.error(comment)
                 processed_command_output = command_output
         elif textfsm_template or command in textfsm_template_dict:
             if command in textfsm_template_dict:
