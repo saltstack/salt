@@ -417,6 +417,7 @@ execution modules
     test
     testinframod
     test_virtual
+    textfsm_mod
     timezone
     tls
     tomcat
