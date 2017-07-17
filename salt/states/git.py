@@ -1308,6 +1308,19 @@ def latest(name,
                         'if it does not already exist).',
                         comments
                     )
+                if set(all_local_tags) != set([
+                    x.split('/')[-1] for x in __salt__['git.ls_remote'](
+                        cwd=target,
+                        remote=remote,
+                        opts="--tags",
+                        user=user,
+                        password=password,
+                        identity=identity,
+                        saltenv=__env__,
+                        ignore_retcode=True,
+                    ).keys()
+                ]):
+                    has_remote_rev = False
 
                 if not has_remote_rev:
                     try:
