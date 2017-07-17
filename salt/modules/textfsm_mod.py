@@ -167,6 +167,8 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv='base'):
         'comment': '',
         'out': None
     }
+    log.debug('Using the saltenv: {}'.format(saltenv))
+    log.debug('Caching {} using the Salt fileserver'.format(template_path))
     tpl_cached_path = __salt__['cp.cache_file'](template_path, saltenv=saltenv)
     if tpl_cached_path is False:
         ret['comment'] = 'Unable to read the TextFSM template from {}'.format(template_path)
@@ -175,17 +177,15 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv='base'):
     try:
         log.debug('Reading TextFSM template from cache path: {}'.format(tpl_cached_path))
         tpl_file_handle = salt.utils.fopen(tpl_cached_path, 'r')
+        log.debug(tpl_file_handle.read())
         fsm_handler = textfsm.TextFSM(tpl_file_handle)
     except textfsm.TextFSMTemplateError as tfte:
         log.error('Unable to parse the TextFSM template', exc_info=True)
-        log.error(tpl_file_handle.read())
         ret['comment'] = 'Unable to parse the TextFSM template from {}. Please check the logs.'.format(template_path)
         return ret
     if not raw_text and raw_text_file:
         log.debug('Trying to read the raw input from {}'.format(raw_text_file))
         raw_text = __salt__['cp.get_file_str'](raw_text_file, saltenv=saltenv)
-        log.debug('Raw text input read from file:')
-        log.debug(raw_text)
         if raw_text is False:
             ret['comment'] = 'Unable to read from {}. Please specify a valid input file or text.'.format(raw_text_file)
             log.error(ret['comment'])
@@ -194,6 +194,8 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv='base'):
         ret['comment'] = 'Please specify a valid input file or text.'
         log.error(ret['comment'])
         return ret
+    log.debug('Processing the raw text:')
+    log.debug(raw_text)
     objects = fsm_handler.ParseText(raw_text)
     ret['out'] = _clitable_to_dict(objects, fsm_handler)
     ret['result'] = True
@@ -226,6 +228,7 @@ def index(command,
             ret['comment'] = 'No TextFSM templates path specified. Please configure in opts/pillar/function args.'
             log.error(ret['comment'])
             return ret
+    log.debug('Using the saltenv: {}'.format(saltenv))
     log.debug('Caching {} using the Salt fileserver'.format(textfsm_path))
     textfsm_cachedir_ret = __salt__['cp.cache_dir'](textfsm_path,
                                                     saltenv=saltenv,
@@ -256,16 +259,14 @@ def index(command,
             ret['comment'] = 'Unable to read from {}. Please specify a valid file or text.'.format(output_file)
             log.error(ret['comment'])
             return ret
-        log.debug('Raw text input read from file:')
-        log.debug(output)
     else:
         ret['comment'] = 'Please specify a valid output text or file'
         log.error(ret['comment'])
         return ret
+    log.debug('Processing the raw text:')
+    log.debug(output)
     try:
         # Parse output through template
-        log.debug('Processing the output:')
-        log.debug(output)
         textfsm_obj.ParseCmd(output, attrs)
         ret['out'] = _clitable_to_dict(textfsm_obj, textfsm_obj)
         ret['result'] = True
