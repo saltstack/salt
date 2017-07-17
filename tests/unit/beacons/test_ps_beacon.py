@@ -2,7 +2,6 @@
 
 # Python libs
 from __future__ import absolute_import
-from collections import namedtuple
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase

@@ -20,7 +20,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
 
-        self.HUMIDITY_MOCK = MagicMock(return_value=70)
+        self.HUMIDITY_MOCK = MagicMock(return_value=80)
         self.TEMPERATURE_MOCK = MagicMock(return_value=30)
         self.PRESSURE_MOCK = MagicMock(return_value=1500)
 
@@ -62,7 +62,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = sensehat.beacon(config)
         self.assertEqual(ret, [{'tag': 'sensehat/humidity',
-                                'humidity': '70%'}])
+                                'humidity': 80}])
 
     def test_sensehat_temperature_match(self):
 
