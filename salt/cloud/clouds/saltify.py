@@ -195,7 +195,6 @@ def list_nodes_full(call=None):
 
     return ret
 
-
 def _list_nodes_full(call=None):
     '''
     List the nodes, ask all 'saltify' minions, return dict of grains.
