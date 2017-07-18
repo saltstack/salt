@@ -618,6 +618,15 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                                      'mechanism': 'fake_mechanism',
                                      'principal': 'fake_principal',
                                      'domain': 'fake_domain'}
+        self.esxdatacenter_details = {'vcenter': 'fake_vcenter',
+                                      'username': 'fake_username',
+                                      'password': 'fake_password',
+                                      'protocol': 'fake_protocol',
+                                      'port': 'fake_port',
+                                      'mechanism': 'fake_mechanism',
+                                      'principal': 'fake_principal',
+                                      'domain': 'fake_domain'}
+
 
     def tearDown(self):
         for attrname in ('esxi_host_details', 'esxi_vcenter_details'):
@@ -636,6 +645,14 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(('fake_host', 'fake_username', 'fake_password',
                           'fake_protocol', 'fake_port', 'fake_mechanism',
                           'fake_principal', 'fake_domain'), ret)
+
+    def test_esxdatacenter_proxy_details(self):
+        with patch('salt.modules.vsphere.get_proxy_type',
+                   MagicMock(return_value='esxdatacenter')):
+            with patch.dict(vsphere.__salt__,
+                            {'esxdatacenter.get_details': MagicMock(
+                                return_value=self.esxdatacenter_details)}):
+                ret = vsphere._get_proxy_connection_details()
 
     def test_esxi_proxy_vcenter_details(self):
         with patch('salt.modules.vsphere.get_proxy_type',
@@ -846,7 +863,7 @@ class GetServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     def test_supported_proxes(self):
-        supported_proxies = ['esxi']
+        supported_proxies = ['esxi', 'esxdatacenter']
         for proxy_type in supported_proxies:
             with patch('salt.modules.vsphere.get_proxy_type',
                        MagicMock(return_value=proxy_type)):
@@ -889,7 +906,7 @@ class DisconnectTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     def test_supported_proxes(self):
-        supported_proxies = ['esxi']
+        supported_proxies = ['esxi', 'esxdatacenter']
         for proxy_type in supported_proxies:
             with patch('salt.modules.vsphere.get_proxy_type',
                        MagicMock(return_value=proxy_type)):
@@ -930,7 +947,7 @@ class TestVcenterConnectionTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     def test_supported_proxes(self):
-        supported_proxies = ['esxi']
+        supported_proxies = ['esxi', 'esxdatacenter']
         for proxy_type in supported_proxies:
             with patch('salt.modules.vsphere.get_proxy_type',
                        MagicMock(return_value=proxy_type)):
