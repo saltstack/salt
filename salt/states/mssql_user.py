@@ -35,7 +35,7 @@ def _normalize_options(options):
         return []
     return [ o for d in options for o in _normalize_options(d) ]
 
-def present(name, password=None, domain=None, database=None, roles=None, login_options=None, user_options=None, **kwargs):
+def present(name, password=None, domain=None, database=None, server_roles=None, roles=None, login_options=None, user_options=None, **kwargs):
     '''
     Ensure that the named user is present with the specified roles
 
@@ -51,6 +51,8 @@ def present(name, password=None, domain=None, database=None, roles=None, login_o
         Needs to be NetBIOS domain or hostname
     database
         the database of the user (not the login)
+    server_roles
+        Add this login to all the server roles in the list
     roles
         Add this user to all the roles in the list
     login_options and user_options
@@ -78,6 +80,7 @@ def present(name, password=None, domain=None, database=None, roles=None, login_o
             login_created = __salt__['mssql.login_create'](name,
                     new_login_password=password,
                     new_login_domain=domain,
+                    new_login_roles=server_roles,
                     new_login_options=_normalize_options(login_options),
                     **kwargs)
             # Non-empty strings are also evaluated to True, so we cannot use if not login_created:
