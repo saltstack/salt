@@ -1700,10 +1700,10 @@ Will insert the following message in the minion logs:
 
 .. jinja_ref:: custom-execution-modules
 
-Python methods
+Python Methods
 ====================
 
-A power feature of jinja that is only hinted at in the official jinja
+A powerful feature of jinja that is only hinted at in the official jinja
 documentation is that you can use the native python methods of the
 variable type. Here is the python documentation for `string methods`_.
 
