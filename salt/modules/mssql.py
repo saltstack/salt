@@ -252,7 +252,7 @@ def login_exists(login, domain=None, **kwargs):
         return 'Could not find the login: {0}'.format(e)
 
 
-def login_create(login, new_login_password=None, new_login_domain=None, new_login_options=None, **kwargs):
+def login_create(login, new_login_password=None, new_login_domain=None, new_login_roles=None, new_login_options=None, **kwargs):
     '''
     Creates a new login.
     Does not update password of existing logins.
@@ -261,6 +261,7 @@ def login_create(login, new_login_password=None, new_login_domain=None, new_logi
     Since hashed passwords are varbinary values, if the
     new_login_password is 'long', it will be considered
     to be HASHED.
+    new_login_roles can only be a list of SERVER roles
     new_login_options can only be a list of strings
 
     CLI Example:
@@ -274,6 +275,8 @@ def login_create(login, new_login_password=None, new_login_domain=None, new_logi
         return False
     if new_login_domain:
         login = '{0}\{1}'.format(new_login_domain, login)
+    if not new_login_roles:
+        new_login_roles = []
     if not new_login_options:
         new_login_options = []
 
@@ -293,6 +296,8 @@ def login_create(login, new_login_password=None, new_login_domain=None, new_logi
         # cur = conn.cursor()
         # cur.execute(sql)
         conn.cursor().execute(sql)
+        for role in new_login_roles:
+            conn.cursor().execute('ALTER SERVER ROLE [{0}] ADD MEMBER [{1}]'.format(role, login))
     except Exception as e:
         return 'Could not create the login: {0}'.format(e)
     finally:
@@ -300,7 +305,6 @@ def login_create(login, new_login_password=None, new_login_domain=None, new_logi
             conn.autocommit(False)
             conn.close()
     return True
-
 
 
 def user_exists(username, domain=None, database=None, **kwargs):
