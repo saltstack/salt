@@ -978,6 +978,10 @@ def login(*registries):
             cmd = ['docker', 'login', '-u', username, '-p', password]
             if registry.lower() != 'hub':
                 cmd.append(registry)
+            log.debug(
+                'Attempting to login to docker registry \'%s\' as user \'%s\'',
+                registry, username
+            )
             login_cmd = __salt__['cmd.run_all'](
                 cmd,
                 python_shell=False,
