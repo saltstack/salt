@@ -118,7 +118,6 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 import salt.defaults.exitcodes
 import salt.log
 import salt.utils.dictupdate
-import salt.utils.files
 import salt.version
 from salt.utils.decorators import jinja_filter
 from salt.utils.decorators import memoize as real_memoize
@@ -190,6 +189,9 @@ def get_color_theme(theme):
     import yaml
     if not os.path.isfile(theme):
         log.warning('The named theme {0} if not available'.format(theme))
+
+    # Late import to avoid circular import.
+    import salt.utils.files
     try:
         with salt.utils.files.fopen(theme, 'rb') as fp_:
             colors = yaml.safe_load(fp_.read())
@@ -430,6 +432,10 @@ def get_specific_user():
 
 
 def get_master_key(key_user, opts, skip_perm_errors=False):
+    # Late import to avoid circular import.
+    import salt.utils.files
+    import salt.utils.verify
+
     if key_user == 'root':
         if opts.get('user', 'root') != 'root':
             key_user = opts.get('user', 'root')
@@ -472,6 +478,9 @@ def daemonize(redirect_out=True):
     '''
     Daemonize a process
     '''
+    # Late import to avoid circular import.
+    import salt.utils.files
+
     try:
         pid = os.fork()
         if pid > 0:
@@ -652,6 +661,9 @@ def activate_profile(test=True):
 
 
 def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
+    # Late import to avoid circular import.
+    import salt.utils.files
+
     if pr is not None and HAS_CPROFILE:
         try:
             pr.disable()
@@ -1005,6 +1017,9 @@ def pem_finger(path=None, key=None, sum_type='sha256'):
 
     If neither a key nor a path are passed in, a blank string will be returned.
     '''
+    # Late import to avoid circular import.
+    import salt.utils.files
+
     if not key:
         if not os.path.isfile(path):
             return ''
@@ -1232,6 +1247,9 @@ def istextfile(fp_, blocksize=512):
     If more than 30% of the chars in the block are non-text, or there
     are NUL ('\x00') bytes in the block, assume this is a binary file.
     '''
+    # Late import to avoid circular import.
+    import salt.utils.files
+
     int2byte = (lambda x: bytes((x,))) if six.PY3 else chr
     text_characters = (
         b''.join(int2byte(i) for i in range(32, 127)) +
@@ -2267,6 +2285,9 @@ def get_hash(path, form='sha256', chunk_size=65536):
             ``get_sum`` cannot really be trusted since it is vulnerable to
             collisions: ``get_sum(..., 'xyz') == 'Hash xyz not supported'``
     '''
+    # Late import to avoid circular import.
+    import salt.utils.files
+
     hash_type = hasattr(hashlib, form) and getattr(hashlib, form) or None
     if hash_type is None:
         raise ValueError('Invalid hash type: {0}'.format(form))
@@ -2772,6 +2793,9 @@ def is_bin_file(path):
     Detects if the file is a binary, returns bool. Returns True if the file is
     a bin, False if the file is not and None if the file is not available.
     '''
+    # Late import to avoid circular import.
+    import salt.utils.files
+
     if not os.path.isfile(path):
         return False
     try:
