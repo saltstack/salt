@@ -1218,7 +1218,12 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return the list of hosts within a networks.
+Return the list of hosts within a networks. This utility works for both IPv4 and IPv6.
+
+.. note::
+
+    When running this command with a large IPv6 network, the command will
+    take a long time to gather all of the hosts.
 
 Example:
 
