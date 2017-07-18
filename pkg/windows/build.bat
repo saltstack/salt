@@ -110,6 +110,12 @@ if not %errorLevel%==0 (
 )
 @echo.
 
+:: Remove build and dist directories
+@echo %0 :: Remove build and dist directories...
+@echo ---------------------------------------------------------------------
+rd /s /q "%SrcDir%\build"
+rd /s /q "%SrcDir%\dist"
+
 :: Install Current Version of salt
 @echo %0 :: Install Current Version of salt...
 @echo ---------------------------------------------------------------------
