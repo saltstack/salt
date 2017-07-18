@@ -945,3 +945,13 @@ The ``glusterfs`` state had the following function removed:
 The ``openvswitch_port`` state had the following change:
 
 - The ``type`` option was removed from the ``present`` function. Please use ``tunnel_type`` instead.
+
+Build Notes
+===========
+
+Windows Installer Packages
+--------------------------
+
+Windows Installer packages have been patched with the following PR: 42347_
+
+.. _42347: https://github.com/saltstack/salt/pull/42347
