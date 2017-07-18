@@ -40,7 +40,7 @@ def _git_version():
         git_version = subprocess.Popen(
             ['git', '--version'],
             shell=False,
-            close_fds=False if salt.utils.is_windows else True,
+            close_fds=False if salt.utils.is_windows() else True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE).communicate()[0]
     except OSError:
