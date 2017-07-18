@@ -19,6 +19,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 import salt.modules.mount as mount
 
@@ -148,7 +149,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=True)
         mock_read = MagicMock(side_effect=OSError)
         with patch.object(os.path, 'isfile', mock):
-            with patch.object(salt.utils, 'fopen', mock_read):
+            with patch.object(salt.utils.files, 'fopen', mock_read):
                 self.assertRaises(CommandExecutionError,
                                   mount.set_fstab, 'A', 'B', 'C')
 
