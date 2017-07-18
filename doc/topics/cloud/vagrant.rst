@@ -12,9 +12,9 @@ Dependencies
 The Vagrant driver itself has no external dependencies.
 
 The machine which will host the VagrantBox must be an existing Salt minion
-and have Vagrant_ installed.
+and have Vagrant_ installed, and a Vagrant-compatible virtual machine engine.
 
-.. _Vagrant https://www.vagrantup.com/
+.. _Vagrant: https://www.vagrantup.com/
 
 Salt-api must be installed and configured on the salt master.
 
@@ -32,7 +32,7 @@ in your Vagrantfile.
 Because the Vagrant driver does not use an actual cloud provider host, the salt master
 must fill the role usually performed by a vendor's cloud management system.
 In order to do that, you must configure your salt master as a salt-api server,
-and supply credentials to use it. (See `salt-api setup`_ below.)
+and supply credentials to use it. (See `Provisioning salt-api`_ below.)
 
 .. code-block:: yaml
 
@@ -57,9 +57,9 @@ installed. The initial profile can be set up at ``/etc/salt/cloud.profiles``
 or in the ``/etc/salt/cloud.profiles.d/`` directory.
 
 Each profile requires a ``vagrantfile``parameter. If the Vagrantfile has
-definitions for `multiple machines`_
+definitions for `multiple machines`_ then you need a ``machine`` parameter,
 
-.. _multiple machines: 
+.. _`multiple machines`: https://www.vagrantup.com/docs/multi-machine/
 as well as either
 an ``key_filename`` or a ``password``.
 
@@ -75,13 +75,13 @@ Profile configuration example:
       key_filename: '/etc/salt/mysshkey.pem'
       provider: my-vagrant-config
 
-The machine can now be "Salted" with the following command:
+The machine can now be created and configured with the following command:
 
 .. code-block:: bash
 
     salt-cloud -p salt-this-machine my-machine
 
-This will install salt on the machine specified by the cloud profile,
+This will create the machine specified by the cloud profile,
 ``salt-this-machine``, and will give the machine the minion id of
 ``my-machine``. If the command was executed on the salt-master, its Salt
 key will automatically be signed on the master.
@@ -94,93 +94,10 @@ to it can be verified with Salt:
     salt my-machine test.ping
 
 
-Destroy Options
----------------
-
-For obvious reasons, the ``destroy`` action does not actually vaporize hardware.
-If the salt  master is connected using salt-api, it can tear down parts of
-the client machines.  It will remove the client's key from the salt master,
-and will attempt the following options:
-  - remove_config_on_destroy: true
-    # default: true
-    # Deactivate salt-minion on reboot and
-    # delete the minion config and key files from its ``/etc/salt`` directory,
-    #   NOTE: If deactivation is unsuccessful (older Ubuntu machines) then when
-    #   salt-minion restarts it will automatically create a new, unwanted, set
-    #   of key files. The ``force_minion_config`` option must be used in that case.
-  - shutdown_on_destroy: false
-    # default: false
-    # send a ``shutdown`` command to the client.
-
-
-Using Map Files
----------------
-The settings explained in the section above may also be set in a map file. An
-example of how to use the Vagrant driver with a map file follows:
-
-.. code-block:: yaml
-
-    # /etc/salt/vagrant-map
-
-    make_salty:
-      - my-instance-0:
-          ssh_host: 12.34.56.78
-          ssh_username: root
-          password: very-bad-password
-      - my-instance-1:
-          ssh_host: 44.33.22.11
-          ssh_username: root
-          password: another-bad-pass
-
-Note: When using a cloud map with the Vagrant driver, the name of the profile
-to use, in this case ``make_salty``, must be defined in a profile config. For
-example:
-
-.. code-block:: yaml
-
-    # /etc/salt/cloud.profiles.d/vagrant.conf
-
-    make_salty:
-      provider: my-vagrant-config
-
-The machines listed in the map file can now be "Salted" by applying the
-following salt map command:
-
-.. code-block:: bash
-
-    salt-cloud -m /etc/salt/vagrant-map
-
-This command will install salt on the machines specified in the map and will
-give each machine their minion id of ``my-instance-0`` and ``my-instance-1``,
-respectively. If the command was executed on the salt-master, its Salt key will
-automatically be signed on the master.
-
-Connectivity to the new "Salted" instances can now be verified with Salt:
-
-.. code-block:: bash
-
-    salt 'my-instance-*' test.ping
-
-Credential Verification
-=======================
-
-Because the Vagrant driver does not actually create VM's, unlike other
-salt-cloud drivers, it has special behaviour when the ``deploy`` option is set
-to ``False``. When the cloud configuration specifies ``deploy: False``, the
-Vagrant driver will attept to authenticate to the target node(s) and return
-``True`` for each one that succeeds. This can be useful to verify ports,
-protocols, services and credentials are correctly configured before a live
-deployment.
-
-Return values:
-  - ``True``: Credential verification succeeded
-  - ``False``: Credential verification succeeded
-  - ``None``: Credential verification was not attempted.
-
 Provisioning salt-api
 =====================
 
-In order to query or control minions it created, vagrant needs to send commands
+In order to query or control minions it created, the driver needs to send commands
 to the salt master.  It does that using the network interface to salt-api.
 
 The salt-api is not enabled by default. The following example will provide a
@@ -190,10 +107,12 @@ and password.
 .. code-block:: yaml
 
     # file /etc/salt/cloud.profiles.d/my_vagrant_profiles.conf
-    hw_41:
-      ssh_host: 10.100.9.41  # the hard address of your target
+    prof1:
+      host: vbox_host  # the Salt id of your virtual machine host
+      machine: mach1   # a machine name in the Vagrantfile (if not primary)
+      cwd: '/projects/my_project' # the path (on vbox_host) of the Vagrantfile
       ssh_username: vagrant  # a user name which has passwordless sudo
-      password: vagrant      # on your target machine
+      password: vagrant      # on the target machine you are creating.
       provider: my_vagrant_provider
 
 .. code-block:: yaml
@@ -201,21 +120,16 @@ and password.
     # file /etc/salt/cloud.providers.d/vagrant_provider.conf
     my_vagrant_provider:
       driver: vagrant
-      # The salt-api user password can be stored in your keyring
-      # don't forget to set the password by running something like:
-      # salt-call sdb.set 'sdb://salt-cloud-keyring/password' 'xyz1234'
       eauth: pam
-      username: sdb://osenv/USER
-      password: sdb://salt-cloud-keyring/password
+      username: vagrant  # supply some sudo-group-member's name
+      password: vagrant  # and password on the salt master
+      minion:
+        master: 10.100.9.5  # the hard address of the master
 
 .. code-block:: yaml
 
-    # file /etc/salt/master.d/sdb.conf
-    # *and* /etc/salt/minion.d/sdb.confsalt-api:  {# the api server is located using the "master" grain #}
-  port: 8000   # TODO: consider using port 4507
-  eauth: pam
-  username: administrator
-  password: xlontestit
+    # file /etc/salt/master.d/auth.conf
+    #  using salt-api ... members of the 'sudo' group can do anything ...
     external_auth:
       pam:
         sudo%:
@@ -224,41 +138,21 @@ and password.
           - '@runner'
           - '@jobs'
 
-    osenv:  # allow Salt sdb to read OS environment variables
-      driver: env
-
-    salt-cloud-keyring: # allow Salt sdb to talk to the OS keyring
-      driver: keyring
-      service: system
-        # remember to write your values into the keystore using a command like:...
-        # salt-call sdb.set 'sdb://salt-cloud-keyring/password' 'YourPasswordHere'
-
-
-.. code-block:: yaml
-
-    # file /srv/pillar/vagrant.sls
-    salt-api:  {# the api server is located using the "master" grain #}
-      port: 8000   # TODO: consider using port 4507
-      eauth: pam
-      {# username: administrator #}
-      {# password: secret123 #}
-
 .. code-block:: yaml
 
     # file /etc/salt/master.d/api.conf
     # see https://docs.saltstack.com/en/latest/ref/netapi/all/salt.netapi.rest_cherrypy.html
     rest_cherrypy:
-      host: {{ salt['config.get']('master') }}
-      port: {{ salt['config.get']('salt-api:port') }}
+      host: localhost
+      port: 8000
       ssl_crt: /etc/pki/tls/certs/localhost.crt
       ssl_key: /etc/pki/tls/certs/localhost.key
       thread_pool: 30
       socket_queue_size: 10
 
 
-Start you target machine as a Salt minion named "node41" by:
+Create your target machine as a Salt minion named "v1" by:
 
 .. code-block:: bash
 
-    $ sudo salt-cloud -p hw_41 node41
-
+    $ sudo salt-cloud -p prof1 v1

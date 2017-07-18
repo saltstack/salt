@@ -183,6 +183,7 @@ simple installation.
       ssh_username: vagrant  # a user name which has passwordless sudo
       password: vagrant      # on your target machine
       provider: my_saltify_provider
+      shutdown_on_destroy: true  # halt the target on "salt-cloud -d" command
 
 
 .. code-block:: yaml
