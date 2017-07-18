@@ -131,3 +131,11 @@ For ``smartos`` some grains have been deprecated. These grains will be removed i
 
 - The ``hypervisor_uuid`` has been replaced with ``mdata:sdc:server_uuid`` grain.
 - The ``datacenter`` has been replaced with ``mdata:sdc:datacenter_name`` grain.
+
+Utils Deprecations
+------------------
+
+The ``salt.utils.cloud.py`` file had the following change:
+
+- The ``fire_event`` function now requires a ``sock_dir`` argument. It was previously
+  optional.

@@ -150,6 +150,22 @@ starts at the root of the state tree or pillar.
 .. _`macro`: http://jinja.pocoo.org/docs/templates/#macros
 .. _`whitespace control`: http://jinja.pocoo.org/docs/templates/#whitespace-control
 
+Errors
+======
+
+Saltstack allows to raise custom errors using the ``raise`` jinja function.
+
+.. code-block:: jinja
+
+    {{ raise('Custom Error') }}
+
+When rendering the template containing the above statement, a ``TemplateError``
+exception is raised, causing the rendering to fail with the following message:
+
+.. code-block:: text
+
+    TemplateError: Custom Error
+
 Filters
 =======
 
