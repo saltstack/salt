@@ -21,6 +21,7 @@ from datetime import datetime
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.itertools
 import salt.utils.url
 import salt.fileserver
@@ -678,7 +679,7 @@ class GitProvider(object):
                 os.write(fh_, six.b(str(os.getpid())))
         except (OSError, IOError) as exc:
             if exc.errno == errno.EEXIST:
-                with salt.utils.fopen(self._get_lock_file(lock_type), 'r') as fd_:
+                with salt.utils.files.fopen(self._get_lock_file(lock_type), 'r') as fd_:
                     try:
                         pid = int(fd_.readline().rstrip())
                     except ValueError:
@@ -1250,7 +1251,7 @@ class GitPython(GitProvider):
         '''
         Using the blob object, write the file to the destination path
         '''
-        with salt.utils.fopen(dest, 'wb+') as fp_:
+        with salt.utils.files.fopen(dest, 'wb+') as fp_:
             blob.stream_data(fp_)
 
 
@@ -1943,7 +1944,7 @@ class Pygit2(GitProvider):
         '''
         Using the blob object, write the file to the destination path
         '''
-        with salt.utils.fopen(dest, 'wb+') as fp_:
+        with salt.utils.files.fopen(dest, 'wb+') as fp_:
             fp_.write(blob.data)
 
 
@@ -2247,7 +2248,7 @@ class GitBase(object):
         if refresh_env_cache:
             new_envs = self.envs(ignore_cache=True)
             serial = salt.payload.Serial(self.opts)
-            with salt.utils.fopen(self.env_cache, 'wb+') as fp_:
+            with salt.utils.files.fopen(self.env_cache, 'wb+') as fp_:
                 fp_.write(serial.dumps(new_envs))
                 log.trace('Wrote env cache data to {0}'.format(self.env_cache))
 
@@ -2436,7 +2437,7 @@ class GitBase(object):
         '''
         remote_map = salt.utils.path_join(self.cache_root, 'remote_map.txt')
         try:
-            with salt.utils.fopen(remote_map, 'w+') as fp_:
+            with salt.utils.files.fopen(remote_map, 'w+') as fp_:
                 timestamp = \
                     datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
                 fp_.write(
@@ -2597,13 +2598,13 @@ class GitFS(GitBase):
 
             salt.fileserver.wait_lock(lk_fn, dest)
             if os.path.isfile(blobshadest) and os.path.isfile(dest):
-                with salt.utils.fopen(blobshadest, 'r') as fp_:
+                with salt.utils.files.fopen(blobshadest, 'r') as fp_:
                     sha = fp_.read()
                     if sha == blob_hexsha:
                         fnd['rel'] = path
                         fnd['path'] = dest
                         return _add_file_stat(fnd, blob_mode)
-            with salt.utils.fopen(lk_fn, 'w+') as fp_:
+            with salt.utils.files.fopen(lk_fn, 'w+') as fp_:
                 fp_.write('')
             for filename in glob.glob(hashes_glob):
                 try:
@@ -2612,7 +2613,7 @@ class GitFS(GitBase):
                     pass
             # Write contents of file to their destination in the FS cache
             repo.write_file(blob, dest)
-            with salt.utils.fopen(blobshadest, 'w+') as fp_:
+            with salt.utils.files.fopen(blobshadest, 'w+') as fp_:
                 fp_.write(blob_hexsha)
             try:
                 os.remove(lk_fn)
@@ -2655,7 +2656,7 @@ class GitFS(GitBase):
         ret['dest'] = fnd['rel']
         gzip = load.get('gzip', None)
         fpath = os.path.normpath(fnd['path'])
-        with salt.utils.fopen(fpath, 'rb') as fp_:
+        with salt.utils.files.fopen(fpath, 'rb') as fp_:
             fp_.seek(load['loc'])
             data = fp_.read(self.opts['file_buffer_size'])
             if data and six.PY3 and not salt.utils.is_bin_file(fpath):
@@ -2692,11 +2693,11 @@ class GitFS(GitBase):
             if not os.path.exists(os.path.dirname(hashdest)):
                 os.makedirs(os.path.dirname(hashdest))
             ret['hsum'] = salt.utils.get_hash(path, self.opts['hash_type'])
-            with salt.utils.fopen(hashdest, 'w+') as fp_:
+            with salt.utils.files.fopen(hashdest, 'w+') as fp_:
                 fp_.write(ret['hsum'])
             return ret
         else:
-            with salt.utils.fopen(hashdest, 'rb') as fp_:
+            with salt.utils.files.fopen(hashdest, 'rb') as fp_:
                 ret['hsum'] = fp_.read()
             return ret
 

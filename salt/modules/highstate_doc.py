@@ -221,7 +221,7 @@ import re
 import yaml
 import logging
 
-import salt.utils
+import salt.utils.files
 import salt.utils.templates as tpl
 from salt.utils.yamldumper import OrderedDumper
 
@@ -412,7 +412,7 @@ def read_file(name):
     '''
     out = ''
     try:
-        with salt.utils.fopen(name, 'r') as f:
+        with salt.utils.files.fopen(name, 'r') as f:
             out = f.read()
     except Exception as ex:
         log.error(ex)
@@ -550,7 +550,7 @@ def _format_markdown_system_file(filename, config):
         if is_binary:
             file_data = '[[skipped binary data]]'
         else:
-            with salt.utils.fopen(filename, 'r') as f:
+            with salt.utils.files.fopen(filename, 'r') as f:
                 file_data = f.read()
         #file_data = __salt__['cmd.shell']('\\file -i \'{0}\' | \\grep -q \'charset=binary\' && echo [[binary data]] || cat \'{0}\''.format(filename))
         file_data = _md_fix(file_data)

@@ -66,7 +66,7 @@ def compile_template(template,
             log.error('Template does not exist: {0}'.format(template))
             return ret
         # Template is an empty file
-        if salt.utils.is_empty(template):
+        if salt.utils.files.is_empty(template):
             log.debug('Template is an empty file: {0}'.format(template))
             return ret
 
@@ -140,7 +140,7 @@ def compile_template_str(template, renderers, default, blacklist, whitelist):
     derived from the template.
     '''
     fn_ = salt.utils.files.mkstemp()
-    with salt.utils.fopen(fn_, 'wb') as ofile:
+    with salt.utils.files.fopen(fn_, 'wb') as ofile:
         ofile.write(SLS_ENCODER(template)[0])
     return compile_template(fn_, renderers, default, blacklist, whitelist)
 
@@ -168,7 +168,7 @@ def template_shebang(template, renderers, default, blacklist, whitelist, input_d
     if template == ':string:':
         line = input_data.split()[0]
     else:
-        with salt.utils.fopen(template, 'r') as ifile:
+        with salt.utils.files.fopen(template, 'r') as ifile:
             line = ifile.readline()
 
     # Check if it starts with a shebang and not a path

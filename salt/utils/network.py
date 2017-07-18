@@ -27,6 +27,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt._compat import ipaddress
 from salt.utils.decorators import jinja_filter
 
@@ -137,7 +138,7 @@ def _generate_minion_id():
                    r'{win}\system32\drivers\etc\hosts'.format(win=os.getenv('WINDIR'))]:
         if not os.path.exists(f_name):
             continue
-        with salt.utils.fopen(f_name) as f_hdl:
+        with salt.utils.files.fopen(f_name) as f_hdl:
             for hst in (line.strip().split('#')[0].strip().split() or None for line in f_hdl.read().split(os.linesep)):
                 if hst and (hst[0][:4] in ['127.', '::1'] or len(hst) == 1):
                     hosts.extend(hst)
@@ -1206,7 +1207,7 @@ def active_tcp():
     ret = {}
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
         if os.path.isfile(statf):
-            with salt.utils.fopen(statf, 'rb') as fp_:
+            with salt.utils.files.fopen(statf, 'rb') as fp_:
                 for line in fp_:
                     if line.strip().startswith('sl'):
                         continue
@@ -1241,7 +1242,7 @@ def _remotes_on(port, which_end):
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
         if os.path.isfile(statf):
             proc_available = True
-            with salt.utils.fopen(statf, 'r') as fp_:
+            with salt.utils.files.fopen(statf, 'r') as fp_:
                 for line in fp_:
                     if line.strip().startswith('sl'):
                         continue

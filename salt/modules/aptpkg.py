@@ -39,6 +39,7 @@ import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
+import salt.utils.files
 import salt.utils.itertools
 import salt.utils.pkg
 import salt.utils.pkg.deb
@@ -2662,7 +2663,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
 
     if path:
         path = __salt__['cp.cache_file'](path, saltenv)
-        with salt.utils.fopen(path, 'r') as ifile:
+        with salt.utils.files.fopen(path, 'r') as ifile:
             content = ifile.readlines()
         selection = _parse_selections(content)
 

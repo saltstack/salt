@@ -15,6 +15,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 default_conf = '/etc/logadm.conf'
@@ -69,7 +70,7 @@ def _parse_conf(conf_file=default_conf):
     Parse a logadm configuration file.
     '''
     ret = {}
-    with salt.utils.fopen(conf_file, 'r') as ifile:
+    with salt.utils.files.fopen(conf_file, 'r') as ifile:
         for line in ifile:
             line = line.strip()
             if not line:

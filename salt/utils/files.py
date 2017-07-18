@@ -123,7 +123,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         except (ImportError, CommandExecutionError):
             pass
         if policy == 'Enforcing':
-            with salt.utils.fopen(os.devnull, 'w') as dev_null:
+            with fopen(os.devnull, 'w') as dev_null:
                 cmd = [rcon, dest]
                 subprocess.call(cmd, stdout=dev_null, stderr=dev_null)
     if os.path.isfile(tgt):

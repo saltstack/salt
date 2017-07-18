@@ -16,6 +16,7 @@ import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ def write(key, value):
     try:
         key = target(key)
         log.trace('Writing {0} to {1}'.format(value, key))
-        with salt.utils.fopen(key, 'w') as twriter:
+        with salt.utils.files.fopen(key, 'w') as twriter:
             twriter.write('{0}\n'.format(value))
             return True
     except:  # pylint: disable=bare-except

@@ -128,21 +128,6 @@ class UtilsTestCase(TestCase):
         self.assertEqual(expected_dict, ret)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_safe_rm(self):
-        with patch('os.remove') as os_remove_mock:
-            utils.safe_rm('dummy_tgt')
-            self.assertTrue(os_remove_mock.called)
-
-    @skipIf(os.path.exists('/tmp/no_way_this_is_a_file_nope.sh'), 'Test file exists! Skipping safe_rm_exceptions test!')
-    def test_safe_rm_exceptions(self):
-        error = False
-        try:
-            utils.safe_rm('/tmp/no_way_this_is_a_file_nope.sh')
-        except (IOError, OSError):
-            error = True
-        self.assertFalse(error, 'utils.safe_rm raised exception when it should not have')
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_format_call(self):
         with patch('salt.utils.arg_lookup') as arg_lookup:
             def dummy_func(first=None, second=None, third=None):

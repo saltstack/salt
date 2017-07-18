@@ -102,6 +102,7 @@ import os
 
 # Import salt utils
 import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -158,7 +159,7 @@ def _text(username, password, **kwargs):
     username_field = kwargs['username_field']-1
     password_field = kwargs['password_field']-1
 
-    with salt.utils.fopen(filename, 'r') as pwfile:
+    with salt.utils.files.fopen(filename, 'r') as pwfile:
         for line in pwfile.readlines():
             fields = line.strip().split(field_separator)
 

@@ -24,11 +24,11 @@ import time
 import logging
 
 # Import salt libs
-import salt.utils.minions
 import salt.config
 import salt.key
+import salt.utils.files
+import salt.utils.minions
 import salt.wheel
-import salt.utils
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -59,7 +59,7 @@ def start(interval=3600, expire=604800):
         minions = {}
         if os.path.exists(presence_file):
             try:
-                with salt.utils.fopen(presence_file, 'r') as f:
+                with salt.utils.files.fopen(presence_file, 'r') as f:
                     minions = msgpack.load(f)
             except IOError as e:
                 log.error('Could not open presence file {0}: {1}'.format(presence_file, e))
@@ -94,7 +94,7 @@ def start(interval=3600, expire=604800):
             del minions[k]
 
         try:
-            with salt.utils.fopen(presence_file, 'w') as f:
+            with salt.utils.files.fopen(presence_file, 'w') as f:
                 msgpack.dump(minions, f)
         except IOError as e:
             log.error('Could not write to presence file {0}: {1}'.format(presence_file, e))

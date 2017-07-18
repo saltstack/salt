@@ -33,7 +33,7 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ def auth(username, password, **kwargs):
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem)
 
     cacert_file = __salt__['config.get']('external_auth:pki:ca_file')
-    with salt.utils.fopen(cacert_file) as f:
+    with salt.utils.files.fopen(cacert_file) as f:
         cacert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
 
     log.debug('Attempting to authenticate via pki.')

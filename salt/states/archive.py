@@ -70,7 +70,7 @@ def _update_checksum(cached_source):
         lines = []
         try:
             try:
-                with salt.utils.fopen(cached_source_sum, 'r') as fp_:
+                with salt.utils.files.fopen(cached_source_sum, 'r') as fp_:
                     for line in fp_:
                         try:
                             lines.append(line.rstrip('\n').split(':', 1))
@@ -80,7 +80,7 @@ def _update_checksum(cached_source):
                 if exc.errno != errno.ENOENT:
                     raise
 
-            with salt.utils.fopen(cached_source_sum, 'w') as fp_:
+            with salt.utils.files.fopen(cached_source_sum, 'w') as fp_:
                 for line in lines:
                     if line[0] == hash_type:
                         line[1] = hsum
@@ -99,7 +99,7 @@ def _read_cached_checksum(cached_source, form=None):
         form = __opts__['hash_type']
     path = '.'.join((cached_source, 'hash'))
     try:
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             for line in fp_:
                 # Should only be one line in this file but just in case it
                 # isn't, read only a single line to avoid overuse of memory.

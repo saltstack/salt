@@ -22,6 +22,7 @@ import salt.config
 import salt.ext.six as six
 import salt.loader
 import salt.utils
+import salt.utils.files
 from salt.exceptions import SaltRenderError
 from salt.ext.six.moves import builtins
 from salt.utils import get_context
@@ -173,7 +174,7 @@ class TestGetTemplate(TestCase):
         if the file is not contained in the searchpath
         '''
         fn_ = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
-        with salt.utils.fopen(fn_) as fp_:
+        with salt.utils.files.fopen(fn_) as fp_:
             out = render_jinja_tmpl(
                 fp_.read(),
                 dict(
@@ -189,7 +190,7 @@ class TestGetTemplate(TestCase):
         if the file is not contained in the searchpath
         '''
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
-        with salt.utils.fopen(filename) as fp_:
+        with salt.utils.files.fopen(filename) as fp_:
             out = render_jinja_tmpl(
                 fp_.read(),
                 dict(
@@ -209,7 +210,7 @@ class TestGetTemplate(TestCase):
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
-            with salt.utils.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
                     fp_.read(),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
@@ -235,7 +236,7 @@ class TestGetTemplate(TestCase):
                                 'files', 'test', 'hello_import_generalerror')
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
-            with salt.utils.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename) as fp_:
                 self.assertRaisesRegex(
                     SaltRenderError,
                     expected,
@@ -259,7 +260,7 @@ class TestGetTemplate(TestCase):
                                 'files', 'test', 'hello_import_undefined')
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
-            with salt.utils.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename) as fp_:
                 self.assertRaisesRegex(
                     SaltRenderError,
                     expected,
@@ -283,7 +284,7 @@ class TestGetTemplate(TestCase):
                                 'files', 'test', 'hello_import_error')
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
-            with salt.utils.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename) as fp_:
                 self.assertRaisesRegex(
                     SaltRenderError,
                     expected,
@@ -295,7 +296,7 @@ class TestGetTemplate(TestCase):
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
-            with salt.utils.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
                     fp_.read(),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
@@ -306,7 +307,7 @@ class TestGetTemplate(TestCase):
             self.assertEqual(fc.requests[0]['path'], 'salt://macro')
 
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
-            with salt.utils.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
                     fp_.read(),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
@@ -373,7 +374,7 @@ class TestGetTemplate(TestCase):
             saltenv='test',
             salt=self.local_salt
         )
-        with salt.utils.fopen(out['data']) as fp:
+        with salt.utils.files.fopen(out['data']) as fp:
             result = fp.read()
             if six.PY2:
                 result = result.decode('utf-8')

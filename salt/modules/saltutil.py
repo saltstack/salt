@@ -50,6 +50,7 @@ import salt.utils
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
+import salt.utils.files
 import salt.utils.minion
 import salt.utils.process
 import salt.utils.url
@@ -106,7 +107,7 @@ def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
     # Dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
-        with salt.utils.fopen(mod_file, 'a+') as ofile:
+        with salt.utils.files.fopen(mod_file, 'a+') as ofile:
             ofile.write('')
     if form == 'grains' and \
        __opts__.get('grains_cache') and \
@@ -1099,7 +1100,7 @@ def find_cached_job(jid):
         else:
             return 'Local jobs cache directory {0} not found'.format(job_dir)
     path = os.path.join(job_dir, 'return.p')
-    with salt.utils.fopen(path, 'rb') as fp_:
+    with salt.utils.files.fopen(path, 'rb') as fp_:
         buf = fp_.read()
         fp_.close()
         if buf:

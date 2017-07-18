@@ -15,6 +15,7 @@ from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.states.file
 from salt.ext.six.moves import range
 
@@ -108,7 +109,7 @@ class SystemModuleTest(ModuleCase):
                 log.debug('Comparing hwclock to sys clock')
                 with os.fdopen(rpipeFd, "r") as rpipe:
                     with os.fdopen(wpipeFd, "w") as wpipe:
-                        with salt.utils.fopen(os.devnull, "r") as nulFd:
+                        with salt.utils.files.fopen(os.devnull, "r") as nulFd:
                             p = subprocess.Popen(args=['hwclock', '--compare'],
                                 stdin=nulFd, stdout=wpipeFd, stderr=subprocess.PIPE)
                             p.communicate()
@@ -140,14 +141,14 @@ class SystemModuleTest(ModuleCase):
 
     def _save_machine_info(self):
         if os.path.isfile('/etc/machine-info'):
-            with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+            with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
                 self._machine_info = mach_info.read()
         else:
             self._machine_info = False
 
     def _restore_machine_info(self):
         if self._machine_info is not False:
-            with salt.utils.fopen('/etc/machine-info', 'w') as mach_info:
+            with salt.utils.files.fopen('/etc/machine-info', 'w') as mach_info:
                 mach_info.write(self._machine_info)
         else:
             self.run_function('file.remove', ['/etc/machine-info'])
@@ -307,7 +308,7 @@ class SystemModuleTest(ModuleCase):
             if not os.path.isfile('/etc/machine-info'):
                 self.assertFalse(res)
             else:
-                with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+                with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
                     data = mach_info.read()
                     self.assertIn(res, data.decode('string_escape'))
 
