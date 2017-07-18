@@ -335,7 +335,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Wraps a text around quoutes.
+This text will be wrapped in quotes.
 
 
 .. jinja_ref:: regex_search
@@ -750,19 +750,43 @@ Returns:
 
 Check a whitelist and/or blacklist to see if the value matches it.
 
-Example:
+This filter can be used with either a whitelist or a blacklist individually,
+or a whitelist and a blacklist can be passed simultaneously.
+
+If whitelist is used alone, value membership is checked against the
+whitelist only. If the value is found, the function returns ``True``.
+Otherwise, it returns ``False``.
+
+If blacklist is used alone, value membership is checked against the
+blacklist only. If the value is found, the function returns ``False``.
+Otherwise, it returns ``True``.
+
+If both a whitelist and a blacklist are provided, value membership in the
+blacklist will be examined first. If the value is not found in the blacklist,
+then the whitelist is checked. If the value isn't found in the whitelist,
+the function returns ``False``.
+
+Whitelist Example:
 
 .. code-block:: jinja
 
-  {{ 5 | check_whitelist_blacklist(whitelist=[5, 6, 7]) }}
-  {{ 5 | check_whitelist_blacklist(blacklist=[5, 6, 7]) }}
+    {{ 5 | check_whitelist_blacklist(whitelist=[5, 6, 7]) }}
 
 Returns:
 
 .. code-block:: python
 
-  True
+    True
 
+Blacklist Example:
+
+.. code-block:: jinja
+
+    {{ 5 | check_whitelist_blacklist(blacklist=[5, 6, 7]) }}
+
+.. code-block:: python
+
+    False
 
 .. jinja_ref:: date_format
 
@@ -825,6 +849,13 @@ Example:
 
   {{ 'wall of text' | to_bytes }}
 
+.. note::
+
+    This option may have adverse effects when using the default renderer, ``yaml_jinja``.
+    This is due to the fact that YAML requires proper handling in regard to special
+    characters. Please see the section on :ref:`YAML ASCII support <yaml_plain_ascii>`
+    in the :ref:`YAML Idiosyncracies <yaml-idiosyncrasies>` documentation for more
+    information.
 
 .. jinja_ref:: json_decode_list
 
@@ -1186,7 +1217,7 @@ Example:
 
 .. code-block:: jinja
 
-  {{ ['192.168.0.1', 'foo', 'bar', 'fe80::'] | ipv4 }}
+  {{ ['192.168.0.1', 'foo', 'bar', 'fe80::'] | ipv6 }}
 
 Returns:
 
@@ -1229,7 +1260,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return the size of the network.
+Return the size of the network. This utility works for both IPv4 and IPv6.
 
 Example:
 
@@ -1289,6 +1320,13 @@ Example:
 
   {{ '00:11:22:33:44:55' | mac_str_to_bytes }}
 
+.. note::
+
+    This option may have adverse effects when using the default renderer, ``yaml_jinja``.
+    This is due to the fact that YAML requires proper handling in regard to special
+    characters. Please see the section on :ref:`YAML ASCII support <yaml_plain_ascii>`
+    in the :ref:`YAML Idiosyncracies <yaml-idiosyncrasies>` documentation for more
+    information.
 
 .. jinja_ref:: dns_check
 
