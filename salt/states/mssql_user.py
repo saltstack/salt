@@ -35,7 +35,7 @@ def _normalize_options(options):
         return []
     return [ o for d in options for o in _normalize_options(d) ]
 
-def present(name, password=None, domain=None, database=None, roles=[], login_options=[], user_options=[], **kwargs):
+def present(name, password=None, domain=None, database=None, roles=None, login_options=None, user_options=None, **kwargs):
     '''
     Ensure that the named user is present with the specified roles
 

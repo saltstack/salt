@@ -252,7 +252,7 @@ def login_exists(login, domain=None, **kwargs):
         return 'Could not find the login: {0}'.format(e)
 
 
-def login_create(login, new_login_password=None, new_login_domain=None, new_login_options=[], **kwargs):
+def login_create(login, new_login_password=None, new_login_domain=None, new_login_options=None, **kwargs):
     '''
     Creates a new login.
     Does not update password of existing logins.
@@ -274,6 +274,8 @@ def login_create(login, new_login_password=None, new_login_domain=None, new_logi
         return False
     if new_login_domain:
         login = '{0}\{1}'.format(new_login_domain, login)
+    if not new_login_options:
+        new_login_options = []
 
     sql = "CREATE LOGIN [{0}] ".format(login)
     if new_login_domain:
@@ -332,7 +334,7 @@ def user_list(**kwargs):
     return [row[0] for row in tsql_query("SELECT name FROM sysusers where issqluser=1 or isntuser=1", as_dict=False, **kwargs)]
 
 
-def user_create(username, login=None, domain=None, database=None, roles=[], options=[], **kwargs):
+def user_create(username, login=None, domain=None, database=None, roles=None, options=None, **kwargs):
     '''
     Creates a new user.
     If login is not specified, the user will be created without a login.
@@ -353,8 +355,12 @@ def user_create(username, login=None, domain=None, database=None, roles=[], opti
         login    = '{0}\{1}'.format(domain, login) if login else login
     if database:
         kwargs['database'] = database
+    if not roles:
+        roles = []
+    if not options:
+        options = []
 
-    sql = "CREATE USER [{0}] ".format(login)
+    sql = "CREATE USER [{0}] ".format(username)
     if login:
         # If the login does not exist, user creation will throw
         # if not login_exists(name, **kwargs):
@@ -371,6 +377,8 @@ def user_create(username, login=None, domain=None, database=None, roles=[], opti
         # cur = conn.cursor()
         # cur.execute(sql)
         conn.cursor().execute(sql)
+        for role in roles:
+            conn.cursor().execute('ALTER ROLE [{0}] ADD MEMBER [{1}]'.format(role, username))
     except Exception as e:
         return 'Could not create the user: {0}'.format(e)
     finally:
