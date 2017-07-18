@@ -42,7 +42,7 @@ class WaitForTaskTestCase(TestCase):
             patcher = patch(mod, mock)
             patcher.start()
             self.addCleanup(patcher.stop)
-    
+
     def test_first_task_info_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
