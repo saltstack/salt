@@ -1407,8 +1407,6 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='de
         # task is in an error state
         try:
             raise task_info.error
-            log.error(exc)
-            raise salt.exceptions.VMwareNotFoundError(exc.msg)
         except vim.fault.NoPermission as exc:
             log.error(exc)
             raise salt.exceptions.VMwareApiError(
