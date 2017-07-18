@@ -777,7 +777,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
             if not load['data'] and init_send:
                 if remove_source:
                     try:
-                        salt.utils.rm_rf(path)
+                        salt.utils.files.rm_rf(path)
                         log.debug('Removing source file \'{0}\''.format(path))
                     except IOError:
                         log.error('cp.push failed to remove file \

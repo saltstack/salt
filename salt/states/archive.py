@@ -866,7 +866,7 @@ def extracted(name,
 
         if os.path.isdir(cached_source):
             # Prevent a traceback from attempting to read from a directory path
-            salt.utils.rm_rf(cached_source)
+            salt.utils.files.rm_rf(cached_source)
 
     existing_cached_source_sum = _read_cached_checksum(cached_source)
 
@@ -1117,7 +1117,7 @@ def extracted(name,
                         for path in incorrect_type:
                             full_path = os.path.join(name, path)
                             try:
-                                salt.utils.rm_rf(full_path.rstrip(os.sep))
+                                salt.utils.files.rm_rf(full_path.rstrip(os.sep))
                                 ret['changes'].setdefault(
                                     'removed', []).append(full_path)
                                 extraction_needed = True
@@ -1176,7 +1176,7 @@ def extracted(name,
                 full_path = os.path.join(name, path)
                 try:
                     log.debug('Removing %s', full_path)
-                    salt.utils.rm_rf(full_path.rstrip(os.sep))
+                    salt.utils.files.rm_rf(full_path.rstrip(os.sep))
                     ret['changes'].setdefault(
                         'removed', []).append(full_path)
                 except OSError as exc:

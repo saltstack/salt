@@ -1187,7 +1187,7 @@ class RemoteClient(Client):
                         # If a directory was formerly cached at this path, then
                         # remove it to avoid a traceback trying to write the file
                         if os.path.isdir(dest):
-                            salt.utils.rm_rf(dest)
+                            salt.utils.files.rm_rf(dest)
                         fn_ = salt.utils.files.fopen(dest, 'wb+')
                 if data.get('gzip', None):
                     data = salt.utils.gzip_util.uncompress(data['data'])

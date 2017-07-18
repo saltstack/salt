@@ -376,7 +376,7 @@ class GitProvider(object):
                                             self.cachedir_basename)
         try:
             # Remove linkdir if it exists
-            salt.utils.rm_rf(self.linkdir)
+            salt.utils.files.rm_rf(self.linkdir)
         except OSError:
             pass
 
@@ -2865,7 +2865,7 @@ class GitPillar(GitBase):
                     # A file or dir already exists at this path, remove it and
                     # then re-attempt to create the symlink
                     try:
-                        salt.utils.rm_rf(lcachelink)
+                        salt.utils.files.rm_rf(lcachelink)
                     except OSError as exc:
                         log.error(
                             'Failed to remove file/dir at path %s: %s',

@@ -4639,7 +4639,7 @@ def worktree_rm(cwd, user=None):
     elif not is_worktree(cwd):
         raise CommandExecutionError(cwd + ' is not a git worktree')
     try:
-        salt.utils.rm_rf(cwd)
+        salt.utils.files.rm_rf(cwd)
     except Exception as exc:
         raise CommandExecutionError(
             'Unable to remove {0}: {1}'.format(cwd, exc)

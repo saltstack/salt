@@ -66,7 +66,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         '''
         if salt.utils.is_windows():
             try:
-                salt.utils.rm_rf(cls.test_symlink_list_file_roots['base'][0])
+                salt.utils.files.rm_rf(cls.test_symlink_list_file_roots['base'][0])
             except OSError:
                 pass
 

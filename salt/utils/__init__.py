@@ -1977,28 +1977,17 @@ def rm_rf(path):
     '''
     Platform-independent recursive delete. Includes code from
     http://stackoverflow.com/a/2656405
+
+    .. deprecated:: Oxygen
     '''
-    def _onerror(func, path, exc_info):
-        '''
-        Error handler for `shutil.rmtree`.
-
-        If the error is due to an access error (read only file)
-        it attempts to add write permission and then retries.
-
-        If the error is for another reason it re-raises the error.
-
-        Usage : `shutil.rmtree(path, onerror=onerror)`
-        '''
-        if is_windows() and not os.access(path, os.W_OK):
-            # Is the error an access error ?
-            os.chmod(path, stat.S_IWUSR)
-            func(path)
-        else:
-            raise  # pylint: disable=E0704
-    if os.path.islink(path) or not os.path.isdir(path):
-        os.remove(path)
-    else:
-        shutil.rmtree(path, onerror=_onerror)
+    warn_until(
+        'Neon',
+        'Use of \'salt.utils.rm_rf\' detected. This function has been moved to '
+        '\'salt.utils.files.rm_rf\' as of Salt Oxygen. This warning will be '
+        'removed in Salt Neon.'
+    )
+    import salt.utils.files
+    return salt.utils.files.rm_rf(path)
 
 
 def option(value, default='', opts=None, pillar=None):
