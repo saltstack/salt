@@ -1011,7 +1011,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         self.assertDictEqual(filestate.comment(name, regex), ret)
 
                     with patch.dict(filestate.__opts__, {'test': False}):
-                        with patch.object(salt.utils, 'fopen',
+                        with patch.object(salt.utils.files, 'fopen',
                                           MagicMock(mock_open())):
                             comt = ('Commented lines successfully')
                             ret.update({'comment': comt, 'result': True})
