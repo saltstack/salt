@@ -115,6 +115,7 @@ if not %errorLevel%==0 (
 @echo ---------------------------------------------------------------------
 rd /s /q "%SrcDir%\build"
 rd /s /q "%SrcDir%\dist"
+@echo.
 
 :: Install Current Version of salt
 @echo %0 :: Install Current Version of salt...
