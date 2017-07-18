@@ -37,6 +37,7 @@ import difflib
 
 # Import Salt libs
 import salt.utils
+import salt.utils.files
 
 from salt.modules.augeas_cfg import METHOD_MAP
 
@@ -275,7 +276,7 @@ def change(name, context=None, changes=None, lens=None,
     old_file = []
     if filename is not None:
         if os.path.isfile(filename):
-            with salt.utils.fopen(filename, 'r') as file_:
+            with salt.utils.files.fopen(filename, 'r') as file_:
                 old_file = file_.readlines()
 
     result = __salt__['augeas.execute'](
@@ -288,7 +289,7 @@ def change(name, context=None, changes=None, lens=None,
         return ret
 
     if old_file:
-        with salt.utils.fopen(filename, 'r') as file_:
+        with salt.utils.files.fopen(filename, 'r') as file_:
             diff = ''.join(
                 difflib.unified_diff(old_file, file_.readlines(), n=0))
 

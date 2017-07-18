@@ -11,6 +11,7 @@ import subprocess
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 # Define the module's virtual name
 __virtualname__ = 'jail'
@@ -99,7 +100,7 @@ def get_enabled():
     ret = []
     for rconf in ('/etc/rc.conf', '/etc/rc.conf.local'):
         if os.access(rconf, os.R_OK):
-            with salt.utils.fopen(rconf, 'r') as _fp:
+            with salt.utils.files.fopen(rconf, 'r') as _fp:
                 for line in _fp:
                     if not line.strip():
                         continue
@@ -135,7 +136,7 @@ def show_config(jail):
     else:
         for rconf in ('/etc/rc.conf', '/etc/rc.conf.local'):
             if os.access(rconf, os.R_OK):
-                with salt.utils.fopen(rconf, 'r') as _fp:
+                with salt.utils.files.fopen(rconf, 'r') as _fp:
                     for line in _fp:
                         if not line.strip():
                             continue
@@ -145,7 +146,7 @@ def show_config(jail):
                         ret[key.split('_', 2)[2]] = value.split('"')[1]
         for jconf in ('/etc/jail.conf', '/usr/local/etc/jail.conf'):
             if os.access(jconf, os.R_OK):
-                with salt.utils.fopen(jconf, 'r') as _fp:
+                with salt.utils.files.fopen(jconf, 'r') as _fp:
                     for line in _fp:
                         line = line.partition('#')[0].strip()
                         if line:
@@ -186,7 +187,7 @@ def fstab(jail):
         c_fstab = config['mount.fstab']
     if 'fstab' in config or 'mount.fstab' in config:
         if os.access(c_fstab, os.R_OK):
-            with salt.utils.fopen(c_fstab, 'r') as _fp:
+            with salt.utils.files.fopen(c_fstab, 'r') as _fp:
                 for line in _fp:
                     line = line.strip()
                     if not line:
