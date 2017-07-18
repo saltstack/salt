@@ -194,7 +194,7 @@ else:
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'vsphere'
-__proxyenabled__ = ['esxi']
+__proxyenabled__ = ['esxi', 'esxdatacenter']
 
 
 def __virtual__():
@@ -221,6 +221,8 @@ def _get_proxy_connection_details():
     proxytype = get_proxy_type()
     if proxytype == 'esxi':
         details = __salt__['esxi.get_details']()
+    elif proxytype == 'esxdatacenter':
+        details = __salt__['esxdatacenter.get_details']()
     else:
         raise CommandExecutionError('\'{0}\' proxy is not supported'
                                     ''.format(proxytype))
@@ -258,6 +260,8 @@ def gets_service_instance_via_proxy(fn):
     Decorator that connects to a target system (vCenter or ESXi host) using the
     proxy details and passes the connection (vim.ServiceInstance) to
     the decorated function.
+
+    Supported proxies: esxi, esxdatacenter.
 
     Notes:
         1. The decorated function must have a ``service_instance`` parameter
@@ -344,7 +348,7 @@ def gets_service_instance_via_proxy(fn):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi')
+@supports_proxies('esxi', 'esxdatacenter')
 def get_service_instance_via_proxy(service_instance=None):
     '''
     Returns a service instance to the proxied endpoint (vCenter/ESXi host).
@@ -363,7 +367,8 @@ def get_service_instance_via_proxy(service_instance=None):
     return salt.utils.vmware.get_service_instance(*connection_details)
 
 
-@supports_proxies('esxi')
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi', 'esxdatacenter')
 def disconnect(service_instance):
     '''
     Disconnects from a vCenter or ESXi host
@@ -1898,7 +1903,7 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi')
+@supports_proxies('esxi', 'esxdatacenter')
 @gets_service_instance_via_proxy
 def test_vcenter_connection(service_instance=None):
     '''
@@ -4211,3 +4216,13 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
                 raise
 
     return ret
+
+
+def _get_esxdatacenter_proxy_details():
+    '''
+    Returns the running esxdatacenter's proxy details
+    '''
+    det = __salt__['esxdatacenter.get_details']()
+    return det.get('vcenter'), det.get('username'), det.get('password'), \
+            det.get('protocol'), det.get('port'), det.get('mechanism'), \
+            det.get('principal'), det.get('domain'), det.get('datacenter')
