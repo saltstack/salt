@@ -331,7 +331,7 @@ VALID_OPTS = {
     # The TCP port on which minion events should be pulled if ipc_mode is TCP
     'tcp_pull_port': int,
 
-    # The TCP port on which events for the master should be pulled if ipc_mode is TCP
+    # The TCP port on which events for the master should be published if ipc_mode is TCP
     'tcp_master_pub_port': int,
 
     # The TCP port on which events for the master should be pulled if ipc_mode is TCP
