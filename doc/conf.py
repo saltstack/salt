@@ -240,9 +240,9 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2016.11.6'  # latest release
-previous_release = '2016.3.6'  # latest release from previous branch
-previous_release_dir = '2016.3'  # path on web server for previous branch
+latest_release = '2017.7.0'  # latest release
+previous_release = '2016.11.6'  # latest release from previous branch
+previous_release_dir = '2016.11'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
@@ -253,8 +253,8 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'latest'  # latest, previous, develop, next
-release = latest_release  # version, latest_release, previous_release
+build_type = 'previous'  # latest, previous, develop, next
+release = previous_release # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
