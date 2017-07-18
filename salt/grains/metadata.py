@@ -50,6 +50,8 @@ def _search(prefix="latest/"):
     for line in http.query(os.path.join(HOST, prefix))['body'].split('\n'):
         if line.endswith('/'):
             ret[line[:-1]] = _search(prefix=os.path.join(prefix, line))
+        elif line.endswith(('dynamic', 'meta-data')):
+            ret[line] = _search(prefix=os.path.join(prefix, line))
         elif '=' in line:
             key, value = line.split('=')
             ret[value] = _search(prefix=os.path.join(prefix, key))

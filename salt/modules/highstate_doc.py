@@ -232,9 +232,10 @@ log = logging.getLogger(__name__)
 
 markdown_basic_jinja_template_txt = """
 {% for s in lowstates %}
-{{s.id}}
+`{{s.id_full}}`
 -----------------------------------------------------------------
-{{s.function}}
+ * state: {{s.state_function}}
+ * name: `{{s.name}}`
 
 {{s.markdown.requisites}}
 {{s.markdown.details}}
