@@ -5,6 +5,7 @@ Compendium of generic DNS utilities
 # Import python libs
 from __future__ import absolute_import
 import logging
+import socket
 import time
 
 # Import salt libs

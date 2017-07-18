@@ -22,7 +22,6 @@ from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoun
 from salt import utils
 
 # Import Python libraries
-import os
 import datetime
 import yaml
 import zmq

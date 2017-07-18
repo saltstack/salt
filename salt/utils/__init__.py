@@ -1372,7 +1372,7 @@ def fopen(*args, **kwargs):
     )
     # Late import to avoid circular import.
     import salt.utils.files
-    return salt.utils.files.fopen(*args, **kwargs)
+    return salt.utils.files.fopen(*args, **kwargs)  # pylint: disable=W8470
 
 
 @contextlib.contextmanager
