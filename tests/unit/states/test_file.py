@@ -1066,7 +1066,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
                     with patch.dict(filestate.__opts__, {'test': False}):
-                        with patch.object(salt.utils, 'fopen',
+                        with patch.object(salt.utils.files, 'fopen',
                                           MagicMock(mock_open())):
                             comt = ('Uncommented lines successfully')
                             ret.update({'comment': comt, 'result': True})
@@ -1130,7 +1130,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                     ret.pop('data', None)
                     ret.update({'name': name})
-                    with patch.object(salt.utils, 'fopen',
+                    with patch.object(salt.utils.files, 'fopen',
                                       MagicMock(mock_open(read_data=''))):
                         with patch.object(salt.utils, 'istextfile', mock_f):
                             with patch.dict(filestate.__opts__, {'test': True}):
