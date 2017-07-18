@@ -5,6 +5,7 @@ Some of the utils used by salt
 
 # Import python libs
 from __future__ import absolute_import, division, print_function
+import contextlib
 import copy
 import collections
 import datetime
@@ -21,7 +22,6 @@ import re
 import shlex
 import shutil
 import socket
-import stat
 import sys
 import pstats
 import tempfile
@@ -145,6 +145,41 @@ def is_hex(value):
         return True
     except (TypeError, ValueError):
         return False
+
+
+def safe_rm(tgt):
+    '''
+    Safely remove a file
+
+    .. deprecated:: Oxygen
+    '''
+    warn_until(
+        'Neon',
+        'Use of \'salt.utils.safe_rm\' detected. This function has been moved to '
+        '\'salt.utils.files.safe_rm\' as of Salt Oxygen. This warning will be '
+        'removed in Salt Neon.'
+    )
+    # Late import to avoid circular import.
+    import salt.utils.files
+    return salt.utils.files.safe_rm(tgt)
+
+
+@jinja_filter('is_empty')
+def is_empty(filename):
+    '''
+    Is a file empty?
+
+    .. deprecated:: Oxygen
+    '''
+    warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_empty\' detected. This function has been moved to '
+        '\'salt.utils.files.is_empty\' as of Salt Oxygen. This warning will be '
+        'removed in Salt Neon.'
+    )
+    # Late import to avoid circular import.
+    import salt.utils.files
+    return salt.utils.files.is_empty(filename)
 
 
 def get_color_theme(theme):
@@ -1297,6 +1332,81 @@ def str_to_num(text):
             return text
 
 
+def fopen(*args, **kwargs):
+    '''
+    Wrapper around open() built-in to set CLOEXEC on the fd.
+
+    This flag specifies that the file descriptor should be closed when an exec
+    function is invoked;
+    When a file descriptor is allocated (as with open or dup), this bit is
+    initially cleared on the new file descriptor, meaning that descriptor will
+    survive into the new program after exec.
+
+    NB! We still have small race condition between open and fcntl.
+
+    .. deprecated:: Oxygen
+    '''
+    warn_until(
+        'Neon',
+        'Use of \'salt.utils.fopen\' detected. This function has been moved to '
+        '\'salt.utils.files.fopen\' as of Salt Oxygen. This warning will be '
+        'removed in Salt Neon.'
+    )
+    # Late import to avoid circular import.
+    import salt.utils.files
+    return salt.utils.files.fopen(*args, **kwargs)
+
+
+@contextlib.contextmanager
+def flopen(*args, **kwargs):
+    '''
+    Shortcut for fopen with lock and context manager
+
+    .. deprecated:: Oxygen
+    '''
+    warn_until(
+        'Neon',
+        'Use of \'salt.utils.flopen\' detected. This function has been moved to '
+        '\'salt.utils.files.flopen\' as of Salt Oxygen. This warning will be '
+        'removed in Salt Neon.'
+    )
+    # Late import to avoid circular import.
+    import salt.utils.files
+    return salt.utils.files.flopen(*args, **kwargs)
+
+
+@contextlib.contextmanager
+def fpopen(*args, **kwargs):
+    '''
+    Shortcut for fopen with extra uid, gid and mode options.
+
+    Supported optional Keyword Arguments:
+
+      mode: explicit mode to set. Mode is anything os.chmod
+            would accept as input for mode. Works only on unix/unix
+            like systems.
+
+      uid: the uid to set, if not set, or it is None or -1 no changes are
+           made. Same applies if the path is already owned by this
+           uid. Must be int. Works only on unix/unix like systems.
+
+      gid: the gid to set, if not set, or it is None or -1 no changes are
+           made. Same applies if the path is already owned by this
+           gid. Must be int. Works only on unix/unix like systems.
+
+    .. deprecated:: Oxygen
+    '''
+    warn_until(
+        'Neon',
+        'Use of \'salt.utils.fpopen\' detected. This function has been moved to '
+        '\'salt.utils.files.fpopen\' as of Salt Oxygen. This warning will be '
+        'removed in Salt Neon.'
+    )
+    # Late import to avoid circular import.
+    import salt.utils.files
+    return salt.utils.files.fpopen(*args, **kwargs)
+
+
 def expr_match(line, expr):
     '''
     Evaluate a line of text against an expression. First try a full-string
@@ -1690,6 +1800,25 @@ def is_aix():
     return sys.platform.startswith('aix')
 
 
+def is_fcntl_available(check_sunos=False):
+    '''
+    Simple function to check if the `fcntl` module is available or not.
+    If `check_sunos` is passed as `True` an additional check to see if host is
+    SunOS is also made. For additional information see: http://goo.gl/159FF8
+
+    .. deprecated:: Oxygen
+    '''
+    warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_fcntl_available\' detected. This function has been moved to '
+        '\'salt.utils.files.is_fcntl_available\' as of Salt Oxygen. This warning will be '
+        'removed in Salt Neon.'
+    )
+    # Late import to avoid circular import.
+    import salt.utils.files
+    return salt.utils.files.is_fcntl_available(check_sunos)
+
+
 def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
     '''
     Check for glob or regexp patterns for include_pat and exclude_pat in the
@@ -1986,6 +2115,7 @@ def rm_rf(path):
         '\'salt.utils.files.rm_rf\' as of Salt Oxygen. This warning will be '
         'removed in Salt Neon.'
     )
+    # Late import to avoid circular import.
     import salt.utils.files
     return salt.utils.files.rm_rf(path)
 
