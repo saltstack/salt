@@ -1062,6 +1062,7 @@ def create_datacenter(service_instance, datacenter_name):
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
     return dc_obj
 
+
 def get_cluster(dc_ref, cluster):
     '''
     Returns a cluster in a datacenter.
