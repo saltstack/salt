@@ -19,7 +19,11 @@ import logging
 import salt.utils
 import salt.config as config
 import salt.netapi
-import salt.ext.ipaddress as ipaddress
+import salt.ext.six as six
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Get logging started
@@ -139,6 +143,15 @@ def list_nodes_full(call=None):
     List the nodes, ask all 'vagrant' minions, return dict of grains (enhanced).
     '''
     ret = _list_nodes_full(call)
+
+    for key, grains in ret.items():  # clean up some hyperverbose grains -- everything is too much
+        try:
+            del grains['cpu_flags'], grains['disks'], grains['pythonpath'], grains['dns'], grains['gpus']
+        except KeyError:
+            pass  # ignore absence of things we are eliminating
+        except TypeError:
+            del ret[key]  # eliminate all reference to unexpected (None) values.
+
     reqs = _build_required_items(ret)
     for name in ret:
         ret[name].update(reqs[name])
@@ -157,17 +170,8 @@ def _list_nodes_full(call=None):
            'tgt_type': 'grain',
            }
     cmd.update(_get_connection_info())
-    ret = local.run(cmd)
 
-    for key, grains in ret.items():  # clean up some hyperverbose grains -- everything is too much
-        try:
-            del grains['cpu_flags'], grains['disks'], grains['pythonpath'], grains['dns'], grains['gpus']
-        except KeyError:
-            pass  # ignore absence of things we are eliminating
-        except TypeError:
-            del ret[key]  # eliminate all reference to unexpected (None) values.
-
-    return ret
+    return local.run(cmd)
 
 
 def list_nodes_select(call=None):
@@ -393,7 +397,10 @@ def destroy(name, call=None):
     cmd.update(_get_connection_info())
     vm_ = cmd['vm']
     my_info = local.run(cmd)
-    vm_.update(my_info[name])  # use profile name to get config values
+    try:
+        vm_.update(my_info[name])  # get profile name to get config value
+    except (IndexError, TypeError):
+        pass
     profile_name = my_info[name]['profile']
     profile = vm_['profiles'][profile_name]
     machine = profile['machine']
@@ -457,7 +464,10 @@ def reboot(name, call=None):
     cmd.update(_get_connection_info())
     vm_ = cmd['vm']
     my_info = local.run(cmd)
-    vm_.update(my_info[name])  # get config values
+    try:
+        vm_.update(my_info[name])  # get profile name to get config value
+    except (IndexError, TypeError):
+        pass
     profile_name = my_info[name]['profile']
     profile = vm_['profiles'][profile_name]
     machine = profile['machine']
