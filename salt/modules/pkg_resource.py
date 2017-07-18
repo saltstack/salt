@@ -5,6 +5,7 @@ Resources needed by pkg providers
 
 # Import python libs
 from __future__ import absolute_import
+import copy
 import fnmatch
 import logging
 import os
@@ -306,3 +307,31 @@ def check_extra_requirements(pkgname, pkgver):
         return __salt__['pkg.check_extra_requirements'](pkgname, pkgver)
 
     return True
+
+
+def format_pkg_list(packages, versions_as_list, attr):
+    '''
+    Formats packages according to parameters for list_pkgs.
+    '''
+    ret = copy.deepcopy(packages)
+    if attr:
+        requested_attr = set(['version', 'arch', 'install_date', 'install_date_time_t'])
+
+        if attr != 'all':
+            requested_attr &= set(attr + ['version'])
+
+        for name in ret:
+            versions = []
+            for all_attr in ret[name]:
+                filtered_attr = {}
+                for key in requested_attr:
+                    filtered_attr[key] = all_attr[key]
+                versions.append(filtered_attr)
+            ret[name] = versions
+        return ret
+
+    for name in ret:
+        ret[name] = [d['version'] for d in ret[name]]
+    if not versions_as_list:
+        stringify(ret)
+    return ret

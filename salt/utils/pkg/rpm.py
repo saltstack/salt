@@ -6,6 +6,7 @@ Common functions for working with RPM packages
 # Import python libs
 from __future__ import absolute_import
 import collections
+import datetime
 import logging
 import subprocess
 
@@ -34,7 +35,7 @@ ARCHES = ARCHES_64 + ARCHES_32 + ARCHES_PPC + ARCHES_S390 + \
     ARCHES_ALPHA + ARCHES_ARM + ARCHES_SH
 
 # EPOCHNUM can't be used until RHEL5 is EOL as it is not present
-QUERYFORMAT = '%{NAME}_|-%{EPOCH}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}'
+QUERYFORMAT = '%{NAME}_|-%{EPOCH}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}_|-%{INSTALLTIME}'
 
 
 def get_osarch():
@@ -59,15 +60,17 @@ def check_32(arch, osarch=None):
     return all(x in ARCHES_32 for x in (osarch, arch))
 
 
-def pkginfo(name, version, arch, repoid):
+def pkginfo(name, version, arch, repoid, install_date=None, install_date_time_t=None):
     '''
     Build and return a pkginfo namedtuple
     '''
     pkginfo_tuple = collections.namedtuple(
         'PkgInfo',
-        ('name', 'version', 'arch', 'repoid')
+        ('name', 'version', 'arch', 'repoid', 'install_date',
+         'install_date_time_t')
     )
-    return pkginfo_tuple(name, version, arch, repoid)
+    return pkginfo_tuple(name, version, arch, repoid, install_date,
+                         install_date_time_t)
 
 
 def resolve_name(name, arch, osarch=None):
@@ -89,7 +92,7 @@ def parse_pkginfo(line, osarch=None):
     pkginfo namedtuple.
     '''
     try:
-        name, epoch, version, release, arch, repoid = line.split('_|-')
+        name, epoch, version, release, arch, repoid, install_time = line.split('_|-')
     # Handle unpack errors (should never happen with the queryformat we are
     # using, but can't hurt to be careful).
     except ValueError:
@@ -101,7 +104,10 @@ def parse_pkginfo(line, osarch=None):
     if epoch not in ('(none)', '0'):
         version = ':'.join((epoch, version))
 
-    return pkginfo(name, version, arch, repoid)
+    install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
+    install_date_time_t = int(install_time)
+
+    return pkginfo(name, version, arch, repoid, install_date, install_date_time_t)
 
 
 def combine_comments(comments):
