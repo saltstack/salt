@@ -333,6 +333,7 @@ import logging
 import errno
 import random
 import yaml
+import copy
 
 # Import Salt libs
 import salt.config
@@ -841,7 +842,7 @@ class Schedule(object):
             if argspec.keywords:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in six.iteritems(ret):
-                    kwargs['__pub_{0}'.format(key)] = val
+                    kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
 
             ret['return'] = self.functions[func](*args, **kwargs)
 
