@@ -25,6 +25,13 @@ Module to provide MS SQL Server compatibility to salt.
 from __future__ import absolute_import
 from json import JSONEncoder, loads
 
+import sys
+if sys.version_info < (3,):
+    varbinary_types = (int, long,)
+else:
+    varbinary_types = (int,)
+
+
 try:
     import pymssql
     HAS_ALL_IMPORTS = True
@@ -127,6 +134,37 @@ def db_exists(database_name, **kwargs):
     return len(tsql_query("SELECT database_id FROM sys.databases WHERE NAME='{0}'".format(database_name), **kwargs)) == 1
 
 
+def db_create(database, containment='NONE', new_database_options=None, **kwargs):
+    '''
+    Creates a new database.
+    Does not update options of existing databases.
+    new_database_options can only be a list of strings
+
+    CLI Example:
+    .. code-block:: bash
+        salt minion mssql.db_create DB_NAME
+    '''
+    if containment not in ['NONE', 'PARTIAL']:
+        return 'CONTAINMENT can be one of NONE and PARTIAL'
+    sql = "CREATE DATABASE [{0}] CONTAINMENT = {1} ".format(database, containment)
+    if new_database_options:
+        sql += ' WITH ' + ', '.join(new_database_options)
+    conn = None
+    try:
+        conn = _get_connection(**kwargs)
+        conn.autocommit(True)
+        # cur = conn.cursor()
+        # cur.execute(sql)
+        conn.cursor().execute(sql)
+    except Exception as e:
+        return 'Could not create the login: {0}'.format(e)
+    finally:
+        if conn:
+            conn.autocommit(False)
+            conn.close()
+    return True
+
+
 def db_remove(database_name, **kwargs):
     '''
     Drops a specific database from the MS SQL server.
@@ -183,7 +221,7 @@ def role_exists(role, **kwargs):
     return len(tsql_query(query='sp_helprole "{0}"'.format(role), as_dict=True, **kwargs)) == 1
 
 
-def role_create(role, owner=None, **kwargs):
+def role_create(role, owner=None, grants=None, **kwargs):
     '''
     Creates a new database role.
     If no owner is specified, the role will be owned by the user that
@@ -195,19 +233,28 @@ def role_create(role, owner=None, **kwargs):
 
         salt minion mssql.role_create role=product01 owner=sysdba
     '''
+    if not grants:
+        grants = []
+
+    sql = 'CREATE ROLE {0}'.format(role)
+    if owner:
+        sql += ' AUTHORIZATION {0}'.format(owner)
+    conn = None
     try:
         conn = _get_connection(**kwargs)
         conn.autocommit(True)
-        cur = conn.cursor()
-        if owner:
-            cur.execute('CREATE ROLE {0} AUTHORIZATION {1}'.format(role, owner))
-        else:
-            cur.execute('CREATE ROLE {0}'.format(role))
-        conn.autocommit(True)
-        conn.close()
-        return True
+        # cur = conn.cursor()
+        # cur.execute(sql)
+        conn.cursor().execute(sql)
+        for grant in grants:
+            conn.cursor().execute('GRANT {0} TO [{1}]'.format(grant, role))
     except Exception as e:
         return 'Could not create the role: {0}'.format(e)
+    finally:
+        if conn:
+            conn.autocommit(False)
+            conn.close()
+    return True
 
 
 def role_remove(role, **kwargs):
@@ -243,7 +290,7 @@ def login_exists(login, domain=None, **kwargs):
         salt minion mssql.login_exists 'LOGIN'
     '''
     if domain:
-        login = '{0}\{1}'.format(domain, login)
+        login = '{0}\\{1}'.format(domain, login)
     try:
         # We should get one, and only one row
         return len(tsql_query(query="SELECT name FROM sys.syslogins WHERE name='{0}'".format(login), **kwargs)) == 1
@@ -259,7 +306,7 @@ def login_create(login, new_login_password=None, new_login_domain=None, new_logi
     For Windows authentication, provide new_login_domain.
     For SQL Server authentication, prvide new_login_password.
     Since hashed passwords are varbinary values, if the
-    new_login_password is 'long', it will be considered
+    new_login_password is 'int / long', it will be considered
     to be HASHED.
     new_login_roles can only be a list of SERVER roles
     new_login_options can only be a list of strings
@@ -274,7 +321,7 @@ def login_create(login, new_login_password=None, new_login_domain=None, new_logi
     if login_exists(login, new_login_domain, **kwargs):
         return False
     if new_login_domain:
-        login = '{0}\{1}'.format(new_login_domain, login)
+        login = '{0}\\{1}'.format(new_login_domain, login)
     if not new_login_roles:
         new_login_roles = []
     if not new_login_options:
@@ -283,7 +330,7 @@ def login_create(login, new_login_password=None, new_login_domain=None, new_logi
     sql = "CREATE LOGIN [{0}] ".format(login)
     if new_login_domain:
         sql += " FROM WINDOWS "
-    elif type(new_login_password) is long:
+    elif isinstance(new_login_password, varbinary_types):
         new_login_options.insert(0, "PASSWORD=0x{0:x} HASHED".format(new_login_password))
     else:  # Plain test password
         new_login_options.insert(0, "PASSWORD=N'{0}'".format(new_login_password))
@@ -305,6 +352,28 @@ def login_create(login, new_login_password=None, new_login_domain=None, new_logi
             conn.autocommit(False)
             conn.close()
     return True
+
+
+def login_remove(login, **kwargs):
+    '''
+    Removes an login.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minion mssql.login_remove LOGINNAME
+    '''
+    try:
+        conn = _get_connection(**kwargs)
+        conn.autocommit(True)
+        cur = conn.cursor()
+        cur.execute("DROP LOGIN [{0}]".format(login))
+        conn.autocommit(False)
+        conn.close()
+        return True
+    except Exception as e:
+        return 'Could not remove the login: {0}'.format(e)
 
 
 def user_exists(username, domain=None, database=None, **kwargs):
