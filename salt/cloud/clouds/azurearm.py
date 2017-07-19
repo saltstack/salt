@@ -59,6 +59,7 @@ import logging
 import pprint
 import base64
 import yaml
+import collections
 import salt.cache
 import salt.config as config
 import salt.utils
@@ -103,6 +104,7 @@ try:
     from azure.mgmt.network.models import (
         IPAllocationMethod,
         NetworkInterface,
+        NetworkInterfaceDnsSettings,
         NetworkInterfaceIPConfiguration,
         NetworkSecurityGroup,
         PublicIPAddress,
@@ -249,7 +251,9 @@ def avail_locations(conn=None, call=None):  # pylint: disable=unused-argument
 
     ret = {}
     regions = webconn.global_model.get_subscription_geo_regions()
-    for location in regions.value:  # pylint: disable=no-member
+    if hasattr(regions, 'value'):
+        regions = regions.value
+    for location in regions:  # pylint: disable=no-member
         lowername = str(location.name).lower().replace(' ', '')
         ret[lowername] = object_to_dict(location)
     return ret
@@ -911,6 +915,17 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
             )
         ]
 
+    dns_settings = None
+    if kwargs.get('dns_servers') is not None:
+        if isinstance(kwargs['dns_servers'], list):
+            dns_settings = NetworkInterfaceDnsSettings(
+                dns_servers=kwargs['dns_servers'],
+                applied_dns_servers=kwargs['dns_servers'],
+                internal_dns_name_label=None,
+                internal_fqdn=None,
+                internal_domain_name_suffix=None,
+            )
+
     network_security_group = None
     if kwargs.get('security_group') is not None:
         network_security_group = netconn.network_security_groups.get(
@@ -922,6 +937,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         location=kwargs['location'],
         network_security_group=network_security_group,
         ip_configurations=ip_configurations,
+        dns_settings=dns_settings,
     )
 
     poller = netconn.network_interfaces.create_or_update(
@@ -1648,9 +1664,14 @@ def pages_to_list(items):
     while True:
         try:
             page = items.next()  # pylint: disable=incompatible-py3-code
-            for item in page:
-                objs.append(item)
+            if isinstance(page, collections.Iterable):
+                for item in page:
+                    objs.append(item)
+            else:
+                objs.append(page)
         except GeneratorExit:
+            break
+        except StopIteration:
             break
     return objs
 

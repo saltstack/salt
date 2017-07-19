@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 import os
 import logging
+import time
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -46,6 +47,10 @@ def beacon(config):
     events only when the service status changes.  Otherwise, it will fire an
     event at each beacon interval.  The default is False.
 
+    `delay`: when `delay` is greater than 0 the beacon will fire events only
+    after the service status changes, and the delay (in seconds) has passed.
+    Applicable only when `onchangeonly` is True.  The default is 0.
+
     `emitatstartup`: when `emitatstartup` is False the beacon will not fire
     event when the minion is reload. Applicable only when `onchangeonly` is True.
     The default is True.
@@ -66,7 +71,7 @@ def beacon(config):
     process). The 'uncleanshutdown' option might not be of much use there,
     unless the unit file is modified.
 
-    Here is an example that will fire an event whenever the state of nginx
+    Here is an example that will fire an event 30 seconds after the state of nginx
     changes and report an uncleanshutdown.  This example is for Arch, which
     places nginx's pid file in `/run`.
 
@@ -76,6 +81,7 @@ def beacon(config):
           service:
             nginx:
               onchangeonly: True
+              delay: 30
               uncleanshutdown: /run/nginx.pid
     '''
     ret = []
@@ -83,6 +89,8 @@ def beacon(config):
         ret_dict = {}
         ret_dict[service] = {'running': __salt__['service.status'](service)}
         ret_dict['service_name'] = service
+        ret_dict['tag'] = service
+        currtime = time.time()
 
         # If no options is given to the service, we fall back to the defaults
         # assign a False value to oncleanshutdown and onchangeonly. Those
@@ -93,6 +101,8 @@ def beacon(config):
             config[service]['emitatstartup'] = True
         if 'onchangeonly' not in config[service]:
             config[service]['onchangeonly'] = False
+        if 'delay' not in config[service]:
+            config[service]['delay'] = 0
 
         # We only want to report the nature of the shutdown
         # if the current running status is False
@@ -103,14 +113,24 @@ def beacon(config):
         if 'onchangeonly' in config[service] and config[service]['onchangeonly'] is True:
             if service not in LAST_STATUS:
                 LAST_STATUS[service] = ret_dict[service]
-                if not config[service]['emitatstartup']:
+                if config[service]['delay'] > 0:
+                    LAST_STATUS[service]['time'] = currtime
+                elif not config[service]['emitatstartup']:
                     continue
                 else:
                     ret.append(ret_dict)
-
-            if LAST_STATUS[service] != ret_dict[service]:
+            if LAST_STATUS[service]['running'] != ret_dict[service]['running']:
                 LAST_STATUS[service] = ret_dict[service]
-                ret.append(ret_dict)
+                if config[service]['delay'] > 0:
+                    LAST_STATUS[service]['time'] = currtime
+                else:
+                    ret.append(ret_dict)
+
+            if 'time' in LAST_STATUS[service]:
+                elapsedtime = int(round(currtime - LAST_STATUS[service]['time']))
+                if elapsedtime > config[service]['delay']:
+                    del LAST_STATUS[service]['time']
+                    ret.append(ret_dict)
         else:
             ret.append(ret_dict)
 
