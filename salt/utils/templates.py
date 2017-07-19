@@ -82,6 +82,13 @@ class AliasedLoader(object):
         else:
             return getattr(self.wrapped, name)
 
+    def __contains__(self, name):
+        if name in ALIASES:
+            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
+            return ALIASES[name] in self.wrapped
+        else:
+            return name in self.wrapped
+
 
 class AliasedModule(object):
     '''
