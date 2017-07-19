@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Infoblox 'a' record managment.
+Infoblox A record managment.
 
 functions accept kwargs:
 
@@ -13,7 +13,7 @@ functions accept kwargs:
 
 def present(name=None, ipv4addr=None, data=None, ensure_data=True, **kwargs):
     '''
-    Ensure infoblox a record.
+    Ensure infoblox A record.
 
     When you wish to update a hostname ensure `name` is set to the hostname
     of the current record. You can give a new name in the `data.name`.
@@ -89,7 +89,7 @@ def present(name=None, ipv4addr=None, data=None, ensure_data=True, **kwargs):
 
 def absent(name=None, ipv4addr=None, **kwargs):
     '''
-    Ensure infoblox name or ipv4addr name is removed.
+    Ensure infoblox A record is removed.
 
     State example:
 

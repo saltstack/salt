@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Infoblox cname managment.
+Infoblox CNAME managment.
 
 functions accept kwargs:
 
@@ -13,12 +13,12 @@ functions accept kwargs:
 
 def present(name=None, data=None, ensure_data=True, **kwargs):
     '''
-    Ensure the cname with the given data is present.
+    Ensure the CNAME with the given data is present.
 
     name
-        cname of record
+        CNAME of record
     data
-        raw cname api data see: https://INFOBLOX/wapidoc
+        raw CNAME api data see: https://INFOBLOX/wapidoc
 
     State example:
 
@@ -100,7 +100,7 @@ def present(name=None, data=None, ensure_data=True, **kwargs):
 
 def absent(name=None, canonical=None, **kwargs):
     '''
-    Ensure the cname with the given name or canonical name is removed
+    Ensure the CNAME with the given name or canonical name is removed
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
     obj = __salt__['infoblox.get_cname'](name=name, canonical=canonical, **kwargs)
