@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-This moduile have been tested on infoblox API v1.2.1,
+This module have been tested on infoblox API v1.2.1,
 other versions of the API are likly workable.
 
 :depends: libinfoblox, https://github.com/steverweber/libinfoblox
@@ -12,7 +12,7 @@ API documents can be found on your infoblox server at:
     https://INFOBLOX/wapidoc
 
 :configuration: The following configuration defaults can be
-    define (pillar or config files '/etc/salt/master.d/infoblox.conf'):
+    defined (pillar or config files '/etc/salt/master.d/infoblox.conf'):
 
     .. code-block:: python
 
@@ -209,7 +209,7 @@ def create_cname(data, **kwargs):
 
 def get_cname(name=None, canonical=None, return_fields=None, **kwargs):
     '''
-    Get cname information.
+    Get CNAME information.
 
     CLI Example:
 
@@ -223,9 +223,9 @@ def get_cname(name=None, canonical=None, return_fields=None, **kwargs):
 
 def update_cname(name, data, **kwargs):
     '''
-    Update cname. This is a helper call to update_object.
+    Update CNAME. This is a helper call to update_object.
 
-    Find a cname `_ref` then call update_object with the record data.
+    Find a CNAME `_ref` then call update_object with the record data.
 
     CLI Example:
 
@@ -233,17 +233,17 @@ def update_cname(name, data, **kwargs):
                 'canonical':'example-ha-0.example.com',
                 'use_ttl':true,
                 'ttl':200,
-                'comment':'Salt managed cname'}"
+                'comment':'Salt managed CNAME'}"
     '''
     o = get_cname(name=name, **kwargs)
     if not o:
-        raise Exception('Cname record not found')
+        raise Exception('CNAME record not found')
     return update_object(objref=o['_ref'], data=data, **kwargs)
 
 
 def delete_cname(name=None, canonical=None, **kwargs):
     '''
-    Delete cname. This is a helper call to delete_object.
+    Delete CNAME. This is a helper call to delete_object.
 
     If record is not found, return True
 
@@ -549,7 +549,7 @@ def create_ipv4_range(data, **kwargs):
 
 def create_a(data, **kwargs):
     '''
-    Create 'a' record.
+    Create A record.
 
     This is a helper function to `create_object`.
     See your infoblox API for full `data` format.
@@ -567,7 +567,7 @@ def create_a(data, **kwargs):
 
 def get_a(name=None, ipv4addr=None, allow_array=True, **kwargs):
     '''
-    Get 'a' record
+    Get A record
 
     CLI Example:
 
@@ -587,9 +587,9 @@ def get_a(name=None, ipv4addr=None, allow_array=True, **kwargs):
 
 def delete_a(name=None, ipv4addr=None, allow_array=False, **kwargs):
     '''
-    Delete 'a' record
+    Delete A record
 
-    If the 'a' record is used as a round robin you can set
+    If the A record is used as a round robin you can set
     `allow_array=true to delete all records for the hostname.
 
     CLI Example:
