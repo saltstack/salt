@@ -524,7 +524,7 @@ class TestCustomExtensions(TestCase):
         env.filters.update(JinjaFilter.salt_jinja_filters)
         if six.PY3:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'{}").split("', '")
-            self.assertEqual(rendered, list(unique))
+            self.assertEqual(sorted(rendered), sorted(list(unique)))
         else:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
             self.assertEqual(rendered, u"{0}".format(unique))

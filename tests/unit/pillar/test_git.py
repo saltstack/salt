@@ -16,6 +16,7 @@ import tempfile
 import shutil
 import subprocess
 import yaml
+import stat
 
 # Import Salt Testing libs
 from tests.integration import AdaptedConfigurationTestCaseMixin
@@ -74,8 +75,12 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
         git_pillar._update('master', 'file://{0}'.format(self.repo_path))
 
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        shutil.rmtree(self.tmpdir, onerror=self._rmtree_error)
         super(GitPillarTestCase, self).tearDown()
+
+    def _rmtree_error(self, func, path, excinfo):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
 
     def _create_repo(self):
         'create source Git repo in temp directory'
