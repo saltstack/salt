@@ -3505,13 +3505,15 @@ def mkstemp(*args, **kwargs):
     accepts another argument, `close_fd`, which, by default, is true and closes
     the fd before returning the file path. Something commonly done throughout
     Salt's code.
+
+    .. deprecated:: Oxygen
     '''
-    if 'prefix' not in kwargs:
-        kwargs['prefix'] = '__salt.tmp.'
-    close_fd = kwargs.pop('close_fd', True)
-    fd_, fpath = tempfile.mkstemp(*args, **kwargs)
-    if close_fd is False:
-        return (fd_, fpath)
-    os.close(fd_)
-    del fd_
-    return fpath
+    warn_until(
+        'Neon',
+        'Use of \'salt.utils.mkstemp\' detected. This function has been moved to '
+        '\'salt.utils.files.mkstemp\' as of Salt Oxygen. This warning will be '
+        'removed in Salt Neon.'
+    )
+    # Late import to avoid circular import.
+    import salt.utils.files
+    return salt.utils.files.mkstemp(*args, **kwargs)

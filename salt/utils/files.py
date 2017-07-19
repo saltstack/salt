@@ -9,6 +9,7 @@ import logging
 import os
 import shutil
 import subprocess
+import tempfile
 import time
 
 # Import salt libs
@@ -43,10 +44,20 @@ def guess_archive_type(name):
 
 def mkstemp(*args, **kwargs):
     '''
-    Should eventually reside here, but for now point back at old location in
-    salt.utils
+    Helper function which does exactly what ``tempfile.mkstemp()`` does but
+    accepts another argument, ``close_fd``, which, by default, is true and closes
+    the fd before returning the file path. Something commonly done throughout
+    Salt's code.
     '''
-    return salt.utils.mkstemp(*args, **kwargs)
+    if 'prefix' not in kwargs:
+        kwargs['prefix'] = '__salt.tmp.'
+    close_fd = kwargs.pop('close_fd', True)
+    fd_, f_path = tempfile.mkstemp(*args, **kwargs)
+    if close_fd is False:
+        return fd_, f_path
+    os.close(fd_)
+    del fd_
+    return f_path
 
 
 def recursive_copy(source, dest):
