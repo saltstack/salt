@@ -153,8 +153,6 @@ def show_conf(conf_file=default_conf, name=None):
     '''
     Show configuration
 
-    .. versionchanged:: Oxygen
-
     conf_file : string
         path to logadm.conf, defaults to /etc/logadm.conf
     name : string
@@ -241,8 +239,6 @@ def show_args():
 def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
     '''
     Set up pattern for logging.
-
-    .. versionchanged:: Oxygen
 
     name : string
         alias for entryname
