@@ -66,7 +66,7 @@ fi
 # Create the Build Environment
 ############################################################################
 echo -n -e "\033]0;Build: Build Environment\007"
-sudo $PKGRESOURCES/build_env.sh
+sudo $PKGRESOURCES/build_env_2.sh
 
 ############################################################################
 # Install Salt

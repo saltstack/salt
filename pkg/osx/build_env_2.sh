@@ -121,8 +121,8 @@ BUILDDIR=$SCRIPTDIR/build
 ############################################################################
 echo -n -e "\033]0;Build_Env: pkg-config\007"
 
-PKGURL="http://pkgconfig.freedesktop.org/releases/pkg-config-0.29.tar.gz"
-PKGDIR="pkg-config-0.29"
+PKGURL="http://pkgconfig.freedesktop.org/releases/pkg-config-0.29.2.tar.gz"
+PKGDIR="pkg-config-0.29.2"
 
 download $PKGURL
 
@@ -140,8 +140,8 @@ sudo -H $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: libsodium\007"
 
-PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.12.tar.gz"
-PKGDIR="libsodium-1.0.12"
+PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.13.tar.gz"
+PKGDIR="libsodium-1.0.13"
 
 download $PKGURL
 
@@ -159,8 +159,8 @@ sudo -H $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: zeromq\007"
 
-PKGURL="http://download.zeromq.org/zeromq-4.1.3.tar.gz"
-PKGDIR="zeromq-4.1.3"
+PKGURL="http://download.zeromq.org/zeromq-4.1.4.tar.gz"
+PKGDIR="zeromq-4.1.4"
 
 download $PKGURL
 
@@ -178,13 +178,13 @@ sudo -H $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: OpenSSL\007"
 
-PKGURL="http://openssl.org/source/openssl-1.0.2f.tar.gz"
-PKGDIR="openssl-1.0.2f"
+PKGURL="http://openssl.org/source/openssl-1.0.2l.tar.gz"
+PKGDIR="openssl-1.0.2l"
 
 download $PKGURL
 
 echo "################################################################################"
-echo "Building OpenSSL 1.0.2f"
+echo "Building OpenSSL"
 echo "################################################################################"
 cd $PKGDIR
 ./Configure darwin64-x86_64-cc --prefix=/opt/salt --openssldir=/opt/salt/openssl
@@ -197,13 +197,13 @@ sudo -H $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: Python\007"
 
-PKGURL="https://www.python.org/ftp/python/2.7.12/Python-2.7.12.tar.xz"
-PKGDIR="Python-2.7.12"
+PKGURL="https://www.python.org/ftp/python/2.7.13/Python-2.7.13.tar.xz"
+PKGDIR="Python-2.7.13"
 
 download $PKGURL
 
 echo "################################################################################"
-echo "Building Python 2.7.12"
+echo "Building Python"
 echo "################################################################################"
 echo "Note there are some test failures"
 cd $PKGDIR
