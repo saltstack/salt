@@ -26,6 +26,7 @@ from salt.ext.six.moves import map
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'at'
@@ -100,7 +101,7 @@ def atq(tag=None):
             job=job
         )
         if __salt__['file.file_exists'](atjob_file):
-            with salt.utils.fopen(atjob_file, 'r') as atjob:
+            with salt.utils.files.fopen(atjob_file, 'r') as atjob:
                 for line in atjob:
                     tmp = job_kw_regex.match(line)
                     if tmp:
@@ -224,7 +225,7 @@ def atc(jobid):
         job=jobid
     )
     if __salt__['file.file_exists'](atjob_file):
-        with salt.utils.fopen(atjob_file, 'r') as rfh:
+        with salt.utils.files.fopen(atjob_file, 'r') as rfh:
             return "".join(rfh.readlines())
     else:
         return {'error': 'invalid job id \'{0}\''.format(jobid)}

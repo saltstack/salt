@@ -9,6 +9,7 @@ import logging
 
 # Import Salt libs
 import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -47,14 +48,14 @@ def profile_list(default_only=False):
     default_profiles = ['All']
 
     ## lookup default profile(s)
-    with salt.utils.fopen('/etc/security/policy.conf', 'r') as policy_conf:
+    with salt.utils.files.fopen('/etc/security/policy.conf', 'r') as policy_conf:
         for policy in policy_conf:
             policy = policy.split('=')
             if policy[0].strip() == 'PROFS_GRANTED':
                 default_profiles.extend(policy[1].strip().split(','))
 
     ## read prof_attr file (profname:res1:res2:desc:attr)
-    with salt.utils.fopen('/etc/security/prof_attr', 'r') as prof_attr:
+    with salt.utils.files.fopen('/etc/security/prof_attr', 'r') as prof_attr:
         for profile in prof_attr:
             profile = profile.split(':')
 
@@ -92,7 +93,7 @@ def profile_get(user, default_hidden=True):
     user_profiles = []
 
     ## read user_attr file (user:qualifier:res1:res2:attr)
-    with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
+    with salt.utils.files.fopen('/etc/user_attr', 'r') as user_attr:
         for profile in user_attr:
             profile = profile.strip().split(':')
 
@@ -249,7 +250,7 @@ def role_list():
     roles = {}
 
     ## read user_attr file (user:qualifier:res1:res2:attr)
-    with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
+    with salt.utils.files.fopen('/etc/user_attr', 'r') as user_attr:
         for role in user_attr:
             role = role.split(':')
 
@@ -291,7 +292,7 @@ def role_get(user):
     user_roles = []
 
     ## read user_attr file (user:qualifier:res1:res2:attr)
-    with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
+    with salt.utils.files.fopen('/etc/user_attr', 'r') as user_attr:
         for role in user_attr:
             role = role.strip().strip().split(':')
 
@@ -442,7 +443,7 @@ def auth_list():
     auths = {}
 
     ## read auth_attr file (name:res1:res2:short_desc:long_desc:attr)
-    with salt.utils.fopen('/etc/security/auth_attr', 'r') as auth_attr:
+    with salt.utils.files.fopen('/etc/security/auth_attr', 'r') as auth_attr:
         for auth in auth_attr:
             auth = auth.split(':')
 
@@ -476,7 +477,7 @@ def auth_get(user, computed=True):
     user_auths = []
 
     ## read user_attr file (user:qualifier:res1:res2:attr)
-    with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
+    with salt.utils.files.fopen('/etc/user_attr', 'r') as user_attr:
         for auth in user_attr:
             auth = auth.strip().split(':')
 

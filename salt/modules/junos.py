@@ -25,6 +25,9 @@ try:
 except ImportError:
     from salt._compat import ElementTree as etree
 
+# Import Salt libs
+import salt.utils.files
+
 # Juniper interface libraries
 # https://github.com/Juniper/py-junos-eznc
 try:
@@ -40,11 +43,6 @@ try:
     HAS_JUNOS = True
 except ImportError:
     HAS_JUNOS = False
-
-# Import salt libraries
-from salt.utils import fopen
-from salt.utils import files
-from salt.utils import safe_rm
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -234,7 +232,7 @@ def rpc(cmd=None, dest=None, format='xml', **kwargs):
             write_response = json.dumps(reply, indent=1)
         else:
             write_response = etree.tostring(reply)
-        with fopen(dest, 'w') as fp:
+        with salt.utils.files.fopen(dest, 'w') as fp:
             fp.write(write_response)
     return ret
 
@@ -460,7 +458,7 @@ def rollback(id=0, **kwargs):
     if 'diffs_file' in op and op['diffs_file'] is not None:
         diff = conn.cu.diff()
         if diff is not None:
-            with fopen(op['diffs_file'], 'w') as fp:
+            with salt.utils.files.fopen(op['diffs_file'], 'w') as fp:
                 fp.write(diff)
         else:
             log.info(
@@ -655,7 +653,7 @@ def cli(command=None, format='text', **kwargs):
         ret['message'] = jxmlease.parse(result)
 
     if 'dest' in op and op['dest'] is not None:
-        with fopen(op['dest'], 'w') as fp:
+        with salt.utils.files.fopen(op['dest'], 'w') as fp:
             fp.write(result)
 
     ret['out'] = True
@@ -833,7 +831,7 @@ def install_config(path=None, **kwargs):
     if "template_vars" in op:
         template_vars = op["template_vars"]
 
-    template_cached_path = files.mkstemp()
+    template_cached_path = salt.utils.files.mkstemp()
     __salt__['cp.get_template'](
         path,
         template_cached_path,
@@ -888,7 +886,7 @@ def install_config(path=None, **kwargs):
             return ret
 
         finally:
-            safe_rm(template_cached_path)
+            salt.utils.files.safe_rm(template_cached_path)
 
         config_diff = cu.diff()
         if config_diff is None:
@@ -929,7 +927,7 @@ def install_config(path=None, **kwargs):
 
         try:
             if write_diff and config_diff is not None:
-                with fopen(write_diff, 'w') as fp:
+                with salt.utils.files.fopen(write_diff, 'w') as fp:
                     fp.write(config_diff)
         except Exception as exception:
             ret['message'] = 'Could not write into diffs_file due to: "{0}"'.format(
@@ -1004,7 +1002,7 @@ def install_os(path=None, **kwargs):
         ret['out'] = False
         return ret
 
-    image_cached_path = files.mkstemp()
+    image_cached_path = salt.utils.files.mkstemp()
     __salt__['cp.get_file'](path, image_cached_path)
 
     if not os.path.isfile(image_cached_path):
@@ -1034,7 +1032,7 @@ def install_os(path=None, **kwargs):
         ret['out'] = False
         return ret
     finally:
-        safe_rm(image_cached_path)
+        salt.utils.files.safe_rm(image_cached_path)
 
     if 'reboot' in op and op['reboot'] is True:
         try:
@@ -1231,7 +1229,7 @@ def load(path=None, **kwargs):
     if "template_vars" in op:
         template_vars = op["template_vars"]
 
-    template_cached_path = files.mkstemp()
+    template_cached_path = salt.utils.files.mkstemp()
     __salt__['cp.get_template'](
         path,
         template_cached_path,
@@ -1278,7 +1276,7 @@ def load(path=None, **kwargs):
         ret['out'] = False
         return ret
     finally:
-        safe_rm(template_cached_path)
+        salt.utils.files.safe_rm(template_cached_path)
 
     return ret
 
