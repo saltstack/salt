@@ -259,14 +259,12 @@ def state(name,
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
 
-    # If pillarenv is directly defined, use it
-    if pillarenv:
+    if pillarenv is not None:
         cmd_kw['kwarg']['pillarenv'] = pillarenv
-    # Use pillarenv if it's passed from __opts__ (via state.orchestrate for example)
-    elif __opts__.get('pillarenv'):
-        cmd_kw['kwarg']['pillarenv'] = __opts__['pillarenv']
 
-    cmd_kw['kwarg']['saltenv'] = saltenv if saltenv is not None else __env__
+    if saltenv is not None:
+        cmd_kw['kwarg']['saltenv'] = saltenv
+
     cmd_kw['kwarg']['queue'] = queue
 
     if isinstance(concurrent, bool):
