@@ -56,8 +56,8 @@ def present(name, containment='NONE', options=None, **kwargs):
         ret['result'] = None
         ret['comment'] = 'Database {0} is set to be added'.format(name)
         return ret
-    
-    db_created = __salt__['mssql.db_create'](name, owner=owner, grants=_normalize_options(grants), **kwargs)
+
+    db_created = __salt__['mssql.db_create'](name, containment=containment, new_database_options=_normalize_options(options), **kwargs)
     if db_created is not True:  # Non-empty strings are also evaluated to True, so we cannot use if not db_created:
         ret['result'] = False
         ret['comment'] += 'Database {0} failed to be created: {1}'.format(name, db_created)

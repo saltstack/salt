@@ -46,7 +46,7 @@ def present(name, owner=None, grants=None, **kwargs):
         return ret
 
     role_created = __salt__['mssql.role_create'](name, owner=owner, grants=grants, **kwargs)
-    if role_created != True:  # Non-empty strings are also evaluated to True, so we cannot use if not role_created:
+    if role_created is not True:  # Non-empty strings are also evaluated to True, so we cannot use if not role_created:
         ret['result'] = False
         ret['comment'] += 'Role {0} failed to be created: {1}'.format(name, role_created)
         return ret
