@@ -20,6 +20,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 try:
     import salt.utils.pycrypto
@@ -288,7 +289,7 @@ def set_password(name, password, use_usermod=False):
         if not os.path.isfile(s_file):
             return ret
         lines = []
-        with salt.utils.fopen(s_file, 'rb') as fp_:
+        with salt.utils.files.fopen(s_file, 'rb') as fp_:
             for line in fp_:
                 line = salt.utils.to_str(line)
                 comps = line.strip().split(':')
@@ -300,7 +301,7 @@ def set_password(name, password, use_usermod=False):
                 comps[2] = str(changed_date.days)
                 line = ':'.join(comps)
                 lines.append('{0}\n'.format(line))
-        with salt.utils.fopen(s_file, 'w+') as fp_:
+        with salt.utils.files.fopen(s_file, 'w+') as fp_:
             fp_.writelines(lines)
         uinfo = info(name)
         return uinfo['passwd'] == password

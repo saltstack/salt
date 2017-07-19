@@ -72,6 +72,7 @@ import json
 import salt.ext.six as six
 import salt.utils.dictupdate as dictupdate
 import salt.utils
+import salt.utils.files
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -407,7 +408,7 @@ def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key,
         size = os.path.getsize(ZipFile)
         if size == func['CodeSize']:
             sha = hashlib.sha256()
-            with salt.utils.fopen(ZipFile, 'rb') as f:
+            with salt.utils.files.fopen(ZipFile, 'rb') as f:
                 sha.update(f.read())
             hashed = sha.digest().encode('base64').strip()
             if hashed != func['CodeSha256']:

@@ -39,7 +39,7 @@ except ImportError:
     HAS_CAPIRCA = False
 
 # Import Salt modules
-import salt.utils
+import salt.utils.files
 from salt.ext import six
 
 # ------------------------------------------------------------------------------
@@ -213,7 +213,7 @@ def _get_services_mapping():
         return _SERVICES
     services_txt = ''
     try:
-        with salt.utils.fopen('/etc/services', 'r') as srv_f:
+        with salt.utils.files.fopen('/etc/services', 'r') as srv_f:
             services_txt = srv_f.read()
     except IOError as ioe:
         log.error('Unable to read from /etc/services:')

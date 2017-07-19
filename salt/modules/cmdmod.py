@@ -142,14 +142,14 @@ def _render_cmd(cmd, cwd, template, saltenv='base', pillarenv=None, pillar_overr
     def _render(contents):
         # write out path to temp file
         tmp_path_fn = salt.utils.files.mkstemp()
-        with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
+        with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](
             tmp_path_fn,
             to_str=True,
             **kwargs
         )
-        salt.utils.safe_rm(tmp_path_fn)
+        salt.utils.files.safe_rm(tmp_path_fn)
         if not data['result']:
             # Failed to render the template
             raise CommandExecutionError(
@@ -2419,7 +2419,7 @@ def exec_code_all(lang, code, cwd=None):
     else:
         codefile = salt.utils.files.mkstemp()
 
-    with salt.utils.fopen(codefile, 'w+t', binary=False) as fp_:
+    with salt.utils.files.fopen(codefile, 'w+t', binary=False) as fp_:
         fp_.write(code)
 
     if powershell:
@@ -2450,7 +2450,7 @@ def tty(device, echo=''):
     else:
         return {'Error': 'The specified device is not a valid TTY'}
     try:
-        with salt.utils.fopen(teletype, 'wb') as tty_device:
+        with salt.utils.files.fopen(teletype, 'wb') as tty_device:
             tty_device.write(salt.utils.to_bytes(echo))
         return {
             'Success': 'Message was successfully echoed to {0}'.format(teletype)
@@ -2662,7 +2662,7 @@ def _is_valid_shell(shell):
     available_shells = []
     if os.path.exists(shells):
         try:
-            with salt.utils.fopen(shells, 'r') as shell_fp:
+            with salt.utils.files.fopen(shells, 'r') as shell_fp:
                 lines = shell_fp.read().splitlines()
             for line in lines:
                 if line.startswith('#'):
@@ -2694,7 +2694,7 @@ def shells():
     ret = []
     if os.path.exists(shells_fn):
         try:
-            with salt.utils.fopen(shells_fn, 'r') as shell_fp:
+            with salt.utils.files.fopen(shells_fn, 'r') as shell_fp:
                 lines = shell_fp.read().splitlines()
             for line in lines:
                 line = line.strip()

@@ -10,7 +10,7 @@ import base64
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 import salt.ext.six.moves.http_client  # pylint: disable=import-error,redefined-builtin,no-name-in-module
 from salt.ext.six.moves import urllib  # pylint: disable=no-name-in-module
 from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=no-name-in-module
@@ -465,7 +465,7 @@ def __save_artifact(artifact_url, target_file, headers):
     try:
         request = urllib.request.Request(artifact_url, None, headers)
         f = urllib.request.urlopen(request)
-        with salt.utils.fopen(target_file, "wb") as local_file:
+        with salt.utils.files.fopen(target_file, "wb") as local_file:
             local_file.write(f.read())
         result['status'] = True
         result['comment'] = __append_comment(('Artifact downloaded from URL: {0}'.format(artifact_url)), result['comment'])

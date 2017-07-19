@@ -10,6 +10,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import (
     CommandExecutionError
@@ -260,7 +261,7 @@ def get_saved_rules(conf_file=None, family='ipv4'):
     if _conf() and not conf_file:
         conf_file = _conf()
 
-    with salt.utils.fopen(conf_file) as fp_:
+    with salt.utils.files.fopen(conf_file) as fp_:
         lines = fp_.readlines()
     rules = []
     for line in lines:
@@ -327,7 +328,7 @@ def save(filename=None, family='ipv4'):
     rules = rules + '\n'
 
     try:
-        with salt.utils.fopen(filename, 'w+') as _fh:
+        with salt.utils.files.fopen(filename, 'w+') as _fh:
             # Write out any changes
             _fh.writelines(rules)
     except (IOError, OSError) as exc:

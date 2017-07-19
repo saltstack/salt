@@ -4,6 +4,7 @@ The networking module for Non-RH/Deb Linux distros
 '''
 from __future__ import absolute_import
 import salt.utils
+import salt.utils.files
 from salt.ext.six.moves import zip
 
 __virtualname__ = 'ip'
@@ -133,7 +134,7 @@ def _parse_routes():
     '''
     Parse the contents of ``/proc/net/route``
     '''
-    with salt.utils.fopen('/proc/net/route', 'r') as fp_:
+    with salt.utils.files.fopen('/proc/net/route', 'r') as fp_:
         out = fp_.read()
 
     ret = {}

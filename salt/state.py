@@ -32,9 +32,11 @@ import salt.loader
 import salt.minion
 import salt.pillar
 import salt.fileclient
+import salt.utils.args
 import salt.utils.crypt
 import salt.utils.dictupdate
 import salt.utils.event
+import salt.utils.files
 import salt.utils.url
 import salt.utils.process
 import salt.syspaths as syspaths
@@ -1702,7 +1704,7 @@ class State(object):
                 # Looks like the directory was created between the check
                 # and the attempt, we are safe to pass
                 pass
-        with salt.utils.fopen(tfile, 'wb+') as fp_:
+        with salt.utils.files.fopen(tfile, 'wb+') as fp_:
             fp_.write(msgpack.dumps(ret))
 
     def call_parallel(self, cdata, low):
@@ -2045,7 +2047,7 @@ class State(object):
                                'name': running[tag]['name'],
                                'changes': {}}
                     try:
-                        with salt.utils.fopen(ret_cache, 'rb') as fp_:
+                        with salt.utils.files.fopen(ret_cache, 'rb') as fp_:
                             ret = msgpack.loads(fp_.read())
                     except (OSError, IOError):
                         ret = {'result': False,
@@ -3623,7 +3625,7 @@ class BaseHighState(object):
 
         if cache:
             if os.path.isfile(cfn):
-                with salt.utils.fopen(cfn, 'rb') as fp_:
+                with salt.utils.files.fopen(cfn, 'rb') as fp_:
                     high = self.serial.load(fp_)
                     return self.state.call_high(high, orchestration_jid)
         # File exists so continue
@@ -3668,7 +3670,7 @@ class BaseHighState(object):
             if salt.utils.is_windows():
                 # Make sure cache file isn't read-only
                 self.state.functions['cmd.run']('attrib -R "{0}"'.format(cfn), output_loglevel='quiet')
-            with salt.utils.fopen(cfn, 'w+b') as fp_:
+            with salt.utils.files.fopen(cfn, 'w+b') as fp_:
                 try:
                     self.serial.dump(high, fp_)
                 except TypeError:

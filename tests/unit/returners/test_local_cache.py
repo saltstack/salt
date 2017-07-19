@@ -27,7 +27,9 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.jid
+import salt.utils.job
 import salt.returners.local_cache as local_cache
 import salt.ext.six as six
 
@@ -160,7 +162,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             dir_name = '/'.join([temp_dir, 'jid'])
             os.mkdir(dir_name)
             jid_file_path = '/'.join([dir_name, 'jid'])
-            with salt.utils.fopen(jid_file_path, 'w') as jid_file:
+            with salt.utils.files.fopen(jid_file_path, 'w') as jid_file:
                 jid_file.write('this is a jid file')
 
         return temp_dir, jid_file_path

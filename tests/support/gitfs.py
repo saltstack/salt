@@ -19,6 +19,7 @@ import yaml
 
 # Import Salt libs
 import salt.utils
+import salt.utils.files
 from salt.fileserver import gitfs
 from salt.pillar import git_pillar
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
@@ -384,14 +385,14 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
                 user=user,
             )
 
-        with salt.utils.fopen(
+        with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'top.sls'), 'w') as fp_:
             fp_.write(textwrap.dedent('''\
             base:
               '*':
                 - foo
             '''))
-        with salt.utils.fopen(
+        with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'foo.sls'), 'w') as fp_:
             fp_.write(textwrap.dedent('''\
             branch: master
@@ -405,7 +406,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
                 master: True
             '''))
         # Add another file to be referenced using git_pillar_includes
-        with salt.utils.fopen(
+        with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'bar.sls'), 'w') as fp_:
             fp_.write('included_pillar: True\n')
         _push('master', 'initial commit')
@@ -421,14 +422,14 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             'git.rm',
             [self.admin_repo, 'bar.sls'],
             user=user)
-        with salt.utils.fopen(
+        with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'top.sls'), 'w') as fp_:
             fp_.write(textwrap.dedent('''\
             dev:
               '*':
                 - foo
             '''))
-        with salt.utils.fopen(
+        with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'foo.sls'), 'w') as fp_:
             fp_.write(textwrap.dedent('''\
             branch: dev
@@ -455,7 +456,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             'git.rm',
             [self.admin_repo, 'foo.sls'],
             user=user)
-        with salt.utils.fopen(
+        with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'top.sls'), 'w') as fp_:
             fp_.write(textwrap.dedent('''\
             base:

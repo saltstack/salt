@@ -35,6 +35,7 @@ except ImportError:
 # Import salt libs
 from salt.exceptions import CommandExecutionError
 import salt.utils
+import salt.utils.files
 import salt.modules.cmdmod
 
 # Define the module's virtual name
@@ -773,7 +774,7 @@ def is_hyper():
         # virtual_subtype isn't set everywhere.
         return False
     try:
-        with salt.utils.fopen('/proc/modules') as fp_:
+        with salt.utils.files.fopen('/proc/modules') as fp_:
             if 'xen_' not in fp_.read():
                 return False
     except (OSError, IOError):

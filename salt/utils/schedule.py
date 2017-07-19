@@ -337,6 +337,9 @@ import yaml
 # Import Salt libs
 import salt.config
 import salt.utils
+import salt.utils.error
+import salt.utils.event
+import salt.utils.files
 import salt.utils.jid
 import salt.utils.process
 import salt.utils.args
@@ -472,7 +475,7 @@ class Schedule(object):
         schedule_conf = os.path.join(minion_d_dir, '_schedule.conf')
         log.debug('Persisting schedule')
         try:
-            with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
+            with salt.utils.files.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(
                     salt.utils.to_bytes(
                         yaml.dump(
@@ -817,7 +820,7 @@ class Schedule(object):
                 log.debug('schedule.handle_func: adding this job to the jobcache '
                           'with data {0}'.format(ret))
                 # write this to /var/cache/salt/minion/proc
-                with salt.utils.fopen(proc_fn, 'w+b') as fp_:
+                with salt.utils.files.fopen(proc_fn, 'w+b') as fp_:
                     fp_.write(salt.payload.Serial(self.opts).dumps(ret))
 
             args = tuple()
@@ -1368,7 +1371,7 @@ def clean_proc_dir(opts):
 
     for basefilename in os.listdir(salt.minion.get_proc_dir(opts['cachedir'])):
         fn_ = os.path.join(salt.minion.get_proc_dir(opts['cachedir']), basefilename)
-        with salt.utils.fopen(fn_, 'rb') as fp_:
+        with salt.utils.files.fopen(fn_, 'rb') as fp_:
             job = None
             try:
                 job = salt.payload.Serial(opts).load(fp_)

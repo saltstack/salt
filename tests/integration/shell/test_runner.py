@@ -21,6 +21,7 @@ import yaml
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
@@ -100,10 +101,10 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
             config = yaml.load(fhr.read())
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
                 fhw.write(
                     yaml.dump(config, default_flow_style=False)
                 )

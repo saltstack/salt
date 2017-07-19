@@ -24,6 +24,7 @@ import ast
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.exceptions
 import salt.ext.six as six
 from salt.utils.odict import OrderedDict
@@ -315,7 +316,7 @@ def _text_or_file(input_):
     content to be parsed.
     '''
     if os.path.isfile(input_):
-        with salt.utils.fopen(input_) as fp_:
+        with salt.utils.files.fopen(input_) as fp_:
             return fp_.read()
     else:
         return input_
@@ -768,7 +769,7 @@ def write_pem(text, path, overwrite=True, pem_type=None):
             _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
         except salt.exceptions.SaltInvocationError:
             pass
-    with salt.utils.fopen(path, 'w') as _fp:
+    with salt.utils.files.fopen(path, 'w') as _fp:
         if pem_type and pem_type == 'CERTIFICATE' and _private_key:
             _fp.write(_private_key)
         _fp.write(text)

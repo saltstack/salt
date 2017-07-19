@@ -22,6 +22,7 @@ import string
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -1597,7 +1598,7 @@ def latest(name,
                 for target_object in target_contents:
                     target_path = os.path.join(target, target_object)
                     try:
-                        salt.utils.rm_rf(target_path)
+                        salt.utils.files.rm_rf(target_path)
                     except OSError as exc:
                         if exc.errno != errno.ENOENT:
                             removal_errors[target_path] = exc
@@ -1950,7 +1951,7 @@ def present(name,
                 if os.path.islink(name):
                     os.unlink(name)
                 else:
-                    salt.utils.rm_rf(name)
+                    salt.utils.files.rm_rf(name)
             except OSError as exc:
                 return _fail(
                     ret,
@@ -2299,7 +2300,7 @@ def detached(name,
                     if os.path.islink(target):
                         os.unlink(target)
                     else:
-                        salt.utils.rm_rf(target)
+                        salt.utils.files.rm_rf(target)
                 except OSError as exc:
                     return _fail(
                         ret,

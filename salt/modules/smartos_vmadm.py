@@ -17,6 +17,7 @@ except ImportError:
 import salt.ext.six as six
 import salt.utils
 import salt.utils.decorators as decorators
+import salt.utils.files
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -127,7 +128,7 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
 
     # write json file
     vmadm_json_file = __salt__['temp.file'](prefix='vmadm-')
-    with salt.utils.fopen(vmadm_json_file, 'w') as vmadm_json:
+    with salt.utils.files.fopen(vmadm_json_file, 'w') as vmadm_json:
         vmadm_json.write(json.dumps(vmcfg))
 
     # vmadm validate create|update [-f <filename>]
@@ -166,7 +167,7 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
         return ret
     else:
         # cleanup json file (only when succesful to help troubleshooting)
-        salt.utils.safe_rm(vmadm_json_file)
+        salt.utils.files.safe_rm(vmadm_json_file)
 
         # return uuid
         if res['stderr'].startswith('Successfully created VM'):

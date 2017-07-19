@@ -11,6 +11,7 @@ import logging
 # Import salt libs
 from salt.exceptions import SaltInvocationError
 import salt.utils
+import salt.utils.files
 
 _LOG = logging.getLogger(__name__)
 _DEFAULT_CONF = '/etc/logrotate.conf'
@@ -62,7 +63,7 @@ def _parse_conf(conf_file=_DEFAULT_CONF):
     multi = {}
     prev_comps = None
 
-    with salt.utils.fopen(conf_file, 'r') as ifile:
+    with salt.utils.files.fopen(conf_file, 'r') as ifile:
         for line in ifile:
             line = line.strip()
             if not line:
