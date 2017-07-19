@@ -89,7 +89,7 @@ import yaml
 from salt.ext.six.moves import range
 from salt.ext.six.moves import StringIO
 
-import salt.utils
+import salt.utils.files
 import salt.returners
 
 log = logging.getLogger(__name__)
@@ -440,7 +440,7 @@ def _produce_output(report, failed, setup):
 
     if report_delivery == 'file':
         output_file = _sprinkle(setup.get('file_output', '/tmp/test.rpt'))
-        with salt.utils.fopen(output_file, 'w') as out:
+        with salt.utils.files.fopen(output_file, 'w') as out:
             out.write(report_text)
     else:
         msg = MIMEText(report_text, report_format)
@@ -490,7 +490,7 @@ def __test_html():
         report_delivery: file
         file_output: '/srv/salt/_returners/test.rpt'
     '''
-    with salt.utils.fopen('test.rpt', 'r') as input_file:
+    with salt.utils.files.fopen('test.rpt', 'r') as input_file:
         data_text = input_file.read()
     data = yaml.safe_load(data_text)
 
@@ -499,7 +499,7 @@ def __test_html():
     string_file.seek(0)
     result = string_file.read()
 
-    with salt.utils.fopen('test.html', 'w') as output:
+    with salt.utils.files.fopen('test.html', 'w') as output:
         output.write(result)
 
 

@@ -24,6 +24,7 @@ import json
 
 import salt.returners
 import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ def returner(ret):
     '''
     opts = _get_options({})  # Pass in empty ret, since this is a list of events
     try:
-        with salt.utils.flopen(opts['filename'], 'a') as logfile:
+        with salt.utils.files.flopen(opts['filename'], 'a') as logfile:
             logfile.write(json.dumps(ret)+'\n')
     except:
         log.error('Could not write to rawdata_json file {0}'.format(opts['filename']))
@@ -74,7 +75,7 @@ def event_return(events):
         return
     opts = _get_options({})  # Pass in empty ret, since this is a list of events
     try:
-        with salt.utils.flopen(opts['filename'], 'a') as logfile:
+        with salt.utils.files.flopen(opts['filename'], 'a') as logfile:
             for event in events:
                 json.dump(event, logfile)
                 logfile.write('\n')

@@ -10,6 +10,7 @@ from tests.support.case import ModuleCase
 
 # Import Salt libs
 import salt.utils
+import salt.utils.files
 
 
 class PyDSLRendererIncludeTestCase(ModuleCase):
@@ -47,7 +48,7 @@ class PyDSLRendererIncludeTestCase(ModuleCase):
                        'hello green 2 \r\n' \
                        'hello blue 3 \r\n'
 
-        with salt.utils.fopen('/tmp/output', 'r') as f:
+        with salt.utils.files.fopen('/tmp/output', 'r') as f:
             ret = f.read()
 
         os.remove('/tmp/output')
