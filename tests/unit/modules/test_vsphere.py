@@ -1059,3 +1059,51 @@ class ListDatacentersViaProxyTestCase(TestCase, LoaderModuleMockMixin):
 
         # Just the first two names are in the result
         self.assertEqual(res, [{'name': 'fake_dc1'}, {'name': 'fake_dc2'}])
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class CreateDatacenterTestCase(TestCase, LoaderModuleMockMixin):
+    '''Tests for salt.modules.vsphere.create_datacenter'''
+    def setup_loader_modules(self):
+        self.mock_si = MagicMock()
+        self.addCleanup(delattr, self, 'mock_si')
+        patcher = patch('salt.utils.vmware.get_service_instance', MagicMock(return_value=self.mock_si))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = patch('salt.utils.vmware.create_datacenter', MagicMock())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return {
+            vsphere: {
+                '__virtual__': MagicMock(return_value='vsphere'),
+                '_get_proxy_connection_details': MagicMock(),
+                'get_proxy_type': MagicMock(return_value='esxdatacenter')
+            }
+        }
+
+    def test_supported_proxes(self):
+        supported_proxies = ['esxdatacenter']
+        for proxy_type in supported_proxies:
+            with patch('salt.modules.vsphere.get_proxy_type',
+                       MagicMock(return_value=proxy_type)):
+                vsphere.create_datacenter('fake_dc1')
+
+    def test_default_service_instance(self):
+        mock_create_datacenter = MagicMock()
+        with patch('salt.utils.vmware.create_datacenter',
+                   mock_create_datacenter):
+            vsphere.create_datacenter('fake_dc1')
+        mock_create_datacenter.assert_called_once_with(self.mock_si,
+                                                       'fake_dc1')
+
+    def test_defined_service_instance(self):
+        mock_si = MagicMock()
+        mock_create_datacenter = MagicMock()
+        with patch('salt.utils.vmware.create_datacenter',
+                   mock_create_datacenter):
+            vsphere.create_datacenter('fake_dc1', service_instance=mock_si)
+        mock_create_datacenter.assert_called_once_with(mock_si, 'fake_dc1')
+
+    def test_returned_value(self):
+        res = vsphere.create_datacenter('fake_dc1')
+        self.assertEqual(res, {'create_datacenter': True})
