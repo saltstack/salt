@@ -68,14 +68,14 @@ def present(name, password=None, domain=None, database=None, server_roles=None, 
         return ret
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'User {0} is set to be added'.format(name, domain)
+        ret['comment'] = 'User {0} is set to be added'.format(name)
         return ret
 
     login = None
     if password or domain:
         login = name
         if __salt__['mssql.login_exists'](login, domain, **kwargs):
-            ret['comment'] = 'Login {0} already exists. '.format(login, domain)
+            ret['comment'] = 'Login {0} already exists. '.format(login)
         else:
             login_created = __salt__['mssql.login_create'](name,
                     new_login_password=password,
@@ -84,7 +84,7 @@ def present(name, password=None, domain=None, database=None, server_roles=None, 
                     new_login_options=_normalize_options(login_options),
                     **kwargs)
             # Non-empty strings are also evaluated to True, so we cannot use if not login_created:
-            if login_created != True:
+            if login_created is not True:
                 ret['result'] = False
                 ret['comment'] = 'Login {0} failed to be added: {1}'.format(name, login_created)
                 return ret

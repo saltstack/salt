@@ -14,10 +14,6 @@ and manage SQL Server Databases
 from __future__ import absolute_import
 import collections
 
-# Salt imports
-from salt.modules import mssql
-import salt.ext.six as six
-
 
 def __virtual__():
     '''
@@ -25,15 +21,17 @@ def __virtual__():
     '''
     return 'mssql.version' in __salt__
 
+
 def _normalize_options(options):
     if type(options) in [dict, collections.OrderedDict]:
-        return [ '{0}={1}'.format(k, v) for k, v in options.items() ]
+        return ['{0}={1}'.format(k, v) for k, v in options.items()]
     if type(options) is list and (not len(options) or type(options[0]) is str):
         return options
     # Invalid options
     if type(options) is not list or type(options[0]) not in [dict, collections.OrderedDict]:
         return []
-    return [ o for d in options for o in _normalize_options(d) ]
+    return [o for d in options for o in _normalize_options(d)]
+
 
 def present(name, containment='NONE', options=None, **kwargs):
     '''
@@ -56,11 +54,11 @@ def present(name, containment='NONE', options=None, **kwargs):
         return ret
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Database {0} is set to be added'.format(name, domain)
+        ret['comment'] = 'Database {0} is set to be added'.format(name)
         return ret
     
     db_created = __salt__['mssql.db_create'](name, owner=owner, grants=_normalize_options(grants), **kwargs)
-    if db_created != True:  # Non-empty strings are also evaluated to True, so we cannot use if not db_created:
+    if db_created is not True:  # Non-empty strings are also evaluated to True, so we cannot use if not db_created:
         ret['result'] = False
         ret['comment'] += 'Database {0} failed to be created: {1}'.format(name, db_created)
         return ret
@@ -81,7 +79,7 @@ def absent(name, **kwargs):
            'result': True,
            'comment': ''}
 
-    if not __salt__['mssql.db_exists'](name ):
+    if not __salt__['mssql.db_exists'](name):
         ret['comment'] = 'Database {0} is not present'.format(name)
         return ret
     if __opts__['test']:
@@ -96,4 +94,3 @@ def absent(name, **kwargs):
     ret['result'] = False
     ret['comment'] = 'Database {0} failed to be removed'.format(name)
     return ret
-

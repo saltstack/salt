@@ -424,7 +424,7 @@ def user_create(username, login=None, domain=None, database=None, roles=None, op
         return 'User {0} already exists'.format(username)
     if domain:
         username = '{0}\\{1}'.format(domain, username)
-        login    = '{0}\\{1}'.format(domain, login) if login else login
+        login =    '{0}\\{1}'.format(domain, login) if login else login
     if database:
         kwargs['database'] = database
     if not roles:

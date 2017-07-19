@@ -12,11 +12,6 @@ and manage SQL Server Roles
       mssql_role.present
 '''
 from __future__ import absolute_import
-import collections
-
-# Salt imports
-from salt.modules import mssql
-import salt.ext.six as six
 
 
 def __virtual__():
@@ -47,9 +42,9 @@ def present(name, owner=None, grants=None, **kwargs):
         return ret
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Role {0} is set to be added'.format(name, domain)
+        ret['comment'] = 'Role {0} is set to be added'.format(name)
         return ret
-    
+
     role_created = __salt__['mssql.role_create'](name, owner=owner, grants=grants, **kwargs)
     if role_created != True:  # Non-empty strings are also evaluated to True, so we cannot use if not role_created:
         ret['result'] = False
@@ -72,7 +67,7 @@ def absent(name, **kwargs):
            'result': True,
            'comment': ''}
 
-    if not __salt__['mssql.role_exists'](name ):
+    if not __salt__['mssql.role_exists'](name):
         ret['comment'] = 'Role {0} is not present'.format(name)
         return ret
     if __opts__['test']:
@@ -87,4 +82,3 @@ def absent(name, **kwargs):
     ret['result'] = False
     ret['comment'] = 'Role {0} failed to be removed'.format(name)
     return ret
-
