@@ -27,6 +27,7 @@ from json import JSONEncoder, loads
 
 import sys
 if sys.version_info < (3,):
+    # pylint: disable=W1699
     varbinary_types = (int, long,)
 else:
     varbinary_types = (int,)
@@ -387,7 +388,7 @@ def user_exists(username, domain=None, database=None, **kwargs):
         salt minion mssql.user_exists 'USERNAME' [database='DBNAME']
     '''
     if domain:
-        username = '{0}\{1}'.format(domain, username)
+        username = '{0}\\{1}'.format(domain, username)
     if database:
         kwargs['database'] = database
     # We should get one, and only one row
@@ -419,13 +420,11 @@ def user_create(username, login=None, domain=None, database=None, roles=None, op
     '''
     if domain and not login:
         return 'domain cannot be set without login'
-        return False
     if user_exists(username, domain, **kwargs):
         return 'User {0} already exists'.format(username)
-        return False
     if domain:
-        username = '{0}\{1}'.format(domain, username)
-        login    = '{0}\{1}'.format(domain, login) if login else login
+        username = '{0}\\{1}'.format(domain, username)
+        login    = '{0}\\{1}'.format(domain, login) if login else login
     if database:
         kwargs['database'] = database
     if not roles:
