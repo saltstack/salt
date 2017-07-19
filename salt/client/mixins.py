@@ -5,6 +5,7 @@ A collection of mixins useful for the various *Client interfaces
 
 # Import Python libs
 from __future__ import absolute_import, print_function, with_statement
+import fnmatch
 import signal
 import logging
 import weakref
@@ -436,10 +437,19 @@ class SyncClientMixin(object):
         Return a dictionary of functions and the inline documentation for each
         '''
         if arg:
-            target_mod = arg + '.' if not arg.endswith('.') else arg
-            docs = [(fun, self.functions[fun].__doc__)
-                    for fun in sorted(self.functions)
-                    if fun == arg or fun.startswith(target_mod)]
+            if '*' in arg:
+                target_mod = arg
+                _use_fnmatch = True
+            else:
+                target_mod = arg + '.' if not arg.endswith('.') else arg
+            log.debug('target_mod {}'.format(target_mod))
+            if _use_fnmatch:
+                docs = [(fun, self.functions[fun].__doc__)
+                        for fun in fnmatch.filter(self.functions, target_mod)]
+            else:
+                docs = [(fun, self.functions[fun].__doc__)
+                        for fun in sorted(self.functions)
+                        if fun == arg or fun.startswith(target_mod)]
         else:
             docs = [(fun, self.functions[fun].__doc__)
                     for fun in sorted(self.functions)]

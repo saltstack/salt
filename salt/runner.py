@@ -276,7 +276,13 @@ class Runner(RunnerClient):
                                 'fun_args': fun_args,
                                 'jid': self.jid},
                                tag='salt/run/{0}/ret'.format(self.jid))
-                ret = '{0}'.format(exc)
+                # Attempt to grab documentation
+                ret = self.get_docs('{0}*'.format(low['fun']))
+
+                # If we didn't get docs returned then
+                # return the `not availble` message.
+                if not ret:
+                    ret = '{0}'.format(exc)
                 if not self.opts.get('quiet', False):
                     display_output(ret, 'nested', self.opts)
             else:
