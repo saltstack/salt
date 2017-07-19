@@ -153,7 +153,7 @@ def show_conf(conf_file=default_conf, name=None):
     '''
     Show configuration
 
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: Oxygen
 
     conf_file : string
         path to logadm.conf, defaults to /etc/logadm.conf
@@ -182,7 +182,7 @@ def list_conf(conf_file=default_conf, log_file=None, include_unset=False):
     '''
     Show parsed configuration
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     conf_file : string
         path to logadm.conf, defaults to /etc/logadm.conf
@@ -221,7 +221,7 @@ def show_args():
     '''
     Show which arguments map to which flags and options.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     CLI Example:
 
@@ -242,7 +242,7 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
     '''
     Set up pattern for logging.
 
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: Oxygen
 
     name : string
         alias for entryname
