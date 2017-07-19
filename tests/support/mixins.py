@@ -30,7 +30,7 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.paths import CODE_DIR
 
 # Import salt libs
-#import salt.config
+# import salt.config
 import salt.utils
 import salt.version
 import salt.exceptions
@@ -91,23 +91,26 @@ class AdaptedConfigurationTestCaseMixin(object):
             rdict = salt.config.apply_master_config(config_overrides, cdict)
         if config_for == 'minion':
             rdict = salt.config.apply_minion_config(config_overrides, cdict)
-
-        verify_env([os.path.join(rdict['pki_dir'], 'minions'),
-                    os.path.join(rdict['pki_dir'], 'minions_pre'),
-                    os.path.join(rdict['pki_dir'], 'minions_rejected'),
-                    os.path.join(rdict['pki_dir'], 'minions_denied'),
-                    os.path.join(rdict['cachedir'], 'jobs'),
-                    os.path.join(rdict['cachedir'], 'raet'),
-                    os.path.join(rdict['cachedir'], 'tokens'),
-                    os.path.join(rdict['root_dir'], 'cache', 'tokens'),
-                    os.path.join(rdict['pki_dir'], 'accepted'),
-                    os.path.join(rdict['pki_dir'], 'rejected'),
-                    os.path.join(rdict['pki_dir'], 'pending'),
-                    os.path.dirname(rdict['log_file']),
-                    rdict['sock_dir'],
-                    conf_dir
-                   ],
-                   RUNTIME_VARS.RUNNING_TESTS_USER)
+        directories = [
+            (os.path.join(rdict['pki_dir'], 'minions'), None),
+            (os.path.join(rdict['pki_dir'], 'minions_pre'), None),
+            (os.path.join(rdict['pki_dir'], 'minions_rejected'), None),
+            (os.path.join(rdict['pki_dir'], 'minions_denied'), None),
+            (os.path.join(rdict['cachedir'], 'jobs'), None),
+            (os.path.join(rdict['cachedir'], 'raet'), None),
+            (os.path.join(rdict['cachedir'], 'tokens'), None),
+            (os.path.join(rdict['root_dir'], 'cache', 'tokens'), None),
+            (os.path.join(rdict['pki_dir'], 'accepted'), None),
+            (os.path.join(rdict['pki_dir'], 'rejected'), None),
+            (os.path.join(rdict['pki_dir'], 'pending'), None),
+            (os.path.dirname(rdict['log_file']), None),
+            (rdict['sock_dir'], None),
+            (conf_dir, None)
+        ]
+        verify_env(
+            dirs=directories,
+            user=RUNTIME_VARS.RUNNING_TESTS_USER
+        )
 
         rdict['config_dir'] = conf_dir
         rdict['conf_file'] = os.path.join(conf_dir, config_for)

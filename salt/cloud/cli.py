@@ -65,8 +65,8 @@ class SaltCloud(parsers.SaltCloudParser):
         try:
             if self.config['verify_env']:
                 verify_env(
-                    [os.path.dirname(self.config['conf_file'])],
-                    salt_master_user
+                    dirs=([os.path.dirname(self.config['conf_file'])], None),
+                    user=salt_master_user
                 )
                 logfile = self.config['log_file']
                 if logfile is not None and not logfile.startswith('tcp://') \

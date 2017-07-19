@@ -10,7 +10,6 @@ from __future__ import absolute_import
 import os
 import re
 import sys
-import stat
 import errno
 import socket
 import logging
@@ -24,10 +23,8 @@ except ImportError:
 # Import salt libs
 from salt.log import is_console_configured
 from salt.log.setup import LOG_LEVELS
-from salt.exceptions import SaltClientError, SaltSystemExit, \
-    CommandExecutionError
+from salt.exceptions import SaltClientError, SaltSystemExit, CommandExecutionError
 import salt.defaults.exitcodes
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -192,106 +189,164 @@ def verify_files(files, user):
     return True
 
 
-def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
+def verify_env(dirs, user, default_mode=0o750,
+               allow_nonprimary_gid=False, pki_dir='', skip_extra=False):
     '''
-    Verify that the named directories are in place and that the environment
-    can shake the salt
+    Creates the directory trees specified if they do not exist, verifies the
+    existing permissions, and attempts to correct them based on the options
+    specified.
+
+    * By default enforces that the group of each directory matches the primary \
+         group of the user specified.
+    * Currently "extra" checks consist of the version of ZMQ.
+    * The behavior on Windows differs due to differences in the file permissions model.
+
+    :param dirs: A list of pairs `V(directory, mode)` where the mode represents \
+    the permissions that should be applied to the respective directory and its subtree.
+    :type dirs: list[(str, int or None)]
+    :param str user: The username of the appropriate path owner. \
+        Typically this is the user specified in the salt config.
+    :param int default_mode: The file mode that should be used for any paths that do not specify one.
+    :param bool allow_nonprimary_gid: Allow ownership by any group the user is a member of.
+    :param str pki_dir: The pki directory (this is required to apply restrictive permissions on Windows).
+    :param bool skip_extra: Skips "extra" checks if true.
+
+    :returns: None
+    :rtype: None
     '''
     if salt.utils.is_windows():
-        return win_verify_env(dirs, permissive, pki_dir, skip_extra)
+        dirs_without_modes = [i[0] for i in dirs]
+        return win_verify_env(
+            dirs=dirs_without_modes,
+            permissive=allow_nonprimary_gid,
+            pki_dir=pki_dir,
+            skip_extra=skip_extra
+        )
+
     import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
-        uid = pwnam[2]
-        gid = pwnam[3]
-        groups = salt.utils.get_gid_list(user, include_default=False)
-
+        salt_user_uid = pwnam[2]
+        salt_user_primary_gid = pwnam[3]
+        salt_user_gids = salt.utils.get_gid_list(user, include_default=False)
     except KeyError:
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
         sys.exit(salt.defaults.exitcodes.EX_NOUSER)
-    for dir_ in dirs:
-        if not dir_:
-            continue
-        if not os.path.isdir(dir_):
+
+    if os.getuid() not in [0, salt_user_uid]:
+        log.warning('Current user {uid} is neither root nor user "{salt_user}" specified in the config. '
+                    'This may lead to unintended file permissions issues.'.format(uid=os.getuid(), salt_user=user))
+
+    def _check_and_set_permissions(
+            path, mode, salt_user_uid,
+            salt_user_primary_gid, salt_user_gids, allow_nonprimary_gid):
+        '''
+        Checks and attempts to "correct" the permissions and ownership on the specified path.
+
+        :param str path: Path to check and set permissions on.
+        :param int mode: The mode the path should have.
+        :param str salt_user_uid: The user id of the user that will be executing Salt.
+        :param int salt_user_primary_gid: The primary GID of the salt user.
+        :param list(int) salt_user_gids: A list of the group GIDs that the salt user belongs to.
+        :param bool allow_nonprimary_gid: Allows the group on the path to match any user the group is a member of.
+        :returns: None
+        :rtype: None
+        '''
+
+        os.chmod(path, mode)
+        log.debug('Setting mode {mode} on {path}.'.format(mode=oct(mode), path=path))
+
+        path_status = os.stat(path)
+        if path_status.st_uid != salt_user_uid:
+            log.debug(
+                'Changing owner of {path} from UID {old_uid} to UID {new_uid}'.format(
+                    path=path, old_uid=path_status.st_uid, new_uid=salt_user_uid)
+            )
             try:
-                cumask = os.umask(18)  # 077
-                os.makedirs(dir_)
-                # If starting the process as root, chown the new dirs
-                if os.getuid() == 0:
-                    os.chown(dir_, uid, gid)
-                os.umask(cumask)
+                os.chown(path, salt_user_uid, -1)
             except OSError as err:
-                msg = 'Failed to create directory path "{0}" - {1}\n'
-                sys.stderr.write(msg.format(dir_, err))
-                sys.exit(err.errno)
+                log.exception('Unable to chown {path}'.format(path=path))
+                if err.errno != errno.EPERM:
+                    raise
 
-        mode = os.stat(dir_)
-        # If starting the process as root, chown the new dirs
-        if os.getuid() == 0:
-            fmode = os.stat(dir_)
-            if fmode.st_uid != uid or fmode.st_gid != gid:
-                if permissive and fmode.st_gid in groups:
-                    # Allow the directory to be owned by any group root
-                    # belongs to if we say it's ok to be permissive
-                    pass
-                else:
-                    # chown the file for the new user
-                    os.chown(dir_, uid, gid)
-            for subdir in [a for a in os.listdir(dir_) if 'jobs' not in a]:
-                fsubdir = os.path.join(dir_, subdir)
-                if '{0}jobs'.format(os.path.sep) in fsubdir:
-                    continue
-                for root, dirs, files in os.walk(fsubdir):
-                    for name in files:
-                        if name.startswith('.'):
-                            continue
-                        path = os.path.join(root, name)
-                        try:
-                            fmode = os.stat(path)
-                        except (IOError, OSError):
-                            pass
-                        if fmode.st_uid != uid or fmode.st_gid != gid:
-                            if permissive and fmode.st_gid in groups:
-                                pass
-                            else:
-                                # chown the file for the new user
-                                os.chown(path, uid, gid)
-                    for name in dirs:
-                        path = os.path.join(root, name)
-                        fmode = os.stat(path)
-                        if fmode.st_uid != uid or fmode.st_gid != gid:
-                            if permissive and fmode.st_gid in groups:
-                                pass
-                            else:
-                                # chown the file for the new user
-                                os.chown(path, uid, gid)
-        # Allow the pki dir to be 700 or 750, but nothing else.
-        # This prevents other users from writing out keys, while
-        # allowing the use-case of 3rd-party software (like django)
-        # to read in what it needs to integrate.
-        #
-        # If the permissions aren't correct, default to the more secure 700.
-        # If acls are enabled, the pki_dir needs to remain readable, this
-        # is still secure because the private keys are still only readable
-        # by the user running the master
-        if dir_ == pki_dir:
-            smode = stat.S_IMODE(mode.st_mode)
-            if smode != 448 and smode != 488:
-                if os.access(dir_, os.W_OK):
-                    os.chmod(dir_, 448)
-                else:
-                    msg = 'Unable to securely set the permissions of "{0}".'
-                    msg = msg.format(dir_)
-                    if is_console_configured():
-                        log.critical(msg)
-                    else:
-                        sys.stderr.write("CRITICAL: {0}\n".format(msg))
+        if allow_nonprimary_gid and path_status.st_gid != salt_user_primary_gid:
+            if path_status.st_gid not in salt_user_gids:
+                log.debug(
+                    'UID {uid} not in group with GID {old_gid}. Changing'
+                    'group of {path} from GID {old_gid} to GID {new_gid}'.format(
+                        uid=salt_user_uid, old_gid=path_status.st_gid,
+                        path=path, new_gid=salt_user_primary_gid)
+                )
+                try:
+                    os.chown(path, -1, salt_user_primary_gid)
+                except OSError as err:
+                    log.exception('Unable to chown {path}'.format(path=path))
+                    if err.errno != errno.EPERM:
+                        raise
+        else:
+            try:
+                os.chown(path, -1, salt_user_primary_gid)
+            except OSError as err:
+                log.exception('Unable to chown {path}'.format(path=path))
+                if err.errno != errno.EPERM:
+                    raise
 
-    if skip_extra is False:
-        # Run the extra verification checks
-        zmq_version()
+    for directory, dir_mode in dirs:
+        if not dir_mode:
+            dir_mode = default_mode
+        if not directory:
+            continue
+
+        if not os.path.isdir(directory):
+            # create directory
+            log.debug('Creating directory {path}'.format(path=directory))
+            try:
+                os.makedirs(directory, dir_mode)
+            except (IOError, OSError):
+                log.exception('Unable to create directory {path}'.format(path=directory))
+
+        try:
+            _check_and_set_permissions(
+                directory,
+                dir_mode,
+                salt_user_uid,
+                salt_user_primary_gid,
+                salt_user_gids,
+                allow_nonprimary_gid
+            )
+        except (IOError, OSError):
+            log.exception('Unable to set permissions for path: {path}'.format(path=directory))
+
+        for dirpath, dirnames, filenames in os.walk(directory):
+            for dirname in dirnames:
+                path = os.path.join(dirpath, dirname)
+                try:
+                    _check_and_set_permissions(
+                        path,
+                        dir_mode,
+                        salt_user_uid,
+                        salt_user_primary_gid,
+                        salt_user_gids,
+                        allow_nonprimary_gid
+                    )
+                except (IOError, OSError):
+                    log.exception('Unable to set permissions for path {path}'.format(path=path))
+
+            for filename in filenames:
+                path = os.path.join(dirpath, filename)
+                try:
+                    _check_and_set_permissions(
+                        path,
+                        dir_mode,
+                        salt_user_uid,
+                        salt_user_primary_gid,
+                        salt_user_gids,
+                        allow_nonprimary_gid
+                    )
+                except (IOError, OSError):
+                    log.exception('Unable to set permissions for path {path}'.format(path=path))
 
 
 def check_user(user):
@@ -486,7 +541,7 @@ def valid_id(opts, id_):
     '''
     try:
         return bool(clean_path(opts['pki_dir'], id_))
-    except (AttributeError, KeyError, TypeError) as e:
+    except (AttributeError, KeyError, TypeError):
         return False
 
 
