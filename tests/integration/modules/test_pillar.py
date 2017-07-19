@@ -61,17 +61,3 @@ class PillarModuleTest(ModuleCase):
         self.assertDictContainsSubset(
             {'knights': ['Lancelot', 'Galahad', 'Bedevere', 'Robin']},
             get_items)
-
-    def test_referencing_preceding_pillars(self):
-        '''
-        Pillars, that come first in the top file can be referenced from
-        the subsequent pillars.
-        '''
-        items = self.run_function('pillar.items', minion_tgt='sub_minion')
-        self.assertDictContainsSubset(
-            {'lowercase_knights': ['lancelot', 'galahad',
-                                   'bedevere', 'robin'],
-             'uppercase_knights': ['LANCELOT', 'GALAHAD',
-                                   'BEDEVERE', 'ROBIN']},
-            items
-        )
