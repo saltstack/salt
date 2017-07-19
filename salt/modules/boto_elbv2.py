@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon ALB
 
-.. versionadded:: TBD
+.. versionadded:: 2017.7.0
 
 :configuration: This module accepts explicit elb credentials but can also utilize
     IAM roles assigned to the instance through Instance Profiles. Dynamic
