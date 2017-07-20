@@ -105,7 +105,7 @@ def datacenter_configured(name):
                 log.info(comments[-1])
                 pchanges.update({'new': {'name': dc_name}})
             else:
-                log.debug ('Creating datacenter \'{0}\'. '.format(dc_name))
+                log.debug('Creating datacenter \'{0}\'. '.format(dc_name))
                 __salt__['vsphere.create_datacenter'](dc_name, si)
                 comments.append('Created datacenter \'{0}\'.'.format(dc_name))
                 log.info(comments[-1])

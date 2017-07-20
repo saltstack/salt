@@ -23,11 +23,6 @@ from tests.support.mock import (
 )
 
 
-#Globals
-esxdatacenter.__salt__ = {}
-esxdatacenter.__opts__ = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.modules.esxdatacenter.datacenter_configured'''
@@ -56,7 +51,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
 
     def tearDown(self):
-        for attrname in ('mock_si'):
+        for attrname in ('mock_si',):
             try:
                 delattr(self, attrname)
             except AttributeError:
