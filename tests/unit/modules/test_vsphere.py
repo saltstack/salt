@@ -1044,8 +1044,8 @@ class ListDatacentersViaProxyTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.vmware.get_managed_object_name',
                        mock_get_managed_object_name):
                 vsphere.list_datacenters_via_proxy()
-        mock_get_managed_object_name.assert_called([call(mock_dcs[0]),
-                                                    call(mock_dcs[1])])
+        mock_get_managed_object_name.assert_has_calls([call(mock_dcs[0]),
+                                                       call(mock_dcs[1])])
 
     def test_returned_array(self):
         with patch('salt.utils.vmware.get_datacenters',
