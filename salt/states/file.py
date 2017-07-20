@@ -2433,12 +2433,16 @@ def managed(name,
                 if sfn and os.path.isfile(sfn):
                     os.remove(sfn)
                 return ret
+
+            if sfn and os.path.isfile(sfn):
+                os.remove(sfn)
+
             # Since we generated a new tempfile and we are not returning here
             # lets change the original sfn to the new tempfile or else we will
             # get file not found
-            if sfn and os.path.isfile(sfn):
-                os.remove(sfn)
-                sfn = tmp_filename
+
+            sfn = tmp_filename
+
         else:
             ret = {'changes': {},
                    'comment': '',
