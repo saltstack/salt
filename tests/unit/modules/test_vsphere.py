@@ -627,7 +627,6 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                                       'principal': 'fake_principal',
                                       'domain': 'fake_domain'}
 
-
     def tearDown(self):
         for attrname in ('esxi_host_details', 'esxi_vcenter_details'):
             try:
