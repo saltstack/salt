@@ -203,7 +203,8 @@ def __virtual__():
 
 def get_proxy_type():
     '''
-    Returns the proxy type
+    Returns the proxy type retrieved either from the pillar of from the proxy
+    minion's config.  Returns ``<undefined>`` otherwise.
 
     CLI Example:
 
@@ -211,7 +212,11 @@ def get_proxy_type():
 
         salt '*' vsphere.get_proxy_type
     '''
-    return __pillar__['proxy']['proxytype']
+    if __pillar__.get('proxy',{}).get('proxytype'):
+        return __pillar__['proxy']['proxytype']
+    if __opts__.get('proxy', {}).get('proxytype'):
+        return __opts__['proxy']['proxytype']
+    return '<undefined>'
 
 
 def _get_proxy_connection_details():
