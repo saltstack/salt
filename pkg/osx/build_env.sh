@@ -241,7 +241,7 @@ sudo -H $MAKE install
 ############################################################################
 # upgrade pip
 ############################################################################
-sudo -H /opt/salt/bin/pip install --upgrade pip
+sudo -H $PIP install --upgrade pip
 
 ############################################################################
 # Download and install salt python dependencies
