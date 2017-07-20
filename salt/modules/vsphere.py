@@ -3589,7 +3589,7 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter')
 @gets_service_instance_via_proxy
-def list_datacenters_via_proxy(datacenter_names=[], service_instance=None):
+def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
     '''
     Returns a list of dict representations of VMware datacenters.
     Connection is done via the proxy details.
@@ -3598,6 +3598,7 @@ def list_datacenters_via_proxy(datacenter_names=[], service_instance=None):
 
     datacenter_names
         List of datacenter names.
+        Default is None.
 
     service_instance
         Service instance (vim.ServiceInstance) of the vCenter.
