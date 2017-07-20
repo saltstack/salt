@@ -152,7 +152,7 @@ import os
 
 # Import Salt Libs
 import salt.exceptions
-from  salt.config.schemas.esxdatacenter import EsxdatacenterProxySchema
+from salt.config.schemas.esxdatacenter import EsxdatacenterProxySchema
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ['esxdatacenter']
@@ -211,18 +211,18 @@ def init(opts):
             raise salt.exceptions.InvalidConfigError(
                 'Mechanism is set to \'userpass\', but no '
                 '\'username\' key found in proxy config.')
-        if not 'passwords' in opts['proxy']:
+        if 'passwords' not in opts['proxy']:
             raise salt.exceptions.InvalidConfigError(
                 'Mechanism is set to \'userpass\', but no '
                 '\'passwords\' key found in proxy config.')
         for key in ('username', 'passwords'):
             DETAILS[key] = opts['proxy'][key]
     else:
-        if not 'domain' in opts['proxy']:
+        if 'domain' not in opts['proxy']:
             raise salt.exceptions.InvalidConfigError(
                 'Mechanism is set to \'sspi\', but no '
                 '\'domain\' key found in proxy config.')
-        if not 'principal' in opts['proxy']:
+        if 'principal' not in opts['proxy']:
             raise salt.exceptions.InvalidConfigError(
                 'Mechanism is set to \'sspi\', but no '
                 '\'principal\' key found in proxy config.')
