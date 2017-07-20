@@ -255,7 +255,7 @@ def start(token,
                                 # Default to trying to run as a client module.
                                 else:
                                     local = salt.client.LocalClient()
-                                    ret = local.cmd('{0}'.format(target), cmd, args, kwargs, tgt_type='{0}'.format(tgt_type))
+                                    ret = local.cmd('{0}'.format(target), cmd, arg=args, kwarg=kwargs, tgt_type='{0}'.format(tgt_type))
 
                                 if ret:
                                     return_text = json.dumps(ret, sort_keys=True, indent=1)
