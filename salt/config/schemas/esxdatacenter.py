@@ -29,7 +29,7 @@ class EsxdatacenterProxySchema(Schema):
     additional_properties = False
     proxytype = StringItem(required=True,
                            enum=['esxdatacenter'])
-    vcenter = StringItem(required=True, pattern='[^\s]+')
+    vcenter = StringItem(required=True, pattern=r'[^\s]+')
     datacenter = StringItem(required=True)
     mechanism = StringItem(required=True, enum=['userpass', 'sspi'])
     username = StringItem()

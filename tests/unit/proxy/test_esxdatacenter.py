@@ -18,7 +18,7 @@ except ImportError:
 # Import Salt Libs
 import salt.proxy.esxdatacenter as esxdatacenter
 import salt.exceptions
-from  salt.config.schemas.esxdatacenter import EsxdatacenterProxySchema
+from salt.config.schemas.esxdatacenter import EsxdatacenterProxySchema
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -37,7 +37,8 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.proxy.esxdatacenter.init'''
     def setup_loader_modules(self):
         return {esxdatacenter: {'__virtual__':
-                                MagicMock(return_value='esxdatacenter')}}
+                                MagicMock(return_value='esxdatacenter'),
+                                'DETAILS': {}}}
 
     def setUp(self):
         self.opts_userpass = {'proxy': {'proxytype': 'esxdatacenter',
@@ -86,7 +87,6 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
                          'Mechanism is set to \'userpass\', but no '
                          '\'username\' key found in proxy config.')
 
-
     def test_no_passwords(self):
         opts = self.opts_userpass.copy()
         del opts['proxy']['passwords']
@@ -125,9 +125,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
             esxdatacenter.init(self.opts_userpass)
         mock_find_credentials.assert_called_once_with()
 
-
     def test_details_userpass(self):
-        esxdatacenter.DETAILS = {}
         mock_find_credentials = MagicMock(return_value=('fake_username',
                                                         'fake_password'))
         with patch('salt.proxy.esxdatacenter.find_credentials',
@@ -143,8 +141,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
                               'protocol': 'fake_protocol',
                               'port': 100})
 
-    def test_details_userpass(self):
-        esxdatacenter.DETAILS = {}
+    def test_details_sspi(self):
         esxdatacenter.init(self.opts_sspi)
         self.assertDictEqual(esxdatacenter.DETAILS,
                              {'vcenter': 'fake_vcenter',

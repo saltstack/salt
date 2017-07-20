@@ -22,15 +22,13 @@ from tests.support.mock import (
 )
 
 
-# Globals
-esxdatacenter.__proxy__ = {}
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GetDetailsTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.modules.esxdatacenter.get_details'''
     def setup_loader_modules(self):
         return {esxdatacenter: {'__virtual__':
-                                MagicMock(return_value='esxdatacenter')}}
+                                MagicMock(return_value='esxdatacenter'),
+                                '__proxy__': {}}}
 
     def test_get_details(self):
         mock_get_details = MagicMock()
