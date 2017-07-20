@@ -15,6 +15,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -221,7 +222,7 @@ def config(conf_path='/etc/rsyncd.conf'):
     '''
     ret = ''
     try:
-        with salt.utils.fopen(conf_path, 'r') as fp_:
+        with salt.utils.files.fopen(conf_path, 'r') as fp_:
             for line in fp_:
                 ret += line
     except IOError as exc:

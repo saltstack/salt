@@ -20,6 +20,7 @@ import multiprocessing.util
 # Import salt libs
 import salt.defaults.exitcodes
 import salt.utils
+import salt.utils.files
 import salt.log.setup
 import salt.defaults.exitcodes
 from salt.log.mixins import NewStyleClassMixIn
@@ -74,7 +75,7 @@ def set_pidfile(pidfile, user):
     if not os.path.isdir(pdir) and pdir:
         os.makedirs(pdir)
     try:
-        with salt.utils.fopen(pidfile, 'w+') as ofile:
+        with salt.utils.files.fopen(pidfile, 'w+') as ofile:
             ofile.write(str(os.getpid()))
     except IOError:
         pass
@@ -128,7 +129,7 @@ def get_pidfile(pidfile):
     '''
     Return the pid from a pidfile as an integer
     '''
-    with salt.utils.fopen(pidfile) as pdf:
+    with salt.utils.files.fopen(pidfile) as pdf:
         pid = pdf.read()
 
     return int(pid)
@@ -446,7 +447,7 @@ class ProcessManager(object):
                 # call 'taskkill', it will leave a 'taskkill' zombie process.
                 # We want to avoid this.
                 return
-            with salt.utils.fopen(os.devnull, 'wb') as devnull:
+            with salt.utils.files.fopen(os.devnull, 'wb') as devnull:
                 for pid, p_map in six.iteritems(self._process_map):
                     # On Windows, we need to explicitly terminate sub-processes
                     # because the processes don't have a sigterm handler.

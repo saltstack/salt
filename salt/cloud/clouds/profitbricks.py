@@ -98,7 +98,8 @@ import pprint
 import time
 
 # Import salt libs
-import salt.utils
+import salt.utils.cloud
+import salt.utils.files
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -107,9 +108,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudSystemExit
 )
-
-# Import salt.cloud libs
-import salt.utils.cloud
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -642,7 +640,7 @@ def get_public_keys(vm_):
                 )
             )
         ssh_keys = []
-        with salt.utils.fopen(key_filename) as rfh:
+        with salt.utils.files.fopen(key_filename) as rfh:
             for key in rfh.readlines():
                 ssh_keys.append(key)
 

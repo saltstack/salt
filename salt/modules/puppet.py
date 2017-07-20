@@ -12,6 +12,7 @@ import datetime
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -243,7 +244,7 @@ def disable(message=None):
     if os.path.isfile(puppet.disabled_lockfile):
         return False
     else:
-        with salt.utils.fopen(puppet.disabled_lockfile, 'w') as lockfile:
+        with salt.utils.files.fopen(puppet.disabled_lockfile, 'w') as lockfile:
             try:
                 # Puppet chokes when no valid json is found
                 str = '{{"disabled_message":"{0}"}}'.format(message) if message is not None else '{}'
@@ -275,7 +276,7 @@ def status():
 
     if os.path.isfile(puppet.run_lockfile):
         try:
-            with salt.utils.fopen(puppet.run_lockfile, 'r') as fp_:
+            with salt.utils.files.fopen(puppet.run_lockfile, 'r') as fp_:
                 pid = int(fp_.read())
                 os.kill(pid, 0)  # raise an OSError if process doesn't exist
         except (OSError, ValueError):
@@ -285,7 +286,7 @@ def status():
 
     if os.path.isfile(puppet.agent_pidfile):
         try:
-            with salt.utils.fopen(puppet.agent_pidfile, 'r') as fp_:
+            with salt.utils.files.fopen(puppet.agent_pidfile, 'r') as fp_:
                 pid = int(fp_.read())
                 os.kill(pid, 0)  # raise an OSError if process doesn't exist
         except (OSError, ValueError):
@@ -312,7 +313,7 @@ def summary():
     puppet = _Puppet()
 
     try:
-        with salt.utils.fopen(puppet.lastrunfile, 'r') as fp_:
+        with salt.utils.files.fopen(puppet.lastrunfile, 'r') as fp_:
             report = yaml.safe_load(fp_.read())
         result = {}
 

@@ -269,7 +269,7 @@ def _get_jinja_error(trace, context=None):
     if add_log:
         if template_path:
             out = '\n{0}\n'.format(msg.splitlines()[0])
-            with salt.utils.fopen(template_path) as fp_:
+            with salt.utils.files.fopen(template_path) as fp_:
                 template_contents = fp_.read()
             out += salt.utils.get_context(
                 template_contents,
@@ -524,7 +524,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
             return {'result': True,
                     'data': data}
         tgt = salt.utils.files.mkstemp()
-        with salt.utils.fopen(tgt, 'w+') as target:
+        with salt.utils.files.fopen(tgt, 'w+') as target:
             target.write(data)
         return {'result': True,
                 'data': tgt}

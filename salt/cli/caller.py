@@ -21,6 +21,7 @@ import salt.output
 import salt.payload
 import salt.transport
 import salt.utils.args
+import salt.utils.files
 import salt.utils.jid
 import salt.utils.minion
 import salt.defaults.exitcodes
@@ -189,7 +190,7 @@ class BaseCaller(object):
                     no_parse=self.opts.get('no_parse', [])),
                 data=sdata)
             try:
-                with salt.utils.fopen(proc_fn, 'w+b') as fp_:
+                with salt.utils.files.fopen(proc_fn, 'w+b') as fp_:
                     fp_.write(self.serial.dumps(sdata))
             except NameError:
                 # Don't require msgpack with local

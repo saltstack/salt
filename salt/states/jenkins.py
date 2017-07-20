@@ -15,7 +15,7 @@ import logging
 # Import Salt libs
 import salt.ext.six as six
 from salt.ext.six.moves import zip
-import salt.utils
+import salt.utils.files
 
 # Import XML parser
 import xml.etree.ElementTree as ET
@@ -62,7 +62,7 @@ def present(name,
         oldXML = ET.fromstring(buf.read())
 
         cached_source_path = __salt__['cp.cache_file'](config, __env__)
-        with salt.utils.fopen(cached_source_path) as _fp:
+        with salt.utils.files.fopen(cached_source_path) as _fp:
             newXML = ET.fromstring(_fp.read())
         if not _elements_equal(oldXML, newXML):
             diff = difflib.unified_diff(
@@ -74,7 +74,7 @@ def present(name,
 
     else:
         cached_source_path = __salt__['cp.cache_file'](config, __env__)
-        with salt.utils.fopen(cached_source_path) as _fp:
+        with salt.utils.files.fopen(cached_source_path) as _fp:
             new_config_xml = _fp.read()
 
         __salt__['jenkins.create_job'](name, config, __env__)

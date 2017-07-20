@@ -14,7 +14,7 @@ from tests.support.paths import TMP
 
 # Import salt libs
 import salt.ext.six as six
-import salt.utils
+import salt.utils.files
 import salt.utils.find
 
 # Import 3rd-party libs
@@ -313,7 +313,7 @@ class TestGrepOption(TestCase):
 
     def test_grep_option_match_regular_file(self):
         hello_file = os.path.join(self.tmpdir, 'hello.txt')
-        with salt.utils.fopen(hello_file, 'w') as fp_:
+        with salt.utils.files.fopen(hello_file, 'w') as fp_:
             fp_.write('foo')
         option = salt.utils.find.GrepOption('grep', 'foo')
         self.assertEqual(
@@ -372,7 +372,7 @@ class TestPrintOption(TestCase):
 
     def test_print_option_execute(self):
         hello_file = os.path.join(self.tmpdir, 'hello.txt')
-        with salt.utils.fopen(hello_file, 'w') as fp_:
+        with salt.utils.files.fopen(hello_file, 'w') as fp_:
             fp_.write('foo')
 
         option = salt.utils.find.PrintOption('print', '')
@@ -561,7 +561,7 @@ class TestFinder(TestCase):
 
     def test_find(self):
         hello_file = os.path.join(self.tmpdir, 'hello.txt')
-        with salt.utils.fopen(hello_file, 'w') as fp_:
+        with salt.utils.files.fopen(hello_file, 'w') as fp_:
             fp_.write('foo')
 
         finder = salt.utils.find.Finder({})

@@ -499,7 +499,7 @@ class Client(object):
                     'Path \'{0}\' is not absolute'.format(url_path)
                 )
             if dest is None:
-                with salt.utils.fopen(url_path, 'r') as fp_:
+                with salt.utils.files.fopen(url_path, 'r') as fp_:
                     data = fp_.read()
                 return data
             return url_path
@@ -507,7 +507,7 @@ class Client(object):
         if url_scheme == 'salt':
             result = self.get_file(url, dest, makedirs, saltenv, cachedir=cachedir)
             if result and dest is None:
-                with salt.utils.fopen(result, 'r') as fp_:
+                with salt.utils.files.fopen(result, 'r') as fp_:
                     data = fp_.read()
                 return data
             return result
@@ -558,7 +558,7 @@ class Client(object):
                 ftp = ftplib.FTP()
                 ftp.connect(url_data.hostname, url_data.port)
                 ftp.login(url_data.username, url_data.password)
-                with salt.utils.fopen(dest, 'wb') as fp_:
+                with salt.utils.files.fopen(dest, 'wb') as fp_:
                     ftp.retrbinary('RETR {0}'.format(url_data.path), fp_.write)
                 ftp.quit()
                 return dest
@@ -680,7 +680,7 @@ class Client(object):
                 dest_tmp = "{0}.part".format(dest)
                 # We need an open filehandle to use in the on_chunk callback,
                 # that's why we're not using a with clause here.
-                destfp = salt.utils.fopen(dest_tmp, 'wb')  # pylint: disable=resource-leakage
+                destfp = salt.utils.files.fopen(dest_tmp, 'wb')  # pylint: disable=resource-leakage
 
                 def on_chunk(chunk):
                     if write_body[0]:
@@ -772,7 +772,7 @@ class Client(object):
             if makedirs:
                 os.makedirs(destdir)
             else:
-                salt.utils.safe_rm(data['data'])
+                salt.utils.files.safe_rm(data['data'])
                 return ''
         shutil.move(data['data'], dest)
         return dest
@@ -1138,7 +1138,7 @@ class RemoteClient(Client):
                     return False
             # We need an open filehandle here, that's why we're not using a
             # with clause:
-            fn_ = salt.utils.fopen(dest, 'wb+')  # pylint: disable=resource-leakage
+            fn_ = salt.utils.files.fopen(dest, 'wb+')  # pylint: disable=resource-leakage
         else:
             log.debug('No dest file found')
 
@@ -1164,7 +1164,7 @@ class RemoteClient(Client):
                                 saltenv,
                                 cachedir=cachedir) as cache_dest:
                             dest = cache_dest
-                            with salt.utils.fopen(cache_dest, 'wb+') as ofile:
+                            with salt.utils.files.fopen(cache_dest, 'wb+') as ofile:
                                 ofile.write(data['data'])
                     if 'hsum' in data and d_tries < 3:
                         # Master has prompted a file verification, if the
@@ -1187,8 +1187,8 @@ class RemoteClient(Client):
                         # If a directory was formerly cached at this path, then
                         # remove it to avoid a traceback trying to write the file
                         if os.path.isdir(dest):
-                            salt.utils.rm_rf(dest)
-                        fn_ = salt.utils.fopen(dest, 'wb+')
+                            salt.utils.files.rm_rf(dest)
+                        fn_ = salt.utils.files.fopen(dest, 'wb+')
                 if data.get('gzip', None):
                     data = salt.utils.gzip_util.uncompress(data['data'])
                 else:

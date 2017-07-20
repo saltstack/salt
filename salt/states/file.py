@@ -320,7 +320,7 @@ def _load_accumulators():
         serial = salt.payload.Serial(__opts__)
         ret = {'accumulators': {}, 'accumulators_deps': {}}
         try:
-            with salt.utils.fopen(path, 'rb') as f:
+            with salt.utils.files.fopen(path, 'rb') as f:
                 loaded = serial.load(f)
                 return loaded if loaded else ret
         except (IOError, NameError):
@@ -338,7 +338,7 @@ def _persist_accummulators(accumulators, accumulators_deps):
 
     serial = salt.payload.Serial(__opts__)
     try:
-        with salt.utils.fopen(_get_accumulator_filepath(), 'w+b') as f:
+        with salt.utils.files.fopen(_get_accumulator_filepath(), 'w+b') as f:
             serial.dump(accumm_data, f)
     except NameError:
         # msgpack error from salt-ssh
@@ -1065,7 +1065,7 @@ def _get_template_texts(source_list=None,
         log.debug(msg.format(rndrd_templ_fn, source))
         if rndrd_templ_fn:
             tmplines = None
-            with salt.utils.fopen(rndrd_templ_fn, 'rb') as fp_:
+            with salt.utils.files.fopen(rndrd_templ_fn, 'rb') as fp_:
                 tmplines = fp_.read()
                 if six.PY3:
                     tmplines = tmplines.decode(__salt_system_encoding__)
@@ -4314,7 +4314,7 @@ def comment(name, regex, char='#', backup='.bak'):
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
         return ret
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         slines = fp_.read()
         if six.PY3:
             slines = slines.decode(__salt_system_encoding__)
@@ -4323,7 +4323,7 @@ def comment(name, regex, char='#', backup='.bak'):
     # Perform the edit
     __salt__['file.comment_line'](name, regex, char, True, backup)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         nlines = fp_.read()
         if six.PY3:
             nlines = nlines.decode(__salt_system_encoding__)
@@ -4422,7 +4422,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
         ret['result'] = None
         return ret
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         slines = fp_.read()
         if six.PY3:
             slines = slines.decode(__salt_system_encoding__)
@@ -4431,7 +4431,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     # Perform the edit
     __salt__['file.comment_line'](name, regex, char, False, backup)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         nlines = fp_.read()
         if six.PY3:
             nlines = nlines.decode(__salt_system_encoding__)
@@ -4655,7 +4655,7 @@ def append(name,
 
     text = _validate_str_list(text)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         slines = fp_.read()
         if six.PY3:
             slines = slines.decode(__salt_system_encoding__)
@@ -4706,7 +4706,7 @@ def append(name,
     else:
         ret['comment'] = 'File {0} is in correct state'.format(name)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         nlines = fp_.read()
         if six.PY3:
             nlines = nlines.decode(__salt_system_encoding__)
@@ -4847,7 +4847,7 @@ def prepend(name,
 
     text = _validate_str_list(text)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         slines = fp_.read()
         if six.PY3:
             slines = slines.decode(__salt_system_encoding__)
@@ -4896,7 +4896,7 @@ def prepend(name,
 
     # if header kwarg is True, use verbatim compare
     if header:
-        with salt.utils.fopen(name, 'rb') as fp_:
+        with salt.utils.files.fopen(name, 'rb') as fp_:
             # read as many lines of target file as length of user input
             contents = fp_.read()
             if six.PY3:
@@ -4917,7 +4917,7 @@ def prepend(name,
     else:
         __salt__['file.prepend'](name, *preface)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         nlines = fp_.read()
         if six.PY3:
             nlines = nlines.decode(__salt_system_encoding__)
@@ -5732,7 +5732,7 @@ def serialize(name,
                         'name': name,
                         'result': False}
 
-            with salt.utils.fopen(name, 'r') as fhr:
+            with salt.utils.files.fopen(name, 'r') as fhr:
                 existing_data = __serializers__[deserializer_name](fhr)
 
             if existing_data is not None:
