@@ -159,6 +159,47 @@ def orchestrate_high(data, test=None, queue=False, pillar=None, **kwargs):
     return ret
 
 
+def orchestrate_show_sls(mods,
+                         saltenv='base',
+                         test=None,
+                         exclude=None,
+                         pillar=None,
+                         pillarenv=None,
+                         pillar_enc=None):
+    '''
+    Display the state data from a specific sls, or list of sls files, after
+    being render using the master minion.
+
+    Note, the master minion adds a "_master" suffix to it's minion id.
+
+    .. seealso:: The state.show_sls module function
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt-run state.orch_show_sls my-orch-formula.my-orch-state 'pillar={ nodegroup: ng1 }'
+    '''
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary')
+
+    __opts__['file_client'] = 'local'
+    minion = salt.minion.MasterMinion(__opts__)
+    running = minion.functions['state.show_sls'](
+        mods,
+        saltenv,
+        test,
+        exclude,
+        pillar=pillar,
+        pillarenv=pillarenv,
+        pillar_enc=pillar_enc)
+
+    ret = {minion.opts['id']: running}
+    return ret
+
+orch_show_sls = salt.utils.alias_function(orchestrate_show_sls, 'orch_show_sls')
+
+
 def event(tagmatch='*',
         count=-1,
         quiet=False,

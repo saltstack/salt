@@ -52,7 +52,7 @@ def __virtual__():
 
 
 def targets_registered(name, targets, region=None, key=None, keyid=None,
-                       profile=None):
+                       profile=None, **kwargs):
     '''
     .. versionadded:: 2017.7.0
 
@@ -126,7 +126,7 @@ def targets_registered(name, targets, region=None, key=None, keyid=None,
 
 
 def targets_deregistered(name, targets, region=None, key=None, keyid=None,
-                       profile=None):
+                       profile=None, **kwargs):
     '''
     Remove targets to an Application Load Balancer target group.
 
@@ -150,7 +150,7 @@ def targets_deregistered(name, targets, region=None, key=None, keyid=None,
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     tg = __salt__['boto_elbv2.target_group_exists'](name, region, key, keyid, profile)
     if tg:
-        health = __salt__['boto_elbv2.describe_target_health'](name, region, key, keyid, profile)
+        health = __salt__['boto_elbv2.describe_target_health'](name, region=region, key=key, keyid=keyid, profile=profile)
         failure = False
         changes = False
         newhealth_mock = copy.copy(health)

@@ -25,7 +25,8 @@ __proxyenabled__ = ['*']
 # Don't shadow built-in's.
 __func_alias__ = {
     'true_': 'true',
-    'false_': 'false'
+    'false_': 'false',
+    'try_': 'try',
 }
 
 log = logging.getLogger(__name__)
@@ -330,16 +331,15 @@ def fib(num):
     start = time.time()
     if num < 2:
         return num, time.time() - start
-    return _fib(num-1) + _fib(num-2), time.time() - start
 
+    prev = 0
+    curr = 1
+    i = 1
+    while i < num:
+        prev, curr = curr, prev + curr
+        i += 1
 
-def _fib(num):
-    '''
-    Helper method for test.fib, doesn't calculate the time.
-    '''
-    if num < 2:
-        return num
-    return _fib(num-1) + _fib(num-2)
+    return curr, time.time() - start
 
 
 def collatz(start):

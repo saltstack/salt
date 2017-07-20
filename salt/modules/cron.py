@@ -130,7 +130,7 @@ def _render_tab(lst):
             comment = '#'
             if cron['comment']:
                 comment += ' {0}'.format(
-                    cron['comment'].rstrip().replace('\n', '\n# '))
+                    cron['comment'].replace('\n', '\n# '))
             if cron['identifier']:
                 comment += ' {0}:{1}'.format(SALT_CRON_IDENTIFIER,
                                              cron['identifier'])
@@ -604,10 +604,10 @@ def rm_job(user,
     if rm_ is not None:
         lst['crons'].pop(rm_)
         ret = 'removed'
-    comdat = _write_cron_lines(user, _render_tab(lst))
-    if comdat['retcode']:
-        # Failed to commit, return the error
-        return comdat['stderr']
+        comdat = _write_cron_lines(user, _render_tab(lst))
+        if comdat['retcode']:
+            # Failed to commit, return the error
+            return comdat['stderr']
     return ret
 
 rm = salt.utils.alias_function(rm_job, 'rm')

@@ -54,7 +54,10 @@ class DockerNetworkTestCase(TestCase, LoaderModuleMockMixin):
                 'network_foo',
                 containers=['container'],
                 )
-        docker_create_network.assert_called_with('network_foo', driver=None)
+        docker_create_network.assert_called_with('network_foo',
+                                                 driver=None,
+                                                 driver_opts=None,
+                                                 check_duplicate=True)
         docker_connect_container_to_network.assert_called_with('abcd',
                                                                  'network_foo')
         self.assertEqual(ret, {'name': 'network_foo',

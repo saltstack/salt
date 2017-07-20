@@ -500,7 +500,10 @@ def bootstrap(vm_, opts):
             'winrm_port', vm_, opts, default=5986
         )
         deploy_kwargs['winrm_use_ssl'] = salt.config.get_cloud_config_value(
-        'winrm_use_ssl', vm_, opts, default=True
+            'winrm_use_ssl', vm_, opts, default=True
+        )
+        deploy_kwargs['winrm_verify_ssl'] = salt.config.get_cloud_config_value(
+            'winrm_verify_ssl', vm_, opts, default=True
         )
 
     # Store what was used to the deploy the VM
@@ -826,7 +829,7 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
             )
 
 
-def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
+def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True, verify=True):
     '''
     Wait until WinRM connection can be established.
     '''
@@ -836,14 +839,20 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
             host, port
         )
     )
+    transport = 'ssl'
+    if not use_ssl:
+        transport = 'plaintext'
     trycount = 0
     while True:
         trycount += 1
         try:
-            transport = 'ssl'
-            if not use_ssl:
-                transport = 'plaintext'
-            s = winrm.Session(host, auth=(username, password), transport=transport)
+            winrm_kwargs = {'target': host,
+                            'auth': (username, password),
+                            'transport': transport}
+            if not verify:
+                log.debug("SSL validation for WinRM disabled.")
+                winrm_kwargs['server_cert_validation'] = 'ignore'
+            s = winrm.Session(**winrm_kwargs)
             if hasattr(s.protocol, 'set_timeout'):
                 s.protocol.set_timeout(15)
             log.trace('WinRM endpoint url: {0}'.format(s.url))
@@ -991,6 +1000,7 @@ def deploy_windows(host,
                    use_winrm=False,
                    winrm_port=5986,
                    winrm_use_ssl=True,
+                   winrm_verify_ssl=True,
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
@@ -1017,7 +1027,8 @@ def deploy_windows(host,
     if HAS_WINRM and use_winrm:
         winrm_session = wait_for_winrm(host=host, port=winrm_port,
                                        username=username, password=password,
-                                       timeout=port_timeout * 60, use_ssl=winrm_use_ssl)
+                                       timeout=port_timeout * 60, use_ssl=winrm_use_ssl,
+                                       verify=winrm_verify_ssl)
         if winrm_session is not None:
             service_available = True
     else:
@@ -1771,18 +1782,10 @@ def filter_event(tag, data, defaults):
     return ret
 
 
-def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
+def fire_event(key, msg, tag, sock_dir, args=None, transport='zeromq'):
     '''
     Fire deploy action
     '''
-    if sock_dir is None:
-        salt.utils.warn_until(
-            'Oxygen',
-            '`salt.utils.cloud.fire_event` requires that the `sock_dir`'
-            'parameter be passed in when calling the function.'
-        )
-        sock_dir = __opts__['sock_dir']
-
     event = salt.utils.event.get_event(
         'master',
         sock_dir,

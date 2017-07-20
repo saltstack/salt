@@ -209,6 +209,9 @@ def get_file(path,
              gzip=None,
              **kwargs):
     '''
+    .. versionchanged:: Oxygen
+        ``dest`` can now be a directory
+
     Used to get a single file from the salt master
 
     CLI Example:
@@ -320,6 +323,9 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, **kwargs):
 
 def get_url(path, dest='', saltenv='base', makedirs=False):
     '''
+    .. versionchanged:: Oxygen
+        ``dest`` can now be a directory
+
     Used to get a single file from a URL.
 
     path
@@ -384,9 +390,11 @@ def get_file_str(path, saltenv='base'):
     '''
     fn_ = cache_file(path, saltenv)
     if isinstance(fn_, six.string_types):
-        with salt.utils.fopen(fn_, 'r') as fp_:
-            data = fp_.read()
-        return data
+        try:
+            with salt.utils.fopen(fn_, 'r') as fp_:
+                return fp_.read()
+        except IOError:
+            return False
     return fn_
 
 

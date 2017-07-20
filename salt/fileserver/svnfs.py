@@ -481,10 +481,30 @@ def _env_is_exposed(env):
     Check if an environment is exposed by comparing it against a whitelist and
     blacklist.
     '''
+    if __opts__['svnfs_env_whitelist']:
+        salt.utils.warn_until(
+            'Neon',
+            'The svnfs_env_whitelist config option has been renamed to '
+            'svnfs_saltenv_whitelist. Please update your configuration.'
+        )
+        whitelist = __opts__['svnfs_env_whitelist']
+    else:
+        whitelist = __opts__['svnfs_saltenv_whitelist']
+
+    if __opts__['svnfs_env_blacklist']:
+        salt.utils.warn_until(
+            'Neon',
+            'The svnfs_env_blacklist config option has been renamed to '
+            'svnfs_saltenv_blacklist. Please update your configuration.'
+        )
+        blacklist = __opts__['svnfs_env_blacklist']
+    else:
+        blacklist = __opts__['svnfs_saltenv_blacklist']
+
     return salt.utils.check_whitelist_blacklist(
         env,
-        whitelist=__opts__['svnfs_env_whitelist'],
-        blacklist=__opts__['svnfs_env_blacklist']
+        whitelist=whitelist,
+        blacklist=blacklist,
     )
 
 

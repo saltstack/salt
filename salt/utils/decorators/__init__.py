@@ -641,3 +641,78 @@ def ignores_kwargs(*kwarg_names):
             return fn(*args, **kwargs_filtered)
         return __ignores_kwargs
     return _ignores_kwargs
+
+
+class JinjaFilter(object):
+    '''
+    This decorator is used to specify that a function is to be loaded as a
+    Jinja filter.
+    '''
+    salt_jinja_filters = {}
+
+    def __init__(self, name=None):
+        '''
+        '''
+        self.name = name
+
+    def __call__(self, function):
+        '''
+        '''
+        name = self.name or function.__name__
+        if name not in self.salt_jinja_filters:
+            log.debug('Marking "{0}" as a jinja filter'.format(name))
+            self.salt_jinja_filters[name] = function
+        return function
+
+
+jinja_filter = JinjaFilter
+
+
+class JinjaTest(object):
+    '''
+    This decorator is used to specify that a function is to be loaded as a
+    Jinja test.
+    '''
+    salt_jinja_tests = {}
+
+    def __init__(self, name=None):
+        '''
+        '''
+        self.name = name
+
+    def __call__(self, function):
+        '''
+        '''
+        name = self.name or function.__name__
+        if name not in self.salt_jinja_tests:
+            log.debug('Marking "{0}" as a jinja test'.format(name))
+            self.salt_jinja_tests[name] = function
+        return function
+
+
+jinja_test = JinjaTest
+
+
+class JinjaGlobal(object):
+    '''
+    This decorator is used to specify that a function is to be loaded as a
+    Jinja global.
+    '''
+    salt_jinja_globals = {}
+
+    def __init__(self, name=None):
+        '''
+        '''
+        self.name = name
+
+    def __call__(self, function):
+        '''
+        '''
+        name = self.name or function.__name__
+        if name not in self.salt_jinja_globals:
+            log.debug('Marking "{0}" as a jinja global'.format(name))
+            self.salt_jinja_globals[name] = function
+        return function
+
+
+jinja_global = JinjaGlobal

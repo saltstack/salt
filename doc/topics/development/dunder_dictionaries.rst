@@ -1,3 +1,5 @@
+.. _dunder-dictionaries:
+
 ===================
 Dunder Dictionaries
 ===================
