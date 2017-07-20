@@ -64,6 +64,7 @@ if [ "$PYVER" == "2" ]; then
 else
     PYTHON=/opt/salt/bin/python3
 fi
+CPUARCH=`uname -m`
 
 ############################################################################
 # Make sure this is the Salt Repository
@@ -85,6 +86,8 @@ sudo $PKGRESOURCES/build_env.sh $PYVER
 # Install Salt
 ############################################################################
 echo -n -e "\033]0;Build: Install Salt\007"
+sudo rm -rm $SRCDIR/build
+sudo rm -rm $SRCDIR/dist
 sudo $PYTHON $SRCDIR/setup.py install
 
 ############################################################################
@@ -92,3 +95,8 @@ sudo $PYTHON $SRCDIR/setup.py install
 ############################################################################
 echo -n -e "\033]0;Build: Package Salt\007"
 sudo $PKGRESOURCES/build_pkg.sh $VERSION $PYVER $PKGDIR
+
+############################################################################
+# Sign Package
+############################################################################
+sudo $PKGRESOURCES/build_sig.sh salt-$VERSION-py$PYVER-$CPUARCH.pkg salt-$VERSION-py$PYVER-$CPUARCH-signed.pkg
