@@ -41,7 +41,7 @@ import salt.ext.six as six
 VALID_PROVIDERS = ('pygit2', 'gitpython')
 # Optional per-remote params that can only be used on a per-remote basis, and
 # thus do not have defaults in salt/config.py.
-PER_REMOTE_ONLY = ('name',)
+PER_REMOTE_ONLY = ('name', 'mountpoint')
 SYMLINK_RECURSE_DEPTH = 100
 
 # Auth support (auth params can be global or per-remote, too)
