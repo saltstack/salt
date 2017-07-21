@@ -21,7 +21,7 @@ __virtualname__ = 'saltcheck'
 
 def __virtual__():
     '''
-    Check dependencies
+    Check dependencies - may be useful in future
     '''
     return __virtualname__
 
@@ -78,6 +78,25 @@ def run_state_tests(state):
     return {state: results_dict}
 
 
+def run_highstate_tests():
+    '''
+    Returns the output of running all salt checks of states that would apply for a highstate
+    CLI Example::
+        salt '*' salt_check.run_highstate_tests
+    '''
+    scheck = SaltCheck()
+    states = scheck.get_top_states()
+    all_states = {}
+    for sta in states:
+        log.info("State Name = {}".format(sta))
+        result_dict = run_state_tests(sta)
+        log.info("result_dict = {}".format(result_dict))
+        key = result_dict.keys()[0]
+        val = result_dict.values()[0]
+        all_states[key] = val
+    return all_states
+
+
 class SaltCheck(object):
     '''
     This class implements the saltcheck
@@ -95,27 +114,49 @@ class SaltCheck(object):
                                   assertGreaterEqual
                                   assertLess assertLessEqual'''.split()
         # self.modules = self.populate_salt_modules_list()
-        # call when needed self.populate_salt_modules_list()
-        self.salt_lc = salt.client.Caller(mopts=__opts__)
+        # self.salt_lc = salt.client.Caller(mopts=__opts__)
+        self.salt_lc = salt.client.Caller()
+
+    # @staticmethod
+    # def update_master_cache():
+    #    '''Easy way to update the master files on the minion'''
+    #    # currently unused, but might be useful later
+    #    __salt__['cp.cache_master'](args=None, kwargs=None)
+    #    return
+
+    # def get_top_sls(self):
+    #    ''' equivalent to a salt cli: salt web state.show_lowstate'''
+    #    # sls_list = []
+    #    try:
+    #        returned = __salt__['state.show_lowstate']()
+    #        for i in returned:
+    #            if i['__sls__'] not in self.sls_list_top:
+    #                self.sls_list_top.append(i['__sls__'])
+    #    except Exception:
+    #        raise
+    #    # self.sls_list = sls_list
+    #    return self.sls_list_top
 
     @staticmethod
-    def update_master_cache():
-        '''Easy way to update the master files on the minion'''
-        __salt__['cp.cache_master'](args=None, kwargs=None)
-        return
-
-    def get_top_sls(self):
-        ''' equivalent to a salt cli: salt web state.show_lowstate'''
-        # sls_list = []
+    def get_top_states():
+        ''' equivalent to a salt cli: salt web state.show_top'''
         try:
-            returned = __salt__['state.show_lowstate']()
-            for i in returned:
-                if i['__sls__'] not in self.sls_list_top:
-                    self.sls_list_top.append(i['__sls__'])
+            returned = __salt__['state.show_top']()
+            # returned = self.call_salt_command(fun='state.show_top',
+            #                                  args=None,
+            #                                  kwargs=None)
+            # doing this to handle states with periods
+            # e.g.  apache.vhost_web1
+            alt_states = []
+            for state in returned['base']:
+                state_bits = state.split(".")
+                state_name = state_bits[0]
+                if state_name not in alt_states:
+                    alt_states.append(state_name)
         except Exception:
             raise
-        # self.sls_list = sls_list
-        return self.sls_list_top
+        log.info("top states: {}".format(alt_states))
+        return alt_states
 
     def get_state_sls(self, state):
         ''' equivalent to a salt cli: salt web state.show_low_sls STATE'''
@@ -195,16 +236,16 @@ class SaltCheck(object):
             raise
         return value
 
-    def call_salt_command_test(self,
-                               fun
-                               ):
-        '''Generic call of salt Caller command'''
-        value = False
-        try:
-            value = self.salt_lc.function(fun)
-        except salt.exceptions.SaltException:
-            raise
-        return value
+    # def call_salt_command_test(self,
+    #                           fun
+    #                           ):
+    #    '''Generic call of salt Caller command'''
+    #    value = False
+    #    try:
+    #        value = self.salt_lc.function(fun)
+    #    except salt.exceptions.SaltException:
+    #        raise
+    #    return value
 
     def run_test(self, test_dict):
         '''Run a single salt_check test'''
@@ -334,7 +375,7 @@ class SaltCheck(object):
     @staticmethod
     def __assert_not_in(expected, returned):
         '''
-        Test if a value is in the list of returned values
+        Test if a value is not in the list of returned values
         '''
         result = (True)
         try:
@@ -346,7 +387,7 @@ class SaltCheck(object):
     @staticmethod
     def __assert_greater(expected, returned):
         '''
-        Test if a value is in the list of returned values
+        Test if a value is greater than the returned value
         '''
         result = (True)
         try:
@@ -358,7 +399,7 @@ class SaltCheck(object):
     @staticmethod
     def __assert_greater_equal(expected, returned):
         '''
-        Test if a value is in the list of returned values
+        Test if a value is greater than or equal to the returned value
         '''
         result = (True)
         try:
@@ -370,7 +411,7 @@ class SaltCheck(object):
     @staticmethod
     def __assert_less(expected, returned):
         '''
-        Test if a value is in the list of returned values
+        Test if a value is less than the returned value
         '''
         result = (True)
         try:
@@ -382,7 +423,7 @@ class SaltCheck(object):
     @staticmethod
     def __assert_less_equal(expected, returned):
         '''
-        Test if a value is in the list of returned values
+        Test if a value is less than or equal to the returned value
         '''
         result = (True)
         try:
@@ -391,19 +432,19 @@ class SaltCheck(object):
             result = "False: " + str(err)
         return result
 
-    @staticmethod
-    def __show_minion_options():
-        '''gather and return minion config options'''
-        cachedir = __opts__['cachedir']
-        root_dir = __opts__['root_dir']
-        states_dirs = __opts__['states_dirs']
-        environment = __opts__['environment']
-        file_roots = __opts__['file_roots']
-        return {'cachedir': cachedir,
-                'root_dir': root_dir,
-                'states_dirs': states_dirs,
-                'environment': environment,
-                'file_roots': file_roots}
+    # @staticmethod
+    # def __show_minion_options():
+    #    '''gather and return minion config options'''
+    #    cachedir = __opts__['cachedir']
+    #    root_dir = __opts__['root_dir']
+    #    states_dirs = __opts__['states_dirs']
+    #    environment = __opts__['environment']
+    #    file_roots = __opts__['file_roots']
+    #    return {'cachedir': cachedir,
+    #            'root_dir': root_dir,
+    #            'states_dirs': states_dirs,
+    #            'environment': environment,
+    #            'file_roots': file_roots}
 
     @staticmethod
     def get_state_search_path_list():
@@ -420,10 +461,10 @@ class SaltCheck(object):
         search_list.append(path)
         return search_list
 
-    def __get_state_dir(self):
-        ''''return the path of the state dir'''
-        paths = self.get_state_search_path_list()
-        return paths
+    # def __get_state_dir(self):
+    #    ''''return the path of the state dir'''
+    #    paths = self.get_state_search_path_list()
+    #    return paths
 
 
 class StateTestLoader(object):
