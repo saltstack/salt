@@ -11,7 +11,7 @@ import os
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -89,7 +89,7 @@ def show_link(name):
     path += 'alternatives/{0}'.format(name)
 
     try:
-        with salt.utils.fopen(path, 'rb') as r_file:
+        with salt.utils.files.fopen(path, 'rb') as r_file:
             contents = r_file.read()
             if six.PY3:
                 contents = contents.decode(__salt_system_encoding__)
