@@ -579,6 +579,8 @@ class Compiler(object):
                 if '__env__' in body:
                     chunk['__env__'] = body['__env__']
                 chunk['__id__'] = name
+                chunk['arg'] = []
+                chunk['kwarg'] = {}
                 for arg in run:
                     if isinstance(arg, six.string_types):
                         funcs.add(arg)
@@ -591,7 +593,7 @@ class Compiler(object):
                                         names.append(_name)
                                 continue
                             else:
-                                chunk.update(arg)
+                                chunk['kwarg'].update(arg)
                 if names:
                     name_order = 1
                     for entry in names:
