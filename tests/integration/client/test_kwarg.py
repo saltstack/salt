@@ -6,6 +6,7 @@ from __future__ import absolute_import
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 
+
 class StdTest(ModuleCase):
     '''
     Test standard client calls
