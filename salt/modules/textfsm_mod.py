@@ -37,7 +37,7 @@ except ImportError:
     HAS_CLITABLE = False
 
 # Import salt modules
-import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -194,9 +194,10 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv='base'):
         # Disabling pylint W8470 to nto complain about fopen.
         # Unfortunately textFSM needs the file handle rather than the content...
         # pylint: disable=W8470
-        tpl_file_handle = salt.utils.fopen(tpl_cached_path, 'r')
+        tpl_file_handle = salt.utils.files.fopen(tpl_cached_path, 'r')
         # pylint: disable=W8470
         log.debug(tpl_file_handle.read())
+        tpl_file_handle.seek(0)  # move the object position back at the top of the file
         fsm_handler = textfsm.TextFSM(tpl_file_handle)
     except textfsm.TextFSMTemplateError as tfte:
         log.error('Unable to parse the TextFSM template', exc_info=True)
