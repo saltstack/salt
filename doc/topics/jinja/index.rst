@@ -907,16 +907,22 @@ Returns:
 ------------
 
 .. versionadded:: 2017.7.0
+.. versionadded:: Oxygen
+    Renamed from ``rand_str`` to ``random_hash`` to more accurately describe
+    what the filter does.
 
-Generate a random string and applies a hash. Default hashing: md5.
+Generates a random number between 1 and the number passed to the filter, and
+then hashes it. The default hash type is the one specified by the minion's
+:conf_minion:`hash_type` config option, but an alternate hash type can be
+passed to the filter as an argument.
 
 Example:
 
 .. code-block:: jinja
 
-  {% set passwd_length = 17 %}
-  {{ passwd_length | rand_str }}
-  {{ passwd_length | rand_str('sha512') }}
+  {% set num_range = 99999999 %}
+  {{ num_range | rand_str }}
+  {{ num_range | rand_str('sha512') }}
 
 Returns:
 
