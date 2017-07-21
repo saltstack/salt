@@ -88,13 +88,13 @@ SIG = (
 class CryptTestCase(TestCase):
 
     def test_gen_keys(self):
-        with patch.multiple(os, umask=MagicMock(), chmod=MagicMock(), chown=MagicMock,
+        with patch.multiple(os, umask=MagicMock(), chmod=MagicMock(),
                             access=MagicMock(return_value=True)):
             with patch('salt.utils.fopen', mock_open()):
-                open_priv_wb = call('/keydir/keyname.pem', 'wb+')
-                open_pub_wb = call('/keydir/keyname.pub', 'wb+')
+                open_priv_wb = call('/keydir{0}keyname.pem'.format(os.sep), 'wb+')
+                open_pub_wb = call('/keydir{0}keyname.pub'.format(os.sep), 'wb+')
                 with patch('os.path.isfile', return_value=True):
-                    self.assertEqual(crypt.gen_keys('/keydir', 'keyname', 2048), '/keydir/keyname.pem')
+                    self.assertEqual(crypt.gen_keys('/keydir', 'keyname', 2048), '/keydir{0}keyname.pem'.format(os.sep))
                     self.assertNotIn(open_priv_wb, salt.utils.fopen.mock_calls)
                     self.assertNotIn(open_pub_wb, salt.utils.fopen.mock_calls)
                 with patch('os.path.isfile', return_value=False):
