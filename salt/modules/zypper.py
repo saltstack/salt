@@ -583,7 +583,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
     return __salt__['lowpkg.version_cmp'](ver1, ver2, ignore_epoch=ignore_epoch)
 
 
-def list_pkgs(versions_as_list=False, attr=None, **kwargs):
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed as a dict. By default, the dict
     contains versions as a comma separated string::
@@ -624,6 +624,7 @@ def list_pkgs(versions_as_list=False, attr=None, **kwargs):
             for x in ('removed', 'purge_desired')]):
         return {}
 
+    attr = kwargs.get("attr")
     if 'pkg.list_pkgs' in __context__:
         return _format_pkg_list(__context__['pkg.list_pkgs'], versions_as_list, attr)
 
@@ -943,7 +944,6 @@ def install(name=None,
             skip_verify=False,
             version=None,
             ignore_repo_failure=False,
-            diff_attr=None,
             **kwargs):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -1096,6 +1096,7 @@ def install(name=None,
     else:
         targets = pkg_params
 
+    diff_attr = kwargs.get("diff_attr")
     old = list_pkgs(attr=diff_attr) if not downloadonly else list_downloaded()
     downgrades = []
     if fromrepo:
