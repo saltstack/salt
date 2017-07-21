@@ -315,7 +315,7 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                     # list of positional arguments. This keyword argument is
                     # invalid.
                     for key, val in six.iteritems(string_kwarg):
-                         invalid_kwargs.append('{0}={1}'.format(key, val))
+                        invalid_kwargs.append('{0}={1}'.format(key, val))
             else:
                 _args.append(arg)
 
