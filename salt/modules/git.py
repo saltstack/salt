@@ -273,10 +273,10 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                 if not salt.utils.is_windows() and 'GIT_SSH' in env:
                     os.remove(env['GIT_SSH'])
 
-                # Cleanup the temporary identify file
+                # Cleanup the temporary identity file
                 if tmp_identity_file and os.path.exists(tmp_identity_file):
-                    log.debug('Removing identify file {0}'.format(tmp_identity_file))
-                    #__salt__['file.remove'](tmp_identity_file)
+                    log.debug('Removing identity file {0}'.format(tmp_identity_file))
+                    __salt__['file.remove'](tmp_identity_file)
 
             # If the command was successful, no need to try additional IDs
             if result['retcode'] == 0:
