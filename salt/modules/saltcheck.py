@@ -34,7 +34,7 @@ def update_master_cache():
     CLI Example:
         salt '*' salt_check.update_master_cache
     '''
-    __salt__['cp.cache_master'](args=None, kwargs=None)
+    __salt__['cp.cache_master']()
     return True
 
 
@@ -103,26 +103,23 @@ class SaltCheck(object):
     '''
 
     def __init__(self):
-        self.sls_list_top = []
+        # self.sls_list_top = []
         self.sls_list_state = []
         self.modules = []
         self.results_dict = {}
         self.results_dict_summary = {}
+        self.auto_update_master_cache = __salt__['config.get']('auto_update_master_cache', False)
         self.assertions_list = '''assertEqual assertNotEqual
                                   assertTrue assertFalse
                                   assertIn assertGreater
                                   assertGreaterEqual
                                   assertLess assertLessEqual'''.split()
-        # self.modules = self.populate_salt_modules_list()
+        self.populate_salt_modules_list()
+        # log.info("modules are: {}".format(self.modules))
         # self.salt_lc = salt.client.Caller(mopts=__opts__)
         self.salt_lc = salt.client.Caller()
-
-    # @staticmethod
-    # def update_master_cache():
-    #    '''Easy way to update the master files on the minion'''
-    #    # currently unused, but might be useful later
-    #    __salt__['cp.cache_master'](args=None, kwargs=None)
-    #    return
+        if self.auto_update_master_cache:
+            update_master_cache()
 
     # def get_top_sls(self):
     #    ''' equivalent to a salt cli: salt web state.show_lowstate'''
@@ -489,8 +486,7 @@ class StateTestLoader(object):
         loads in one test file
         '''
         try:
-            with salt.utils.fopen(filepath, 'r') as myfile:
-                # myfile = open(filepath, 'r')
+            with salt.utils.files.fopen(filepath, 'r') as myfile:
                 contents_yaml = yaml.load(myfile)
                 for key, value in contents_yaml.items():
                     self.test_dict[key] = value
@@ -503,7 +499,8 @@ class StateTestLoader(object):
         log.info("gather_files: {}".format(time.time()))
         filepath = filepath + os.sep + 'salt-check-tests'
         rootdir = filepath
-        for dirname, filelist in os.walk(rootdir):
+        # for dirname, subdirlist, filelist in os.walk(rootdir):
+        for dirname, dummy, filelist in os.walk(rootdir):
             for fname in filelist:
                 if fname.endswith('.tst'):
                     start_path = dirname + os.sep + fname
@@ -528,7 +525,8 @@ class StateTestLoader(object):
             rootdir = full_path
             if os.path.isdir(full_path):
                 log.info("searching path= {}".format(full_path))
-                for dirname, subdirlist in os.walk(rootdir, topdown=True):
+                # for dirname, subdirlist, filelist in os.walk(rootdir, topdown=True):
+                for dirname, subdirlist, dummy in os.walk(rootdir, topdown=True):
                     if "salt-check-tests" in subdirlist:
                         self.gather_files(dirname)
                         log.info("test_files list: {}".format(self.test_files))
