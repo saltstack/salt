@@ -16,6 +16,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 IS_WINDOWS = salt.utils.is_windows()
 
@@ -84,7 +85,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         test cmd.run unless
         '''
         state_key = 'cmd_|-{0}_|-{0}_|-run'.format(self.test_tmp_path)
-        with salt.utils.fopen(self.state_file, 'w') as fb_:
+        with salt.utils.files.fopen(self.state_file, 'w') as fb_:
             fb_.write(textwrap.dedent('''
                 {0}:
                   cmd.run:
@@ -115,7 +116,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         test cmd.run creates already there
         '''
         state_key = 'cmd_|-echo >> {0}_|-echo >> {0}_|-run'.format(self.test_file)
-        with salt.utils.fopen(self.state_file, 'w') as fb_:
+        with salt.utils.files.fopen(self.state_file, 'w') as fb_:
             fb_.write(textwrap.dedent('''
                 echo >> {0}:
                   cmd.run:
@@ -132,7 +133,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         os.remove(self.test_file)
         state_key = 'cmd_|-echo >> {0}_|-echo >> {0}_|-run'.format(self.test_file)
-        with salt.utils.fopen(self.state_file, 'w') as fb_:
+        with salt.utils.files.fopen(self.state_file, 'w') as fb_:
             fb_.write(textwrap.dedent('''
                 echo >> {0}:
                   cmd.run:
@@ -148,7 +149,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         test cmd.run with shell redirect
         '''
         state_key = 'cmd_|-echo test > {0}_|-echo test > {0}_|-run'.format(self.test_file)
-        with salt.utils.fopen(self.state_file, 'w') as fb_:
+        with salt.utils.files.fopen(self.state_file, 'w') as fb_:
             fb_.write(textwrap.dedent('''
                 echo test > {0}:
                   cmd.run
@@ -179,7 +180,7 @@ class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
         saltines_key = 'cmd_|-saltines_|-echo changed=true_|-run'
         biscuits_key = 'cmd_|-biscuits_|-echo biscuits_|-wait'
 
-        with salt.utils.fopen(self.state_file, 'w') as fb_:
+        with salt.utils.files.fopen(self.state_file, 'w') as fb_:
             fb_.write(textwrap.dedent('''
                 saltines:
                   cmd.run:

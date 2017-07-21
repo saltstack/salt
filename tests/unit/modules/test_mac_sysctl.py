@@ -67,7 +67,7 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests adding of config file failure
         '''
-        with patch('salt.utils.fopen', mock_open()) as m_open, \
+        with patch('salt.utils.files.fopen', mock_open()) as m_open, \
                 patch('os.path.isfile', MagicMock(return_value=False)):
             m_open.side_effect = IOError(13, 'Permission denied', '/file')
             self.assertRaises(CommandExecutionError,
@@ -79,7 +79,7 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests successful add of config file when previously not one
         '''
-        with patch('salt.utils.fopen', mock_open()) as m_open, \
+        with patch('salt.utils.files.fopen', mock_open()) as m_open, \
                 patch('os.path.isfile', MagicMock(return_value=False)):
             mac_sysctl.persist('net.inet.icmp.icmplim', 50)
             helper_open = m_open()
@@ -92,7 +92,7 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         to_write = '#\n# Kernel sysctl configuration\n#\n'
         m_calls_list = [call.writelines(['net.inet.icmp.icmplim=50', '\n'])]
-        with patch('salt.utils.fopen', mock_open(read_data=to_write)) as m_open, \
+        with patch('salt.utils.files.fopen', mock_open(read_data=to_write)) as m_open, \
                 patch('os.path.isfile', MagicMock(return_value=True)):
             mac_sysctl.persist('net.inet.icmp.icmplim', 50, config=to_write)
             helper_open = m_open()

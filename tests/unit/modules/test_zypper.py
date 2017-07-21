@@ -21,7 +21,7 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 import salt.modules.zypper as zypper
 from salt.exceptions import CommandExecutionError
 
@@ -46,7 +46,7 @@ def get_test_data(filename):
     '''
     Return static test data
     '''
-    with salt.utils.fopen(
+    with salt.utils.files.fopen(
             os.path.join(
                 os.path.join(
                     os.path.dirname(os.path.abspath(__file__)), 'zypp'), filename)) as rfh:

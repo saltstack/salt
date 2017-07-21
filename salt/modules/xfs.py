@@ -34,6 +34,7 @@ import logging
 
 # Import Salt libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -507,7 +508,7 @@ def _get_mounts():
     List mounted filesystems.
     '''
     mounts = {}
-    with salt.utils.fopen("/proc/mounts") as fhr:
+    with salt.utils.files.fopen("/proc/mounts") as fhr:
         for line in fhr.readlines():
             device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
             if fstype != 'xfs':

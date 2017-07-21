@@ -83,7 +83,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                 with patch('time.time', MagicMock(return_value=m.now)):
                     with patch('os.path.exists', MagicMock(return_value=True)):
                         proc_uptime = '{0} {1}'.format(m.ut, m.idle)
-                        with patch('salt.utils.fopen', mock_open(read_data=proc_uptime)):
+                        with patch('salt.utils.files.fopen', mock_open(read_data=proc_uptime)):
                             ret = status.uptime()
                             self.assertDictEqual(ret, m.ret)
 

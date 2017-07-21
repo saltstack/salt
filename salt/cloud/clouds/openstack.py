@@ -175,10 +175,9 @@ from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 
 # Import salt libs
 import salt.utils
-
-# Import salt.cloud libs
 import salt.utils.cloud
-import salt.utils.pycrypto as sup
+import salt.utils.files
+import salt.utils.pycrypto
 import salt.config as config
 from salt.utils import namespaced_function
 from salt.exceptions import (
@@ -529,7 +528,7 @@ def request_instance(vm_=None, call=None):
     if files:
         kwargs['ex_files'] = {}
         for src_path in files:
-            with salt.utils.fopen(files[src_path], 'r') as fp_:
+            with salt.utils.files.fopen(files[src_path], 'r') as fp_:
                 kwargs['ex_files'][src_path] = fp_.read()
 
     userdata_file = config.get_cloud_config_value(
@@ -537,7 +536,7 @@ def request_instance(vm_=None, call=None):
     )
     if userdata_file is not None:
         try:
-            with salt.utils.fopen(userdata_file, 'r') as fp_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fp_:
                 kwargs['ex_userdata'] = salt.utils.cloud.userdata_template(
                     __opts__, vm_, fp_.read()
                 )
@@ -761,7 +760,7 @@ def create(vm_):
             )
         data = conn.ex_get_node_details(vm_['instance_id'])
         if vm_['key_filename'] is None and 'change_password' in __opts__ and __opts__['change_password'] is True:
-            vm_['password'] = sup.secure_password()
+            vm_['password'] = salt.utils.pycrypto.secure_password()
             conn.ex_set_password(data, vm_['password'])
         networks(vm_)
     else:

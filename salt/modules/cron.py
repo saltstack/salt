@@ -227,13 +227,13 @@ def _write_cron_lines(user, lines):
     path = salt.utils.files.mkstemp()
     if _check_instance_uid_match(user) or __grains__.get('os_family') in ('Solaris', 'AIX'):
         # In some cases crontab command should be executed as user rather than root
-        with salt.utils.fpopen(path, 'w+', uid=__salt__['file.user_to_uid'](user), mode=0o600) as fp_:
+        with salt.utils.files.fpopen(path, 'w+', uid=__salt__['file.user_to_uid'](user), mode=0o600) as fp_:
             fp_.writelines(lines)
         ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path),
                                       runas=user,
                                       python_shell=False)
     else:
-        with salt.utils.fpopen(path, 'w+', mode=0o600) as fp_:
+        with salt.utils.files.fpopen(path, 'w+', mode=0o600) as fp_:
             fp_.writelines(lines)
         ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
                                       python_shell=False)

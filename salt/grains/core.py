@@ -43,8 +43,9 @@ except ImportError:
 import salt.exceptions
 import salt.log
 import salt.utils
-import salt.utils.network
 import salt.utils.dns
+import salt.utils.files
+import salt.utils.network
 import salt.ext.six as six
 from salt.ext.six.moves import range
 
@@ -119,7 +120,7 @@ def _linux_cpudata():
     cpuinfo = '/proc/cpuinfo'
     # Parse over the cpuinfo file
     if os.path.isfile(cpuinfo):
-        with salt.utils.fopen(cpuinfo, 'r') as _fp:
+        with salt.utils.files.fopen(cpuinfo, 'r') as _fp:
             for line in _fp:
                 comps = line.split(':')
                 if not len(comps) > 1:
@@ -338,7 +339,7 @@ def _bsd_cpudata(osdata):
     if osdata['kernel'] == 'FreeBSD' and os.path.isfile('/var/run/dmesg.boot'):
         grains['cpu_flags'] = []
         # TODO: at least it needs to be tested for BSD other then FreeBSD
-        with salt.utils.fopen('/var/run/dmesg.boot', 'r') as _fp:
+        with salt.utils.files.fopen('/var/run/dmesg.boot', 'r') as _fp:
             cpu_here = False
             for line in _fp:
                 if line.startswith('CPU: '):
@@ -402,7 +403,7 @@ def _memdata(osdata):
         meminfo = '/proc/meminfo'
 
         if os.path.isfile(meminfo):
-            with salt.utils.fopen(meminfo, 'r') as ifile:
+            with salt.utils.files.fopen(meminfo, 'r') as ifile:
                 for line in ifile:
                     comps = line.rstrip('\n').split(':')
                     if not len(comps) > 1:
@@ -711,10 +712,10 @@ def _virtual(osdata):
                 pass
         if os.path.isfile('/proc/1/cgroup'):
             try:
-                with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
+                with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
                     if ':/lxc/' in fhr.read():
                         grains['virtual_subtype'] = 'LXC'
-                with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
+                with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
                     fhr_contents = fhr.read()
                     if ':/docker/' in fhr_contents or ':/system.slice/docker' in fhr_contents:
                         grains['virtual_subtype'] = 'Docker'
@@ -730,7 +731,7 @@ def _virtual(osdata):
                 failed_commands.discard('dmidecode')
         # Provide additional detection for OpenVZ
         if os.path.isfile('/proc/self/status'):
-            with salt.utils.fopen('/proc/self/status') as status_file:
+            with salt.utils.files.fopen('/proc/self/status') as status_file:
                 vz_re = re.compile(r'^envID:\s+(\d+)$')
                 for line in status_file:
                     vz_match = vz_re.match(line.rstrip('\n'))
@@ -750,7 +751,7 @@ def _virtual(osdata):
                     grains['virtual_subtype'] = 'Xen HVM DomU'
                 elif os.path.isfile('/proc/xen/capabilities') and \
                         os.access('/proc/xen/capabilities', os.R_OK):
-                    with salt.utils.fopen('/proc/xen/capabilities') as fhr:
+                    with salt.utils.files.fopen('/proc/xen/capabilities') as fhr:
                         if 'control_d' not in fhr.read():
                             # Tested on CentOS 5.5 / 2.6.18-194.3.1.el5xen
                             grains['virtual_subtype'] = 'Xen PV DomU'
@@ -770,12 +771,12 @@ def _virtual(osdata):
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
         if os.path.isfile('/proc/cpuinfo'):
-            with salt.utils.fopen('/proc/cpuinfo', 'r') as fhr:
+            with salt.utils.files.fopen('/proc/cpuinfo', 'r') as fhr:
                 if 'QEMU Virtual CPU' in fhr.read():
                     grains['virtual'] = 'kvm'
         if os.path.isfile('/sys/devices/virtual/dmi/id/product_name'):
             try:
-                with salt.utils.fopen('/sys/devices/virtual/dmi/id/product_name', 'r') as fhr:
+                with salt.utils.files.fopen('/sys/devices/virtual/dmi/id/product_name', 'r') as fhr:
                     output = fhr.read()
                     if 'VirtualBox' in output:
                         grains['virtual'] = 'VirtualBox'
@@ -1234,7 +1235,7 @@ def _parse_os_release():
         filename = '/usr/lib/os-release'
 
     data = dict()
-    with salt.utils.fopen(filename) as ifile:
+    with salt.utils.files.fopen(filename) as ifile:
         regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?$')
         for line in ifile:
             match = regex.match(line.strip())
@@ -1331,7 +1332,7 @@ def os_data():
             grains['init'] = 'systemd'
         except (OSError, IOError):
             if os.path.exists('/proc/1/cmdline'):
-                with salt.utils.fopen('/proc/1/cmdline') as fhr:
+                with salt.utils.files.fopen('/proc/1/cmdline') as fhr:
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     try:
                         init_bin = salt.utils.which(init_cmdline[0])
@@ -1350,7 +1351,7 @@ def os_data():
                             # Default to the value of file_buffer_size for the minion
                             buf_size = 262144
                         try:
-                            with salt.utils.fopen(init_bin, 'rb') as fp_:
+                            with salt.utils.files.fopen(init_bin, 'rb') as fp_:
                                 buf = True
                                 edge = six.b('')
                                 buf = fp_.read(buf_size).lower()
@@ -1407,7 +1408,7 @@ def os_data():
                     '^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?'
                     '([\\w\\s\\.\\-_]+)(?:\'|")?'
                 ))
-                with salt.utils.fopen('/etc/lsb-release') as ifile:
+                with salt.utils.files.fopen('/etc/lsb-release') as ifile:
                     for line in ifile:
                         match = regex.match(line.rstrip('\n'))
                         if match:
@@ -1442,7 +1443,7 @@ def os_data():
                     grains['lsb_distrib_id'] = 'SUSE'
                     version = ''
                     patch = ''
-                    with salt.utils.fopen('/etc/SuSE-release') as fhr:
+                    with salt.utils.files.fopen('/etc/SuSE-release') as fhr:
                         for line in fhr:
                             if 'enterprise' in line.lower():
                                 grains['lsb_distrib_id'] = 'SLES'
@@ -1462,7 +1463,7 @@ def os_data():
                 elif os.path.isfile('/etc/altlinux-release'):
                     # ALT Linux
                     grains['lsb_distrib_id'] = 'altlinux'
-                    with salt.utils.fopen('/etc/altlinux-release') as ifile:
+                    with salt.utils.files.fopen('/etc/altlinux-release') as ifile:
                         # This file is symlinked to from:
                         #     /etc/fedora-release
                         #     /etc/redhat-release
@@ -1477,7 +1478,7 @@ def os_data():
                 elif os.path.isfile('/etc/centos-release'):
                     # CentOS Linux
                     grains['lsb_distrib_id'] = 'CentOS'
-                    with salt.utils.fopen('/etc/centos-release') as ifile:
+                    with salt.utils.files.fopen('/etc/centos-release') as ifile:
                         for line in ifile:
                             # Need to pull out the version and codename
                             # in the case of custom content in /etc/centos-release
@@ -1492,7 +1493,7 @@ def os_data():
                 elif os.path.isfile('/etc.defaults/VERSION') \
                         and os.path.isfile('/etc.defaults/synoinfo.conf'):
                     grains['osfullname'] = 'Synology'
-                    with salt.utils.fopen('/etc.defaults/VERSION', 'r') as fp_:
+                    with salt.utils.files.fopen('/etc.defaults/VERSION', 'r') as fp_:
                         synoinfo = {}
                         for line in fp_:
                             try:
@@ -1565,7 +1566,7 @@ def os_data():
             if salt.utils.is_smartos_globalzone():
                 grains.update(_smartos_computenode_data())
         elif os.path.isfile('/etc/release'):
-            with salt.utils.fopen('/etc/release', 'r') as fp_:
+            with salt.utils.files.fopen('/etc/release', 'r') as fp_:
                 rel_data = fp_.read()
                 try:
                     release_re = re.compile(
@@ -1928,7 +1929,7 @@ def get_machine_id():
     if not existing_locations:
         return {}
     else:
-        with salt.utils.fopen(existing_locations[0]) as machineid:
+        with salt.utils.files.fopen(existing_locations[0]) as machineid:
             return {'machine_id': machineid.read().strip()}
 
 
@@ -2047,7 +2048,7 @@ def _hw_data(osdata):
             contents_file = os.path.join('/sys/class/dmi/id', fw_file)
             if os.path.exists(contents_file):
                 try:
-                    with salt.utils.fopen(contents_file, 'r') as ifile:
+                    with salt.utils.files.fopen(contents_file, 'r') as ifile:
                         grains[key] = ifile.read()
                         if key == 'uuid':
                             grains['uuid'] = grains['uuid'].lower()
@@ -2321,19 +2322,19 @@ def _smartos_zone_data():
     imageversion = re.compile('Image:\\s(.+)')
     pkgsrcpath = re.compile('PKG_PATH=(.+)')
     if os.path.isfile('/etc/pkgsrc_version'):
-        with salt.utils.fopen('/etc/pkgsrc_version', 'r') as fp_:
+        with salt.utils.files.fopen('/etc/pkgsrc_version', 'r') as fp_:
             for line in fp_:
                 match = pkgsrcversion.match(line)
                 if match:
                     grains['pkgsrcversion'] = match.group(1)
     if os.path.isfile('/etc/product'):
-        with salt.utils.fopen('/etc/product', 'r') as fp_:
+        with salt.utils.files.fopen('/etc/product', 'r') as fp_:
             for line in fp_:
                 match = imageversion.match(line)
                 if match:
                     grains['imageversion'] = match.group(1)
     if os.path.isfile('/opt/local/etc/pkg_install.conf'):
-        with salt.utils.fopen('/opt/local/etc/pkg_install.conf', 'r') as fp_:
+        with salt.utils.files.fopen('/opt/local/etc/pkg_install.conf', 'r') as fp_:
             for line in fp_:
                 match = pkgsrcpath.match(line)
                 if match:

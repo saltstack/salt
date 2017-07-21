@@ -1218,7 +1218,12 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return the list of hosts within a networks.
+Return the list of hosts within a networks. This utility works for both IPv4 and IPv6.
+
+.. note::
+
+    When running this command with a large IPv6 network, the command will
+    take a long time to gather all of the hosts.
 
 Example:
 
@@ -1699,6 +1704,23 @@ Will insert the following message in the minion logs:
     2017-02-01 01:24:40,728 [salt.module.logmod][ERROR   ][3779] testing jinja logging
 
 .. jinja_ref:: custom-execution-modules
+
+Python Methods
+====================
+
+A powerful feature of jinja that is only hinted at in the official jinja
+documentation is that you can use the native python methods of the
+variable type. Here is the python documentation for `string methods`_.
+
+.. code-block:: jinja
+
+  {% set hostname,domain = grains.id.partition('.')[::2] %}{{ hostname }}
+
+.. code-block:: jinja
+
+  {% set strings = grains.id.split('-') %}{{ strings[0] }}
+
+.. _`string methods`: https://docs.python.org/2/library/stdtypes.html#string-methods
 
 Custom Execution Modules
 ========================

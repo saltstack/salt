@@ -170,6 +170,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.ext.six as six
 
 log = logging.getLogger(__name__)
@@ -190,7 +191,7 @@ def _file_read(path):
     '''
     content = False
     if os.path.exists(path):
-        with salt.utils.fopen(path, 'r+') as fp_:
+        with salt.utils.files.fopen(path, 'r+') as fp_:
             content = fp_.read()
         fp_.close()
     return content
@@ -200,7 +201,7 @@ def _file_write(path, content):
     '''
     Write content to a file
     '''
-    with salt.utils.fopen(path, 'w+') as fp_:
+    with salt.utils.files.fopen(path, 'w+') as fp_:
         fp_.write(content)
     fp_.close()
 

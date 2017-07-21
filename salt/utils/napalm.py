@@ -19,6 +19,7 @@ from __future__ import absolute_import
 
 import traceback
 import logging
+import importlib
 from functools import wraps
 log = logging.getLogger(__file__)
 
@@ -264,6 +265,7 @@ def get_device_opts(opts, salt_obj=None):
     network_device['TIMEOUT'] = device_dict.get('timeout', 60)
     network_device['OPTIONAL_ARGS'] = device_dict.get('optional_args', {})
     network_device['ALWAYS_ALIVE'] = device_dict.get('always_alive', True)
+    network_device['PROVIDER'] = device_dict.get('provider')
     network_device['UP'] = False
     # get driver object form NAPALM
     if 'config_lock' not in network_device['OPTIONAL_ARGS']:
@@ -281,7 +283,24 @@ def get_device(opts, salt_obj=None):
     '''
     log.debug('Setting up NAPALM connection')
     network_device = get_device_opts(opts, salt_obj=salt_obj)
-    _driver_ = napalm_base.get_network_driver(network_device.get('DRIVER_NAME'))
+    provider_lib = napalm_base
+    if network_device.get('PROVIDER'):
+        # In case the user requires a different provider library,
+        #   other than napalm-base.
+        # For example, if napalm-base does not satisfy the requirements
+        #   and needs to be enahanced with more specific features,
+        #   we may need to define a custom library on top of napalm-base
+        #   with the constraint that it still needs to provide the
+        #   `get_network_driver` function. However, even this can be
+        #   extended later, if really needed.
+        # Configuration example:
+        #   provider: napalm_base_example
+        try:
+            provider_lib = importlib.import_module(network_device.get('PROVIDER'))
+        except ImportError as ierr:
+            log.error('Unable to import {0}'.format(network_device.get('PROVIDER')), exc_info=True)
+            log.error('Falling back to napalm-base')
+    _driver_ = provider_lib.get_network_driver(network_device.get('DRIVER_NAME'))
     try:
         network_device['DRIVER'] = _driver_(
             network_device.get('HOSTNAME', ''),

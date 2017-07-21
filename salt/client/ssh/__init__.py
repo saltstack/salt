@@ -39,12 +39,13 @@ import salt.serializers.yaml
 import salt.state
 import salt.utils
 import salt.utils.args
-import salt.utils.event
 import salt.utils.atomicfile
+import salt.utils.event
+import salt.utils.files
+import salt.utils.network
 import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
-import salt.utils.network
 from salt.utils import is_windows
 from salt.utils.process import MultiprocessingProcess
 
@@ -195,7 +196,7 @@ if not is_windows():
     if not os.path.exists(shim_file):
         # On esky builds we only have the .pyc file
         shim_file += "c"
-    with salt.utils.fopen(shim_file) as ssh_py_shim:
+    with salt.utils.files.fopen(shim_file) as ssh_py_shim:
         SSH_PY_SHIM = ssh_py_shim.read()
 
 log = logging.getLogger(__name__)
@@ -337,7 +338,7 @@ class SSH(object):
                         )
                     )
         pub = '{0}.pub'.format(priv)
-        with salt.utils.fopen(pub, 'r') as fp_:
+        with salt.utils.files.fopen(pub, 'r') as fp_:
             return '{0} rsa root@master'.format(fp_.read().split()[1])
 
     def key_deploy(self, host, ret):
@@ -941,12 +942,12 @@ class Single(object):
                     'grains': opts_pkg['grains'],
                     'pillar': pillar_data}
             if data_cache:
-                with salt.utils.fopen(datap, 'w+b') as fp_:
+                with salt.utils.files.fopen(datap, 'w+b') as fp_:
                     fp_.write(
                             self.serial.dumps(data)
                             )
         if not data and data_cache:
-            with salt.utils.fopen(datap, 'rb') as fp_:
+            with salt.utils.files.fopen(datap, 'rb') as fp_:
                 data = self.serial.load(fp_)
         opts = data.get('opts', {})
         opts['grains'] = data.get('grains')
@@ -1412,7 +1413,7 @@ def mod_data(fsclient):
         return mods
     tfp = tarfile.open(ext_tar_path, 'w:gz')
     verfile = os.path.join(fsclient.opts['cachedir'], 'ext_mods.ver')
-    with salt.utils.fopen(verfile, 'w+') as fp_:
+    with salt.utils.files.fopen(verfile, 'w+') as fp_:
         fp_.write(ver)
     tfp.add(verfile, 'ext_version')
     for ref in ret:

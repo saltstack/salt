@@ -371,6 +371,7 @@ on a minion event bus.
 .. code-block:: python
 
     import tests.integration as integration
+    import salt.utils.event
 
     class TestEvent(integration.SaltEventAssertsMixin):
         '''
@@ -443,7 +444,7 @@ to test states:
     from tests.support.mixins import SaltReturnAssertsMixin
 
     # Import salt libs
-    import salt.utils
+    import salt.utils.files
 
     HFILE = os.path.join(TMP, 'hosts')
 
@@ -470,7 +471,7 @@ to test states:
             ip = '10.10.10.10'
             ret = self.run_state('host.present', name=name, ip=ip)
             self.assertSaltTrueReturn(ret)
-            with salt.utils.fopen(HFILE) as fp_:
+            with salt.utils.files.fopen(HFILE) as fp_:
                 output = fp_.read()
                 self.assertIn('{0}\t\t{1}'.format(ip, name), output)
 

@@ -15,10 +15,10 @@ from contextlib import closing
 # Import salt libs
 import salt.client.ssh.shell
 import salt.client.ssh
-import salt.utils
 import salt.utils.files
 import salt.utils.thin
 import salt.utils.url
+import salt.utils.verify
 import salt.roster
 import salt.state
 import salt.loader
@@ -177,13 +177,13 @@ def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, 
             [salt.utils.url.create('_output')],
             [salt.utils.url.create('_utils')],
             ]
-    with salt.utils.fopen(lowfn, 'w+') as fp_:
+    with salt.utils.files.fopen(lowfn, 'w+') as fp_:
         fp_.write(json.dumps(chunks))
     if pillar:
-        with salt.utils.fopen(pillarfn, 'w+') as fp_:
+        with salt.utils.files.fopen(pillarfn, 'w+') as fp_:
             fp_.write(json.dumps(pillar))
     if roster_grains:
-        with salt.utils.fopen(roster_grainsfn, 'w+') as fp_:
+        with salt.utils.files.fopen(roster_grainsfn, 'w+') as fp_:
             fp_.write(json.dumps(roster_grains))
 
     if id_ is None:

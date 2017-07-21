@@ -64,6 +64,7 @@ import salt.cache
 import salt.config as config
 import salt.utils
 import salt.utils.cloud
+import salt.utils.files
 import salt.ext.six as six
 import salt.version
 from salt.exceptions import (
@@ -1002,7 +1003,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
     else:
         if os.path.exists(userdata_file):
-            with salt.utils.fopen(userdata_file, 'r') as fh_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
     userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)

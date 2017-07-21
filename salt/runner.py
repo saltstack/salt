@@ -15,6 +15,7 @@ import salt.minion
 import salt.utils
 import salt.utils.args
 import salt.utils.event
+import salt.utils.files
 from salt.client import mixins
 from salt.output import display_output
 from salt.utils.lazy import verify_fun
@@ -204,7 +205,7 @@ class Runner(RunnerClient):
                 if self.opts.get('eauth'):
                     if 'token' in self.opts:
                         try:
-                            with salt.utils.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
+                            with salt.utils.files.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
                                 low['key'] = fp_.readline()
                         except IOError:
                             low['token'] = self.opts['token']

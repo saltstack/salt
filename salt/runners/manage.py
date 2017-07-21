@@ -22,6 +22,7 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: dis
 # Import salt libs
 import salt.key
 import salt.utils
+import salt.utils.files
 import salt.utils.minions
 import salt.client
 import salt.client.ssh
@@ -966,7 +967,7 @@ objShell.Exec("{1}{2}")'''
                  '  >>' + x + '.vbs\ncscript.exe /NoLogo ' + x + '.vbs'
 
     batch_path = tempfile.mkstemp(suffix='.bat')[1]
-    with salt.utils.fopen(batch_path, 'wb') as batch_file:
+    with salt.utils.files.fopen(batch_path, 'wb') as batch_file:
         batch_file.write(batch)
 
     for host in hosts.split(","):

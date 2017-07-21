@@ -25,6 +25,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.pkg
 import salt.utils.itertools
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -1048,7 +1049,7 @@ def list_repos():
     regex = re.compile(REPO_REGEXP)
     for filename in os.listdir(OPKG_CONFDIR):
         if filename.endswith(".conf"):
-            with salt.utils.fopen(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
+            with salt.utils.files.fopen(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
                 for line in conf_file:
                     if regex.search(line):
                         repo = {}
@@ -1095,7 +1096,7 @@ def _del_repo_from_file(alias, filepath):
     '''
     Remove a repo from filepath
     '''
-    with salt.utils.fopen(filepath) as fhandle:
+    with salt.utils.files.fopen(filepath) as fhandle:
         output = []
         regex = re.compile(REPO_REGEXP)
         for line in fhandle:
@@ -1105,7 +1106,7 @@ def _del_repo_from_file(alias, filepath):
                 cols = salt.utils.shlex_split(line.strip())
                 if alias != cols[1]:
                     output.append(line)
-    with salt.utils.fopen(filepath, 'w') as fhandle:
+    with salt.utils.files.fopen(filepath, 'w') as fhandle:
         fhandle.writelines(output)
 
 
@@ -1122,7 +1123,7 @@ def _add_new_repo(alias, uri, compressed, enabled=True):
     repostr += uri + '\n'
     conffile = os.path.join(OPKG_CONFDIR, alias + '.conf')
 
-    with salt.utils.fopen(conffile, 'a') as fhandle:
+    with salt.utils.files.fopen(conffile, 'a') as fhandle:
         fhandle.write(repostr)
 
 
@@ -1130,7 +1131,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
     '''
     Replace a repo entry in filepath with repostr
     '''
-    with salt.utils.fopen(filepath) as fhandle:
+    with salt.utils.files.fopen(filepath) as fhandle:
         output = []
         for line in fhandle:
             cols = salt.utils.shlex_split(line.strip())
@@ -1138,7 +1139,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
                 output.append(line)
             else:
                 output.append(repostr + '\n')
-    with salt.utils.fopen(filepath, 'w') as fhandle:
+    with salt.utils.files.fopen(filepath, 'w') as fhandle:
         fhandle.writelines(output)
 
 

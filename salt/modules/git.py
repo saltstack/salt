@@ -2039,7 +2039,7 @@ def is_worktree(cwd,
         return False
     gitdir = os.path.join(toplevel, '.git')
     try:
-        with salt.utils.fopen(gitdir, 'r') as fp_:
+        with salt.utils.files.fopen(gitdir, 'r') as fp_:
             for line in fp_:
                 try:
                     label, path = line.split(None, 1)
@@ -2381,7 +2381,7 @@ def list_worktrees(cwd,
             Return contents of a single line file with EOF newline stripped
             '''
             try:
-                with salt.utils.fopen(path, 'r') as fp_:
+                with salt.utils.files.fopen(path, 'r') as fp_:
                     for line in fp_:
                         ret = line.strip()
                         # Ignore other lines, if they exist (which they
@@ -4639,7 +4639,7 @@ def worktree_rm(cwd, user=None):
     elif not is_worktree(cwd):
         raise CommandExecutionError(cwd + ' is not a git worktree')
     try:
-        salt.utils.rm_rf(cwd)
+        salt.utils.files.rm_rf(cwd)
     except Exception as exc:
         raise CommandExecutionError(
             'Unable to remove {0}: {1}'.format(cwd, exc)
