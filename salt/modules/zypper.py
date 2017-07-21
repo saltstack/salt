@@ -670,6 +670,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
 
+        If ``all`` is specified, all valid attributes will be returned.
+
             .. versionadded:: Oxygen
 
     removed:
@@ -726,9 +728,10 @@ def _format_pkg_list(packages, versions_as_list, attr):
     '''
     ret = copy.deepcopy(packages)
     if attr:
-        requested_attr = (set(attr + ['version']) &
-                          set(['version', 'arch', 'install_date',
-                               'install_date_time_t']))
+        requested_attr = set(['version', 'arch', 'install_date', 'install_date_time_t'])
+
+        if attr != 'all':
+            requested_attr &= set(attr + ['version'])
 
         for name in ret:
             versions = []
@@ -1124,6 +1127,8 @@ def install(name=None,
                     'arch': '<new-arch>'}}}
 
         Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
+
+        If ``all`` is specified, all valid attributes will be returned.
 
         .. versionadded:: Oxygen
 
