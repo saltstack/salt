@@ -74,6 +74,8 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return (False, 'The boto_kms module could not be loaded: boto libraries not found')
+    if 'boto.assign_funcs' not in __utils__:
+        return (False, 'Requires the following to be installed: boto >= 2.0.0.')
     return True
 
 
