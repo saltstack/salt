@@ -37,6 +37,7 @@ from xml.parsers.expat import ExpatError
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.pkg
 import salt.utils.systemd
 from salt.exceptions import (
@@ -276,7 +277,7 @@ class _Zypper(object):
 
             if os.path.exists(self.ZYPPER_LOCK):
                 try:
-                    with salt.utils.fopen(self.ZYPPER_LOCK) as rfh:
+                    with salt.utils.files.fopen(self.ZYPPER_LOCK) as rfh:
                         data = __salt__['ps.proc_info'](int(rfh.readline()),
                                                         attrs=['pid', 'name', 'cmdline', 'create_time'])
                         data['cmdline'] = ' '.join(data['cmdline'])
@@ -1432,7 +1433,7 @@ def list_locks():
     '''
     locks = {}
     if os.path.exists(LOCKS):
-        with salt.utils.fopen(LOCKS) as fhr:
+        with salt.utils.files.fopen(LOCKS) as fhr:
             for meta in [item.split('\n') for item in fhr.read().split('\n\n')]:
                 lock = {}
                 for element in [el for el in meta if el]:
@@ -1808,7 +1809,7 @@ def list_products(all=False, refresh=False):
         if 'productline' in p_nfo and p_nfo['productline']:
             oem_file = os.path.join(OEM_PATH, p_nfo['productline'])
             if os.path.isfile(oem_file):
-                with salt.utils.fopen(oem_file, 'r') as rfile:
+                with salt.utils.files.fopen(oem_file, 'r') as rfile:
                     oem_release = rfile.readline().strip()
                     if oem_release:
                         p_nfo['release'] = oem_release

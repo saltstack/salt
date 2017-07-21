@@ -26,6 +26,8 @@ import functools
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 from salt.exceptions import SaltInvocationError
 import salt.utils
+import salt.utils.files
+import salt.utils.vt
 
 HAS_LIBS = False
 
@@ -76,7 +78,7 @@ def _create_rpmmacros():
         os.makedirs(mockdir)
 
     rpmmacros = os.path.join(home, '.rpmmacros')
-    with salt.utils.fopen(rpmmacros, 'w') as afile:
+    with salt.utils.files.fopen(rpmmacros, 'w') as afile:
         afile.write('%_topdir {0}\n'.format(rpmbuilddir))
         afile.write('%signature gpg\n')
         afile.write('%_source_filedigest_algorithm 8\n')

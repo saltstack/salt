@@ -10,7 +10,7 @@ import logging
 
 # Import Salt libs
 import salt.client
-import salt.utils.virt
+import salt.utils.files
 import salt.utils.cloud
 import salt.key
 from salt.exceptions import SaltClientError
@@ -245,7 +245,7 @@ def init(
         __jid_event__.fire_event({'message': 'Minion will be preseeded'}, 'progress')
         priv_key, pub_key = salt.utils.cloud.gen_keys()
         accepted_key = os.path.join(__opts__['pki_dir'], 'minions', name)
-        with salt.utils.fopen(accepted_key, 'w') as fp_:
+        with salt.utils.files.fopen(accepted_key, 'w') as fp_:
             fp_.write(pub_key)
 
     client = salt.client.get_local_client(__opts__['conf_file'])

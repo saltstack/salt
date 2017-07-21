@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import logging
 from copy import deepcopy
+import pkg_resources
 
 # import Python Third Party Libs
 # pylint: disable=import-error
@@ -45,8 +46,10 @@ except ImportError:
 
 # Import Salt Libs
 import salt.config
+import salt.ext.six as six
 import salt.loader
 import salt.modules.boto_elb as boto_elb
+import salt.utils.versions
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -63,11 +66,32 @@ conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key,
 boto_conn_parameters = {'aws_access_key_id': access_key,
                         'aws_secret_access_key': secret_key}
 instance_parameters = {'instance_type': 't1.micro'}
+required_moto = '0.3.7'
+required_moto_py3 = '1.0.1'
+
+
+def _has_required_moto():
+    '''
+    Returns True or False depending on if ``moto`` is installed and at the correct version,
+    depending on what version of Python is running these tests.
+    '''
+    if not HAS_MOTO:
+        return False
+    else:
+        moto_version = salt.utils.versions.LooseVersion(pkg_resources.get_distribution('moto').version)
+        if moto_version < required_moto:
+            return False
+        elif six.PY3 and moto_version < required_moto_py3:
+            return False
+
+    return True
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_moto() is False, 'The moto module must be >= to {0} for '
+                                       'PY2 or {1} for PY3.'.format(required_moto, required_moto_py3))
 class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.boto_elb module

@@ -26,7 +26,7 @@ import yaml
 
 from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
-import salt.utils
+import salt.utils.files
 import salt.utils.templates
 
 try:
@@ -1220,7 +1220,7 @@ def __read_and_render_yaml_file(source,
         raise CommandExecutionError(
             'Source file \'{0}\' not found'.format(source))
 
-    with salt.utils.fopen(sfn, 'r') as src:
+    with salt.utils.files.fopen(sfn, 'r') as src:
         contents = src.read()
 
         if template:

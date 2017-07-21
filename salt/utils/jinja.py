@@ -29,7 +29,7 @@ from jinja2.ext import Extension
 # Import salt libs
 import salt
 import salt.fileclient
-import salt.utils
+import salt.utils.files
 import salt.utils.url
 from salt.utils.decorators import jinja_filter, jinja_test, jinja_global
 from salt.utils.odict import OrderedDict
@@ -130,7 +130,7 @@ class SaltCacheLoader(BaseLoader):
         for spath in self.searchpath:
             filepath = path.join(spath, template)
             try:
-                with salt.utils.fopen(filepath, 'rb') as ifile:
+                with salt.utils.files.fopen(filepath, 'rb') as ifile:
                     contents = ifile.read().decode(self.encoding)
                     mtime = path.getmtime(filepath)
 

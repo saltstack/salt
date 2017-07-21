@@ -2862,7 +2862,7 @@ def export(name,
             # open the filehandle. If not using gzip, we need to open the
             # filehandle here. We make sure to close it in the "finally" block
             # below.
-            out = salt.utils.fopen(path, 'wb')  # pylint: disable=resource-leakage
+            out = salt.utils.files.fopen(path, 'wb')  # pylint: disable=resource-leakage
         response = _client_wrapper('export', name)
         buf = None
         while buf != '':
@@ -3874,12 +3874,12 @@ def save(name,
             compressor = lzma.LZMACompressor()
 
         try:
-            with salt.utils.fopen(saved_path, 'rb') as uncompressed:
+            with salt.utils.files.fopen(saved_path, 'rb') as uncompressed:
                 if compression != 'gzip':
                     # gzip doesn't use a Compressor object, it uses a .open()
                     # method to open the filehandle. If not using gzip, we need
                     # to open the filehandle here.
-                    out = salt.utils.fopen(path, 'wb')
+                    out = salt.utils.files.fopen(path, 'wb')
                 buf = None
                 while buf != '':
                     buf = uncompressed.read(4096)

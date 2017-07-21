@@ -44,7 +44,7 @@
 from __future__ import absolute_import
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 try:
     import salt.utils.namecheap
     CAN_USE_NAMECHEAP = True
@@ -224,7 +224,7 @@ def __get_certificates(command,
 
     opts = salt.utils.namecheap.get_opts(command)
 
-    with salt.utils.fopen(csr_file, 'rb') as csr_handle:
+    with salt.utils.files.fopen(csr_file, 'rb') as csr_handle:
         opts['csr'] = csr_handle.read()
 
     opts['CertificateID'] = certificate_id
@@ -597,7 +597,7 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.parseCSR')
 
-    with salt.utils.fopen(csr_file, 'rb') as csr_handle:
+    with salt.utils.files.fopen(csr_file, 'rb') as csr_handle:
         opts['csr'] = csr_handle.read()
 
     opts['CertificateType'] = certificate_type

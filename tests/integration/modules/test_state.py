@@ -16,6 +16,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 # Import 3rd-party libs
@@ -197,7 +198,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.sls', mods='testappend.step-2')
         self.assertSaltTrueReturn(ret)
 
-        with salt.utils.fopen(testfile, 'r') as fp_:
+        with salt.utils.files.fopen(testfile, 'r') as fp_:
             testfile_contents = fp_.read()
 
         contents = textwrap.dedent('''\
@@ -232,7 +233,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.sls', mods='testappend.step-1')
         self.assertSaltTrueReturn(ret)
 
-        with salt.utils.fopen(testfile, 'r') as fp_:
+        with salt.utils.files.fopen(testfile, 'r') as fp_:
             testfile_contents = fp_.read()
 
         self.assertMultiLineEqual(contents, testfile_contents)
@@ -299,7 +300,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Does it match?
         try:
-            with salt.utils.fopen(testfile, 'r') as fp_:
+            with salt.utils.files.fopen(testfile, 'r') as fp_:
                 contents = fp_.read()
             self.assertMultiLineEqual(expected, contents)
             # Make sure we don't re-append existing text
@@ -313,7 +314,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertSaltTrueReturn(ret)
 
-            with salt.utils.fopen(testfile, 'r') as fp_:
+            with salt.utils.files.fopen(testfile, 'r') as fp_:
                 contents = fp_.read()
             self.assertMultiLineEqual(expected, contents)
         except Exception:
@@ -387,7 +388,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             'files', 'file', 'base', 'issue-2068-template-str-no-dot.sls'
         )
 
-        with salt.utils.fopen(template_path, 'r') as fp_:
+        with salt.utils.files.fopen(template_path, 'r') as fp_:
             template = fp_.read()
             ret = self.run_function(
                 'state.template_str', [template], timeout=120
@@ -413,7 +414,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             'files', 'file', 'base', 'issue-2068-template-str.sls'
         )
 
-        with salt.utils.fopen(template_path, 'r') as fp_:
+        with salt.utils.files.fopen(template_path, 'r') as fp_:
             template = fp_.read()
         ret = self.run_function(
             'state.template_str', [template], timeout=120
@@ -939,7 +940,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertSaltTrueReturn(ret)
             self.assertTrue(os.path.isfile(tgt))
-            with salt.utils.fopen(tgt, 'r') as cheese:
+            with salt.utils.files.fopen(tgt, 'r') as cheese:
                 data = cheese.read()
                 self.assertIn('Gromit', data)
                 self.assertIn('Comte', data)

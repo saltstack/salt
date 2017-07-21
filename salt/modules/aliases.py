@@ -11,7 +11,7 @@ import stat
 import tempfile
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt.utils import which as _which
 from salt.exceptions import SaltInvocationError
 
@@ -49,7 +49,7 @@ def __parse_aliases():
     ret = []
     if not os.path.isfile(afn):
         return ret
-    with salt.utils.fopen(afn, 'r') as ifile:
+    with salt.utils.files.fopen(afn, 'r') as ifile:
         for line in ifile:
             match = __ALIAS_RE.match(line)
             if match:

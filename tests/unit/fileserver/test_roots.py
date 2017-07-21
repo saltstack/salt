@@ -19,6 +19,7 @@ from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 from salt.fileserver import roots
 from salt import fileclient
 import salt.utils
+import salt.utils.files
 
 try:
     import win32file
@@ -46,7 +47,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         if salt.utils.is_windows():
             root_dir = tempfile.mkdtemp(dir=TMP)
             source_sym = os.path.join(root_dir, 'source_sym')
-            with salt.utils.fopen(source_sym, 'w') as fp_:
+            with salt.utils.files.fopen(source_sym, 'w') as fp_:
                 fp_.write('hello world!\n')
             cwd = os.getcwd()
             try:
@@ -65,7 +66,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         '''
         if salt.utils.is_windows():
             try:
-                salt.utils.rm_rf(cls.test_symlink_list_file_roots['base'][0])
+                salt.utils.files.rm_rf(cls.test_symlink_list_file_roots['base'][0])
             except OSError:
                 pass
 

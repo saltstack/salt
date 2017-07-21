@@ -23,6 +23,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.files
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -80,7 +81,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             raise Exception('Failed to build image')
 
         try:
-            salt.utils.rm_rf(cls.image_build_rootdir)
+            salt.utils.files.rm_rf(cls.image_build_rootdir)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise
@@ -124,7 +125,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             if name in self.run_function('docker.list_containers', all=True):
                 self.run_function('docker.rm', [name], force=True)
             try:
-                salt.utils.rm_rf(bind_dir_host)
+                salt.utils.files.rm_rf(bind_dir_host)
             except OSError as exc:
                 if exc.errno != errno.ENOENT:
                     raise

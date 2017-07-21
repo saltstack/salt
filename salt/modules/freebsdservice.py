@@ -19,6 +19,7 @@ import re
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+import salt.utils.files
 from salt.exceptions import CommandNotFoundError
 
 __func_alias__ = {
@@ -222,7 +223,7 @@ def _switch(name,                   # pylint: disable=C0103
         val = 'NO'
 
     if os.path.exists(config):
-        with salt.utils.fopen(config, 'r') as ifile:
+        with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
                 if not line.startswith('{0}='.format(rcvar)):
                     nlines.append(line)
@@ -236,7 +237,7 @@ def _switch(name,                   # pylint: disable=C0103
             nlines[-1] = '{0}\n'.format(nlines[-1])
         nlines.append('{0}="{1}"\n'.format(rcvar, val))
 
-    with salt.utils.fopen(config, 'w') as ofile:
+    with salt.utils.files.fopen(config, 'w') as ofile:
         ofile.writelines(nlines)
 
     return True

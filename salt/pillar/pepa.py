@@ -282,7 +282,7 @@ from os.path import isfile, join
 # Import Salt libs
 import salt.ext.six as six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
-import salt.utils
+import salt.utils.files
 from salt.utils.yamlloader import SaltYamlSafeLoader
 
 # Import 3rd-party libs
@@ -428,7 +428,7 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
             fn = join(templdir, re.sub(r'\W', '_', entry.lower()) + '.yaml')
             if isfile(fn):
                 log.info("Loading template: {0}".format(fn))
-                with salt.utils.fopen(fn) as fhr:
+                with salt.utils.files.fopen(fn) as fhr:
                     template = jinja2.Template(fhr.read())
                 output['pepa_templates'].append(fn)
 
@@ -528,7 +528,7 @@ def validate(output, resource):
     pepa_schemas = []
     for fn in glob.glob(valdir + '/*.yaml'):
         log.info("Loading schema: {0}".format(fn))
-        with salt.utils.fopen(fn) as fhr:
+        with salt.utils.files.fopen(fn) as fhr:
             template = jinja2.Template(fhr.read())
         data = output
         data['grains'] = __grains__.copy()
@@ -557,7 +557,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # Get configuration
-    with salt.utils.fopen(args.config) as fh_:
+    with salt.utils.files.fopen(args.config) as fh_:
         __opts__.update(
             yaml.load(
                 fh_.read(),

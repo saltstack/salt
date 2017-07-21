@@ -19,7 +19,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.files
 import salt.transport
 import salt.modules.cp as cp
 from salt.utils import templates
@@ -62,7 +62,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
                                               'data': file_data}
         with patch.dict(templates.TEMPLATE_REGISTRY,
                         {'jinja': mock_jinja}):
-            with patch('salt.utils.fopen', mock_open(read_data=file_data)):
+            with patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
                 self.assertRaises(CommandExecutionError,
                                   cp._render_filenames,
                                   path, dest, saltenv, template)
@@ -78,10 +78,10 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         file_data = '/srv/salt/biscuits'
         mock_jinja = lambda *args, **kwargs: {'result': True,
                                               'data': file_data}
-        ret = (file_data, file_data)  # salt.utils.fopen can only be mocked once
+        ret = (file_data, file_data)  # salt.utils.files.fopen can only be mocked once
         with patch.dict(templates.TEMPLATE_REGISTRY,
                         {'jinja': mock_jinja}):
-            with patch('salt.utils.fopen', mock_open(read_data=file_data)):
+            with patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
                 self.assertEqual(cp._render_filenames(
                                  path, dest, saltenv, template), ret)
 
@@ -104,7 +104,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         file_data = 'Remember to keep your files well salted.'
         saltenv = 'base'
         ret = file_data
-        with patch('salt.utils.fopen', mock_open(read_data=file_data)):
+        with patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
             with patch('salt.modules.cp.cache_file',
                        MagicMock(return_value=dest)):
                 self.assertEqual(cp.get_file_str(path, dest), ret)
@@ -136,14 +136,14 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
                 patch.multiple('salt.modules.cp',
                                _auth=MagicMock(**{'return_value.gen_token.return_value': 'token'}),
                                __opts__={'id': 'abc', 'file_buffer_size': 10}), \
-                patch('salt.utils.fopen', mock_open(read_data='content')), \
+                patch('salt.utils.files.fopen', mock_open(read_data='content')), \
                 patch('salt.transport.Channel.factory', MagicMock()):
             response = cp.push('/saltines/test.file')
             self.assertEqual(response, True)
-            self.assertEqual(salt.utils.fopen().read.call_count, 2)  # pylint: disable=resource-leakage
+            self.assertEqual(salt.utils.files.fopen().read.call_count, 2)  # pylint: disable=resource-leakage
             salt.transport.Channel.factory({}).send.assert_called_once_with(
                 dict(
-                    loc=salt.utils.fopen().tell(),  # pylint: disable=resource-leakage
+                    loc=salt.utils.files.fopen().tell(),  # pylint: disable=resource-leakage
                     cmd='_file_recv',
                     tok='token',
                     path=['saltines', 'test.file'],

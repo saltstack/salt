@@ -139,6 +139,7 @@ import os
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.files
 import salt.utils.odict as odict
 import salt.utils.dictupdate as dictupdate
 import salt.ext.six as six
@@ -380,7 +381,7 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
         new_keys[str(i)]['key_id'] = created[response][result]['access_key']['access_key_id']
         new_keys[str(i)]['secret_key'] = created[response][result]['access_key']['secret_access_key']
     try:
-        with salt.utils.fopen('{0}/{1}'.format(save_dir, name), 'a') as _wrf:
+        with salt.utils.files.fopen('{0}/{1}'.format(save_dir, name), 'a') as _wrf:
             for key_num, key in new_keys.items():
                 key_id = key['key_id']
                 secret_key = key['secret_key']

@@ -218,11 +218,11 @@ class RedirectStdStreams(object):
 
     def __init__(self, stdout=None, stderr=None):
         # Late import
-        import salt.utils
+        import salt.utils.files
         if stdout is None:
-            stdout = salt.utils.fopen(os.devnull, 'w')  # pylint: disable=resource-leakage
+            stdout = salt.utils.files.fopen(os.devnull, 'w')  # pylint: disable=resource-leakage
         if stderr is None:
-            stderr = salt.utils.fopen(os.devnull, 'w')  # pylint: disable=resource-leakage
+            stderr = salt.utils.files.fopen(os.devnull, 'w')  # pylint: disable=resource-leakage
 
         self.__stdout = stdout
         self.__stderr = stderr

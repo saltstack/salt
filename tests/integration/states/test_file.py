@@ -33,6 +33,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 HAS_PWD = True
 try:
@@ -166,7 +167,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.absent
         '''
         name = os.path.join(TMP, 'file_to_kill')
-        with salt.utils.fopen(name, 'w+') as fp_:
+        with salt.utils.files.fopen(name, 'w+') as fp_:
             fp_.write('killme')
         ret = self.run_state('file.absent', name=name)
         self.assertSaltTrueReturn(ret)
@@ -212,7 +213,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.absent test interface
         '''
         name = os.path.join(TMP, 'file_to_kill')
-        with salt.utils.fopen(name, 'w+') as fp_:
+        with salt.utils.files.fopen(name, 'w+') as fp_:
             fp_.write('killme')
         ret = self.run_state('file.absent', test=True, name=name)
         try:
@@ -232,9 +233,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         src = os.path.join(
             FILES, 'file', 'base', 'grail', 'scene33'
         )
-        with salt.utils.fopen(src, 'r') as fp_:
+        with salt.utils.files.fopen(src, 'r') as fp_:
             master_data = fp_.read()
-        with salt.utils.fopen(name, 'r') as fp_:
+        with salt.utils.files.fopen(name, 'r') as fp_:
             minion_data = fp_.read()
         self.assertEqual(master_data, minion_data)
         self.assertSaltTrueReturn(ret)
@@ -344,7 +345,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.run_function('state.sls', [state_file])
         self.assertTrue(os.path.exists(grain_path))
 
-        with salt.utils.fopen(grain_path, 'r') as fp_:
+        with salt.utils.files.fopen(grain_path, 'r') as fp_:
             file_contents = fp_.readlines()
 
         self.assertTrue(re.match('^minion$', file_contents[0]))
@@ -426,7 +427,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.managed test interface
         '''
         name = os.path.join(TMP, 'grail_not_scene33')
-        with salt.utils.fopen(name, 'wb') as fp_:
+        with salt.utils.files.fopen(name, 'wb') as fp_:
             fp_.write(six.b('test_managed_show_changes_false\n'))
 
         ret = self.run_state(
@@ -453,9 +454,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         state_key = 'file_|-{0}_|-{0}_|-managed'.format(funny_file)
 
         try:
-            with salt.utils.fopen(funny_url_path, 'w'):
+            with salt.utils.files.fopen(funny_url_path, 'w'):
                 pass
-            with salt.utils.fopen(state_file, 'w') as fp_:
+            with salt.utils.files.fopen(state_file, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
                 {0}:
                   file.managed:
@@ -494,7 +495,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
             state_keys[typ] = 'file_|-{0} file_|-{1}_|-managed'.format(typ, managed_files[typ])
         try:
-            with salt.utils.fopen(state_file, 'w') as fd_:
+            with salt.utils.files.fopen(state_file, 'w') as fd_:
                 fd_.write(textwrap.dedent('''\
                     bool file:
                       file.managed:
@@ -660,14 +661,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             os.makedirs(name)
 
         strayfile = os.path.join(name, 'strayfile')
-        with salt.utils.fopen(strayfile, 'w'):
+        with salt.utils.files.fopen(strayfile, 'w'):
             pass
 
         straydir = os.path.join(name, 'straydir')
         if not os.path.isdir(straydir):
             os.makedirs(straydir)
 
-        with salt.utils.fopen(os.path.join(straydir, 'strayfile2'), 'w'):
+        with salt.utils.files.fopen(os.path.join(straydir, 'strayfile2'), 'w'):
             pass
 
         ret = self.run_state('file.directory', name=name, clean=True)
@@ -688,7 +689,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             os.makedirs(name)
 
         strayfile = os.path.join(name, 'strayfile')
-        with salt.utils.fopen(strayfile, 'w'):
+        with salt.utils.files.fopen(strayfile, 'w'):
             pass
 
         straydir = os.path.join(name, 'straydir')
@@ -696,11 +697,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             os.makedirs(straydir)
 
         strayfile2 = os.path.join(straydir, 'strayfile2')
-        with salt.utils.fopen(strayfile2, 'w'):
+        with salt.utils.files.fopen(strayfile2, 'w'):
             pass
 
         keepfile = os.path.join(straydir, 'keepfile')
-        with salt.utils.fopen(keepfile, 'w'):
+        with salt.utils.files.fopen(keepfile, 'w'):
             pass
 
         exclude_pat = 'E@^straydir(|/keepfile)$'
@@ -729,7 +730,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             os.makedirs(name)
 
         strayfile = os.path.join(name, 'strayfile')
-        with salt.utils.fopen(strayfile, 'w'):
+        with salt.utils.files.fopen(strayfile, 'w'):
             pass
 
         straydir = os.path.join(name, 'straydir')
@@ -737,11 +738,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             os.makedirs(straydir)
 
         strayfile2 = os.path.join(straydir, 'strayfile2')
-        with salt.utils.fopen(strayfile2, 'w'):
+        with salt.utils.files.fopen(strayfile2, 'w'):
             pass
 
         keepfile = os.path.join(straydir, 'keepfile')
-        with salt.utils.fopen(keepfile, 'w'):
+        with salt.utils.files.fopen(keepfile, 'w'):
             pass
 
         exclude_pat = 'E@^straydir(|/keepfile)$'
@@ -780,11 +781,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.addCleanup(lambda: shutil.rmtree(directory))
 
         wrong_file = os.path.join(directory, "wrong")
-        with salt.utils.fopen(wrong_file, "w") as fp:
+        with salt.utils.files.fopen(wrong_file, "w") as fp:
             fp.write("foo")
         good_file = os.path.join(directory, "bar")
 
-        with salt.utils.fopen(state_file, 'w') as fp:
+        with salt.utils.files.fopen(state_file, 'w') as fp:
             self.addCleanup(lambda: os.remove(state_file))
             fp.write(textwrap.dedent('''\
                 some_dir:
@@ -815,11 +816,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.addCleanup(lambda: shutil.rmtree(directory))
 
         wrong_file = os.path.join(directory, "wrong")
-        with salt.utils.fopen(wrong_file, "w") as fp:
+        with salt.utils.files.fopen(wrong_file, "w") as fp:
             fp.write("foo")
         good_file = os.path.join(directory, "bar")
 
-        with salt.utils.fopen(state_file, 'w') as fp:
+        with salt.utils.files.fopen(state_file, 'w') as fp:
             self.addCleanup(lambda: os.remove(state_file))
             fp.write(textwrap.dedent('''\
                 some_dir:
@@ -851,11 +852,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.addCleanup(lambda: shutil.rmtree(directory))
 
         wrong_file = os.path.join(directory, "wrong")
-        with salt.utils.fopen(wrong_file, "w") as fp:
+        with salt.utils.files.fopen(wrong_file, "w") as fp:
             fp.write("foo")
         good_file = os.path.join(directory, "bar")
 
-        with salt.utils.fopen(state_file, 'w') as fp:
+        with salt.utils.files.fopen(state_file, 'w') as fp:
             self.addCleanup(lambda: os.remove(state_file))
             fp.write(textwrap.dedent('''\
                 some_dir:
@@ -992,7 +993,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             template='jinja', defaults={'spam': _ts})
         try:
             self.assertSaltTrueReturn(ret)
-            with salt.utils.fopen(os.path.join(name, 'scene33'), 'r') as fp_:
+            with salt.utils.files.fopen(os.path.join(name, 'scene33'), 'r') as fp_:
                 contents = fp_.read()
             self.assertIn(_ts, contents)
         finally:
@@ -1006,11 +1007,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         if not os.path.isdir(name):
             os.makedirs(name)
         strayfile = os.path.join(name, 'strayfile')
-        with salt.utils.fopen(strayfile, 'w'):
+        with salt.utils.files.fopen(strayfile, 'w'):
             pass
 
         # Corner cases: replacing file with a directory and vice versa
-        with salt.utils.fopen(os.path.join(name, '36'), 'w'):
+        with salt.utils.files.fopen(os.path.join(name, '36'), 'w'):
             pass
         os.makedirs(os.path.join(name, 'scene33'))
         ret = self.run_state(
@@ -1031,11 +1032,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         if not os.path.isdir(name):
             os.makedirs(name)
         strayfile = os.path.join(name, 'strayfile')
-        with salt.utils.fopen(strayfile, 'w'):
+        with salt.utils.files.fopen(strayfile, 'w'):
             pass
 
         # Corner cases: replacing file with a directory and vice versa
-        with salt.utils.fopen(os.path.join(name, '32'), 'w'):
+        with salt.utils.files.fopen(os.path.join(name, '32'), 'w'):
             pass
         os.makedirs(os.path.join(name, 'scene34'))
         ret = self.run_state('file.recurse',
@@ -1086,14 +1087,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.replace
         '''
         name = os.path.join(TMP, 'replace_test')
-        with salt.utils.fopen(name, 'w+') as fp_:
+        with salt.utils.files.fopen(name, 'w+') as fp_:
             fp_.write('change_me')
 
         ret = self.run_state('file.replace',
                 name=name, pattern='change', repl='salt', backup=False)
 
         try:
-            with salt.utils.fopen(name, 'r') as fp_:
+            with salt.utils.files.fopen(name, 'r') as fp_:
                 self.assertIn('salt', fp_.read())
 
             self.assertSaltTrueReturn(ret)
@@ -1116,7 +1117,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         test_name = 'test_replace_issue_18612'
         path_test = os.path.join(TMP, test_name)
 
-        with salt.utils.fopen(path_test, 'w+') as fp_test_:
+        with salt.utils.files.fopen(path_test, 'w+') as fp_test_:
             fp_test_.write('# en_US.UTF-8')
 
         ret = []
@@ -1126,11 +1127,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         try:
             # ensure, the number of lines didn't change, even after invoking 'file.replace' 3 times
-            with salt.utils.fopen(path_test, 'r') as fp_test_:
+            with salt.utils.files.fopen(path_test, 'r') as fp_test_:
                 self.assertTrue((sum(1 for _ in fp_test_) == 1))
 
             # ensure, the replacement succeeded
-            with salt.utils.fopen(path_test, 'r') as fp_test_:
+            with salt.utils.files.fopen(path_test, 'r') as fp_test_:
                 self.assertTrue(fp_test_.read().startswith('en_US.UTF-8'))
 
             # ensure, all runs of 'file.replace' reported success
@@ -1392,7 +1393,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     'finally': 'the last item'},
                 formatter='json')
 
-        with salt.utils.fopen(path_test, 'r') as fp_:
+        with salt.utils.files.fopen(path_test, 'r') as fp_:
             serialized_file = fp_.read()
 
         expected_file = '''{
@@ -1473,7 +1474,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         name = os.path.join(TMP, 'comment_test')
         try:
             # write a line to file
-            with salt.utils.fopen(name, 'w+') as fp_:
+            with salt.utils.files.fopen(name, 'w+') as fp_:
                 fp_.write('comment_me')
 
             # Look for changes with test=True: return should be "None" at the first run
@@ -1485,7 +1486,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             # result is positive
             self.assertSaltTrueReturn(ret)
             # line is commented
-            with salt.utils.fopen(name, 'r') as fp_:
+            with salt.utils.files.fopen(name, 'r') as fp_:
                 self.assertTrue(fp_.read().startswith('#comment'))
 
             # comment twice
@@ -1494,7 +1495,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             # result is still positive
             self.assertSaltTrueReturn(ret)
             # line is still commented
-            with salt.utils.fopen(name, 'r') as fp_:
+            with salt.utils.files.fopen(name, 'r') as fp_:
                 self.assertTrue(fp_.read().startswith('#comment'))
 
             # Test previously commented file returns "True" now and not "None" with test=True
@@ -1510,12 +1511,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         name = os.path.join(TMP, 'comment_test_test')
         try:
-            with salt.utils.fopen(name, 'w+') as fp_:
+            with salt.utils.files.fopen(name, 'w+') as fp_:
                 fp_.write('comment_me')
             ret = self.run_state(
                 'file.comment', test=True, name=name, regex='.*comment.*',
             )
-            with salt.utils.fopen(name, 'r') as fp_:
+            with salt.utils.files.fopen(name, 'r') as fp_:
                 self.assertNotIn('#comment', fp_.read())
             self.assertSaltNoneReturn(ret)
         finally:
@@ -1527,10 +1528,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         name = os.path.join(TMP, 'uncomment_test')
         try:
-            with salt.utils.fopen(name, 'w+') as fp_:
+            with salt.utils.files.fopen(name, 'w+') as fp_:
                 fp_.write('#comment_me')
             ret = self.run_state('file.uncomment', name=name, regex='^comment')
-            with salt.utils.fopen(name, 'r') as fp_:
+            with salt.utils.files.fopen(name, 'r') as fp_:
                 self.assertNotIn('#comment', fp_.read())
             self.assertSaltTrueReturn(ret)
         finally:
@@ -1542,12 +1543,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         name = os.path.join(TMP, 'uncomment_test_test')
         try:
-            with salt.utils.fopen(name, 'w+') as fp_:
+            with salt.utils.files.fopen(name, 'w+') as fp_:
                 fp_.write('#comment_me')
             ret = self.run_state(
                 'file.uncomment', test=True, name=name, regex='^comment.*'
             )
-            with salt.utils.fopen(name, 'r') as fp_:
+            with salt.utils.files.fopen(name, 'r') as fp_:
                 self.assertIn('#comment', fp_.read())
             self.assertSaltNoneReturn(ret)
         finally:
@@ -1559,10 +1560,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         name = os.path.join(TMP, 'append_test')
         try:
-            with salt.utils.fopen(name, 'w+') as fp_:
+            with salt.utils.files.fopen(name, 'w+') as fp_:
                 fp_.write('#salty!')
             ret = self.run_state('file.append', name=name, text='cheese')
-            with salt.utils.fopen(name, 'r') as fp_:
+            with salt.utils.files.fopen(name, 'r') as fp_:
                 self.assertIn('cheese', fp_.read())
             self.assertSaltTrueReturn(ret)
         finally:
@@ -1574,12 +1575,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         name = os.path.join(TMP, 'append_test_test')
         try:
-            with salt.utils.fopen(name, 'w+') as fp_:
+            with salt.utils.files.fopen(name, 'w+') as fp_:
                 fp_.write('#salty!')
             ret = self.run_state(
                 'file.append', test=True, name=name, text='cheese'
             )
-            with salt.utils.fopen(name, 'r') as fp_:
+            with salt.utils.files.fopen(name, 'r') as fp_:
                 self.assertNotIn('cheese', fp_.read())
             self.assertSaltNoneReturn(ret)
         finally:
@@ -1743,7 +1744,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 'state.sls', mods='testappend.issue-2227'
             )
             self.assertSaltTrueReturn(ret)
-            with salt.utils.fopen(tmp_file_append, 'r') as fp_:
+            with salt.utils.files.fopen(tmp_file_append, 'r') as fp_:
                 contents_pre = fp_.read()
 
             # It should not append text again
@@ -1752,7 +1753,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertSaltTrueReturn(ret)
 
-            with salt.utils.fopen(tmp_file_append, 'r') as fp_:
+            with salt.utils.files.fopen(tmp_file_append, 'r') as fp_:
                 contents_post = fp_.read()
 
             self.assertEqual(contents_pre, contents_post)
@@ -1768,7 +1769,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         if not self.run_function('cmd.has_exec', ['patch']):
             self.skipTest('patch is not installed')
         src_file = os.path.join(TMP, 'src.txt')
-        with salt.utils.fopen(src_file, 'w+') as fp:
+        with salt.utils.files.fopen(src_file, 'w+') as fp:
             fp.write(src)
         ret = self.run_state(
             'file.patch',
@@ -1781,7 +1782,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     def test_patch(self):
         src_file, ret = self.do_patch()
         self.assertSaltTrueReturn(ret)
-        with salt.utils.fopen(src_file) as fp:
+        with salt.utils.files.fopen(src_file) as fp:
             self.assertEqual(fp.read(), 'Hello world\n')
 
     def test_patch_hash_mismatch(self):
@@ -1801,7 +1802,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # Get a path to the temporary file
         tmp_file = os.path.join(TMP, 'issue-2041-comment.txt')
         # Write some data to it
-        with salt.utils.fopen(tmp_file, 'w') as fp_:
+        with salt.utils.files.fopen(tmp_file, 'w') as fp_:
             fp_.write('hello\nworld\n')
         # create the sls template
         template_lines = [
@@ -1836,7 +1837,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # Get a path to the temporary file
         tmp_file = os.path.join(TMP, 'issue-2379-file-append.txt')
         # Write some data to it
-        with salt.utils.fopen(tmp_file, 'w') as fp_:
+        with salt.utils.files.fopen(tmp_file, 'w') as fp_:
             fp_.write(
                 'hello\nworld\n'           # Some junk
                 '#PermitRootLogin yes\n'   # Commented text
@@ -1958,7 +1959,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             "    - backup: '.bak2'",
             '    - show_changes: True',
             '']
-        with salt.utils.fopen(template_path, 'w') as fp_:
+        with salt.utils.files.fopen(template_path, 'w') as fp_:
             fp_.write(
                 os.linesep.join(sls_template).format(testcase_filedest))
 
@@ -1966,7 +1967,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_function('state.sls', mods='issue-8343')
             for name, step in six.iteritems(ret):
                 self.assertSaltTrueReturn({name: step})
-            with salt.utils.fopen(testcase_filedest) as fp_:
+            with salt.utils.files.fopen(testcase_filedest) as fp_:
                 contents = fp_.read().split(os.linesep)
             self.assertEqual(
                 ['#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
@@ -2025,14 +2026,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '    - show_changes: True'
         ]
 
-        with salt.utils.fopen(template_path, 'w') as fp_:
+        with salt.utils.files.fopen(template_path, 'w') as fp_:
             fp_.write(os.linesep.join(sls_template).format(testcase_filedest))
 
         try:
             ret = self.run_function('state.sls', mods='issue-11003')
             for name, step in six.iteritems(ret):
                 self.assertSaltTrueReturn({name: step})
-            with salt.utils.fopen(testcase_filedest) as fp_:
+            with salt.utils.files.fopen(testcase_filedest) as fp_:
                 contents = fp_.read().split(os.linesep)
 
             begin = contents.index(
@@ -2115,7 +2116,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '    - require:',
             '      - cmd: some-utf8-file-content-remove',
         ]
-        with salt.utils.fopen(template_path, 'w') as fp_:
+        with salt.utils.files.fopen(template_path, 'w') as fp_:
             fp_.write(os.linesep.join(template_lines))
         try:
             ret = self.run_function('state.sls', mods='issue-8947')
@@ -2318,7 +2319,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if exc.errno != errno.EBADF:
                 raise exc
 
-        with salt.utils.fopen(source, 'w') as fp_:
+        with salt.utils.files.fopen(source, 'w') as fp_:
             fp_.write('{{ foo }}\n')
 
         try:
@@ -2347,7 +2348,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if exc.errno != errno.EBADF:
                 raise exc
 
-        with salt.utils.fopen(source, 'w') as fp_:
+        with salt.utils.files.fopen(source, 'w') as fp_:
             fp_.write('{{ foo }}\n')
 
         try:

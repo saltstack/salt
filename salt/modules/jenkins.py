@@ -33,7 +33,7 @@ try:
 except ImportError:
     HAS_JENKINS = False
 
-import salt.utils
+import salt.utils.files
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -264,7 +264,7 @@ def create_job(name=None,
     else:
         config_xml_file = __salt__['cp.cache_file'](config_xml, saltenv)
 
-        with salt.utils.fopen(config_xml_file) as _fp:
+        with salt.utils.files.fopen(config_xml_file) as _fp:
             config_xml = _fp.read()
 
     server = _connect()
@@ -303,7 +303,7 @@ def update_job(name=None,
     else:
         config_xml_file = __salt__['cp.cache_file'](config_xml, saltenv)
 
-        with salt.utils.fopen(config_xml_file) as _fp:
+        with salt.utils.files.fopen(config_xml_file) as _fp:
             config_xml = _fp.read()
 
     server = _connect()
