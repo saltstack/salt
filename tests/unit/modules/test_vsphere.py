@@ -986,8 +986,10 @@ class ListDatacentersViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         self.mock_si = MagicMock()
         self.addCleanup(delattr, self, 'mock_si')
-        patcher = patch('salt.utils.vmware.get_service_instance', MagicMock(return_value=self.mock_si))
+        patcher = patch('salt.utils.vmware.get_service_instance',
+                        MagicMock(return_value=self.mock_si))
         patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = patch('salt.utils.vmware.get_datacenters', MagicMock())
         patcher.start()
         self.addCleanup(patcher.stop)
