@@ -10,6 +10,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -163,7 +164,7 @@ def _parse_dnamasq(filename):
             'Error: No such file \'{0}\''.format(filename)
         )
 
-    with salt.utils.fopen(filename, 'r') as fp_:
+    with salt.utils.files.fopen(filename, 'r') as fp_:
         for line in fp_:
             if not line.strip():
                 continue

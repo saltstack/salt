@@ -22,6 +22,7 @@ from tests.support.helpers import requires_network, skip_if_binaries_missing
 
 # Import Salt libs
 import salt.utils
+import salt.utils.files
 import salt.modules.zcbuildout as buildout
 import salt.modules.cmdmod as cmd
 
@@ -47,7 +48,7 @@ log = logging.getLogger(__name__)
 
 
 def download_to(url, dest):
-    with salt.utils.fopen(dest, 'w') as fic:
+    with salt.utils.files.fopen(dest, 'w') as fic:
         fic.write(urlopen(url, timeout=10).read())
 
 
@@ -294,14 +295,14 @@ class BuildoutTestCase(Base):
         bpy = os.path.join(b_dir, 'bootstrap.py')
         buildout.upgrade_bootstrap(b_dir)
         time1 = os.stat(bpy).st_mtime
-        with salt.utils.fopen(bpy) as fic:
+        with salt.utils.files.fopen(bpy) as fic:
             data = fic.read()
         self.assertTrue('setdefaulttimeout(2)' in data)
         flag = os.path.join(b_dir, '.buildout', '2.updated_bootstrap')
         self.assertTrue(os.path.exists(flag))
         buildout.upgrade_bootstrap(b_dir, buildout_ver=1)
         time2 = os.stat(bpy).st_mtime
-        with salt.utils.fopen(bpy) as fic:
+        with salt.utils.files.fopen(bpy) as fic:
             data = fic.read()
         self.assertTrue('setdefaulttimeout(2)' in data)
         flag = os.path.join(b_dir, '.buildout', '1.updated_bootstrap')
