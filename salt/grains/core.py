@@ -1188,6 +1188,7 @@ _OS_FAMILY_MAP = {
     'NILinuxRT-XFCE': 'NILinuxRT',
     'KDE neon': 'Debian',
     'Void': 'Void',
+    'IDMS': 'Debian',
 }
 
 
