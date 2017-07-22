@@ -21,7 +21,6 @@ import re
 import os
 import time
 import datetime
-import fnmatch
 from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
@@ -1089,23 +1088,17 @@ def install(name=None,
     version_num = Wildcard(__zypper__)(name, version)
     if pkg_type == 'repository':
         targets = []
-        problems = []
         for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
+                log.debug('targeting package: %s', param)
                 targets.append(param)
             else:
-                match = re.match(r'^([<>])?(=)?([^<>=]+)$', version_num)
-                if match:
-                    gt_lt, equal, verstr = match.groups()
-                    targets.append('{0}{1}{2}'.format(param, ((gt_lt or '') + (equal or '')) or '=', verstr))
-                    log.debug(targets)
-                else:
-                    msg = ('Invalid version string \'{0}\' for package \'{1}\''.format(version_num, name))
-                    problems.append(msg)
-        if problems:
-            for problem in problems:
-                log.error(problem)
-            return {}
+                prefix, verstr = salt.utils.pkg.split_comparison(version_num)
+                if not prefix:
+                    prefix = '='
+                target = '{0}{1}{2}'.format(param, prefix, verstr)
+                log.debug('targeting package: %s', target)
+                targets.append(target)
     elif pkg_type == 'advisory':
         targets = []
         cur_patches = list_patches()
@@ -1161,7 +1154,7 @@ def install(name=None,
     # (affects only kernel packages at this point)
     for pkg_name in new:
         pkg_data = new[pkg_name]
-        if isinstance(pkg_data, str):
+        if isinstance(pkg_data, six.string_types):
             new[pkg_name] = pkg_data.split(',')[-1]
 
     ret = salt.utils.compare_dicts(old, new)

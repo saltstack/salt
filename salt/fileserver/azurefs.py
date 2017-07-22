@@ -10,43 +10,58 @@ the Master config file.
     fileserver_backend:
       - azurefs
 
-Each environment is configured as a storage container. The name of the container
-must match the name of the environment. The ``storage_account`` is the name of
-the storage account inside Azure where the container lives, and the
-``storage_key`` is the access key used for that storage account:
+Starting in Oxygen, this fileserver requires the standalone Azure Storage SDK
+for Python. Theoretically any version >= v0.20.0 should work, but it was
+developed against the v0.33.0 version.
+
+Each storage container will be mapped to an environment. By default, containers
+will be mapped to the ``base`` environment. You can override this behavior with
+the ``saltenv`` configuration option. You can have an unlimited number of
+storage containers, and can have a storage container serve multiple
+environments, or have multiple storage containers mapped to the same
+environment. Normal first-found rules apply, and storage containers are
+searched in the order they are defined.
+
+You must have either an account_key or a sas_token defined for each container,
+if it is private. If you use a sas_token, it must have READ and LIST
+permissions.
 
 .. code-block:: yaml
 
-    azurefs_envs:
-      base:
-        storage_account: my_storage
-        storage_key: frehgfw34fWGegG07fwsfw343tGFDSDGDFGD==
+    azurefs:
+      - account_name: my_storage
+        account_key: 'fNH9cRp0+qVIVYZ+5rnZAhHc9ycOUcJnHtzpfOr0W0sxrtL2KVLuMe1xDfLwmfed+JJInZaEdWVCPHD4d/oqeA=='
+        container_name: my_container
+      - account_name: my_storage
+        sas_token: 'ss=b&sp=&sv=2015-07-08&sig=cohxXabx8FQdXsSEHyUXMjsSfNH2tZ2OB97Ou44pkRE%3D&srt=co&se=2017-04-18T21%3A38%3A01Z'
+        container_name: my_dev_container
+        saltenv: dev
+      - account_name: my_storage
+        container_name: my_public_container
 
-With this configuration, multiple storage accounts can be used with a single
-salt instrastructure.
+.. note::
+
+    Do not include the leading ? for sas_token if generated from the web
 '''
 
 # Import python libs
 from __future__ import absolute_import
+from salt.utils.versions import LooseVersion
+import base64
+import json
+import logging
 import os
 import os.path
-import logging
-import time
-
-try:
-    import fcntl
-    HAS_FCNTL = True
-except ImportError:
-    # fcntl is not available on windows
-    HAS_FCNTL = False
+import shutil
 
 # Import salt libs
 import salt.fileserver
 import salt.utils
-import salt.syspaths
 
 try:
-    import salt.utils.msazure as azure
+    import azure.storage
+    if LooseVersion(azure.storage.__version__) < LooseVersion('0.20.0'):
+        raise ImportError('azure.storage.__version__ must be >= 0.20.0')
     HAS_AZURE = True
 except ImportError:
     HAS_AZURE = False
@@ -62,12 +77,18 @@ log = logging.getLogger()
 
 def __virtual__():
     '''
-    Only load if file_recv is enabled
+    Only load if defined in fileserver_backend and azure.storage is present
     '''
     if __virtualname__ not in __opts__['fileserver_backend']:
         return False
 
     if not HAS_AZURE:
+        return False
+
+    if 'azurefs' not in __opts__:
+        return False
+
+    if not _validate_config():
         return False
 
     return True
@@ -77,76 +98,67 @@ def find_file(path, saltenv='base', **kwargs):
     '''
     Search the environment for the relative path
     '''
-    if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
-        kwargs.pop('env')
-
     fnd = {'path': '',
            'rel': ''}
-    try:
-        root = os.path.join(salt.syspaths.CACHE_DIR, 'azure')
-    except (IndexError, ValueError):
-        # An invalid index or index option was passed
-        return fnd
-    full = os.path.join(root, path)
-    if os.path.isfile(full) and not salt.fileserver.is_file_ignored(
-                                                            __opts__, full):
-        fnd['path'] = full
-        fnd['rel'] = path
-        try:
-            # Converting the stat result to a list, the elements of the
-            # list correspond to the following stat_result params:
-            # 0 => st_mode=33188
-            # 1 => st_ino=10227377
-            # 2 => st_dev=65026
-            # 3 => st_nlink=1
-            # 4 => st_uid=1000
-            # 5 => st_gid=1000
-            # 6 => st_size=1056233
-            # 7 => st_atime=1468284229
-            # 8 => st_mtime=1456338235
-            # 9 => st_ctime=1456338235
-            fnd['stat'] = list(os.stat(full))
-        except Exception:
-            pass
+    for container in __opts__.get('azurefs', []):
+        if container.get('saltenv', 'base') != saltenv:
+            continue
+        full = os.path.join(_get_container_path(container), path)
+        if os.path.isfile(full) and not salt.fileserver.is_file_ignored(
+                                                                __opts__, path):
+            fnd['path'] = full
+            fnd['rel'] = path
+            try:
+                # Converting the stat result to a list, the elements of the
+                # list correspond to the following stat_result params:
+                # 0 => st_mode=33188
+                # 1 => st_ino=10227377
+                # 2 => st_dev=65026
+                # 3 => st_nlink=1
+                # 4 => st_uid=1000
+                # 5 => st_gid=1000
+                # 6 => st_size=1056233
+                # 7 => st_atime=1468284229
+                # 8 => st_mtime=1456338235
+                # 9 => st_ctime=1456338235
+                fnd['stat'] = list(os.stat(full))
+            except Exception:
+                pass
+            return fnd
     return fnd
 
 
 def envs():
     '''
-    Treat each container as an environment
+    Each container configuration can have an environment setting, or defaults
+    to base
     '''
-    containers = __opts__.get('azurefs_containers', [])
-    return containers.keys()
+    saltenvs = []
+    for container in __opts__.get('azurefs', []):
+        saltenvs.append(container.get('saltenv', 'base'))
+    # Remove duplicates
+    return list(set(saltenvs))
 
 
 def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
-        load.pop('env')
-
     ret = {'data': '',
            'dest': ''}
-    if 'path' not in load or 'loc' not in load or 'saltenv' not in load:
+    required_load_keys = set(['path', 'loc', 'saltenv'])
+    if not all(x in load for x in required_load_keys):
+        log.debug(
+            'Not all of the required keys present in payload. '
+            'Missing: {0}'.format(
+                ', '.join(required_load_keys.difference(load))
+            )
+        )
         return ret
     if not fnd['path']:
         return ret
     ret['dest'] = fnd['rel']
     gzip = load.get('gzip', None)
-
     fpath = os.path.normpath(fnd['path'])
     with salt.utils.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
@@ -162,179 +174,208 @@ def serve_file(load, fnd):
 
 def update():
     '''
-    When we are asked to update (regular interval) lets reap the cache
+    Update caches of the storage containers.
+
+    Compares the md5 of the files on disk to the md5 of the blobs in the
+    container, and only updates if necessary.
+
+    Also processes deletions by walking the container caches and comparing
+    with the list of blobs in the container
     '''
-    base_dir = os.path.join(salt.syspaths.CACHE_DIR, 'azure')
-    if not os.path.isdir(base_dir):
-        os.makedirs(base_dir)
+    for container in __opts__['azurefs']:
+        path = _get_container_path(container)
+        try:
+            if not os.path.exists(path):
+                os.makedirs(path)
+            elif not os.path.isdir(path):
+                shutil.rmtree(path)
+                os.makedirs(path)
+        except Exception as exc:
+            log.exception('Error occurred creating cache directory for azurefs')
+            continue
+        blob_service = _get_container_service(container)
+        name = container['container_name']
+        try:
+            blob_list = blob_service.list_blobs(name)
+        except Exception as exc:
+            log.exception('Error occurred fetching blob list for azurefs')
+            continue
 
-    try:
-        salt.fileserver.reap_fileserver_cache_dir(
-            os.path.join(base_dir, 'hash'),
-            find_file
-        )
-    except (IOError, OSError):
-        # Hash file won't exist if no files have yet been served up
-        pass
+        # Walk the cache directory searching for deletions
+        blob_names = [blob.name for blob in blob_list]
+        blob_set = set(blob_names)
+        for root, dirs, files in os.walk(path):
+            for f in files:
+                fname = os.path.join(root, f)
+                relpath = os.path.relpath(fname, path)
+                if relpath not in blob_set:
+                    salt.fileserver.wait_lock(fname + '.lk', fname)
+                    try:
+                        os.unlink(fname)
+                    except Exception:
+                        pass
+            if not dirs and not files:
+                shutil.rmtree(root)
 
-    data_dict = {}
-    if os.listdir(base_dir):
-        # Find out what the latest file is, so that we only update files more
-        # recent than that, and not the entire filesystem
+        for blob in blob_list:
+            fname = os.path.join(path, blob.name)
+            update = False
+            if os.path.exists(fname):
+                # File exists, check the hashes
+                source_md5 = blob.properties.content_settings.content_md5
+                local_md5 = base64.b64encode(salt.utils.get_hash(fname, 'md5').decode('hex'))
+                if local_md5 != source_md5:
+                    update = True
+            else:
+                update = True
 
-        all_files = []
-        for root, subFolders, files in os.walk(base_dir):
-            for fn_ in files:
-                full_path = os.path.join(root, fn_)
-                all_files.append([
-                    os.path.getmtime(full_path),
-                    full_path,
-                ])
-        if all_files:
-            all_files.sort()
-            all_files.reverse()
-            latest_stamp = os.path.getmtime(all_files[0][1])
-            format_stamp = time.strftime(
-                '%Y-%m-%d %H:%M:%S', time.localtime(latest_stamp)
-            )
+            if update:
+                if not os.path.exists(os.path.dirname(fname)):
+                    os.makedirs(os.path.dirname(fname))
+                # Lock writes
+                lk_fn = fname + '.lk'
+                salt.fileserver.wait_lock(lk_fn, fname)
+                with salt.utils.fopen(lk_fn, 'w+') as fp_:
+                    fp_.write('')
 
-        #data_dict={'sysparm_query': 'sys_updated_on > {0}'.format(format_stamp)}
+                try:
+                    blob_service.get_blob_to_path(name, blob.name, fname)
+                except Exception as exc:
+                    log.exception('Error occurred fetching blob from azurefs')
+                    continue
 
-    # Pull in any files that have changed
-    envs = __opts__.get('azurefs_envs', [])
-    for env in envs:
-        storage_conn = azure.get_storage_conn(opts=envs[env])
-        result = azure.list_blobs(
-            storage_conn=storage_conn,
-            container=env,
-        )
+                # Unlock writes
+                try:
+                    os.unlink(lk_fn)
+                except Exception:
+                    pass
 
-        # Write out any new files to disk
-        for blob in result:
-            file_name = os.path.join(base_dir, blob)
-
-            # Make sure the directory exists first
-            comps = file_name.split('/')
-            file_path = '/'.join(comps[:-1])
-            if not os.path.exists(file_path):
-                os.makedirs(file_path)
-
-            # Write out the file
-            azure.get_blob(
-                storage_conn=storage_conn,
-                container=env,
-                name=blob,
-                local_path=file_name,
-            )
-
-            time_stamp = time.mktime(
-                time.strptime(
-                    result[blob]['properties']['last_modified'][0],
-                    '%a, %d %b %Y %H:%M:%S %Z'
-                ),
-            )
-            os.utime(file_name, (time_stamp, time_stamp))
+        # Write out file list
+        container_list = path + '.list'
+        lk_fn = container_list + '.lk'
+        salt.fileserver.wait_lock(lk_fn, container_list)
+        with salt.utils.fopen(lk_fn, 'w+') as fp_:
+            fp_.write('')
+        with salt.utils.fopen(container_list, 'w') as fp_:
+            fp_.write(json.dumps(blob_names))
+        try:
+            os.unlink(lk_fn)
+        except Exception:
+            pass
 
 
 def file_hash(load, fnd):
     '''
-    Return a file hash, the hash type is set in the master config file
+    Return a file hash based on the hash type set in the master config
     '''
+    if not all(x in load for x in ('path', 'saltenv')):
+        return '', None
+    ret = {'hash_type': __opts__['hash_type']}
+    relpath = fnd['rel']
     path = fnd['path']
-    ret = {}
-
-    # if the file doesn't exist, we can't get a hash
-    if not path or not os.path.isfile(path):
-        return ret
-
-    # set the hash_type as it is determined by config
-    # -- so mechanism won't change that
-    ret['hash_type'] = __opts__['hash_type']
-
-    # check if the hash is cached
-    # cache file's contents should be 'hash:mtime'
-    cache_path = os.path.join(salt.syspaths.CACHE_DIR,
-                              'azure/hash',
-                              load['saltenv'],
-                              '{0}.hash.{1}'.format(
-                                    fnd['rel'], __opts__['hash_type'])
-                            )
-    # if we have a cache, serve that if the mtime hasn't changed
-    if os.path.exists(cache_path):
-        try:
-            with salt.utils.fopen(cache_path, 'rb') as fp_:
-                try:
-                    hsum, mtime = fp_.read().split(':')
-                except ValueError:
-                    log.debug(
-                        'Fileserver attempted to read'
-                        'incomplete cache file. Retrying.'
-                    )
-                    file_hash(load, fnd)
-                    return ret
-                if os.path.getmtime(path) == mtime:
-                    # check if mtime changed
-                    ret['hsum'] = hsum
-                    return ret
-        except os.error:
-            # Can't use Python select() because we need Windows support
-            log.debug(
-                'Fileserver encountered lock'
-                'when reading cache file. Retrying.'
-            )
-            file_hash(load, fnd)
-            return ret
-
-    # if we don't have a cache entry-- lets make one
-    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
-    cache_dir = os.path.dirname(cache_path)
-    # make cache directory if it doesn't exist
-    if not os.path.exists(cache_dir):
-        os.makedirs(cache_dir)
-    # save the cache object 'hash:mtime'
-    if HAS_FCNTL:
-        with salt.utils.flopen(cache_path, 'w') as fp_:
-            fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
-            fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
+    hash_cachedir = os.path.join(__opts__['cachedir'], 'azurefs', 'hashes')
+    hashdest = salt.utils.path_join(hash_cachedir,
+                                    load['saltenv'],
+                                    '{0}.hash.{1}'.format(relpath,
+                                                          __opts__['hash_type']))
+    if not os.path.isfile(hashdest):
+        if not os.path.exists(os.path.dirname(hashdest)):
+            os.makedirs(os.path.dirname(hashdest))
+        ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+        with salt.utils.fopen(hashdest, 'w+') as fp_:
+            fp_.write(ret['hsum'])
         return ret
     else:
-        with salt.utils.fopen(cache_path, 'w') as fp_:
-            fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
+        with salt.utils.fopen(hashdest, 'rb') as fp_:
+            ret['hsum'] = fp_.read()
         return ret
 
 
 def file_list(load):
     '''
-    Return a list of all files on the file server in a specified environment
+    Return a list of all files in a specified environment
     '''
-    ret = []
-    envs = __opts__.get('azurefs_envs', [])
-    storage_conn = azure.get_storage_conn(opts=envs[load['saltenv']])
-    result = azure.list_blobs(
-        storage_conn=storage_conn,
-        container=load['saltenv'],
-    )
-    for blob in result:
-        ret.append(blob)
-    return ret
+    ret = set()
+    try:
+        for container in __opts__['azurefs']:
+            if container.get('saltenv', 'base') != load['saltenv']:
+                continue
+            container_list = _get_container_path(container) + '.list'
+            lk = container_list + '.lk'
+            salt.fileserver.wait_lock(lk, container_list, 5)
+            if not os.path.exists(container_list):
+                continue
+            with salt.utils.fopen(container_list, 'r') as fp_:
+                ret.update(set(json.load(fp_)))
+    except Exception as exc:
+        log.error('azurefs: an error ocurred retrieving file lists. '
+                  'It should be resolved next time the fileserver '
+                  'updates. Please do not manually modify the azurefs '
+                  'cache directory.')
+    return list(ret)
 
 
 def dir_list(load):
     '''
-    Return a list of all directories on the master
+    Return a list of all directories in a specified environment
     '''
-    ret = []
-    envs = __opts__.get('azurefs_envs', [])
-    storage_conn = azure.get_storage_conn(opts=envs[load['saltenv']])
-    result = azure.list_blobs(
-        storage_conn=storage_conn,
-        container=load['saltenv'],
-    )
-    for blob in result:
-        if '/' not in blob:
-            continue
-        comps = blob.split('/')
-        path = '/'.join(comps[:-1])
-        if path not in ret:
-            ret.append(path)
-    return ret
+    ret = set()
+    files = file_list(load)
+    for f in files:
+        dirname = f
+        while dirname:
+            dirname = os.path.dirname(dirname)
+            if dirname:
+                ret.add(dirname)
+    return list(ret)
+
+
+def _get_container_path(container):
+    '''
+    Get the cache path for the container in question
+
+    Cache paths are generate by combining the account name, container name,
+    and saltenv, separated by underscores
+    '''
+    root = os.path.join(__opts__['cachedir'], 'azurefs')
+    container_dir = '{0}_{1}_{2}'.format(container.get('account_name', ''),
+                                         container.get('container_name', ''),
+                                         container.get('saltenv', 'base'))
+    return os.path.join(root, container_dir)
+
+
+def _get_container_service(container):
+    '''
+    Get the azure block blob service for the container in question
+
+    Try account_key, sas_token, and no auth in that order
+    '''
+    if 'account_key' in container:
+        account = azure.storage.CloudStorageAccount(container['account_name'], account_key=container['account_key'])
+    elif 'sas_token' in container:
+        account = azure.storage.CloudStorageAccount(container['account_name'], sas_token=container['sas_token'])
+    else:
+        account = azure.storage.CloudStorageAccount(container['account_name'])
+    blob_service = account.create_block_blob_service()
+    return blob_service
+
+
+def _validate_config():
+    '''
+    Validate azurefs config, return False if it doesn't validate
+    '''
+    if not isinstance(__opts__['azurefs'], list):
+        log.error('azurefs configuration is not formed as a list, skipping azurefs')
+        return False
+    for container in __opts__['azurefs']:
+        if not isinstance(container, dict):
+            log.error('One or more entries in the azurefs configuration list '
+                      'are not formed as a dict. Skipping azurefs: {0}'
+                      .format(container))
+            return False
+        if 'account_name' not in container or 'container_name' not in container:
+            log.error('An azurefs container configuration is missing either '
+                      'an account_name or a container_name: {0}'
+                      .format(container))
+            return False
+    return True

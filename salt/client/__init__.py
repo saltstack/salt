@@ -560,12 +560,15 @@ class LocalClient(object):
                 'tgt_type': tgt_type,
                 'ret': ret,
                 'batch': batch,
+                'failhard': kwargs.get('failhard', False),
                 'raw': kwargs.get('raw', False)}
 
         if 'timeout' in kwargs:
             opts['timeout'] = kwargs['timeout']
         if 'gather_job_timeout' in kwargs:
             opts['gather_job_timeout'] = kwargs['gather_job_timeout']
+        if 'batch_wait' in kwargs:
+            opts['batch_wait'] = int(kwargs['batch_wait'])
 
         eauth = {}
         if 'eauth' in kwargs:

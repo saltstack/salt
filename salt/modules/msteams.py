@@ -75,7 +75,7 @@ def post_card(message,
     payload = {
         "text": message,
         "title": title,
-        "theme_color": theme_color
+        "themeColor": theme_color
     }
 
     result = salt.utils.http.query(hook_url, method='POST', data=json.dumps(payload), status=True)

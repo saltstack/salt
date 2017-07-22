@@ -1,0 +1,11 @@
+#!/sbin/openrc-run
+command="/usr/bin/salt-master"
+command_args="--daemon"
+pidfile="/var/run/salt-master.pid"
+name="Salt Master"
+
+depend() {
+	need localmount
+	use net
+	after bootmisc
+}

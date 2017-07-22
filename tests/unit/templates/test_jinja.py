@@ -25,6 +25,7 @@ import salt.utils
 from salt.exceptions import SaltRenderError
 from salt.ext.six.moves import builtins
 from salt.utils import get_context
+from salt.utils.decorators import JinjaFilter
 from salt.utils.jinja import (
     SaltCacheLoader,
     SerializerExtension,
@@ -164,8 +165,7 @@ class TestGetTemplate(TestCase):
                 os.path.dirname(os.path.abspath(__file__)),
                 'extmods'),
         }
-        self.local_salt = {
-        }
+        self.local_salt = {}
 
     def test_fallback(self):
         '''
@@ -176,7 +176,11 @@ class TestGetTemplate(TestCase):
         with salt.utils.fopen(fn_) as fp_:
             out = render_jinja_tmpl(
                 fp_.read(),
-                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+                dict(
+                    opts=self.local_opts,
+                    saltenv='test',
+                    salt=self.local_salt
+                ))
         self.assertEqual(out, 'world\n')
 
     def test_fallback_noloader(self):
@@ -188,7 +192,11 @@ class TestGetTemplate(TestCase):
         with salt.utils.fopen(filename) as fp_:
             out = render_jinja_tmpl(
                 fp_.read(),
-                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+                dict(
+                    opts=self.local_opts,
+                    saltenv='test',
+                    salt=self.local_salt
+                ))
         self.assertEqual(out, 'Hey world !a b !\n')
 
     def test_saltenv(self):
@@ -310,8 +318,13 @@ class TestGetTemplate(TestCase):
 
     @skipIf(HAS_TIMELIB is False, 'The `timelib` library is not installed.')
     def test_strftime(self):
-        response = render_jinja_tmpl('{{ "2002/12/25"|strftime }}',
-                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        response = render_jinja_tmpl(
+            '{{ "2002/12/25"|strftime }}',
+            dict(
+                opts=self.local_opts,
+                saltenv='test',
+                salt=self.local_salt
+            ))
         self.assertEqual(response, '2002-12-25')
 
         objects = (
@@ -322,21 +335,44 @@ class TestGetTemplate(TestCase):
         )
 
         for object in objects:
-            response = render_jinja_tmpl('{{ object|strftime }}',
-                    dict(object=object, opts=self.local_opts, saltenv='test', salt=self.local_salt))
+            response = render_jinja_tmpl(
+                '{{ object|strftime }}',
+                dict(
+                    object=object,
+                    opts=self.local_opts,
+                    saltenv='test',
+                    salt=self.local_salt
+                ))
             self.assertEqual(response, '2002-12-25')
 
-            response = render_jinja_tmpl('{{ object|strftime("%b %d, %Y") }}',
-                    dict(object=object, opts=self.local_opts, saltenv='test', salt=self.local_salt))
+            response = render_jinja_tmpl(
+                '{{ object|strftime("%b %d, %Y") }}',
+                dict(
+                    object=object,
+                    opts=self.local_opts,
+                    saltenv='test',
+                    salt=self.local_salt
+                ))
             self.assertEqual(response, 'Dec 25, 2002')
 
-            response = render_jinja_tmpl('{{ object|strftime("%y") }}',
-                    dict(object=object, opts=self.local_opts, saltenv='test', salt=self.local_salt))
+            response = render_jinja_tmpl(
+                '{{ object|strftime("%y") }}',
+                dict(
+                    object=object,
+                    opts=self.local_opts,
+                    saltenv='test',
+                    salt=self.local_salt
+                ))
             self.assertEqual(response, '02')
 
     def test_non_ascii(self):
         fn = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
-        out = JINJA(fn, opts=self.local_opts, saltenv='test')
+        out = JINJA(
+            fn,
+            opts=self.local_opts,
+            saltenv='test',
+            salt=self.local_salt
+        )
         with salt.utils.fopen(out['data']) as fp:
             result = fp.read()
             if six.PY2:
@@ -477,6 +513,7 @@ class TestCustomExtensions(TestCase):
     def test_regex_escape(self):
         dataset = 'foo?:.*/\\bar'
         env = Environment(extensions=[SerializerExtension])
+        env.filters.update(JinjaFilter.salt_jinja_filters)
         rendered = env.from_string('{{ dataset|regex_escape }}').render(dataset=dataset)
         self.assertEqual(rendered, re.escape(dataset))
 
@@ -484,6 +521,7 @@ class TestCustomExtensions(TestCase):
         dataset = 'foo'
         unique = set(dataset)
         env = Environment(extensions=[SerializerExtension])
+        env.filters.update(JinjaFilter.salt_jinja_filters)
         if six.PY3:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'{}").split("', '")
             self.assertEqual(rendered, list(unique))
@@ -495,6 +533,7 @@ class TestCustomExtensions(TestCase):
         dataset = ('foo', 'foo', 'bar')
         unique = set(dataset)
         env = Environment(extensions=[SerializerExtension])
+        env.filters.update(JinjaFilter.salt_jinja_filters)
         if six.PY3:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'{}").split("', '")
             self.assertEqual(rendered, list(unique))
@@ -506,6 +545,7 @@ class TestCustomExtensions(TestCase):
         dataset = ['foo', 'foo', 'bar']
         unique = ['foo', 'bar']
         env = Environment(extensions=[SerializerExtension])
+        env.filters.update(JinjaFilter.salt_jinja_filters)
         if six.PY3:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'[]").split("', '")
             self.assertEqual(rendered, unique)

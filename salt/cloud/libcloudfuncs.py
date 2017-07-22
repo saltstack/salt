@@ -17,6 +17,7 @@ from salt.ext.six.moves import zip
 # Import libcloud
 try:
     import libcloud
+    import re
     from libcloud.compute.types import Provider
     from libcloud.compute.providers import get_driver
     from libcloud.compute.deployment import (

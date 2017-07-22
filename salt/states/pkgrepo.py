@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Management of APT/YUM package repos
+Management of APT/RPM package repos
 ===================================
 
-Package repositories for APT-based and YUM-based distros can be managed with
+Package repositories for APT-based and RPM-based distros(openSUSE/SUSE, CentOS/Fedora/Redhat) can be managed with
 these states. Here is some example SLS:
 
 .. code-block:: yaml

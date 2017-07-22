@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
-Support for reboot, shutdown, etc
+Support for reboot, shutdown, etc on POSIX-like systems.
+
+.. note::
+
+    If you have configured a wrapper such as ``molly-guard`` to
+    intercept *interactive* shutdown commands, be aware that calling
+    ``system.halt``, ``system.poweroff``, ``system.reboot``, and
+    ``system.shutdown`` with ``salt-call`` will hang indefinitely
+    while the wrapper script waits for user input. Calling them with
+    ``salt`` will work as expected.
+
 '''
 from __future__ import absolute_import
 
@@ -24,7 +34,7 @@ def __virtual__():
     Windows, Solaris, and Mac have their own modules
     '''
     if salt.utils.is_windows():
-        return (False, 'This module is not available on windows')
+        return (False, 'This module is not available on Windows')
 
     if salt.utils.is_darwin():
         return (False, 'This module is not available on Mac OS')
@@ -415,7 +425,7 @@ def get_system_date(utc_offset=None):
 
 def set_system_date(newdate, utc_offset=None):
     '''
-    Set the Windows system date. Use <mm-dd-yy> format for the date.
+    Set the system date. Use <mm-dd-yy> format for the date.
 
     :param str newdate:
         The date to set. Can be any of the following formats

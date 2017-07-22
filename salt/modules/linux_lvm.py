@@ -354,6 +354,7 @@ def lvcreate(lvname,
              pv=None,
              thinvolume=False,
              thinpool=False,
+             force=False,
              **kwargs):
     '''
     Create a new logical volume, with option for which physical volume to be used
@@ -427,6 +428,9 @@ def lvcreate(lvname,
         cmd.append(pv)
     if extra_arguments:
         cmd.extend(extra_arguments)
+
+    if force:
+        cmd.append('-yes')
 
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     lvdev = '/dev/{0}/{1}'.format(vgname, lvname)

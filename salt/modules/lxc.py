@@ -288,10 +288,8 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         any extra argument for the salt minion config
     dnsservers
         list of DNS servers to set inside the container
-        (Defaults to 8.8.8.8 and 4.4.4.4 until Oxygen release)
     dns_via_dhcp
         do not set the dns servers, let them be set by the dhcp.
-        (Defaults to False until Oxygen release)
     autostart
         autostart the container at boot time
     password
@@ -404,13 +402,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     snapshot = _cloud_get('snapshot', False)
     autostart = bool(_cloud_get('autostart', True))
     dnsservers = _cloud_get('dnsservers', [])
-    dns_via_dhcp = _cloud_get('dns_via_dhcp', False)
-    if not dnsservers and not dns_via_dhcp:
-        salt.utils.warn_until('Oxygen', (
-            'dnsservers will stop defaulting to 8.8.8.8 and 4.4.4.4 '
-            'in Oxygen.  Please set your dnsservers.'
-        ))
-        dnsservers = ['8.8.8.8', '4.4.4.4']
+    dns_via_dhcp = _cloud_get('dns_via_dhcp', True)
     password = _cloud_get('password', 's3cr3t')
     password_encrypted = _cloud_get('password_encrypted', False)
     fstype = _cloud_get('fstype', None)

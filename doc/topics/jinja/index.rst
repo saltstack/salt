@@ -150,6 +150,22 @@ starts at the root of the state tree or pillar.
 .. _`macro`: http://jinja.pocoo.org/docs/templates/#macros
 .. _`whitespace control`: http://jinja.pocoo.org/docs/templates/#whitespace-control
 
+Errors
+======
+
+Saltstack allows to raise custom errors using the ``raise`` jinja function.
+
+.. code-block:: jinja
+
+    {{ raise('Custom Error') }}
+
+When rendering the template containing the above statement, a ``TemplateError``
+exception is raised, causing the rendering to fail with the following message:
+
+.. code-block:: text
+
+    TemplateError: Custom Error
+
 Filters
 =======
 
@@ -1475,7 +1491,75 @@ Returns:
 
   /usr/local/salt/virtualenv/bin/salt-master
 
-.. jinja_ref:: jinja-in-files
+
+Tests
+=====
+
+Saltstack extends `builtin tests`_ with these custom tests:
+
+.. _`builtin tests`: http://jinja.pocoo.org/docs/templates/#builtin-tests
+
+.. jinja_ref:: equalto
+
+``equalto``
+-----------
+
+Tests the equality between two values.
+
+Can be used in an ``if`` statement directly:
+
+.. code-block:: jinja
+
+    {% if 1 is equalto(1) %}
+        < statements >
+    {% endif %}
+
+If clause evaluates to ``True``
+
+or with the ``selectattr`` filter:
+
+.. code-block:: jinja
+
+    {{ [{'value': 1}, {'value': 2} , {'value': 3}] | selectattr('value', 'equalto', 3) | list }}
+
+Returns:
+
+.. code-block:: python
+
+    [{'value': 3}]
+
+.. jinja_ref:: match
+
+``match``
+---------
+
+Tests that a string matches the regex passed as an argument.
+
+Can be used in a ``if`` statement directly:
+
+.. code-block:: jinja
+
+    {% if 'a' is match('[a-b]') %}
+        < statements >
+    {% endif %}
+
+If clause evaluates to ``True``
+
+or with the ``selectattr`` filter:
+
+.. code-block:: jinja
+
+    {{ [{'value': 'a'}, {'value': 'b'}, {'value': 'c'}] | selectattr('value', 'match', '[b-e]') | list }}
+
+Returns:
+
+.. code-block:: python
+
+    [{'value': 'b'}, {'value': 'c'}]
+
+
+Test supports additional optional arguments: ``ignorecase``, ``multiline``
+
 
 Jinja in Files
 ==============

@@ -514,25 +514,6 @@ def beacons(opts, functions, context=None, proxy=None):
     )
 
 
-def search(opts, returners, whitelist=None):
-    '''
-    Returns the search modules
-
-    :param dict opts: The Salt options dictionary
-    :param returners: Undocumented
-    :param whitelist: Undocumented
-    '''
-    # TODO Document returners arg
-    # TODO Document whitelist arg
-    return LazyLoader(
-        _module_dirs(opts, 'search', 'search'),
-        opts,
-        tag='search',
-        whitelist=whitelist,
-        pack={'__ret__': returners},
-    )
-
-
 def log_handlers(opts):
     '''
     Returns the custom logging handler modules
@@ -627,6 +608,43 @@ def grain_funcs(opts, proxy=None):
     )
 
 
+def _load_cached_grains(opts, cfn):
+    '''
+    Returns the grains cached in cfn, or None if the cache is too old or is
+    corrupted.
+    '''
+    if not os.path.isfile(cfn):
+        log.debug('Grains cache file does not exist.')
+        return None
+
+    grains_cache_age = int(time.time() - os.path.getmtime(cfn))
+    if grains_cache_age > opts.get('grains_cache_expiration', 300):
+        log.debug('Grains cache last modified {0} seconds ago and '
+                  'cache expiration is set to {1}. '
+                  'Grains cache expired. Refreshing.'.format(
+                      grains_cache_age,
+                      opts.get('grains_cache_expiration', 300)
+                  ))
+        return None
+
+    if opts.get('refresh_grains_cache', False):
+        log.debug('refresh_grains_cache requested, Refreshing.')
+        return None
+
+    log.debug('Retrieving grains from cache')
+    try:
+        serial = salt.payload.Serial(opts)
+        with salt.utils.fopen(cfn, 'rb') as fp_:
+            cached_grains = serial.load(fp_)
+        if not cached_grains:
+            log.debug('Cached grains are empty, cache might be corrupted. Refreshing.')
+            return None
+
+        return cached_grains
+    except (IOError, OSError):
+        return None
+
+
 def grains(opts, force_refresh=False, proxy=None):
     '''
     Return the functions for the dynamic grains and the values for the static
@@ -653,29 +671,10 @@ def grains(opts, force_refresh=False, proxy=None):
         opts['cachedir'],
         'grains.cache.p'
     )
-    if not force_refresh:
-        if opts.get('grains_cache', False):
-            if os.path.isfile(cfn):
-                grains_cache_age = int(time.time() - os.path.getmtime(cfn))
-                if opts.get('grains_cache_expiration', 300) >= grains_cache_age and not \
-                        opts.get('refresh_grains_cache', False) and not force_refresh:
-                    log.debug('Retrieving grains from cache')
-                    try:
-                        serial = salt.payload.Serial(opts)
-                        with salt.utils.fopen(cfn, 'rb') as fp_:
-                            cached_grains = serial.load(fp_)
-                        return cached_grains
-                    except (IOError, OSError):
-                        pass
-                else:
-                    log.debug('Grains cache last modified {0} seconds ago and '
-                              'cache expiration is set to {1}. '
-                              'Grains cache expired. Refreshing.'.format(
-                                  grains_cache_age,
-                                  opts.get('grains_cache_expiration', 300)
-                              ))
-            else:
-                log.debug('Grains cache file does not exist.')
+    if not force_refresh and opts.get('grains_cache', False):
+        cached_grains = _load_cached_grains(opts, cfn)
+        if cached_grains:
+            return cached_grains
     else:
         log.debug('Grains refresh requested. Refreshing grains.')
 
@@ -789,12 +788,18 @@ def grains(opts, force_refresh=False, proxy=None):
                 try:
                     serial = salt.payload.Serial(opts)
                     serial.dump(grains_data, fp_)
-                except TypeError:
-                    # Can't serialize pydsl
-                    pass
-        except (IOError, OSError):
-            msg = 'Unable to write to grains cache file {0}'
-            log.error(msg.format(cfn))
+                except TypeError as e:
+                    log.error('Failed to serialize grains cache: {0}'.format(e))
+                    raise  # re-throw for cleanup
+        except Exception as e:
+            msg = 'Unable to write to grains cache file {0}: {1}'
+            log.error(msg.format(cfn, e))
+            # Based on the original exception, the file may or may not have been
+            # created. If it was, we will remove it now, as the exception means
+            # the serialized data is not to be trusted, no matter what the
+            # exception is.
+            if os.path.isfile(cfn):
+                os.unlink(cfn)
         os.umask(cumask)
 
     if grains_deep_merge:
