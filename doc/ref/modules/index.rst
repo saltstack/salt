@@ -405,6 +405,10 @@ similar to the following:
            return __virtualname__
        return False
 
+Note that the ``__virtual__()`` function will return either a ``True`` or ``False``
+value. If it returns a ``True`` value, this ``__virtualname__`` module-level attribute
+can be set as seen in the above example. This is the name that the module should be
+referred to as.
 
 Documentation
 =============
