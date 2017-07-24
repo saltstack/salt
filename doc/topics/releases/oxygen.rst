@@ -101,6 +101,14 @@ The ``win_service`` module had the following changes:
 - The ``type`` option was removed from the ``create`` function. Please use
   ``service_type`` instead.
 
+Runner Deprecations
+-------------------
+
+The ``manage`` runner had the following changes:
+
+- The ``root_user`` kwarg was removed from the ``bootstrap`` function. Please
+  use ``salt-ssh`` roster entries for the host instead.
+
 State Deprecations
 ------------------
 
