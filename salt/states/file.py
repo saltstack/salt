@@ -3261,7 +3261,8 @@ def replace(name,
             not_found_content=None,
             backup='.bak',
             show_changes=True,
-            ignore_if_missing=False):
+            ignore_if_missing=False,
+            backslash_literal=False):
     r'''
     Maintain an edit in a file.
 
@@ -3351,6 +3352,14 @@ def replace(name,
         state will display an error raised by the execution module. If set to
         ``True``, the state will simply report no changes.
 
+    backslash_literal : False
+        .. versionadded:: 2016.11.7
+
+        Interpret backslashes as literal backslashes for the repl and not
+        escape characters.  This will help when using append/prepend so that
+        the backslashes are not interpreted for the repl on the second run of
+        the state.
+
     For complex regex patterns, it can be useful to avoid the need for complex
     quoting and escape sequences by making use of YAML's multiline string
     syntax.
@@ -3399,7 +3408,8 @@ def replace(name,
                                        backup=backup,
                                        dry_run=__opts__['test'],
                                        show_changes=show_changes,
-                                       ignore_if_missing=ignore_if_missing)
+                                       ignore_if_missing=ignore_if_missing,
+                                       backslash_literal=backslash_literal)
 
     if changes:
         ret['pchanges']['diff'] = changes
