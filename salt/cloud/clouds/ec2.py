@@ -965,7 +965,7 @@ def ssh_interface(vm_):
         'ssh_interface', vm_, __opts__, default='public_ips',
         search_global=False
     )
-    if not ret in ('public_ips', 'private_ips'):
+    if ret not in ('public_ips', 'private_ips'):
         log.warning((
             'Invalid ssh_interface: {0}. '
             'Allowed options are ("public_ips", "private_ips"). '
