@@ -161,6 +161,7 @@ def rsync(src,
     if not src or not dst:
         raise SaltInvocationError('src and dst cannot be empty')
 
+    tmp_src = None
     if src.startswith('salt://'):
         _src = src
         _path = re.sub('salt://', '', _src)
