@@ -907,9 +907,9 @@ def _assign_floating_ips(vm_, conn, kwargs):
                             floating.append(idx)
                             break
                 if not floating:
-                    raise SaltCloudSystemExit(
+                    log.warning(
                         'There are no more floating IP addresses '
-                        'available, please create some more'
+                        'available, please create some more if necessary'
                     )
             except Exception as e:
                 if str(e).startswith('404'):
