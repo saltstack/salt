@@ -541,8 +541,20 @@ def _virtual(osdata):
             command = 'system_profiler'
             args = ['SPDisplaysDataType']
         elif osdata['kernel'] == 'SunOS':
-            command = 'prtdiag'
-            args = []
+            virtinfo = salt.utils.which('virtinfo')
+            if virtinfo:
+                try:
+                    ret = __salt__['cmd.run_all']('{0} -a'.format(virtinfo))
+                except salt.exceptions.CommandExecutionError:
+                    if salt.log.is_logging_configured():
+                        failed_commands.add(virtinfo)
+                else:
+                    if ret['stdout'].endswith('not supported'):
+                        command = 'prtdiag'
+                    else:
+                        command = 'virtinfo'
+            else:
+                command = 'prtdiag'
 
         cmd = salt.utils.which(command)
 
@@ -689,6 +701,9 @@ def _virtual(osdata):
             elif 'joyent smartdc hvm' in model:
                 grains['virtual'] = 'kvm'
             break
+        elif command == 'virtinfo':
+            grains['virtual'] = 'LDOM'
+            break
     else:
         if osdata['kernel'] not in skip_cmds:
             log.debug(
@@ -828,17 +843,27 @@ def _virtual(osdata):
         if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
             grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'SunOS':
-        # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
-        zonename = salt.utils.which('zonename')
-        if zonename:
-            zone = __salt__['cmd.run']('{0}'.format(zonename))
-            if zone != 'global':
+        if grains['virtual'] == 'LDOM':
+            roles = []
+            for role in ('control', 'io', 'root', 'service'):
+                subtype_cmd = '{0} -c current get -H -o value {1}-role'.format(cmd, role)
+                ret = __salt__['cmd.run_all']('{0}'.format(subtype_cmd))
+                if ret['stdout'] == 'true':
+                    roles.append(role)
+            if roles:
+                grains['virtual_subtype'] = roles
+        else:
+            # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
+            zonename = salt.utils.which('zonename')
+            if zonename:
+                zone = __salt__['cmd.run']('{0}'.format(zonename))
+                if zone != 'global':
+                    grains['virtual'] = 'zone'
+                    if salt.utils.is_smartos_zone():
+                        grains.update(_smartos_zone_data())
+            # Check if it's a branded zone (i.e. Solaris 8/9 zone)
+            if isdir('/.SUNWnative'):
                 grains['virtual'] = 'zone'
-                if salt.utils.is_smartos_zone():
-                    grains.update(_smartos_zone_data())
-        # Check if it's a branded zone (i.e. Solaris 8/9 zone)
-        if isdir('/.SUNWnative'):
-            grains['virtual'] = 'zone'
     elif osdata['kernel'] == 'NetBSD':
         if sysctl:
             if 'QEMU Virtual CPU' in __salt__['cmd.run'](
