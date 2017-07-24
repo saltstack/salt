@@ -116,6 +116,7 @@ if salt.utils.is_windows():
     from salt.modules.win_pkg import _repo_process_pkg_sls
     from salt.modules.win_pkg import _get_latest_pkg_version
     from salt.modules.win_pkg import _reverse_cmp_pkg_versions
+    from functools import cmp_to_key
     _get_package_info = _namespaced_function(_get_package_info, globals())
     get_repo_data = _namespaced_function(get_repo_data, globals())
     _get_repo_details = \
@@ -130,6 +131,7 @@ if salt.utils.is_windows():
         _namespaced_function(_get_latest_pkg_version, globals())
     _reverse_cmp_pkg_versions = \
         _namespaced_function(_reverse_cmp_pkg_versions, globals())
+    cmp_to_key = _namespaced_function(cmp_to_key, globals())
     # The following imports are used by the namespaced win_pkg funcs
     # and need to be included in their globals.
     # pylint: disable=import-error,unused-import
