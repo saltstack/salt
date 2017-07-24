@@ -14,8 +14,8 @@ import os
 import yaml
 
 # Import Salt libs
-import salt.utils
 import salt.utils.event
+import salt.utils.files
 from salt.ext.six.moves import map
 
 # Get logging started
@@ -291,7 +291,7 @@ def save():
         yaml_out = ''
 
     try:
-        with salt.utils.fopen(sfn, 'w+') as fp_:
+        with salt.utils.files.fopen(sfn, 'w+') as fp_:
             fp_.write(yaml_out)
         ret['comment'] = 'Beacons saved to {0}.'.format(sfn)
     except (IOError, OSError):

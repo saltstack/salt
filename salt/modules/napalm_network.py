@@ -27,6 +27,7 @@ log = logging.getLogger(__name__)
 
 # salt libs
 from salt.ext import six
+import salt.utils.files
 import salt.utils.templates
 import salt.utils.napalm
 from salt.utils.napalm import proxy_napalm_wrap
@@ -1016,7 +1017,7 @@ def load_config(filename=None,
     loaded_config = None
     if debug:
         if filename:
-            with salt.utils.fopen(filename) as rfh:
+            with salt.utils.files.fopen(filename) as rfh:
                 loaded_config = rfh.read()
         else:
             loaded_config = text
@@ -1361,7 +1362,7 @@ def load_template(template_name,
                     _loaded['result'] = False
                     _loaded['comment'] = 'Error while rendering the template.'
                     return _loaded
-                with salt.utils.fopen(_temp_tpl_file) as rfh:
+                with salt.utils.files.fopen(_temp_tpl_file) as rfh:
                     _rendered = rfh.read()
                 __salt__['file.remove'](_temp_tpl_file)
             else:

@@ -8,7 +8,7 @@ import os
 from tests.support.case import ModuleCase
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 
 class StdTest(ModuleCase):
@@ -43,7 +43,7 @@ class StdTest(ModuleCase):
         # create fake minion
         key_file = os.path.join(self.master_opts['pki_dir'], 'minions', 'footest')
         # touch the file
-        with salt.utils.fopen(key_file, 'a'):
+        with salt.utils.files.fopen(key_file, 'a'):
             pass
         # ping that minion and ensure it times out
         try:
@@ -126,7 +126,7 @@ class StdTest(ModuleCase):
         # Create a minion key, but do not start the "fake" minion. This mimics
         # a disconnected minion.
         key_file = os.path.join(self.master_opts['pki_dir'], 'minions', 'disconnected')
-        with salt.utils.fopen(key_file, 'a'):
+        with salt.utils.files.fopen(key_file, 'a'):
             pass
 
         # ping disconnected minion and ensure it times out and returns with correct message

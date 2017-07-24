@@ -35,6 +35,7 @@ import salt.loader
 import salt.utils
 import salt.utils.args
 import salt.utils.event
+import salt.utils.files
 import salt.utils.minions
 import salt.utils.verify
 import salt.utils.jid
@@ -193,7 +194,7 @@ class LocalClient(object):
                                                self.skip_perm_errors)
 
         try:
-            with salt.utils.fopen(keyfile, 'r') as key:
+            with salt.utils.files.fopen(keyfile, 'r') as key:
                 return key.read()
         except (OSError, IOError):
             # Fall back to eauth

@@ -25,6 +25,7 @@ import salt.config
 import salt.minion
 import salt.utils
 import salt.utils.event
+import salt.utils.files
 from salt.utils.network import host_to_ips as _host_to_ips
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
@@ -215,7 +216,7 @@ def uptime():
         ut_path = "/proc/uptime"
         if not os.path.exists(ut_path):
             raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
-        with salt.utils.fopen(ut_path) as rfh:
+        with salt.utils.files.fopen(ut_path) as rfh:
             seconds = int(float(rfh.read().split()[0]))
     elif salt.utils.is_sunos():
         # note: some flavors/vesions report the host uptime inside a zone
@@ -310,7 +311,7 @@ def cpustats():
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/stat', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/stat', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -437,7 +438,7 @@ def meminfo():
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/meminfo', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/meminfo', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -583,7 +584,7 @@ def cpuinfo():
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/cpuinfo', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/cpuinfo', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -782,7 +783,7 @@ def diskstats():
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/diskstats', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/diskstats', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -932,7 +933,7 @@ def diskusage(*args):
         # ifile source of data varies with OS, otherwise all the same
         if __grains__['kernel'] == 'Linux':
             try:
-                with salt.utils.fopen('/proc/mounts', 'r') as fp_:
+                with salt.utils.files.fopen('/proc/mounts', 'r') as fp_:
                     ifile = fp_.read().splitlines()
             except OSError:
                 return {}
@@ -987,7 +988,7 @@ def vmstats():
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/vmstat', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/vmstat', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -1065,7 +1066,7 @@ def netstats():
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/net/netstat', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/net/netstat', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -1187,7 +1188,7 @@ def netdev():
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/net/dev', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/net/dev', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -1448,7 +1449,7 @@ def version():
         linux specific implementation of version
         '''
         try:
-            with salt.utils.fopen('/proc/version', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/version', 'r') as fp_:
                 return fp_.read().strip()
         except IOError:
             return {}

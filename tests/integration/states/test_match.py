@@ -17,7 +17,7 @@ from tests.support.paths import FILES
 from tests.support.helpers import skip_if_not_root
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 STATE_DIR = os.path.join(FILES, 'file', 'base')
 
@@ -34,7 +34,7 @@ class StateMatchTest(ModuleCase):
         top_filename = 'issue-2167-ipcidr-match.sls'
         top_file = os.path.join(STATE_DIR, top_filename)
         try:
-            with salt.utils.fopen(top_file, 'w') as fp_:
+            with salt.utils.files.fopen(top_file, 'w') as fp_:
                 fp_.write(
                     'base:\n'
                     '  {0}:\n'

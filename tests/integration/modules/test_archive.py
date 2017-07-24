@@ -16,6 +16,7 @@ from tests.support.helpers import destructiveTest
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 # Import 3rd party libs
 try:
@@ -59,7 +60,7 @@ class ArchiveTest(ModuleCase):
 
         # Create source
         os.makedirs(self.src)
-        with salt.utils.fopen(os.path.join(self.src, 'file'), 'w') as theorem:
+        with salt.utils.files.fopen(os.path.join(self.src, 'file'), 'w') as theorem:
             theorem.write(textwrap.dedent(r'''\
                 Compression theorem of computational complexity theory:
 

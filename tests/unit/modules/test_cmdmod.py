@@ -251,7 +251,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         Tests return when provided shell is available
         '''
         with patch('os.path.exists', MagicMock(return_value=True)):
-            with patch('salt.utils.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
+            with patch('salt.utils.files.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
                 self.assertTrue(cmdmod._is_valid_shell('/bin/bash'))
 
     @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
@@ -260,7 +260,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         Tests return when provided shell is not available
         '''
         with patch('os.path.exists', MagicMock(return_value=True)):
-            with patch('salt.utils.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
+            with patch('salt.utils.files.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
                 self.assertFalse(cmdmod._is_valid_shell('foo'))
 
     def test_os_environment_remains_intact(self):

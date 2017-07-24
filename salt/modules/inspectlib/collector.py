@@ -29,6 +29,7 @@ from salt.modules.inspectlib.entities import (AllowedDir, IgnoredDir, Package,
                                               PayloadFile, PackageCfgFile)
 
 import salt.utils
+import salt.utils.files
 from salt.utils import fsutils
 from salt.utils import reinit_crypto
 from salt.exceptions import CommandExecutionError
@@ -475,7 +476,7 @@ def is_alive(pidfile):
     Check if PID is still alive.
     '''
     try:
-        with salt.utils.fopen(pidfile) as fp_:
+        with salt.utils.files.fopen(pidfile) as fp_:
             os.kill(int(fp_.read().strip()), 0)
         return True
     except Exception as ex:
@@ -517,7 +518,7 @@ if __name__ == '__main__':
         pid = os.fork()
         if pid > 0:
             reinit_crypto()
-            with salt.utils.fopen(os.path.join(pidfile, EnvLoader.PID_FILE), 'w') as fp_:
+            with salt.utils.files.fopen(os.path.join(pidfile, EnvLoader.PID_FILE), 'w') as fp_:
                 fp_.write('{0}\n'.format(pid))
             sys.exit(0)
     except OSError as ex:

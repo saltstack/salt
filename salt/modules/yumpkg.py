@@ -41,6 +41,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.pkg
 import salt.ext.six as six
 import salt.utils.itertools
@@ -2581,7 +2582,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
             content += '\n{0}={1}'.format(line, filerepos[stanza][line])
         content += '\n{0}\n'.format(comments)
 
-    with salt.utils.fopen(repofile, 'w') as fileout:
+    with salt.utils.files.fopen(repofile, 'w') as fileout:
         fileout.write(content)
 
     return 'Repo {0} has been removed from {1}'.format(repo, repofile)
@@ -2722,7 +2723,7 @@ def mod_repo(repo, basedir=None, **kwargs):
             )
         content += '\n{0}\n'.format(comments)
 
-    with salt.utils.fopen(repofile, 'w') as fileout:
+    with salt.utils.files.fopen(repofile, 'w') as fileout:
         fileout.write(content)
 
     return {repofile: filerepos}
@@ -2735,7 +2736,7 @@ def _parse_repo_file(filename):
     repos = {}
     header = ''
     repo = ''
-    with salt.utils.fopen(filename, 'r') as rfile:
+    with salt.utils.files.fopen(filename, 'r') as rfile:
         for line in rfile:
             if line.startswith('['):
                 repo = line.strip().replace('[', '').replace(']', '')

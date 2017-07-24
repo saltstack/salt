@@ -17,6 +17,7 @@ from tests.support.paths import TMP
 import salt.loader
 import salt.config
 import salt.utils
+import salt.utils.files
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 
@@ -348,7 +349,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 '''.format(output, output, output)))
 
             self.state_highstate({'base': ['aaa']}, dirpath)
-            with salt.utils.fopen(output, 'r') as f:
+            with salt.utils.files.fopen(output, 'r') as f:
                 self.assertEqual(''.join(f.read().split()), "XYZABCDEF")
 
         finally:
@@ -381,9 +382,9 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 A()
                 '''.format(dirpath, dirpath, dirpath, dirpath)))
             self.state_highstate({'base': ['aaa']}, dirpath)
-            with salt.utils.fopen(os.path.join(dirpath, 'yyy.txt'), 'rt') as f:
+            with salt.utils.files.fopen(os.path.join(dirpath, 'yyy.txt'), 'rt') as f:
                 self.assertEqual(f.read(), 'hehe\nhoho\n')
-            with salt.utils.fopen(os.path.join(dirpath, 'xxx.txt'), 'rt') as f:
+            with salt.utils.files.fopen(os.path.join(dirpath, 'xxx.txt'), 'rt') as f:
                 self.assertEqual(f.read(), 'hehe\n')
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
@@ -456,5 +457,5 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
 
 
 def write_to(fpath, content):
-    with salt.utils.fopen(fpath, 'w') as f:
+    with salt.utils.files.fopen(fpath, 'w') as f:
         f.write(content)
