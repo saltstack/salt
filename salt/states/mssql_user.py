@@ -74,7 +74,7 @@ def present(name, login=None, domain=None, database=None, roles=None, options=No
                                                        domain=domain,
                                                        database=database,
                                                        roles=roles,
-                                                       options=_normalize_options(user_options),
+                                                       options=_normalize_options(options),
                                                        **kwargs)
     if user_created is not True:  # Non-empty strings are also evaluated to True, so we cannot use if not user_created:
         ret['result'] = False
