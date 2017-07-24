@@ -686,7 +686,6 @@ def versions():
 def bootstrap(version='develop',
               script=None,
               hosts='',
-              root_user=False,
               script_args='',
               roster='flat',
               ssh_user=None,
@@ -706,14 +705,6 @@ def bootstrap(version='develop',
     hosts
         Comma-separated hosts [example: hosts='host1.local,host2.local']. These
         hosts need to exist in the specified roster.
-
-    root_user : False
-        Prepend ``root@`` to each host. Default changed in Salt 2016.11.0 from ``True``
-        to ``False``.
-
-        .. versionchanged:: 2016.11.0
-
-        .. deprecated:: Oxygen
 
     script_args
         Any additional arguments that you want to pass to the script.
@@ -772,19 +763,8 @@ def bootstrap(version='develop',
         salt-run manage.bootstrap hosts='host1,host2' version='v0.17'
         salt-run manage.bootstrap hosts='host1,host2' version='v0.17' \
             script='https://bootstrap.saltstack.com/develop'
-        salt-run manage.bootstrap hosts='ec2-user@host1,ec2-user@host2' \
-            root_user=False
 
     '''
-    dep_warning = (
-        'Starting with Salt 2016.11.0, manage.bootstrap now uses Salt SSH to '
-        'connect, and requires a roster entry. Please ensure that a roster '
-        'entry exists for this host. Non-roster hosts will no longer be '
-        'supported starting with Salt Oxygen.'
-    )
-    if root_user is True:
-        salt.utils.warn_until('Oxygen', dep_warning)
-
     if script is None:
         script = 'https://bootstrap.saltstack.com'
 
@@ -825,21 +805,7 @@ def bootstrap(version='develop',
             client_opts['argv'] = ['file.remove', tmp_dir]
             salt.client.ssh.SSH(client_opts).run()
         except SaltSystemExit as exc:
-            if 'No hosts found with target' in str(exc):
-                log.warning('The host {0} was not found in the Salt SSH roster '
-                            'system. Attempting to log in without Salt SSH.')
-                salt.utils.warn_until('Oxygen', dep_warning)
-                ret = subprocess.call([
-                    'ssh',
-                    ('root@' if root_user else '') + host,
-                    'python -c \'import urllib; '
-                    'print urllib.urlopen('
-                    '"' + script + '"'
-                    ').read()\' | sh -s -- git ' + version
-                ])
-                return ret
-            else:
-                log.error(str(exc))
+            log.error(str(exc))
 
 
 def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
