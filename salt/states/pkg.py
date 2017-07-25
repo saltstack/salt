@@ -131,7 +131,6 @@ if salt.utils.is_windows():
         _namespaced_function(_get_latest_pkg_version, globals())
     _reverse_cmp_pkg_versions = \
         _namespaced_function(_reverse_cmp_pkg_versions, globals())
-    cmp_to_key = _namespaced_function(cmp_to_key, globals())
     # The following imports are used by the namespaced win_pkg funcs
     # and need to be included in their globals.
     # pylint: disable=import-error,unused-import
