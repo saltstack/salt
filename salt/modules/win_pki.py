@@ -155,7 +155,7 @@ def get_certs(context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
             if key not in blacklist_keys:
                 cert_info[key.lower()] = item[key]
 
-        cert_info['dnsnames'] = [name['Unicode'] for name in item['DnsNameList']]
+        cert_info['dnsnames'] = [name.get('Unicode') for name in item.get('DnsNameList', {})]
         ret[item['Thumbprint']] = cert_info
     return ret
 
