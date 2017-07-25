@@ -771,22 +771,6 @@ class UtilsTestCase(TestCase):
         self.assertEqual('baz', utils.option('foo:bar', {'not_found': 'nope'}, pillar={'master': test_two_level_dict}))
         self.assertEqual('baz', utils.option('foo:bar', {'not_found': 'nope'}, pillar=test_two_level_dict))
 
-    def test_parse_docstring(self):
-        test_keystone_str = '''Management of Keystone users
-                                ============================
-
-                                :depends:   - keystoneclient Python module
-                                :configuration: See :py:mod:`salt.modules.keystone` for setup instructions.
-'''
-
-        ret = utils.parse_docstring(test_keystone_str)
-        expected_dict = {'deps': ['keystoneclient'],
-                         'full': 'Management of Keystone users\n                                '
-                                 '============================\n\n                                '
-                                 ':depends:   - keystoneclient Python module\n                                '
-                                 ':configuration: See :py:mod:`salt.modules.keystone` for setup instructions.\n'}
-        self.assertDictEqual(ret, expected_dict)
-
     def test_get_hash_exception(self):
         self.assertRaises(ValueError, utils.get_hash, '/tmp/foo/', form='INVALID')
 
