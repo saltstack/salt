@@ -312,16 +312,6 @@ class SaltStackVersion(object):
         )
 
     @property
-    def rc_info(self):
-        import salt.utils
-        salt.utils.warn_until(
-            'Oxygen',
-            'Please stop using the \'rc_info\' attribute and instead use '
-            '\'pre_info\'. \'rc_info\' will be supported until Salt {version}.'
-        )
-        return self.pre_info
-
-    @property
     def pre_info(self):
         return (
             self.major,
