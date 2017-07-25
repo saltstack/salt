@@ -874,8 +874,9 @@ def run(cmd,
     :param bool encoded_cmd: Specify if the supplied command is encoded.
       Only applies to shell 'powershell'.
 
-    :pram bool raise_err: Specifies whether to raise a CommandExecutionError.
-      If False, the error will be logged. Default is False.
+    :param bool raise_err: Specifies whether to raise a CommandExecutionError.
+      If False, the error will be logged, but no exception will be raised.
+      Default is False.
 
     .. warning::
         This function does not process commands through a shell
