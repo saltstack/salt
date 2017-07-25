@@ -55,6 +55,13 @@ Salt Cloud and Newer PyWinRM Versions
 Versions of ``pywinrm>=0.2.1`` are finally able to disable validation of self
 signed certificates.  :ref:`Here<new-pywinrm>` for more information.
 
+Solaris Logical Domains In Virtual Grain
+----------------------------------------
+
+Support has been added to the ``virtual`` grain for detecting Solaris LDOMs
+running on T-Series SPARC hardware.  The ``virtual_subtype`` grain is 
+populated as a list of domain roles.
+
 Configuration Option Deprecations
 ---------------------------------
 
@@ -100,6 +107,14 @@ The ``win_service`` module had the following changes:
   ``start_type`` instead.
 - The ``type`` option was removed from the ``create`` function. Please use
   ``service_type`` instead.
+
+Runner Deprecations
+-------------------
+
+The ``manage`` runner had the following changes:
+
+- The ``root_user`` kwarg was removed from the ``bootstrap`` function. Please
+  use ``salt-ssh`` roster entries for the host instead.
 
 State Deprecations
 ------------------
