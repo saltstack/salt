@@ -1521,7 +1521,7 @@ class Minion(MinionBase):
                 ret['out'] = 'nested'
         else:
             docs = minion_instance.functions['sys.doc']('{0}*'.format(function_name))
-            if docs:
+            if all(docs[doc] for doc in docs):
                 ret['return'] = docs
             else:
                 ret['return'] = minion_instance.functions.missing_fun_string(function_name)

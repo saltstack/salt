@@ -277,7 +277,10 @@ class Runner(RunnerClient):
                                 'jid': self.jid},
                                tag='salt/run/{0}/ret'.format(self.jid))
                 # Attempt to grab documentation
-                ret = self.get_docs('{0}*'.format(low['fun']))
+                if 'fun' in low:
+                    ret = self.get_docs('{0}*'.format(low['fun']))
+                else:
+                    ret = None
 
                 # If we didn't get docs returned then
                 # return the `not availble` message.
