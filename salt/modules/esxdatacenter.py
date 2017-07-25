@@ -22,7 +22,7 @@ def __virtual__():
     '''
     if salt.utils.is_proxy():
         return __virtualname__
-    return False
+    return (False, 'Must be run on a proxy minion')
 
 
 def get_details():
