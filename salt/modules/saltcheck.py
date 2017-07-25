@@ -98,6 +98,21 @@ def run_state_tests(state):
             result = scheck.run_test(value)
             results_dict[key] = result
         results[state_name] = results_dict
+    for state in results:
+        passed = 0
+        failed = 0
+        if len(results[state].items()) == 0:
+            results[state]['state test results'] = {'pass': passed, 'fail': failed}
+        else:
+            for dummy, val in results[state].items():
+                if val:
+                    passed = passed + 1
+                elif val.upper().startswith('False'):
+                    failed = failed + 1
+                else:
+                    failed = 0
+                    passed = 0
+                results[state]['state test results'] = {'pass': passed, 'fail': failed}
     return results
 
 
@@ -112,12 +127,13 @@ def run_highstate_tests():
     for sta in states:
         log.info("State Name = {}".format(sta))
         all_states.update(run_state_tests(sta))
-        # result_dict = run_state_tests(sta)
-        # log.info("result_dict = {}".format(result_dict))
-        # key = result_dict.keys()[0]
-        # val = result_dict.values()[0]
-        # all_states[key] = val
-    return {'highstate_test_result': all_states}
+    passed = 0
+    failed = 0
+    for state in all_states:
+        passed = all_states[state]['state test results']['pass'] + passed
+        failed = all_states[state]['state test results']['fail'] + failed
+    all_states['Total Pass/Fail:'] = {'pass': passed, 'fail': failed}
+    return all_states
 
 
 def _is_valid_module(module):
