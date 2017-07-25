@@ -481,7 +481,7 @@ def __save_artifact(artifact_url, target_file, headers):
     return result
 
 
-def __get_group_id_subpath(group_id, use_literal_group_id):
+def __get_group_id_subpath(group_id, use_literal_group_id=False):
     if not use_literal_group_id:
         group_url = group_id.replace('.', '/')
         return group_url
