@@ -1305,7 +1305,7 @@ class AESFuncs(object):
         with salt.utils.files.fopen(cpath, mode) as fp_:
             if load['loc']:
                 fp_.seek(load['loc'])
-            
+
             fp_.write(load['data'])
         return True
 
