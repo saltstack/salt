@@ -26,11 +26,7 @@ from __future__ import absolute_import
 from json import JSONEncoder, loads
 
 import sys
-if sys.version_info < (3,):
-    # pylint: disable=W1699
-    varbinary_types = (int, long,)
-else:
-    varbinary_types = (int,)
+import salt.ext.six as six
 
 
 try:
@@ -331,7 +327,7 @@ def login_create(login, new_login_password=None, new_login_domain=None, new_logi
     sql = "CREATE LOGIN [{0}] ".format(login)
     if new_login_domain:
         sql += " FROM WINDOWS "
-    elif isinstance(new_login_password, varbinary_types):
+    elif isinstance(new_login_password, six.integer_types):
         new_login_options.insert(0, "PASSWORD=0x{0:x} HASHED".format(new_login_password))
     else:  # Plain test password
         new_login_options.insert(0, "PASSWORD=N'{0}'".format(new_login_password))
