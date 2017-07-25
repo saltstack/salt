@@ -4,12 +4,15 @@
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from salt.exceptions import CommandExecutionError
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
+from salt.exceptions import CommandExecutionError
 import salt.modules.saltcheck as saltcheck
 
+saltcheck.__salt__ = {}
 
 class SaltCheckTestCase(TestCase):
     ''' SaltCheckTestCase'''
@@ -17,23 +20,24 @@ class SaltCheckTestCase(TestCase):
     def test_update_master_cache(self):
         self.assertTrue(saltcheck.update_master_cache)
 
-    def test_call_salt_command(self):
-        sc = saltcheck.SaltCheck()
-        returned = sc.call_salt_command(fun="test.echo", args=['hello'], kwargs=None)
-        self.assertEqual(returned, 'hello')
 
-    #def test__is_valid_test(self):
-    #    my_dict = {'module_and_function': 'test.echo',
-    #                 'assertion': 'assertEqual',
-    #                 'expected-return': 'True'}
-    #    sc = saltcheck.SaltCheck()
-    #    mybool = sc.__is_valid_test(my_dict)
-    #    self.assertTrue(mybool)
-        
-    #def test_is_valid_module(self):
-    #    sc = saltcheck.SaltCheck()
-    #    returned = sc.is_valid_module('test')
-    #    self.assertTrue(returned)
+    def test_call_salt_command(self):
+        with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value=True),
+                                             'sys.list_modules': MagicMock(return_value=['module1'])
+                                            }):
+            sc = saltcheck.SaltCheck()
+            returned = sc.call_salt_command(fun="test.echo", args=['hello'], kwargs=None)
+            self.assertEqual(returned, 'hello')
+
+    def test_call_salt_command2(self):
+        with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value=True),
+                                             'sys.list_modules': MagicMock(return_value=['module1'])
+                                            }):
+        #with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['module1'])}):
+            sc = saltcheck.SaltCheck()
+            returned = sc.call_salt_command(fun="test.echo", args=['hello'], kwargs=None)
+            self.assertNotEqual(returned, 'not-hello')
+
 
     def test__assert_equal1(self):
         sc = saltcheck.SaltCheck()
@@ -194,3 +198,18 @@ class SaltCheckTestCase(TestCase):
         b = 100
         mybool = sc._SaltCheck__assert_less_equal(a, b)
         self.assertEqual(mybool, True)
+    
+
+    ####################################################
+    #def test__is_valid_test(self):
+    #    my_dict = {'module_and_function': 'test.echo',
+    #                 'assertion': 'assertEqual',
+    #                 'expected-return': 'True'}
+    #    sc = saltcheck.SaltCheck()
+    #    mybool = sc.__is_valid_test(my_dict)
+    #    self.assertTrue(mybool)
+        
+    #def test_is_valid_module(self):
+    #    sc = saltcheck.SaltCheck()
+    #    returned = sc.is_valid_module('test')
+    #    self.assertTrue(returned)
