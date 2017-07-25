@@ -71,9 +71,11 @@ Profile configuration example:
 
     salt-this-machine:
       ssh_host: 12.34.56.78
-      ssh_username: root
+      ssh_username: root  # the username on the client
       key_filename: '/etc/salt/mysshkey.pem'
       provider: my-vagrant-config
+      runas: my-username  # the username who defined the Vagrantbox on the hose
+
 
 The machine can now be created and configured with the following command:
 
@@ -101,8 +103,7 @@ In order to query or control minions it created, the driver needs to send comman
 to the salt master.  It does that using the network interface to salt-api.
 
 The salt-api is not enabled by default. The following example will provide a
-simple installation, with some minimal security enabled, using your own username
-and password.
+simple installation.
 
 .. code-block:: yaml
 
@@ -114,6 +115,7 @@ and password.
       ssh_username: vagrant  # a user name which has passwordless sudo
       password: vagrant      # on the target machine you are creating.
       provider: my_vagrant_provider
+      runas: my_linux_name  # owner of Vagrantbox on your workstation
 
 .. code-block:: yaml
 
@@ -150,9 +152,36 @@ and password.
       thread_pool: 30
       socket_queue_size: 10
 
+.. code-block:: yaml
+
+    # file /srv/salt/salt_api.sls
+    salt-api:
+      pkg.installed:
+        - unless:
+          - salt-api --version
+    #
+    cherrypy:
+      pip.installed:
+    #
+    create-cert:
+      module.run:
+        - name: tls.create_self_signed_cert
+        - kwargs:
+          - O: 'The Round Table'
+          - L: 'Camelot'
+          - emailAddress: arthur@roundtable.org
+    #
+    salt-api-service:
+      service.running:
+        - name: salt-api
+        - enable: True
+        - watch:
+          - pkg: salt-api
+
 
 Create your target machine as a Salt minion named "v1" by:
 
 .. code-block:: bash
 
+    $ sudo salt-call --local state.apply salt_api
     $ sudo salt-cloud -p prof1 v1
