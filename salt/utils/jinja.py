@@ -19,6 +19,7 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 
 # Import third party libs
 import jinja2
+import pytoml
 import salt.ext.six as six
 import yaml
 from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
@@ -761,6 +762,7 @@ class SerializerExtension(Extension, object):
         self.environment.filters.update({
             'yaml': self.format_yaml,
             'json': self.format_json,
+            'toml': self.format_toml,
             'xml': self.format_xml,
             'python': self.format_python,
             'load_yaml': self.load_yaml,
@@ -794,6 +796,9 @@ class SerializerExtension(Extension, object):
 
     def format_json(self, value, sort_keys=True, indent=None):
         return Markup(json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
+    
+    def format_toml(self, value, sort_keys=True):
+        return Markup(pytoml.dumps(value, sort_keys=sort_keys))
 
     def format_yaml(self, value, flow_style=True):
         yaml_txt = yaml.dump(value, default_flow_style=flow_style,
