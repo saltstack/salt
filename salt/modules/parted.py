@@ -97,7 +97,7 @@ def align_check(device, part_type, partition):
 
         salt '*' partition.align_check /dev/sda minimal 1
     '''
-    cmd = 'parted -m -s {0} align-check {1} {2}'.format(device, part_type, partition)
+    cmd = 'parted -m {0} align-check {1} {2}'.format(device, part_type, partition)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
