@@ -571,9 +571,7 @@ class Compiler(object):
                 if state.startswith('__'):
                     continue
                 chunk = {'state': state,
-                         'name': name,
-                         'arg': [],
-                         'kwarg': {}}
+                         'name': name}
                 if '__sls__' in body:
                     chunk['__sls__'] = body['__sls__']
                 if '__env__' in body:
