@@ -285,13 +285,17 @@ def _register_functions():
     functions, and then register them in the module namespace so that they
     can be called via salt.
     """
-    for module_ in modules.__all__:
+    try:
+        modules_ = [_to_snake_case(module_) for module_ in modules.__all__]
+    except AttributeError:
+        modules_ = [module_ for module_ in modules.modules]
+
+    for mod_name in modules_:
         mod_name = _to_snake_case(module_)
         mod_func = _copy_function(mod_name, str(mod_name))
-        mod_func.__doc__ = _build_doc(module_)
+        mod_func.__doc__ = _build_doc(mod_name)
         __all__.append(mod_name)
         globals()[mod_name] = mod_func
-
 
 if TESTINFRA_PRESENT:
     _register_functions()
