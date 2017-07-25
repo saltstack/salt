@@ -16,8 +16,9 @@ import logging
 import glob
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed when is_true and compare_dicts are moved
 import salt.utils.files
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, MinionError
@@ -42,7 +43,7 @@ def _check_xbps():
     '''
     Looks to see if xbps-install is present on the system, return full path
     '''
-    return salt.utils.which('xbps-install')
+    return salt.utils.path.which('xbps-install')
 
 
 @decorators.memoize

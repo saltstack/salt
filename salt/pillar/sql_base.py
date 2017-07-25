@@ -251,7 +251,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
 
         # Filter out values that don't have queries.
         qbuffer = [x for x in qbuffer if (
-                (isinstance(x[1], str) and len(x[1]))
+                (isinstance(x[1], six.string_types) and len(x[1]))
                 or
                 (isinstance(x[1], (list, tuple)) and (len(x[1]) > 0) and x[1][0])
                 or
@@ -266,7 +266,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                         'with_lists': None,
                         'ignore_null': False
                         }
-            if isinstance(qb[1], str):
+            if isinstance(qb[1], six.string_types):
                 defaults['query'] = qb[1]
             elif isinstance(qb[1], (list, tuple)):
                 defaults['query'] = qb[1][0]

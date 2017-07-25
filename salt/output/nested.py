@@ -25,14 +25,14 @@ Example output::
 '''
 from __future__ import absolute_import
 # Import python libs
-import salt.utils.odict
 from numbers import Number
 
 # Import salt libs
 import salt.output
-from salt.ext.six import string_types
-from salt.utils import get_colors
 import salt.utils.locales
+import salt.utils.odict
+from salt.utils import get_colors
+from salt.ext.six import string_types
 
 
 class NestDisplay(object):

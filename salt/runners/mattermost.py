@@ -20,7 +20,7 @@ import json
 import logging
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import Salt libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
