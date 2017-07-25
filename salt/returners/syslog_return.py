@@ -100,7 +100,7 @@ except ImportError:
 # Import Salt libs
 import salt.utils.jid
 import salt.returners
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 # Define the module's virtual name

@@ -21,7 +21,7 @@ import salt.exceptions as excs
 # Import Salt libraries
 import salt.utils.vmware
 # Import Third Party Libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     from pyVmomi import vim, vmodl
@@ -597,7 +597,7 @@ class GetServiceInstanceTestCase(TestCase):
                                                 None)
 
     def test_no_cached_service_instance_same_host_on_proxy(self):
-        with patch('salt.utils.is_proxy', MagicMock(return_value=True)):
+        with patch('salt.utils.platform.is_proxy', MagicMock(return_value=True)):
             # Service instance is uncached when using class default mock objs
             mock_get_si = MagicMock()
             with patch('salt.utils.vmware._get_service_instance', mock_get_si):

@@ -17,10 +17,13 @@ import salt.master
 import salt.transport.frame
 import salt.utils.event
 import salt.utils.files
-import salt.ext.six as six
+import salt.utils.minions
+import salt.utils.stringutils
+import salt.utils.verify
 from salt.utils.cache import CacheCli
 
 # Import Third Party Libs
+from salt.ext import six
 import tornado.gen
 try:
     from Cryptodome.Cipher import PKCS1_OAEP
@@ -125,7 +128,7 @@ class AESReqServerMixin(object):
         if six.PY2:
             pret['key'] = cipher.encrypt(key)
         else:
-            pret['key'] = cipher.encrypt(salt.utils.to_bytes(key))
+            pret['key'] = cipher.encrypt(salt.utils.stringutils.to_bytes(key))
         pret[dictkey] = pcrypt.dumps(
             ret if ret is not False else {}
         )

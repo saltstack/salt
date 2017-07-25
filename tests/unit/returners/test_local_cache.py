@@ -26,12 +26,12 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-import salt.utils
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.job
+import salt.utils.platform
 import salt.returners.local_cache as local_cache
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -280,7 +280,7 @@ class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleM
         # This needed due to a race condition in Windows
         # `os.makedirs` hasn't released the handle before
         # `local_cache.clean_old_jobs` tries to delete the new_jid_dir
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             import time
             lock_dir = new_jid_dir + '.lckchk'
             tries = 0

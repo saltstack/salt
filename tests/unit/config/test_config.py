@@ -109,7 +109,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         fpath = tempfile.mktemp()
         temp_config = 'root_dir: /\n'\
                       'key_logfile: key\n'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             temp_config = 'root_dir: c:\\\n'\
                           'key_logfile: key\n'
         try:
@@ -119,7 +119,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             config = sconfig.master_config(fpath)
             expect_path_join = os.path.join('/', 'key')
             expect_sep_join = '//key'
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 expect_path_join = os.path.join('c:\\', 'key')
                 expect_sep_join = 'c:\\\\key'
 
@@ -168,7 +168,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 shutil.rmtree(tempdir)
 
     @skipIf(
-        salt.utils.is_windows(),
+        salt.utils.platform.is_windows(),
         'You can\'t set an environment dynamically in Windows')
     def test_load_master_config_from_environ_var(self):
         original_environ = os.environ.copy()
@@ -215,7 +215,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 shutil.rmtree(tempdir)
 
     @skipIf(
-        salt.utils.is_windows(),
+        salt.utils.platform.is_windows(),
         'You can\'t set an environment dynamically in Windows')
     def test_load_minion_config_from_environ_var(self):
         original_environ = os.environ.copy()
@@ -605,7 +605,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             search_paths = sconfig.cloud_config('/etc/salt/cloud').get('deploy_scripts_search_path')
             etc_deploy_path = '/salt/cloud.deploy.d'
             deploy_path = '/salt/cloud/deploy'
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 etc_deploy_path = '/salt\\cloud.deploy.d'
                 deploy_path = '\\salt\\cloud\\deploy'
 
@@ -1027,7 +1027,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     # other cloud configuration tests
 
     @skipIf(
-        salt.utils.is_windows(),
+        salt.utils.platform.is_windows(),
         'You can\'t set an environment dynamically in Windows')
     def test_load_cloud_config_from_environ_var(self):
         original_environ = os.environ.copy()
@@ -1086,7 +1086,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             default_config = sconfig.cloud_config(config_file_path)
             default_config['deploy_scripts_search_path'] = deploy_dir_path
             with salt.utils.files.fopen(config_file_path, 'w') as cfd:
-                cfd.write(yaml.dump(default_config))
+                cfd.write(yaml.dump(default_config, default_flow_style=False))
 
             default_config = sconfig.cloud_config(config_file_path)
 

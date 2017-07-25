@@ -23,12 +23,13 @@ from __future__ import absolute_import
 import logging
 import re
 
-# Import 3rd-party libs
-import salt.ext.six as six
-
-# Import salt libs
+# Import Salt libs
 from salt.exceptions import SaltInvocationError
-import salt.utils
+import salt.utils.args
+import salt.utils.platform
+
+# Import 3rd-party libs
+from salt.ext import six
 
 try:
     import wmi
@@ -49,7 +50,7 @@ def __virtual__():
     '''
     Only works on Windows systems.
     '''
-    if salt.utils.is_windows() and _HAS_MODULE_DEPENDENCIES:
+    if salt.utils.platform.is_windows() and _HAS_MODULE_DEPENDENCIES:
         return __virtualname__
     return False
 
@@ -102,7 +103,7 @@ def _normalize_server_settings(**settings):
     Convert setting values that had been improperly converted to a dict back to a string.
     '''
     ret = dict()
-    settings = salt.utils.clean_kwargs(**settings)
+    settings = salt.utils.args.clean_kwargs(**settings)
 
     for setting in settings:
         if isinstance(settings[setting], dict):

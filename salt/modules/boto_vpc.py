@@ -150,7 +150,7 @@ ACTIVE = 'active'
 log = logging.getLogger(__name__)
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error
 # pylint: disable=import-error
 try:

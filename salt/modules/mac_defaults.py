@@ -8,8 +8,8 @@ Set defaults on Mac OS
 from __future__ import absolute_import
 import logging
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'macdefaults'
@@ -19,7 +19,7 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return __virtualname__
     return False
 

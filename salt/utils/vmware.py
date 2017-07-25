@@ -83,11 +83,13 @@ import time
 # Import Salt Libs
 import salt.exceptions
 import salt.modules.cmdmod
-import salt.utils
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
 
 
 # Import Third Party Libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
 try:
     from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub
@@ -134,7 +136,7 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None, creds
     :return: Dictionary
     '''
 
-    esx_cmd = salt.utils.which('esxcli')
+    esx_cmd = salt.utils.path.which('esxcli')
     if not esx_cmd:
         log.error('Missing dependency: The salt.utils.vmware.esxcli function requires ESXCLI.')
         return False
@@ -353,7 +355,7 @@ def get_service_instance(host, username=None, password=None, protocol=None,
     service_instance = GetSi()
     if service_instance:
         stub = GetStub()
-        if salt.utils.is_proxy() or (hasattr(stub, 'host') and stub.host != ':'.join([host, str(port)])):
+        if salt.utils.platform.is_proxy() or (hasattr(stub, 'host') and stub.host != ':'.join([host, str(port)])):
             # Proxies will fork and mess up the cached service instance.
             # If this is a proxy or we are connecting to a different host
             # invalidate the service instance to avoid a potential memory leak
@@ -573,7 +575,7 @@ def get_gssapi_token(principal, host, domain):
         if out_token:
             if six.PY2:
                 return base64.b64encode(out_token)
-            return base64.b64encode(salt.utils.to_bytes(out_token))
+            return base64.b64encode(salt.utils.stringutils.to_bytes(out_token))
         if ctx.established:
             break
         if not in_token:

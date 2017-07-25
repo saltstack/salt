@@ -58,7 +58,7 @@ DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 # Import third party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 try:
     import boto
     import boto.ec2

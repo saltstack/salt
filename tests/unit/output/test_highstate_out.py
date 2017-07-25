@@ -12,10 +12,11 @@ from tests.support.unit import TestCase
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.stringutils
 import salt.output.highstate as highstate
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class JsonTestCase(TestCase, LoaderModuleMockMixin):
@@ -100,9 +101,9 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
                 continue
             entry = entry[key]
         if six.PY2:
-            entry['comment'] = salt.utils.to_unicode(entry['comment'])
+            entry['comment'] = salt.utils.stringutils.to_unicode(entry['comment'])
         else:
-            entry['comment'] = salt.utils.to_bytes(entry['comment'])
+            entry['comment'] = salt.utils.stringutils.to_bytes(entry['comment'])
         ret = highstate.output(self.data)
         self.assertIn('Succeeded: 1 (changed=1)', ret)
         self.assertIn('Failed:    0', ret)

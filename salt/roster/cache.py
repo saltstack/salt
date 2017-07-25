@@ -103,7 +103,7 @@ import re
 import salt.utils.minions
 import salt.cache
 from salt._compat import ipaddress
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
