@@ -306,14 +306,16 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
         else:
             string_kwarg = salt.utils.args.parse_input([arg], condition=False)[1]  # pylint: disable=W0632
             if string_kwarg:
-                log.critical(
-                    'String kwarg(s) %s passed to '
-                    'salt.minion.load_args_and_kwargs(). This is no longer '
-                    'supported, so the kwarg(s) will be ignored. Arguments '
-                    'passed to salt.minion.load_args_and_kwargs() should be '
-                    'passed to salt.utils.args.parse_input() first to load '
-                    'and condition them properly.', string_kwarg
-                )
+                if argspec.keywords or next(six.iterkeys(string_kwarg)) in argspec.args:
+                    # Function supports **kwargs or is a positional argument to
+                    # the function.
+                    _kwargs.update(string_kwarg)
+                else:
+                    # **kwargs not in argspec and parsed argument name not in
+                    # list of positional arguments. This keyword argument is
+                    # invalid.
+                    for key, val in six.iteritems(string_kwarg):
+                        invalid_kwargs.append('{0}={1}'.format(key, val))
             else:
                 _args.append(arg)
 

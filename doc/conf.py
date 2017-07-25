@@ -320,11 +320,21 @@ rst_prolog = """\
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
 .. |windownload| raw:: html
 
-     <p>x86: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>Python2 x86: <a
+     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-x86-Setup.exe.md5"><strong>md5</strong></a></p>
 
-     <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>Python2 AMD64: <a
+     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>Python3 x86: <a
+     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+
+     <p>Python3 AMD64: <a
+     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+
 
 .. |osxdownload| raw:: html
 

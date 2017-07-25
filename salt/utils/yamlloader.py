@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import warnings
 
 # Import third party libs
+import re
 import yaml
 from yaml.nodes import MappingNode, SequenceNode
 from yaml.constructor import ConstructorError
@@ -101,6 +102,11 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
                 # an empty string. Change it to '0'.
                 if node.value == '':
                     node.value = '0'
+        elif node.tag == 'tag:yaml.org,2002:str':
+            # If any string comes in as a quoted unicode literal, eval it into
+            # the proper unicode string type.
+            if re.match(r'^u([\'"]).+\1$', node.value, flags=re.IGNORECASE):
+                node.value = eval(node.value, {}, {})  # pylint: disable=W0123
         return super(SaltYamlSafeLoader, self).construct_scalar(node)
 
     def flatten_mapping(self, node):
