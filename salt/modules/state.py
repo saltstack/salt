@@ -265,14 +265,14 @@ def _get_opts(**kwargs):
 
     if 'saltenv' in kwargs:
         saltenv = kwargs['saltenv']
-        if not isinstance(saltenv, six.string_types):
+        if saltenv is not None and not isinstance(saltenv, six.string_types):
             opts['environment'] = str(kwargs['saltenv'])
         else:
             opts['environment'] = kwargs['saltenv']
 
     if 'pillarenv' in kwargs:
         pillarenv = kwargs['pillarenv']
-        if not isinstance(pillarenv, six.string_types):
+        if pillarenv is not None and not isinstance(pillarenv, six.string_types):
             opts['pillarenv'] = str(kwargs['pillarenv'])
         else:
             opts['pillarenv'] = kwargs['pillarenv']

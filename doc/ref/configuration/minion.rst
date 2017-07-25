@@ -1304,6 +1304,20 @@ A list of extra directories to search for Salt renderers
     render_dirs:
       - /var/lib/salt/renderers
 
+.. conf_minion:: utils_dirs
+
+``utils_dirs``
+---------------
+
+Default: ``[]``
+
+A list of extra directories to search for Salt utilities
+
+.. code-block:: yaml
+
+    utils_dirs:
+      - /var/lib/salt/utils
+
 .. conf_minion:: cython_enable
 
 ``cython_enable``

@@ -655,18 +655,22 @@ def system_information():
     release = platform.release()
     if platform.win32_ver()[0]:
         import win32api  # pylint: disable=3rd-party-module-not-gated
-        if ((sys.version_info.major == 2 and sys.version_info >= (2, 7, 12)) or
-                (sys.version_info.major == 3 and sys.version_info >= (3, 5, 2))):
-            if win32api.GetVersionEx(1)[8] > 1:
-                server = {'Vista': '2008Server',
-                          '7': '2008ServerR2',
-                          '8': '2012Server',
-                          '8.1': '2012ServerR2',
-                          '10': '2016Server'}
-                release = server.get(platform.release(),
-                                     'UNKServer')
-                _, ver, sp, extra = platform.win32_ver()
-                version = ' '.join([release, ver, sp, extra])
+        server = {'Vista': '2008Server',
+                  '7': '2008ServerR2',
+                  '8': '2012Server',
+                  '8.1': '2012ServerR2',
+                  '10': '2016Server'}
+        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
+        # started reporting the Desktop version instead of the Server version on
+        # Server versions of Windows, so we need to look those up
+        # So, if you find a Server Platform that's a key in the server
+        # dictionary, then lookup the actual Server Release.
+        # If this is a Server Platform then `GetVersionEx` will return a number
+        # greater than 1.
+        if win32api.GetVersionEx(1)[8] > 1 and release in server:
+            release = server[release]
+        _, ver, sp, extra = platform.win32_ver()
+        version = ' '.join([release, ver, sp, extra])
 
     system = [
         ('system', platform.system()),

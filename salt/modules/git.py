@@ -185,15 +185,24 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             identity = [identity]
 
         # try each of the identities, independently
+        tmp_identity_file = None
         for id_file in identity:
             if 'salt://' in id_file:
-                _id_file = id_file
-                id_file = __salt__['cp.cache_file'](id_file, saltenv)
+                with salt.utils.files.set_umask(0o077):
+                    tmp_identity_file = salt.utils.mkstemp()
+                    _id_file = id_file
+                    id_file = __salt__['cp.get_file'](id_file,
+                                                      tmp_identity_file,
+                                                      saltenv)
                 if not id_file:
                     log.error('identity {0} does not exist.'.format(_id_file))
+                    __salt__['file.remove'](tmp_identity_file)
                     continue
                 else:
-                    __salt__['file.set_mode'](id_file, '0600')
+                    if user:
+                        os.chown(id_file,
+                                 __salt__['file.user_to_uid'](user),
+                                 -1)
             else:
                 if not __salt__['file.file_exists'](id_file):
                     missing_keys.append(id_file)
@@ -263,6 +272,11 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             finally:
                 if not salt.utils.is_windows() and 'GIT_SSH' in env:
                     os.remove(env['GIT_SSH'])
+
+                # Cleanup the temporary identify file
+                if tmp_identity_file and os.path.exists(tmp_identity_file):
+                    log.debug('Removing identify file {0}'.format(tmp_identity_file))
+                    #__salt__['file.remove'](tmp_identity_file)
 
             # If the command was successful, no need to try additional IDs
             if result['retcode'] == 0:
