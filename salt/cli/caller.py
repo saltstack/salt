@@ -167,6 +167,7 @@ class BaseCaller(object):
         if fun not in self.minion.functions:
             docs = self.minion.functions['sys.doc']('{0}*'.format(fun))
             if docs:
+                docs[fun] = self.minion.functions.missing_fun_string(fun)
                 ret['out'] = 'nested'
                 ret['return'] = docs
                 return ret

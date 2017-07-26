@@ -442,7 +442,6 @@ class SyncClientMixin(object):
                 _use_fnmatch = True
             else:
                 target_mod = arg + '.' if not arg.endswith('.') else arg
-            log.debug('target_mod {}'.format(target_mod))
             if _use_fnmatch:
                 docs = [(fun, self.functions[fun].__doc__)
                         for fun in fnmatch.filter(self.functions, target_mod)]
