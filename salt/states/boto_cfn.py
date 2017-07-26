@@ -141,10 +141,14 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
     stack_policy_body = _get_template(stack_policy_body, name)
     stack_policy_during_update_body = _get_template(stack_policy_during_update_body, name)
 
+    for i in [template_body, stack_policy_body, stack_policy_during_update_body]:
+        if isinstance(i, dict):
+            return i
+
     _valid = _validate(template_body, template_url, region, key, keyid, profile)
     log.debug('Validate is : {0}.'.format(_valid))
     if _valid is not True:
-        code, message = _get_error(_valid)
+        code, message = _valid
         ret['result'] = False
         ret['comment'] = 'Template could not be validated.\n{0} \n{1}'.format(code, message)
         return ret
