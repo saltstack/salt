@@ -1094,7 +1094,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             virtual_funcs = []
         self.virtual_funcs = virtual_funcs
 
-        self.disabled = set(self.opts.get('disable_{0}s'.format(self.tag), []))
+        self.disabled = set(self.opts.get('disable_{0}{1}'.format(
+            self.tag, '' if self.tag[-1] == 's' else 's'), []))
 
         self.refresh_file_mapping()
 
