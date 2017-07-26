@@ -468,7 +468,7 @@ def __save_artifact(artifact_url, target_file, headers):
     try:
         request = urllib.request.Request(artifact_url, None, headers)
         f = urllib.request.urlopen(request)
-        with salt.utils.fopen(target_file, "wb") as local_file:
+        with salt.utils.files.fopen(target_file, "wb") as local_file:
             local_file.write(f.read())
         result['status'] = True
         result['comment'] = __append_comment(('Artifact downloaded from URL: {0}'.format(artifact_url)), result['comment'])
