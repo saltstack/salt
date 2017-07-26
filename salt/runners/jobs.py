@@ -13,6 +13,7 @@ import os
 import salt.client
 import salt.payload
 import salt.utils
+import salt.utils.files
 import salt.utils.jid
 import salt.minion
 import salt.returners
@@ -577,13 +578,13 @@ def _walk_through(job_dir, display_progress=False):
 
         for final in os.listdir(t_path):
             load_path = os.path.join(t_path, final, '.load.p')
-            with salt.utils.fopen(load_path, 'rb') as rfh:
+            with salt.utils.files.fopen(load_path, 'rb') as rfh:
                 job = serial.load(rfh)
 
             if not os.path.isfile(load_path):
                 continue
 
-            with salt.utils.fopen(load_path, 'rb') as rfh:
+            with salt.utils.files.fopen(load_path, 'rb') as rfh:
                 job = serial.load(rfh)
             jid = job['jid']
             if display_progress:

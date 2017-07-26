@@ -21,6 +21,7 @@ from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
@@ -78,7 +79,7 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
         ]
 
         # Let's populate the requirements file, just pep-8 for now
-        with salt.utils.fopen(requirements_file_path, 'a') as fhw:
+        with salt.utils.files.fopen(requirements_file_path, 'a') as fhw:
             fhw.write('pep8==1.3.3\n')
 
         # Let's run our state!!!
@@ -106,7 +107,7 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertNotIn('zope.interface==4.0.1', ret)
 
         # Now let's update the requirements file, which is now cached.
-        with salt.utils.fopen(requirements_file_path, 'w') as fhw:
+        with salt.utils.files.fopen(requirements_file_path, 'w') as fhw:
             fhw.write('zope.interface==4.0.1\n')
 
         # Let's run our state!!!

@@ -59,10 +59,12 @@ import logging
 import pprint
 import base64
 import yaml
+import collections
 import salt.cache
 import salt.config as config
 import salt.utils
 import salt.utils.cloud
+import salt.utils.files
 import salt.ext.six as six
 import salt.version
 from salt.exceptions import (
@@ -250,7 +252,9 @@ def avail_locations(conn=None, call=None):  # pylint: disable=unused-argument
 
     ret = {}
     regions = webconn.global_model.get_subscription_geo_regions()
-    for location in regions.value:  # pylint: disable=no-member
+    if hasattr(regions, 'value'):
+        regions = regions.value
+    for location in regions:  # pylint: disable=no-member
         lowername = str(location.name).lower().replace(' ', '')
         ret[lowername] = object_to_dict(location)
     return ret
@@ -999,7 +1003,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
     else:
         if os.path.exists(userdata_file):
-            with salt.utils.fopen(userdata_file, 'r') as fh_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
     userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
@@ -1661,9 +1665,14 @@ def pages_to_list(items):
     while True:
         try:
             page = items.next()  # pylint: disable=incompatible-py3-code
-            for item in page:
-                objs.append(item)
+            if isinstance(page, collections.Iterable):
+                for item in page:
+                    objs.append(item)
+            else:
+                objs.append(page)
         except GeneratorExit:
+            break
+        except StopIteration:
             break
     return objs
 

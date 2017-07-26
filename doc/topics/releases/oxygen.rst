@@ -49,17 +49,47 @@ environments (i.e. ``saltenvs``) have been added:
    ignore all tags and use branches only, and also to keep SHAs from being made
    available as saltenvs.
 
+Salt Cloud and Newer PyWinRM Versions
+-------------------------------------
+
+Versions of ``pywinrm>=0.2.1`` are finally able to disable validation of self
+signed certificates.  :ref:`Here<new-pywinrm>` for more information.
+
+Solaris Logical Domains In Virtual Grain
+----------------------------------------
+
+Support has been added to the ``virtual`` grain for detecting Solaris LDOMs
+running on T-Series SPARC hardware.  The ``virtual_subtype`` grain is 
+populated as a list of domain roles.
+
+
+Deprecations
+============
+
 Configuration Option Deprecations
 ---------------------------------
 
 - The ``requests_lib`` configuration option has been removed. Please use
   ``backend`` instead.
 
+Profitbricks Cloud Updated Dependency
+-------------------------------------
+
+The minimum version of the `profitbrick` python package for the `profitbricks`
+cloud driver has changed from 3.0.0 to 3.1.0.
+
 Module Deprecations
 -------------------
 
 The ``blockdev`` execution module has been removed. Its functions were merged
 with the ``disk`` module. Please use the ``disk`` execution module instead.
+
+The ``lxc`` execution module had the following changes:
+
+- The ``dnsservers`` option to the ``cloud_init_interface`` function no longer
+  defaults to ``4.4.4.4`` and ``8.8.8.8``.
+- The ``dns_via_dhcp`` option to the ``cloud_init_interface`` function defaults
+  to ``True`` now instead of ``False``.
 
 The ``win_psget`` module had the following changes:
 
@@ -87,6 +117,14 @@ The ``win_service`` module had the following changes:
   ``start_type`` instead.
 - The ``type`` option was removed from the ``create`` function. Please use
   ``service_type`` instead.
+
+Runner Deprecations
+-------------------
+
+The ``manage`` runner had the following changes:
+
+- The ``root_user`` kwarg was removed from the ``bootstrap`` function. Please
+  use ``salt-ssh`` roster entries for the host instead.
 
 State Deprecations
 ------------------
@@ -118,3 +156,18 @@ For ``smartos`` some grains have been deprecated. These grains will be removed i
 
 - The ``hypervisor_uuid`` has been replaced with ``mdata:sdc:server_uuid`` grain.
 - The ``datacenter`` has been replaced with ``mdata:sdc:datacenter_name`` grain.
+
+Utils Deprecations
+------------------
+
+The ``salt.utils.cloud.py`` file had the following change:
+
+- The ``fire_event`` function now requires a ``sock_dir`` argument. It was previously
+  optional.
+
+Other Miscellaneous Deprecations
+--------------------------------
+
+The ``version.py`` file had the following changes:
+
+- The ``rc_info`` function was removed. Please use ``pre_info`` instead.

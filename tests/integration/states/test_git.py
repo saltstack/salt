@@ -21,6 +21,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 
@@ -227,7 +228,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
 
             # Make change to LICENSE file.
-            with salt.utils.fopen(os.path.join(name, 'LICENSE'), 'a') as fp_:
+            with salt.utils.files.fopen(os.path.join(name, 'LICENSE'), 'a') as fp_:
                 fp_.write('Lorem ipsum dolor blah blah blah....\n')
 
             # Make sure that we now have uncommitted changes
@@ -295,7 +296,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             # Make a change to the repo by editing the file in the admin copy
             # of the repo and committing.
             head_pre = _head(admin_dir)
-            with salt.utils.fopen(os.path.join(admin_dir, 'LICENSE'), 'a') as fp_:
+            with salt.utils.files.fopen(os.path.join(admin_dir, 'LICENSE'), 'a') as fp_:
                 fp_.write('Hello world!')
             self.run_function(
                 'git.commit', [admin_dir, 'added a line'],
@@ -342,7 +343,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             # Check out a new branch in the clone and make a commit, to ensure
             # that when we re-run the state, it is not a fast-forward change
             self.run_function('git.checkout', [name, 'new_branch'], opts='-b')
-            with salt.utils.fopen(os.path.join(name, 'foo'), 'w'):
+            with salt.utils.files.fopen(os.path.join(name, 'foo'), 'w'):
                 pass
             self.run_function('git.add', [name, '.'])
             self.run_function(
@@ -405,7 +406,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
 
         try:
             # Add and commit a file
-            with salt.utils.fopen(os.path.join(name, 'foo.txt'), 'w') as fp_:
+            with salt.utils.files.fopen(os.path.join(name, 'foo.txt'), 'w') as fp_:
                 fp_.write('Hello world\n')
             self.run_function('git.add', [name, '.'])
             self.run_function(
@@ -422,7 +423,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
             # Add another commit
-            with salt.utils.fopen(os.path.join(name, 'foo.txt'), 'w') as fp_:
+            with salt.utils.files.fopen(os.path.join(name, 'foo.txt'), 'w') as fp_:
                 fp_.write('Added a line\n')
             self.run_function(
                 'git.commit', [name, 'added a line'],
@@ -472,7 +473,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         try:
             fname = os.path.join(name, 'stoptheprocess')
 
-            with salt.utils.fopen(fname, 'a') as fh_:
+            with salt.utils.files.fopen(fname, 'a') as fh_:
                 fh_.write('')
 
             ret = self.run_state(
@@ -542,7 +543,7 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         # Clone bare repo
         self.run_function('git.clone', [admin], url=repo)
         # Create, add, commit, and push file
-        with salt.utils.fopen(os.path.join(admin, 'foo'), 'w'):
+        with salt.utils.files.fopen(os.path.join(admin, 'foo'), 'w'):
             pass
         self.run_function('git.add', [admin, '.'])
         self.run_function(

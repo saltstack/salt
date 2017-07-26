@@ -75,8 +75,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             'show_jid': self.options.show_jid}
 
         if 'token' in self.config:
+            import salt.utils.files
             try:
-                with salt.utils.fopen(os.path.join(self.config['cachedir'], '.root_key'), 'r') as fp_:
+                with salt.utils.files.fopen(os.path.join(self.config['cachedir'], '.root_key'), 'r') as fp_:
                     kwargs['key'] = fp_.readline()
             except IOError:
                 kwargs['token'] = self.config['token']

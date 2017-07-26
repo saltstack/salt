@@ -24,9 +24,10 @@ from salt.ext.six.moves import StringIO  # pylint: disable=import-error,no-name-
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
+import salt.utils.odict
 import salt.utils.templates
 import salt.utils.validate.net
-import salt.utils.odict
 
 
 # Set up logging
@@ -219,7 +220,7 @@ def _read_file(path):
     Reads and returns the contents of a text file
     '''
     try:
-        with salt.utils.flopen(path, 'rb') as contents:
+        with salt.utils.files.flopen(path, 'rb') as contents:
             return [salt.utils.to_str(line) for line in contents.readlines()]
     except (OSError, IOError):
         return ''
@@ -280,7 +281,7 @@ def _parse_current_network_settings():
     opts['networking'] = ''
 
     if os.path.isfile(_DEB_NETWORKING_FILE):
-        with salt.utils.fopen(_DEB_NETWORKING_FILE) as contents:
+        with salt.utils.files.fopen(_DEB_NETWORKING_FILE) as contents:
             for line in contents:
                 if line.startswith('#'):
                     continue
@@ -574,7 +575,7 @@ def _parse_interfaces(interface_files=None):
     method = -1
 
     for interface_file in interface_files:
-        with salt.utils.fopen(interface_file) as interfaces:
+        with salt.utils.files.fopen(interface_file) as interfaces:
             # This ensures iface_dict exists, but does not ensure we're not reading a new interface.
             iface_dict = {}
             for line in interfaces:
@@ -1489,7 +1490,7 @@ def _write_file(iface, data, folder, pattern):
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.flopen(filename, 'w') as fout:
+    with salt.utils.files.flopen(filename, 'w') as fout:
         fout.write(data)
     return filename
 
@@ -1514,7 +1515,7 @@ def _write_file_routes(iface, data, folder, pattern):
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.flopen(filename, 'w') as fout:
+    with salt.utils.files.flopen(filename, 'w') as fout:
         fout.write(data)
 
     __salt__['file.set_mode'](filename, '0755')
@@ -1533,7 +1534,7 @@ def _write_file_network(data, filename, create=False):
         msg = msg.format(filename)
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.flopen(filename, 'w') as fout:
+    with salt.utils.files.flopen(filename, 'w') as fout:
         fout.write(data)
 
 
@@ -1609,7 +1610,7 @@ def _write_file_ifaces(iface, data, **settings):
         msg = msg.format(os.path.dirname(filename))
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.flopen(filename, 'w') as fout:
+    with salt.utils.files.flopen(filename, 'w') as fout:
         if _SEPARATE_FILE:
             fout.write(saved_ifcfg)
         else:
@@ -1642,7 +1643,7 @@ def _write_file_ppp_ifaces(iface, data):
         msg = msg.format(os.path.dirname(filename))
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.fopen(filename, 'w') as fout:
+    with salt.utils.files.fopen(filename, 'w') as fout:
         fout.write(ifcfg)
 
     # Return as a array so the difflib works

@@ -31,10 +31,11 @@ import salt.fileserver
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.event
-import salt.utils.verify
-import salt.utils.minions
+import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.jid
+import salt.utils.minions
+import salt.utils.verify
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.pillar import git_pillar
 from salt.utils.event import tagify
@@ -154,7 +155,7 @@ def clean_expired_tokens(opts):
     for (dirpath, dirnames, filenames) in os.walk(opts['token_dir']):
         for token in filenames:
             token_path = os.path.join(dirpath, token)
-            with salt.utils.fopen(token_path, 'rb') as token_file:
+            with salt.utils.files.fopen(token_path, 'rb') as token_file:
                 try:
                     token_data = serializer.loads(token_file.read())
                 except msgpack.UnpackValueError:
@@ -223,7 +224,7 @@ def mk_key(opts, user):
 
     key = salt.crypt.Crypticle.generate_key_string()
     cumask = os.umask(191)
-    with salt.utils.fopen(keyfile, 'w+') as fp_:
+    with salt.utils.files.fopen(keyfile, 'w+') as fp_:
         fp_.write(key)
     os.umask(cumask)
     # 600 octal: Read and write access to the owner only.
@@ -360,7 +361,7 @@ class AutoKey(object):
             log.warning(message.format(signing_file))
             return False
 
-        with salt.utils.fopen(signing_file, 'r') as fp_:
+        with salt.utils.files.fopen(signing_file, 'r') as fp_:
             for line in fp_:
                 line = line.strip()
                 if line.startswith('#'):
@@ -693,7 +694,7 @@ class RemoteFuncs(object):
             mode = 'ab'
         else:
             mode = 'wb'
-        with salt.utils.fopen(cpath, mode) as fp_:
+        with salt.utils.files.fopen(cpath, mode) as fp_:
             if load['loc']:
                 fp_.seek(load['loc'])
             fp_.write(load['data'])
@@ -858,7 +859,7 @@ class RemoteFuncs(object):
             if not os.path.isdir(auth_cache):
                 os.makedirs(auth_cache)
             jid_fn = os.path.join(auth_cache, load['jid'])
-            with salt.utils.fopen(jid_fn, 'r') as fp_:
+            with salt.utils.files.fopen(jid_fn, 'r') as fp_:
                 if not load['id'] == fp_.read():
                     return {}
 
@@ -915,7 +916,7 @@ class RemoteFuncs(object):
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
         jid_fn = os.path.join(auth_cache, str(ret['jid']))
-        with salt.utils.fopen(jid_fn, 'w+') as fp_:
+        with salt.utils.files.fopen(jid_fn, 'w+') as fp_:
             fp_.write(load['id'])
         return ret
 

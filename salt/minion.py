@@ -86,6 +86,7 @@ import salt.payload
 import salt.syspaths
 import salt.utils
 import salt.utils.context
+import salt.utils.files
 import salt.utils.jid
 import salt.pillar
 import salt.utils.args
@@ -667,7 +668,7 @@ class SMinion(MinionBase):
             else:
                 penv = 'base'
             cache_top = {penv: {self.opts['id']: ['cache']}}
-            with salt.utils.fopen(ptop, 'wb') as fp_:
+            with salt.utils.files.fopen(ptop, 'wb') as fp_:
                 fp_.write(
                     yaml.dump(
                         cache_top,
@@ -676,7 +677,7 @@ class SMinion(MinionBase):
                 )
                 os.chmod(ptop, 0o600)
             cache_sls = os.path.join(pdir, 'cache.sls')
-            with salt.utils.fopen(cache_sls, 'wb') as fp_:
+            with salt.utils.files.fopen(cache_sls, 'wb') as fp_:
                 fp_.write(
                     yaml.dump(
                         self.opts['pillar'],
@@ -1418,7 +1419,7 @@ class Minion(MinionBase):
         sdata = {'pid': os.getpid()}
         sdata.update(data)
         log.info('Starting a new job with PID {0}'.format(sdata['pid']))
-        with salt.utils.fopen(fn_, 'w+b') as fp_:
+        with salt.utils.files.fopen(fn_, 'w+b') as fp_:
             fp_.write(minion_instance.serial.dumps(sdata))
         ret = {'success': False}
         function_name = data['fun']

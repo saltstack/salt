@@ -29,10 +29,11 @@ from jinja2.ext import Extension
 # Import salt libs
 import salt
 import salt.fileclient
-import salt.utils
+import salt.utils.files
 import salt.utils.url
-from salt.utils.decorators import jinja_filter, jinja_test
+from salt.utils.decorators import jinja_filter, jinja_test, jinja_global
 from salt.utils.odict import OrderedDict
+from salt.exceptions import TemplateError
 
 log = logging.getLogger(__name__)
 
@@ -129,7 +130,7 @@ class SaltCacheLoader(BaseLoader):
         for spath in self.searchpath:
             filepath = path.join(spath, template)
             try:
-                with salt.utils.fopen(filepath, 'rb') as ifile:
+                with salt.utils.files.fopen(filepath, 'rb') as ifile:
                     contents = ifile.read().decode(self.encoding)
                     mtime = path.getmtime(filepath)
 
@@ -180,6 +181,12 @@ class PrintableDict(OrderedDict):
             # function.
             output.append('{0!r}: {1!r}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
         return '{' + ', '.join(output) + '}'
+
+
+# Additional globals
+@jinja_global('raise')
+def jinja_raise(msg):
+    raise TemplateError(msg)
 
 
 # Additional tests

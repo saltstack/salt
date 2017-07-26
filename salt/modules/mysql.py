@@ -44,6 +44,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 # Import third party libs
 import salt.ext.six as six
@@ -701,7 +702,7 @@ def file_query(database, file_name, **connection_args):
 
     '''
     if os.path.exists(file_name):
-        with salt.utils.fopen(file_name, 'r') as ifile:
+        with salt.utils.files.fopen(file_name, 'r') as ifile:
             contents = ifile.read()
     else:
         log.error('File "{0}" does not exist'.format(file_name))

@@ -95,6 +95,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 import salt.utils
+import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
 
@@ -438,7 +439,7 @@ def managed(name, ppa=None, **kwargs):
 
     # empty file before configure
     if kwargs.get('clean_file', False):
-        with salt.utils.fopen(kwargs['file'], 'w'):
+        with salt.utils.files.fopen(kwargs['file'], 'w'):
             pass
 
     try:

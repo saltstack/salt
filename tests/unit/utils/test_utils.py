@@ -22,7 +22,6 @@ from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoun
 from salt import utils
 
 # Import Python libraries
-import os
 import datetime
 import yaml
 import zmq
@@ -126,21 +125,6 @@ class UtilsTestCase(TestCase):
         expected_dict = {'args': ['first', 'second', 'third'], 'kwargs': {'fourth': 'fifth'}}
         ret = utils.arg_lookup(dummy_func)
         self.assertEqual(expected_dict, ret)
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_safe_rm(self):
-        with patch('os.remove') as os_remove_mock:
-            utils.safe_rm('dummy_tgt')
-            self.assertTrue(os_remove_mock.called)
-
-    @skipIf(os.path.exists('/tmp/no_way_this_is_a_file_nope.sh'), 'Test file exists! Skipping safe_rm_exceptions test!')
-    def test_safe_rm_exceptions(self):
-        error = False
-        try:
-            utils.safe_rm('/tmp/no_way_this_is_a_file_nope.sh')
-        except (IOError, OSError):
-            error = True
-        self.assertFalse(error, 'utils.safe_rm raised exception when it should not have')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_format_call(self):
@@ -786,22 +770,6 @@ class UtilsTestCase(TestCase):
         self.assertEqual('baz', utils.option('foo:bar', {'not_found': 'nope'}, opts=test_two_level_dict))
         self.assertEqual('baz', utils.option('foo:bar', {'not_found': 'nope'}, pillar={'master': test_two_level_dict}))
         self.assertEqual('baz', utils.option('foo:bar', {'not_found': 'nope'}, pillar=test_two_level_dict))
-
-    def test_parse_docstring(self):
-        test_keystone_str = '''Management of Keystone users
-                                ============================
-
-                                :depends:   - keystoneclient Python module
-                                :configuration: See :py:mod:`salt.modules.keystone` for setup instructions.
-'''
-
-        ret = utils.parse_docstring(test_keystone_str)
-        expected_dict = {'deps': ['keystoneclient'],
-                         'full': 'Management of Keystone users\n                                '
-                                 '============================\n\n                                '
-                                 ':depends:   - keystoneclient Python module\n                                '
-                                 ':configuration: See :py:mod:`salt.modules.keystone` for setup instructions.\n'}
-        self.assertDictEqual(ret, expected_dict)
 
     def test_get_hash_exception(self):
         self.assertRaises(ValueError, utils.get_hash, '/tmp/foo/', form='INVALID')

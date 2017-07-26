@@ -35,6 +35,7 @@ import salt.loader
 import salt.utils
 import salt.utils.args
 import salt.utils.event
+import salt.utils.files
 import salt.utils.minions
 import salt.utils.verify
 import salt.utils.jid
@@ -193,7 +194,7 @@ class LocalClient(object):
                                                self.skip_perm_errors)
 
         try:
-            with salt.utils.fopen(keyfile, 'r') as key:
+            with salt.utils.files.fopen(keyfile, 'r') as key:
                 return key.read()
         except (OSError, IOError):
             # Fall back to eauth
@@ -567,6 +568,8 @@ class LocalClient(object):
             opts['timeout'] = kwargs['timeout']
         if 'gather_job_timeout' in kwargs:
             opts['gather_job_timeout'] = kwargs['gather_job_timeout']
+        if 'batch_wait' in kwargs:
+            opts['batch_wait'] = int(kwargs['batch_wait'])
 
         eauth = {}
         if 'eauth' in kwargs:
