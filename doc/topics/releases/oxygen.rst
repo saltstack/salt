@@ -62,6 +62,10 @@ Support has been added to the ``virtual`` grain for detecting Solaris LDOMs
 running on T-Series SPARC hardware.  The ``virtual_subtype`` grain is 
 populated as a list of domain roles.
 
+
+Deprecations
+============
+
 Configuration Option Deprecations
 ---------------------------------
 
@@ -160,3 +164,10 @@ The ``salt.utils.cloud.py`` file had the following change:
 
 - The ``fire_event`` function now requires a ``sock_dir`` argument. It was previously
   optional.
+
+Other Miscellaneous Deprecations
+--------------------------------
+
+The ``version.py`` file had the following changes:
+
+- The ``rc_info`` function was removed. Please use ``pre_info`` instead.
