@@ -2,7 +2,7 @@
 '''
 Infoblox host record managment.
 
-functions accept kwargs:
+functions accept api_opts:
 
     api_verifyssl: verify SSL [default to True or pillar value]
     api_url: server to connect to [default to pillar value]
@@ -11,7 +11,7 @@ functions accept kwargs:
 '''
 
 
-def present(name=None, start_addr=None, end_addr=None, data=None, **kwargs):
+def present(name=None, start_addr=None, end_addr=None, data=None, **api_opts):
     '''
     Ensure range record is present.
 
@@ -100,11 +100,11 @@ def present(name=None, start_addr=None, end_addr=None, data=None, **kwargs):
     if 'end_addr' not in data:
         data.update({'end_addr': end_addr})
 
-    obj = __salt__['infoblox.get_ipv4_range'](data['start_addr'], data['end_addr'], **kwargs)
+    obj = __salt__['infoblox.get_ipv4_range'](data['start_addr'], data['end_addr'], **api_opts)
     if obj is None:
-        obj = __salt__['infoblox.get_ipv4_range'](start_addr=data['start_addr'], end_addr=None, **kwargs)
+        obj = __salt__['infoblox.get_ipv4_range'](start_addr=data['start_addr'], end_addr=None, **api_opts)
         if obj is None:
-            obj = __salt__['infoblox.get_ipv4_range'](start_addr=None, end_addr=data['end_addr'], **kwargs)
+            obj = __salt__['infoblox.get_ipv4_range'](start_addr=None, end_addr=data['end_addr'], **api_opts)
 
     if obj:
         diff = __salt__['infoblox.diff_objects'](data, obj)
@@ -117,7 +117,7 @@ def present(name=None, start_addr=None, end_addr=None, data=None, **kwargs):
                 ret['result'] = None
                 ret['comment'] = 'would attempt to update record'
                 return ret
-            new_obj = __salt__['infoblox.update_object'](obj['_ref'], data=data, **kwargs)
+            new_obj = __salt__['infoblox.update_object'](obj['_ref'], data=data, **api_opts)
             ret['result'] = True
             ret['comment'] = 'record fields updated'
             ret['changes'] = {'diff': diff}
@@ -128,8 +128,8 @@ def present(name=None, start_addr=None, end_addr=None, data=None, **kwargs):
         ret['comment'] = 'would attempt to create record {0}'.format(name)
         return ret
 
-    new_obj_ref = __salt__['infoblox.create_ipv4_range'](data, **kwargs)
-    new_obj = __salt__['infoblox.get_ipv4_range'](data['start_addr'], data['end_addr'], **kwargs)
+    new_obj_ref = __salt__['infoblox.create_ipv4_range'](data, **api_opts)
+    new_obj = __salt__['infoblox.get_ipv4_range'](data['start_addr'], data['end_addr'], **api_opts)
 
     ret['result'] = True
     ret['comment'] = 'record created'
@@ -137,7 +137,7 @@ def present(name=None, start_addr=None, end_addr=None, data=None, **kwargs):
     return ret
 
 
-def absent(name=None, start_addr=None, end_addr=None, data=None, **kwargs):
+def absent(name=None, start_addr=None, end_addr=None, data=None, **api_opts):
     '''
     Ensure the range is removed
 
@@ -165,11 +165,11 @@ def absent(name=None, start_addr=None, end_addr=None, data=None, **kwargs):
     if 'end_addr' not in data:
         data.update({'end_addr': end_addr})
 
-    obj = __salt__['infoblox.get_ipv4_range'](data['start_addr'], data['end_addr'], **kwargs)
+    obj = __salt__['infoblox.get_ipv4_range'](data['start_addr'], data['end_addr'], **api_opts)
     if obj is None:
-        obj = __salt__['infoblox.get_ipv4_range'](start_addr=data['start_addr'], end_addr=None, **kwargs)
+        obj = __salt__['infoblox.get_ipv4_range'](start_addr=data['start_addr'], end_addr=None, **api_opts)
         if obj is None:
-            obj = __salt__['infoblox.get_ipv4_range'](start_addr=None, end_addr=data['end_addr'], **kwargs)
+            obj = __salt__['infoblox.get_ipv4_range'](start_addr=None, end_addr=data['end_addr'], **api_opts)
 
     if not obj:
         ret['result'] = True

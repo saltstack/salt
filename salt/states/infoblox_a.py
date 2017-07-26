@@ -2,7 +2,7 @@
 '''
 Infoblox A record managment.
 
-functions accept kwargs:
+functions accept api_opts:
 
     api_verifyssl: verify SSL [default to True or pillar value]
     api_url: server to connect to [default to pillar value]
@@ -11,7 +11,7 @@ functions accept kwargs:
 '''
 
 
-def present(name=None, ipv4addr=None, data=None, ensure_data=True, **kwargs):
+def present(name=None, ipv4addr=None, data=None, ensure_data=True, **api_opts):
     '''
     Ensure infoblox A record.
 
@@ -38,10 +38,10 @@ def present(name=None, ipv4addr=None, data=None, ensure_data=True, **kwargs):
     if 'ipv4addr' not in data:
         data.update({'ipv4addr': ipv4addr})
 
-    obj = __salt__['infoblox.get_a'](name=name, ipv4addr=ipv4addr, allow_array=False, **kwargs)
+    obj = __salt__['infoblox.get_a'](name=name, ipv4addr=ipv4addr, allow_array=False, **api_opts)
     if obj is None:
         # perhaps the user updated the name
-        obj = __salt__['infoblox.get_a'](name=data['name'], ipv4addr=data['ipv4addr'], allow_array=False, **kwargs)
+        obj = __salt__['infoblox.get_a'](name=data['name'], ipv4addr=data['ipv4addr'], allow_array=False, **api_opts)
         if obj:
             # warn user that the data was updated and does not match
             ret['result'] = False
@@ -68,7 +68,7 @@ def present(name=None, ipv4addr=None, data=None, ensure_data=True, **kwargs):
                 ret['comment'] = 'would attempt to update infoblox record'
                 return ret
             ## TODO: perhaps need to review the output of new_obj
-            new_obj = __salt__['infoblox.update_object'](obj['_ref'], data=data, **kwargs)
+            new_obj = __salt__['infoblox.update_object'](obj['_ref'], data=data, **api_opts)
             ret['result'] = True
             ret['comment'] = 'infoblox record fields updated (note: removing fields might not update)'
             return ret
@@ -78,8 +78,8 @@ def present(name=None, ipv4addr=None, data=None, ensure_data=True, **kwargs):
         ret['comment'] = 'would attempt to create infoblox record {0}'.format(data['name'])
         return ret
 
-    new_obj_ref = __salt__['infoblox.create_a'](data=data, **kwargs)
-    new_obj = __salt__['infoblox.get_a'](name=name, ipv4addr=ipv4addr, allow_array=False, **kwargs)
+    new_obj_ref = __salt__['infoblox.create_a'](data=data, **api_opts)
+    new_obj = __salt__['infoblox.get_a'](name=name, ipv4addr=ipv4addr, allow_array=False, **api_opts)
 
     ret['result'] = True
     ret['comment'] = 'infoblox record created'
@@ -87,7 +87,7 @@ def present(name=None, ipv4addr=None, data=None, ensure_data=True, **kwargs):
     return ret
 
 
-def absent(name=None, ipv4addr=None, **kwargs):
+def absent(name=None, ipv4addr=None, **api_opts):
     '''
     Ensure infoblox A record is removed.
 
@@ -103,7 +103,7 @@ def absent(name=None, ipv4addr=None, **kwargs):
             - ipv4addr: 127.0.23.23
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
-    obj = __salt__['infoblox.get_a'](name=name, ipv4addr=ipv4addr, allow_array=False, **kwargs)
+    obj = __salt__['infoblox.get_a'](name=name, ipv4addr=ipv4addr, allow_array=False, **api_opts)
 
     if not obj:
         ret['result'] = True
@@ -115,7 +115,7 @@ def absent(name=None, ipv4addr=None, **kwargs):
         ret['changes'] = {'old': obj, 'new': 'absent'}
         return ret
 
-    if __salt__['infoblox.delete_a'](name=name, ipv4addr=ipv4addr, **kwargs):
+    if __salt__['infoblox.delete_a'](name=name, ipv4addr=ipv4addr, **api_opts):
         ret['result'] = True
         ret['changes'] = {'old': obj, 'new': 'absent'}
     return ret

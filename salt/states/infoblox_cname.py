@@ -2,7 +2,7 @@
 '''
 Infoblox CNAME managment.
 
-functions accept kwargs:
+functions accept api_opts:
 
     api_verifyssl: verify SSL [default to True or pillar value]
     api_url: server to connect to [default to pillar value]
@@ -11,7 +11,7 @@ functions accept kwargs:
 '''
 
 
-def present(name=None, data=None, ensure_data=True, **kwargs):
+def present(name=None, data=None, ensure_data=True, **api_opts):
     '''
     Ensure the CNAME with the given data is present.
 
@@ -51,10 +51,10 @@ def present(name=None, data=None, ensure_data=True, **kwargs):
     if 'name' not in data:
         data.update({'name': name})
 
-    obj = __salt__['infoblox.get_cname'](name=name, **kwargs)
+    obj = __salt__['infoblox.get_cname'](name=name, **api_opts)
     if obj is None:
         # perhaps the user updated the name
-        obj = __salt__['infoblox.get_cname'](name=data['name'], **kwargs)
+        obj = __salt__['infoblox.get_cname'](name=data['name'], **api_opts)
         if obj:
             # warn user that the data was updated and does not match
             ret['result'] = False
@@ -79,7 +79,7 @@ def present(name=None, data=None, ensure_data=True, **kwargs):
                 ret['result'] = None
                 ret['comment'] = 'would attempt to update infoblox record'
                 return ret
-            new_obj = __salt__['infoblox.update_object'](obj['_ref'], data=data, **kwargs)
+            new_obj = __salt__['infoblox.update_object'](obj['_ref'], data=data, **api_opts)
             ret['result'] = True
             ret['comment'] = 'infoblox record fields updated (note: removing fields might not update)'
             return ret
@@ -89,8 +89,8 @@ def present(name=None, data=None, ensure_data=True, **kwargs):
         ret['comment'] = 'would attempt to create infoblox record {0}'.format(data['name'])
         return ret
 
-    new_obj_ref = __salt__['infoblox.create_cname'](data=data, **kwargs)
-    new_obj = __salt__['infoblox.get_cname'](name=name, **kwargs)
+    new_obj_ref = __salt__['infoblox.create_cname'](data=data, **api_opts)
+    new_obj = __salt__['infoblox.get_cname'](name=name, **api_opts)
 
     ret['result'] = True
     ret['comment'] = 'infoblox record created'
@@ -98,12 +98,12 @@ def present(name=None, data=None, ensure_data=True, **kwargs):
     return ret
 
 
-def absent(name=None, canonical=None, **kwargs):
+def absent(name=None, canonical=None, **api_opts):
     '''
     Ensure the CNAME with the given name or canonical name is removed
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
-    obj = __salt__['infoblox.get_cname'](name=name, canonical=canonical, **kwargs)
+    obj = __salt__['infoblox.get_cname'](name=name, canonical=canonical, **api_opts)
 
     if not obj:
         ret['result'] = True
@@ -115,7 +115,7 @@ def absent(name=None, canonical=None, **kwargs):
         ret['changes'] = {'old': obj, 'new': 'absent'}
         return ret
 
-    if __salt__['infoblox.delete_cname'](name=name, canonical=canonical, **kwargs):
+    if __salt__['infoblox.delete_cname'](name=name, canonical=canonical, **api_opts):
         ret['result'] = True
         ret['changes'] = {'old': obj, 'new': 'absent'}
     return ret
