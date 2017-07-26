@@ -8,6 +8,9 @@ Set SaltDir=%SaltDir:~0,-1%
 Set Python=%SaltDir%\bin\python.exe
 Set Script=%SaltDir%\bin\Scripts\salt-minion
 
+:: Set PYTHONPATH
+Set PYTHONPATH=C:\salt\bin;C:\salt\bin\Lib\site-packages
+
 :: Stop the Salt Minion service
 net stop salt-minion
 
