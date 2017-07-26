@@ -7,6 +7,7 @@ import logging
 import os
 import time
 import yaml
+import collections
 try:
     import salt.utils
     import salt.client
@@ -123,7 +124,8 @@ def run_highstate_tests():
         salt '*' salt_check.run_highstate_tests
     '''
     states = _get_top_states()
-    all_states = {}
+    #all_states = {}
+    all_states = collections.OrderedDict()
     for sta in states:
         log.info("State Name = {}".format(sta))
         all_states.update(run_state_tests(sta))
@@ -206,8 +208,8 @@ class SaltCheck(object):
         # log.info("modules are: {}".format(self.modules))
         # self.salt_lc = salt.client.Caller(mopts=__opts__)
         self.salt_lc = salt.client.Caller()
-        # if self.auto_update_master_cache:
-        #    update_master_cache()
+        if self.auto_update_master_cache:
+            update_master_cache()
 
     def __is_valid_test(self, test_dict):
         '''Determine if a test contains:
