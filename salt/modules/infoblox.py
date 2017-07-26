@@ -22,7 +22,7 @@ API documents can be found on your infoblox server at:
             api_user: 'username'
             api_key: 'password'
 
-    Many of the functions accept `kwargs` to override the API config.
+    Many of the functions accept `api_opts` to override the API config.
 
     .. code-block:: bash
 
@@ -51,10 +51,10 @@ def __virtual__():
 cache = {}
 
 
-def _get_config(**kwargs):
+def _get_config(**api_opts):
     '''
     Return configuration
-    user passed kwargs override salt config.get vars
+    user passed api_opts override salt config.get vars
     '''
     config = {
         'api_sslverify': True,
@@ -66,13 +66,13 @@ def _get_config(**kwargs):
         config_key = '{0}.config'.format(__virtualname__)
         config.update(__salt__['config.get'](config_key, {}))
     # pylint: disable=C0201
-    for k in set(config.keys()) & set(kwargs.keys()):
-        config[k] = kwargs[k]
+    for k in set(config.keys()) & set(api_opts.keys()):
+        config[k] = api_opts[k]
     return config
 
 
-def _get_infoblox(**kwargs):
-    config = _get_config(**kwargs)
+def _get_infoblox(**api_opts):
+    config = _get_config(**api_opts)
     # TODO: perhaps cache in __opts__
     cache_key = 'infoblox_session_{0},{1},{2}'.format(
         config['api_url'], config['api_user'], config['api_key'])
@@ -110,7 +110,7 @@ def is_ipaddr_in_ipfunc_range(ipaddr, ipfunc):
     return libinfoblox.is_ipaddr_in_ipfunc_range(ipaddr, ipfunc)
 
 
-def update_host(name, data, **kwargs):
+def update_host(name, data, **api_opts):
     '''
     Update host record. This is a helper call to update_object.
 
@@ -120,11 +120,11 @@ def update_host(name, data, **kwargs):
 
         salt-call infoblox.update_host name=fqdn data={}
     '''
-    o = get_host(name=name, **kwargs)
-    return update_object(objref=o['_ref'], data=data, **kwargs)
+    o = get_host(name=name, **api_opts)
+    return update_object(objref=o['_ref'], data=data, **api_opts)
 
 
-def update_object(objref, data, **kwargs):
+def update_object(objref, data, **api_opts):
     '''
     Update raw infoblox object.
     This is a low level api call.
@@ -137,11 +137,11 @@ def update_object(objref, data, **kwargs):
     '''
     if '__opts__' in globals() and __opts__['test']:
         return {'Test': 'Would attempt to update object: {0}'.format(objref)}
-    infoblox = _get_infoblox(**kwargs)
+    infoblox = _get_infoblox(**api_opts)
     return infoblox.update_object(objref, data)
 
 
-def delete_object(objref, **kwargs):
+def delete_object(objref, **api_opts):
     '''
     Delete infoblox object.
     This is a low level api call.
@@ -152,11 +152,11 @@ def delete_object(objref, **kwargs):
     '''
     if '__opts__' in globals() and __opts__['test']:
         return {'Test': 'Would attempt to delete object: {0}'.format(objref)}
-    infoblox = _get_infoblox(**kwargs)
+    infoblox = _get_infoblox(**api_opts)
     return infoblox.delete_object(objref)
 
 
-def create_object(object_type, data, **kwargs):
+def create_object(object_type, data, **api_opts):
     '''
     Create raw infoblox object
     This is a low level api call.
@@ -167,12 +167,12 @@ def create_object(object_type, data, **kwargs):
     '''
     if '__opts__' in globals() and __opts__['test']:
         return {'Test': 'Would attempt to create object: {0}'.format(object_type)}
-    infoblox = _get_infoblox(**kwargs)
+    infoblox = _get_infoblox(**api_opts)
     return infoblox.create_object(object_type, data)
 
 
 def get_object(objref, data=None, return_fields=None, max_results=None,
-               ensure_none_or_one_result=False, **kwargs):
+               ensure_none_or_one_result=False, **api_opts):
     '''
     Get raw infoblox object.
     This is a low level api call.
@@ -183,12 +183,12 @@ def get_object(objref, data=None, return_fields=None, max_results=None,
     '''
     if not data:
         data = {}
-    infoblox = _get_infoblox(**kwargs)
+    infoblox = _get_infoblox(**api_opts)
     return infoblox.get_object(objref, data, return_fields,
                                max_results, ensure_none_or_one_result)
 
 
-def create_cname(data, **kwargs):
+def create_cname(data, **api_opts):
     '''
     Create a cname record.
 
@@ -202,12 +202,12 @@ def create_cname(data, **kwargs):
             "canonical": "example-ha-0.example.com" \
         }
     '''
-    infoblox = _get_infoblox(**kwargs)
+    infoblox = _get_infoblox(**api_opts)
     host = infoblox.create_cname(data=data)
     return host
 
 
-def get_cname(name=None, canonical=None, return_fields=None, **kwargs):
+def get_cname(name=None, canonical=None, return_fields=None, **api_opts):
     '''
     Get CNAME information.
 
@@ -216,12 +216,12 @@ def get_cname(name=None, canonical=None, return_fields=None, **kwargs):
         salt-call infoblox.get_cname name=example.example.com
         salt-call infoblox.get_cname canonical=example-ha-0.example.com
     '''
-    infoblox = _get_infoblox(**kwargs)
+    infoblox = _get_infoblox(**api_opts)
     o = infoblox.get_cname(name=name, canonical=canonical, return_fields=return_fields)
     return o
 
 
-def update_cname(name, data, **kwargs):
+def update_cname(name, data, **api_opts):
     '''
     Update CNAME. This is a helper call to update_object.
 
@@ -235,13 +235,13 @@ def update_cname(name, data, **kwargs):
                 'ttl':200,
                 'comment':'Salt managed CNAME'}"
     '''
-    o = get_cname(name=name, **kwargs)
+    o = get_cname(name=name, **api_opts)
     if not o:
         raise Exception('CNAME record not found')
-    return update_object(objref=o['_ref'], data=data, **kwargs)
+    return update_object(objref=o['_ref'], data=data, **api_opts)
 
 
-def delete_cname(name=None, canonical=None, **kwargs):
+def delete_cname(name=None, canonical=None, **api_opts):
     '''
     Delete CNAME. This is a helper call to delete_object.
 
@@ -252,13 +252,13 @@ def delete_cname(name=None, canonical=None, **kwargs):
         salt-call infoblox.delete_cname name=example.example.com
         salt-call infoblox.delete_cname canonical=example-ha-0.example.com
     '''
-    cname = get_cname(name=name, canonical=canonical, **kwargs)
+    cname = get_cname(name=name, canonical=canonical, **api_opts)
     if cname:
-        return delete_object(cname['_ref'], **kwargs)
+        return delete_object(cname['_ref'], **api_opts)
     return True
 
 
-def get_host(name=None, ipv4addr=None, mac=None, return_fields=None, **kwargs):
+def get_host(name=None, ipv4addr=None, mac=None, return_fields=None, **api_opts):
     '''
     Get host information
 
@@ -273,12 +273,12 @@ def get_host(name=None, ipv4addr=None, mac=None, return_fields=None, **kwargs):
 
         return_fields='ipv4addrs,aliases,name,configure_for_dns,extattrs,disable,view,comment,zone'
     '''
-    infoblox = _get_infoblox(**kwargs)
+    infoblox = _get_infoblox(**api_opts)
     host = infoblox.get_host(name=name, mac=mac, ipv4addr=ipv4addr, return_fields=return_fields)
     return host
 
 
-def get_host_advanced(name=None, ipv4addr=None, mac=None, **kwargs):
+def get_host_advanced(name=None, ipv4addr=None, mac=None, **api_opts):
     '''
     Get all host information
 
@@ -286,12 +286,12 @@ def get_host_advanced(name=None, ipv4addr=None, mac=None, **kwargs):
 
         salt-call infoblox.get_host_advanced hostname.domain.ca
     '''
-    infoblox = _get_infoblox(**kwargs)
+    infoblox = _get_infoblox(**api_opts)
     host = infoblox.get_host_advanced(name=name, mac=mac, ipv4addr=ipv4addr)
     return host
 
 
-def get_host_domainname(name, domains=None, **kwargs):
+def get_host_domainname(name, domains=None, **api_opts):
     '''
     Get host domain name
 
@@ -312,7 +312,7 @@ def get_host_domainname(name, domains=None, **kwargs):
     '''
     name = name.lower().rstrip('.')
     if not domains:
-        data = get_host(name=name, **kwargs)
+        data = get_host(name=name, **api_opts)
         if data and 'zone' in data:
             return data['zone'].lower()
         else:
@@ -329,7 +329,7 @@ def get_host_domainname(name, domains=None, **kwargs):
     return None
 
 
-def get_host_hostname(name, domains=None, **kwargs):
+def get_host_hostname(name, domains=None, **api_opts):
     '''
     Get hostname
 
@@ -353,13 +353,13 @@ def get_host_hostname(name, domains=None, **kwargs):
     name = name.lower().rstrip('.')
     if not domains:
         return name.split('.')[0]
-    domain = get_host_domainname(name, domains, **kwargs)
+    domain = get_host_domainname(name, domains, **api_opts)
     if domain and domain in name:
         return name.rsplit('.' + domain)[0]
     return name
 
 
-def get_host_mac(name=None, allow_array=False, **kwargs):
+def get_host_mac(name=None, allow_array=False, **api_opts):
     '''
     Get mac address from host record.
 
@@ -369,7 +369,7 @@ def get_host_mac(name=None, allow_array=False, **kwargs):
 
         salt-call infoblox.get_host_mac host=localhost.domain.com
     '''
-    data = get_host(name=name, **kwargs)
+    data = get_host(name=name, **api_opts)
     if data and 'ipv4addrs' in data:
         l = []
         for a in data['ipv4addrs']:
@@ -382,7 +382,7 @@ def get_host_mac(name=None, allow_array=False, **kwargs):
     return None
 
 
-def get_host_ipv4(name=None, mac=None, allow_array=False, **kwargs):
+def get_host_ipv4(name=None, mac=None, allow_array=False, **api_opts):
     '''
     Get ipv4 address from host record.
 
@@ -393,7 +393,7 @@ def get_host_ipv4(name=None, mac=None, allow_array=False, **kwargs):
         salt-call infoblox.get_host_ipv4 host=localhost.domain.com
         salt-call infoblox.get_host_ipv4 mac=00:50:56:84:6e:ae
     '''
-    data = get_host(name=name, mac=mac, **kwargs)
+    data = get_host(name=name, mac=mac, **api_opts)
     if data and 'ipv4addrs' in data:
         l = []
         for a in data['ipv4addrs']:
@@ -408,7 +408,7 @@ def get_host_ipv4(name=None, mac=None, allow_array=False, **kwargs):
 
 def get_host_ipv4addr_info(ipv4addr=None, mac=None,
                                         discovered_data=None,
-                                        return_fields=None, **kwargs):
+                                        return_fields=None, **api_opts):
     '''
     Get host ipv4addr information
 
@@ -421,13 +421,13 @@ def get_host_ipv4addr_info(ipv4addr=None, mac=None,
         salt-call infoblox.get_ipv4addr mac=00:50:56:84:6e:ae return_fields=host
         return_fields='mac,host,configure_for_dhcp,ipv4addr'
     '''
-    infoblox = _get_infoblox(**kwargs)
+    infoblox = _get_infoblox(**api_opts)
     return infoblox.get_host_ipv4addr_object(ipv4addr, mac, discovered_data, return_fields)
 
 
 def get_host_ipv6addr_info(ipv6addr=None, mac=None,
                                         discovered_data=None,
-                                        return_fields=None, **kwargs):
+                                        return_fields=None, **api_opts):
     '''
     Get host ipv6addr information
 
@@ -435,11 +435,11 @@ def get_host_ipv6addr_info(ipv6addr=None, mac=None,
 
         salt-call infoblox.get_host_ipv6addr_info ipv6addr=2001:db8:85a3:8d3:1349:8a2e:370:7348
     '''
-    infoblox = _get_infoblox(**kwargs)
+    infoblox = _get_infoblox(**api_opts)
     return infoblox.get_host_ipv6addr_object(ipv6addr, mac, discovered_data, return_fields)
 
 
-def get_network(ipv4addr=None, network=None, return_fields=None, **kwargs):
+def get_network(ipv4addr=None, network=None, return_fields=None, **api_opts):
     '''
     Get list of all networks.
     This is helpfull when looking up subnets to
@@ -454,11 +454,11 @@ def get_network(ipv4addr=None, network=None, return_fields=None, **kwargs):
 
         salt-call infoblox.get_network
     '''
-    infoblox = _get_infoblox(**kwargs)
+    infoblox = _get_infoblox(**api_opts)
     return infoblox.get_network(ipv4addr=ipv4addr, network=network, return_fields=return_fields)
 
 
-def delete_host(name=None, mac=None, ipv4addr=None, **kwargs):
+def delete_host(name=None, mac=None, ipv4addr=None, **api_opts):
     '''
     Delete host
 
@@ -470,11 +470,11 @@ def delete_host(name=None, mac=None, ipv4addr=None, **kwargs):
     '''
     if '__opts__' in globals() and __opts__['test']:
         return {'Test': 'Would attempt to delete host'}
-    infoblox = _get_infoblox(**kwargs)
+    infoblox = _get_infoblox(**api_opts)
     return infoblox.delete_host(name, mac, ipv4addr)
 
 
-def create_host(data, **kwargs):
+def create_host(data, **api_opts):
     '''
     Add host record
 
@@ -501,10 +501,10 @@ def create_host(data, **kwargs):
                 'mac': '00:50:56:84:6e:ae'}],
             'ipv6addrs': [], }
     '''
-    return create_object('record:host', data, **kwargs)
+    return create_object('record:host', data, **api_opts)
 
 
-def get_ipv4_range(start_addr=None, end_addr=None, return_fields=None, **kwargs):
+def get_ipv4_range(start_addr=None, end_addr=None, return_fields=None, **api_opts):
     '''
     Get ip range
 
@@ -512,11 +512,11 @@ def get_ipv4_range(start_addr=None, end_addr=None, return_fields=None, **kwargs)
 
         salt-call infoblox.get_ipv4_range start_addr=123.123.122.12
     '''
-    infoblox = _get_infoblox(**kwargs)
+    infoblox = _get_infoblox(**api_opts)
     return infoblox.get_range(start_addr, end_addr, return_fields)
 
 
-def delete_ipv4_range(start_addr=None, end_addr=None, **kwargs):
+def delete_ipv4_range(start_addr=None, end_addr=None, **api_opts):
     '''
     Delete ip range.
 
@@ -524,14 +524,14 @@ def delete_ipv4_range(start_addr=None, end_addr=None, **kwargs):
 
             salt-call infoblox.delete_ipv4_range start_addr=123.123.122.12
     '''
-    r = get_ipv4_range(start_addr, end_addr, **kwargs)
+    r = get_ipv4_range(start_addr, end_addr, **api_opts)
     if r:
-        return delete_object(r['_ref'], **kwargs)
+        return delete_object(r['_ref'], **api_opts)
     else:
         return True
 
 
-def create_ipv4_range(data, **kwargs):
+def create_ipv4_range(data, **api_opts):
     '''
     Create a ipv4 range
 
@@ -544,10 +544,10 @@ def create_ipv4_range(data, **kwargs):
             start_addr: '129.97.150.160',
             end_addr: '129.97.150.170'}
     '''
-    return create_object('range', data, **kwargs)
+    return create_object('range', data, **api_opts)
 
 
-def create_a(data, **kwargs):
+def create_a(data, **api_opts):
     '''
     Create A record.
 
@@ -562,10 +562,10 @@ def create_a(data, **kwargs):
                     ipv4addr: '127.0.0.1'
                     view: External
     '''
-    return create_object('record:a', data, **kwargs)
+    return create_object('record:a', data, **api_opts)
 
 
-def get_a(name=None, ipv4addr=None, allow_array=True, **kwargs):
+def get_a(name=None, ipv4addr=None, allow_array=True, **api_opts):
     '''
     Get A record
 
@@ -579,13 +579,13 @@ def get_a(name=None, ipv4addr=None, allow_array=True, **kwargs):
         data['name'] = name
     if ipv4addr:
         data['ipv4addr'] = ipv4addr
-    r = get_object('record:a', data=data, **kwargs)
+    r = get_object('record:a', data=data, **api_opts)
     if r and len(r) > 1 and not allow_array:
         raise Exception('More than one result, use allow_array to return the data')
     return r
 
 
-def delete_a(name=None, ipv4addr=None, allow_array=False, **kwargs):
+def delete_a(name=None, ipv4addr=None, allow_array=False, **api_opts):
     '''
     Delete A record
 
@@ -598,7 +598,7 @@ def delete_a(name=None, ipv4addr=None, allow_array=False, **kwargs):
         salt-call infoblox.delete_a ipv4addr=192.168.3.5
         salt-call infoblox.delete_a name=acname.example.com allow_array=true
     '''
-    r = get_a(name, ipv4addr, allow_array=False, **kwargs)
+    r = get_a(name, ipv4addr, allow_array=False, **api_opts)
     if not r:
         return True
     if len(r) == 0:
@@ -607,5 +607,5 @@ def delete_a(name=None, ipv4addr=None, allow_array=False, **kwargs):
         raise Exception('More than one result, use allow_array to override')
     ret = []
     for ri in r:
-        ret.append(delete_object(ri['_ref'], **kwargs))
+        ret.append(delete_object(ri['_ref'], **api_opts))
     return ret

@@ -2,7 +2,7 @@
 '''
 Infoblox host record managment.
 
-functions accept kwargs:
+functions accept api_opts:
 
     api_verifyssl: verify SSL [default to True or pillar value]
     api_url: server to connect to [default to pillar value]
@@ -11,7 +11,7 @@ functions accept kwargs:
 '''
 
 
-def present(name=None, data=None, ensure_data=True, **kwargs):
+def present(name=None, data=None, ensure_data=True, **api_opts):
     '''
     This will ensure that a host with the provided name exists.
     This will try to ensure that the state of the host matches the given data
@@ -47,10 +47,10 @@ def present(name=None, data=None, ensure_data=True, **kwargs):
     if 'name' not in data:
         data.update({'name': name})
 
-    obj = __salt__['infoblox.get_host'](name=name, **kwargs)
+    obj = __salt__['infoblox.get_host'](name=name, **api_opts)
     if obj is None:
         # perhaps the user updated the name
-        obj = __salt__['infoblox.get_host'](name=data['name'], **kwargs)
+        obj = __salt__['infoblox.get_host'](name=data['name'], **api_opts)
         if obj:
             # warn user that the host name was updated and does not match
             ret['result'] = False
@@ -63,7 +63,7 @@ def present(name=None, data=None, ensure_data=True, **kwargs):
             ret['comment'] = 'infoblox record already created (supplied fields not ensured to match)'
             return ret
 
-        obj = __salt__['infoblox.get_host_advanced'](name=name, **kwargs)
+        obj = __salt__['infoblox.get_host_advanced'](name=name, **api_opts)
         diff = __salt__['infoblox.diff_objects'](data, obj)
         if not diff:
             ret['result'] = True
@@ -105,7 +105,7 @@ def present(name=None, data=None, ensure_data=True, **kwargs):
                                 ret['result'] = False
                                 return ret
 
-            new_obj = __salt__['infoblox.update_object'](obj['_ref'], data=data, **kwargs)
+            new_obj = __salt__['infoblox.update_object'](obj['_ref'], data=data, **api_opts)
             ret['result'] = True
             ret['comment'] = 'infoblox record fields updated (note: removing fields might not update)'
             #ret['changes'] = {'diff': diff }
@@ -116,8 +116,8 @@ def present(name=None, data=None, ensure_data=True, **kwargs):
         ret['comment'] = 'would attempt to create infoblox record {0}'.format(name)
         return ret
 
-    new_obj_ref = __salt__['infoblox.create_host'](data=data, **kwargs)
-    new_obj = __salt__['infoblox.get_host'](name=name, **kwargs)
+    new_obj_ref = __salt__['infoblox.create_host'](data=data, **api_opts)
+    new_obj = __salt__['infoblox.get_host'](name=name, **api_opts)
 
     ret['result'] = True
     ret['comment'] = 'infoblox record created'
@@ -125,7 +125,7 @@ def present(name=None, data=None, ensure_data=True, **kwargs):
     return ret
 
 
-def absent(name=None, ipv4addr=None, mac=None, **kwargs):
+def absent(name=None, ipv4addr=None, mac=None, **api_opts):
     '''
     Ensure the host with the given Name ipv4addr or mac is removed.
 
@@ -145,7 +145,7 @@ def absent(name=None, ipv4addr=None, mac=None, **kwargs):
             - mac: 12:02:12:31:23:43
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
-    obj = __salt__['infoblox.get_host'](name=name, ipv4addr=ipv4addr, mac=mac, **kwargs)
+    obj = __salt__['infoblox.get_host'](name=name, ipv4addr=ipv4addr, mac=mac, **api_opts)
 
     if not obj:
         ret['result'] = True
@@ -157,7 +157,7 @@ def absent(name=None, ipv4addr=None, mac=None, **kwargs):
         ret['changes'] = {'old': obj, 'new': 'absent'}
         return ret
 
-    if __salt__['infoblox.delete_host'](name=name, mac=mac, **kwargs):
+    if __salt__['infoblox.delete_host'](name=name, mac=mac, **api_opts):
         ret['result'] = True
         ret['changes'] = {'old': obj, 'new': 'absent'}
     return ret
