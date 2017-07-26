@@ -79,10 +79,9 @@ these states. Here is some example SLS:
     ``python-pycurl`` will need to be manually installed if it is not present
     once ``python-software-properties`` is installed.
 
-    On Ubuntu & Debian systems, the ```python-apt`` package is required to be
-    installed.  To check if this package is installed, run ``dpkg -l
-    python-software-properties``.  ``python-apt`` will need to be manually
-    installed if it is not present.
+    On Ubuntu & Debian systems, the ``python-apt`` package is required to be
+    installed. To check if this package is installed, run ``dpkg -l python-apt``.
+    ``python-apt`` will need to be manually installed if it is not present.
 
 '''
 
