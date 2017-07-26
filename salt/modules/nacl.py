@@ -89,7 +89,7 @@ without extra parameters:
     nacl.config:
         pk: '/kfGX7PbWeu099702PBbKWLpG/9p06IQRswkdWHCDk0='
 
-The developer can then use a less secure system to encrypt data.
+The developer can then use a less-secure system to encrypt data.
 
 .. code-block:: bash
 
@@ -115,7 +115,7 @@ Larger files like certificates can be encrypted with:
     cert=$(cat /tmp/cert.crt)
     salt-call --out=newline_values_only nacl.enc_pub data="$cert" > /tmp/cert.nacl
 
-In Pillars rended with jinja be sure to include `|json` so line breaks are encoded:
+In pillars rended with jinja be sure to include `|json` so line breaks are encoded:
 
 .. code-block:: jinja
 
