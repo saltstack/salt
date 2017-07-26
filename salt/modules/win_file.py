@@ -1687,9 +1687,6 @@ def check_perms(path,
                     perms = changes[user]['perms']
 
                 try:
-                    log.debug('*' * 68)
-                    log.debug(perms)
-                    log.debug('*' * 68)
                     salt.utils.win_dacl.set_permissions(
                         path, user, perms, 'deny', applies_to)
                     ret['changes']['deny_perms'][user] = changes[user]
