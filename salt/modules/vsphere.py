@@ -3591,6 +3591,68 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
     return ret
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter')
+@gets_service_instance_via_proxy
+def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
+    '''
+    Returns a list of dict representations of VMware datacenters.
+    Connection is done via the proxy details.
+
+    Supported proxies: esxdatacenter
+
+    datacenter_names
+        List of datacenter names.
+        Default is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.list_datacenters_via_proxy
+
+        salt '*' vsphere.list_datacenters_via_proxy dc1
+
+        salt '*' vsphere.list_datacenters_via_proxy dc1,dc2
+
+        salt '*' vsphere.list_datacenters_via_proxy datacenter_names=[dc1, dc2]
+    '''
+    if not datacenter_names:
+        dc_refs = salt.utils.vmware.get_datacenters(service_instance,
+                                                    get_all_datacenters=True)
+    else:
+        dc_refs = salt.utils.vmware.get_datacenters(service_instance,
+                                                    datacenter_names)
+
+    return [{'name': salt.utils.vmware.get_managed_object_name(dc_ref)}
+            for dc_ref in dc_refs]
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter')
+@gets_service_instance_via_proxy
+def create_datacenter(datacenter_name, service_instance=None):
+    '''
+    Creates a datacenter.
+
+    Supported proxies: esxdatacenter
+
+    datacenter_name
+        The datacenter name
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.create_datacenter dc1
+    '''
+    salt.utils.vmware.create_datacenter(service_instance, datacenter_name)
+    return {'create_datacenter': True}
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
