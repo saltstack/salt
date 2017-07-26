@@ -9,4 +9,4 @@ Set Python=%SaltDir%\bin\python.exe
 Set Script=%SaltDir%\bin\Scripts\salt-key
 
 :: Launch Script
-"%Python%" -E "%Script%" %*
+"%Python%" -E -s "%Script%" %*
