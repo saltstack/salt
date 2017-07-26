@@ -302,7 +302,7 @@ import re
 
 # Import Salt Libs
 from salt.ext.six import exec_
-import salt.utils
+import salt.utils.files
 import salt.loader
 from salt.fileclient import get_file_client
 from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
@@ -457,7 +457,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
                         'Could not find the file \'{0}\''.format(import_file)
                     )
 
-                with salt.utils.fopen(state_file) as state_fh:
+                with salt.utils.files.fopen(state_file) as state_fh:
                     state_contents, state_globals = process_template(state_fh)
                 exec_(state_contents, state_globals)
 

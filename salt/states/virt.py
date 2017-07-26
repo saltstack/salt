@@ -26,6 +26,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'virt'
@@ -114,7 +115,7 @@ def keys(name, basepath='/etc/pki', **kwargs):
         if not os.path.exists(os.path.dirname(paths[key])):
             os.makedirs(os.path.dirname(paths[key]))
         if os.path.isfile(paths[key]):
-            with salt.utils.fopen(paths[key], 'r') as fp_:
+            with salt.utils.files.fopen(paths[key], 'r') as fp_:
                 if fp_.read() != pillar[p_key]:
                     ret['changes'][key] = 'update'
         else:
@@ -128,7 +129,7 @@ def keys(name, basepath='/etc/pki', **kwargs):
         ret['changes'] = {}
     else:
         for key in ret['changes']:
-            with salt.utils.fopen(paths[key], 'w+') as fp_:
+            with salt.utils.files.fopen(paths[key], 'w+') as fp_:
                 fp_.write(pillar['libvirt.{0}.pem'.format(key)])
 
         ret['comment'] = 'Updated libvirt certs and keys'

@@ -6,7 +6,7 @@ ProfitBricks Cloud Module
 The ProfitBricks SaltStack cloud module allows a ProfitBricks server to
 be automatically deployed and bootstraped with Salt.
 
-:depends: profitbrick >= 3.0.0
+:depends: profitbrick >= 3.1.0
 
 The module requires ProfitBricks credentials to be supplied along with
 an existing virtual datacenter UUID where the server resources will
@@ -98,7 +98,8 @@ import pprint
 import time
 
 # Import salt libs
-import salt.utils
+import salt.utils.cloud
+import salt.utils.files
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -108,16 +109,14 @@ from salt.exceptions import (
     SaltCloudSystemExit
 )
 
-# Import salt.cloud libs
-import salt.utils.cloud
-
 # Import 3rd-party libs
 import salt.ext.six as six
 try:
     from profitbricks.client import (
         ProfitBricksService, Server,
         NIC, Volume, FirewallRule,
-        Datacenter, LoadBalancer, LAN
+        Datacenter, LoadBalancer, LAN,
+        PBNotFoundError
     )
     HAS_PROFITBRICKS = True
 except ImportError:
@@ -482,7 +481,13 @@ def list_nodes(conn=None, call=None):
 
     ret = {}
     datacenter_id = get_datacenter_id()
-    nodes = conn.list_servers(datacenter_id=datacenter_id)
+
+    try:
+        nodes = conn.list_servers(datacenter_id=datacenter_id)
+    except PBNotFoundError:
+        log.error('Failed to get nodes list from datacenter: {0}'.format(
+                  datacenter_id))
+        raise
 
     for item in nodes['items']:
         node = {'id': item['id']}
@@ -642,7 +647,7 @@ def get_public_keys(vm_):
                 )
             )
         ssh_keys = []
-        with salt.utils.fopen(key_filename) as rfh:
+        with salt.utils.files.fopen(key_filename) as rfh:
             for key in rfh.readlines():
                 ssh_keys.append(key)
 

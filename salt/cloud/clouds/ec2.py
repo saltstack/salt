@@ -89,14 +89,12 @@ import re
 import decimal
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.cloud
+import salt.utils.files
 import salt.utils.hashutils
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
-
-# Import salt.cloud libs
-import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
     SaltCloudException,
@@ -1787,7 +1785,7 @@ def request_instance(vm_=None, call=None):
     else:
         log.trace('userdata_file: {0}'.format(userdata_file))
         if os.path.exists(userdata_file):
-            with salt.utils.fopen(userdata_file, 'r') as fh_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
     userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
@@ -2328,6 +2326,9 @@ def wait_for_instance(
         use_winrm = config.get_cloud_config_value(
             'use_winrm', vm_, __opts__, default=False
         )
+        winrm_verify_ssl = config.get_cloud_config_value(
+            'winrm_verify_ssl', vm_, __opts__, default=True
+        )
 
         if win_passwd and win_passwd == 'auto':
             log.debug('Waiting for auto-generated Windows EC2 password')
@@ -2399,7 +2400,8 @@ def wait_for_instance(
                                                           winrm_port,
                                                           username,
                                                           win_passwd,
-                                                          timeout=ssh_connect_timeout):
+                                                          timeout=ssh_connect_timeout,
+                                                          verify=winrm_verify_ssl):
                 raise SaltCloudSystemExit(
                     'Failed to authenticate against remote windows host'
                 )
@@ -2440,7 +2442,7 @@ def wait_for_instance(
                     continue
                 keys += '\n{0} {1}'.format(ip_address, line)
 
-            with salt.utils.fopen(known_hosts_file, 'a') as fp_:
+            with salt.utils.files.fopen(known_hosts_file, 'a') as fp_:
                 fp_.write(keys)
             fp_.close()
 
@@ -4385,7 +4387,7 @@ def import_keypair(kwargs=None, call=None):
     public_key_file = kwargs['file']
 
     if os.path.exists(public_key_file):
-        with salt.utils.fopen(public_key_file, 'r') as fh_:
+        with salt.utils.files.fopen(public_key_file, 'r') as fh_:
             public_key = fh_.read()
 
     if public_key is not None:
@@ -4774,7 +4776,7 @@ def get_password_data(
 
     if 'key' not in kwargs:
         if 'key_file' in kwargs:
-            with salt.utils.fopen(kwargs['key_file'], 'r') as kf_:
+            with salt.utils.files.fopen(kwargs['key_file'], 'r') as kf_:
                 kwargs['key'] = kf_.read()
 
     if 'key' in kwargs:
@@ -4874,7 +4876,7 @@ def _parse_pricing(url, name):
     outfile = os.path.join(
         __opts__['cachedir'], 'ec2-pricing-{0}.p'.format(name)
     )
-    with salt.utils.fopen(outfile, 'w') as fho:
+    with salt.utils.files.fopen(outfile, 'w') as fho:
         msgpack.dump(regions, fho)
 
     return True
@@ -4942,7 +4944,7 @@ def show_pricing(kwargs=None, call=None):
     if not os.path.isfile(pricefile):
         update_pricing({'type': name}, 'function')
 
-    with salt.utils.fopen(pricefile, 'r') as fhi:
+    with salt.utils.files.fopen(pricefile, 'r') as fhi:
         ec2_price = msgpack.load(fhi)
 
     region = get_location(profile)
