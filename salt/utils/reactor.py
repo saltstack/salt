@@ -273,6 +273,8 @@ class ReactWrap(object):
         try:
             f_call = salt.utils.format_call(l_fun, low)
             kwargs = f_call.get('kwargs', {})
+            if 'kwarg' not in kwargs:
+                kwargs['kwarg'] = {}
 
             # TODO: Setting the user doesn't seem to work for actual remote publishes
             if low['state'] in ('runner', 'wheel'):
