@@ -346,9 +346,10 @@ def summary():
 
 def plugin_sync():
     '''
-    Runs a plugin synch between the puppet master and agent
+    Runs a plugin sync between the puppet master and agent
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' puppet.plugin_sync
