@@ -121,7 +121,7 @@ In pillars rended with jinja be sure to include `|json` so line breaks are encod
 
     cert: "{{salt.nacl.dec('S2uogToXkgENz9...085KYt')|json}}"
 
-In States rendered with jinja it is also good pratice to include `|json`:
+In states rendered with jinja it is also good pratice to include `|json`:
 
 .. code-block:: jinja
 
