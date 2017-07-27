@@ -142,14 +142,14 @@ def _render_cmd(cmd, cwd, template, saltenv='base', pillarenv=None, pillar_overr
     def _render(contents):
         # write out path to temp file
         tmp_path_fn = salt.utils.files.mkstemp()
-        with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
+        with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](
             tmp_path_fn,
             to_str=True,
             **kwargs
         )
-        salt.utils.safe_rm(tmp_path_fn)
+        salt.utils.files.safe_rm(tmp_path_fn)
         if not data['result']:
             # Failed to render the template
             raise CommandExecutionError(
@@ -543,10 +543,25 @@ def _run(cmd,
         try:
             proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
         except (OSError, IOError) as exc:
-            raise CommandExecutionError(
+            msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
-                'reason: {2}'.format(cmd, kwargs, exc)
+                'reason: '.format(
+                    cmd if _check_loglevel(output_loglevel) is not None
+                        else 'REDACTED',
+                    kwargs
+                )
             )
+            try:
+                if exc.filename is None:
+                    msg += 'command not found'
+                else:
+                    msg += '{0}: {1}'.format(exc, exc.filename)
+            except AttributeError:
+                # Both IOError and OSError have the filename attribute, so this
+                # is a precaution in case the exception classes in the previous
+                # try/except are changed.
+                msg += 'unknown'
+            raise CommandExecutionError(msg)
 
         try:
             proc.run()
@@ -1623,7 +1638,7 @@ def run_all(cmd,
     :param bool encoded_cmd: Specify if the supplied command is encoded.
       Only applies to shell 'powershell'.
 
-      .. versionadded:: Nitrogen
+      .. versionadded:: Oxygen
 
     :param bool redirect_stderr: If set to ``True``, then stderr will be
       redirected to stdout. This is helpful for cases where obtaining both the
@@ -2404,7 +2419,7 @@ def exec_code_all(lang, code, cwd=None):
     else:
         codefile = salt.utils.files.mkstemp()
 
-    with salt.utils.fopen(codefile, 'w+t', binary=False) as fp_:
+    with salt.utils.files.fopen(codefile, 'w+t', binary=False) as fp_:
         fp_.write(code)
 
     if powershell:
@@ -2435,7 +2450,7 @@ def tty(device, echo=''):
     else:
         return {'Error': 'The specified device is not a valid TTY'}
     try:
-        with salt.utils.fopen(teletype, 'wb') as tty_device:
+        with salt.utils.files.fopen(teletype, 'wb') as tty_device:
             tty_device.write(salt.utils.to_bytes(echo))
         return {
             'Success': 'Message was successfully echoed to {0}'.format(teletype)
@@ -2647,7 +2662,7 @@ def _is_valid_shell(shell):
     available_shells = []
     if os.path.exists(shells):
         try:
-            with salt.utils.fopen(shells, 'r') as shell_fp:
+            with salt.utils.files.fopen(shells, 'r') as shell_fp:
                 lines = shell_fp.read().splitlines()
             for line in lines:
                 if line.startswith('#'):
@@ -2679,7 +2694,7 @@ def shells():
     ret = []
     if os.path.exists(shells_fn):
         try:
-            with salt.utils.fopen(shells_fn, 'r') as shell_fp:
+            with salt.utils.files.fopen(shells_fn, 'r') as shell_fp:
                 lines = shell_fp.read().splitlines()
             for line in lines:
                 line = line.strip()
@@ -3184,7 +3199,7 @@ def powershell_all(cmd,
         salt '*' cmd.run_all '$PSVersionTable.CLRVersion' shell=powershell
         salt '*' cmd.run_all 'Get-NetTCPConnection' shell=powershell
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     .. warning::
 

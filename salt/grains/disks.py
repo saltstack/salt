@@ -11,6 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -127,7 +128,7 @@ def _linux_disks():
     ret = {'disks': [], 'SSDs': []}
 
     for entry in glob.glob('/sys/block/*/queue/rotational'):
-        with salt.utils.fopen(entry) as entry_fp:
+        with salt.utils.files.fopen(entry) as entry_fp:
             device = entry.split('/')[3]
             flag = entry_fp.read(1)
             if flag == '0':

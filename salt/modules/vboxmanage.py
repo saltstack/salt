@@ -23,6 +23,7 @@ import logging
 
 # pylint: disable=import-error,no-name-in-module
 import salt.utils
+import salt.utils.files
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 # pylint: enable=import-error,no-name-in-module
@@ -457,7 +458,7 @@ def clonemedium(medium,
         params += ' ' + uuid_out
     elif file_out:
         try:
-            salt.utils.fopen(file_out, 'w').close()  # pylint: disable=resource-leakage
+            salt.utils.files.fopen(file_out, 'w').close()  # pylint: disable=resource-leakage
             os.unlink(file_out)
             params += ' ' + file_out
         except OSError:

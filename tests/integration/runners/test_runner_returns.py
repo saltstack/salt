@@ -16,6 +16,7 @@ from tests.support.runtests import RUNTIME_VARS
 # Import salt libs
 import salt.payload
 import salt.utils
+import salt.utils.files
 import salt.utils.jid
 
 
@@ -118,7 +119,7 @@ class RunnerReturnsTest(ShellCase):
             'return.p',
         )
         serial = salt.payload.Serial(self.master_opts)
-        with salt.utils.fopen(serialized_return, 'rb') as fp_:
+        with salt.utils.files.fopen(serialized_return, 'rb') as fp_:
             deserialized = serial.loads(fp_.read())
 
         self.clean_return(deserialized['return'])

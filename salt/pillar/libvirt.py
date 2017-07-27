@@ -16,6 +16,7 @@ import subprocess
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 
 def __virtual__():
@@ -50,9 +51,9 @@ def ext_pillar(minion_id,
         if not key.endswith('.pem'):
             continue
         fn_ = os.path.join(key_dir, key)
-        with salt.utils.fopen(fn_, 'r') as fp_:
+        with salt.utils.files.fopen(fn_, 'r') as fp_:
             ret['libvirt.{0}'.format(key)] = fp_.read()
-    with salt.utils.fopen(cacert, 'r') as fp_:
+    with salt.utils.files.fopen(cacert, 'r') as fp_:
         ret['libvirt.cacert.pem'] = fp_.read()
     return ret
 
@@ -76,7 +77,7 @@ def gen_hyper_keys(minion_id,
     cacert = os.path.join(key_dir, 'cacert.pem')
     cainfo = os.path.join(key_dir, 'ca.info')
     if not os.path.isfile(cainfo):
-        with salt.utils.fopen(cainfo, 'w+') as fp_:
+        with salt.utils.files.fopen(cainfo, 'w+') as fp_:
             fp_.write('cn = salted\nca\ncert_signing_key')
     if not os.path.isfile(cakey):
         subprocess.call(
@@ -96,7 +97,7 @@ def gen_hyper_keys(minion_id,
     ccert = os.path.join(sub_dir, 'clientcert.pem')
     clientinfo = os.path.join(sub_dir, 'client.info')
     if not os.path.isfile(srvinfo):
-        with salt.utils.fopen(srvinfo, 'w+') as fp_:
+        with salt.utils.files.fopen(srvinfo, 'w+') as fp_:
             infodat = ('organization = salted\ncn = {0}\ntls_www_server'
                        '\nencryption_key\nsigning_key'
                        '\ndigitalSignature\nexpiration_days = {1}'
@@ -114,7 +115,7 @@ def gen_hyper_keys(minion_id,
                ).format(priv, cacert, cakey, srvinfo, cert)
         subprocess.call(cmd, shell=True)
     if not os.path.isfile(clientinfo):
-        with salt.utils.fopen(clientinfo, 'w+') as fp_:
+        with salt.utils.files.fopen(clientinfo, 'w+') as fp_:
             infodat = ('country = {0}\nstate = {1}\nlocality = '
                        '{2}\norganization = {3}\ncn = {4}\n'
                        'tls_www_client\nencryption_key\nsigning_key\n'

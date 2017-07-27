@@ -39,6 +39,7 @@ except ImportError:
 import salt.utils
 import salt.utils.xmlutil as xml
 import salt.utils.args
+import salt.utils.files
 import salt.loader
 import salt.config
 import salt.version
@@ -233,12 +234,12 @@ def query(url,
         # proper cookie jar. Unfortunately, since session cookies do not
         # contain expirations, they can't be stored in a proper cookie jar.
         if os.path.isfile(session_cookie_jar):
-            with salt.utils.fopen(session_cookie_jar, 'rb') as fh_:
+            with salt.utils.files.fopen(session_cookie_jar, 'rb') as fh_:
                 session_cookies = msgpack.load(fh_)
             if isinstance(session_cookies, dict):
                 header_dict.update(session_cookies)
         else:
-            with salt.utils.fopen(session_cookie_jar, 'wb') as fh_:
+            with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
                 msgpack.dump('', fh_)
 
     for header in header_list:
@@ -461,8 +462,8 @@ def query(url,
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
             if HAS_CURL_HTTPCLIENT is False:
-                ret['error'] = ('proxy_host and proxy_port has been set. This requires pycurl, but the '
-                                'pycurl library does not seem to be installed')
+                ret['error'] = ('proxy_host and proxy_port has been set. This requires pycurl and tornado, '
+                                'but the libraries does not seem to be installed')
                 log.error(ret['error'])
                 return ret
 
@@ -549,11 +550,11 @@ def query(url,
                   'incompatibilities between requests and logging.').format(exc))
 
     if text_out is not None:
-        with salt.utils.fopen(text_out, 'w') as tof:
+        with salt.utils.files.fopen(text_out, 'w') as tof:
             tof.write(result_text)
 
     if headers_out is not None and os.path.exists(headers_out):
-        with salt.utils.fopen(headers_out, 'w') as hof:
+        with salt.utils.files.fopen(headers_out, 'w') as hof:
             hof.write(result_headers)
 
     if cookies is not None:
@@ -562,7 +563,7 @@ def query(url,
     if persist_session is True and HAS_MSGPACK:
         # TODO: See persist_session above
         if 'set-cookie' in result_headers:
-            with salt.utils.fopen(session_cookie_jar, 'wb') as fh_:
+            with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
                 session_cookies = result_headers.get('set-cookie', None)
                 if session_cookies is not None:
                     msgpack.dump({'Cookie': session_cookies}, fh_)
@@ -613,7 +614,7 @@ def query(url,
             text = True
 
         if decode_out:
-            with salt.utils.fopen(decode_out, 'w') as dof:
+            with salt.utils.files.fopen(decode_out, 'w') as dof:
                 dof.write(result_text)
 
     if text is True:
@@ -738,7 +739,7 @@ def update_ca_bundle(
                     )
                 )
                 try:
-                    with salt.utils.fopen(cert_file, 'r') as fcf:
+                    with salt.utils.files.fopen(cert_file, 'r') as fcf:
                         merge_content = '\n'.join((merge_content, fcf.read()))
                 except IOError as exc:
                     log.error(
@@ -750,7 +751,7 @@ def update_ca_bundle(
         if merge_content:
             log.debug('Appending merge_files to {0}'.format(target))
             try:
-                with salt.utils.fopen(target, 'a') as tfp:
+                with salt.utils.files.fopen(target, 'a') as tfp:
                     tfp.write('\n')
                     tfp.write(merge_content)
             except IOError as exc:
@@ -778,7 +779,7 @@ def _render(template, render, renderer, template_dict, opts):
         if str(ret).startswith('#!') and not str(ret).startswith('#!/'):
             ret = str(ret).split('\n', 1)[1]
         return ret
-    with salt.utils.fopen(template, 'r') as fh_:
+    with salt.utils.files.fopen(template, 'r') as fh_:
         return fh_.read()
 
 

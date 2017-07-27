@@ -19,6 +19,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 import salt.modules.mount as mount
 
@@ -90,7 +91,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(os.path, 'isfile', mock):
                 file_data = '\n'.join(['#',
                                        'A B C D,E,F G H'])
-                with patch('salt.utils.fopen',
+                with patch('salt.utils.files.fopen',
                            mock_open(read_data=file_data),
                            create=True) as m:
                     m.return_value.__iter__.return_value = file_data.splitlines()
@@ -113,7 +114,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(os.path, 'isfile', mock):
                 file_data = '\n'.join(['#',
                                        'swap        -   /tmp                tmpfs    -   yes    size=2048m'])
-                with patch('salt.utils.fopen',
+                with patch('salt.utils.files.fopen',
                            mock_open(read_data=file_data),
                            create=True) as m:
                     m.return_value.__iter__.return_value = file_data.splitlines()
@@ -131,7 +132,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         mock_fstab = MagicMock(return_value={})
         with patch.dict(mount.__grains__, {'kernel': ''}):
             with patch.object(mount, 'fstab', mock_fstab):
-                with patch('salt.utils.fopen', mock_open()):
+                with patch('salt.utils.files.fopen', mock_open()):
                     self.assertTrue(mount.rm_fstab('name', 'device'))
 
     def test_set_fstab(self):
@@ -148,13 +149,13 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=True)
         mock_read = MagicMock(side_effect=OSError)
         with patch.object(os.path, 'isfile', mock):
-            with patch.object(salt.utils, 'fopen', mock_read):
+            with patch.object(salt.utils.files, 'fopen', mock_read):
                 self.assertRaises(CommandExecutionError,
                                   mount.set_fstab, 'A', 'B', 'C')
 
         mock = MagicMock(return_value=True)
         with patch.object(os.path, 'isfile', mock):
-            with patch('salt.utils.fopen',
+            with patch('salt.utils.files.fopen',
                        mock_open(read_data=MOCK_SHELL_FILE)):
                 self.assertEqual(mount.set_fstab('A', 'B', 'C'), 'new')
 
@@ -260,7 +261,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         file_data = '\n'.join(['Filename Type Size Used Priority',
                                '/dev/sda1 partition 31249404 4100 -1'])
         with patch.dict(mount.__grains__, {'os': '', 'kernel': ''}):
-            with patch('salt.utils.fopen',
+            with patch('salt.utils.files.fopen',
                        mock_open(read_data=file_data),
                        create=True) as m:
                 m.return_value.__iter__.return_value = file_data.splitlines()

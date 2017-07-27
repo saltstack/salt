@@ -9,7 +9,7 @@ import tempfile
 from tests.support.unit import TestCase
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 import salt.modules.ini_manage as ini
 
 
@@ -119,7 +119,7 @@ empty_option=
         ini.set_option(self.tfile.name, {
             'SectionB': {'test3': 'new value 3B'},
         })
-        with salt.utils.fopen(self.tfile.name, 'r') as fp:
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             file_content = fp.read()
         self.assertIn('\nempty_option = \n', file_content,
                       'empty_option was not preserved')
@@ -128,7 +128,7 @@ empty_option=
         ini.set_option(self.tfile.name, {
             'SectionB': {'test3': 'new value 3B'},
         })
-        with salt.utils.fopen(self.tfile.name, 'r') as fp:
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             file_content = fp.read()
         self.assertEqual('''\
 # Comment on the first line

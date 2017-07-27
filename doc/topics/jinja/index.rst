@@ -150,6 +150,22 @@ starts at the root of the state tree or pillar.
 .. _`macro`: http://jinja.pocoo.org/docs/templates/#macros
 .. _`whitespace control`: http://jinja.pocoo.org/docs/templates/#whitespace-control
 
+Errors
+======
+
+Saltstack allows to raise custom errors using the ``raise`` jinja function.
+
+.. code-block:: jinja
+
+    {{ raise('Custom Error') }}
+
+When rendering the template containing the above statement, a ``TemplateError``
+exception is raised, causing the rendering to fail with the following message:
+
+.. code-block:: text
+
+    TemplateError: Custom Error
+
 Filters
 =======
 
@@ -335,7 +351,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Wraps a text around quoutes.
+This text will be wrapped in quotes.
 
 
 .. jinja_ref:: regex_search
@@ -750,19 +766,43 @@ Returns:
 
 Check a whitelist and/or blacklist to see if the value matches it.
 
-Example:
+This filter can be used with either a whitelist or a blacklist individually,
+or a whitelist and a blacklist can be passed simultaneously.
+
+If whitelist is used alone, value membership is checked against the
+whitelist only. If the value is found, the function returns ``True``.
+Otherwise, it returns ``False``.
+
+If blacklist is used alone, value membership is checked against the
+blacklist only. If the value is found, the function returns ``False``.
+Otherwise, it returns ``True``.
+
+If both a whitelist and a blacklist are provided, value membership in the
+blacklist will be examined first. If the value is not found in the blacklist,
+then the whitelist is checked. If the value isn't found in the whitelist,
+the function returns ``False``.
+
+Whitelist Example:
 
 .. code-block:: jinja
 
-  {{ 5 | check_whitelist_blacklist(whitelist=[5, 6, 7]) }}
-  {{ 5 | check_whitelist_blacklist(blacklist=[5, 6, 7]) }}
+    {{ 5 | check_whitelist_blacklist(whitelist=[5, 6, 7]) }}
 
 Returns:
 
 .. code-block:: python
 
-  True
+    True
 
+Blacklist Example:
+
+.. code-block:: jinja
+
+    {{ 5 | check_whitelist_blacklist(blacklist=[5, 6, 7]) }}
+
+.. code-block:: python
+
+    False
 
 .. jinja_ref:: date_format
 
@@ -825,6 +865,13 @@ Example:
 
   {{ 'wall of text' | to_bytes }}
 
+.. note::
+
+    This option may have adverse effects when using the default renderer, ``yaml_jinja``.
+    This is due to the fact that YAML requires proper handling in regard to special
+    characters. Please see the section on :ref:`YAML ASCII support <yaml_plain_ascii>`
+    in the :ref:`YAML Idiosyncracies <yaml-idiosyncrasies>` documentation for more
+    information.
 
 .. jinja_ref:: json_decode_list
 
@@ -876,16 +923,22 @@ Returns:
 ------------
 
 .. versionadded:: 2017.7.0
+.. versionadded:: Oxygen
+    Renamed from ``rand_str`` to ``random_hash`` to more accurately describe
+    what the filter does.
 
-Generate a random string and applies a hash. Default hashing: md5.
+Generates a random number between 1 and the number passed to the filter, and
+then hashes it. The default hash type is the one specified by the minion's
+:conf_minion:`hash_type` config option, but an alternate hash type can be
+passed to the filter as an argument.
 
 Example:
 
 .. code-block:: jinja
 
-  {% set passwd_length = 17 %}
-  {{ passwd_length | rand_str }}
-  {{ passwd_length | rand_str('sha512') }}
+  {% set num_range = 99999999 %}
+  {{ num_range | rand_str }}
+  {{ num_range | rand_str('sha512') }}
 
 Returns:
 
@@ -1186,7 +1239,7 @@ Example:
 
 .. code-block:: jinja
 
-  {{ ['192.168.0.1', 'foo', 'bar', 'fe80::'] | ipv4 }}
+  {{ ['192.168.0.1', 'foo', 'bar', 'fe80::'] | ipv6 }}
 
 Returns:
 
@@ -1202,7 +1255,12 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return the list of hosts within a networks.
+Return the list of hosts within a networks. This utility works for both IPv4 and IPv6.
+
+.. note::
+
+    When running this command with a large IPv6 network, the command will
+    take a long time to gather all of the hosts.
 
 Example:
 
@@ -1224,7 +1282,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return the size of the network.
+Return the size of the network. This utility works for both IPv4 and IPv6.
 
 Example:
 
@@ -1284,6 +1342,13 @@ Example:
 
   {{ '00:11:22:33:44:55' | mac_str_to_bytes }}
 
+.. note::
+
+    This option may have adverse effects when using the default renderer, ``yaml_jinja``.
+    This is due to the fact that YAML requires proper handling in regard to special
+    characters. Please see the section on :ref:`YAML ASCII support <yaml_plain_ascii>`
+    in the :ref:`YAML Idiosyncracies <yaml-idiosyncrasies>` documentation for more
+    information.
 
 .. jinja_ref:: dns_check
 
@@ -1683,6 +1748,23 @@ Will insert the following message in the minion logs:
     2017-02-01 01:24:40,728 [salt.module.logmod][ERROR   ][3779] testing jinja logging
 
 .. jinja_ref:: custom-execution-modules
+
+Python Methods
+====================
+
+A powerful feature of jinja that is only hinted at in the official jinja
+documentation is that you can use the native python methods of the
+variable type. Here is the python documentation for `string methods`_.
+
+.. code-block:: jinja
+
+  {% set hostname,domain = grains.id.partition('.')[::2] %}{{ hostname }}
+
+.. code-block:: jinja
+
+  {% set strings = grains.id.split('-') %}{{ strings[0] }}
+
+.. _`string methods`: https://docs.python.org/2/library/stdtypes.html#string-methods
 
 Custom Execution Modules
 ========================

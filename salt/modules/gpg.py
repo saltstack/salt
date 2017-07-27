@@ -22,6 +22,7 @@ import time
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -726,7 +727,7 @@ def import_key(text=None,
 
     if filename:
         try:
-            with salt.utils.flopen(filename, 'rb') as _fp:
+            with salt.utils.files.flopen(filename, 'rb') as _fp:
                 lines = _fp.readlines()
                 text = ''.join(lines)
         except IOError:
@@ -1019,13 +1020,13 @@ def sign(user=None,
         else:
             signed_data = gpg.sign(text, keyid=keyid, passphrase=gpg_passphrase)
     elif filename:
-        with salt.utils.flopen(filename, 'rb') as _fp:
+        with salt.utils.files.flopen(filename, 'rb') as _fp:
             if gnupg_version >= '1.3.1':
                 signed_data = gpg.sign(text, default_key=keyid, passphrase=gpg_passphrase)
             else:
                 signed_data = gpg.sign_file(_fp, keyid=keyid, passphrase=gpg_passphrase)
         if output:
-            with salt.utils.flopen(output, 'w') as fout:
+            with salt.utils.files.flopen(output, 'w') as fout:
                 fout.write(signed_data.data)
     else:
         raise SaltInvocationError('filename or text must be passed.')
@@ -1056,7 +1057,7 @@ def verify(text=None,
 
     signature
         Specify the filename of a detached signature.
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     CLI Example:
 
@@ -1077,10 +1078,10 @@ def verify(text=None,
         if signature:
             # need to call with fopen instead of flopen due to:
             # https://bitbucket.org/vinay.sajip/python-gnupg/issues/76/verify_file-closes-passed-file-handle
-            with salt.utils.fopen(signature, 'rb') as _fp:
+            with salt.utils.files.fopen(signature, 'rb') as _fp:
                 verified = gpg.verify_file(_fp, filename)
         else:
-            with salt.utils.flopen(filename, 'rb') as _fp:
+            with salt.utils.files.flopen(filename, 'rb') as _fp:
                 verified = gpg.verify_file(_fp)
     else:
         raise SaltInvocationError('filename or text must be passed.')
@@ -1173,12 +1174,12 @@ def encrypt(user=None,
         if GPG_1_3_1:
             # This version does not allow us to encrypt using the
             # file stream # have to read in the contents and encrypt.
-            with salt.utils.flopen(filename, 'rb') as _fp:
+            with salt.utils.files.flopen(filename, 'rb') as _fp:
                 _contents = _fp.read()
             result = gpg.encrypt(_contents, recipients, passphrase=gpg_passphrase, output=output)
         else:
             # This version allows encrypting the file stream
-            with salt.utils.flopen(filename, 'rb') as _fp:
+            with salt.utils.files.flopen(filename, 'rb') as _fp:
                 if output:
                     result = gpg.encrypt_file(_fp, recipients, passphrase=gpg_passphrase, output=output, sign=sign)
                 else:
@@ -1264,7 +1265,7 @@ def decrypt(user=None,
     if text:
         result = gpg.decrypt(text, passphrase=gpg_passphrase)
     elif filename:
-        with salt.utils.flopen(filename, 'rb') as _fp:
+        with salt.utils.files.flopen(filename, 'rb') as _fp:
             if output:
                 result = gpg.decrypt_file(_fp, passphrase=gpg_passphrase, output=output)
             else:

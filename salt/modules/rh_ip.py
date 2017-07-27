@@ -15,6 +15,7 @@ import jinja2.exceptions
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.templates
 import salt.utils.validate.net
 import salt.ext.six as six
@@ -856,7 +857,7 @@ def _parse_network_settings(opts, current):
         _raise_error_network('hostname', ['server1.example.com'])
 
     if 'nozeroconf' in opts:
-        nozeroconf = salt.utils.dequote(opts['nozerconf'])
+        nozeroconf = salt.utils.dequote(opts['nozeroconf'])
         if nozeroconf in valid:
             if nozeroconf in _CONFIG_TRUE:
                 result['nozeroconf'] = true_val
@@ -904,7 +905,7 @@ def _read_file(path):
     Reads and returns the contents of a file
     '''
     try:
-        with salt.utils.fopen(path, 'rb') as rfh:
+        with salt.utils.files.fopen(path, 'rb') as rfh:
             contents = rfh.read()
             if six.PY3:
                 contents = contents.encode(__salt_system_encoding__)
@@ -929,7 +930,7 @@ def _write_file_iface(iface, data, folder, pattern):
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.fopen(filename, 'w') as fp_:
+    with salt.utils.files.fopen(filename, 'w') as fp_:
         fp_.write(data)
 
 
@@ -937,7 +938,7 @@ def _write_file_network(data, filename):
     '''
     Writes a file to disk
     '''
-    with salt.utils.fopen(filename, 'w') as fp_:
+    with salt.utils.files.fopen(filename, 'w') as fp_:
         fp_.write(data)
 
 

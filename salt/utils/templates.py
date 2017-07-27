@@ -39,7 +39,7 @@ from salt.exceptions import (
 import salt.utils.jinja
 import salt.utils.network
 from salt.utils.odict import OrderedDict
-from salt.utils.decorators import JinjaFilter, JinjaTest
+from salt.utils.decorators import JinjaFilter, JinjaTest, JinjaGlobal
 from salt import __path__ as saltpath
 
 log = logging.getLogger(__name__)
@@ -72,6 +72,9 @@ class AliasedLoader(object):
 
     def __getattr__(self, name):
         return getattr(self.wrapped, name)
+
+    def __contains__(self, name):
+        return name in self.wrapped
 
 
 class AliasedModule(object):
@@ -269,7 +272,7 @@ def _get_jinja_error(trace, context=None):
     if add_log:
         if template_path:
             out = '\n{0}\n'.format(msg.splitlines()[0])
-            with salt.utils.fopen(template_path) as fp_:
+            with salt.utils.files.fopen(template_path) as fp_:
                 template_contents = fp_.read()
             out += salt.utils.get_context(
                 template_contents,
@@ -329,6 +332,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.tests.update(JinjaTest.salt_jinja_tests)
     jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
+    jinja_env.globals.update(JinjaGlobal.salt_jinja_globals)
 
     # globals
     jinja_env.globals['odict'] = OrderedDict
@@ -523,7 +527,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
             return {'result': True,
                     'data': data}
         tgt = salt.utils.files.mkstemp()
-        with salt.utils.fopen(tgt, 'w+') as target:
+        with salt.utils.files.fopen(tgt, 'w+') as target:
             target.write(data)
         return {'result': True,
                 'data': tgt}

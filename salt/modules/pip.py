@@ -85,6 +85,7 @@ import sys
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import tempfile
 import salt.utils.locales
 import salt.utils.url
@@ -204,7 +205,7 @@ def _find_req(link):
 
     logger.info('_find_req -- link = %s', str(link))
 
-    with salt.utils.fopen(link) as fh_link:
+    with salt.utils.files.fopen(link) as fh_link:
         child_links = rex_pip_chain_read.findall(fh_link.read())
 
     base_path = os.path.dirname(link)
@@ -936,7 +937,7 @@ def uninstall(pkgs=None,
             pkgs = [p.strip() for p in pkgs.split(',')]
         if requirements:
             for requirement in requirements:
-                with salt.utils.fopen(requirement) as rq_:
+                with salt.utils.files.fopen(requirement) as rq_:
                     for req in rq_:
                         try:
                             req_pkg, _ = req.split('==')

@@ -337,7 +337,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.snapper.changed_files', MagicMock(return_value=["/tmp/foo2"])), \
                 patch('salt.modules.snapper._is_text_file', MagicMock(return_value=True)), \
                 patch('os.path.isfile', MagicMock(side_effect=[False, True])), \
-                patch('salt.utils.fopen', mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post'])), \
+                patch('salt.utils.files.fopen', mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post'])), \
                 patch('salt.modules.snapper.snapper.ListConfigs', MagicMock(return_value=DBUS_RET['ListConfigs'])):
             if sys.version_info < (2, 7):
                 self.assertEqual(snapper.diff(), {"/tmp/foo2": MODULE_RET['DIFF']['/tmp/foo26']})
@@ -360,7 +360,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 mock_open(read_data=FILE_CONTENT["/tmp/foo"]['post']).return_value,
                 mock_open(read_data=FILE_CONTENT["/tmp/foo2"]['post']).return_value,
             ]
-            with patch('salt.utils.fopen') as fopen_mock:
+            with patch('salt.utils.files.fopen') as fopen_mock:
                 fopen_mock.side_effect = fopen_effect
                 module_ret = {
                     "/tmp/foo": MODULE_RET['DIFF']["/tmp/foo"],
@@ -388,7 +388,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 mock_open(read_data="dummy binary").return_value,
                 mock_open(read_data="dummy binary").return_value,
             ]
-            with patch('salt.utils.fopen') as fopen_mock:
+            with patch('salt.utils.files.fopen') as fopen_mock:
                 fopen_mock.side_effect = fopen_effect
                 module_ret = {
                     "/tmp/foo3": MODULE_RET['DIFF']["/tmp/foo3"],

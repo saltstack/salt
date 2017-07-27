@@ -67,10 +67,10 @@ from Crypto.Signature import PKCS1_v1_5
 # Import salt libs
 import salt.ext.six as six
 from salt.ext.six.moves import http_client  # pylint: disable=import-error,no-name-in-module
-import salt.utils.http
 import salt.utils.cloud
+import salt.utils.files
+import salt.utils.http
 import salt.config as config
-from salt.utils.cloud import is_public_ip
 from salt.cloud.libcloudfuncs import node_state
 from salt.exceptions import (
     SaltCloudSystemExit,
@@ -693,7 +693,7 @@ def reformat_node(item=None, full=False):
     item['public_ips'] = []
     if 'ips' in item:
         for ip in item['ips']:
-            if is_public_ip(ip):
+            if salt.utils.cloud.is_public_ip(ip):
                 item['public_ips'].append(ip)
             else:
                 item['private_ips'].append(ip)
@@ -951,7 +951,7 @@ def import_key(kwargs=None, call=None):
         ))
         return False
 
-    with salt.utils.fopen(kwargs['keyfile'], 'r') as fp_:
+    with salt.utils.files.fopen(kwargs['keyfile'], 'r') as fp_:
         kwargs['key'] = fp_.read()
 
     send_data = {'name': kwargs['keyname'], 'key': kwargs['key']}
@@ -1070,11 +1070,11 @@ def query(action=None,
 
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%a, %d %b %Y %H:%M:%S %Z').strip()
-    with salt.utils.fopen(ssh_keyfile, 'r') as kh_:
-        rsa_key = RSA.importKey(kh_)
+    with salt.utils.files.fopen(ssh_keyfile, 'r') as kh_:
+        rsa_key = RSA.importKey(kh_.read())
     rsa_ = PKCS1_v1_5.new(rsa_key)
     hash_ = SHA256.new()
-    hash_.update(timestamp)
+    hash_.update(timestamp.encode(__salt_system_encoding__))
     signed = base64.b64encode(rsa_.sign(hash_))
     keyid = '/{0}/keys/{1}'.format(user.split('/')[0], ssh_keyname)
 
@@ -1085,7 +1085,7 @@ def query(action=None,
         'Date': timestamp,
         'Authorization': 'Signature keyId="{0}",algorithm="rsa-sha256" {1}'.format(
             keyid,
-            signed
+            signed.decode(__salt_system_encoding__)
         ),
     }
 

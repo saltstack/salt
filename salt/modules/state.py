@@ -29,6 +29,7 @@ import salt.config
 import salt.payload
 import salt.state
 import salt.utils
+import salt.utils.files
 import salt.utils.jid
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -258,12 +259,22 @@ def _get_opts(**kwargs):
     Return a copy of the opts for use, optionally load a local config on top
     '''
     opts = copy.deepcopy(__opts__)
+
     if 'localconfig' in kwargs:
-        opts = salt.config.minion_config(kwargs['localconfig'], defaults=opts)
-    else:
-        if 'saltenv' in kwargs:
+        return salt.config.minion_config(kwargs['localconfig'], defaults=opts)
+
+    if 'saltenv' in kwargs:
+        saltenv = kwargs['saltenv']
+        if saltenv is not None and not isinstance(saltenv, six.string_types):
+            opts['environment'] = str(kwargs['saltenv'])
+        else:
             opts['environment'] = kwargs['saltenv']
-        if 'pillarenv' in kwargs:
+
+    if 'pillarenv' in kwargs:
+        pillarenv = kwargs['pillarenv']
+        if pillarenv is not None and not isinstance(pillarenv, six.string_types):
+            opts['pillarenv'] = str(kwargs['pillarenv'])
+        else:
             opts['pillarenv'] = kwargs['pillarenv']
 
     return opts
@@ -621,7 +632,7 @@ def request(mods=None,
         if salt.utils.is_windows():
             # Make sure cache file isn't read-only
             __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-        with salt.utils.fopen(notify_path, 'w+b') as fp_:
+        with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
             serial.dump(req, fp_)
     except (IOError, OSError):
         msg = 'Unable to write state request file {0}. Check permission.'
@@ -645,7 +656,7 @@ def check_request(name=None):
     notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
     serial = salt.payload.Serial(__opts__)
     if os.path.isfile(notify_path):
-        with salt.utils.fopen(notify_path, 'rb') as fp_:
+        with salt.utils.files.fopen(notify_path, 'rb') as fp_:
             req = serial.load(fp_)
         if name:
             return req[name]
@@ -685,7 +696,7 @@ def clear_request(name=None):
             if salt.utils.is_windows():
                 # Make sure cache file isn't read-only
                 __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-            with salt.utils.fopen(notify_path, 'w+b') as fp_:
+            with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
                 serial.dump(req, fp_)
         except (IOError, OSError):
             msg = 'Unable to write state request file {0}. Check permission.'
@@ -1076,7 +1087,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     umask = os.umask(0o77)
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
-            with salt.utils.fopen(cfn, 'rb') as fp_:
+            with salt.utils.files.fopen(cfn, 'rb') as fp_:
                 high_ = serial.load(fp_)
                 return st_.state.call_high(high_, orchestration_jid)
     os.umask(umask)
@@ -1112,7 +1123,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
         if salt.utils.is_windows():
             # Make sure cache file isn't read-only
             __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
-        with salt.utils.fopen(cache_file, 'w+b') as fp_:
+        with salt.utils.files.fopen(cache_file, 'w+b') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
         msg = 'Unable to write to SLS cache file {0}. Check permission.'
@@ -1123,7 +1134,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     __opts__['test'] = orig_test
 
     try:
-        with salt.utils.fopen(cfn, 'w+b') as fp_:
+        with salt.utils.files.fopen(cfn, 'w+b') as fp_:
             try:
                 serial.dump(high_, fp_)
             except TypeError:
@@ -1780,7 +1791,7 @@ def pkg(pkg_path,
     s_pkg.extractall(root)
     s_pkg.close()
     lowstate_json = os.path.join(root, 'lowstate.json')
-    with salt.utils.fopen(lowstate_json, 'r') as fp_:
+    with salt.utils.files.fopen(lowstate_json, 'r') as fp_:
         lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
     # Check for errors in the lowstate
     for chunk in lowstate:
@@ -1788,14 +1799,14 @@ def pkg(pkg_path,
             return lowstate
     pillar_json = os.path.join(root, 'pillar.json')
     if os.path.isfile(pillar_json):
-        with salt.utils.fopen(pillar_json, 'r') as fp_:
+        with salt.utils.files.fopen(pillar_json, 'r') as fp_:
             pillar_override = json.load(fp_)
     else:
         pillar_override = None
 
     roster_grains_json = os.path.join(root, 'roster_grains.json')
     if os.path.isfile(roster_grains_json):
-        with salt.utils.fopen(roster_grains_json, 'r') as fp_:
+        with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
             roster_grains = json.load(fp_, object_hook=salt.utils.decode_dict)
 
     popts = _get_opts(**kwargs)

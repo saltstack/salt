@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
-Support for reboot, shutdown, etc
+Support for reboot, shutdown, etc on POSIX-like systems.
+
+.. note::
+
+    If you have configured a wrapper such as ``molly-guard`` to
+    intercept *interactive* shutdown commands, be aware that calling
+    ``system.halt``, ``system.poweroff``, ``system.reboot``, and
+    ``system.shutdown`` with ``salt-call`` will hang indefinitely
+    while the wrapper script waits for user input. Calling them with
+    ``salt`` will work as expected.
+
 '''
 from __future__ import absolute_import
 
@@ -11,6 +21,7 @@ import os.path
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.ext.six as six
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -24,7 +35,7 @@ def __virtual__():
     Windows, Solaris, and Mac have their own modules
     '''
     if salt.utils.is_windows():
-        return (False, 'This module is not available on windows')
+        return (False, 'This module is not available on Windows')
 
     if salt.utils.is_darwin():
         return (False, 'This module is not available on Mac OS')
@@ -415,7 +426,7 @@ def get_system_date(utc_offset=None):
 
 def set_system_date(newdate, utc_offset=None):
     '''
-    Set the Windows system date. Use <mm-dd-yy> format for the date.
+    Set the system date. Use <mm-dd-yy> format for the date.
 
     :param str newdate:
         The date to set. Can be any of the following formats
@@ -503,7 +514,7 @@ def get_computer_desc():
     else:
         pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
         try:
-            with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+            with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
                 for line in mach_info.readlines():
                     match = pattern.match(line)
                     if match:
@@ -547,14 +558,14 @@ def set_computer_desc(desc):
         return True if result == 0 else False
 
     if not os.path.isfile('/etc/machine-info'):
-        with salt.utils.fopen('/etc/machine-info', 'w'):
+        with salt.utils.files.fopen('/etc/machine-info', 'w'):
             pass
 
     is_pretty_hostname_found = False
     pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
     new_line = 'PRETTY_HOSTNAME="{0}"'.format(desc)
     try:
-        with salt.utils.fopen('/etc/machine-info', 'r+') as mach_info:
+        with salt.utils.files.fopen('/etc/machine-info', 'r+') as mach_info:
             lines = mach_info.readlines()
             for i, line in enumerate(lines):
                 if pattern.match(line):

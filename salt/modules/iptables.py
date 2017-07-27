@@ -37,6 +37,7 @@ import string
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
 from salt.ext import six
@@ -970,7 +971,7 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
 
     rules = ''
     if conf_file:
-        with salt.utils.fopen(conf_file, 'r') as ifile:
+        with salt.utils.files.fopen(conf_file, 'r') as ifile:
             rules = ifile.read()
     elif in_mem:
         cmd = '{0}-save' . format(_iptables_cmd(family))

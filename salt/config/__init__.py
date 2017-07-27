@@ -33,6 +33,7 @@ from salt.ext.six.moves.urllib.parse import urlparse
 # Import salt libs
 import salt.utils
 import salt.utils.dictupdate
+import salt.utils.files
 import salt.utils.network
 import salt.syspaths
 import salt.utils.validate.path
@@ -352,7 +353,7 @@ VALID_OPTS = {
     # The TCP port on which minion events should be pulled if ipc_mode is TCP
     'tcp_pull_port': int,
 
-    # The TCP port on which events for the master should be pulled if ipc_mode is TCP
+    # The TCP port on which events for the master should be published if ipc_mode is TCP
     'tcp_master_pub_port': int,
 
     # The TCP port on which events for the master should be pulled if ipc_mode is TCP
@@ -1932,7 +1933,7 @@ def _read_conf_file(path):
     Read in a config file from a given path and process it into a dictionary
     '''
     log.debug('Reading configuration from {0}'.format(path))
-    with salt.utils.fopen(path, 'r') as conf_file:
+    with salt.utils.files.fopen(path, 'r') as conf_file:
         try:
             conf_opts = yaml.safe_load(conf_file.read()) or {}
         except yaml.YAMLError as err:
@@ -2024,8 +2025,8 @@ def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
             log.debug('Writing {0} based on {1}'.format(path, template))
-            with salt.utils.fopen(path, 'w') as out:
-                with salt.utils.fopen(template, 'r') as ifile:
+            with salt.utils.files.fopen(path, 'w') as out:
+                with salt.utils.files.fopen(template, 'r') as ifile:
                     ifile.readline()  # skip first line
                     out.write(ifile.read())
 
@@ -3313,7 +3314,7 @@ def _cache_id(minion_id, cache_file):
     Helper function, writes minion id to a cache file.
     '''
     try:
-        with salt.utils.fopen(cache_file, 'w') as idf:
+        with salt.utils.files.fopen(cache_file, 'w') as idf:
             idf.write(minion_id)
     except (IOError, OSError) as exc:
         log.error('Could not cache minion ID: {0}'.format(exc))
@@ -3346,7 +3347,7 @@ def get_id(opts, cache_minion_id=False):
 
     if opts.get('minion_id_caching', True):
         try:
-            with salt.utils.fopen(id_cache) as idf:
+            with salt.utils.files.fopen(id_cache) as idf:
                 name = idf.readline().strip()
                 bname = salt.utils.to_bytes(name)
                 if bname.startswith(codecs.BOM):  # Remove BOM if exists
@@ -3748,7 +3749,7 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
         # Make sure token is still valid
         expire = opts.get('token_expire', 43200)
         if os.stat(opts['token_file']).st_mtime + expire > time.mktime(time.localtime()):
-            with salt.utils.fopen(opts['token_file']) as fp_:
+            with salt.utils.files.fopen(opts['token_file']) as fp_:
                 opts['token'] = fp_.read().strip()
     # On some platforms, like OpenBSD, 0.0.0.0 won't catch a master running on localhost
     if opts['interface'] == '0.0.0.0':

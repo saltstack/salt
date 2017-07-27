@@ -16,6 +16,7 @@ from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.ext.six.moves import range
 
 
@@ -217,7 +218,7 @@ class ShadowModuleTest(ModuleCase):
         #saving shadow file
         if not os.access("/etc/shadow", os.R_OK | os.W_OK):
             self.skipTest('Could not save initial state of /etc/shadow')
-        with salt.utils.fopen('/etc/shadow', 'r') as sFile:
+        with salt.utils.files.fopen('/etc/shadow', 'r') as sFile:
             shadow = sFile.read()
         #set root password
         self.assertTrue(self.run_function('shadow.set_password', ['root', self._password]))
@@ -228,5 +229,5 @@ class ShadowModuleTest(ModuleCase):
         self.assertEqual(
             self.run_function('shadow.info', ['root'])['passwd'], '')
         #restore shadow file
-        with salt.utils.fopen('/etc/shadow', 'w') as sFile:
+        with salt.utils.files.fopen('/etc/shadow', 'w') as sFile:
             sFile.write(shadow)

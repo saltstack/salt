@@ -10,6 +10,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -115,7 +116,7 @@ def parse_config(config_file=None):
         config_file = _config_file()
     ret = {}
     if _check_config_exists(config_file):
-        with salt.utils.fopen(config_file) as ifile:
+        with salt.utils.files.fopen(config_file) as ifile:
             for line in ifile:
                 key, val = line.split('=')
                 ret[key] = val

@@ -16,6 +16,7 @@ from tests.support.paths import FILES, TMP
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 
 class FileModuleTest(ModuleCase):
@@ -24,7 +25,7 @@ class FileModuleTest(ModuleCase):
     '''
     def setUp(self):
         self.myfile = os.path.join(TMP, 'myfile')
-        with salt.utils.fopen(self.myfile, 'w+') as fp:
+        with salt.utils.files.fopen(self.myfile, 'w+') as fp:
             fp.write('Hello\n')
         self.mydir = os.path.join(TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
@@ -123,18 +124,18 @@ class FileModuleTest(ModuleCase):
         src_patch = os.path.join(
             FILES, 'file', 'base', 'hello.patch')
         src_file = os.path.join(TMP, 'src.txt')
-        with salt.utils.fopen(src_file, 'w+') as fp:
+        with salt.utils.files.fopen(src_file, 'w+') as fp:
             fp.write('Hello\n')
 
         # dry-run should not modify src_file
         ret = self.minion_run('file.patch', src_file, src_patch, dry_run=True)
         assert ret['retcode'] == 0, repr(ret)
-        with salt.utils.fopen(src_file) as fp:
+        with salt.utils.files.fopen(src_file) as fp:
             self.assertEqual(fp.read(), 'Hello\n')
 
         ret = self.minion_run('file.patch', src_file, src_patch)
         assert ret['retcode'] == 0, repr(ret)
-        with salt.utils.fopen(src_file) as fp:
+        with salt.utils.files.fopen(src_file) as fp:
             self.assertEqual(fp.read(), 'Hello world\n')
 
     def test_remove_file(self):
