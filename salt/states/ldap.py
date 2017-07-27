@@ -336,16 +336,16 @@ def managed(name, entries, connect_spec=None):
                     changed_old[dn] = o
                     changed_new[dn] = n
                     success_dn_set[dn] = True
-                except ldap3.LDAPError as err:
-                    log.exception('failed to %s entry %s (%s)', op, dn, err)
-                    errs.append((op, dn, err))
+                except ldap3.LDAPError:
+                    log.exception('failed to %s entry %s', op, dn)
+                    errs.append((op, dn))
                     continue
 
             if len(errs):
                 ret['result'] = False
                 ret['comment'] = 'failed to ' \
-                                 + ', '.join((op + ' entry ' + dn + '(' + str(err) + ')'
-                                              for op, dn, err in errs))
+                                 + ', '.join((op + ' entry ' + dn
+                                              for op, dn in errs))
 
     # set ret['changes'].  filter out any unchanged attributes, and
     # convert the value sets to lists before returning them to the
