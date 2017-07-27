@@ -78,7 +78,6 @@ import salt.utils.dicttrim
 import salt.utils.process
 import salt.utils.zeromq
 import salt.log.setup
-import salt.defaults.exitcodes
 import salt.transport.ipc
 
 log = logging.getLogger(__name__)
