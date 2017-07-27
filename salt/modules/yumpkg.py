@@ -902,7 +902,6 @@ def refresh_db(**kwargs):
         # This feature is disable because it is not used by Salt and lasts a lot with using large repo like EPEL
         update_cmd.append('--setopt=autocheck_running_kernel=false')
 
-
     for args in (repo_arg, exclude_arg, branch_arg):
         if args:
             clean_cmd.extend(args)
