@@ -519,8 +519,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
 
         try:
             # Use cgi.parse_header to correctly separate parameters from value
-            header = cgi.parse_header(self.request.headers['Content-Type'])
-            value, parameters = header
+            value, parameters = cgi.parse_header(self.request.headers['Content-Type'])
             return ct_in_map[value](data)
         except KeyError:
             self.send_error(406)
@@ -534,7 +533,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         if not self.request.body:
             return
         data = self.deserialize(self.request.body)
-        self.raw_data = copy(data)
+        self.request_payload = copy(data)
 
         if self.request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
             if 'arg' in data and not isinstance(data['arg'], list):
@@ -690,15 +689,13 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             }}
         '''
         try:
-            request_payload = self.deserialize(self.request.body)
-
-            if not isinstance(request_payload, dict):
+            if not isinstance(self.request_payload, dict):
                 self.send_error(400)
                 return
 
-            creds = {'username': request_payload['username'],
-                     'password': request_payload['password'],
-                     'eauth': request_payload['eauth'],
+            creds = {'username': self.request_payload['username'],
+                     'password': self.equest_payload['password'],
+                     'eauth': self.equest_payload['eauth'],
                      }
         # if any of the args are missing, its a bad request
         except KeyError:
@@ -1623,7 +1620,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             listen=False)
 
         ret = self.event.fire_event({
-            'post': self.raw_data,
+            'post': self.request_payload,
             'get': dict(self.request.query_arguments),
             # In Tornado >= v4.0.3, the headers come
             # back as an HTTPHeaders instance, which
