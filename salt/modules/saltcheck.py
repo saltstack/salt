@@ -85,12 +85,11 @@ def run_state_tests(state):
             missing_tests = missing_tests + 1
         else:
             for dummy, val in results[state].items():
-                if val:
+                log.info("dummy={}, val={}".format(dummy, val))
+                if val.startswith('Pass'):
                     passed = passed + 1
-                elif val.upper().startswith('False'):
+                if val.startswith('Fail'):
                     failed = failed + 1
-                else:
-                    pass
     out_list = []
     for key, value in results.items():
         out_list.append({key: value})
@@ -127,12 +126,11 @@ def run_highstate_tests():
             missing_tests = missing_tests + 1
         else:
             for dummy, val in results[state].items():
-                if val:
+                log.info("dummy={}, val={}".format(dummy, val))
+                if val.startswith('Pass'):
                     passed = passed + 1
-                elif val.upper().startswith('False'):
+                if val.startswith('Fail'):
                     failed = failed + 1
-                else:
-                    pass
     out_list = []
     for key, value in results.items():
         out_list.append({key: value})
@@ -244,13 +242,13 @@ class SaltCheck(object):
         value = False
         try:
             if args and kwargs:
-                value = self.salt_lc.function(fun, *args, **kwargs)
+                value = self.salt_lc.cmd(fun, *args, **kwargs)
             elif args and not kwargs:
-                value = self.salt_lc.function(fun, *args)
+                value = self.salt_lc.cmd(fun, *args)
             elif not args and kwargs:
-                value = self.salt_lc.function(fun, **kwargs)
+                value = self.salt_lc.cmd(fun, **kwargs)
             else:
-                value = self.salt_lc.function(fun)
+                value = self.salt_lc.cmd(fun)
         except salt.exceptions.SaltException:
             raise
         except Exception:
@@ -266,7 +264,6 @@ class SaltCheck(object):
             expected_return = test_dict['expected-return']
             kwargs = test_dict.get('kwargs', None)
             actual_return = self.call_salt_command(mod_and_func, args, kwargs)
-            # checking for membership in a list does not require a type cast
             if assertion != "assertIn":
                 expected_return = self.cast_expected_to_returned_type(expected_return, actual_return)
             if assertion == "assertEqual":
@@ -290,9 +287,9 @@ class SaltCheck(object):
             elif assertion == "assertLessEqual":
                 value = self.__assert_less_equal(expected_return, actual_return)
             else:
-                value = False
+                value = "Fail"
         else:
-            return False
+            return "Fail"
         return value
 
     @staticmethod
@@ -320,12 +317,12 @@ class SaltCheck(object):
         '''
         Test if two objects are equal
         '''
-        result = True
+        result = "Pass"
 
         try:
             assert (expected == returned), "{0} is not equal to {1}".format(expected, returned)
         except AssertionError as err:
-            result = "False: " + str(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -333,11 +330,11 @@ class SaltCheck(object):
         '''
         Test if two objects are not equal
         '''
-        result = (True)
+        result = "Pass"
         try:
             assert (expected != returned), "{0} is equal to {1}".format(expected, returned)
         except AssertionError as err:
-            result = "False: " + str(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -345,11 +342,11 @@ class SaltCheck(object):
         '''
         Test if an boolean is True
         '''
-        result = (True)
+        result = "Pass"
         try:
             assert (returned is True), "{0} not True".format(returned)
         except AssertionError as err:
-            result = "False: " + str(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -357,7 +354,7 @@ class SaltCheck(object):
         '''
         Test if an boolean is False
         '''
-        result = (True)
+        result = "Pass"
         if isinstance(returned, str):
             try:
                 returned = bool(returned)
@@ -366,7 +363,7 @@ class SaltCheck(object):
         try:
             assert (returned is False), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "False: " + str(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -374,11 +371,11 @@ class SaltCheck(object):
         '''
         Test if a value is in the list of returned values
         '''
-        result = (True)
+        result = "Pass"
         try:
             assert (expected in returned), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "False: " + str(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -386,11 +383,11 @@ class SaltCheck(object):
         '''
         Test if a value is not in the list of returned values
         '''
-        result = (True)
+        result = "Pass"
         try:
             assert (expected not in returned), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "False: " + str(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -398,11 +395,11 @@ class SaltCheck(object):
         '''
         Test if a value is greater than the returned value
         '''
-        result = (True)
+        result = "Pass"
         try:
             assert (expected > returned), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "False: " + str(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -410,11 +407,11 @@ class SaltCheck(object):
         '''
         Test if a value is greater than or equal to the returned value
         '''
-        result = (True)
+        result = "Pass"
         try:
             assert (expected >= returned), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "False: " + str(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -422,11 +419,11 @@ class SaltCheck(object):
         '''
         Test if a value is less than the returned value
         '''
-        result = (True)
+        result = "Pass"
         try:
             assert (expected < returned), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "False: " + str(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -434,11 +431,11 @@ class SaltCheck(object):
         '''
         Test if a value is less than or equal to the returned value
         '''
-        result = (True)
+        result = "Pass"
         try:
             assert (expected <= returned), "{0} not False".format(returned)
         except AssertionError as err:
-            result = "False: " + str(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod

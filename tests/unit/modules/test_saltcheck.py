@@ -210,7 +210,7 @@ class SaltCheckTestCase(TestCase):
             a = 100
             b = 100
             mybool = sc._SaltCheck__assert_greater_equal(a, b)
-            self.assertEqual(mybool, True)
+            self.assertEqual(mybool, 'Pass')
 
     def test__assert_less1(self):
         with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value=True),
@@ -270,7 +270,7 @@ class SaltCheckTestCase(TestCase):
             a = 100
             b = 100
             mybool = sc._SaltCheck__assert_less_equal(a, b)
-            self.assertEqual(mybool, True)
+            self.assertEqual(mybool, 'Pass')
 
     def test_run_test_1(self):
         with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value=True),
@@ -279,7 +279,7 @@ class SaltCheckTestCase(TestCase):
                                              'cp.cache_master': MagicMock(return_value=[True])
                                             }):
             returned = saltcheck.run_test(test={"module_and_function": "test.echo", "assertion": "assertEqual", "expected-return": "This works!", "args":["This works!"] })
-            self.assertEqual(returned, True)
+            self.assertEqual(returned, 'Pass')
 
     # pillar injection not supported yet 
     #def test_run_test_2(self):
