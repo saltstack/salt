@@ -129,7 +129,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         'host': ('ipv6-private', 'ipv6-global', 'ipv4-private', 'ipv4-public')
     })
     if isinstance(roster_order, (tuple, list)):
-        salt.utils.warn_until('Oxygen',
+        salt.utils.warn_until('Fluorine',
                               'Using legacy syntax for roster_order')
         roster_order = {
             'host': roster_order
@@ -137,7 +137,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     for config_key, order in roster_order.items():
         for idx, key in enumerate(order):
             if key in ('public', 'private', 'local'):
-                salt.utils.warn_until('Oxygen',
+                salt.utils.warn_until('Fluorine',
                                       'roster_order {0} will include IPv6 soon. '
                                       'Set order to ipv4-{0} if needed.'.format(key))
                 order[idx] = 'ipv4-' + key
