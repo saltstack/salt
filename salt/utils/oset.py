@@ -21,6 +21,7 @@ Rob Speer's changes are as follows:
     - added a __getstate__ and __setstate__ so it can be pickled
     - added __getitem__
 """
+from __future__ import absolute_import
 import collections
 
 SLICE_ALL = slice(None)
