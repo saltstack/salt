@@ -82,7 +82,6 @@ def run_state_tests(state):
     missing_tests = 0
     for state in results:
         if len(results[state].items()) == 0:
-            # results[state]['test results'] = {'pass': passed, 'fail': failed}
             missing_tests = missing_tests + 1
         else:
             for dummy, val in results[state].items():
@@ -91,11 +90,14 @@ def run_state_tests(state):
                 elif val.upper().startswith('False'):
                     failed = failed + 1
                 else:
-                    # failed = 0
-                    # passed = 0
                     pass
-    results['state test results'] = {'passed': passed, 'failed': failed, 'missing_tests': missing_tests}
-    return results
+    out_list = []
+    for key, value in results.items():
+        out_list.append({key: value})
+    out_list.sort()
+    out_list.append({"TEST RESULTS": {'passed': passed, 'failed': failed, 'missing_tests': missing_tests}})
+    return out_list
+
 
 def run_highstate_tests():
     '''
@@ -108,7 +110,6 @@ def run_highstate_tests():
     stl = StateTestLoader(search_paths=paths)
     results = {}
     sls_list = _get_top_states()
-    #sls_list = _get_state_sls(state)
     for state_name in sls_list:
         mypath = stl.convert_sls_to_path(state_name)
         stl.add_test_files_for_sls(mypath)
@@ -123,7 +124,6 @@ def run_highstate_tests():
     missing_tests = 0
     for state in results:
         if len(results[state].items()) == 0:
-            # results[state]['test results'] = {'pass': passed, 'fail': failed}
             missing_tests = missing_tests + 1
         else:
             for dummy, val in results[state].items():
@@ -132,41 +132,13 @@ def run_highstate_tests():
                 elif val.upper().startswith('False'):
                     failed = failed + 1
                 else:
-                    # failed = 0
-                    # passed = 0
                     pass
-    results['state test results'] = {'passed': passed, 'failed': failed, 'missing_tests': missing_tests}
-    return results
-
-
-def run_highstate_tests_old():
-    '''
-    Returns the output of running all salt checks of states that would apply for a highstate
-    CLI Example::
-        salt '*' saltcheck.run_highstate_tests
-    '''
-    # there is a bug here....b/c a state can deeply nest it is easy to get false numbers in terms of tests run
-    # with results....need to redo this to load in all tests and pass that dict to SaltCheck - similar to run_state_tests
-    states = _get_top_states()
-    all_states = {}
-    passed = 0
-    failed = 0
-    missing_tests = 0
-    for sta in states:
-        out_dict = None
-        out_dict = run_state_tests(sta)
-        log.info("state-test-result: {}".format(out_dict))
-        passed = out_dict['state test results']['passed'] + passed
-        failed = out_dict['state test results']['failed'] + failed
-        missing_tests = out_dict['state test results']['missing_tests'] + missing_tests
-        r = None
-        r = dict(out_dict)
-        del r['state test results']
-        log.info("out_dict_after_removing_state_test_results: {}".format(out_dict))
-        log.info("r_dict: {}".format(r))
-        all_states.update(r)
-    all_states.update({'test_results': {'passed': passed, 'failed': failed, 'missing_tests': missing_tests} })
-    return all_states
+    out_list = []
+    for key, value in results.items():
+        out_list.append({key: value})
+    out_list.sort()
+    out_list.append({"TEST RESULTS": {'passed': passed, 'failed': failed, 'missing_tests': missing_tests}})
+    return out_list
 
 
 def _is_valid_module(module):
@@ -197,15 +169,9 @@ def _get_top_states():
         returned = __salt__['state.show_top']()
         for i in returned['base']:
             alt_states.append(i)
-        #alt_states = []
-        #for state in returned['base']:
-        #    state_bits = state.split(".")
-        #    state_name = state_bits[0]
-        #    if state_name not in alt_states:
-        #        alt_states.append(state_name)
     except Exception:
         raise
-    #log.info("top states: {}".format(alt_states))
+    # log.info("top states: {}".format(alt_states))
     return alt_states
 
 
