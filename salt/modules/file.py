@@ -710,18 +710,21 @@ def check_hash(path, file_hash):
 
     hash
         The hash to check against the file specified in the ``path`` argument.
-        For versions 2016.11.4 and newer, the hash can be specified without an
+
+        .. versionchanged:: 2016.11.4
+
+        For this and newer versions the hash can be specified without an
         accompanying hash type (e.g. ``e138491e9d5b97023cea823fe17bac22``),
         but for earlier releases it is necessary to also specify the hash type
-        in the format ``<hash_type>:<hash_value>`` (e.g.
-        ``md5:e138491e9d5b97023cea823fe17bac22``).
+        in the format ``<hash_type>=<hash_value>`` (e.g.
+        ``md5=e138491e9d5b97023cea823fe17bac22``).
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.check_hash /etc/fstab e138491e9d5b97023cea823fe17bac22
-        salt '*' file.check_hash /etc/fstab md5:e138491e9d5b97023cea823fe17bac22
+        salt '*' file.check_hash /etc/fstab md5=e138491e9d5b97023cea823fe17bac22
     '''
     path = os.path.expanduser(path)
 
