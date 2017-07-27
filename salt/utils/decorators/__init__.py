@@ -542,8 +542,14 @@ class _WithDeprecated(_DeprecationDecorator):
                 f_name=function.__name__))
 
         opts = self._globals.get('__opts__', '{}')
-        use_deprecated = full_name in opts.get(self.CFG_USE_DEPRECATED, list())
-        use_superseded = full_name in opts.get(self.CFG_USE_SUPERSEDED, list())
+        pillar = self._globals.get('__pillar__', '{}')
+
+        use_deprecated = full_name in opts.get(self.CFG_USE_DEPRECATED, list()) or \
+            full_name in pillar.get(self.CFG_USE_DEPRECATED, list())
+
+        use_superseded = full_name in opts.get(self.CFG_USE_SUPERSEDED, list()) or \
+            full_name in pillar.get(self.CFG_USE_SUPERSEDED, list())
+
         if use_deprecated and use_superseded:
             raise SaltConfigurationError("Function '{0}' is mentioned both in deprecated "
                                          "and superseded sections. Please remove any of that.".format(full_name))
@@ -567,6 +573,8 @@ class _WithDeprecated(_DeprecationDecorator):
         return func_path in self._globals.get('__opts__').get(
             self.CFG_USE_DEPRECATED, list()) or (self._policy == self.OPT_IN
                                                  and not (func_path in self._globals.get('__opts__', {}).get(
+                                                          self.CFG_USE_SUPERSEDED, list()))
+                                                 and not (func_path in self._globals.get('__pillar__', {}).get(
                                                           self.CFG_USE_SUPERSEDED, list()))), func_path
 
     def __call__(self, function):
