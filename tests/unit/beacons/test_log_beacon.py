@@ -51,7 +51,7 @@ class LogBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                       'must contain file option.'))
 
     def test_log_match(self):
-        with patch('salt.utils.fopen',
+        with patch('salt.utils.files.fopen',
                    mock_open(read_data=_STUB_LOG_ENTRY)):
             config = [{'file': '/var/log/auth.log',
                        'tags': {'sshd': {'regex': '.*sshd.*'}}
