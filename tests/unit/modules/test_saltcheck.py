@@ -280,13 +280,3 @@ class SaltCheckTestCase(TestCase):
                                             }):
             returned = saltcheck.run_test(test={"module_and_function": "test.echo", "assertion": "assertEqual", "expected-return": "This works!", "args":["This works!"] })
             self.assertEqual(returned, 'Pass')
-
-    # pillar injection not supported yet 
-    #def test_run_test_2(self):
-    #    with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value=True),
-    #                                         'sys.list_modules': MagicMock(return_value=['pillar']),
-    #                                         'sys.list_functions': MagicMock(return_value=['pillar.get'])
-    #                                        }):
-    #        returned = saltcheck.run_test(test={"module_and_function": "pillar.get", "pillar-data": "mykey:myvalue", "assertion": "assertEqual", "expected-return": "myvalue", "args":["mykey"] })
-    #        self.assertEqual(returned, True)
-

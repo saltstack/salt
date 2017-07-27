@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 This module should be saved as salt/modules/saltcheck.py
+This works in master and masterless configurations
 '''
 from __future__ import absolute_import
 import logging
@@ -28,8 +29,9 @@ def __virtual__():
 
 def update_master_cache():
     '''
-    Updates the master cache onto the minion - to transfer all salt-check-tests
+    Updates the master cache onto the minion - transfers all salt-check-tests
     Should be done one time before running tests, and if tests are updated
+    Can be automated by setting "auto_update_master_cache: True" in minion config
 
     CLI Example:
         salt '*' saltcheck.update_master_cache
@@ -40,13 +42,13 @@ def update_master_cache():
 
 def run_test(**kwargs):
     '''
-    Enables running one saltcheck test via cli
+    Enables running one saltcheck test via command line
     CLI Example::
         salt '*' saltcheck.run_test
-          test='{"module_and_function": "test.echo",
-            "assertion": "assertEqual",
-            "expected-return": "This works!",
-            "args":["This works!"] }'
+            test='{"module_and_function": "test.echo",
+                   "assertion": "assertEqual",
+                   "expected-return": "This works!",
+                   "args":["This works!"] }'
     '''
     # salt converts the string to a dictionary auto-magically
     scheck = SaltCheck()
@@ -54,14 +56,14 @@ def run_test(**kwargs):
     if test and isinstance(test, dict):
         return scheck.run_test(test)
     else:
-        return "test must be dictionary"
+        return "Test must be a dictionary"
 
 
 def run_state_tests(state):
     '''
     Returns the output of running all salt check test for a state
     CLI Example::
-      salt '*' saltcheck.run_state_tests postfix_ubuntu_16_04
+      salt '*' saltcheck.run_state_tests postfix
     '''
     scheck = SaltCheck()
     paths = scheck.get_state_search_path_list()
@@ -203,7 +205,6 @@ class SaltCheck(object):
                                   assertGreaterEqual
                                   assertLess assertLessEqual'''.split()
         self.auto_update_master_cache = _get_auto_update_cache_value
-        # log.info("modules are: {}".format(self.modules))
         # self.salt_lc = salt.client.Caller(mopts=__opts__)
         self.salt_lc = salt.client.Caller()
         if self.auto_update_master_cache:
@@ -215,7 +216,7 @@ class SaltCheck(object):
              a valid module and function,
              a valid assertion,
              an expected return value'''
-        tots = 0  # need total of >= 6 to pass test
+        tots = 0  # need total of >= 6 to be a valid test
         m_and_f = test_dict.get('module_and_function', None)
         assertion = test_dict.get('assertion', None)
         expected_return = test_dict.get('expected-return', None)
@@ -519,7 +520,6 @@ class StateTestLoader(object):
 
     def add_test_files_for_sls(self, sls_path):
         '''Adding test files'''
-        # state_path = None
         for path in self.search_paths:
             full_path = path + os.sep + sls_path
             rootdir = full_path
