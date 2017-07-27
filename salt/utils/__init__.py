@@ -67,13 +67,6 @@ except ImportError:
     HAS_TIMELIB = False
 
 try:
-    import parsedatetime
-
-    HAS_PARSEDATETIME = True
-except ImportError:
-    HAS_PARSEDATETIME = False
-
-try:
     import fcntl
     HAS_FCNTL = True
 except ImportError:

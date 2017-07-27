@@ -15,8 +15,7 @@ import salt.utils
 import salt.utils.cache
 import salt.utils.event
 import salt.utils.process
-import salt.defaults.exitcodes
-from salt.ext.six import string_types, iterkeys
+from salt.ext.six import iterkeys
 from salt._compat import string_types
 log = logging.getLogger(__name__)
 
