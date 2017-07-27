@@ -32,6 +32,8 @@ Builds for a few platforms are available as part of the RC at https://repo.salts
 
 Available builds:
 
+- Ubuntu16
+- Redhat7
 - Windows
 
 .. FreeBSD
