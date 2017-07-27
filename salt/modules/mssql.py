@@ -275,9 +275,10 @@ def role_remove(role, **kwargs):
         return 'Could not create the role: {0}'.format(e)
 
 
-def login_exists(login, domain=None, **kwargs):
+def login_exists(login, domain='', **kwargs):
     '''
     Find if a login exists in the MS SQL server.
+    domain, if provided, will be prepended to login
 
     CLI Example:
 
@@ -295,7 +296,7 @@ def login_exists(login, domain=None, **kwargs):
         return 'Could not find the login: {0}'.format(e)
 
 
-def login_create(login, new_login_password=None, new_login_domain=None, new_login_roles=None, new_login_options=None, **kwargs):
+def login_create(login, new_login_password=None, new_login_domain='', new_login_roles=None, new_login_options=None, **kwargs):
     '''
     Creates a new login.
     Does not update password of existing logins.
@@ -372,9 +373,10 @@ def login_remove(login, **kwargs):
         return 'Could not remove the login: {0}'.format(e)
 
 
-def user_exists(username, domain=None, database=None, **kwargs):
+def user_exists(username, domain='', database=None, **kwargs):
     '''
     Find if an user exists in a specific database on the MS SQL server.
+    domain, if provided, will be prepended to username
 
     CLI Example:
 
@@ -403,10 +405,11 @@ def user_list(**kwargs):
     return [row[0] for row in tsql_query("SELECT name FROM sysusers where issqluser=1 or isntuser=1", as_dict=False, **kwargs)]
 
 
-def user_create(username, login=None, domain=None, database=None, roles=None, options=None, **kwargs):
+def user_create(username, login=None, domain='', database=None, roles=None, options=None, **kwargs):
     '''
     Creates a new user.
     If login is not specified, the user will be created without a login.
+    domain, if provided, will be prepended to username.
     options can only be a list of strings
 
     CLI Example:
