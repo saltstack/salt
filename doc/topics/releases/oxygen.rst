@@ -49,8 +49,30 @@ environments (i.e. ``saltenvs``) have been added:
    ignore all tags and use branches only, and also to keep SHAs from being made
    available as saltenvs.
 
-Salt Cloud and Newer PyWinRM Versions
--------------------------------------
+Salt Cloud Features
+===================
+
+Pre-Flight Commands
+-------------------
+
+Support has been added for specified "preflight commands" to run on a VM before
+the deploy script is run. These must be defined as a list in a cloud configuration
+file. For example:
+
+.. code-block:: yaml
+
+       my-cloud-profile:
+         provider: linode-config
+         image: Ubuntu 16.04 LTS
+         size: Linode 2048
+         preflight_cmds:
+           - whoami
+           - echo 'hello world!'
+
+These commands will run in sequence **before** the bootstrap script is executed.
+
+Newer PyWinRM Versions
+----------------------
 
 Versions of ``pywinrm>=0.2.1`` are finally able to disable validation of self
 signed certificates.  :ref:`Here<new-pywinrm>` for more information.
