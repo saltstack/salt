@@ -94,7 +94,7 @@ def run_state_tests(state):
     for key, value in results.items():
         out_list.append({key: value})
     out_list.sort()
-    out_list.append({"TEST RESULTS": {'passed': passed, 'failed': failed, 'missing_tests': missing_tests}})
+    out_list.append({"TEST RESULTS": {'Passed': passed, 'Failed': failed, 'Missing Tests': missing_tests}})
     return out_list
 
 
@@ -135,7 +135,7 @@ def run_highstate_tests():
     for key, value in results.items():
         out_list.append({key: value})
     out_list.sort()
-    out_list.append({"TEST RESULTS": {'passed': passed, 'failed': failed, 'missing_tests': missing_tests}})
+    out_list.append({"TEST RESULTS": {'Passed': passed, 'Failed': failed, 'Missing Tests': missing_tests}})
     return out_list
 
 
