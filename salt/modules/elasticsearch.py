@@ -272,7 +272,7 @@ def alias_create(indices, alias, hosts=None, body=None, profile=None, source=Non
     body
         Optional definition such as routing or filter as defined in https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-aliases.html
     source
-        URL of file specifying optional definition such as routing or filter 
+        URL of file specifying optional definition such as routing or filter. Cannot be used in combination with ``body``.
 
     CLI example::
 
@@ -380,7 +380,7 @@ def document_create(index, doc_type, body=None, id=None, hosts=None, profile=Non
     body
         Document to store
     source
-        URL of file specifying document to store
+        URL of file specifying document to store. Cannot be used in combination with ``body``.
     id
         Optional unique document identifier for specified doc_type (empty for random)
 
@@ -486,7 +486,7 @@ def index_create(index, body=None, hosts=None, profile=None, source=None):
     body
         Index definition, such as settings and mappings as defined in https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-create-index.html
     source
-        URL to file specifying index definition
+        URL to file specifying index definition. Cannot be used in combination with ``body``.
 
     CLI example::
 
@@ -645,7 +645,7 @@ def mapping_create(index, doc_type, body=None, hosts=None, profile=None, source=
     body
         Mapping definition as specified in https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-put-mapping.html
     source
-        URL to file specifying mapping definition
+        URL to file specifying mapping definition. Cannot be used in combination with ``body``.
 
     CLI example::
 
@@ -727,7 +727,7 @@ def index_template_create(name, body=None, hosts=None, profile=None, source=None
         Template definition as specified in http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
 
     source
-        URL to file specifying template definition
+        URL to file specifying template definition. Cannot be used in combination with ``body``.
 
     CLI example::
 
