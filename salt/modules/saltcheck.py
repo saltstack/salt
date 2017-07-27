@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-This module should be saved as salt/modules/saltcheck.py
-This works in master and masterless configurations
+A module for testing the logic of states and highstates
+:codeauthor:    William Cannon <william.cannon@gmail.com>
+:maturity:      new
 '''
 from __future__ import absolute_import
 import logging
@@ -42,7 +43,9 @@ def update_master_cache():
 
 def run_test(**kwargs):
     '''
-    Enables running one saltcheck test via command line
+    Execute one saltcheck test and return result
+
+    :param keyword arg test:
     CLI Example::
         salt '*' saltcheck.run_test
             test='{"module_and_function": "test.echo",
@@ -61,7 +64,11 @@ def run_test(**kwargs):
 
 def run_state_tests(state):
     '''
-    Returns the output of running all salt check test for a state
+    Execute all tests for a salt state and return results
+    Nested states will also be tested
+
+    :param str state: the name of a user defined state
+
     CLI Example::
       salt '*' saltcheck.run_state_tests postfix
     '''
@@ -102,7 +109,8 @@ def run_state_tests(state):
 
 def run_highstate_tests():
     '''
-    Returns the output of running all salt check test for a state
+    Execute all tests for a salt highstate and return results
+
     CLI Example::
       salt '*' saltcheck.run_highstate_tests
     '''
