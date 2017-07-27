@@ -571,6 +571,7 @@ class _WithDeprecated(_DeprecationDecorator):
             f_name=self._orig_f_name)
 
         return func_path in self._globals.get('__opts__').get(
+            self.CFG_USE_DEPRECATED, list()) or func_path in self._globals.get('__pillar__').get(
             self.CFG_USE_DEPRECATED, list()) or (self._policy == self.OPT_IN
                                                  and not (func_path in self._globals.get('__opts__', {}).get(
                                                           self.CFG_USE_SUPERSEDED, list()))
