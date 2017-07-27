@@ -462,8 +462,8 @@ def query(url,
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
             if HAS_CURL_HTTPCLIENT is False:
-                ret['error'] = ('proxy_host and proxy_port has been set. This requires pycurl, but the '
-                                'pycurl library does not seem to be installed')
+                ret['error'] = ('proxy_host and proxy_port has been set. This requires pycurl and tornado, '
+                                'but the libraries does not seem to be installed')
                 log.error(ret['error'])
                 return ret
 
