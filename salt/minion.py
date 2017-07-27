@@ -1522,12 +1522,17 @@ class Minion(MinionBase):
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
                 ret['out'] = 'nested'
         else:
-            ret['return'] = minion_instance.functions.missing_fun_string(function_name)
-            mod_name = function_name.split('.')[0]
-            if mod_name in minion_instance.function_errors:
-                ret['return'] += ' Possible reasons: \'{0}\''.format(
-                    minion_instance.function_errors[mod_name]
-                )
+            docs = minion_instance.functions['sys.doc']('{0}*'.format(function_name))
+            if docs:
+                docs[function_name] = minion_instance.functions.missing_fun_string(function_name)
+                ret['return'] = docs
+            else:
+                ret['return'] = minion_instance.functions.missing_fun_string(function_name)
+                mod_name = function_name.split('.')[0]
+                if mod_name in minion_instance.function_errors:
+                    ret['return'] += ' Possible reasons: \'{0}\''.format(
+                        minion_instance.function_errors[mod_name]
+                    )
             ret['success'] = False
             ret['retcode'] = 254
             ret['out'] = 'nested'
