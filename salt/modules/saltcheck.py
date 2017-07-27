@@ -1,6 +1,48 @@
 # -*- coding: utf-8 -*-
 '''
 A module for testing the logic of states and highstates
+
+Saltcheck provides unittest like functionality requiring only the knowledge of salt module execution and yaml.
+
+In order to run state and highstate saltcheck tests a sub-folder of a state must be creaed and named "saltcheck-tests".
+
+Tests for a state should be created in files ending in *.tst and placed in the saltcheck-tests folder.
+
+Multiple tests can be created in a file.
+Multiple *.tst files can be created in the saltcheck-tests folder.
+The "id" of a test works in the same manner as in salt state files.
+They should be unique and descriptive.
+
+Example file system layout:
+/srv/salt/apache/
+                 init.sls
+                 config.sls
+                 saltcheck-tests/
+                                 pkg_and_mods.tst
+                                 config.tst
+
+
+Saltcheck Test Syntax:
+
+Unique-ID:
+  module_and_function: 
+  args:
+  kwargs:
+  assertion:
+  expected-return: 
+
+
+Example test 1:
+
+echo-test-hello:
+  module_and_function: test.echo
+  args:
+    - "hello"
+  kwargs:
+  assertion: assertEqual
+  expected-return:  'hello'
+
+ 
 :codeauthor:    William Cannon <william.cannon@gmail.com>
 :maturity:      new
 '''
