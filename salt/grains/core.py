@@ -541,8 +541,20 @@ def _virtual(osdata):
             command = 'system_profiler'
             args = ['SPDisplaysDataType']
         elif osdata['kernel'] == 'SunOS':
-            command = 'prtdiag'
-            args = []
+            virtinfo = salt.utils.which('virtinfo')
+            if virtinfo:
+                try:
+                    ret = __salt__['cmd.run_all']('{0} -a'.format(virtinfo))
+                except salt.exceptions.CommandExecutionError:
+                    if salt.log.is_logging_configured():
+                        failed_commands.add(virtinfo)
+                else:
+                    if ret['stdout'].endswith('not supported'):
+                        command = 'prtdiag'
+                    else:
+                        command = 'virtinfo'
+            else:
+                command = 'prtdiag'
 
         cmd = salt.utils.which(command)
 
@@ -689,6 +701,9 @@ def _virtual(osdata):
             elif 'joyent smartdc hvm' in model:
                 grains['virtual'] = 'kvm'
             break
+        elif command == 'virtinfo':
+            grains['virtual'] = 'LDOM'
+            break
     else:
         if osdata['kernel'] not in skip_cmds:
             log.debug(
@@ -828,17 +843,27 @@ def _virtual(osdata):
         if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
             grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'SunOS':
-        # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
-        zonename = salt.utils.which('zonename')
-        if zonename:
-            zone = __salt__['cmd.run']('{0}'.format(zonename))
-            if zone != 'global':
+        if grains['virtual'] == 'LDOM':
+            roles = []
+            for role in ('control', 'io', 'root', 'service'):
+                subtype_cmd = '{0} -c current get -H -o value {1}-role'.format(cmd, role)
+                ret = __salt__['cmd.run_all']('{0}'.format(subtype_cmd))
+                if ret['stdout'] == 'true':
+                    roles.append(role)
+            if roles:
+                grains['virtual_subtype'] = roles
+        else:
+            # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
+            zonename = salt.utils.which('zonename')
+            if zonename:
+                zone = __salt__['cmd.run']('{0}'.format(zonename))
+                if zone != 'global':
+                    grains['virtual'] = 'zone'
+                    if salt.utils.is_smartos_zone():
+                        grains.update(_smartos_zone_data())
+            # Check if it's a branded zone (i.e. Solaris 8/9 zone)
+            if isdir('/.SUNWnative'):
                 grains['virtual'] = 'zone'
-                if salt.utils.is_smartos_zone():
-                    grains.update(_smartos_zone_data())
-        # Check if it's a branded zone (i.e. Solaris 8/9 zone)
-        if isdir('/.SUNWnative'):
-            grains['virtual'] = 'zone'
     elif osdata['kernel'] == 'NetBSD':
         if sysctl:
             if 'QEMU Virtual CPU' in __salt__['cmd.run'](
@@ -985,28 +1010,20 @@ def _windows_platform_data():
         os_release = platform.release()
         kernel_version = platform.version()
         info = salt.utils.win_osinfo.get_os_version_info()
+        server = {'Vista': '2008Server',
+                  '7': '2008ServerR2',
+                  '8': '2012Server',
+                  '8.1': '2012ServerR2',
+                  '10': '2016Server'}
 
         # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
         # started reporting the Desktop version instead of the Server version on
         # Server versions of Windows, so we need to look those up
-        # Check for Python >=2.7.12 or >=3.5.2
-        ver = pythonversion()['pythonversion']
-        if ((six.PY2 and
-                salt.utils.compare_versions(ver, '>=', [2, 7, 12, 'final', 0]))
-            or
-            (six.PY3 and
-                salt.utils.compare_versions(ver, '>=', [3, 5, 2, 'final', 0]))):
-            # (Product Type 1 is Desktop, Everything else is Server)
-            if info['ProductType'] > 1:
-                server = {'Vista': '2008Server',
-                          '7': '2008ServerR2',
-                          '8': '2012Server',
-                          '8.1': '2012ServerR2',
-                          '10': '2016Server'}
-                os_release = server.get(os_release,
-                                        'Grain not found. Update lookup table '
-                                        'in the `_windows_platform_data` '
-                                        'function in `grains\\core.py`')
+        # So, if you find a Server Platform that's a key in the server
+        # dictionary, then lookup the actual Server Release.
+        # (Product Type 1 is Desktop, Everything else is Server)
+        if info['ProductType'] > 1 and os_release in server:
+            os_release = server[os_release]
 
         service_pack = None
         if info['ServicePackMajor'] > 0:
@@ -1188,6 +1205,7 @@ _OS_FAMILY_MAP = {
     'NILinuxRT-XFCE': 'NILinuxRT',
     'KDE neon': 'Debian',
     'Void': 'Void',
+    'IDMS': 'Debian',
 }
 
 

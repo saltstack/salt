@@ -55,11 +55,28 @@ Salt Cloud and Newer PyWinRM Versions
 Versions of ``pywinrm>=0.2.1`` are finally able to disable validation of self
 signed certificates.  :ref:`Here<new-pywinrm>` for more information.
 
+Solaris Logical Domains In Virtual Grain
+----------------------------------------
+
+Support has been added to the ``virtual`` grain for detecting Solaris LDOMs
+running on T-Series SPARC hardware.  The ``virtual_subtype`` grain is 
+populated as a list of domain roles.
+
+
+Deprecations
+============
+
 Configuration Option Deprecations
 ---------------------------------
 
 - The ``requests_lib`` configuration option has been removed. Please use
   ``backend`` instead.
+
+Profitbricks Cloud Updated Dependency
+-------------------------------------
+
+The minimum version of the `profitbrick` python package for the `profitbricks`
+cloud driver has changed from 3.0.0 to 3.1.0.
 
 Module Deprecations
 -------------------
@@ -147,3 +164,10 @@ The ``salt.utils.cloud.py`` file had the following change:
 
 - The ``fire_event`` function now requires a ``sock_dir`` argument. It was previously
   optional.
+
+Other Miscellaneous Deprecations
+--------------------------------
+
+The ``version.py`` file had the following changes:
+
+- The ``rc_info`` function was removed. Please use ``pre_info`` instead.
