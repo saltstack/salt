@@ -519,7 +519,8 @@ runas
 
 .. versionadded:: 2017.7.0
 
-The ``runas`` global option is used to set the user which will be used to run the command in the ``cmd.run`` module.
+The ``runas`` global option is used to set the user which will be used to run
+the command in the ``cmd.run`` module.
 
 .. code-block:: yaml
 
@@ -531,6 +532,26 @@ The ``runas`` global option is used to set the user which will be used to run th
           - pkg: python-pip
 
 In the above state, the pip command run by ``cmd.run`` will be run by the daniel user.
+
+runas_passwd
+~~~~~~~~~~~~
+
+.. versionadded:: 2017.7.2
+
+The ``runas_passwd`` global option is used to set the password used by the runas
+global option. This is required by ``cmd.run`` on Windows when ``runas`` is
+specified. It will be set when ``password`` is defined in the state.
+
+.. code-block:: yaml
+
+    run_script:
+      cmd.run:
+        - name: Powershell -NonInteractive -ExecutionPolicy Bypass -File C:\\Temp\\script.ps1
+        - runas: frank
+        - password: supersecret
+
+In the above state, the Powershell script run by ``cmd.run`` will be run by the
+frank user with the password ``supersecret``.
 
 .. _requisites-require-in:
 .. _requisites-watch-in:

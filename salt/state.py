@@ -1751,6 +1751,7 @@ class State(object):
             ret = {'result': False, 'name': low['name'], 'changes': {}}
 
         self.state_con['runas'] = low.get('runas', None)
+        self.state_con['runas_passwd'] = low.get('runas_passwd', None)
 
         if not low.get('__prereq__'):
             log.info(
