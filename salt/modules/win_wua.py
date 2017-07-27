@@ -955,7 +955,7 @@ def set_wu_settings(level=None,
         Microsoft began using the Unified Update Platform (UUP) starting with
         Windows 10 / Server 2016. The Windows Update settings have changed and
         the ability to 'Save' Windows Update settings has been removed. Windows
-        Update settings are read-only. See msdn documentation:
+        Update settings are read-only. See MSDN documentation:
         https://msdn.microsoft.com/en-us/library/aa385829(v=vs.85).aspx
 
     :param int level:
