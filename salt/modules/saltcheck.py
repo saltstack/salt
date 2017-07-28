@@ -161,6 +161,13 @@ def run_highstate_tests():
     stl = StateTestLoader(search_paths=paths)
     results = {}
     sls_list = _get_top_states()
+    all_states = []
+    for top_state in sls_list:
+        sls_list = _get_state_sls(top_state)
+        for state in sls_list:
+            if state not in all_states:
+                all_states.append(state)
+
     for state_name in sls_list:
         mypath = stl.convert_sls_to_path(state_name)
         stl.add_test_files_for_sls(mypath)
