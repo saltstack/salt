@@ -90,6 +90,9 @@ def present(name, driver=None, containers=None):
     # map containers to container's Ids.
     containers = [__salt__['docker.inspect_container'](c)['Id'] for c in containers]
     networks = __salt__['docker.networks'](names=[name])
+    log.trace(
+        'docker_network.present: current networks: {0}'.format(networks)
+    )
 
     # networks will contain all Docker networks which partially match 'name'.
     # We need to loop through to find the matching network, if there is one.
@@ -159,6 +162,9 @@ def absent(name, driver=None):
            'comment': ''}
 
     networks = __salt__['docker.networks'](names=[name])
+    log.trace(
+        'docker_network.absent: current networks: {0}'.format(networks)
+    )
 
     # networks will contain all Docker networks which partially match 'name'.
     # We need to loop through to find the matching network, if there is one.
