@@ -1887,6 +1887,7 @@ def replace(path,
             show_changes=True,
             ignore_if_missing=False,
             preserve_inode=True,
+            backslash_literal=False,
         ):
     '''
     .. versionadded:: 0.17.0
@@ -1987,6 +1988,14 @@ def replace(path,
         filename. Hard links will then share an inode with the backup, instead
         (if using ``backup`` to create a backup copy).
 
+    backslash_literal : False
+        .. versionadded:: 2016.11.7
+
+        Interpret backslashes as literal backslashes for the repl and not
+        escape characters.  This will help when using append/prepend so that
+        the backslashes are not interpreted for the repl on the second run of
+        the state.
+
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
     processing can be bypassed in order to pass an equal sign through to the
@@ -2083,7 +2092,10 @@ def replace(path,
                 if re.search(cpattern, r_data):
                     return True  # `with` block handles file closure
             else:
-                result, nrepl = re.subn(cpattern, repl, r_data, count)
+                result, nrepl = re.subn(cpattern,
+                                        repl.replace('\\', '\\\\') if backslash_literal else repl,
+                                        r_data,
+                                        count)
 
                 # found anything? (even if no change)
                 if nrepl > 0:
@@ -2141,8 +2153,10 @@ def replace(path,
                         r_data = mmap.mmap(r_file.fileno(),
                                            0,
                                            access=mmap.ACCESS_READ)
-                        result, nrepl = re.subn(cpattern, repl,
-                                                r_data, count)
+                        result, nrepl = re.subn(cpattern,
+                                                repl.replace('\\', '\\\\') if backslash_literal else repl,
+                                                r_data,
+                                                count)
                         try:
                             w_file.write(salt.utils.to_str(result))
                         except (OSError, IOError) as exc:
