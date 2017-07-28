@@ -108,34 +108,34 @@ class CryptTestCase(TestCase):
     @patch('os.chown', MagicMock())
     @patch('os.access', MagicMock(return_value=True))
     def test_gen_keys_with_passphrase(self):
-        with patch('salt.utils.fopen', mock_open()):
+        with patch('salt.utils.files.open', mock_open()):
             open_priv_wb = call('/keydir/keyname.pem', 'wb+')
             open_pub_wb = call('/keydir/keyname.pub', 'wb+')
             with patch('os.path.isfile', return_value=True):
                 self.assertEqual(crypt.gen_keys('/keydir', 'keyname', 2048, passphrase='password'), '/keydir/keyname.pem')
-                self.assertNotIn(open_priv_wb, salt.utils.fopen.mock_calls)
-                self.assertNotIn(open_pub_wb, salt.utils.fopen.mock_calls)
+                self.assertNotIn(open_priv_wb, salt.utils.files.open.mock_calls)
+                self.assertNotIn(open_pub_wb, salt.utils.files.open.mock_calls)
             with patch('os.path.isfile', return_value=False):
-                with patch('salt.utils.fopen', mock_open()):
+                with patch('salt.utils.files.open', mock_open()):
                     crypt.gen_keys('/keydir', 'keyname', 2048)
-                    salt.utils.fopen.assert_has_calls([open_priv_wb, open_pub_wb], any_order=True)
+                    salt.utils.files.open.assert_has_calls([open_priv_wb, open_pub_wb], any_order=True)
 
     @patch('os.umask', MagicMock())
     @patch('os.chmod', MagicMock())
     @patch('os.chown', MagicMock())
     @patch('os.access', MagicMock(return_value=True))
     def test_gen_keys_with_passphrase(self):
-        with patch('salt.utils.fopen', mock_open()):
+        with patch('salt.utils.files.open', mock_open()):
             open_priv_wb = call('/keydir/keyname.pem', 'wb+')
             open_pub_wb = call('/keydir/keyname.pub', 'wb+')
             with patch('os.path.isfile', return_value=True):
                 self.assertEqual(crypt.gen_keys('/keydir', 'keyname', 2048, passphrase='password'), '/keydir/keyname.pem')
-                self.assertNotIn(open_priv_wb, salt.utils.fopen.mock_calls)
-                self.assertNotIn(open_pub_wb, salt.utils.fopen.mock_calls)
+                self.assertNotIn(open_priv_wb, salt.utils.files.open.mock_calls)
+                self.assertNotIn(open_pub_wb, salt.utils.files.open.mock_calls)
             with patch('os.path.isfile', return_value=False):
-                with patch('salt.utils.fopen', mock_open()):
+                with patch('salt.utils.files.open', mock_open()):
                     crypt.gen_keys('/keydir', 'keyname', 2048)
-                    salt.utils.fopen.assert_has_calls([open_priv_wb, open_pub_wb], any_order=True)
+                    salt.utils.files.open.assert_has_calls([open_priv_wb, open_pub_wb], any_order=True)
 
     def test_sign_message(self):
         key = RSA.importKey(PRIVKEY_DATA)
@@ -143,11 +143,11 @@ class CryptTestCase(TestCase):
             self.assertEqual(SIG, salt.crypt.sign_message('/keydir/keyname.pem', MSG))
 
     def test_sign_message_with_passphrase(self):
-        with patch('salt.utils.fopen', mock_open(read_data=PRIVKEY_DATA)):
+        with patch('salt.utils.files.open', mock_open(read_data=PRIVKEY_DATA)):
             self.assertEqual(SIG, crypt.sign_message('/keydir/keyname.pem', MSG, passphrase='password'))
 
     def test_sign_message_with_passphrase(self):
-        with patch('salt.utils.fopen', mock_open(read_data=PRIVKEY_DATA)):
+        with patch('salt.utils.files.open', mock_open(read_data=PRIVKEY_DATA)):
             self.assertEqual(SIG, crypt.sign_message('/keydir/keyname.pem', MSG, passphrase='password'))
 
     def test_verify_signature(self):
