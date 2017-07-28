@@ -69,10 +69,14 @@ class DockerNetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         docker_remove_network = Mock(return_value='removed')
         docker_disconnect_container_from_network = Mock(return_value='disconnected')
+        docker_networks = Mock(return_value=[{
+            'Name': 'network_foo',
+            'Containers': {'container': {}}
+        }])
         __salt__ = {
             'docker.remove_network': docker_remove_network,
             'docker.disconnect_container_from_network': docker_disconnect_container_from_network,
-            'docker.networks': Mock(return_value=[{'Containers': {'container': {}}}]),
+            'docker.networks': docker_networks,
         }
         with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
