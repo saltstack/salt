@@ -839,6 +839,7 @@ def run(name,
             'Neon',
             'The legacy password argument is deprecated. Use runas_password'
             'instead. This warning will be removed in Salt Neon')
+
     if runas is not None:
         __context__['runas'] = runas
     if runas_password is not None:
@@ -1089,6 +1090,7 @@ def script(name,
             'Neon',
             'The legacy password argument is deprecated. Use runas_password'
             'instead. This warning will be removed in Salt Neon')
+
     if runas is not None:
         __context__['runas'] = runas
     if runas_password is not None:
@@ -1212,8 +1214,29 @@ def call(name,
            'result': False,
            'comment': ''}
 
+    if 'user' in kwargs or 'group' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'The legacy user/group arguments are deprecated. '
+            'Replace them with runas. '
+            'These arguments will be removed in Salt Oxygen.'
+        )
+        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
+            runas = kwargs.pop('user')
+
+    if 'password' in kwargs:
+        runas_password = kwargs.pop('password')
+        salt.utils.warn_until(
+            'Neon',
+            'The legacy password argument is deprecated. Use runas_password'
+            'instead. This warning will be removed in Salt Neon')
+
+    if runas is not None:
+        __context__['runas'] = runas
+    if runas_password is not None:
+        __context__['runas_password'] = runas_password
+
     cmd_kwargs = {'cwd': kwargs.get('cwd'),
-                  'runas': kwargs.get('user'),
                   'shell': kwargs.get('shell') or __grains__['shell'],
                   'env': kwargs.get('env'),
                   'use_vt': use_vt,
