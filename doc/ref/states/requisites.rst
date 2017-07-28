@@ -538,9 +538,9 @@ runas_passwd
 
 .. versionadded:: 2017.7.2
 
-The ``runas_passwd`` global option is used to set the password used by the runas
-global option. This is required by ``cmd.run`` on Windows when ``runas`` is
-specified. It will be set when ``password`` is defined in the state.
+The ``runas_password`` global option is used to set the password used by the
+runas global option. This is required by ``cmd.run`` on Windows when ``runas``
+is specified. It will be set when ``runas_password`` is defined in the state.
 
 .. code-block:: yaml
 
@@ -548,7 +548,7 @@ specified. It will be set when ``password`` is defined in the state.
       cmd.run:
         - name: Powershell -NonInteractive -ExecutionPolicy Bypass -File C:\\Temp\\script.ps1
         - runas: frank
-        - password: supersecret
+        - runas_password: supersecret
 
 In the above state, the Powershell script run by ``cmd.run`` will be run by the
 frank user with the password ``supersecret``.
