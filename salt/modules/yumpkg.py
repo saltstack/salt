@@ -1034,6 +1034,11 @@ def refresh_db(**kwargs):
 
     clean_cmd = [_yum(), '--quiet', 'clean', 'expire-cache']
     update_cmd = [_yum(), '--quiet', 'check-update']
+
+    if __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '7':
+        # This feature is disable because it is not used by Salt and lasts a lot with using large repo like EPEL
+        update_cmd.append('--setopt=autocheck_running_kernel=false')
+
     for args in (repo_arg, exclude_arg, branch_arg):
         if args:
             clean_cmd.extend(args)
