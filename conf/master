@@ -311,6 +311,9 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
+# The size of key that should be generated when creating new keys.
+#keysize: 2048
+
 # Time in minutes that an incoming public key with a matching name found in
 # pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
 # are removed when the master checks the minion_autosign directory.
@@ -966,6 +969,21 @@
 #         This may represent a substantial security risk.
 #
 #pillar_cache_backend: disk
+
+
+######        Reactor Settings        #####
+###########################################
+# Define a salt reactor. See https://docs.saltstack.com/en/latest/topics/reactor/
+#reactor: []
+
+#Set the TTL for the cache of the reactor configuration.
+#reactor_refresh_interval: 60
+
+#Configure the number of workers for the runner/wheel in the reactor.
+#reactor_worker_threads: 10
+
+#Define the queue size for workers in the reactor.
+#reactor_worker_hwm: 10000
 
 
 #####          Syndic settings       #####

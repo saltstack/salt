@@ -1071,10 +1071,10 @@ def query(action=None,
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%a, %d %b %Y %H:%M:%S %Z').strip()
     with salt.utils.files.fopen(ssh_keyfile, 'r') as kh_:
-        rsa_key = RSA.importKey(kh_)
+        rsa_key = RSA.importKey(kh_.read())
     rsa_ = PKCS1_v1_5.new(rsa_key)
     hash_ = SHA256.new()
-    hash_.update(timestamp)
+    hash_.update(timestamp.encode(__salt_system_encoding__))
     signed = base64.b64encode(rsa_.sign(hash_))
     keyid = '/{0}/keys/{1}'.format(user.split('/')[0], ssh_keyname)
 
@@ -1085,7 +1085,7 @@ def query(action=None,
         'Date': timestamp,
         'Authorization': 'Signature keyId="{0}",algorithm="rsa-sha256" {1}'.format(
             keyid,
-            signed
+            signed.decode(__salt_system_encoding__)
         ),
     }
 
