@@ -2,6 +2,49 @@
 '''
 Module for managing Windows Updates using the Windows Update Agent.
 
+List updates on the system using the following functions:
+
+- :ref:`available`
+- :ref:`list`
+
+This is an easy way to find additional information about updates available to
+to the system, such as the GUID, KB number, or description.
+
+Once you have the GUID or a KB number for the update you can get information
+about the update, download, install, or uninstall it using these functions:
+
+- :ref:`get`
+- :ref:`download`
+- :ref:`install`
+- :ref:`uninstall`
+
+The get function expects a name in the form of a GUID, KB, or Title and should
+return information about a single update. The other functions accept either a
+single item or a list of items for downloading/installing/uninstalling a
+specific list of items.
+
+The :ref:`list` and :ref:`get` functions are utility functions. In addition to
+returning information about updates they can also download and install updates
+by setting ``download=True`` or ``install=True``. So, with :ref:`list` for
+example, you could run the function with the filters you want to see what is
+available. Then just add ``install=True`` to install everything on that list.
+
+If you want to download, install, or uninstall specific updates, use
+:ref:`download`, :ref:`install`, or :ref:`uninstall`. To update your system
+with the latest updates use :ref:`list` and set ``install=True``
+
+You can also adjust the Windows Update settings using the :ref:`set_wu_settings`
+function. This function is only supported on the following operating systems:
+
+- Windows Vista / Server 2008
+- Windows 7 / Server 2008R2
+- Windows 8 / Server 2012
+- Windows 8.1 / Server 2012R2
+
+As of Windows 10 and Windows Server 2016, the ability to modify the Windows
+Update settings has been restricted. The settings can be modified in the Local
+Group Policy using the ``lgpo`` module.
+
 .. versionadded:: 2015.8.0
 
 :depends:
@@ -54,12 +97,12 @@ def available(software=True,
               skip_mandatory=False,
               skip_reboot=False,
               categories=None,
-              severities=None,
-              ):
+              severities=None,):
     '''
     .. versionadded:: 2017.7.0
 
-    List updates that match the passed criteria.
+    List updates that match the passed criteria. This allows for more filter
+    options than :func:`list`. Good for finding a specific GUID or KB.
 
     Args:
 
@@ -176,9 +219,11 @@ def available(software=True,
     wua = salt.utils.win_update.WindowsUpdateAgent()
 
     # Look for available
-    updates = wua.available(skip_hidden, skip_installed, skip_mandatory,
-                            skip_reboot, software, drivers, categories,
-                            severities)
+    updates = wua.available(
+        skip_hidden=skip_hidden, skip_installed=skip_installed,
+        skip_mandatory=skip_mandatory, skip_reboot=skip_reboot,
+        software=software, drivers=drivers, categories=categories,
+        severities=severities)
 
     # Return results as Summary or Details
     return updates.summary() if summary else updates.list()
