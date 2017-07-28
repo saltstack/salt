@@ -654,6 +654,7 @@ def run(name,
         creates=None,
         cwd=None,
         runas=None,
+        runas_password=None,
         shell=None,
         env=None,
         stateful=False,
@@ -686,6 +687,9 @@ def run(name,
 
     runas
         The user name to run the command as
+
+    runas_password
+        The password of the user specified in runas. Required for Windows
 
     shell
         The shell to use for execution, defaults to the shell grain
@@ -829,9 +833,19 @@ def run(name,
         if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
+    if 'password' in kwargs:
+        runas_password = kwargs.pop('password')
+        salt.utils.warn_until(
+            'Neon',
+            'The legacy password argument is deprecated. Use runas_password'
+            'instead. This warning will be removed in Salt Neon')
+    if runas is not None:
+        __context__['runas'] = runas
+    if runas_password is not None:
+        __context__['runas_password'] = runas_password
+
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({'cwd': cwd,
-                       'runas': runas,
                        'use_vt': use_vt,
                        'shell': shell or __grains__['shell'],
                        'env': env,
@@ -891,6 +905,7 @@ def script(name,
            creates=None,
            cwd=None,
            runas=None,
+           runas_password=None,
            shell=None,
            env=None,
            stateful=False,
@@ -932,6 +947,9 @@ def script(name,
 
     runas
         The name of the user to run the command as
+
+    runas_password
+        The password of the user specified in runas. Required for Windows
 
     shell
         The shell to use for execution. The default is set in grains['shell']
@@ -1065,9 +1083,19 @@ def script(name,
         if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
+    if 'password' in kwargs:
+        runas_password = kwargs.pop('password')
+        salt.utils.warn_until(
+            'Neon',
+            'The legacy password argument is deprecated. Use runas_password'
+            'instead. This warning will be removed in Salt Neon')
+    if runas is not None:
+        __context__['runas'] = runas
+    if runas_password is not None:
+        __context__['runas_password'] = runas_password
+
     cmd_kwargs = copy.deepcopy(kwargs)
-    cmd_kwargs.update({'runas': runas,
-                       'shell': shell or __grains__['shell'],
+    cmd_kwargs.update({'shell': shell or __grains__['shell'],
                        'env': env,
                        'onlyif': onlyif,
                        'unless': unless,
@@ -1082,7 +1110,6 @@ def script(name,
 
     run_check_cmd_kwargs = {
         'cwd': cwd,
-        'runas': runas,
         'shell': shell or __grains__['shell']
     }
 
