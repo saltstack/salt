@@ -544,11 +544,11 @@ class _WithDeprecated(_DeprecationDecorator):
         opts = self._globals.get('__opts__', '{}')
         pillar = self._globals.get('__pillar__', '{}')
 
-        use_deprecated = full_name in opts.get(self.CFG_USE_DEPRECATED, list()) or \
-            full_name in pillar.get(self.CFG_USE_DEPRECATED, list())
+        use_deprecated = (full_name in opts.get(self.CFG_USE_DEPRECATED, list()) or
+                          full_name in pillar.get(self.CFG_USE_DEPRECATED, list()))
 
-        use_superseded = full_name in opts.get(self.CFG_USE_SUPERSEDED, list()) or \
-            full_name in pillar.get(self.CFG_USE_SUPERSEDED, list())
+        use_superseded = (full_name in opts.get(self.CFG_USE_SUPERSEDED, list()) or
+                          full_name in pillar.get(self.CFG_USE_SUPERSEDED, list()))
 
         if use_deprecated and use_superseded:
             raise SaltConfigurationError("Function '{0}' is mentioned both in deprecated "
