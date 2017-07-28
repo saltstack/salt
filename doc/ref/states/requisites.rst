@@ -533,8 +533,8 @@ the command in the ``cmd.run`` module.
 
 In the above state, the pip command run by ``cmd.run`` will be run by the daniel user.
 
-runas_passwd
-~~~~~~~~~~~~
+runas_password
+~~~~~~~~~~~~~~
 
 .. versionadded:: 2017.7.2
 
