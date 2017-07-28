@@ -926,10 +926,17 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         if self.application.opts['order_masters']:
             syndic_min_wait = tornado.gen.sleep(self.application.opts['syndic_wait'])
 
+        authentication = {
+            'token': chunk.get('token'),
+            'username': chunk.get('username'),
+            'password': chunk.get('password'),
+            'eauth': chunk.get('eauth'),
+        }
         job_not_running = self.job_not_running(pub_data['jid'],
                                                chunk['tgt'],
                                                f_call['kwargs']['expr_form'],
-                                               minions_remaining=minions_remaining
+                                               authentication,
+                                               minions_remaining=minions_remaining,
                                                )
 
         # if we have a min_wait, do that
@@ -982,6 +989,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
                   jid,
                   tgt,
                   tgt_type,
+                  authentication,
                   minions_remaining=None,
                   ):
         '''
@@ -994,7 +1002,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         ping_pub_data = yield self.saltclients['local'](tgt,
                                                         'saltutil.find_job',
                                                         [jid],
-                                                        expr_form=tgt_type)
+                                                        expr_form=tgt_type,
+                                                        **authentication)
         ping_tag = tagify([ping_pub_data['jid'], 'ret'], 'job')
 
         minion_running = False
@@ -1011,7 +1020,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
                     ping_pub_data = yield self.saltclients['local'](tgt,
                                                                     'saltutil.find_job',
                                                                     [jid],
-                                                                    expr_form=tgt_type)
+                                                                    expr_form=tgt_type,
+                                                                    **authentication)
                     ping_tag = tagify([ping_pub_data['jid'], 'ret'], 'job')
                     minion_running = False
                     continue
