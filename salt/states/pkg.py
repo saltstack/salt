@@ -105,6 +105,7 @@ if salt.utils.is_windows():
     import datetime
     import errno
     import time
+    from functools import cmp_to_key
     # pylint: disable=import-error
     # pylint: enable=unused-import
     from salt.modules.win_pkg import _get_package_info

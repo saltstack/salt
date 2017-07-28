@@ -1759,7 +1759,8 @@ Default: ``top.sls``
 
 The state system uses a "top" file to tell the minions what environment to
 use and what modules to use. The state_top file is defined relative to the
-root of the base environment.
+root of the base environment. The value of "state_top" is also used for the
+pillar top file
 
 .. code-block:: yaml
 
