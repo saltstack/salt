@@ -147,13 +147,13 @@ def boolean(name, value, persist=False):
     bools = __salt__['selinux.list_sebool']()
     if name not in bools:
         ret['comment'] = 'Boolean {0} is not available'.format(name)
-        ret['result'] = False if not __opts__['test'] else None
+        ret['result'] = False
         return ret
     rvalue = _refine_value(value)
     if rvalue is None:
         ret['comment'] = '{0} is not a valid value for the ' \
                          'boolean'.format(value)
-        ret['result'] = False if not __opts__['test'] else None
+        ret['result'] = False
         return ret
     state = bools[name]['State'] == rvalue
     default = bools[name]['Default'] == rvalue
