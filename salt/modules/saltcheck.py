@@ -25,11 +25,11 @@ Example file system layout:
 Saltcheck Test Syntax:
 
 Unique-ID:
-  module_and_function: 
+  module_and_function:
   args:
   kwargs:
   assertion:
-  expected-return: 
+  expected-return:
 
 
 Example test 1:
@@ -42,7 +42,7 @@ echo-test-hello:
   assertion: assertEqual
   expected-return:  'hello'
 
- 
+
 :codeauthor:    William Cannon <william.cannon@gmail.com>
 :maturity:      new
 '''
@@ -270,6 +270,7 @@ class SaltCheck(object):
         m_and_f = test_dict.get('module_and_function', None)
         assertion = test_dict.get('assertion', None)
         expected_return = test_dict.get('expected-return', None)
+        log.info("__is_valid_test has test: {}".format(test_dict))
         if m_and_f:
             tots += 1
             module, function = m_and_f.split('.')
@@ -277,18 +278,22 @@ class SaltCheck(object):
                 tots += 1
             if _is_valid_function(module, function):
                 tots += 1
+            log.info("__is_valid_test has valid m_and_f")
         if assertion:
             tots += 1
             if assertion in self.assertions_list:
                 tots += 1
+                log.info("__is_valid_test has valid_assertion")
         if expected_return:
             tots += 1
+            log.info("__is_valid_test has valid_expected_return")
+        log.info("__is_valid_test score: {}".format(tots))
         return tots >= 6
 
     def call_salt_command(self,
                           fun,
-                          args=None,
-                          kwargs=None):
+                          args,
+                          kwargs):
         '''Generic call of salt Caller command'''
         value = False
         try:
@@ -311,9 +316,9 @@ class SaltCheck(object):
         if self.__is_valid_test(test_dict):
             mod_and_func = test_dict['module_and_function']
             args = test_dict.get('args', None)
+            kwargs = test_dict.get('kwargs', None)
             assertion = test_dict['assertion']
             expected_return = test_dict['expected-return']
-            kwargs = test_dict.get('kwargs', None)
             actual_return = self.call_salt_command(mod_and_func, args, kwargs)
             if assertion != "assertIn":
                 expected_return = self.cast_expected_to_returned_type(expected_return, actual_return)
@@ -338,9 +343,9 @@ class SaltCheck(object):
             elif assertion == "assertLessEqual":
                 value = self.__assert_less_equal(expected_return, actual_return)
             else:
-                value = "Fail"
+                value = "Fail - bas assertion"
         else:
-            return "Fail"
+            return "Fail - invalid test"
         return value
 
     @staticmethod
