@@ -1752,7 +1752,11 @@ class State(object):
             ret = {'result': False, 'name': low['name'], 'changes': {}}
 
         self.state_con['runas'] = low.get('runas', None)
-        self.state_con['runas_password'] = low.get('runas_password', None)
+
+        if low['state'] == 'cmd' and 'password' in low:
+            self.state_con['runas_password'] = low['password']
+        else:
+            self.state_con['runas_password'] = low.get('runas_password', None)
 
         if not low.get('__prereq__'):
             log.info(
