@@ -98,7 +98,7 @@ def __virtual__():
     Solaris 10, OmniOS, OpenIndiana, OpenSolaris, or Smartos.
     '''
     if _is_globalzone() and salt.utils.which('zonecfg'):
-        if __grains__['os_family'] == 'Solaris':
+        if __grains__['os'] in ['Oracle Solaris', 'OpenSolaris', 'SmartOS', 'OmniOS', 'OpenIndiana']:
             return __virtualname__
 
     return (
