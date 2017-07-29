@@ -135,6 +135,14 @@ Alternatively, one could use the private IP to connect by specifying:
       ssh_interface: private_ips
 
 
+.. note::
+
+    When using floating ips from networks, if the OpenStack driver is unable to
+    allocate a new ip address for the server, it will check that for
+    unassociated ip addresses in the floating ip pool.  If SaltCloud is running
+    in parallel mode, it is possible that more than one server will attempt to
+    use the same ip address.
+
 '''
 
 # Import python libs
@@ -854,40 +862,43 @@ def _assign_floating_ips(vm_, conn, kwargs):
                     pool = OpenStack_1_1_FloatingIpPool(
                         net['floating'], conn.connection
                     )
-                    for idx in pool.list_floating_ips():
-                        if idx.node_id is None:
-                            floating.append(idx)
+                    try:
+                        floating.append(pool.create_floating_ip())
+                    except Exception as e:
+                        log.debug('Cannot allocate IP from floating pool \'%s\'. Checking for unassociated ips.',
+                                  net['floating'])
+                        for idx in pool.list_floating_ips():
+                            if idx.node_id is None:
+                                floating.append(idx)
+                                break
                     if not floating:
-                        try:
-                            floating.append(pool.create_floating_ip())
-                        except Exception as e:
-                            raise SaltCloudSystemExit(
-                                'Floating pool \'{0}\' does not have any more '
-                                'please create some more or use a different '
-                                'pool.'.format(net['floating'])
-                            )
+                        raise SaltCloudSystemExit(
+                            'There are no more floating IP addresses '
+                            'available, please create some more'
+                        )
         # otherwise, attempt to obtain list without specifying pool
         # this is the same as 'nova floating-ip-list'
         elif ssh_interface(vm_) != 'private_ips':
             try:
                 # This try/except is here because it appears some
-                # *cough* Rackspace *cough*
                 # OpenStack providers return a 404 Not Found for the
                 # floating ip pool URL if there are no pools setup
                 pool = OpenStack_1_1_FloatingIpPool(
                     '', conn.connection
                 )
-                for idx in pool.list_floating_ips():
-                    if idx.node_id is None:
-                        floating.append(idx)
+                try:
+                    floating.append(pool.create_floating_ip())
+                except Exception as e:
+                    log.debug('Cannot allocate IP from the default floating pool. Checking for unassociated ips.')
+                    for idx in pool.list_floating_ips():
+                        if idx.node_id is None:
+                            floating.append(idx)
+                            break
                 if not floating:
-                    try:
-                        floating.append(pool.create_floating_ip())
-                    except Exception as e:
-                        raise SaltCloudSystemExit(
-                            'There are no more floating IP addresses '
-                            'available, please create some more'
-                        )
+                    log.warning(
+                        'There are no more floating IP addresses '
+                        'available, please create some more if necessary'
+                    )
             except Exception as e:
                 if str(e).startswith('404'):
                     pass
