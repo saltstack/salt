@@ -43,12 +43,7 @@ __virtualname__ = 'zabbix'
 
 
 def __virtual__():
-    '''
-    Only load the module if Zabbix server is installed
-    '''
-    if salt.utils.which('zabbix_server'):
-        return __virtualname__
-    return (False, 'The zabbix execution module cannot be loaded: zabbix not installed.')
+    return __virtualname__
 
 
 def _frontend_url():
