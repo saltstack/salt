@@ -32,6 +32,7 @@ from tests.support.paths import CODE_DIR
 # Import salt libs
 #import salt.config
 import salt.utils
+import salt.utils.files
 import salt.version
 import salt.exceptions
 from salt.utils.verify import verify_env
@@ -111,7 +112,7 @@ class AdaptedConfigurationTestCaseMixin(object):
 
         rdict['config_dir'] = conf_dir
         rdict['conf_file'] = os.path.join(conf_dir, config_for)
-        with salt.utils.fopen(rdict['conf_file'], 'w') as wfh:
+        with salt.utils.files.fopen(rdict['conf_file'], 'w') as wfh:
             wfh.write(yaml.dump(rdict, default_flow_style=False))
         return rdict
 

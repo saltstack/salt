@@ -150,7 +150,9 @@ class Registry(object):  # pylint: disable=R0903
             _winreg.REG_DWORD:     'REG_DWORD',
             _winreg.REG_EXPAND_SZ: 'REG_EXPAND_SZ',
             _winreg.REG_MULTI_SZ:  'REG_MULTI_SZ',
-            _winreg.REG_SZ:        'REG_SZ'
+            _winreg.REG_SZ:        'REG_SZ',
+            # REG_QWORD isn't in the winreg library
+            11:                    'REG_QWORD'
         }
         self.opttype_reverse = {
             _winreg.REG_OPTION_NON_VOLATILE: 'REG_OPTION_NON_VOLATILE',
@@ -753,7 +755,7 @@ def import_file(source, use_32bit_registry=False):
     '''
     Import registry settings from a Windows ``REG`` file by invoking ``REG.EXE``.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     Usage:
 

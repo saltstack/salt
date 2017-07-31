@@ -312,6 +312,18 @@ def arg_repr(*args, **kwargs):
     return {"args": repr(args), "kwargs": repr(kwargs)}
 
 
+def arg_clean(*args, **kwargs):
+    '''
+    Like test.arg but cleans kwargs of the __pub* items
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.arg_clean 1 "two" 3.1 txt="hello" wow='{a: 1, b: "hello"}'
+    '''
+    return dict(args=args, kwargs=salt.utils.clean_kwargs(**kwargs))
+
+
 def fib(num):
     '''
     Return the num-th Fibonacci number, and the time it took to compute in

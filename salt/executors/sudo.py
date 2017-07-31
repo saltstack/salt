@@ -60,7 +60,7 @@ def execute(opts, data, func, args, kwargs):
            '-c', salt.syspaths.CONFIG_DIR,
            '--',
            data.get('fun')]
-    if data['fun'] == 'state.sls':
+    if data['fun'] in ('state.sls', 'state.highstate', 'state.apply'):
         kwargs['concurrent'] = True
     for arg in args:
         cmd.append(_cmd_quote(str(arg)))

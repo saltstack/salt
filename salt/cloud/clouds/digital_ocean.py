@@ -36,6 +36,7 @@ import decimal
 
 # Import Salt Libs
 import salt.utils.cloud
+import salt.utils.files
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -383,7 +384,7 @@ def create(vm_):
     )
     if userdata_file is not None:
         try:
-            with salt.utils.fopen(userdata_file, 'r') as fp_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fp_:
                 kwargs['user_data'] = salt.utils.cloud.userdata_template(
                     __opts__, vm_, fp_.read()
                 )
@@ -713,7 +714,7 @@ def import_keypair(kwargs=None, call=None):
         file(mandatory): public key file-name
         keyname(mandatory): public key name in the provider
     '''
-    with salt.utils.fopen(kwargs['file'], 'r') as public_key_filename:
+    with salt.utils.files.fopen(kwargs['file'], 'r') as public_key_filename:
         public_key_content = public_key_filename.read()
 
     digital_ocean_kwargs = {

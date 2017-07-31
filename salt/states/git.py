@@ -22,6 +22,7 @@ import string
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -1597,7 +1598,7 @@ def latest(name,
                 for target_object in target_contents:
                     target_path = os.path.join(target, target_object)
                     try:
-                        salt.utils.rm_rf(target_path)
+                        salt.utils.files.rm_rf(target_path)
                     except OSError as exc:
                         if exc.errno != errno.ENOENT:
                             removal_errors[target_path] = exc
@@ -1950,7 +1951,7 @@ def present(name,
                 if os.path.islink(name):
                     os.unlink(name)
                 else:
-                    salt.utils.rm_rf(name)
+                    salt.utils.files.rm_rf(name)
             except OSError as exc:
                 return _fail(
                     ret,
@@ -2213,7 +2214,7 @@ def detached(name,
 
     # Determine if supplied ref is a hash
     remote_rev_type = 'ref'
-    if len(ref) <= 40 \
+    if len(rev) <= 40 \
             and all(x in string.hexdigits for x in rev):
         rev = rev.lower()
         remote_rev_type = 'hash'
@@ -2299,7 +2300,7 @@ def detached(name,
                     if os.path.islink(target):
                         os.unlink(target)
                     else:
-                        salt.utils.rm_rf(target)
+                        salt.utils.files.rm_rf(target)
                 except OSError as exc:
                     return _fail(
                         ret,
@@ -2419,7 +2420,7 @@ def detached(name,
                 https_pass=https_pass,
                 ignore_retcode=False)
 
-            if 'refs/remotes/'+remote+'/'+ref in all_remote_refs:
+            if 'refs/remotes/'+remote+'/'+rev in all_remote_refs:
                 checkout_commit_id = all_remote_refs['refs/remotes/' + remote + '/' + rev]
             elif 'refs/tags/' + rev in all_remote_refs:
                 checkout_commit_id = all_remote_refs['refs/tags/' + rev]

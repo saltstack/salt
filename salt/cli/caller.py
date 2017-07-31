@@ -21,6 +21,7 @@ import salt.output
 import salt.payload
 import salt.transport
 import salt.utils.args
+import salt.utils.files
 import salt.utils.jid
 import salt.utils.minion
 import salt.defaults.exitcodes
@@ -164,6 +165,12 @@ class BaseCaller(object):
             ret['jid']
         )
         if fun not in self.minion.functions:
+            docs = self.minion.functions['sys.doc']('{0}*'.format(fun))
+            if docs:
+                docs[fun] = self.minion.functions.missing_fun_string(fun)
+                ret['out'] = 'nested'
+                ret['return'] = docs
+                return ret
             sys.stderr.write(self.minion.functions.missing_fun_string(fun))
             mod_name = fun.split('.')[0]
             if mod_name in self.minion.function_errors:
@@ -189,7 +196,7 @@ class BaseCaller(object):
                     no_parse=self.opts.get('no_parse', [])),
                 data=sdata)
             try:
-                with salt.utils.fopen(proc_fn, 'w+b') as fp_:
+                with salt.utils.files.fopen(proc_fn, 'w+b') as fp_:
                     fp_.write(self.serial.dumps(sdata))
             except NameError:
                 # Don't require msgpack with local

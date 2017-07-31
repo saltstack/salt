@@ -28,8 +28,6 @@ The following salt-cloud drivers have known issues running with Python 3. These 
 
 - Joyent
 
-- Any driver that relies on the `apache-libcloud` library such as cloudstack, dimenstiondata, gce, nova, and openstack
-
 - When running under Python 3, users who require Unicode support should ensure that a locale is set on their machines.
   Users using the `C` locale are advised to switch to a UTF-aware locale to ensure proper functionality with Salt with Python 3.
 
@@ -945,3 +943,13 @@ The ``glusterfs`` state had the following function removed:
 The ``openvswitch_port`` state had the following change:
 
 - The ``type`` option was removed from the ``present`` function. Please use ``tunnel_type`` instead.
+
+Build Notes
+===========
+
+Windows Installer Packages
+--------------------------
+
+Windows Installer packages have been patched with the following PR: 42347_
+
+.. _42347: https://github.com/saltstack/salt/pull/42347

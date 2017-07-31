@@ -1858,7 +1858,7 @@ def get_all_tags(filters=None, region=None, key=None, keyid=None, profile=None):
     '''
     Describe all tags matching the filter criteria, or all tags in the account otherwise.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     filters
         (dict) - Additional constraints on which volumes to return.  Note that valid filters vary

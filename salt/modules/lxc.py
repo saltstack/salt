@@ -29,6 +29,7 @@ import salt
 import salt.utils.odict
 import salt.utils
 import salt.utils.dictupdate
+import salt.utils.files
 import salt.utils.network
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils.cloud
@@ -288,10 +289,8 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         any extra argument for the salt minion config
     dnsservers
         list of DNS servers to set inside the container
-        (Defaults to 8.8.8.8 and 4.4.4.4 until Oxygen release)
     dns_via_dhcp
         do not set the dns servers, let them be set by the dhcp.
-        (Defaults to False until Oxygen release)
     autostart
         autostart the container at boot time
     password
@@ -404,13 +403,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     snapshot = _cloud_get('snapshot', False)
     autostart = bool(_cloud_get('autostart', True))
     dnsservers = _cloud_get('dnsservers', [])
-    dns_via_dhcp = _cloud_get('dns_via_dhcp', False)
-    if not dnsservers and not dns_via_dhcp:
-        salt.utils.warn_until('Oxygen', (
-            'dnsservers will stop defaulting to 8.8.8.8 and 4.4.4.4 '
-            'in Oxygen.  Please set your dnsservers.'
-        ))
-        dnsservers = ['8.8.8.8', '4.4.4.4']
+    dns_via_dhcp = _cloud_get('dns_via_dhcp', True)
     password = _cloud_get('password', 's3cr3t')
     password_encrypted = _cloud_get('password_encrypted', False)
     fstype = _cloud_get('fstype', None)
@@ -1002,7 +995,7 @@ class _LXCConfig(object):
         if self.name:
             self.path = os.path.join(path, self.name, 'config')
             if os.path.isfile(self.path):
-                with salt.utils.fopen(self.path) as fhr:
+                with salt.utils.files.fopen(self.path) as fhr:
                     for line in fhr.readlines():
                         match = self.pattern.findall((line.strip()))
                         if match:
@@ -1042,7 +1035,7 @@ class _LXCConfig(object):
             content = self.as_string()
             # 2 step rendering to be sure not to open/wipe the config
             # before as_string succeeds.
-            with salt.utils.fopen(self.path, 'w') as fic:
+            with salt.utils.files.fopen(self.path, 'w') as fic:
                 fic.write(content)
                 fic.flush()
 
@@ -2768,7 +2761,7 @@ def info(name, path=None):
 
         ret = {}
         config = []
-        with salt.utils.fopen(conf_file) as fp_:
+        with salt.utils.files.fopen(conf_file) as fp_:
             for line in fp_:
                 comps = [x.strip() for x in
                          line.split('#', 1)[0].strip().split('=', 1)]
@@ -2978,8 +2971,8 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
     changes = {'edited': [], 'added': [], 'removed': []}
     ret = {'changes': changes, 'result': True, 'comment': ''}
 
-    # do not use salt.utils.fopen !
-    with salt.utils.fopen(lxc_conf_p, 'r') as fic:
+    # do not use salt.utils.files.fopen !
+    with salt.utils.files.fopen(lxc_conf_p, 'r') as fic:
         filtered_lxc_conf = []
         for row in lxc_conf:
             if not row:
@@ -3036,11 +3029,11 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
         conf_changed = conf != orig_config
         chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         if conf_changed:
-            # DO NOT USE salt.utils.fopen here, i got (kiorky)
+            # DO NOT USE salt.utils.files.fopen here, i got (kiorky)
             # problems with lxc configs which were wiped !
-            with salt.utils.fopen('{0}.{1}'.format(lxc_conf_p, chrono), 'w') as wfic:
+            with salt.utils.files.fopen('{0}.{1}'.format(lxc_conf_p, chrono), 'w') as wfic:
                 wfic.write(conf)
-            with salt.utils.fopen(lxc_conf_p, 'w') as wfic:
+            with salt.utils.files.fopen(lxc_conf_p, 'w') as wfic:
                 wfic.write(conf)
             ret['comment'] = 'Updated'
             ret['result'] = True
@@ -4232,7 +4225,7 @@ def read_conf(conf_file, out_format='simple'):
     '''
     ret_commented = []
     ret_simple = {}
-    with salt.utils.fopen(conf_file, 'r') as fp_:
+    with salt.utils.files.fopen(conf_file, 'r') as fp_:
         for line in fp_.readlines():
             if '=' not in line:
                 ret_commented.append(line)
@@ -4316,7 +4309,7 @@ def write_conf(conf_file, conf):
                 if out_line:
                     content += out_line
                     content += '\n'
-    with salt.utils.fopen(conf_file, 'w') as fp_:
+    with salt.utils.files.fopen(conf_file, 'w') as fp_:
         fp_.write(content)
     return {}
 
@@ -4646,7 +4639,7 @@ def apply_network_profile(name, network_profile, nic_opts=None, path=None):
     cfgpath = os.path.join(cpath, name, 'config')
 
     before = []
-    with salt.utils.fopen(cfgpath, 'r') as fp_:
+    with salt.utils.files.fopen(cfgpath, 'r') as fp_:
         for line in fp_:
             before.append(line)
 
@@ -4663,7 +4656,7 @@ def apply_network_profile(name, network_profile, nic_opts=None, path=None):
         edit_conf(cfgpath, out_format='commented', **network_params)
 
     after = []
-    with salt.utils.fopen(cfgpath, 'r') as fp_:
+    with salt.utils.files.fopen(cfgpath, 'r') as fp_:
         for line in fp_:
             after.append(line)
 

@@ -30,6 +30,7 @@ from salt.ext.six.moves.urllib.request import (
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -450,7 +451,7 @@ def config(name, config, edit=True):
         key = next(six.iterkeys(entry))
         configs = _parse_config(entry[key], key)
         if edit:
-            with salt.utils.fopen(name, 'w') as configfile:
+            with salt.utils.files.fopen(name, 'w') as configfile:
                 configfile.write('# This file is managed by Salt.\n')
                 configfile.write(configs)
     return configs

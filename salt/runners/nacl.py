@@ -28,7 +28,7 @@ Now with the config in the master you can use the runner nacl like:
 from __future__ import absolute_import
 import base64
 import os
-import salt.utils
+import salt.utils.files
 import salt.syspaths
 
 
@@ -70,7 +70,7 @@ def _get_key(rstrip_newline=True, **kwargs):
     if not key and keyfile:
         if not os.path.isfile(keyfile):
             raise Exception('file not found: {0}'.format(keyfile))
-        with salt.utils.fopen(keyfile, 'rb') as keyf:
+        with salt.utils.files.fopen(keyfile, 'rb') as keyf:
             key = keyf.read()
     if key is None:
         raise Exception('no key found')
@@ -98,7 +98,7 @@ def keygen(keyfile=None):
     if keyfile:
         if os.path.isfile(keyfile):
             raise Exception('file already found: {0}'.format(keyfile))
-        with salt.utils.fopen(keyfile, 'w') as keyf:
+        with salt.utils.files.fopen(keyfile, 'w') as keyf:
             keyf.write(key)
             return 'saved: {0}'.format(keyfile)
     return key

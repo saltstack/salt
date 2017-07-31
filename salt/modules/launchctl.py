@@ -22,6 +22,7 @@ import re
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+import salt.utils.files
 from salt.utils.versions import LooseVersion as _LooseVersion
 import salt.ext.six as six
 
@@ -88,7 +89,7 @@ def _available_services():
                 try:
                     # This assumes most of the plist files
                     # will be already in XML format
-                    with salt.utils.fopen(file_path):
+                    with salt.utils.files.fopen(file_path):
                         plist = plistlib.readPlist(true_path)
 
                 except Exception:

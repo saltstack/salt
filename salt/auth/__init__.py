@@ -229,7 +229,7 @@ class LoadAuth(object):
 
         try:
             with salt.utils.files.set_umask(0o177):
-                with salt.utils.fopen(t_path, 'w+b') as fp_:
+                with salt.utils.files.fopen(t_path, 'w+b') as fp_:
                     fp_.write(self.serial.dumps(tdata))
         except (IOError, OSError):
             log.warning('Authentication failure: can not write token file "{0}".'.format(t_path))
@@ -245,7 +245,7 @@ class LoadAuth(object):
         if not os.path.isfile(t_path):
             return {}
         try:
-            with salt.utils.fopen(t_path, 'rb') as fp_:
+            with salt.utils.files.fopen(t_path, 'rb') as fp_:
                 tdata = self.serial.loads(fp_.read())
         except (IOError, OSError):
             log.warning('Authentication failure: can not read token file "{0}".'.format(t_path))
@@ -670,7 +670,7 @@ class Resolver(object):
             return tdata
         try:
             with salt.utils.files.set_umask(0o177):
-                with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
+                with salt.utils.files.fopen(self.opts['token_file'], 'w+') as fp_:
                     fp_.write(tdata['token'])
         except (IOError, OSError):
             pass

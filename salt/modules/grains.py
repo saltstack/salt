@@ -12,15 +12,14 @@ import operator
 import collections
 import json
 import math
+import yaml
 from functools import reduce  # pylint: disable=redefined-builtin
 
-# Import 3rd-party libs
-import yaml
-import salt.utils.compat
+# Import Salt libs
 import salt.ext.six as six
-
-# Import salt libs
 import salt.utils
+import salt.utils.compat
+import salt.utils.files
 import salt.utils.yamldumper
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
@@ -235,7 +234,7 @@ def setvals(grains, destructive=False):
         )
 
     if os.path.isfile(gfn):
-        with salt.utils.fopen(gfn, 'rb') as fp_:
+        with salt.utils.files.fopen(gfn, 'rb') as fp_:
             try:
                 grains = yaml.safe_load(fp_.read())
             except yaml.YAMLError as exc:
@@ -253,14 +252,14 @@ def setvals(grains, destructive=False):
             __grains__[key] = val
     cstr = salt.utils.yamldumper.safe_dump(grains, default_flow_style=False)
     try:
-        with salt.utils.fopen(gfn, 'w+') as fp_:
+        with salt.utils.files.fopen(gfn, 'w+') as fp_:
             fp_.write(cstr)
     except (IOError, OSError):
         msg = 'Unable to write to grains file at {0}. Check permissions.'
         log.error(msg.format(gfn))
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
     try:
-        with salt.utils.flopen(fn_, 'w+') as fp_:
+        with salt.utils.files.flopen(fn_, 'w+') as fp_:
             fp_.write('')
     except (IOError, OSError):
         msg = 'Unable to write to cache file {0}. Check permissions.'

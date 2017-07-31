@@ -19,8 +19,9 @@ import json
 # Import salt libs
 import salt.ext.six as six
 import salt.daemons.masterapi
-import salt.utils.args
 import salt.utils
+import salt.utils.args
+import salt.utils.files
 import salt.transport
 from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
@@ -279,7 +280,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
-        with salt.utils.fopen(fn_, 'w+b') as fp_:
+        with salt.utils.files.fopen(fn_, 'w+b') as fp_:
             fp_.write(self.serial.dumps(sdata))
         ret = {'success': False}
         function_name = data['fun']

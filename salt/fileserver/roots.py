@@ -25,8 +25,10 @@ import logging
 # Import salt libs
 import salt.fileserver
 import salt.utils
+import salt.utils.event
+import salt.utils.files
+import salt.utils.gzip_util
 import salt.utils.path
-from salt.utils.event import tagify
 import salt.ext.six as six
 
 log = logging.getLogger(__name__)
@@ -131,7 +133,7 @@ def serve_file(load, fnd):
     ret['dest'] = fnd['rel']
     gzip = load.get('gzip', None)
     fpath = os.path.normpath(fnd['path'])
-    with salt.utils.fopen(fpath, 'rb') as fp_:
+    with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
         if data and six.PY3 and not salt.utils.is_bin_file(fpath):
@@ -168,7 +170,7 @@ def update():
     old_mtime_map = {}
     # if you have an old map, load that
     if os.path.exists(mtime_map_path):
-        with salt.utils.fopen(mtime_map_path, 'r') as fp_:
+        with salt.utils.files.fopen(mtime_map_path, 'r') as fp_:
             for line in fp_:
                 try:
                     file_path, mtime = line.replace('\n', '').split(':', 1)
@@ -193,7 +195,7 @@ def update():
     mtime_map_path_dir = os.path.dirname(mtime_map_path)
     if not os.path.exists(mtime_map_path_dir):
         os.makedirs(mtime_map_path_dir)
-    with salt.utils.fopen(mtime_map_path, 'w') as fp_:
+    with salt.utils.files.fopen(mtime_map_path, 'w') as fp_:
         for file_path, mtime in six.iteritems(new_mtime_map):
             fp_.write('{file_path}:{mtime}\n'.format(file_path=file_path,
                                                      mtime=mtime))
@@ -206,7 +208,8 @@ def update():
                 __opts__['transport'],
                 opts=__opts__,
                 listen=False)
-        event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
+        event.fire_event(data,
+                         salt.utils.event.tagify(['roots', 'update'], prefix='fileserver'))
 
 
 def file_hash(load, fnd):
@@ -244,7 +247,7 @@ def file_hash(load, fnd):
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.fopen(cache_path, 'r') as fp_:
+            with salt.utils.files.fopen(cache_path, 'r') as fp_:
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
@@ -284,7 +287,7 @@ def file_hash(load, fnd):
                 raise
     # save the cache object "hash:mtime"
     cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
-    with salt.utils.flopen(cache_path, 'w') as fp_:
+    with salt.utils.files.flopen(cache_path, 'w') as fp_:
         fp_.write(cache_object)
     return ret
 

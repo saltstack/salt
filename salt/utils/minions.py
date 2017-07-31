@@ -14,6 +14,8 @@ import logging
 # Import salt libs
 import salt.payload
 import salt.utils
+import salt.utils.files
+import salt.utils.network
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError, SaltCacheError
 import salt.auth.ldap
@@ -21,7 +23,6 @@ import salt.cache
 import salt.ext.six as six
 
 # Import 3rd-party libs
-import salt.ext.six as six
 if six.PY3:
     import ipaddress
 else:
@@ -227,7 +228,7 @@ class CkMinions(object):
         try:
             if self.opts['key_cache'] and os.path.exists(pki_cache_fn):
                 log.debug('Returning cached minion list')
-                with salt.utils.fopen(pki_cache_fn) as fn_:
+                with salt.utils.files.fopen(pki_cache_fn) as fn_:
                     return self.serial.load(fn_)
             else:
                 for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):

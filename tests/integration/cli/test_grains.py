@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.files
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase, SSHCase
@@ -61,7 +61,7 @@ class GrainsTargetingTest(ShellCase):
         # Create a minion key, but do not start the "fake" minion. This mimics a
         # disconnected minion.
         key_file = os.path.join(self.master_opts['pki_dir'], 'minions', 'disconnected')
-        with salt.utils.fopen(key_file, 'a'):
+        with salt.utils.files.fopen(key_file, 'a'):
             pass
 
         # ping disconnected minion and ensure it times out and returns with correct message

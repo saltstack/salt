@@ -24,7 +24,7 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.integration.utils import testprogram
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 
 log = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
         for fname in ('master', 'minion'):
             pid_path = os.path.join(config_dir, '{0}.pid'.format(fname))
-            with salt.utils.fopen(self.get_config_file_path(fname), 'r') as fhr:
+            with salt.utils.files.fopen(self.get_config_file_path(fname), 'r') as fhr:
                 config = yaml.load(fhr.read())
                 config['log_file'] = config['syndic_log_file'] = 'file:///tmp/log/LOG_LOCAL3'
                 config['root_dir'] = config_dir
@@ -55,7 +55,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
                     config['ret_port'] = int(config['ret_port']) + 10
                     config['publish_port'] = int(config['publish_port']) + 10
 
-                with salt.utils.fopen(os.path.join(config_dir, fname), 'w') as fhw:
+                with salt.utils.files.fopen(os.path.join(config_dir, fname), 'w') as fhw:
                     fhw.write(
                         yaml.dump(config, default_flow_style=False)
                     )
@@ -73,7 +73,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
         # Now kill it if still running
         if os.path.exists(pid_path):
-            with salt.utils.fopen(pid_path) as fhr:
+            with salt.utils.files.fopen(pid_path) as fhr:
                 try:
                     os.kill(int(fhr.read()), signal.SIGKILL)
                 except OSError:

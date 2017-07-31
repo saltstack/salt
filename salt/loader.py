@@ -22,6 +22,7 @@ from zipimport import zipimporter
 import salt.config
 import salt.syspaths
 import salt.utils.context
+import salt.utils.files
 import salt.utils.lazy
 import salt.utils.event
 import salt.utils.odict
@@ -194,7 +195,7 @@ def minion_mods(
                             generated modules in __context__
 
     :param dict utils: Utility functions which should be made available to
-                            Salt modules in __utils__. See `utils_dir` in
+                            Salt modules in __utils__. See `utils_dirs` in
                             salt.config for additional information about
                             configuration.
 
@@ -634,7 +635,7 @@ def _load_cached_grains(opts, cfn):
     log.debug('Retrieving grains from cache')
     try:
         serial = salt.payload.Serial(opts)
-        with salt.utils.fopen(cfn, 'rb') as fp_:
+        with salt.utils.files.fopen(cfn, 'rb') as fp_:
             cached_grains = serial.load(fp_)
         if not cached_grains:
             log.debug('Cached grains are empty, cache might be corrupted. Refreshing.')
@@ -784,7 +785,7 @@ def grains(opts, force_refresh=False, proxy=None):
                 import salt.modules.cmdmod
                 # Make sure cache file isn't read-only
                 salt.modules.cmdmod._run_quiet('attrib -R "{0}"'.format(cfn))
-            with salt.utils.fopen(cfn, 'w+b') as fp_:
+            with salt.utils.files.fopen(cfn, 'w+b') as fp_:
                 try:
                     serial = salt.payload.Serial(opts)
                     serial.dump(grains_data, fp_)
@@ -1099,7 +1100,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             virtual_funcs = []
         self.virtual_funcs = virtual_funcs
 
-        self.disabled = set(self.opts.get('disable_{0}s'.format(self.tag), []))
+        self.disabled = set(self.opts.get('disable_{0}{1}'.format(
+            self.tag, '' if self.tag[-1] == 's' else 's'), []))
 
         self.refresh_file_mapping()
 
@@ -1412,7 +1414,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         # pylint: enable=no-member
                         sys.modules[mod_namespace] = mod
                     else:
-                        with salt.utils.fopen(fpath, desc[1]) as fn_:
+                        with salt.utils.files.fopen(fpath, desc[1]) as fn_:
                             mod = imp.load_module(mod_namespace, fn_, fpath, desc)
         except IOError:
             raise

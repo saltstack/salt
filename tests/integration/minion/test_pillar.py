@@ -25,6 +25,7 @@ import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.pillar as pillar
 
 log = logging.getLogger(__name__)
@@ -226,13 +227,13 @@ class DecryptGPGPillarTest(ModuleCase):
             log.debug('Result:\n%s', output)
 
             os.makedirs(PILLAR_BASE)
-            with salt.utils.fopen(TOP_SLS, 'w') as fp_:
+            with salt.utils.files.fopen(TOP_SLS, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
                 base:
                   '*':
                     - gpg
                 '''))
-            with salt.utils.fopen(GPG_SLS, 'w') as fp_:
+            with salt.utils.files.fopen(GPG_SLS, 'w') as fp_:
                 fp_.write(GPG_PILLAR_YAML)
 
     @classmethod

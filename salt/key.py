@@ -23,8 +23,11 @@ import salt.daemons.masterapi
 import salt.exceptions
 import salt.minion
 import salt.utils
+import salt.utils.args
 import salt.utils.event
+import salt.utils.files
 import salt.utils.kinds
+import salt.utils.sdb
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
@@ -118,7 +121,7 @@ class KeyCLI(object):
         if self.opts['eauth']:
             if 'token' in self.opts:
                 try:
-                    with salt.utils.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
+                    with salt.utils.files.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
                         low['key'] = fp_.readline()
                 except IOError:
                     low['token'] = self.opts['token']
@@ -374,6 +377,8 @@ class Key(object):
                 io_loop=io_loop
                 )
 
+        self.passphrase = salt.utils.sdb.sdb_get(self.opts['signing_key_pass'], self.opts)
+
     def _check_minions_directories(self):
         '''
         Return the minion keys directory paths
@@ -409,7 +414,7 @@ class Key(object):
         '''
         keydir, keyname, keysize, user = self._get_key_attrs(keydir, keyname,
                                                              keysize, user)
-        salt.crypt.gen_keys(keydir, keyname, keysize, user)
+        salt.crypt.gen_keys(keydir, keyname, keysize, user, self.passphrase)
         return salt.utils.pem_finger(os.path.join(keydir, keyname + '.pub'))
 
     def gen_signature(self, privkey, pubkey, sig_path):
@@ -418,7 +423,8 @@ class Key(object):
         '''
         return salt.crypt.gen_signature(privkey,
                                         pubkey,
-                                        sig_path)
+                                        sig_path,
+                                        self.passphrase)
 
     def gen_keys_signature(self, priv, pub, signature_path, auto_create=False, keysize=None):
         '''
@@ -452,7 +458,8 @@ class Key(object):
                 salt.crypt.gen_keys(self.opts['pki_dir'],
                                     self.opts['master_sign_key_name'],
                                     keysize or self.opts['keysize'],
-                                    self.opts.get('user'))
+                                    self.opts.get('user'),
+                                    self.passphrase)
 
                 priv = self.opts['pki_dir'] + '/' + self.opts['master_sign_key_name'] + '.pem'
             else:
@@ -649,7 +656,7 @@ class Key(object):
             ret[status] = {}
             for key in salt.utils.isorted(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
-                with salt.utils.fopen(path, 'r') as fp_:
+                with salt.utils.files.fopen(path, 'r') as fp_:
                     ret[status][key] = fp_.read()
         return ret
 
@@ -662,7 +669,7 @@ class Key(object):
             ret[status] = {}
             for key in salt.utils.isorted(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
-                with salt.utils.fopen(path, 'r') as fp_:
+                with salt.utils.files.fopen(path, 'r') as fp_:
                     ret[status][key] = fp_.read()
         return ret
 
@@ -1005,7 +1012,7 @@ class RaetKey(Key):
                 if not name or prefix != 'estate':
                     continue
                 path = os.path.join(road_cache, road)
-                with salt.utils.fopen(path, 'rb') as fp_:
+                with salt.utils.files.fopen(path, 'rb') as fp_:
                     if ext == '.json':
                         data = json.load(fp_)
                     elif ext == '.msgpack':
@@ -1060,7 +1067,7 @@ class RaetKey(Key):
                 'pub': pub,
                 'verify': verify}
         if self.opts['open_mode']:  # always accept and overwrite
-            with salt.utils.fopen(acc_path, 'w+b') as fp_:
+            with salt.utils.files.fopen(acc_path, 'w+b') as fp_:
                 fp_.write(self.serial.dumps(keydata))
                 return self.ACC
         if os.path.isfile(rej_path):
@@ -1068,7 +1075,7 @@ class RaetKey(Key):
             return self.REJ
         elif os.path.isfile(acc_path):
             # The minion id has been accepted, verify the key strings
-            with salt.utils.fopen(acc_path, 'rb') as fp_:
+            with salt.utils.files.fopen(acc_path, 'rb') as fp_:
                 keydata = self.serial.loads(fp_.read())
             if keydata['pub'] == pub and keydata['verify'] == verify:
                 return self.ACC
@@ -1078,7 +1085,7 @@ class RaetKey(Key):
         elif os.path.isfile(pre_path):
             auto_reject = self.auto_key.check_autoreject(minion_id)
             auto_sign = self.auto_key.check_autosign(minion_id)
-            with salt.utils.fopen(pre_path, 'rb') as fp_:
+            with salt.utils.files.fopen(pre_path, 'rb') as fp_:
                 keydata = self.serial.loads(fp_.read())
             if keydata['pub'] == pub and keydata['verify'] == verify:
                 if auto_reject:
@@ -1109,7 +1116,7 @@ class RaetKey(Key):
         else:
             w_path = pre_path
             ret = self.PEND
-        with salt.utils.fopen(w_path, 'w+b') as fp_:
+        with salt.utils.files.fopen(w_path, 'w+b') as fp_:
             fp_.write(self.serial.dumps(keydata))
             return ret
 
@@ -1121,7 +1128,7 @@ class RaetKey(Key):
         verify: <verify>
         '''
         path = os.path.join(self.opts['pki_dir'], status, minion_id)
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             keydata = self.serial.loads(fp_.read())
             return 'pub: {0}\nverify: {1}'.format(
                     keydata['pub'],
@@ -1131,7 +1138,7 @@ class RaetKey(Key):
         '''
         Return a sha256 kingerprint for the key
         '''
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             keydata = self.serial.loads(fp_.read())
             key = 'pub: {0}\nverify: {1}'.format(
                     keydata['pub'],
@@ -1387,7 +1394,7 @@ class RaetKey(Key):
         path = os.path.join(self.opts['pki_dir'], status, minion_id)
         if not os.path.isfile(path):
             return {}
-        with salt.utils.fopen(path, 'rb') as fp_:
+        with salt.utils.files.fopen(path, 'rb') as fp_:
             return self.serial.loads(fp_.read())
 
     def read_local(self):
@@ -1398,7 +1405,7 @@ class RaetKey(Key):
         path = os.path.join(self.opts['pki_dir'], 'local.key')
         if not os.path.isfile(path):
             return {}
-        with salt.utils.fopen(path, 'rb') as fp_:
+        with salt.utils.files.fopen(path, 'rb') as fp_:
             return self.serial.loads(fp_.read())
 
     def write_local(self, priv, sign):
@@ -1412,7 +1419,7 @@ class RaetKey(Key):
         if os.path.exists(path):
             #mode = os.stat(path).st_mode
             os.chmod(path, stat.S_IWUSR | stat.S_IRUSR)
-        with salt.utils.fopen(path, 'w+') as fp_:
+        with salt.utils.files.fopen(path, 'w+') as fp_:
             fp_.write(self.serial.dumps(keydata))
             os.chmod(path, stat.S_IRUSR)
         os.umask(c_umask)

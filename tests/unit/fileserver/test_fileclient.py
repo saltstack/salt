@@ -17,7 +17,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt import fileclient
 import salt.ext.six as six
 
@@ -118,7 +118,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
             _new_dir(saltenv_root)
 
             path = os.path.join(saltenv_root, 'foo.txt')
-            with salt.utils.fopen(path, 'w') as fp_:
+            with salt.utils.files.fopen(path, 'w') as fp_:
                 fp_.write(
                     'This is a test file in the \'{0}\' saltenv.\n'
                     .format(saltenv)
@@ -128,7 +128,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
             os.makedirs(subdir_abspath)
             for subdir_file in SUBDIR_FILES:
                 path = os.path.join(subdir_abspath, subdir_file)
-                with salt.utils.fopen(path, 'w') as fp_:
+                with salt.utils.files.fopen(path, 'w') as fp_:
                     fp_.write(
                         'This is file \'{0}\' in subdir \'{1} from saltenv '
                         '\'{2}\''.format(subdir_file, SUBDIR, saltenv)
@@ -174,7 +174,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                     # sufficient here. If opening the file raises an exception,
                     # this is a problem, so we are not catching the exception
                     # and letting it be raised so that the test fails.
-                    with salt.utils.fopen(cache_loc) as fp_:
+                    with salt.utils.files.fopen(cache_loc) as fp_:
                         content = fp_.read()
                     log.debug('cache_loc = %s', cache_loc)
                     log.debug('content = %s', content)
@@ -214,7 +214,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                     # sufficient here. If opening the file raises an exception,
                     # this is a problem, so we are not catching the exception
                     # and letting it be raised so that the test fails.
-                    with salt.utils.fopen(cache_loc) as fp_:
+                    with salt.utils.files.fopen(cache_loc) as fp_:
                         content = fp_.read()
                     log.debug('cache_loc = %s', cache_loc)
                     log.debug('content = %s', content)
@@ -255,7 +255,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                     # sufficient here. If opening the file raises an exception,
                     # this is a problem, so we are not catching the exception
                     # and letting it be raised so that the test fails.
-                    with salt.utils.fopen(cache_loc) as fp_:
+                    with salt.utils.files.fopen(cache_loc) as fp_:
                         content = fp_.read()
                     log.debug('cache_loc = %s', cache_loc)
                     log.debug('content = %s', content)
@@ -285,7 +285,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                 # opening the file raises an exception, this is a problem, so
                 # we are not catching the exception and letting it be raised so
                 # that the test fails.
-                with salt.utils.fopen(cache_loc) as fp_:
+                with salt.utils.files.fopen(cache_loc) as fp_:
                     content = fp_.read()
                 log.debug('cache_loc = %s', cache_loc)
                 log.debug('content = %s', content)
@@ -319,7 +319,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                 # opening the file raises an exception, this is a problem, so
                 # we are not catching the exception and letting it be raised so
                 # that the test fails.
-                with salt.utils.fopen(cache_loc) as fp_:
+                with salt.utils.files.fopen(cache_loc) as fp_:
                     content = fp_.read()
                 log.debug('cache_loc = %s', cache_loc)
                 log.debug('content = %s', content)
@@ -354,7 +354,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                 # opening the file raises an exception, this is a problem, so
                 # we are not catching the exception and letting it be raised so
                 # that the test fails.
-                with salt.utils.fopen(cache_loc) as fp_:
+                with salt.utils.files.fopen(cache_loc) as fp_:
                     content = fp_.read()
                 log.debug('cache_loc = %s', cache_loc)
                 log.debug('content = %s', content)
