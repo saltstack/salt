@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: :email:`Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
 
 
     tests.unit.pillar_test
@@ -18,6 +19,7 @@ from tests.support.paths import TMP
 
 # Import salt libs
 import salt.pillar
+import salt.exceptions
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -317,3 +319,107 @@ p2:
             }[sls]
 
         client.get_state.side_effect = get_state
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch('salt.transport.Channel.factory', MagicMock())
+class RemotePillarTestCase(TestCase):
+    '''
+    Tests for instantiating a RemotePillar in salt.pillar
+    '''
+    def setUp(self):
+        self.grains = {}
+
+    def tearDown(self):
+        for attr in ('grains',):
+            try:
+                delattr(self, attr)
+            except AttributeError:
+                continue
+
+    def test_get_opts_in_pillar_override_call(self):
+        mock_get_pillar_override_from_opts = MagicMock(return_value={})
+        with patch('salt.pillar.RemotePillarMixin.get_pillar_override_from_opts',
+                   mock_get_pillar_override_from_opts):
+            salt.pillar.RemotePillar({}, self.grains, 'mocked-minion', 'dev')
+        mock_get_pillar_override_from_opts.assert_called_once_with(
+            {'environment': 'dev'})
+
+    def test_multiple_keys_in_opts_added_to_pillar(self):
+        opts = {
+            'renderer': 'json',
+            'path_to_add': 'fake_data',
+            'path_to_add2': {'fake_data2': ['fake_data3', 'fake_data4']},
+            'add_to_pillar': ['path_to_add', 'path_to_add2']
+        }
+        pillar = salt.pillar.RemotePillar(opts, self.grains,
+                                          'mocked-minion', 'dev')
+        self.assertEqual(pillar.pillar_override,
+                         {'path_to_add': 'fake_data',
+                          'path_to_add2': {'fake_data2': ['fake_data3',
+                                                          'fake_data4']}})
+
+    def test_subkey_in_opts_added_to_pillar(self):
+        opts = {
+            'renderer': 'json',
+            'path_to_add': 'fake_data',
+            'path_to_add2': {'fake_data5': 'fake_data6',
+                             'fake_data2': ['fake_data3', 'fake_data4']},
+            'add_to_pillar': ['path_to_add2:fake_data5']
+        }
+        pillar = salt.pillar.RemotePillar(opts, self.grains,
+                                          'mocked-minion', 'dev')
+        self.assertEqual(pillar.pillar_override,
+                         {'path_to_add2': {'fake_data5': 'fake_data6'}})
+
+    def test_pillar_overrides_merge_on_keys_in_opts(self):
+        opts = {
+            'renderer': 'json',
+            'path_to_add': 'fake_data',
+            'path_to_add2': {'fake_data2': ['fake_data3', 'fake_data4']},
+            'add_to_pillar': ['path_to_add', 'path_to_add2']
+        }
+        pillar = salt.pillar.RemotePillar(opts, self.grains, 'mocked-minion', 'dev',
+                                          pillar_override={'path_to_add2':
+                                                           'fake_override'})
+        self.assertEqual(pillar.pillar_override,
+                         {'path_to_add': 'fake_data',
+                          'path_to_add2': 'fake_override'})
+
+    def test_non_existent_leaf_opt_in_add_to_pillar(self):
+        opts = {
+            'renderer': 'json',
+            'path_to_add': 'fake_data',
+            'path_to_add2': {'fake_data5': 'fake_data6',
+                             'fake_data2': ['fake_data3', 'fake_data4']},
+            'add_to_pillar': ['path_to_add2:fake_data_non_exist']
+        }
+        pillar = salt.pillar.RemotePillar(opts, self.grains,
+                                          'mocked-minion', 'dev')
+        self.assertEqual(pillar.pillar_override, {})
+
+
+    def test_non_existent_intermediate_opt_in_add_to_pillar(self):
+        opts = {
+            'renderer': 'json',
+            'path_to_add': 'fake_data',
+            'path_to_add2': {'fake_data5': 'fake_data6',
+                             'fake_data2': ['fake_data3', 'fake_data4']},
+            'add_to_pillar': ['path_to_add_no_exist']
+        }
+        pillar = salt.pillar.RemotePillar(opts, self.grains,
+                                          'mocked-minion', 'dev')
+        self.assertEqual(pillar.pillar_override, {})
+
+    def test_malformed_add_to_pillar(self):
+        opts = {
+            'renderer': 'json',
+            'path_to_add': 'fake_data',
+            'path_to_add2': {'fake_data5': 'fake_data6',
+                             'fake_data2': ['fake_data3', 'fake_data4']},
+            'add_to_pillar': MagicMock()
+        }
+        with self.assertRaises(salt.exceptions.SaltClientError) as excinfo:
+            salt.pillar.RemotePillar(opts, self.grains, 'mocked-minion', 'dev')
+        self.assertEqual(excinfo.exception.strerror,
+                         '\'add_to_pillar\' config is malformed.')
