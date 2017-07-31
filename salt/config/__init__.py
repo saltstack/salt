@@ -1079,6 +1079,11 @@ VALID_OPTS = {
     # (in other words, require that minions have 'minion_sign_messages'
     # turned on)
     'require_minion_sign_messages': bool,
+
+    # The list of config entries to be passed to external pillar function as
+    # part of the extra_minion_data param
+    # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
+    'pass_to_ext_pillars': (six.string_types, list),
 }
 
 # default configurations
