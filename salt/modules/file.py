@@ -2179,14 +2179,14 @@ def replace(path,
         if not_found_content is None:
             not_found_content = repl
         if prepend_if_not_found:
-            new_file.insert(0, not_found_content + os.linesep)
+            new_file.insert(0, not_found_content + salt.utils.to_bytes(os.linesep))
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith(os.linesep):
-                    new_file[-1] += os.linesep
-            new_file.append(not_found_content + os.linesep)
+                if not new_file[-1].endswith(salt.utils.to_bytes(os.linesep)):
+                    new_file[-1] += salt.utils.to_bytes(os.linesep)
+            new_file.append(not_found_content + salt.utils.to_bytes(os.linesep))
         has_changes = True
         if not dry_run:
             try:
@@ -2386,12 +2386,12 @@ def blockreplace(path,
 
                         # Check for multi-line '\n' terminated content as split will
                         # introduce an unwanted additional new line.
-                        if content and content[-1] == os.linesep:
+                        if content and content[-1] == salt.utils.to_bytes(os.linesep):
                             content = content[:-1]
 
                         # push new block content in file
-                        for cline in content.split(os.linesep):
-                            new_file.append(cline + os.linesep)
+                        for cline in content.split(salt.utils.to_bytes(os.linesep)):
+                            new_file.append(cline + salt.utils.to_bytes(os.linesep))
 
                         done = True
 
@@ -2419,25 +2419,25 @@ def blockreplace(path,
     if not done:
         if prepend_if_not_found:
             # add the markers and content at the beginning of file
-            new_file.insert(0, marker_end + os.linesep)
+            new_file.insert(0, marker_end + salt.utils.to_bytes(os.linesep))
             if append_newline is True:
-                new_file.insert(0, content + os.linesep)
+                new_file.insert(0, content + salt.utils.to_bytes(os.linesep))
             else:
                 new_file.insert(0, content)
-            new_file.insert(0, marker_start + os.linesep)
+            new_file.insert(0, marker_start + salt.utils.to_bytes(os.linesep))
             done = True
         elif append_if_not_found:
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith(os.linesep):
+                if not new_file[-1].endswith(salt.utils.to_bytes(os.linesep)):
                     new_file[-1] += os.linesep
             # add the markers and content at the end of file
-            new_file.append(marker_start + os.linesep)
+            new_file.append(marker_start + salt.utils.to_bytes(os.linesep))
             if append_newline is True:
-                new_file.append(content + os.linesep)
+                new_file.append(content + salt.utils.to_bytes(os.linesep))
             else:
                 new_file.append(content)
-            new_file.append(marker_end + os.linesep)
+            new_file.append(marker_end + salt.utils.to_bytes(os.linesep))
             done = True
         else:
             raise CommandExecutionError(
@@ -3585,6 +3585,7 @@ def source_list(source, source_hash, saltenv):
     if contextkey in __context__:
         return __context__[contextkey]
 
+
     # get the master file list
     if isinstance(source, list):
         mfiles = [(f, saltenv) for f in __salt__['cp.list_master'](saltenv)]
@@ -3609,6 +3610,14 @@ def source_list(source, source_hash, saltenv):
                 single_src = next(iter(single))
                 single_hash = single[single_src] if single[single_src] else source_hash
                 urlparsed_single_src = _urlparse(single_src)
+                # Fix this for Windows
+                if salt.utils.is_windows():
+                    # urlparse doesn't handle a local Windows path without the
+                    # protocol indicator (file://). The scheme will be the
+                    # drive letter instead of the protocol. So, we'll add the
+                    # protocol and re-parse
+                    if urlparsed_single_src.scheme.lower() in string.ascii_lowercase:
+                        urlparsed_single_src = _urlparse('file://' + single_src)
                 proto = urlparsed_single_src.scheme
                 if proto == 'salt':
                     path, senv = salt.utils.url.parse(single_src)
@@ -3620,10 +3629,15 @@ def source_list(source, source_hash, saltenv):
                 elif proto.startswith('http') or proto == 'ftp':
                     ret = (single_src, single_hash)
                     break
-                elif proto == 'file' and os.path.exists(urlparsed_single_src.path):
+                elif proto == 'file' and (
+                         os.path.exists(urlparsed_single_src.netloc) or
+                         os.path.exists(urlparsed_single_src.path) or
+                         os.path.exists(os.path.join(
+                             urlparsed_single_src.netloc,
+                             urlparsed_single_src.path))):
                     ret = (single_src, single_hash)
                     break
-                elif single_src.startswith('/') and os.path.exists(single_src):
+                elif single_src.startswith(os.linesep) and os.path.exists(single_src):
                     ret = (single_src, single_hash)
                     break
             elif isinstance(single, six.string_types):
@@ -3634,14 +3648,26 @@ def source_list(source, source_hash, saltenv):
                     ret = (single, source_hash)
                     break
                 urlparsed_src = _urlparse(single)
+                if salt.utils.is_windows():
+                    # urlparse doesn't handle a local Windows path without the
+                    # protocol indicator (file://). The scheme will be the
+                    # drive letter instead of the protocol. So, we'll add the
+                    # protocol and re-parse
+                    if urlparsed_src.scheme.lower() in string.ascii_lowercase:
+                        urlparsed_src = _urlparse('file://' + single)
                 proto = urlparsed_src.scheme
-                if proto == 'file' and os.path.exists(urlparsed_src.path):
+                if proto == 'file' and (
+                        os.path.exists(urlparsed_src.netloc) or
+                        os.path.exists(urlparsed_src.path) or
+                        os.path.exists(os.path.join(
+                            urlparsed_src.netloc,
+                            urlparsed_src.path))):
                     ret = (single, source_hash)
                     break
                 elif proto.startswith('http') or proto == 'ftp':
                     ret = (single, source_hash)
                     break
-                elif single.startswith('/') and os.path.exists(single):
+                elif single.startswith(os.linesep) and os.path.exists(single):
                     ret = (single, source_hash)
                     break
         if ret is None:

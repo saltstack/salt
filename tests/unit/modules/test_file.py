@@ -862,6 +862,10 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
     def test_source_list_for_list_returns_local_file_slash_from_dict(self):
         with patch.dict(filemod.__salt__, {'cp.list_master': MagicMock(return_value=[]),
                                            'cp.list_master_dirs': MagicMock(return_value=[])}):
+            print('*' * 68)
+            print(self.myfile)
+            print(os.path.exists(self.myfile))
+            print('*' * 68)
             ret = filemod.source_list(
                 [{self.myfile: ''}], 'filehash', 'base')
             self.assertEqual(list(ret), [self.myfile, 'filehash'])
