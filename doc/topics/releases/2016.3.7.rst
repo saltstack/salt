@@ -4,6 +4,9 @@ Salt 2016.3.7 Release Notes
 
 Version 2016.3.7 is a bugfix release for :ref:`2016.3.0 <release-2016-3-0>`.
 
+Changes for v2016.3.6..v2016.3.7
+--------------------------------
+
 New master configuration option `allow_minion_key_revoke`, defaults to True.  This option
 controls whether a minion can request that the master revoke its key.  When True, a minion
 can request a key revocation and the master will comply.  If it is False, the key will not
@@ -24,3 +27,10 @@ New minion configuration option `minion_sign_messages`
 Causes the minion to cryptographically sign the payload of messages it places
 on the event bus for the master.  The payloads are signed with the minion's
 private key so the master can verify the signature with its public key.
+
+Security Fix
+============
+
+CVE-2017-12791 Maliciously crafted minion IDs can cause unwanted directory traversals on the Salt-master
+
+Correct a flaw in minion id validation which could allow certain minions to authenticate to a master despite not having the correct credentials. To exploit the vulnerability, an attacker must create a salt-minion with an ID containing characters that will cause a directory traversal. Credit for discovering the security flaw goes to: Vernhk@qq.com
