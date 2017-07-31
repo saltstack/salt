@@ -2113,6 +2113,38 @@ It will be interpreted as megabytes.
 
     file_recv_max_size: 100
 
+.. conf_minion:: add_to_pillar
+
+``add_to_pillar``
+-----------------
+
+Specify a list of configuration options whose values become pillar overrides.
+The values are included in the pillar requests sent to the master, are merged
+into the pillar and can be accessed in external pillar retrieval functions.
+
+Suboptions can be specified using the ':' notation (i.e. ``option:suboption``)
+
+If the config contains
+
+.. code-block:: yaml
+
+    opt1: value1
+    opt2:
+      subopt1: value2
+      subopt2: value3
+
+    add_to_pillar:
+      - opt1
+      - opt2: subopt1
+
+the pillar will contain
+
+.. code-block:: yaml
+
+    opt1: value1
+    opt2:
+      subopt1: value2
+
 Security Settings
 =================
 
