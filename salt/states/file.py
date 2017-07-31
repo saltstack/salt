@@ -3739,7 +3739,13 @@ def line(name, content=None, match=None, mode=None, location=None,
     if not name:
         return _error(ret, 'Must provide name to file.line')
 
-    managed(name, create=create, user=user, group=group, mode=file_mode)
+    managed(
+        name,
+        create=create,
+        user=user,
+        group=group,
+        mode=file_mode,
+        replace=False)
 
     check_res, check_msg = _check_file(name)
     if not check_res:
