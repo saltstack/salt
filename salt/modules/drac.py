@@ -221,8 +221,6 @@ def delete_user(username, uid=None):
         log.warning('\'{0}\' does not exist'.format(username))
         return False
 
-    return True
-
 
 def change_password(username, password, uid=None):
     '''
@@ -245,8 +243,6 @@ def change_password(username, password, uid=None):
     else:
         log.warning('\'{0}\' does not exist'.format(username))
         return False
-
-    return True
 
 
 def create_user(username, password, permissions, users=None):

@@ -217,13 +217,13 @@ def _raise_error_routes(iface, option, expected):
 
 def _read_file(path):
     '''
-    Reads and returns the contents of a text file
+    Reads and returns the contents of a text file as a list of lines
     '''
     try:
         with salt.utils.files.flopen(path, 'rb') as contents:
             return [salt.utils.to_str(line) for line in contents.readlines()]
     except (OSError, IOError):
-        return ''
+        return []
 
 
 def _parse_resolve():

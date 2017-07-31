@@ -334,7 +334,7 @@ def show_queue():
     queue_pattern = re.compile(r"(?P<queue_id>^[A-Z0-9]+)\s+(?P<size>\d+)\s(?P<timestamp>\w{3}\s\w{3}\s\d{1,2}\s\d{2}\:\d{2}\:\d{2})\s+(?P<sender>.+)")
     recipient_pattern = re.compile(r"^\s+(?P<recipient>.+)")
     for line in out:
-        if re.match('^[-|postqueue:|Mail]', line):
+        if re.match('^(-|postqueue:|Mail)', line):
             # discard in-queue wrapper
             continue
         if re.match(queue_pattern, line):
