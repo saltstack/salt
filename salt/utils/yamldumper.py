@@ -28,7 +28,7 @@ except ImportError:
     HAS_IOFLO = False
 
 
-class IndentMixin(SafeDumper):
+class IndentMixin(Dumper):
     '''
     Mixin that improves YAML dumped list readability
     by indenting them by two spaces,
