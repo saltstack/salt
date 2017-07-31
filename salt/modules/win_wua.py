@@ -2,6 +2,49 @@
 '''
 Module for managing Windows Updates using the Windows Update Agent.
 
+List updates on the system using the following functions:
+
+- :ref:`available`
+- :ref:`list`
+
+This is an easy way to find additional information about updates available to
+to the system, such as the GUID, KB number, or description.
+
+Once you have the GUID or a KB number for the update you can get information
+about the update, download, install, or uninstall it using these functions:
+
+- :ref:`get`
+- :ref:`download`
+- :ref:`install`
+- :ref:`uninstall`
+
+The get function expects a name in the form of a GUID, KB, or Title and should
+return information about a single update. The other functions accept either a
+single item or a list of items for downloading/installing/uninstalling a
+specific list of items.
+
+The :ref:`list` and :ref:`get` functions are utility functions. In addition to
+returning information about updates they can also download and install updates
+by setting ``download=True`` or ``install=True``. So, with :ref:`list` for
+example, you could run the function with the filters you want to see what is
+available. Then just add ``install=True`` to install everything on that list.
+
+If you want to download, install, or uninstall specific updates, use
+:ref:`download`, :ref:`install`, or :ref:`uninstall`. To update your system
+with the latest updates use :ref:`list` and set ``install=True``
+
+You can also adjust the Windows Update settings using the :ref:`set_wu_settings`
+function. This function is only supported on the following operating systems:
+
+- Windows Vista / Server 2008
+- Windows 7 / Server 2008R2
+- Windows 8 / Server 2012
+- Windows 8.1 / Server 2012R2
+
+As of Windows 10 and Windows Server 2016, the ability to modify the Windows
+Update settings has been restricted. The settings can be modified in the Local
+Group Policy using the ``lgpo`` module.
+
 .. versionadded:: 2015.8.0
 
 :depends:
@@ -54,36 +97,40 @@ def available(software=True,
               skip_mandatory=False,
               skip_reboot=False,
               categories=None,
-              severities=None,
-              ):
+              severities=None,):
     '''
     .. versionadded:: 2017.7.0
 
-    List updates that match the passed criteria.
+    List updates that match the passed criteria. This allows for more filter
+    options than :func:`list`. Good for finding a specific GUID or KB.
 
     Args:
 
-        software (bool): Include software updates in the results (default is
-        True)
+        software (bool):
+            Include software updates in the results (default is True)
 
-        drivers (bool): Include driver updates in the results (default is False)
+        drivers (bool):
+            Include driver updates in the results (default is False)
 
         summary (bool):
-        - True: Return a summary of updates available for each category.
-        - False (default): Return a detailed list of available updates.
+            - True: Return a summary of updates available for each category.
+            - False (default): Return a detailed list of available updates.
 
-        skip_installed (bool): Skip updates that are already installed. Default
-        is False.
+        skip_installed (bool):
+            Skip updates that are already installed. Default is False.
 
-        skip_hidden (bool): Skip updates that have been hidden. Default is True.
+        skip_hidden (bool):
+            Skip updates that have been hidden. Default is True.
 
-        skip_mandatory (bool): Skip mandatory updates. Default is False.
+        skip_mandatory (bool):
+            Skip mandatory updates. Default is False.
 
-        skip_reboot (bool): Skip updates that require a reboot. Default is
-        False.
+        skip_reboot (bool):
+            Skip updates that require a reboot. Default is False.
 
-        categories (list): Specify the categories to list. Must be passed as a
-        list. All categories returned by default.
+        categories (list):
+            Specify the categories to list. Must be passed as a list. All
+            categories returned by default.
 
             Categories include the following:
 
@@ -101,8 +148,9 @@ def available(software=True,
             * Windows 8.1 and later drivers
             * Windows Defender
 
-        severities (list): Specify the severities to include. Must be passed as
-        a list. All severities returned by default.
+        severities (list):
+            Specify the severities to include. Must be passed as a list. All
+            severities returned by default.
 
             Severities include the following:
 
@@ -152,28 +200,30 @@ def available(software=True,
         salt '*' win_wua.available
 
         # List all updates with categories of Critical Updates and Drivers
-        salt '*' win_wua.available categories=['Critical Updates','Drivers']
+        salt '*' win_wua.available categories=["Critical Updates","Drivers"]
 
         # List all Critical Security Updates
-        salt '*' win_wua.available categories=['Security Updates'] severities=['Critical']
+        salt '*' win_wua.available categories=["Security Updates"] severities=["Critical"]
 
         # List all updates with a severity of Critical
-        salt '*' win_wua.available severities=['Critical']
+        salt '*' win_wua.available severities=["Critical"]
 
         # A summary of all available updates
         salt '*' win_wua.available summary=True
 
         # A summary of all Feature Packs and Windows 8.1 Updates
-        salt '*' win_wua.available categories=['Feature Packs','Windows 8.1'] summary=True
+        salt '*' win_wua.available categories=["Feature Packs","Windows 8.1"] summary=True
     '''
 
     # Create a Windows Update Agent instance
     wua = salt.utils.win_update.WindowsUpdateAgent()
 
     # Look for available
-    updates = wua.available(skip_hidden, skip_installed, skip_mandatory,
-                            skip_reboot, software, drivers, categories,
-                            severities)
+    updates = wua.available(
+        skip_hidden=skip_hidden, skip_installed=skip_installed,
+        skip_mandatory=skip_mandatory, skip_reboot=skip_reboot,
+        software=software, drivers=drivers, categories=categories,
+        severities=severities)
 
     # Return results as Summary or Details
     return updates.summary() if summary else updates.list()
@@ -183,23 +233,29 @@ def list_update(name, download=False, install=False):
     '''
     .. deprecated:: 2017.7.0
        Use :func:`get` instead
+
     Returns details for all updates that match the search criteria
 
     Args:
-        name (str): The name of the update you're searching for. This can be the
-        GUID, a KB number, or any part of the name of the update. GUIDs and
-        KBs are preferred. Run ``list_updates`` to get the GUID for the update
-        you're looking for.
 
-        download (bool): Download the update returned by this function. Run this
-        function first to see if the update exists, then set ``download=True``
-        to download the update.
+        name (str):
+            The name of the update you're searching for. This can be the GUID, a
+            KB number, or any part of the name of the update. GUIDs and KBs are
+            preferred. Run ``list_updates`` to get the GUID for the update
+            you're looking for.
 
-        install (bool): Install the update returned by this function. Run this
-        function first to see if the update exists, then set ``install=True`` to
-        install the update.
+        download (bool):
+            Download the update returned by this function. Run this function
+            first to see if the update exists, then set ``download=True`` to
+            download the update.
+
+        install (bool):
+            Install the update returned by this function. Run this function
+            first to see if the update exists, then set ``install=True`` to
+            install the update.
 
     Returns:
+
         dict: Returns a dict containing a list of updates that match the name if
         download and install are both set to False. Should usually be a single
         update, but can return multiple if a partial name is given.
@@ -258,23 +314,28 @@ def get(name, download=False, install=False):
     '''
     .. versionadded:: 2017.7.0
 
-    Returns details for all updates that match the search criteria
+    Returns details for the named update
 
     Args:
-        name (str): The name of the update you're searching for. This can be the
-        GUID, a KB number, or any part of the name of the update. GUIDs and
-        KBs are preferred. Run ``list`` to get the GUID for the update
-        you're looking for.
 
-        download (bool): Download the update returned by this function. Run this
-        function first to see if the update exists, then set ``download=True``
-        to download the update.
+        name (str):
+            The name of the update you're searching for. This can be the GUID, a
+            KB number, or any part of the name of the update. GUIDs and KBs are
+            preferred. Run ``list`` to get the GUID for the update you're
+            looking for.
 
-        install (bool): Install the update returned by this function. Run this
-        function first to see if the update exists, then set ``install=True`` to
-        install the update.
+        download (bool):
+            Download the update returned by this function. Run this function
+            first to see if the update exists, then set ``download=True`` to
+            download the update.
+
+        install (bool):
+            Install the update returned by this function. Run this function
+            first to see if the update exists, then set ``install=True`` to
+            install the update.
 
     Returns:
+
         dict: Returns a dict containing a list of updates that match the name if
         download and install are both set to False. Should usually be a single
         update, but can return multiple if a partial name is given.
@@ -357,30 +418,35 @@ def list_updates(software=True,
     install is True the same list will be downloaded and/or installed.
 
     Args:
-        software (bool): Include software updates in the results (default is
-        True)
 
-        drivers (bool): Include driver updates in the results (default is False)
+        software (bool):
+            Include software updates in the results (default is True)
+
+        drivers (bool):
+            Include driver updates in the results (default is False)
 
         summary (bool):
-        - True: Return a summary of updates available for each category.
-        - False (default): Return a detailed list of available updates.
+            - True: Return a summary of updates available for each category.
+            - False (default): Return a detailed list of available updates.
 
-        skip_installed (bool): Skip installed updates in the results (default is
-        False)
+        skip_installed (bool):
+            Skip installed updates in the results (default is False)
 
-        download (bool): (Overrides reporting functionality) Download the list
-        of updates returned by this function. Run this function first with
-        ``download=False`` to see what will be downloaded, then set
-        ``download=True`` to download the updates.
+        download (bool):
+            (Overrides reporting functionality) Download the list of updates
+            returned by this function. Run this function first with
+            ``download=False`` to see what will be downloaded, then set
+            ``download=True`` to download the updates.
 
-        install (bool): (Overrides reporting functionality) Install the list of
-        updates returned by this function. Run this function first with
-        ``install=False`` to see what will be installed, then set
-        ``install=True`` to install the updates.
+        install (bool):
+            (Overrides reporting functionality) Install the list of updates
+            returned by this function. Run this function first with
+            ``install=False`` to see what will be installed, then set
+            ``install=True`` to install the updates.
 
-        categories (list): Specify the categories to list. Must be passed as a
-        list. All categories returned by default.
+        categories (list):
+            Specify the categories to list. Must be passed as a list. All
+            categories returned by default.
 
             Categories include the following:
 
@@ -398,8 +464,9 @@ def list_updates(software=True,
             * Windows 8.1 and later drivers
             * Windows Defender
 
-        severities (list): Specify the severities to include. Must be passed as
-        a list. All severities returned by default.
+        severities (list):
+            Specify the severities to include. Must be passed as a list. All
+            severities returned by default.
 
             Severities include the following:
 
@@ -486,30 +553,35 @@ def list(software=True,
     install is True the same list will be downloaded and/or installed.
 
     Args:
-        software (bool): Include software updates in the results (default is
-        True)
 
-        drivers (bool): Include driver updates in the results (default is False)
+        software (bool):
+            Include software updates in the results (default is True)
+
+        drivers (bool):
+            Include driver updates in the results (default is False)
 
         summary (bool):
-        - True: Return a summary of updates available for each category.
-        - False (default): Return a detailed list of available updates.
+            - True: Return a summary of updates available for each category.
+            - False (default): Return a detailed list of available updates.
 
-        skip_installed (bool): Skip installed updates in the results (default is
-        False)
+        skip_installed (bool):
+            Skip installed updates in the results (default is False)
 
-        download (bool): (Overrides reporting functionality) Download the list
-        of updates returned by this function. Run this function first with
-        ``download=False`` to see what will be downloaded, then set
-        ``download=True`` to download the updates.
+        download (bool):
+            (Overrides reporting functionality) Download the list of updates
+            returned by this function. Run this function first with
+            ``download=False`` to see what will be downloaded, then set
+            ``download=True`` to download the updates.
 
-        install (bool): (Overrides reporting functionality) Install the list of
-        updates returned by this function. Run this function first with
-        ``install=False`` to see what will be installed, then set
-        ``install=True`` to install the updates.
+        install (bool):
+            (Overrides reporting functionality) Install the list of updates
+            returned by this function. Run this function first with
+            ``install=False`` to see what will be installed, then set
+            ``install=True`` to install the updates.
 
-        categories (list): Specify the categories to list. Must be passed as a
-        list. All categories returned by default.
+        categories (list):
+            Specify the categories to list. Must be passed as a list. All
+            categories returned by default.
 
             Categories include the following:
 
@@ -527,8 +599,9 @@ def list(software=True,
             * Windows 8.1 and later drivers
             * Windows Defender
 
-        severities (list): Specify the severities to include. Must be passed as
-        a list. All severities returned by default.
+        severities (list):
+            Specify the severities to include. Must be passed as a list. All
+            severities returned by default.
 
             Severities include the following:
 
@@ -575,22 +648,22 @@ def list(software=True,
     .. code-block:: bash
 
         # Normal Usage (list all software updates)
-        salt '*' win_wua.list_updates
+        salt '*' win_wua.list
 
         # List all updates with categories of Critical Updates and Drivers
-        salt '*' win_wua.list_updates categories=['Critical Updates','Drivers']
+        salt '*' win_wua.list categories=['Critical Updates','Drivers']
 
         # List all Critical Security Updates
-        salt '*' win_wua.list_updates categories=['Security Updates'] severities=['Critical']
+        salt '*' win_wua.list categories=['Security Updates'] severities=['Critical']
 
         # List all updates with a severity of Critical
-        salt '*' win_wua.list_updates severities=['Critical']
+        salt '*' win_wua.list severities=['Critical']
 
         # A summary of all available updates
-        salt '*' win_wua.list_updates summary=True
+        salt '*' win_wua.list summary=True
 
         # A summary of all Feature Packs and Windows 8.1 Updates
-        salt '*' win_wua.list_updates categories=['Feature Packs','Windows 8.1'] summary=True
+        salt '*' win_wua.list categories=['Feature Packs','Windows 8.1'] summary=True
     '''
     # Create a Windows Update Agent instance
     wua = salt.utils.win_update.WindowsUpdateAgent()
@@ -604,11 +677,11 @@ def list(software=True,
 
     # Download
     if download or install:
-        ret['Download'] = wua.download(updates.updates)
+        ret['Download'] = wua.download(updates)
 
     # Install
     if install:
-        ret['Install'] = wua.install(updates.updates)
+        ret['Install'] = wua.install(updates)
 
     if not ret:
         return updates.summary() if summary else updates.list()
@@ -625,13 +698,16 @@ def download_update(name):
 
     Args:
 
-        name (str): The name of the update to download. This can be a GUID, a KB
-        number, or any part of the name. To ensure a single item is matched the
-        GUID is preferred.
+        name (str):
+            The name of the update to download. This can be a GUID, a KB number,
+            or any part of the name. To ensure a single item is matched the GUID
+            is preferred.
 
-        .. note:: If more than one result is returned an error will be raised.
+    .. note::
+        If more than one result is returned an error will be raised.
 
     Returns:
+
         dict: A dictionary containing the results of the download
 
     CLI Examples:
@@ -641,7 +717,6 @@ def download_update(name):
         salt '*' win_wua.download_update 12345678-abcd-1234-abcd-1234567890ab
 
         salt '*' win_wua.download_update KB12312321
-
     '''
     salt.utils.warn_until(
         'Fluorine',
@@ -660,8 +735,9 @@ def download_updates(names):
 
     Args:
 
-        names (list): A list of updates to download. This can be any combination
-        of GUIDs, KB numbers, or names. GUIDs or KBs are preferred.
+        names (list):
+            A list of updates to download. This can be any combination of GUIDs,
+            KB numbers, or names. GUIDs or KBs are preferred.
 
     Returns:
 
@@ -672,7 +748,7 @@ def download_updates(names):
     .. code-block:: bash
 
         # Normal Usage
-        salt '*' win_wua.download guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB2131233']
+        salt '*' win_wua.download_updates guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB2131233']
     '''
     salt.utils.warn_until(
         'Fluorine',
@@ -690,9 +766,14 @@ def download(names):
 
     Args:
 
-        names (str, list): A single update or a list of updates to download.
-        This can be any combination of GUIDs, KB numbers, or names. GUIDs or KBs
-        are preferred.
+        names (str, list):
+            A single update or a list of updates to download. This can be any
+            combination of GUIDs, KB numbers, or names. GUIDs or KBs are
+            preferred.
+
+    .. note::
+        An error will be raised if there are more results than there are items
+        in the names parameter
 
     Returns:
 
@@ -703,7 +784,7 @@ def download(names):
     .. code-block:: bash
 
         # Normal Usage
-        salt '*' win_wua.download guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB2131233']
+        salt '*' win_wua.download names=['12345678-abcd-1234-abcd-1234567890ab', 'KB2131233']
     '''
     # Create a Windows Update Agent instance
     wua = salt.utils.win_update.WindowsUpdateAgent()
@@ -713,6 +794,13 @@ def download(names):
 
     if updates.count() == 0:
         raise CommandExecutionError('No updates found')
+
+    # Make sure it's a list so count comparison is correct
+    if isinstance(names, six.string_types):
+        names = [names]
+
+    if isinstance(names, six.integer_types):
+        names = [str(names)]
 
     if updates.count() > len(names):
         raise CommandExecutionError('Multiple updates found, names need to be '
@@ -734,10 +822,12 @@ def install_update(name):
         number, or any part of the name. To ensure a single item is matched the
         GUID is preferred.
 
-        .. note:: If no results or more than one result is returned an error
-           will be raised.
+    .. note::
+        If no results or more than one result is returned an error will be
+        raised.
 
     Returns:
+
         dict: A dictionary containing the results of the install
 
     CLI Examples:
@@ -795,9 +885,14 @@ def install(names):
 
     Args:
 
-        names (str, list): A single update or a list of updates to install.
-        This can be any combination of GUIDs, KB numbers, or names. GUIDs or KBs
-        are preferred.
+        names (str, list):
+            A single update or a list of updates to install. This can be any
+            combination of GUIDs, KB numbers, or names. GUIDs or KBs are
+            preferred.
+
+    .. note::
+        An error will be raised if there are more results than there are items
+        in the names parameter
 
     Returns:
 
@@ -808,7 +903,7 @@ def install(names):
     .. code-block:: bash
 
         # Normal Usage
-        salt '*' win_wua.install_updates guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB12323211']
+        salt '*' win_wua.install KB12323211
     '''
     # Create a Windows Update Agent instance
     wua = salt.utils.win_update.WindowsUpdateAgent()
@@ -818,6 +913,13 @@ def install(names):
 
     if updates.count() == 0:
         raise CommandExecutionError('No updates found')
+
+    # Make sure it's a list so count comparison is correct
+    if isinstance(names, six.string_types):
+        names = [names]
+
+    if isinstance(names, six.integer_types):
+        names = [str(names)]
 
     if updates.count() > len(names):
         raise CommandExecutionError('Multiple updates found, names need to be '
@@ -834,9 +936,10 @@ def uninstall(names):
 
     Args:
 
-        names (str, list): A single update or a list of updates to uninstall.
-        This can be any combination of GUIDs, KB numbers, or names. GUIDs or KBs
-        are preferred.
+        names (str, list):
+            A single update or a list of updates to uninstall. This can be any
+            combination of GUIDs, KB numbers, or names. GUIDs or KBs are
+            preferred.
 
     Returns:
 
@@ -888,34 +991,37 @@ def set_wu_settings(level=None,
         Update settings are read-only. See MSDN documentation:
         https://msdn.microsoft.com/en-us/library/aa385829(v=vs.85).aspx
 
-    :param int level:
-        Number from 1 to 4 indicating the update level:
+    Args:
+
+        level (int):
+            Number from 1 to 4 indicating the update level:
+
             1. Never check for updates
             2. Check for updates but let me choose whether to download and install them
             3. Download updates but let me choose whether to install them
             4. Install updates automatically
 
-    :param bool recommended:
-        Boolean value that indicates whether to include optional or recommended
-        updates when a search for updates and installation of updates is
-        performed.
+        recommended (bool):
+            Boolean value that indicates whether to include optional or
+            recommended updates when a search for updates and installation of
+            updates is performed.
 
-    :param bool featured:
-        Boolean value that indicates whether to display notifications for
-        featured updates.
+        featured (bool):
+            Boolean value that indicates whether to display notifications for
+            featured updates.
 
-    :param bool elevated:
-        Boolean value that indicates whether non-administrators can perform some
-        update-related actions without administrator approval.
+        elevated (bool):
+            Boolean value that indicates whether non-administrators can perform
+            some update-related actions without administrator approval.
 
-    :param bool msupdate:
-        Boolean value that indicates whether to turn on Microsoft Update for
-        other Microsoft products
+        msupdate (bool):
+            Boolean value that indicates whether to turn on Microsoft Update for
+            other Microsoft products
 
-    :param str day:
-        Days of the week on which Automatic Updates installs or uninstalls
-        updates.
-        Accepted values:
+        day (str):
+            Days of the week on which Automatic Updates installs or uninstalls
+            updates. Accepted values:
+
             - Everyday
             - Monday
             - Tuesday
@@ -924,18 +1030,20 @@ def set_wu_settings(level=None,
             - Friday
             - Saturday
 
-    :param str time:
-        Time at which Automatic Updates installs or uninstalls updates. Must be
-        in the ##:## 24hr format, eg. 3:00 PM would be 15:00
+        time (str):
+            Time at which Automatic Updates installs or uninstalls updates. Must
+            be in the ##:## 24hr format, eg. 3:00 PM would be 15:00. Must be in
+            1 hour increments.
 
-    :return: Returns a dictionary containing the results.
+    Returns:
+
+        dict: Returns a dictionary containing the results.
 
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' win_wua.set_wu_settings level=4 recommended=True featured=False
-
     '''
     # The AutomaticUpdateSettings.Save() method used in this function does not
     # work on Windows 10 / Server 2016. It is called in throughout this function
@@ -1110,30 +1218,31 @@ def get_wu_settings():
             Boolean value that indicates whether to display notifications for
             featured updates.
         Group Policy Required (Read-only):
-            Boolean value that indicates whether Group Policy requires the Automatic
-            Updates service.
+            Boolean value that indicates whether Group Policy requires the
+            Automatic Updates service.
         Microsoft Update:
             Boolean value that indicates whether to turn on Microsoft Update for
             other Microsoft Products
         Needs Reboot:
-            Boolean value that indicates whether the machine is in a reboot pending
-            state.
+            Boolean value that indicates whether the machine is in a reboot
+            pending state.
         Non Admins Elevated:
-            Boolean value that indicates whether non-administrators can perform some
-            update-related actions without administrator approval.
+            Boolean value that indicates whether non-administrators can perform
+            some update-related actions without administrator approval.
         Notification Level:
             Number 1 to 4 indicating the update level:
                 1. Never check for updates
-                2. Check for updates but let me choose whether to download and install them
+                2. Check for updates but let me choose whether to download and
+                   install them
                 3. Download updates but let me choose whether to install them
                 4. Install updates automatically
         Read Only (Read-only):
             Boolean value that indicates whether the Automatic Update
             settings are read-only.
         Recommended Updates:
-            Boolean value that indicates whether to include optional or recommended
-            updates when a search for updates and installation of updates is
-            performed.
+            Boolean value that indicates whether to include optional or
+            recommended updates when a search for updates and installation of
+            updates is performed.
         Scheduled Day:
             Days of the week on which Automatic Updates installs or uninstalls
             updates.
@@ -1216,13 +1325,12 @@ def get_needs_reboot():
 
     Returns:
 
-        bool: True if the system requires a reboot, False if not
+        bool: True if the system requires a reboot, otherwise False
 
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' win_wua.get_needs_reboot
-
     '''
     return salt.utils.win_update.needs_reboot()
