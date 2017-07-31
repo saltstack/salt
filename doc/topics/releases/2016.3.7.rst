@@ -1,0 +1,11 @@
+===========================
+Salt 2016.3.7 Release Notes
+===========================
+
+Version 2016.3.7 is a bugfix release for :ref:`2016.3.0 <release-2016-3-0>`.
+
+Changes for v2016.3.6..v2016.3.7
+--------------------------------
+
+- Correct a flaw in minion id validation which could allow certain minions to
+  authenticate to a master despite not having the correct credentials.
