@@ -1955,7 +1955,7 @@ def schema_create(dbname, name, owner=None,
     '''
 
     # check if schema exists
-    if schema_exists(dbname, name,
+    if schema_exists(dbname, name, user=user,
                      db_user=db_user, db_password=db_password,
                      db_host=db_host, db_port=db_port):
         log.info('\'{0}\' already exists in \'{1}\''.format(name, dbname))
@@ -2010,7 +2010,7 @@ def schema_remove(dbname, name,
     '''
 
     # check if schema exists
-    if not schema_exists(dbname, name,
+    if not schema_exists(dbname, name, user=None,
                          db_user=db_user, db_password=db_password,
                          db_host=db_host, db_port=db_port):
         log.info('Schema \'{0}\' does not exist in \'{1}\''.format(name, dbname))
@@ -2024,7 +2024,7 @@ def schema_remove(dbname, name,
         maintenance_db=dbname,
         host=db_host, user=db_user, port=db_port, password=db_password)
 
-    if not schema_exists(dbname, name,
+    if not schema_exists(dbname, name, user,
                          db_user=db_user, db_password=db_password,
                          db_host=db_host, db_port=db_port):
         return True
@@ -2033,7 +2033,7 @@ def schema_remove(dbname, name,
         return False
 
 
-def schema_exists(dbname, name,
+def schema_exists(dbname, name, user=None,
                   db_user=None, db_password=None,
                   db_host=None, db_port=None):
     '''
@@ -2051,6 +2051,9 @@ def schema_exists(dbname, name,
     name
        Schema name we look for
 
+    user
+        The system user the operation should be performed on behalf of
+
     db_user
         database username if different from config or default
 
@@ -2065,14 +2068,14 @@ def schema_exists(dbname, name,
 
     '''
     return bool(
-        schema_get(dbname, name,
+        schema_get(dbname, name, user=user,
                    db_user=db_user,
                    db_host=db_host,
                    db_port=db_port,
                    db_password=db_password))
 
 
-def schema_get(dbname, name,
+def schema_get(dbname, name, user=None,
                db_user=None, db_password=None,
                db_host=None, db_port=None):
     '''
@@ -2090,6 +2093,9 @@ def schema_get(dbname, name,
     name
        Schema name we look for
 
+    user
+        The system user the operation should be performed on behalf of
+
     db_user
         database username if different from config or default
 
@@ -2102,7 +2108,7 @@ def schema_get(dbname, name,
     db_port
         Database port if different from config or default
     '''
-    all_schemas = schema_list(dbname,
+    all_schemas = schema_list(dbname, user=user,
                               db_user=db_user,
                               db_host=db_host,
                               db_port=db_port,
@@ -2114,7 +2120,7 @@ def schema_get(dbname, name,
         return False
 
 
-def schema_list(dbname,
+def schema_list(dbname, user=None,
                 db_user=None, db_password=None,
                 db_host=None, db_port=None):
     '''
@@ -2128,6 +2134,9 @@ def schema_list(dbname,
 
     dbname
         Database name we query on
+
+    user
+        The system user the operation should be performed on behalf of
 
     db_user
         database username if different from config or default
@@ -2153,7 +2162,7 @@ def schema_list(dbname,
         'LEFT JOIN pg_roles ON pg_roles.oid = pg_namespace.nspowner '
     ]))
 
-    rows = psql_query(query,
+    rows = psql_query(query, runas=user,
                       host=db_host,
                       user=db_user,
                       port=db_port,
