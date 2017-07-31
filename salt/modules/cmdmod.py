@@ -770,6 +770,7 @@ def run(cmd,
         bg=False,
         password=None,
         encoded_cmd=False,
+        raise_err=False,
         **kwargs):
     r'''
     Execute the passed command and return the output as a string
@@ -873,6 +874,10 @@ def run(cmd,
     :param bool encoded_cmd: Specify if the supplied command is encoded.
       Only applies to shell 'powershell'.
 
+    :param bool raise_err: Specifies whether to raise a CommandExecutionError.
+      If False, the error will be logged, but no exception will be raised.
+      Default is False.
+
     .. warning::
         This function does not process commands through a shell
         unless the python_shell flag is set to True. This means that any
@@ -962,6 +967,8 @@ def run(cmd,
                 )
             )
             log.error(log_callback(msg))
+            if raise_err:
+                raise CommandExecutionError(log_callback(ret['stdout']))
         log.log(lvl, 'output: {0}'.format(log_callback(ret['stdout'])))
     return ret['stdout']
 

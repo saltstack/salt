@@ -164,6 +164,19 @@ class CreateDatacenterTestCase(TestCase):
             vmware.create_datacenter(self.mock_si, 'fake_dc')
         self.mock_create_datacenter.assert_called_once_with('fake_dc')
 
+    def test_create_datacenter_raise_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        self.mock_root_folder = MagicMock(
+            CreateDatacenter=MagicMock(side_effect=exc))
+        with patch('salt.utils.vmware.get_root_folder',
+                   MagicMock(return_value=self.mock_root_folder)):
+            with self.assertRaises(VMwareApiError) as excinfo:
+                vmware.create_datacenter(self.mock_si, 'fake_dc')
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
     def test_create_datacenter_raise_vim_fault(self):
         exc = vim.VimFault()
         exc.msg = 'VimFault msg'
