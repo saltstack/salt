@@ -168,7 +168,7 @@ def run_highstate_tests():
             if state not in all_states:
                 all_states.append(state)
 
-    for state_name in sls_list:
+    for state_name in all_states:
         mypath = stl.convert_sls_to_path(state_name)
         stl.add_test_files_for_sls(mypath)
         stl.load_test_suite()
