@@ -1066,6 +1066,18 @@ def clean_metadata(**kwargs):
     return refresh_db(**kwargs)
 
 
+class AvailablePackages(object):
+    def __init__(self, *args, **kwargs):
+        self._args = args
+        self._kwargs = kwargs
+        self._available_data = None
+
+    def get(self, *args, **kwargs):
+        if not self._available_data:
+            self._available_data = list_repo_pkgs(*self._args, **self._kwargs)
+        return self._available_data.get(*args, **kwargs)
+
+
 def install(name=None,
             refresh=False,
             skip_verify=False,
@@ -1279,7 +1291,7 @@ def install(name=None,
                     has_comparison.append(pkgname)
             except (TypeError, ValueError):
                 continue
-        _available = list_repo_pkgs(
+        _available = AvailablePackages(
             *has_wildcards + has_comparison,
             byrepo=False,
             **kwargs)
