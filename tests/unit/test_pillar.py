@@ -423,3 +423,29 @@ class RemotePillarTestCase(TestCase):
             salt.pillar.RemotePillar(opts, self.grains, 'mocked-minion', 'dev')
         self.assertEqual(excinfo.exception.strerror,
                          '\'add_to_pillar\' config is malformed.')
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch('salt.transport.client.AsyncReqChannel.factory', MagicMock())
+class AsyncRemotePillarTestCase(TestCase):
+    '''
+    Tests for instantiating a AsyncRemotePillar in salt.pillar
+    '''
+    def setUp(self):
+        self.grains = {}
+
+    def tearDown(self):
+        for attr in ('grains',):
+            try:
+                delattr(self, attr)
+            except AttributeError:
+                continue
+
+    def test_get_opts_in_pillar_override_call(self):
+        mock_get_pillar_override_from_opts = MagicMock(return_value={})
+        with patch('salt.pillar.RemotePillarMixin.get_pillar_override_from_opts',
+                   mock_get_pillar_override_from_opts):
+            salt.pillar.AsyncRemotePillar({}, self.grains,
+                                          'mocked-minion', 'dev')
+        mock_get_pillar_override_from_opts.assert_called_once_with(
+            {'environment': 'dev'})
