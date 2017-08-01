@@ -4,6 +4,11 @@ Salt 2017.7.1 Release Notes
 
 Version 2017.7.1 is a bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
 
+Additional output modes
+=======================
+The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and ``terse_id``.
+Just like ``mixed_id``, these use the state ID as name in the highstate output
+
 Changes for v2017.7.0..v2017.7.1
 --------------------------------
 
