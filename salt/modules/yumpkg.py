@@ -180,7 +180,7 @@ def _check_versionlock():
     Ensure that the appropriate versionlock plugin is present
     '''
     if _yum() == 'dnf':
-        elif int(__grains__.get('osmajorrelease')) >= 26:
+        if int(__grains__.get('osmajorrelease')) >= 26:
             if six.PY3:
                 vl_plugin = 'python3-dnf-plugin-versionlock'
             else:
