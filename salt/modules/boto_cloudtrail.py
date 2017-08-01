@@ -92,6 +92,8 @@ def __virtual__():
     elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
         return (False, 'The boto_cloudtrial module could not be loaded: '
                 'boto version {0} or later must be installed.'.format(required_boto3_version))
+    elif 'boto3.assign_funcs' not in __utils__:
+        return (False, 'Requires the following to be installed: boto >= 2.0.0, boto3 >= 1.2.6 and botocore >= 1.3.23')
     else:
         return True
 

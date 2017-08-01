@@ -76,7 +76,10 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return (False, 'The module boto_dynamodb could not be loaded: boto libraries not found')
-    __utils__['boto.assign_funcs'](__name__, 'dynamodb2', pack=__salt__)
+    if 'boto.assign_funcs' in __utils__:
+        __utils__['boto.assign_funcs'](__name__, 'dynamodb2', pack=__salt__)
+    else:
+        return (False, 'Requires the following to be installed: boto >= 2.0.0.')
     return True
 
 

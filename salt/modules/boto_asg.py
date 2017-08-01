@@ -86,8 +86,10 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return (False, 'The boto_asg module could not be loaded: boto libraries not found')
-
-    __utils__['boto.assign_funcs'](__name__, 'asg', module='ec2.autoscale', pack=__salt__)
+    if 'boto3.assign_funcs' in __utils__:
+        __utils__['boto.assign_funcs'](__name__, 'asg', module='ec2.autoscale', pack=__salt__)
+    else:
+        return (False, 'Requires the following to be installed: boto >= 2.0.0, boto3 >= 1.2.6 and botocore >= 1.3.23')
     setattr(sys.modules[__name__], '_get_ec2_conn',
             __utils__['boto.get_connection_func']('ec2'))
     return True

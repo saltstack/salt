@@ -130,6 +130,8 @@ def __virtual__():
     a given version.
     '''
     required_boto3_version = '1.3.1'
+    if 'boto3.assign_funcs' not in __utils__:
+        return (False, 'Requires the following to be installed: boto >= 2.0.0, boto3 >= 1.2.6 and botocore >= 1.3.23')
     if not HAS_BOTO:
         return (False, 'The boto_rds module could not be loaded: '
                 'boto libraries not found')

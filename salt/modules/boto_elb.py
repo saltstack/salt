@@ -86,7 +86,10 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return (False, "The boto_elb module cannot be loaded: boto library not found")
-    __utils__['boto.assign_funcs'](__name__, 'elb', module='ec2.elb', pack=__salt__)
+    if 'boto.assign_funcs' in __utils__:
+        __utils__['boto.assign_funcs'](__name__, 'elb', module='ec2.elb', pack=__salt__)
+    else:
+        return (False, 'Requires the following to be installed: boto >= 2.0.0, boto3 >= 1.2.6 and botocore >= 1.3.23')
     return True
 
 

@@ -87,7 +87,10 @@ def __virtual__():
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return (False, "The boto_ec2 module cannot be loaded: boto library version incorrect ")
     else:
-        __utils__['boto.assign_funcs'](__name__, 'ec2', pack=__salt__)
+        if 'boto.assign_funcs' in __utils__:
+            __utils__['boto.assign_funcs'](__name__, 'ec2', pack=__salt__)
+        else:
+            return (False, 'Requires the following to be installed: boto >= 2.0.0.')
         return True
 
 
