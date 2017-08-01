@@ -467,8 +467,10 @@ import signal
 import tarfile
 from multiprocessing import Process, Pipe
 
+logger = logging.getLogger(__name__)
+
 # Import third-party libs
-# pylint: disable=import-error, 3rd-party-module-not-gated
+# pylint: disable=import-error
 import cherrypy
 try:
     from cherrypy.lib import cpstats
@@ -480,8 +482,7 @@ except ImportError:
 
 import yaml
 import salt.ext.six as six
-# pylint: enable=import-error, 3rd-party-module-not-gated
-
+# pylint: enable=import-error
 
 # Import Salt libs
 import salt
@@ -490,8 +491,6 @@ import salt.utils.event
 
 # Import salt-api libs
 import salt.netapi
-
-logger = logging.getLogger(__name__)
 
 # Imports related to websocket
 try:
