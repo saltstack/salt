@@ -424,13 +424,14 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
     for group in list_resource_groups():
         nodes = compconn.virtual_machines.list(group)
         for node in nodes:
+            private_ips, public_ips = __get_ips_from_node(group, node)
             ret[node.name] = object_to_dict(node)
             ret[node.name]['id'] = node.id
             ret[node.name]['name'] = node.name
             ret[node.name]['size'] = node.hardware_profile.vm_size
             ret[node.name]['state'] = node.provisioning_state
-            ret[node.name]['private_ips'] = node.network_profile.network_interfaces
-            ret[node.name]['public_ips'] = node.network_profile.network_interfaces
+            ret[node.name]['private_ips'] = private_ips
+            ret[node.name]['public_ips'] = public_ips
             ret[node.name]['storage_profile']['data_disks'] = []
             ret[node.name]['resource_group'] = group
             for disk in node.storage_profile.data_disks:
@@ -448,6 +449,30 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
                 except TypeError:
                     ret[node.name]['image'] = None
     return ret
+
+
+def __get_ips_from_node(resource_group, node):
+    '''
+    List private and public IPs from a VM interface
+    '''
+    global netconn  # pylint: disable=global-statement,invalid-name
+    if not netconn:
+        netconn = get_conn(NetworkManagementClient)
+
+    private_ips = []
+    public_ips = []
+    for node_iface in node.network_profile.network_interfaces:
+        node_iface_name = node_iface.id.split('/')[-1]
+        network_interface = netconn.network_interfaces.get(resource_group, node_iface_name)
+        for ip_configuration in network_interface.ip_configurations:
+            if ip_configuration.private_ip_address:
+                private_ips.append(ip_configuration.private_ip_address)
+            if ip_configuration.public_ip_address and ip_configuration.public_ip_address.id:
+                public_iface_name = ip_configuration.public_ip_address.id.split('/')[-1]
+                public_iface = netconn.public_ip_addresses.get(resource_group, public_iface_name)
+                public_ips.append(public_iface.ip_address)
+
+    return private_ips, public_ips
 
 
 def list_resource_groups(conn=None, call=None):  # pylint: disable=unused-argument
