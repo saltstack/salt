@@ -153,6 +153,8 @@ from __future__ import absolute_import
 import base64
 import os
 import salt.utils
+import salt.utils.win_functions
+import salt.utils.win_dacl
 import salt.syspaths
 
 
@@ -256,7 +258,11 @@ def keygen(sk_file=None, pk_file=None):
             kp = libnacl.public.SecretKey()
             with salt.utils.fopen(sk_file, 'w') as keyf:
                 keyf.write(base64.b64encode(kp.sk))
-            if not salt.utils.is_windows():
+            if salt.utils.is_windows():
+                cur_user = salt.utils.win_functions.get_current_user()
+                salt.utils.win_dacl.set_owner(sk_file, cur_user)
+                salt.utils.win_dacl.set_permissions(sk_file, cur_user, 'full_control', 'grant', reset_perms=True, protected=True)
+            else:
                 # chmod 0600 file
                 os.chmod(sk_file, 1536)
             return 'saved sk_file: {0}'.format(sk_file)
@@ -282,7 +288,11 @@ def keygen(sk_file=None, pk_file=None):
     kp = libnacl.public.SecretKey()
     with salt.utils.fopen(sk_file, 'w') as keyf:
         keyf.write(base64.b64encode(kp.sk))
-    if not salt.utils.is_windows():
+    if salt.utils.is_windows():
+        cur_user = salt.utils.win_functions.get_current_user()
+        salt.utils.win_dacl.set_owner(sk_file, cur_user)
+        salt.utils.win_dacl.set_permissions(sk_file, cur_user, 'full_control', 'grant', reset_perms=True, protected=True)
+    else:
         # chmod 0600 file
         os.chmod(sk_file, 1536)
     with salt.utils.fopen(pk_file, 'w') as keyf:
