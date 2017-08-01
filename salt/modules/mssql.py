@@ -222,12 +222,13 @@ def role_create(role, owner=None, grants=None, **kwargs):
     Creates a new database role.
     If no owner is specified, the role will be owned by the user that
     executes CREATE ROLE, which is the user argument or mssql.user option.
+    grants is list of strings.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt minion mssql.role_create role=product01 owner=sysdba
+        salt minion mssql.role_create role=product01 owner=sysdba grants='["SELECT", "INSERT", "UPDATE", "DELETE", "EXECUTE"]'
     '''
     if not grants:
         grants = []
