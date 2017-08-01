@@ -19,6 +19,8 @@ Statistics:
 
 Changes:
 
+- Correct a flaw in minion id validation which could allow certain minions to
+  authenticate to a master despite not having the correct credentials.
 
 - **PR** `#42548`_: (*gtmanfred*) pass in empty kwarg for reactor
   @ *2017-07-26T00:41:20Z*
