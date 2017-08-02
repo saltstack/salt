@@ -75,7 +75,7 @@ multiprocessing: ``False``
     this option permits the configuration of the ``multiprocessing`` option
     more specifically, for some proxy minions.
 
-    .. versionadded:: 2017.7.1
+    .. versionadded:: 2017.7.2
 
 
 .. _`NAPALM Read the Docs page`: https://napalm.readthedocs.io/en/latest/#supported-network-operating-systems
