@@ -2465,7 +2465,6 @@ def managed(name,
                 user,
                 group,
                 mode,
-                attrs,
                 __env__,
                 backup,
                 makedirs,
@@ -3806,7 +3805,6 @@ def replace(name,
         :py:func:`~re.search`.
 
         ..note::
-
             If you need to match a literal string that contains regex special
             characters, you may want to use salt's custom Jinja filter,
             ``escape_regex``.
@@ -5603,7 +5601,8 @@ def serialize(name,
     show_diff
         DEPRECATED: Please use show_changes.
 
-        If set to ''False'', the diff will not be shown in the return data if changes are made.
+        If set to ''False'', the diff will not be shown in the return data if
+        changes are made.
 
     show_changes
         Output a unified diff of the old file and the new file. If ``False``
@@ -5747,10 +5746,10 @@ def serialize(name,
         show_changes = show_diff
 
         mgs = (
-            'The \'show_diff\' argument to the file.serialized state has been'
+            'The \'show_diff\' argument to the file.serialized state has been '
             'deprecated, please use \'show_changes\' instead.'
         )
-        salt.util.warn_until('Oxygen', msg)
+        salt.utils.warn_until('Oxygen', msg)
 
     if __opts__['test']:
         ret['changes'] = __salt__['file.check_managed_changes'](
