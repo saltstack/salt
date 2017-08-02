@@ -243,6 +243,11 @@ def get_device_opts(opts, salt_obj=None):
     network_device = {}
     # by default, look in the proxy config details
     device_dict = opts.get('proxy', {}) or opts.get('napalm', {})
+    if opts.get('proxy') or opts.get('napalm'):
+        opts['multiprocessing'] = device_dict.get('multiprocessing', False)
+        # Most NAPALM drivers are SSH-based, so multiprocessing should default to False.
+        # But the user can be allows to have a different value for the multiprocessing, which will
+        #   override the opts.
     if salt_obj and not device_dict:
         # get the connection details from the opts
         device_dict = salt_obj['config.merge']('napalm')
