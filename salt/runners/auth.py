@@ -20,6 +20,10 @@ def mk_token(**load):
     '''
     Create an eauth token using provided credentials
 
+    Non-root users may specify an expiration date (if allowed via the
+    :conf_master:`token_expire_user_override` setting) by passing an additional
+    ``token_expire`` param.
+
     CLI Example:
 
     .. code-block:: shell
