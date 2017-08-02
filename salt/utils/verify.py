@@ -484,7 +484,7 @@ def clean_id(id_):
     '''
     Returns if the passed id is clean.
     '''
-    if re.search(r'\.\.{sep}'.format(sep=os.sep), id_):
+    if re.search(r'\.\.\{sep}'.format(sep=os.sep), id_):
         return False
     return True
 
