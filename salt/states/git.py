@@ -1154,13 +1154,22 @@ def latest(name,
                                            password=password,
                                            https_user=https_user,
                                            https_pass=https_pass)
-                comments.append(
-                    'Remote \'{0}\' changed from {1} to {2}'.format(
-                        remote,
-                        salt.utils.url.redact_http_basic_auth(fetch_url),
-                        redacted_fetch_url
+                if fetch_url is None:
+                    comments.append(
+                        'Remote \'{0}\' set to {1}'.format(
+                            remote,
+                            redacted_fetch_url
+                        )
                     )
-                )
+                    ret['changes']['new'] = name + ' => ' + remote
+                else:
+                    comments.append(
+                        'Remote \'{0}\' changed from {1} to {2}'.format(
+                            remote,
+                            salt.utils.url.redact_http_basic_auth(fetch_url),
+                            redacted_fetch_url
+                        )
+                    )
 
             if remote_rev is not None:
                 if __opts__['test']:
