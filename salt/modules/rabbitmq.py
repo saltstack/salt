@@ -472,11 +472,11 @@ def set_user_tags(name, tags, runas=None):
     if runas is None:
         runas = salt.utils.get_user()
 
-    if tags and isinstance(tags, (list, tuple)):
-        tags = ' '.join(tags)
+    if not isinstance(tags, (list, tuple)):
+        tags = [tags]
 
-    res = __salt__['cmd.run'](
-        ['rabbitmqctl', 'set_user_tags', name, tags],
+    res = __salt__['cmd.run_all'](
+        ['rabbitmqctl', 'set_user_tags', name] + tags,
         runas=runas,
         python_shell=False)
     msg = "Tag(s) set"
