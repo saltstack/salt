@@ -476,7 +476,7 @@ def set_user_tags(name, tags, runas=None):
         tags = [tags]
 
     res = __salt__['cmd.run'](
-        ['rabbitmqctl', 'set_user_tags', name] + tags,
+        ['rabbitmqctl', 'set_user_tags', name] + list(tags),
         runas=runas,
         python_shell=False)
     msg = "Tag(s) set"
