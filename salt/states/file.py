@@ -5601,7 +5601,7 @@ def serialize(name,
     show_diff
         DEPRECATED: Please use show_changes.
 
-        If set to ''False'', the diff will not be shown in the return data if
+        If set to ``False``, the diff will not be shown in the return data if
         changes are made.
 
     show_changes
@@ -5744,8 +5744,7 @@ def serialize(name,
 
     if show_diff is not None:
         show_changes = show_diff
-
-        mgs = (
+        msg = (
             'The \'show_diff\' argument to the file.serialized state has been '
             'deprecated, please use \'show_changes\' instead.'
         )
