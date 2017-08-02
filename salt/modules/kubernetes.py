@@ -16,6 +16,7 @@ or `api_password` parameters when calling a function:
 .. code-block:: bash
     salt '*' kubernetes.nodes api_url=http://k8s-api-server:port api_user=myuser api_password=pass
 
+.. versionadded: 2017.7.0
 '''
 
 # Import Python Futures
