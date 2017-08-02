@@ -67,6 +67,17 @@ provider: ``napalm_base``
 
     .. versionadded:: 2017.7.1
 
+multiprocessing: ``False``
+    Overrides the :conf_minion:`multiprocessing` option, per proxy minion.
+    The ``multiprocessing`` option must be turned off for SSH-based proxies.
+    However, some NAPALM drivers (e.g. Arista, NX-OS) are not SSH-based.
+    As multiple proxy minions may share the same configuration file,
+    this option permits the configuration of the ``multiprocessing`` option
+    more specifically, for some proxy minions.
+
+    .. versionadded:: 2017.7.1
+
+
 .. _`NAPALM Read the Docs page`: https://napalm.readthedocs.io/en/latest/#supported-network-operating-systems
 .. _`optional arguments`: http://napalm.readthedocs.io/en/latest/support/index.html#list-of-supported-optional-arguments
 
