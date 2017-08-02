@@ -291,7 +291,6 @@ def _register_functions():
         modules_ = [module_ for module_ in modules.modules]
 
     for mod_name in modules_:
-        mod_name = _to_snake_case(module_)
         mod_func = _copy_function(mod_name, str(mod_name))
         mod_func.__doc__ = _build_doc(mod_name)
         __all__.append(mod_name)
