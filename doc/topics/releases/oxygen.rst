@@ -98,6 +98,39 @@ running on T-Series SPARC hardware.  The ``virtual_subtype`` grain is
 populated as a list of domain roles.
 
 
+Beacon configuration changes
+----------------------------------------
+
+In order to remain consistent and to align with other Salt components such as states,
+support for configuring beacons using dictionary based configuration has been deprecated
+in favor of list based configuration.  All beacons have a validation function which will 
+check the configuration for the correct format and only load if the validation passes.
+
+Examples:
+    ```
+	beacons:
+	  ps:
+		- processes:
+			salt-master: running
+			mysql: stopped
+
+	```
+	```
+    beacons:
+	  service:
+		- services:
+			nginx:
+			  onchangeonly: True
+			  delay: 30
+			  uncleanshutdown: /run/nginx.pid
+	```
+	```
+	beacons:
+	  memusage:
+		- percent: 63%
+
+	```
+
 Deprecations
 ------------
 
