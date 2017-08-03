@@ -1071,7 +1071,7 @@ class LocalFuncs(object):
                                                 'for user {0}.').format(username)))
             auth_list = self.loadauth.get_auth_list(load)
 
-        if not self.ckminions.runner_check(auth_list, load['fun']):
+        if not self.ckminions.runner_check(auth_list, load['fun'], load['kwarg']):
             return dict(error=dict(name=err_name,
                                    message=('Authentication failure of type "{0}" occurred '
                                             'for user {1}.').format(auth_type, username)))
@@ -1127,7 +1127,7 @@ class LocalFuncs(object):
                                                 'user {0}.').format(username)))
 
         if auth_type != 'user':
-            if not self.ckminions.wheel_check(auth_list, load['fun']):
+            if not self.ckminions.wheel_check(auth_list, load['fun'], load['kwarg']):
                 return dict(error=dict(name=err_name,
                                        message=('Authentication failure of type "{0}" occurred for '
                                                 'user {1}.').format(auth_type, username)))
