@@ -59,7 +59,7 @@ def _redis_client(opts):
 
 def mk_token(opts, tdata):
     '''
-    Mint a new token using the config option hash_type and store tdata with 'token' attribute set 
+    Mint a new token using the config option hash_type and store tdata with 'token' attribute set
     to the token.
     This module uses the hash of random 512 bytes as a token.
 

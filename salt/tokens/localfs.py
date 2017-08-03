@@ -20,7 +20,7 @@ __virtualname__ = 'localfs'
 
 def mk_token(opts, tdata):
     '''
-    Mint a new token using the config option hash_type and store tdata with 'token' attribute set 
+    Mint a new token using the config option hash_type and store tdata with 'token' attribute set
     to the token.
     This module uses the hash of random 512 bytes as a token.
 
@@ -55,7 +55,6 @@ def get_token(opts, tok):
     :returns: Token data if successful. Empty dict if failed.
     '''
     t_path = os.path.join(opts['token_dir'], tok)
-    t_path = os.path.join(opts['token_dir'], tok)
     if not os.path.isfile(t_path):
         return {}
     serial = salt.payload.Serial(opts)
@@ -76,9 +75,9 @@ def rm_token(opts, tok):
     :param tok: Token to remove
     :returns: Empty dict if successful. None if failed.
     '''
+    t_path = os.path.join(opts['token_dir'], tok)
     try:
         os.remove(t_path)
         return {}
     except (IOError, OSError):
         log.warning('Could not remove token {0}'.format(tok))
-        pass
