@@ -17,9 +17,7 @@ from __future__ import absolute_import
 
 # Import python libs
 from __future__ import print_function
-import os
 import collections
-import hashlib
 import time
 import logging
 import random
@@ -56,6 +54,7 @@ class LoadAuth(object):
         self.max_fail = 1.0
         self.serial = salt.payload.Serial(opts)
         self.auth = salt.loader.auth(opts)
+        self.tokens = salt.loader.eauth_tokens(opts)
         self.ckminions = ckminions or salt.utils.minions.CkMinions(opts)
 
     def load_name(self, load):
@@ -200,13 +199,6 @@ class LoadAuth(object):
         '''
         if not self.authenticate_eauth(load):
             return {}
-        fstr = '{0}.auth'.format(load['eauth'])
-        hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
-        tok = str(hash_type(os.urandom(512)).hexdigest())
-        t_path = os.path.join(self.opts['token_dir'], tok)
-        while os.path.isfile(t_path):
-            tok = str(hash_type(os.urandom(512)).hexdigest())
-            t_path = os.path.join(self.opts['token_dir'], tok)
 
         if self._allow_custom_expire(load):
             token_expire = load.pop('token_expire', self.opts['token_expire'])
@@ -217,8 +209,7 @@ class LoadAuth(object):
         tdata = {'start': time.time(),
                  'expire': time.time() + token_expire,
                  'name': self.load_name(load),
-                 'eauth': load['eauth'],
-                 'token': tok}
+                 'eauth': load['eauth']}
 
         if self.opts['keep_acl_in_token']:
             acl_ret = self.__get_acl(load)
@@ -227,29 +218,17 @@ class LoadAuth(object):
         if 'groups' in load:
             tdata['groups'] = load['groups']
 
-        try:
-            with salt.utils.files.set_umask(0o177):
-                with salt.utils.files.fopen(t_path, 'w+b') as fp_:
-                    fp_.write(self.serial.dumps(tdata))
-        except (IOError, OSError):
-            log.warning('Authentication failure: can not write token file "{0}".'.format(t_path))
-            return {}
-        return tdata
+        return self.tokens["{0}.mk_token".format(self.opts['eauth_tokens'])](self.opts, tdata)
 
     def get_tok(self, tok):
         '''
         Return the name associated with the token, or False if the token is
         not valid
         '''
-        t_path = os.path.join(self.opts['token_dir'], tok)
-        if not os.path.isfile(t_path):
+        tdata = self.tokens["{0}.get_token".format(self.opts['eauth_tokens'])](self.opts, tok)
+        if not tdata:
             return {}
-        try:
-            with salt.utils.files.fopen(t_path, 'rb') as fp_:
-                tdata = self.serial.loads(fp_.read())
-        except (IOError, OSError):
-            log.warning('Authentication failure: can not read token file "{0}".'.format(t_path))
-            return {}
+
         rm_tok = False
         if 'expire' not in tdata:
             # invalid token, delete it!
@@ -257,11 +236,8 @@ class LoadAuth(object):
         if tdata.get('expire', '0') < time.time():
             rm_tok = True
         if rm_tok:
-            try:
-                os.remove(t_path)
-                return {}
-            except (IOError, OSError):
-                pass
+            self.tokens["{0}.rm_token".format(self.opts['eauth_tokens'])](self.opts, tok)
+
         return tdata
 
     def authenticate_token(self, load):

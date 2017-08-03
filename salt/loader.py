@@ -416,6 +416,19 @@ def serializers(opts):
     )
 
 
+def eauth_tokens(opts):
+    '''
+    Returns the tokens modules
+    :param dict opts: The Salt options dictionary
+    :returns: LazyLoader instance, with only serializers present in the keyspace
+    '''
+    return LazyLoader(
+        _module_dirs(opts, 'tokens'),
+        opts,
+        tag='tokens',
+    )
+
+
 def auth(opts, whitelist=None):
     '''
     Returns the auth modules
