@@ -1436,7 +1436,10 @@ def absent(name):
             ret['comment'] = 'File {0} is set for removal'.format(name)
             return ret
         try:
-            __salt__['file.remove'](name)
+            if salt.utils.is_windows():
+                __salt__['file.remove'](name, force=True)
+            else:
+                __salt__['file.remove'](name)
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
@@ -2452,12 +2455,16 @@ def managed(name,
                 if sfn and os.path.isfile(sfn):
                     os.remove(sfn)
                 return ret
+
+            if sfn and os.path.isfile(sfn):
+                os.remove(sfn)
+
             # Since we generated a new tempfile and we are not returning here
             # lets change the original sfn to the new tempfile or else we will
             # get file not found
-            if sfn and os.path.isfile(sfn):
-                os.remove(sfn)
-                sfn = tmp_filename
+
+            sfn = tmp_filename
+
         else:
             ret = {'changes': {},
                    'comment': '',
@@ -3818,12 +3825,13 @@ def replace(name,
         A regular expression, to be matched using Python's
         :py:func:`~re.search`.
 
-        ..note::
+        .. note::
+
             If you need to match a literal string that contains regex special
             characters, you may want to use salt's custom Jinja filter,
             ``escape_regex``.
 
-            ..code-block:: jinja
+            .. code-block:: jinja
 
                 {{ 'http://example.com?foo=bar%20baz' | escape_regex }}
 
