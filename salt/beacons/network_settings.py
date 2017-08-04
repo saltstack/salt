@@ -102,12 +102,13 @@ def beacon(config):
 
         beacons:
           network_settings:
-            eth0:
-              ipaddr:
-              promiscuity:
-                onvalue: 1
-            eth1:
-              linkmode:
+            - interfaces:
+                - eth0:
+                    ipaddr:
+                    promiscuity:
+                      onvalue: 1
+                - eth1:
+                    linkmode:
 
     The config above will check for value changes on eth0 ipaddr and eth1 linkmode. It will also
     emit if the promiscuity value changes to 1.
