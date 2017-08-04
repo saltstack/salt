@@ -558,6 +558,19 @@ def _prep_pull():
     '''
     __context__['docker._pull_status'] = [x[:12] for x in images(all=True)]
 
+def _scrub_links(links, name):
+    '''
+    Remove container name from HostConfig:Links values to enable comparing
+    container configurations correctly.
+    '''
+    if isinstance(links, list):
+        ret = []
+        for l in links:
+            ret.append(l.replace('/{0}/'.format(name), '/', 1))
+    else:
+        ret = links
+
+    return ret
 
 def _size_fmt(num):
     '''
@@ -884,6 +897,9 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict][item]
             val2 = result2[conf_dict].get(item)
+            if item == 'Links':
+                val1 = _scrub_links(val1, first)
+                val2 = _scrub_links(val2, second)
             if val1 != val2:
                 ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
         # Check for optionally-present items that were in the second container
@@ -895,6 +911,9 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict].get(item)
             val2 = result2[conf_dict][item]
+            if item == 'Links':
+                val1 = _scrub_links(val1, first)
+                val2 = _scrub_links(val2, second)
             if val1 != val2:
                 ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
     return ret
