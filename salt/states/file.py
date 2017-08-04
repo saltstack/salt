@@ -1456,7 +1456,7 @@ def absent(name):
         	if salt.utils.is_windows():
                 __salt__['file.remove'](name, force=True)
             else:
-            	__salt__['file.remove'](name)
+                __salt__['file.remove'](name)
             ret['comment'] = 'Removed directory {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
