@@ -1218,6 +1218,7 @@ def extracted(name,
                                                       options=options,
                                                       trim_output=trim_output,
                                                       password=password,
+                                                      extract_perms=extract_perms,
                                                       **kwargs)
             elif archive_format == 'rar':
                 try:
