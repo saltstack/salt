@@ -452,6 +452,9 @@ def bootstrap(vm_, opts):
         'maxtries': salt.config.get_cloud_config_value(
             'wait_for_passwd_maxtries', vm_, opts, default=15
         ),
+        'preflight_cmds': salt.config.get_cloud_config_value(
+            'preflight_cmds', vm_, __opts__, default=[]
+        ),
     }
 
     inline_script_kwargs = deploy_kwargs
@@ -1464,6 +1467,15 @@ def deploy_script(host,
                         raise SaltCloudSystemExit(
                             'Can\'t set ownership for {0}'.format(
                                 preseed_minion_keys_tempdir))
+
+            # Run any pre-flight commands before running deploy scripts
+            preflight_cmds = kwargs.get('preflight_cmds', [])
+            for command in preflight_cmds:
+                cmd_ret = root_cmd(command, tty, sudo, **ssh_kwargs)
+                if cmd_ret:
+                    raise SaltCloudSystemExit(
+                        'Pre-flight command failed: \'{0}\''.format(command)
+                    )
 
             # The actual deploy script
             if script:
