@@ -398,7 +398,6 @@ class RemotePillarTestCase(TestCase):
                                           'mocked-minion', 'dev')
         self.assertEqual(pillar.pillar_override, {})
 
-
     def test_non_existent_intermediate_opt_in_add_to_pillar(self):
         opts = {
             'renderer': 'json',
