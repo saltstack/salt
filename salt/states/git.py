@@ -1308,7 +1308,7 @@ def latest(name,
                         'if it does not already exist).',
                         comments
                     )
-                if set(all_local_tags) != set([
+                remote_tags = set([
                     x.split('/')[-1] for x in __salt__['git.ls_remote'](
                         cwd=target,
                         remote=remote,
@@ -1318,9 +1318,14 @@ def latest(name,
                         identity=identity,
                         saltenv=__env__,
                         ignore_retcode=True,
-                    ).keys()
-                ]):
+                    ).keys() if '^{}' not in x
+                ])
+                if set(all_local_tags) != remote_tags:
                     has_remote_rev = False
+                    ret['changes']['tags'] = {
+                        'old': all_local_tags,
+                        'new': list(remote_tags)
+                    }
 
                 if not has_remote_rev:
                     try:
