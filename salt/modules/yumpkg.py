@@ -46,6 +46,7 @@ import salt.utils.pkg
 import salt.ext.six as six
 import salt.utils.itertools
 import salt.utils.systemd
+import salt.utils.lazy
 import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -1066,16 +1067,19 @@ def clean_metadata(**kwargs):
     return refresh_db(**kwargs)
 
 
-class AvailablePackages(object):
+class AvailablePackages(salt.utils.lazy.LazyDict):
     def __init__(self, *args, **kwargs):
+        super(AvailablePackages, self).__init__()
         self._args = args
         self._kwargs = kwargs
-        self._available_data = None
 
-    def get(self, *args, **kwargs):
-        if not self._available_data:
-            self._available_data = list_repo_pkgs(*self._args, **self._kwargs)
-        return self._available_data.get(*args, **kwargs)
+    def _load(self, key):
+        self._load_all()
+        return True
+
+    def _load_all(self):
+        self._dict = list_repo_pkgs(*self._args, **self._kwargs)
+        self.loaded = True
 
 
 def install(name=None,
