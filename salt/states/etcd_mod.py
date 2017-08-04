@@ -194,6 +194,42 @@ def wait_set(name, value, profile=None):
     }
 
 
+def directory(name, profile=None):
+    '''
+    Create a directory in etcd.
+
+    name
+        The etcd directory name, for example: ``/foo/bar/baz``.
+    profile
+        Optional, defaults to ``None``. Sets the etcd profile to use which has
+        been defined in the Salt Master config.
+    '''
+
+    created = False
+
+    rtn = {
+        'name': name,
+        'comment': 'Directory exists',
+        'result': True,
+        'changes': {}
+    }
+
+    current = __salt__['etcd.get'](name, profile=profile, recurse=True)
+    if not current:
+        created = True
+
+    result = __salt__['etcd.set'](name, None, directory=True, profile=profile)
+
+    if result and result != current:
+        if created:
+            rtn['comment'] = 'New directory created'
+            rtn['changes'] = {
+                name: 'Created'
+            }
+
+    return rtn
+
+
 def rm_(name, recurse=False, profile=None):
     '''
     Deletes a key from etcd. This function is also aliased as ``rm``.
