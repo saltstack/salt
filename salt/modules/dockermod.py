@@ -558,6 +558,7 @@ def _prep_pull():
     '''
     __context__['docker._pull_status'] = [x[:12] for x in images(all=True)]
 
+
 def _scrub_links(links, name):
     '''
     Remove container name from HostConfig:Links values to enable comparing
@@ -571,6 +572,7 @@ def _scrub_links(links, name):
         ret = links
 
     return ret
+
 
 def _size_fmt(num):
     '''
