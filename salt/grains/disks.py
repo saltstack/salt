@@ -18,7 +18,8 @@ import salt.utils.files
 import salt.modules.cmdmod
 
 __salt__ = {
-    'cmd.run': salt.modules.cmdmod._run_quiet
+    'cmd.run': salt.modules.cmdmod._run_quiet,
+    'cmd.run_all': salt.modules.cmdmod._run_all_quiet
 }
 
 log = logging.getLogger(__name__)
@@ -32,6 +33,8 @@ def disks():
         return _freebsd_geom()
     elif salt.utils.is_linux():
         return _linux_disks()
+    elif salt.utils.is_windows():
+        return _windows_disks()
     else:
         log.trace('Disk grain does not support OS')
 
@@ -140,4 +143,40 @@ def _linux_disks():
             else:
                 log.trace('Unable to identify device {0} as an SSD or HDD.'
                           ' It does not report 0 or 1'.format(device))
+    return ret
+
+
+def _windows_disks():
+    wmic = salt.utils.which('wmic')
+
+    namespace = r'\\root\microsoft\windows\storage'
+    path = 'MSFT_PhysicalDisk'
+    where = '(MediaType=3 or MediaType=4)'
+    get = 'DeviceID,MediaType'
+
+    ret = {'disks': [], 'SSDs': []}
+
+    cmdret = __salt__['cmd.run_all'](
+        '{0} /namespace:{1} path {2} where {3} get {4} /format:table'.format(
+            wmic, namespace, path, where, get))
+
+    if cmdret['retcode'] != 0:
+        log.trace('Disk grain does not support this version of Windows')
+    else:
+        for line in cmdret['stdout'].splitlines():
+            info = line.split()
+            if len(info) != 2 or not info[0].isdigit or not info[1].isdigit:
+                continue
+            device = r'\\.\PhysicalDrive{0}'.format(info[0])
+            mediatype = info[1]
+            if mediatype == '3':
+                log.trace('Device {0} reports itself as an HDD'.format(device))
+                ret['disks'].append(device)
+            elif mediatype == '4':
+                log.trace('Device {0} reports itself as an SSD'.format(device))
+                ret['SSDs'].append(device)
+            else:
+                log.trace('Unable to identify device {0} as an SSD or HDD.'
+                          'It does not report 3 or 4'.format(device))
+
     return ret
