@@ -165,7 +165,7 @@ def _windows_disks():
     else:
         for line in cmdret['stdout'].splitlines():
             info = line.split()
-            if len(info) != 2 or not info[0].isdigit or not info[1].isdigit:
+            if len(info) != 2 or not info[0].isdigit() or not info[1].isdigit():
                 continue
             device = r'\\.\PhysicalDrive{0}'.format(info[0])
             mediatype = info[1]
