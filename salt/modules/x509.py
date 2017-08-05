@@ -331,10 +331,14 @@ def _parse_subject(subject):
     for nid_name, nid_num in six.iteritems(subject.nid):
         if nid_num in nids:
             continue
-        val = getattr(subject, nid_name)
-        if val:
-            ret[nid_name] = val
-            nids.append(nid_num)
+        try:
+            val = getattr(subject, nid_name)
+            if val:
+                ret[nid_name] = val
+                nids.append(nid_num)
+        except TypeError as e:
+            if e.args and e.args[0] == 'No string argument provided':
+                pass
 
     return ret
 
