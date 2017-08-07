@@ -763,7 +763,8 @@ def _render(template, render, renderer, template_dict, opts):
         blacklist = opts.get('renderer_blacklist')
         whitelist = opts.get('renderer_whitelist')
         ret = compile_template(template, rend, renderer, blacklist, whitelist, **template_dict)
-        ret = ret.read()
+        if salt.utils.stringio.is_readable(ret):
+            ret = ret.read()
         if str(ret).startswith('#!') and not str(ret).startswith('#!/'):
             ret = str(ret).split('\n', 1)[1]
         return ret
