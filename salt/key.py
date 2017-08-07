@@ -596,7 +596,7 @@ class Key(object):
         minions = []
         for key, val in six.iteritems(keys):
             minions.extend(val)
-        if not self.opts.get('preserve_minion_cache', False) or not preserve_minions:
+        if not self.opts.get('preserve_minion_cache', False):
             for minion in os.listdir(m_cache):
                 if minion not in minions and minion not in preserve_minions:
                     shutil.rmtree(os.path.join(m_cache, minion))
@@ -834,7 +834,7 @@ class Key(object):
     def delete_key(self,
                     match=None,
                     match_dict=None,
-                    preserve_minions=False,
+                    preserve_minions=None,
                     revoke_auth=False):
         '''
         Delete public keys. If "match" is passed, it is evaluated as a glob.
@@ -871,11 +871,10 @@ class Key(object):
                     self.event.fire_event(eload, tagify(prefix='key'))
                 except (OSError, IOError):
                     pass
-        if preserve_minions:
-            preserve_minions_list = matches.get('minions', [])
+        if self.opts.get('preserve_minions') is True:
+            self.check_minion_cache(preserve_minions=matches.get('minions', []))
         else:
-            preserve_minions_list = []
-        self.check_minion_cache(preserve_minions=preserve_minions_list)
+            self.check_minion_cache()
         if self.opts.get('rotate_aes_key'):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return (
@@ -1056,10 +1055,11 @@ class RaetKey(Key):
             minions.extend(val)
 
         m_cache = os.path.join(self.opts['cachedir'], 'minions')
-        if os.path.isdir(m_cache):
-            for minion in os.listdir(m_cache):
-                if minion not in minions:
-                    shutil.rmtree(os.path.join(m_cache, minion))
+        if not self.opts.get('preserve_minion_cache', False):
+            if os.path.isdir(m_cache):
+                for minion in os.listdir(m_cache):
+                    if minion not in minions and minion not in preserve_minions:
+                        shutil.rmtree(os.path.join(m_cache, minion))
 
         kind = self.opts.get('__role', '')  # application kind
         if kind not in kinds.APPL_KINDS:
@@ -1299,7 +1299,7 @@ class RaetKey(Key):
     def delete_key(self,
                    match=None,
                    match_dict=None,
-                   preserve_minions=False,
+                   preserve_minions=None,
                    revoke_auth=False):
         '''
         Delete public keys. If "match" is passed, it is evaluated as a glob.
@@ -1330,7 +1330,10 @@ class RaetKey(Key):
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                 except (OSError, IOError):
                     pass
-        self.check_minion_cache(preserve_minions=matches.get('minions', []))
+        if self.opts.get('preserve_minions') is True:
+            self.check_minion_cache(preserve_minions=matches.get('minions', []))
+        else:
+            self.check_minion_cache()
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
