@@ -223,7 +223,7 @@ def create_mount_target(filesystemid,
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
-    return client.create_mount_point(FileSystemId=filesystemid,
+    return client.create_mount_target(FileSystemId=filesystemid,
                                      SubnetId=subnetid,
                                      IpAddress=ipaddress,
                                      SecurityGroups=securitygroups)
