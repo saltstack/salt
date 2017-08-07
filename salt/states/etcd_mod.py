@@ -143,6 +143,13 @@ def set_(name, value, profile=None):
     profile
         Optional, defaults to ``None``. Sets the etcd profile to use which has
         been defined in the Salt Master config.
+
+        .. code-block:: yaml
+
+            my_etd_config:
+              etcd.host: 127.0.0.1
+              etcd.port: 4001
+
     '''
 
     created = False
@@ -184,6 +191,13 @@ def wait_set(name, value, profile=None):
     profile
         The etcd profile to use that has been configured on the Salt Master,
         this is optional and defaults to ``None``.
+
+        .. code-block:: yaml
+
+            my_etd_config:
+              etcd.host: 127.0.0.1
+              etcd.port: 4001
+
     '''
 
     return {
@@ -203,6 +217,12 @@ def directory(name, profile=None):
     profile
         Optional, defaults to ``None``. Sets the etcd profile to use which has
         been defined in the Salt Master config.
+
+        .. code-block:: yaml
+
+            my_etd_config:
+              etcd.host: 127.0.0.1
+              etcd.port: 4001
     '''
 
     created = False
@@ -241,6 +261,12 @@ def rm_(name, recurse=False, profile=None):
     profile
         Optional, defaults to ``None``. Sets the etcd profile to use which has
         been defined in the Salt Master config.
+
+        .. code-block:: yaml
+
+            my_etd_config:
+              etcd.host: 127.0.0.1
+              etcd.port: 4001
     '''
 
     rtn = {
@@ -277,6 +303,12 @@ def wait_rm(name, recurse=False, profile=None):
     profile
         Optional, defaults to ``None``. Sets the etcd profile to use which has
         been defined in the Salt Master config.
+
+        .. code-block:: yaml
+
+            my_etd_config:
+              etcd.host: 127.0.0.1
+              etcd.port: 4001
     '''
 
     return {
