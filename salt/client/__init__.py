@@ -194,7 +194,7 @@ class LocalClient(object):
             salt.utils.verify.check_path_traversal(self.opts['cachedir'],
                                                key_user,
                                                self.skip_perm_errors)
-            with salt.utils.fopen(keyfile, 'r') as key:
+            with salt.utils.files.fopen(keyfile, 'r') as key:
                 return key.read()
         except (OSError, IOError, SaltClientError):
             # Fall back to eauth
