@@ -2799,7 +2799,8 @@ def cache_nodes_ip(opts, base=None):
     '''
     salt.utils.warn_until(
         'Flourine',
-        'This function is incomplete and non-functional.'
+        'This function is incomplete and non-functional '
+        'and will be removed in Salt Flourine.'
     )
     if base is None:
         base = opts['cachedir']
