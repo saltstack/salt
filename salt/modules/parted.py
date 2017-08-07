@@ -216,7 +216,7 @@ def align_check(device, part_type, partition):
             'Invalid partition passed to partition.align_check'
         )
 
-    cmd = 'parted -m -s {0} align-check {1} {2}'.format(
+    cmd = 'parted -m {0} align-check {1} {2}'.format(
         device, part_type, partition
     )
     out = __salt__['cmd.run'](cmd).splitlines()
