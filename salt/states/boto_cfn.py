@@ -43,6 +43,9 @@ from __future__ import absolute_import
 import logging
 import json
 
+# Import Salt libs
+import salt.utils.compat
+
 # Import 3rd party libs
 try:
     from salt._compat import ElementTree as ET
@@ -158,7 +161,7 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
         template = template['GetTemplateResponse']['GetTemplateResult']['TemplateBody'].encode('ascii', 'ignore')
         template = json.loads(template)
         _template_body = json.loads(template_body)
-        compare = cmp(template, _template_body)
+        compare = salt.utils.compat.cmp(template, _template_body)
         if compare != 0:
             log.debug('Templates are not the same. Compare value is {0}'.format(compare))
             # At this point we should be able to run update safely since we already validated the template
