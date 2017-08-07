@@ -158,7 +158,7 @@ def create_file_system(name,
     import os
     import base64
     creation_token = base64.b64encode(os.urandom(46), ['-', '_'])
-    tags = [{"Key": "Name", "Value": name}]
+    tags = {"Key": "Name", "Value": name}
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
@@ -327,7 +327,7 @@ def delete_mount_target(mounttargetid,
 
 
 def delete_tags(filesystemid,
-                tags,
+                tagkeys,
                 keyid=None,
                 key=None,
                 profile=None,
@@ -351,8 +351,7 @@ def delete_tags(filesystemid,
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
-    client.delete_tags(FileSystemId=filesystemid, Tags=tags)
-
+    client.delete_tags(FileSystemId=filesystemid, TagKeys=tagkeys)
 
 def get_file_systems(filesystemid=None,
                      keyid=None,
