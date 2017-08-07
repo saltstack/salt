@@ -122,12 +122,11 @@ State Module Changes
       # After
       run_something:
         module.run:
-          mymodule.something:
+          - mymodule.something:
             - name: some name
             - first_arg: one
             - second_arg: two
             - do_stuff: True
-
 
   Since a lot of users are already using :py:func:`module.run
   <salt.states.module.run>` states, this new behavior must currently be
@@ -136,6 +135,36 @@ State Module Changes
   the next feature release of Salt (Oxygen) and the old usage will no longer be
   supported at that time.
 
+  Another feature of the new :py:func:`module.run <salt.states.module.run>` is that
+  it allows calling many functions in a single batch, such as:
+
+  .. code-block:: yaml
+
+      run_something:
+        module.run:
+          - mymodule.function_without_parameters:
+          - mymodule.another_function:
+            - myparam
+            - my_other_param
+
+  In a rare case that you have a function that needs to be called several times but
+  with the different parameters, an additional feature of "tagging" is to the
+  rescue. In order to tag a function, use a colon delimeter. For example:
+
+  .. code-block:: yaml
+
+      run_something:
+        module.run:
+          - mymodule.same_function:1:
+          - mymodule.same_function:2:
+            - myparam
+            - my_other_param
+          - mymodule.same_function:3:
+            - foo: bar
+
+  The example above will run `mymodule.same_function` three times with the
+  different parameters.
+
   To enable the new behavior for :py:func:`module.run <salt.states.module.run>`,
   add the following to the minion config file:
 
@@ -143,6 +172,7 @@ State Module Changes
 
       use_superseded:
         - module.run
+
 - The default for the ``fingerprint_hash_type`` option used in the ``present``
   function in the :mod:`ssh <salt.states.ssh_know_hosts>` state changed from
   ``md5`` to ``sha256``.
@@ -676,6 +706,7 @@ Execution modules
 - :mod:`salt.modules.grafana4 <salt.modules.grafana4>`
 - :mod:`salt.modules.heat <salt.modules.heat>`
 - :mod:`salt.modules.icinga2 <salt.modules.icinga2>`
+- :mod:`salt.modules.kubernetes <salt.modules.kubernetes>`
 - :mod:`salt.modules.logmod <salt.modules.logmod>`
 - :mod:`salt.modules.mattermost <salt.modules.mattermost>`
 - :mod:`salt.modules.namecheap_dns <salt.modules.namecheap_dns>`
@@ -754,6 +785,7 @@ States
 - :mod:`salt.states.icinga2 <salt.states.icinga2>`
 - :mod:`salt.states.influxdb_continuous_query <salt.states.influxdb_continuous_query>`
 - :mod:`salt.states.influxdb_retention_policy <salt.states.influxdb_retention_policy>`
+- :mod:`salt.states.kubernetes <salt.states.kubernetes>`
 - :mod:`salt.states.logadm <salt.states.logadm>`
 - :mod:`salt.states.logrotate <salt.states.logrotate>`
 - :mod:`salt.states.msteams <salt.states.msteams>`
