@@ -197,6 +197,7 @@ execution modules
     keyboard
     keystone
     kmod
+    kubernetes
     launchctl
     layman
     ldap3
