@@ -158,7 +158,7 @@ def create_file_system(name,
     import os
     import base64
     creation_token = base64.b64encode(os.urandom(46), ['-', '_'])
-    tags = {"Key": "Name", "Value": name}
+    tags = [{"Key": "Name", "Value": name}]
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 

@@ -38,6 +38,7 @@ def sync_all(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
     log.debug('Syncing all')
     ret = {}
+    ret['clouds'] = sync_clouds(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['modules'] = sync_modules(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['states'] = sync_states(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     ret['grains'] = sync_grains(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
