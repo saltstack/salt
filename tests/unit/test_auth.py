@@ -23,6 +23,9 @@ class LoadAuthTestCase(TestCase):
         patches = (
             ('salt.payload.Serial', None),
             ('salt.loader.auth', dict(return_value={'pam.auth': 'fake_func_str', 'pam.groups': 'fake_groups_function_str'}))
+            ('salt.loader.eauth_tokens', dict(return_value={'localfs.mk_token': 'fake_func_mktok',
+                                                            'localfs.get_token': 'fake_func_gettok',
+                                                            'localfs.rm_roken': 'fake_func_rmtok'}))
         )
         for mod, mock in patches:
             if mock:
