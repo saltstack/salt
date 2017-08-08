@@ -186,15 +186,12 @@ def _fulfills_version_spec(versions, oper, desired_version,
         if isinstance(versions, dict) and 'version' in versions:
             versions = versions['version']
     for ver in versions:
-        if oper == '==':
-            if fnmatch.fnmatch(ver, desired_version):
-                return True
-
-        elif salt.utils.compare_versions(ver1=ver,
-                                         oper=oper,
-                                         ver2=desired_version,
-                                         cmp_func=cmp_func,
-                                         ignore_epoch=ignore_epoch):
+        if (oper == '==' and fnmatch.fnmatch(ver, desired_version)) \
+                or salt.utils.compare_versions(ver1=ver,
+                                               oper=oper,
+                                               ver2=desired_version,
+                                               cmp_func=cmp_func,
+                                               ignore_epoch=ignore_epoch):
             return True
     return False
 
