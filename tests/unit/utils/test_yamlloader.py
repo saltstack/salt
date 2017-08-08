@@ -100,3 +100,15 @@ class YamlLoaderTestCase(TestCase):
                   <<: *p1
                   v2: beta
                   v2: betabeta'''))
+
+    def test_yaml_with_unicode_literals(self):
+        '''
+        Test proper loading of unicode literals
+        '''
+        self.assertEqual(
+            self._render_yaml(textwrap.dedent('''\
+                foo:
+                  a: Д
+                  b: {'a': u'\\u0414'}''')),
+            {'foo': {'a': u'\u0414', 'b': {'a': u'\u0414'}}}
+        )
