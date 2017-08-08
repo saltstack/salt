@@ -186,6 +186,7 @@ def _get_serv(ret=None):
         pool = _get_conn_pool(_options)
         return redis.StrictRedis(connection_pool=pool)
 
+
 def _get_ttl():
     return __opts__.get('keep_jobs', 24) * 3600
 
