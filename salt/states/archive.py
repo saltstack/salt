@@ -1194,7 +1194,7 @@ def extracted(name,
                 return ret
 
         if not os.path.isdir(name):
-            __salt__['file.makedirs'](name, user=user)
+            __states__['file.directory'](name, user=user, makedirs=True)
             created_destdir = True
 
         log.debug('Extracting {0} to {1}'.format(cached_source, name))
@@ -1218,6 +1218,7 @@ def extracted(name,
                                                       options=options,
                                                       trim_output=trim_output,
                                                       password=password,
+                                                      extract_perms=extract_perms,
                                                       **kwargs)
             elif archive_format == 'rar':
                 try:
