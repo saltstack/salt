@@ -25,6 +25,19 @@ by any master tops matches that are not matched via a top file.
 To make master tops matches execute first, followed by top file matches, set
 the new :conf_minion:`master_tops_first` minion config option to ``True``.
 
+LDAP via External Authentication Changes
+----------------------------------------
+In this release of Salt, if LDAP Bind Credentials are supplied, then
+these credentials will be used for all LDAP access except the first
+authentication when a job is submitted.  The first authentication will
+use the user's credentials as passed on the CLI.  This behavior is to
+accommodate certain two-factor authentication schemes where the authentication
+token can only be used once.
+
+In previous releases the bind credentials would only be used to determine
+the LDAP user's existence and group membership.  The user's LDAP credentials
+were used from then on.
+
 New GitFS Features
 ------------------
 
@@ -49,8 +62,30 @@ environments (i.e. ``saltenvs``) have been added:
    ignore all tags and use branches only, and also to keep SHAs from being made
    available as saltenvs.
 
-Salt Cloud and Newer PyWinRM Versions
--------------------------------------
+Salt Cloud Features
+===================
+
+Pre-Flight Commands
+-------------------
+
+Support has been added for specified "preflight commands" to run on a VM before
+the deploy script is run. These must be defined as a list in a cloud configuration
+file. For example:
+
+.. code-block:: yaml
+
+       my-cloud-profile:
+         provider: linode-config
+         image: Ubuntu 16.04 LTS
+         size: Linode 2048
+         preflight_cmds:
+           - whoami
+           - echo 'hello world!'
+
+These commands will run in sequence **before** the bootstrap script is executed.
+
+Newer PyWinRM Versions
+----------------------
 
 Versions of ``pywinrm>=0.2.1`` are finally able to disable validation of self
 signed certificates.  :ref:`Here<new-pywinrm>` for more information.
