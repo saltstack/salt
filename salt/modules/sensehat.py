@@ -21,6 +21,9 @@ Example:
 from __future__ import absolute_import
 import logging
 
+# Import Salt Libs
+import salt.utils
+
 try:
     from sense_hat import SenseHat
     _sensehat = SenseHat()
@@ -222,6 +225,7 @@ def show_image(image):
 
         salt 'raspberry' sensehat.show_image /tmp/my_image.png
     '''
+    image = salt.utils.expanduser(image)
     return _sensehat.load_image(image)
 
 

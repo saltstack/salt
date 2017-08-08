@@ -57,6 +57,9 @@ Notes
 
 from __future__ import absolute_import
 
+# Import Salt Libs
+import salt.utils
+
 
 # Private
 def __virtual__():
@@ -127,6 +130,7 @@ def war_deployed(name,
         either specify a version yourself, or set version to ``False``.
 
     '''
+    name, war = salt.utils.expanduser(name, war)
     # Prepare
     ret = {'name': name,
            'result': True,
@@ -309,6 +313,7 @@ def undeployed(name,
             - require:
               - service: application-service
     '''
+    name = salt.utils.expanduser(name)
 
     # Prepare
     ret = {'name': name,

@@ -55,6 +55,7 @@ def bin_pkg_info(path, saltenv='base'):
         salt '*' lowpkg.bin_pkg_info /root/foo-1.2.3-1ubuntu1_all.deb
         salt '*' lowpkg.bin_pkg_info salt://foo-1.2.3-1ubuntu1_all.deb
     '''
+    path = salt.utils.expanduser(path)
     # If the path is a valid protocol, pull it down using cp.cache_file
     if __salt__['config.valid_fileproto'](path):
         newpath = __salt__['cp.cache_file'](path, saltenv)

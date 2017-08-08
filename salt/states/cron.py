@@ -515,6 +515,7 @@ def file(name,
     backup
         Overrides the default backup mode for the user's crontab.
     '''
+    source_hash_name = salt.utils.expanduser(source_hash_name)
     # Initial set up
     mode = '0600'
 

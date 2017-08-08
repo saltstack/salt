@@ -42,6 +42,7 @@ import logging
 import sys
 
 # Import salt libs
+import salt.utils
 from salt.ext.six import string_types
 
 # Define the module's virtual name
@@ -203,6 +204,7 @@ def installed(name,
     loglevel
         loglevel for buildout commands
     '''
+    name = salt.utils.expanduser(name)
     ret = {}
 
     if 'group' in kwargs:

@@ -13,6 +13,7 @@ Manage OpenStack configuration file settings.
 from __future__ import absolute_import
 
 # Import Salt Libs
+import salt.utils
 from salt.exceptions import CommandExecutionError
 
 
@@ -46,6 +47,7 @@ def present(name, filename, section, value, parameter=None):
         The value to set
 
     '''
+    filename = salt.utils.expanduser(filename)
 
     if parameter is None:
         parameter = name
@@ -103,6 +105,7 @@ def absent(name, filename, section, parameter=None):
         The parameter to change.  If the parameter is not supplied, the name will be used as the parameter.
 
     '''
+    filename = salt.utils.expanduser(filename)
 
     if parameter is None:
         parameter = name

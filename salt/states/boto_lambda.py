@@ -199,6 +199,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
     '''
+    ZipFile = salt.utils.expanduser(ZipFile)
     ret = {'name': FunctionName,
            'result': True,
            'comment': '',

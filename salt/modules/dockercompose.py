@@ -286,6 +286,7 @@ def get(path):
 
         salt myminion dockercompose.get /path/where/docker-compose/stored
     '''
+    path = salt.utils.expanduser(path)
 
     salt_result = __read_docker_compose(path)
     if not salt_result['status']:
@@ -314,6 +315,7 @@ def create(path, docker_compose):
 
         salt myminion dockercompose.create /path/where/docker-compose/stored content
     '''
+    path = salt.utils.expanduser(path)
     if docker_compose:
         ret = __write_docker_compose(path, docker_compose)
         if isinstance(ret, dict):
@@ -342,6 +344,7 @@ def pull(path, service_names=None):
         salt myminion dockercompose.pull /path/where/docker-compose/stored
         salt myminion dockercompose.pull /path/where/docker-compose/stored '[janus]'
     '''
+    path = salt.utils.expanduser(path)
 
     project = __load_project(path)
     if isinstance(project, dict):
@@ -376,6 +379,7 @@ def build(path, service_names=None):
         salt myminion dockercompose.build /path/where/docker-compose/stored
         salt myminion dockercompose.build /path/where/docker-compose/stored '[janus]'
     '''
+    path = salt.utils.expanduser(path)
 
     project = __load_project(path)
     if isinstance(project, dict):
@@ -407,6 +411,7 @@ def restart(path, service_names=None):
         salt myminion dockercompose.restart /path/where/docker-compose/stored
         salt myminion dockercompose.restart /path/where/docker-compose/stored '[janus]'
     '''
+    path = salt.utils.expanduser(path)
 
     project = __load_project(path)
     debug_ret = {}
@@ -444,6 +449,7 @@ def stop(path, service_names=None):
         salt myminion dockercompose.stop /path/where/docker-compose/stored
         salt myminion dockercompose.stop  /path/where/docker-compose/stored '[janus]'
     '''
+    path = salt.utils.expanduser(path)
 
     project = __load_project(path)
     debug_ret = {}
@@ -481,6 +487,7 @@ def pause(path, service_names=None):
         salt myminion dockercompose.pause /path/where/docker-compose/stored
         salt myminion dockercompose.pause /path/where/docker-compose/stored '[janus]'
     '''
+    path = salt.utils.expanduser(path)
 
     project = __load_project(path)
     debug_ret = {}
@@ -518,6 +525,7 @@ def unpause(path, service_names=None):
         salt myminion dockercompose.pause /path/where/docker-compose/stored
         salt myminion dockercompose.pause /path/where/docker-compose/stored '[janus]'
     '''
+    path = salt.utils.expanduser(path)
 
     project = __load_project(path)
     debug_ret = {}
@@ -555,6 +563,7 @@ def start(path, service_names=None):
         salt myminion dockercompose.start /path/where/docker-compose/stored
         salt myminion dockercompose.start /path/where/docker-compose/stored '[janus]'
     '''
+    path = salt.utils.expanduser(path)
 
     project = __load_project(path)
     debug_ret = {}
@@ -592,6 +601,7 @@ def kill(path, service_names=None):
         salt myminion dockercompose.kill /path/where/docker-compose/stored
         salt myminion dockercompose.kill /path/where/docker-compose/stored '[janus]'
     '''
+    path = salt.utils.expanduser(path)
 
     project = __load_project(path)
     debug_ret = {}
@@ -629,6 +639,7 @@ def rm(path, service_names=None):
         salt myminion dockercompose.rm /path/where/docker-compose/stored
         salt myminion dockercompose.rm /path/where/docker-compose/stored '[janus]'
     '''
+    path = salt.utils.expanduser(path)
 
     project = __load_project(path)
     if isinstance(project, dict):
@@ -654,6 +665,7 @@ def ps(path):
 
         salt myminion dockercompose.ps /path/where/docker-compose/stored
     '''
+    path = salt.utils.expanduser(path)
 
     project = __load_project(path)
     result = {}
@@ -702,6 +714,7 @@ def up(path, service_names=None):
         salt myminion dockercompose.up /path/where/docker-compose/stored
         salt myminion dockercompose.up /path/where/docker-compose/stored '[janus]'
     '''
+    path = salt.utils.expanduser(path)
 
     debug_ret = {}
     project = __load_project(path)

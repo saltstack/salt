@@ -563,6 +563,7 @@ def backup(file_name, jail=None, chroot=None, root=None):
 
             salt '*' pkg.backup /tmp/pkg chroot=/path/to/chroot
     '''
+    jail, chroot, root = salt.utils.expanduser(jail, chroot, root)
     ret = __salt__['cmd.run'](
         _pkg(jail, chroot, root) + ['backup', '-d', file_name],
         output_loglevel='trace',
@@ -610,6 +611,7 @@ def restore(file_name, jail=None, chroot=None, root=None):
 
             salt '*' pkg.restore /tmp/pkg chroot=/path/to/chroot
     '''
+    jail, chroot, root = salt.utils.expanduser(jail, chroot, root)
     return __salt__['cmd.run'](
         _pkg(jail, chroot, root) + ['backup', '-r', file_name],
         output_loglevel='trace',
@@ -1739,7 +1741,7 @@ def updating(name,
              root=None,
              filedate=None,
              filename=None):
-    ''''
+    '''
     Displays UPDATING entries of software packages
 
     CLI Example:
@@ -1789,6 +1791,7 @@ def updating(name,
 
             salt '*' pkg.updating foo filename=/tmp/UPDATING
     '''
+    filename = salt.utils.expanduser(filename)
 
     opts = ''
     if filedate:

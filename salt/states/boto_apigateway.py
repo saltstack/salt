@@ -233,6 +233,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
 
         .. versionadded:: 2017.7.0
     '''
+    swagger_file = salt.utils.expanduser(swagger_file)
     ret = {'name': name,
            'result': True,
            'comment': '',
@@ -380,6 +381,7 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
     '''
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name,
            'result': True,

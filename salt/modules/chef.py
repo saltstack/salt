@@ -123,6 +123,7 @@ def client(whyrun=False,
         Enable whyrun mode when set to True
 
     '''
+    logfile = salt.utils.expanduser(logfile)
     if logfile is None:
         logfile = _default_logfile('chef-client')
     args = ['chef-client',
@@ -192,6 +193,7 @@ def solo(whyrun=False,
     whyrun
         Enable whyrun mode when set to True
     '''
+    logfile = salt.utils.expanduser(logfile)
     if logfile is None:
         logfile = _default_logfile('chef-solo')
     args = ['chef-solo',

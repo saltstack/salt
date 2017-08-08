@@ -25,6 +25,7 @@ import os
 
 # Import salt libs
 from salt import exceptions
+import salt.utils
 from salt.states.git import _fail, _neutral_test
 
 log = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ def latest(name,
     trust : False
         Automatically trust the remote server. SVN's --trust-server-cert
     '''
+    target = salt.utils.expanduser(target)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
         return _fail(ret, 'Target option is required')
@@ -220,6 +222,7 @@ def export(name,
     trust : False
         Automatically trust the remote server. SVN's --trust-server-cert
     '''
+    name, target = salt.utils.expanduser(name, target)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
         return _fail(ret, 'Target option is required')

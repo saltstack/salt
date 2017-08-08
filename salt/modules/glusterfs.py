@@ -601,6 +601,7 @@ def set_quota_volume(name, path, size, enable_quota=False):
         salt '*' glusterfs.set_quota_volume <volume> <path> <size> enable_quota=True
 
     '''
+    path = salt.utils.expanduser(path)
     cmd = 'volume quota {0}'.format(name)
     if path:
         cmd += ' limit-usage {0}'.format(path)
@@ -628,6 +629,7 @@ def unset_quota_volume(name, path):
         salt '*' glusterfs.unset_quota_volume <volume> <path>
 
     '''
+    path = salt.utils.expanduser(path)
     cmd = 'volume quota {0}'.format(name)
     if path:
         cmd += ' remove {0}'.format(path)

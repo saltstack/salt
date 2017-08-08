@@ -19,6 +19,9 @@ from __future__ import absolute_import
 import logging
 import os
 
+# Import Salt Libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 __virtualname__ = "xattr"
 
@@ -45,6 +48,7 @@ def exists(name, attributes):
         a hex value then add 0x to the beginning of the value.
 
     '''
+    name = salt.utils.expanduser(name)
     ret = {'name': name,
            'result': True,
            'comment': '',
@@ -96,6 +100,7 @@ def delete(name, attributes):
         The attributes that should be removed from the file/directory, this is accepted as
         an array.
     '''
+    name = salt.utils.expanduser(name)
     ret = {'name': name,
            'result': True,
            'comment': '',

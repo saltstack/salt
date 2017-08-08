@@ -587,6 +587,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
+    debconf, sources = salt.utils.expanduser(debconf, sources)
     _refresh_db = False
     if salt.utils.is_true(refresh):
         _refresh_db = True

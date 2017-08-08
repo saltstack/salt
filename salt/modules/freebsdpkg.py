@@ -375,6 +375,7 @@ def install(name=None,
 
         salt '*' pkg.install <package name>
     '''
+    sources = salt.utils.expanduser(sources)
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
             name, pkgs, sources, **kwargs

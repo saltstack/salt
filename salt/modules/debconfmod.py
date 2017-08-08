@@ -160,6 +160,7 @@ def set_template(path, template, context, defaults, saltenv='base', **kwargs):
         salt '*' debconf.set_template salt://pathto/pkg.selections.jinja jinja None None
 
     '''
+    path = salt.utils.expanduser(path)
 
     path = __salt__['cp.get_template'](
         path=path,

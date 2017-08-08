@@ -230,7 +230,7 @@ def get_gid(path, follow_symlinks=True):
     .. versionchanged:: 0.16.4
         ``follow_symlinks`` option added
     '''
-    return stats(os.path.expanduser(path), follow_symlinks=follow_symlinks).get('gid', -1)
+    return stats(salt.utils.expanduser(path), follow_symlinks=follow_symlinks).get('gid', -1)
 
 
 def get_group(path, follow_symlinks=True):
@@ -252,7 +252,7 @@ def get_group(path, follow_symlinks=True):
     .. versionchanged:: 0.16.4
         ``follow_symlinks`` option added
     '''
-    return stats(os.path.expanduser(path), follow_symlinks=follow_symlinks).get('group', False)
+    return stats(salt.utils.expanduser(path), follow_symlinks=follow_symlinks).get('group', False)
 
 
 def uid_to_user(uid):
@@ -317,7 +317,7 @@ def get_uid(path, follow_symlinks=True):
     .. versionchanged:: 0.16.4
         ``follow_symlinks`` option added
     '''
-    return stats(os.path.expanduser(path), follow_symlinks=follow_symlinks).get('uid', -1)
+    return stats(salt.utils.expanduser(path), follow_symlinks=follow_symlinks).get('uid', -1)
 
 
 def get_user(path, follow_symlinks=True):
@@ -339,7 +339,7 @@ def get_user(path, follow_symlinks=True):
     .. versionchanged:: 0.16.4
         ``follow_symlinks`` option added
     '''
-    return stats(os.path.expanduser(path), follow_symlinks=follow_symlinks).get('user', False)
+    return stats(salt.utils.expanduser(path), follow_symlinks=follow_symlinks).get('user', False)
 
 
 def get_mode(path, follow_symlinks=True):
@@ -361,7 +361,7 @@ def get_mode(path, follow_symlinks=True):
     .. versionchanged:: 2014.1.0
         ``follow_symlinks`` option added
     '''
-    return stats(os.path.expanduser(path), follow_symlinks=follow_symlinks).get('mode', '')
+    return stats(salt.utils.expanduser(path), follow_symlinks=follow_symlinks).get('mode', '')
 
 
 def set_mode(path, mode):
@@ -380,7 +380,7 @@ def set_mode(path, mode):
 
         salt '*' file.set_mode /etc/passwd 0644
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     mode = str(mode).lstrip('0Oo')
     if not mode:
@@ -414,7 +414,7 @@ def lchown(path, user, group):
 
         salt '*' file.chown /etc/passwd root root
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     uid = user_to_uid(user)
     gid = group_to_gid(group)
@@ -452,7 +452,7 @@ def chown(path, user, group):
 
         salt '*' file.chown /etc/passwd root root
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     uid = user_to_uid(user)
     gid = group_to_gid(group)
@@ -495,7 +495,7 @@ def chgrp(path, group):
 
         salt '*' file.chgrp /etc/passwd root
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     user = get_user(path)
     return chown(path, user, group)
@@ -659,7 +659,7 @@ def get_sum(path, form='sha256'):
 
         salt '*' file.get_sum /etc/passwd sha512
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.isfile(path):
         return 'File not found'
@@ -691,7 +691,7 @@ def get_hash(path, form='sha256', chunk_size=65536):
 
         salt '*' file.get_hash /etc/shadow
     '''
-    return salt.utils.get_hash(os.path.expanduser(path), form, chunk_size)
+    return salt.utils.get_hash(salt.utils.expanduser(path), form, chunk_size)
 
 
 def get_source_sum(file_name='',
@@ -740,6 +740,7 @@ def get_source_sum(file_name='',
         salt '*' file.get_source_sum /tmp/foo.tar.gz source=http://mydomain.tld/foo.tar.gz source_hash=https://mydomain.tld/hashes.md5
         salt '*' file.get_source_sum /tmp/foo.tar.gz source=http://mydomain.tld/foo.tar.gz source_hash=https://mydomain.tld/hashes.md5 source_hash_name=./dir2/foo.tar.gz
     '''
+    file_name = salt.utils.expanduser(file_name)
     def _invalid_source_hash_format():
         '''
         DRY helper for reporting invalid source_hash input
@@ -860,7 +861,9 @@ def check_hash(path, file_hash):
         salt '*' file.check_hash /etc/fstab e138491e9d5b97023cea823fe17bac22
         salt '*' file.check_hash /etc/fstab md5=e138491e9d5b97023cea823fe17bac22
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
+    path = salt.utils.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not isinstance(file_hash, six.string_types):
         raise SaltInvocationError('hash must be a string')
@@ -1014,7 +1017,7 @@ def find(path, *args, **kwargs):
     except ValueError as ex:
         return 'error: {0}'.format(ex)
 
-    ret = [item for i in [finder.find(p) for p in glob.glob(os.path.expanduser(path))] for item in i]
+    ret = [item for i in [finder.find(p) for p in glob.glob(salt.utils.expanduser(path))] for item in i]
     ret.sort()
     return ret
 
@@ -1086,7 +1089,7 @@ def sed(path,
     # Largely inspired by Fabric's contrib.files.sed()
     # XXX:dc: Do we really want to always force escaping?
     #
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.exists(path):
         return False
@@ -1137,7 +1140,7 @@ def sed_contains(path,
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
     '''
     # Largely inspired by Fabric's contrib.files.contains()
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.exists(path):
         return False
@@ -1223,7 +1226,7 @@ def psed(path,
     # XXX:dc: Do we really want to always force escaping?
     #
     # Mandate that before and after are strings
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     multi = bool(multi)
 
@@ -1424,7 +1427,7 @@ def comment_line(path,
                 '$' if regex.endswith('$') else '')
 
     # Load the real path to the file
-    path = os.path.realpath(os.path.expanduser(path))
+    path = os.path.realpath(salt.utils.expanduser(path))
 
     # Make sure the file exists
     if not os.path.isfile(path):
@@ -1836,7 +1839,7 @@ def line(path, content=None, match=None, mode=None, location=None,
 
             salt '*' file.line /path/to/file content="CREATEMAIL_SPOOL=no" match="CREATE_MAIL_SPOOL=yes" mode="replace"
     '''
-    path = os.path.realpath(os.path.expanduser(path))
+    path = os.path.realpath(salt.utils.expanduser(path))
     if not os.path.isfile(path):
         if not quiet:
             raise CommandExecutionError('File "{0}" does not exists or is not a file.'.format(path))
@@ -2165,9 +2168,9 @@ def replace(path,
     if is_link(path):
         symlink = True
         target_path = os.readlink(path)
-        given_path = os.path.expanduser(path)
+        given_path = salt.utils.expanduser(path)
 
-    path = os.path.realpath(os.path.expanduser(path))
+    path = os.path.realpath(salt.utils.expanduser(path))
 
     if not os.path.exists(path):
         if ignore_if_missing:
@@ -2482,7 +2485,8 @@ def blockreplace(path,
         '#-- end managed zone foobar --' $'10.0.1.1 foo.foobar\\n10.0.1.2 bar.foobar' True
 
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.exists(path):
         raise SaltInvocationError('File not found: {0}'.format(path))
@@ -2704,6 +2708,7 @@ def patch(originalfile, patchfile, options='', dry_run=False):
 
     .. code-block:: bash
 
+    originalfile, patchfile = salt.utils.expanduser(originalfile, patchfile)
         salt '*' file.patch /opt/file.txt /tmp/file.txt.patch
     '''
     patchpath = salt.utils.which('patch')
@@ -2770,7 +2775,7 @@ def contains(path, text):
 
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.exists(path):
         return False
@@ -2803,7 +2808,7 @@ def contains_regex(path, regex, lchar=''):
 
         salt '*' file.contains_regex /etc/crontab
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.exists(path):
         return False
@@ -2833,7 +2838,7 @@ def contains_glob(path, glob_expr):
 
         salt '*' file.contains_glob /etc/foobar '*cheese*'
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.exists(path):
         return False
@@ -2881,7 +2886,8 @@ def append(path, *args, **kwargs):
             salt '*' file.append /etc/motd args="['cheese=spam','spam=cheese']"
 
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     # Largely inspired by Fabric's contrib.files.append()
 
@@ -2949,7 +2955,7 @@ def prepend(path, *args, **kwargs):
             salt '*' file.prepend /etc/motd args="['cheese=spam','spam=cheese']"
 
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if 'args' in kwargs:
         if isinstance(kwargs['args'], list):
@@ -3005,7 +3011,7 @@ def write(path, *args, **kwargs):
             salt '*' file.write /etc/motd args="['cheese=spam','spam=cheese']"
 
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if 'args' in kwargs:
         if isinstance(kwargs['args'], list):
@@ -3039,7 +3045,7 @@ def touch(name, atime=None, mtime=None):
 
         salt '*' file.touch /var/log/emptyfile
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     if atime and atime.isdigit():
         atime = int(atime)
@@ -3089,7 +3095,7 @@ def seek_read(path, size, offset):
 
         salt '*' file.seek_read /path/to/file 4096 0
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
     seek_fh = os.open(path, os.O_RDONLY)
     try:
         os.lseek(seek_fh, int(offset), 0)
@@ -3120,7 +3126,7 @@ def seek_write(path, data, offset):
 
         salt '*' file.seek_write /path/to/file 'some data' 4096
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
     seek_fh = os.open(path, os.O_WRONLY)
     try:
         os.lseek(seek_fh, int(offset), 0)
@@ -3149,7 +3155,7 @@ def truncate(path, length):
 
         salt '*' file.truncate /path/to/file 512
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
     with salt.utils.files.fopen(path, 'rb+') as seek_fh:
         seek_fh.truncate(int(length))
 
@@ -3166,7 +3172,7 @@ def link(src, path):
 
         salt '*' file.link /path/to/file /path/to/link
     '''
-    src = os.path.expanduser(src)
+    src, path = salt.utils.expanduser(src, path)
 
     if not os.path.isabs(src):
         raise SaltInvocationError('File path must be absolute.')
@@ -3194,7 +3200,7 @@ def is_link(path):
     # therefore helps API consistency by providing a single function to call for
     # both operating systems.
 
-    return os.path.islink(os.path.expanduser(path))
+    return os.path.islink(salt.utils.expanduser(path))
 
 
 def symlink(src, path):
@@ -3207,7 +3213,7 @@ def symlink(src, path):
 
         salt '*' file.symlink /path/to/file /path/to/link
     '''
-    path = os.path.expanduser(path)
+    src, path = salt.utils.expanduser(src, path)
 
     try:
         if os.path.normpath(os.readlink(path)) == os.path.normpath(src):
@@ -3237,8 +3243,7 @@ def rename(src, dst):
 
         salt '*' file.rename /path/to/src /path/to/dst
     '''
-    src = os.path.expanduser(src)
-    dst = os.path.expanduser(dst)
+    src, dst = salt.utils.expanduser(src, dst)
 
     if not os.path.isabs(src):
         raise SaltInvocationError('File path must be absolute.')
@@ -3280,8 +3285,7 @@ def copy(src, dst, recurse=False, remove_existing=False):
         salt '*' file.copy /path/to/src_dir /path/to/dst_dir recurse=True remove_existing=True
 
     '''
-    src = os.path.expanduser(src)
-    dst = os.path.expanduser(dst)
+    src, dst = salt.utils.expanduser(src, dst)
 
     if not os.path.isabs(src):
         raise SaltInvocationError('File path must be absolute.')
@@ -3330,7 +3334,7 @@ def lstat(path):
 
         salt '*' file.lstat /path/to/file
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.isabs(path):
         raise SaltInvocationError('Path to file must be absolute.')
@@ -3364,7 +3368,7 @@ def access(path, mode):
         salt '*' file.access /path/to/file f
         salt '*' file.access /path/to/file x
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.isabs(path):
         raise SaltInvocationError('Path to link must be absolute.')
@@ -3414,7 +3418,7 @@ def readlink(path, canonicalize=False):
 
         salt '*' file.readlink /path/to/link
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.isabs(path):
         raise SaltInvocationError('Path to link must be absolute.')
@@ -3440,7 +3444,7 @@ def readdir(path):
 
         salt '*' file.readdir /path/to/dir/
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.isabs(path):
         raise SaltInvocationError('Dir path must be absolute.')
@@ -3465,7 +3469,7 @@ def statvfs(path):
 
         salt '*' file.statvfs /path/to/file
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
@@ -3490,7 +3494,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
 
         salt '*' file.stats /etc/passwd
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     ret = {}
     if not os.path.exists(path):
@@ -3549,7 +3553,7 @@ def rmdir(path):
 
         salt '*' file.rmdir /tmp/foo/
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
@@ -3575,7 +3579,7 @@ def remove(path):
 
         salt '*' file.remove /tmp/foo
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute: {0}'.format(path))
@@ -3605,7 +3609,7 @@ def directory_exists(path):
         salt '*' file.directory_exists /etc
 
     '''
-    return os.path.isdir(os.path.expanduser(path))
+    return os.path.isdir(salt.utils.expanduser(path))
 
 
 def file_exists(path):
@@ -3619,7 +3623,7 @@ def file_exists(path):
         salt '*' file.file_exists /etc/passwd
 
     '''
-    return os.path.isfile(os.path.expanduser(path))
+    return os.path.isfile(salt.utils.expanduser(path))
 
 
 def path_exists_glob(path):
@@ -3637,7 +3641,7 @@ def path_exists_glob(path):
         salt '*' file.path_exists_glob /etc/pam*/pass*
 
     '''
-    return True if glob.glob(os.path.expanduser(path)) else False
+    return True if glob.glob(salt.utils.expanduser(path)) else False
 
 
 def restorecon(path, recursive=False):
@@ -3933,6 +3937,7 @@ def get_managed(
     CLI Example:
 
     .. code-block:: bash
+    name = salt.utils.expanduser(name)
 
         salt '*' file.get_managed /etc/httpd/conf.d/httpd.conf jinja salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' None root root '755' base None None
     '''
@@ -4300,7 +4305,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     .. versionchanged:: 2014.1.3
         ``follow_symlinks`` option added
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     if not ret:
         ret = {'name': name,
@@ -4665,9 +4670,11 @@ def check_file_meta(
     saltenv
         Salt environment used to resolve source files
 
+    name = salt.utils.expanduser(name)
     contents
         File contents
     '''
+    name, contents = salt.utils.expanduser(name, contents)
     changes = {}
     if not source_sum:
         source_sum = dict()
@@ -4765,7 +4772,7 @@ def get_diff(
 
         salt '*' file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
     '''
-    minionfile = os.path.expanduser(minionfile)
+    minionfile = salt.utils.expanduser(minionfile)
 
     ret = ''
 
@@ -4916,7 +4923,7 @@ def manage_file(name,
         ``follow_symlinks`` option added
 
     '''
-    name = os.path.expanduser(name)
+    name, sfn = salt.utils.expanduser(name, sfn)
 
     if not ret:
         ret = {'name': name,
@@ -5304,7 +5311,7 @@ def mkdir(dir_path,
 
         salt '*' file.mkdir /opt/jetty/context
     '''
-    dir_path = os.path.expanduser(dir_path)
+    dir_path = salt.utils.expanduser(dir_path)
 
     directory = os.path.normpath(dir_path)
 
@@ -5338,7 +5345,7 @@ def makedirs_(path,
 
         salt '*' file.makedirs /opt/code/
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     if mode:
         mode = salt.utils.normalize_mode(mode)
@@ -5397,7 +5404,7 @@ def makedirs_perms(name,
 
         salt '*' file.makedirs_perms /opt/code
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     path = os.path
     head, tail = path.split(name)
@@ -5430,7 +5437,7 @@ def get_devmm(name):
 
        salt '*' file.get_devmm /dev/chr
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     if is_chrdev(name) or is_blkdev(name):
         stat_structure = os.stat(name)
@@ -5451,7 +5458,7 @@ def is_chrdev(name):
 
        salt '*' file.is_chrdev /dev/chr
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     stat_structure = None
     try:
@@ -5482,7 +5489,7 @@ def mknod_chrdev(name,
 
        salt '*' file.mknod_chrdev /dev/chr 180 31
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name,
            'changes': {},
@@ -5526,7 +5533,7 @@ def is_blkdev(name):
 
        salt '*' file.is_blkdev /dev/blk
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     stat_structure = None
     try:
@@ -5557,7 +5564,7 @@ def mknod_blkdev(name,
 
        salt '*' file.mknod_blkdev /dev/blk 8 999
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name,
            'changes': {},
@@ -5601,7 +5608,7 @@ def is_fifo(name):
 
        salt '*' file.is_fifo /dev/fifo
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     stat_structure = None
     try:
@@ -5630,7 +5637,7 @@ def mknod_fifo(name,
 
        salt '*' file.mknod_fifo /dev/fifo
     '''
-    name = os.path.expanduser(name)
+    name = salt.utils.expanduser(name)
 
     ret = {'name': name,
            'changes': {},
@@ -5715,7 +5722,7 @@ def list_backups(path, limit=None):
 
         salt '*' file.list_backups /foo/bar/baz.txt
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     try:
         limit = int(limit)
@@ -5786,7 +5793,7 @@ def list_backups_dir(path, limit=None):
 
         salt '*' file.list_backups_dir /foo/bar/baz/
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     try:
         limit = int(limit)
@@ -5850,7 +5857,7 @@ def restore_backup(path, backup_id):
 
         salt '*' file.restore_backup /foo/bar/baz.txt 0
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     # Note: This only supports minion backups, so this function will need to be
     # modified if/when master backups are implemented.
@@ -5912,7 +5919,7 @@ def delete_backup(path, backup_id):
 
         salt '*' file.delete_backup /var/cache/salt/minion/file_backup/home/foo/bar/baz.txt 0
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     ret = {'result': False,
            'comment': 'Invalid backup_id \'{0}\''.format(backup_id)}
@@ -5977,11 +5984,12 @@ def grep(path,
     .. code-block:: bash
 
         salt '*' file.grep /etc/passwd nobody
+    path = salt.utils.expanduser(path)
         salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr -- -i
         salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr -- -i -B2
         salt '*' file.grep "/etc/sysconfig/network-scripts/*" ipaddr -- -i -l
     '''
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     split_opts = []
     for opt in opts:
@@ -6209,8 +6217,7 @@ def move(src, dst):
 
         salt '*' file.move /path/to/src /path/to/dst
     '''
-    src = os.path.expanduser(src)
-    dst = os.path.expanduser(dst)
+    src, dst = salt.utils.expanduser(src, dst)
 
     if not os.path.isabs(src):
         raise SaltInvocationError('Source path must be absolute.')

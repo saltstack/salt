@@ -116,6 +116,7 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
         salt '*' slsutil.renderer string='Inline template! {{ saltenv }}'
         salt '*' slsutil.renderer string='Hello, {{ name }}.' name='world'
     '''
+    path = salt.utils.expanduser(path)
     if not path and not string:
         raise salt.exceptions.SaltInvocationError(
                 'Must pass either path or string')

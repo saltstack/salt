@@ -84,6 +84,7 @@ def bin_pkg_info(path, saltenv='base'):
         salt '*' lowpkg.bin_pkg_info /root/salt-2015.5.1-2.el7.noarch.rpm
         salt '*' lowpkg.bin_pkg_info salt://salt-2015.5.1-2.el7.noarch.rpm
     '''
+    path = salt.utils.expanduser(path)
     # If the path is a valid protocol, pull it down using cp.cache_file
     if __salt__['config.valid_fileproto'](path):
         newpath = __salt__['cp.cache_file'](path, saltenv)
@@ -439,6 +440,7 @@ def diff(package, path):
 
         salt '*' lowpkg.diff apache2 /etc/apache2/httpd.conf
     '''
+    path = salt.utils.expanduser(path)
 
     cmd = "rpm2cpio {0} " \
           "| cpio -i --quiet --to-stdout .{1} " \

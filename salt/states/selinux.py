@@ -25,6 +25,8 @@ booleans can be set.
     execution module is available.
 '''
 
+# Import Salt Libs
+import salt.utils
 
 def __virtual__():
     '''
@@ -270,6 +272,7 @@ def module_install(name):
 
     .. versionadded:: 2016.11.6
     '''
+    name = salt.utils.expanduser(name)
     ret = {'name': name,
            'result': True,
            'comment': '',

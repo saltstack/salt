@@ -3511,3 +3511,35 @@ def mkstemp(*args, **kwargs):
     # Late import to avoid circular import.
     import salt.utils.files
     return salt.utils.files.mkstemp(*args, **kwargs)
+
+
+def expanduser(*paths):
+    '''
+    None-safe version of os.path.expanduser, that can also expand multiple
+    arguments at the same time.
+
+    If one of the arguments is a list of strings, all those will be expanded
+    too. Values in dictionaries (potentially within lists) will also be expanded.
+    '''
+    expanded_paths = []
+    for path in paths:
+        if not path:
+            expanded_paths.append(path)
+        elif isinstance(path, six.string_types):
+            expanded_paths.append(os.path.expanduser(path))
+        elif isinstance(path, (list, tuple)):
+            nested_expanded = []
+            for nested_element in path:
+                nested_expanded.append(expanduser(nested_element))
+            expanded_paths.append(nested_expanded)
+        elif isinstance(path, dict):
+            for key, value in path.items():
+                path[key] = expanduser(value)
+            expanded_paths.append(path)
+        else:
+            expanded_paths.append(path)
+
+    if len(expanded_paths) == 1:
+        return expanded_paths[0]
+    else:
+        return tuple(expanded_paths)

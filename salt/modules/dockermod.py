@@ -3102,6 +3102,7 @@ def build(path=None,
 
         salt myminion docker.build /path/to/docker/build/dir dockerfile=Dockefile.different image=myimage:dev
     '''
+    path, dockerfile = salt.utils.expanduser(path, dockerfile)
     _prep_pull()
 
     image = ':'.join(salt.utils.docker.get_repo_tag(image))
@@ -3332,6 +3333,7 @@ def import_(source,
         salt myminion docker.import /tmp/cent7-minimal.tar.xz myuser/centos:7
         salt myminion docker.import salt://dockerimages/cent7-minimal.tar.xz myuser/centos:7
     '''
+    source = salt.utils.expanduser(source)
     repo_name, repo_tag = salt.utils.docker.get_repo_tag(image)
     path = __salt__['container_resource.cache_file'](source)
 
@@ -3421,6 +3423,7 @@ def load(path, image=None):
         salt myminion docker.load /path/to/image.tar
         salt myminion docker.load salt://path/to/docker/saved/image.tar image=myuser/myimage:mytag
     '''
+    path = salt.utils.expanduser(path)
     if image is not None:
         image = ':'.join(salt.utils.docker.get_repo_tag(image))
     local_path = __salt__['container_resource.cache_file'](path)
@@ -3835,6 +3838,7 @@ def save(name,
         salt myminion docker.save centos:7 /tmp/cent7.tar
         salt myminion docker.save 0123456789ab cdef01234567 /tmp/saved.tar
     '''
+    path = salt.utils.expanduser(path)
     err = 'Path \'{0}\' is not absolute'.format(path)
     try:
         if not os.path.isabs(path):
@@ -5052,6 +5056,7 @@ def script(name,
         salt myminion docker.script mycontainer salt://scripts/runme.sh 'arg1 arg2 "arg 3"'
         salt myminion docker.script mycontainer salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n' output_loglevel=quiet
     '''
+    source = salt.utils.expanduser(source)
     return _script(name,
                    source,
                    saltenv=saltenv,
@@ -5125,6 +5130,7 @@ def script_retcode(name,
         salt myminion docker.script_retcode mycontainer salt://scripts/runme.sh 'arg1 arg2 "arg 3"'
         salt myminion docker.script_retcode mycontainer salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n' output_loglevel=quiet
     '''
+    source = salt.utils.expanduser(source)
     return _script(name,
                    source,
                    saltenv=saltenv,

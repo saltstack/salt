@@ -281,6 +281,7 @@ def managed(name, ppa=None, **kwargs):
        running of apt-get update prior to attempting to install these
        packages. Setting a require in the pkg will not work for this.
     '''
+    name, name = salt.utils.expanduser(name, name)
     ret = {'name': name,
            'changes': {},
            'result': None,

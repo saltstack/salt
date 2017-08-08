@@ -371,6 +371,7 @@ def stop(app, url='http://localhost:8080/manager', timeout=180):
         salt '*' tomcat.stop /jenkins
         salt '*' tomcat.stop /jenkins http://localhost:8080/manager
     '''
+    app = salt.utils.expanduser(app)
 
     return _simple_cmd('stop', app, url, timeout=timeout)
 
@@ -393,6 +394,7 @@ def start(app, url='http://localhost:8080/manager', timeout=180):
         salt '*' tomcat.start /jenkins
         salt '*' tomcat.start /jenkins http://localhost:8080/manager
     '''
+    app = salt.utils.expanduser(app)
 
     return _simple_cmd('start', app, url, timeout=timeout)
 
@@ -415,6 +417,7 @@ def reload_(app, url='http://localhost:8080/manager', timeout=180):
         salt '*' tomcat.reload /jenkins
         salt '*' tomcat.reload /jenkins http://localhost:8080/manager
     '''
+    app = salt.utils.expanduser(app)
 
     return _simple_cmd('reload', app, url, timeout=timeout)
 
@@ -437,6 +440,7 @@ def sessions(app, url='http://localhost:8080/manager', timeout=180):
         salt '*' tomcat.sessions /jenkins
         salt '*' tomcat.sessions /jenkins http://localhost:8080/manager
     '''
+    app = salt.utils.expanduser(app)
 
     return _simple_cmd('sessions', app, url, timeout=timeout)
 
@@ -459,6 +463,7 @@ def status_webapp(app, url='http://localhost:8080/manager', timeout=180):
         salt '*' tomcat.status_webapp /jenkins
         salt '*' tomcat.status_webapp /jenkins http://localhost:8080/manager
     '''
+    app = salt.utils.expanduser(app)
 
     webapps = ls(url, timeout=timeout)
     for i in webapps:
@@ -516,6 +521,7 @@ def undeploy(app, url='http://localhost:8080/manager', timeout=180):
         salt '*' tomcat.undeploy /jenkins
         salt '*' tomcat.undeploy /jenkins http://localhost:8080/manager
     '''
+    app = salt.utils.expanduser(app)
 
     return _simple_cmd('undeploy', app, url, timeout=timeout)
 
@@ -578,6 +584,7 @@ def deploy_war(war,
         salt '*' tomcat.deploy_war /tmp/application.war /api no
         salt '*' tomcat.deploy_war /tmp/application.war /api yes http://localhost:8080/manager
     '''
+    war, context = salt.utils.expanduser(war, context)
     # Decide the location to copy the war for the deployment
     tfile = 'salt.{0}'.format(os.path.basename(war))
     if temp_war_location is not None:

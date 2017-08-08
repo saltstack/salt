@@ -85,7 +85,7 @@ def _rbenv_path(runas=None):
         path = __salt__['config.option']('rbenv.root') \
             or '~{0}/.rbenv'.format(runas)
 
-    return os.path.expanduser(path)
+    return salt.utils.expanduser(path)
 
 
 def _rbenv_exec(command, env=None, runas=None, ret=None):
@@ -164,7 +164,7 @@ def install(runas=None, path=None):
         salt '*' rbenv.install
     '''
     path = path or _rbenv_path(runas)
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
     return _install_rbenv(path, runas) and _install_ruby_build(path, runas)
 
 
@@ -183,7 +183,7 @@ def update(runas=None, path=None):
         salt '*' rbenv.update
     '''
     path = path or _rbenv_path(runas)
-    path = os.path.expanduser(path)
+    path = salt.utils.expanduser(path)
 
     return _update_rbenv(path, runas) and _update_ruby_build(path, runas)
 

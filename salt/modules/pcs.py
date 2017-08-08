@@ -257,6 +257,7 @@ def cib_create(cibfile, scope='configuration', extra_args=None):
         salt '*' pcs.cib_create cibfile='/tmp/VIP_apache_1.cib' \\
                                 'scope=False'
     '''
+    cibfile = salt.utils.expanduser(cibfile)
     cmd = ['pcs', 'cluster', 'cib', cibfile]
     if isinstance(scope, six.string_types):
         cmd += ['scope={0}'.format(scope)]
@@ -284,6 +285,7 @@ def cib_push(cibfile, scope='configuration', extra_args=None):
         salt '*' pcs.cib_push cibfile='/tmp/VIP_apache_1.cib' \\
                               'scope=False'
     '''
+    cibfile = salt.utils.expanduser(cibfile)
     cmd = ['pcs', 'cluster', 'cib-push', cibfile]
     if isinstance(scope, six.string_types):
         cmd += ['scope={0}'.format(scope)]
@@ -306,6 +308,7 @@ def config_show(cibfile=None):
 
         salt '*' pcs.config_show cibfile='/tmp/cib_for_galera'
     '''
+    cibfile = salt.utils.expanduser(cibfile)
     return item_show(item='config', item_id=None, extra_args=None, cibfile=cibfile)
 
 

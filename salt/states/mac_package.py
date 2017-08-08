@@ -95,6 +95,7 @@ def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpk
             version_check: python --version_check=2.7.[0-9]
 
     '''
+    name, target, target = salt.utils.expanduser(name, target, target)
     ret = {'name': name,
            'result': True,
            'comment': '',

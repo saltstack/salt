@@ -181,6 +181,7 @@ def cert_base_path(cacert_path=None):
 
         salt '*' tls.cert_base_path
     '''
+    cacert_path = salt.utils.expanduser(cacert_path)
     if not cacert_path:
         cacert_path = __context__.get(
             'ca.contextual_cert_base_path',
@@ -333,6 +334,7 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None, ca_filename=None):
 
         salt '*' tls.maybe_fix_ssl_version test_ca /etc/certs
     '''
+    cacert_path = salt.utils.expanduser(cacert_path)
     set_ca_path(cacert_path)
     if not ca_filename:
         ca_filename = '{0}_ca_cert'.format(ca_name)
@@ -400,6 +402,7 @@ def ca_exists(ca_name, cacert_path=None, ca_filename=None):
 
         salt '*' tls.ca_exists test_ca /etc/certs
     '''
+    cacert_path = salt.utils.expanduser(cacert_path)
     set_ca_path(cacert_path)
     if not ca_filename:
         ca_filename = '{0}_ca_cert'.format(ca_name)
@@ -437,6 +440,7 @@ def get_ca(ca_name, as_text=False, cacert_path=None):
 
         salt '*' tls.get_ca test_ca as_text=False cacert_path=/etc/certs
     '''
+    cacert_path = salt.utils.expanduser(cacert_path)
     set_ca_path(cacert_path)
     certp = '{0}/{1}/{2}_ca_cert.crt'.format(
             cert_base_path(),
@@ -479,6 +483,7 @@ def get_ca_signed_cert(ca_name,
 
         salt '*' tls.get_ca_signed_cert test_ca CN=localhost as_text=False cacert_path=/etc/certs
     '''
+    cacert_path = salt.utils.expanduser(cacert_path)
     set_ca_path(cacert_path)
     if not cert_filename:
         cert_filename = CN
@@ -528,6 +533,7 @@ def get_ca_signed_key(ca_name,
                 as_text=False \
                 cacert_path=/etc/certs
     '''
+    cacert_path = salt.utils.expanduser(cacert_path)
     set_ca_path(cacert_path)
     if not key_filename:
         key_filename = CN
@@ -644,6 +650,7 @@ def create_ca(ca_name,
 
         salt '*' tls.create_ca test_ca
     '''
+    cacert_path = salt.utils.expanduser(cacert_path)
     status = _check_onlyif_unless(onlyif, unless)
     if status is not None:
         return None
@@ -1142,6 +1149,7 @@ def create_self_signed_cert(tls_dir='tls',
 
         salt 'minion' tls.create_self_signed_cert CN='test.mysite.org'
     '''
+    cacert_path = salt.utils.expanduser(cacert_path)
     set_ca_path(cacert_path)
 
     if not os.path.exists('{0}/{1}/certs/'.format(cert_base_path(), tls_dir)):
@@ -1319,6 +1327,7 @@ def create_ca_signed_cert(ca_name,
 
         salt '*' tls.create_ca_signed_cert test localhost
     '''
+    cacert_path, cert_path = salt.utils.expanduser(cacert_path, cert_path)
     ret = {}
 
     set_ca_path(cacert_path)
@@ -1481,6 +1490,7 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None, replace=False):
 
         salt '*' tls.create_pkcs12 test localhost
     '''
+    cacert_path = salt.utils.expanduser(cacert_path)
     set_ca_path(cacert_path)
     if not replace and os.path.exists(
             '{0}/{1}/certs/{2}.p12'.format(
@@ -1554,6 +1564,7 @@ def cert_info(cert_path, digest='sha256'):
 
         salt '*' tls.cert_info /dir/for/certs/cert.pem
     '''
+    cert_path = salt.utils.expanduser(cert_path)
     # format that OpenSSL returns dates in
     date_fmt = '%Y%m%d%H%M%SZ'
 
@@ -1656,6 +1667,7 @@ def create_empty_crl(
                 ca_filename='ca' \
                 crl_file='/etc/openvpn/team1/crl.pem'
     '''
+    cacert_path, crl_file = salt.utils.expanduser(cacert_path, crl_file)
 
     set_ca_path(cacert_path)
 
@@ -1744,6 +1756,7 @@ def revoke_cert(
                 crl_file='/etc/openvpn/team1/crl.pem'
 
     '''
+    cacert_path, cert_path, crl_file = salt.utils.expanduser(cacert_path, cert_path, crl_file)
 
     set_ca_path(cacert_path)
     ca_dir = '{0}/{1}'.format(cert_base_path(), ca_name)

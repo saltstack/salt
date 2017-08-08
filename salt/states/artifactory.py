@@ -8,6 +8,9 @@ This state downloads artifacts from artifactory.
 from __future__ import absolute_import
 import logging
 
+# Import Salt Libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -77,6 +80,7 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None, use_literal_
            - target_dir: /opt/jboss7/modules/com/company/lib
 
     '''
+    target_dir, target_file = salt.utils.expanduser(target_dir, target_file)
     log.debug(" ======================== STATE: artifactory.downloaded (name: %s) ", name)
     ret = {'name': name,
            'result': True,

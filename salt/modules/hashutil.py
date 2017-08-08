@@ -69,6 +69,7 @@ def digest_file(infile, checksum='md5'):
 
         salt '*' hashutil.digest_file /path/to/file
     '''
+    infile = salt.utils.expanduser(infile)
     if not __salt__['file.file_exists'](infile):
         raise salt.exceptions.CommandExecutionError(
                 "File path '{0}' not found.".format(infile))

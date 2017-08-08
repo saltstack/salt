@@ -77,6 +77,7 @@ def set_option(file_name, sections=None, separator='='):
 
         salt '*' ini.set_option /path/to/ini '{section_foo: {key: value}}'
     '''
+    file_name = salt.utils.expanduser(file_name)
     sections = sections or {}
     changes = {}
     inifile = _Ini.get_ini_file(file_name, separator=separator)

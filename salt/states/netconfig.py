@@ -24,6 +24,7 @@ import logging
 log = logging.getLogger(__name__)
 
 # import NAPALM utils
+import salt.utils
 import salt.utils.napalm
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -320,6 +321,7 @@ def managed(name,
             }
         }
     '''
+    template_name = salt.utils.expanduser(template_name)
 
     ret = salt.utils.napalm.default_ret(name)
 

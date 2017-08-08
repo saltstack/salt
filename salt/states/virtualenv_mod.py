@@ -127,6 +127,7 @@ def managed(name,
             - env_vars:
                 PATH_VAR: '/usr/local/bin/'
     '''
+    name = salt.utils.expanduser(name)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     if 'virtualenv.create' not in __salt__:

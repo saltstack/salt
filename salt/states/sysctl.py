@@ -17,6 +17,7 @@ from __future__ import absolute_import
 import re
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError
 
 
@@ -43,6 +44,7 @@ def present(name, value, config=None):
         The location of the sysctl configuration file. If not specified, the
         proper location will be detected based on platform.
     '''
+    config = salt.utils.expanduser(config)
     ret = {'name': name,
            'result': True,
            'changes': {},

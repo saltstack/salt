@@ -558,6 +558,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
+    requirements, bin_env, log, exists_action, install_options, cwd, cert = salt.utils.expanduser(requirements, bin_env, log, exists_action, install_options, cwd, cert)
     pip_bin = _get_pip_bin(bin_env)
 
     cmd = [pip_bin, 'install']
@@ -894,6 +895,7 @@ def uninstall(pkgs=None,
         salt '*' pip.uninstall <package name> bin_env=/path/to/pip_bin
 
     '''
+    requirements, bin_env, log, cwd = salt.utils.expanduser(requirements, bin_env, log, cwd)
     pip_bin = _get_pip_bin(bin_env)
 
     cmd = [pip_bin, 'uninstall', '-y']
@@ -999,6 +1001,7 @@ def freeze(bin_env=None,
         The packages pip, wheel, setuptools, and distribute are included if the
         installed pip is new enough.
     '''
+    bin_env, cwd = salt.utils.expanduser(bin_env, cwd)
     pip_bin = _get_pip_bin(bin_env)
 
     cmd = [pip_bin, 'freeze']

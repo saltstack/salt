@@ -443,7 +443,7 @@ def _expand_sources(sources):
         sources = [x.strip() for x in sources.split(',')]
     elif isinstance(sources, (float, six.integer_types)):
         sources = [str(sources)]
-    return [path
+    return [salt.utils.expanduser(path)
             for source in sources
             for path in _glob(source)]
 
@@ -514,6 +514,7 @@ def tar(options, tarfile, sources=None, dest=None,
         # Unpack a tarfile
         salt '*' archive.tar xf foo.tar dest=/target/directory
     '''
+    tarfile, dest, cwd = salt.utils.expanduser(tarfile, dest, cwd)
     if not options:
         # Catch instances were people pass an empty string for the "options"
         # argument. Someone would have to be really silly to do this, but we
@@ -675,6 +676,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
         # Globbing for sources (2017.7.0 and later)
         salt '*' archive.cmd_zip /tmp/zipfile.zip '/tmp/sourcefile*'
     '''
+    zip_file, cwd = salt.utils.expanduser(zip_file, cwd)
     cmd = ['zip', '-r']
     cmd.append('{0}'.format(zip_file))
     cmd.extend(_expand_sources(sources))
@@ -740,6 +742,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
         # Globbing for sources (2017.7.0 and later)
         salt '*' archive.zip /tmp/zipfile.zip '/tmp/sourcefile*'
     '''
+    zip_file = salt.utils.expanduser(zip_file)
     if runas:
         euid = os.geteuid()
         egid = os.getegid()
@@ -900,6 +903,7 @@ def cmd_unzip(zip_file,
 
         salt '*' archive.cmd_unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
     '''
+    zip_file, dest = salt.utils.expanduser(zip_file, dest)
     if isinstance(excludes, six.string_types):
         excludes = [x.strip() for x in excludes.split(',')]
     elif isinstance(excludes, (float, six.integer_types)):
@@ -1018,6 +1022,7 @@ def unzip(zip_file,
 
         salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ password='BadPassword'
     '''
+    zip_file, dest = salt.utils.expanduser(zip_file, dest)
     if not excludes:
         excludes = []
     if runas:
@@ -1123,6 +1128,7 @@ def is_encrypted(name, clean=False, saltenv='base'):
             salt '*' archive.is_encrypted https://domain.tld/myfile.zip clean=True
             salt '*' archive.is_encrypted ftp://10.1.2.3/foo.zip
     '''
+    name = salt.utils.expanduser(name)
     cached = __salt__['cp.cache_file'](name, saltenv)
     if not cached:
         raise CommandExecutionError('Failed to cache {0}'.format(name))
@@ -1198,6 +1204,7 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
         # Globbing for sources (2017.7.0 and later)
         salt '*' archive.rar /tmp/rarfile.rar '/tmp/sourcefile*'
     '''
+    rarfile, cwd = salt.utils.expanduser(rarfile, cwd)
     cmd = ['rar', 'a', '-idp', '{0}'.format(rarfile)]
     cmd.extend(_expand_sources(sources))
     return __salt__['cmd.run'](cmd,
@@ -1239,6 +1246,7 @@ def unrar(rarfile, dest, excludes=None, template=None, runas=None, trim_output=F
         salt '*' archive.unrar /tmp/rarfile.rar /home/strongbad/ excludes=file_1,file_2
 
     '''
+    rarfile, dest = salt.utils.expanduser(rarfile, dest)
     if isinstance(excludes, six.string_types):
         excludes = [entry.strip() for entry in excludes.split(',')]
 

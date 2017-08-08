@@ -110,6 +110,7 @@ def install(pkg,
         salt '*' bower.install jquery#2.0 /path/to/project
 
     '''
+    dir = salt.utils.expanduser(dir)
     _check_valid_version()
 
     cmd = _construct_bower_command('install')
@@ -159,6 +160,7 @@ def uninstall(pkg, dir, runas=None, env=None):
         salt '*' bower.uninstall underscore /path/to/project
 
     '''
+    dir = salt.utils.expanduser(dir)
     _check_valid_version()
 
     cmd = _construct_bower_command('uninstall')
@@ -200,6 +202,7 @@ def list_(dir, runas=None, env=None):
         salt '*' bower.list /path/to/project
 
     '''
+    dir = salt.utils.expanduser(dir)
     _check_valid_version()
 
     cmd = _construct_bower_command('list')
@@ -241,6 +244,7 @@ def prune(dir, runas=None, env=None):
         salt '*' bower.prune /path/to/project
 
     '''
+    dir = salt.utils.expanduser(dir)
     _check_valid_version()
 
     cmd = _construct_bower_command('prune')

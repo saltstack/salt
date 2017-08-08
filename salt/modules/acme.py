@@ -124,6 +124,7 @@ def cert(name,
 
         salt 'gitlab.example.com' acme.cert dev.example.com "[gitlab.example.com]" test_cert=True renew=14 webroot=/opt/gitlab/embedded/service/gitlab-rails/public
     '''
+    webroot = salt.utils.expanduser(webroot)
 
     cmd = [LEA, 'certonly', '--quiet']
 

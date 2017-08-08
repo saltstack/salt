@@ -57,6 +57,7 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
         the htpasswd file (unlike force, which updates regardless)
 
     '''
+    htpasswd_file = salt.utils.expanduser(htpasswd_file)
     ret = {'name': name,
            'changes': {},
            'comment': '',
@@ -115,6 +116,7 @@ def user_absent(name, htpasswd_file=None, runas=None):
         The system user to run htpasswd command with
 
     '''
+    htpasswd_file = salt.utils.expanduser(htpasswd_file)
     ret = {'name': name,
            'changes': {},
            'comment': '',

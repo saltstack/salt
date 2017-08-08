@@ -40,6 +40,7 @@ the location of composer in the state.
 from __future__ import absolute_import
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import SaltException
 
 
@@ -112,6 +113,7 @@ def installed(name,
         default behavior.  If ``False``, only run ``composer install`` if there is no
         vendor directory present.
     '''
+    composer, php = salt.utils.expanduser(composer, php)
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     did_install = __salt__['composer.did_composer_install'](name)
@@ -234,6 +236,7 @@ def update(name,
     composer_home
         ``$COMPOSER_HOME`` environment variable
     '''
+    composer, php = salt.utils.expanduser(composer, php)
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     # Check if composer.lock exists, if so we already ran `composer install`

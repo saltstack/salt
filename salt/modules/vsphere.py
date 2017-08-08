@@ -439,6 +439,7 @@ def esxcli_cmd(cmd_str, host=None, username=None, password=None, protocol=None, 
         salt '*' vsphere.esxcli_cmd my.vcenter.location root bad-password \
             'system coredump network get' esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
+    credstore = salt.utils.expanduser(credstore)
     ret = {}
     if esxi_hosts:
         if not isinstance(esxi_hosts, list):
@@ -511,6 +512,7 @@ def get_coredump_network_config(host, username, password, protocol=None, port=No
             esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
 
     '''
+    credstore = salt.utils.expanduser(credstore)
     cmd = 'system coredump network get'
     ret = {}
     if esxi_hosts:
@@ -586,6 +588,7 @@ def coredump_network_enable(host, username, password, enabled, protocol=None, po
         salt '*' vsphere.coredump_network_enable my.vcenter.location root bad-password True \
             esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
+    credstore = salt.utils.expanduser(credstore)
     if enabled:
         enable_it = 1
     else:
@@ -683,6 +686,7 @@ def set_coredump_network_config(host,
         salt '*' vsphere.set_coredump_network_config my.vcenter.location root bad-password 'dump_ip.host.com' \
             esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
+    credstore = salt.utils.expanduser(credstore)
     cmd = 'system coredump network set -v {0} -i {1} -o {2}'.format(host_vnic,
                                                                     dump_ip,
                                                                     dump_port)
@@ -761,6 +765,7 @@ def get_firewall_status(host, username, password, protocol=None, port=None, esxi
         salt '*' vsphere.get_firewall_status my.vcenter.location root bad-password \
             esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
+    credstore = salt.utils.expanduser(credstore)
     cmd = 'network firewall ruleset list'
 
     ret = {}
@@ -851,6 +856,7 @@ def enable_firewall_ruleset(host,
         salt '*' vsphere.enable_firewall_ruleset my.vcenter.location root bad-password True 'syslog' \
             esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
+    credstore = salt.utils.expanduser(credstore)
     cmd = 'network firewall ruleset set --enabled {0} --ruleset-id={1}'.format(
         ruleset_enable, ruleset_name
     )
@@ -918,6 +924,7 @@ def syslog_service_reload(host, username, password, protocol=None, port=None, es
         salt '*' vsphere.syslog_service_reload my.vcenter.location root bad-password \
             esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
+    credstore = salt.utils.expanduser(credstore)
     cmd = 'system syslog reload'
 
     ret = {}
@@ -1018,6 +1025,7 @@ def set_syslog_config(host,
             esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
 
     '''
+    credstore = salt.utils.expanduser(credstore)
     ret = {}
 
     # First, enable the syslog firewall ruleset, for each host, if needed.
@@ -1121,6 +1129,7 @@ def get_syslog_config(host, username, password, protocol=None, port=None, esxi_h
         salt '*' vsphere.get_syslog_config my.vcenter.location root bad-password \
             esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
+    credstore = salt.utils.expanduser(credstore)
     cmd = 'system syslog config get'
 
     ret = {}
@@ -1207,6 +1216,7 @@ def reset_syslog_config(host,
         salt '*' vsphere.reset_syslog_config my.vcenter.location root bad-password \
             syslog_config='logdir,loghost' esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
+    credstore = salt.utils.expanduser(credstore)
     if not syslog_config:
         raise CommandExecutionError('The \'reset_syslog_config\' function requires a '
                                     '\'syslog_config\' setting.')

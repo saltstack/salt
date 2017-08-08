@@ -139,6 +139,7 @@ def get_config(config_file='/etc/dnsmasq.conf'):
         salt '*' dnsmasq.get_config
         salt '*' dnsmasq.get_config config_file=/etc/dnsmasq.conf
     '''
+    config_file = salt.utils.expanduser(config_file)
     dnsopts = _parse_dnamasq(config_file)
     if 'conf-dir' in dnsopts:
         for filename in os.listdir(dnsopts['conf-dir']):

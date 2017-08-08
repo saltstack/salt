@@ -388,6 +388,7 @@ def install(name=None, refresh=False, fromrepo=None,
 
         salt '*' pkg.install <package name>
     '''
+    sources = salt.utils.expanduser(sources)
 
     # XXX sources is not yet used in this code
 
@@ -586,6 +587,7 @@ def add_repo(repo, conffile='/usr/share/xbps.d/15-saltstack.conf'):
 
         salt '*' pkg.add_repo <repo url> [conffile=/path/to/xbps/repo.conf]
     '''
+    conffile = salt.utils.expanduser(conffile)
 
     if len(_locate_repo_files(repo)) == 0:
         try:

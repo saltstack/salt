@@ -39,6 +39,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+import salt.utils
 import salt.utils.docker
 
 # Enable proper logging
@@ -160,6 +161,7 @@ def present(name,
 
         .. versionadded: 2017.7.0
     '''
+    build, dockerfile = salt.utils.expanduser(build, dockerfile)
     ret = {'name': name,
            'changes': {},
            'result': False,

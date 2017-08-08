@@ -1,0 +1,804 @@
+states.virt.keys:basepath 	Defaults to ``/etc/pki``, this is the root location used for libvirtkeys on the hypervisor
+states.libcloud_storage.file_present:path 	Local path to file
+states.libcloud_storage.object_present:path 	Local path to file
+states.acme.cert:webroot 	True or a full path to webroot. Otherwise use standalone mode
+# states.boto3_route53.rr_present:GeoLocation 	Geo location resource record sets only.  A dict that lets you control how Route 53 respondsto DNS queries based on the geographic origin of the query.  For example, if you want allqueries from Africa to be routed to a web server with an IP address of 192.0.2.111, create aresource record set with a Type of A and a ContinentCode of AF.
+# states.boto_asg.present:placement_group 	Physical location of your cluster placement group created in AmazonEC2. Once set this can not be updated (Amazon restriction).
+states.cisconso.value_present:path 	The device path to set the value at, a list of element names in order, / separated
+states.cisconso.value_present:config 	The new value at the given path
+# states.dellchassis.chassis:location 	The location of the chassis.
+states.sysctl.present:config 	The location of the sysctl configuration file. If not specified, theproper location will be detected based on platform.
+states.alternatives.install:path 	is the location of the new alternative target.NB: This file / directory must already exist.(e.g. /usr/bin/less)
+states.alternatives.remove:path 	is the location of one of the alternative target files.(e.g. /usr/bin/less)
+states.alternatives.set_:path 	is the location of one of the alternative target files.(e.g. /usr/bin/less)
+# states.archive.extracted:source_hash 	Hash of source file, or file with list of hash-to-file mappings
+states.archive.extracted:source_hash_name 	When ``source_hash`` refers to a hash file, Salt will try to find thecorrect hash by matching the filename part of the ``source`` URI. Whenmanaging a file with a ``source`` of ``salt://files/foo.tar.gz``, thenthe following line in a hash file would match:
+# states.archive.extracted:list_options 	**For tar archives only.** This state uses :py:func:`archive.list<salt.modules.archive.list_>` to discover the contents of the sourcearchive so that it knows which file paths should exist on the minion ifthe archive has already been extracted. For the vast majority of tararchives, :py:func:`archive.list <salt.modules.archive.list_>` "justworks". Archives compressed using gzip, bzip2, and xz/lzma (with thehelp of the xz_ CLI command) are supported automatically. However, forarchives compressed using other compression types, CLI options must bepassed to :py:func:`archive.list <salt.modules.archive.list_>`.
+states.archive.extracted:if_missing 	If specified, this path will be checked, and if it exists then thearchive will not be extracted. This path can be either a directory or afile, so this option can also be used to check for a semaphore file andconditionally skip extraction.
+states.archive.extracted:enforce_ownership_on 	When ``user`` or ``group`` is specified, Salt will default to enforcingpermissions on the file/directory paths detected by running:py:func:`archive.list <salt.modules.archive.list_>` on the sourcearchive. Use this argument to specify an alternate directory on whichownership should be enforced.
+states.artifactory.downloaded:target_file 	Target file to download artifact to. By default file name is resolved by artifactory.
+states.augeas.change:context 	A file path, prefixed by ``/files``. Should resolve to an actual file(not an arbitrary augeas path). This is used to avoid duplicating thefile name for each item in the changes list (for example, ``set bind 0.0.0.0``in the example below operates on the file specified by ``context``). If``context`` is not specified, a file path prefixed by ``/files`` should beincluded with the ``set`` command.
+# states.augeas.change:load_path 	A list of directories that modules should be searched in. This is inaddition to the standard load path and the directories inAUGEAS_LENS_LIB.
+states.boto_apigateway.absent:name 	Name of the swagger file in YAML format
+# states.boto_apigateway.absent:stage_name 	Name of the stage to be removed irrespective of the swagger file content.If the current deployment associated with the stage_name has no other stages associatedwith it, the deployment will also be removed.
+states.boto_apigateway.present:swagger_file 	Name of the location of the swagger rest api definition file in YAML format.
+# states.boto_cloudtrail.present:S3KeyPrefix 	Specifies the Amazon S3 key prefix that comes after the name of thebucket you have designated for log file delivery.
+# states.boto_cloudtrail.present:SnsTopicName 	Specifies the name of the Amazon SNS topic defined for notification oflog file delivery. The maximum length is 256 characters.
+states.boto_iam_role.present:path 	The path to the role/instance profile. (See https://boto.readthedocs.io/en/latest/ref/iam.html#boto.iam.connection.IAMConnection.create_role)
+states.boto_lambda.function_present:ZipFile 	A path to a .zip file containing your deployment package. If this isspecified, S3Bucket and S3Key must not be specified.
+# states.boto_lambda.function_present:S3Bucket 	Amazon S3 bucket name where the .zip file containing your package isstored. If this is specified, S3Key must be specified and ZipFile mustNOT be specified.
+states.bower.installed:dir 	The target directory in which to install the package
+states.bower.removed:dir 	The target directory in which to install the package
+states.cmd.run:cwd 	The current working directory to execute the command in, defaults to/root
+states.cmd.run:creates 	Only run if the file or files specified by ``creates`` do not exist.
+# states.cmd.script:source 	The location of the script to download. If the file is located on themaster in the directory named spam, and is called eggs, the sourcestring is salt://spam/eggs
+states.cmd.script:cwd 	The current working directory to execute the command in, defaults to/root
+states.cmd.script:creates 	Only run if the file or files specified by ``creates`` do not exist.
+states.cmd.wait:cwd 	The current working directory to execute the command in, defaults to/root
+states.cmd.wait:creates 	Only run if the file or files specified by ``creates`` do not exist.
+# states.cmd.wait_script:source 	The source script being downloaded to the minion, this source script ishosted on the salt master server.  If the file is located on the masterin the directory named spam, and is called eggs, the source string issalt://spam/eggs
+states.cmd.wait_script:cwd 	The current working directory to execute the command in, defaults to/root
+states.cmd.watch:cwd 	The current working directory to execute the command in, defaults to/root
+states.cmd.watch:creates 	Only run if the file or files specified by ``creates`` do not exist.
+# states.cron.file:name 	The source file to be used as the crontab. This source file can behosted on either the salt master server, or on an HTTP or FTP server.For files hosted on the salt file server, if the file is located onthe master in the directory named spam, and is called eggs, the sourcestring is ``salt://spam/eggs``
+# states.cron.file:source_hash 	This can be either a file which contains a source hash string forthe source, or a source hash string. The source hash string is thehash algorithm followed by the hash of the file:``md5=e138491e9d5b97023cea823fe17bac22``
+states.cron.file:source_hash_name 	When ``source_hash`` refers to a hash file, Salt will try to find thecorrect hash by matching the filename/URI associated with that hash. Bydefault, Salt will look for the filename being managed. When managing afile at path ``/tmp/foo.txt``, then the following line in a hash filewould match:
+states.cryptdev.mapped:keyfile 	Either ``None`` if the password is to be entered manually on boot, oran absolute path to a keyfile. If the password is to be askedinteractively, the mapping cannot be performed with ``immediate=True``.
+states.cryptdev.mapped:config 	Set an alternative location for the crypttab, if the map is persistent,Default is ``/etc/crypttab``
+states.cryptdev.unmapped:config 	Set an alternative location for the crypttab, if the map is persistent,Default is ``/etc/crypttab``
+states.docker_image.present:build 	Path to directory on the Minion containing a Dockerfile
+states.docker_image.present:dockerfile 	Allows for an alternative Dockerfile to be specified.  Path to alternativeDockefile is relative to the build path for the Docker container.
+# states.esxi.ssh_configured:ssh_key 	Public SSH key to added to the authorized_keys file on the ESXi host. You canuse ``ssh_key`` or ``ssh_key_file``, but not both.
+# states.esxi.ssh_configured:ssh_key_file 	File containing the public SSH key to be added to the authorized_keys file onthe ESXi host. You can use ``ssh_key_file`` or ``ssh_key``, but not both.
+# states.file.absent:name 	The path which should be deleted
+# states.file.append:name 	The location of the file to append to.
+# states.file.append:source 	A single source file to append. This source file can be hosted on eitherthe salt master server, or on an HTTP or FTP server. Both HTTPS andHTTP are supported as well as downloading directly from Amazon S3compatible URLs with both pre-configured and automatic IAM credentials(see s3.get state documentation). File retrieval from Openstack Swiftobject storage is supported via swift://container/object_path URLs(see swift.get documentation).
+# states.file.append:source_hash 	This can be one of the following:1. a source hash string2. the URI of a file that contains source hash strings
+# states.file.blockreplace:name 	Filesystem path to the file to be edited
+# states.file.blockreplace:source 	The source file to download to the minion, this source file can behosted on either the salt master server, or on an HTTP or FTP server.Both HTTPS and HTTP are supported as well as downloading directlyfrom Amazon S3 compatible URLs with both pre-configured and automaticIAM credentials. (see s3.get state documentation)File retrieval from Openstack Swift object storage is supported viaswift://container/object_path URLs, see swift.get documentation.For files hosted on the salt file server, if the file is located onthe master in the directory named spam, and is called eggs, the sourcestring is salt://spam/eggs. If source is left blank or None(use ~ in YAML), the file will be created as an empty file andthe content will not be managed. This is also the case when a filealready exists and the source is undefined; the contents of the filewill not be changed or managed.
+# states.file.blockreplace:source_hash 	This can be one of the following:1. a source hash string2. the URI of a file that contains source hash strings
+# states.file.blockreplace:backup 	The file extension to use for a backup of the file if any edit is made.Set this to ``False`` to skip making a backup.
+# states.file.comment:name 	The full path to the file to be edited
+# states.file.copy:name 	The location of the file to copy to
+# states.file.copy:source 	The location of the file to copy to the location specified with name
+states.file.decode:name 	Path of the file to be written.
+# states.file.decode:contents_pillar 	A Pillar path to the encoded file. Uses the same path syntax as:py:func:`pillar.get <salt.modules.pillar.get>`. The:py:func:`hashutil.base64_encodefile<salt.modules.hashutil.base64_encodefile>` function can load encodedcontent into Pillar. Either this option or ``encoded_data`` must bespecified.
+# states.file.directory:name 	The location to create or manage a directory
+# states.file.directory:recurse 	Enforce user/group ownership and mode of directory recursively. Acceptsa list of strings representing what you would like to recurse.  If``mode`` is defined, will recurse on both ``file_mode`` and ``dir_mode`` ifthey are defined.  If ``ignore_files`` or ``ignore_dirs`` is included, files ordirectories will be left unchanged respectively.Example:
+# states.file.directory:backupname 	If the name of the directory exists and is not a directory, it will berenamed to the backupname. If the backupname alreadyexists and force is False, the state will fail. Otherwise, thebackupname will be removed first.
+# states.file.exists:name 	Absolute path which must exist
+# states.file.line:name 	Filesystem path to the file to be edited.
+# states.file.line:location 	Defines where to place content in the line. Note this option is onlyused when ``mode=insert`` is specified. If a location is passed in, ittakes precedence over both the ``before`` and ``after`` kwargs. Validlocations are:
+# states.file.line:create 	Create an empty file if doesn
+# states.file.managed:name 	The location of the file to manage
+# states.file.managed:source 	The source file to download to the minion, this source file can behosted on either the salt master server (``salt://``), the salt minionlocal file system (``/``), or on an HTTP or FTP server (``http(s)://``,``ftp://``).
+# states.file.managed:source_hash 	This can be one of the following:1. a source hash string2. the URI of a file that contains source hash strings
+# states.file.managed:source_hash_name 	When ``source_hash`` refers to a hash file, Salt will try to find thecorrect hash by matching the filename/URI associated with that hash. Bydefault, Salt will look for the filename being managed. When managing afile at path ``/tmp/foo.txt``, then the following line in a hash filewould match:
+# states.file.managed:encoding 	Encoding used for the file, e.g. ```UTF-8```, ```base64```.Default is None, which means str() will be applied to contents toensure an ascii encoded file and backwards compatibility.See https://docs.python.org/3/library/codecs.html#standard-encodingsfor available encodings.
+# states.file.managed:tmp_ext 	Suffix for temp file created by ``check_cmd``. Useful for checkersdependent on config file extension (e.g. the init-checkconf upstartconfig checker).
+# states.file.missing:name 	Absolute path which must NOT exist
+# states.file.mknod:name 	name of the file
+# states.file.patch:name 	The file or directory to which the patch will be applied.
+# states.file.patch:source 	The source patch to download to the minion, this source file must behosted on the salt master server. If the file is located in thedirectory named spam, and is called eggs, the source string issalt://spam/eggs. A source is required.
+# states.file.recurse:name 	The directory to set the recursion in
+# states.file.recurse:source 	The source directory, this directory is located on the salt master fileserver and is specified with the salt:// protocol. If the directory islocated on the master in the directory named spam, and is called eggs,the source string is salt://spam/eggs
+# states.file.rename:name 	The location of the file to rename to
+# states.file.rename:source 	The location of the file to move to the location specified with name
+# states.file.replace:name 	Filesystem path to the file to be edited. If a symlink is specified, itwill be resolved to its target.
+# states.file.replace:backup 	The file extension to use for a backup of the file before editing. Setto ``False`` to skip making a backup.
+# states.file.retention_schedule:name 	The filesystem path to the directory containing backups to be managed.
+# states.file.serialize:name 	The location of the file to create
+# states.file.serialize:dataset_pillar 	Operates like ``dataset``, but draws from a value stored in pillar,using the pillar path syntax used in :mod:`pillar.get<salt.modules.pillar.get>`. This is useful when the pillar valuecontains newlines, as referencing a pillar variable using a jinja/makotemplate can result in YAML formatting issues due to the newlinescausing indentation mismatches.
+# states.file.shortcut:name 	The location of the shortcut to create. Must end with either".lnk" or ".url"
+# states.file.shortcut:target 	The location that the shortcut points to
+# states.file.shortcut:working_dir 	Working directory in which to execute target
+# states.file.symlink:name 	The location of the symlink to create
+# states.file.symlink:target 	The location that the symlink points to
+# states.file.touch:name 	name of the file
+# states.file.touch:atime 	atime of the file
+# states.file.touch:mtime 	mtime of the file
+# states.file.uncomment:name 	The full path to the file to be edited
+states.git.detached:target 	Name of the target directory where repository is about to be cloned.
+states.git.detached:identity 	A path on the minion (or a SaltStack fileserver URL, e.g.``salt://path/to/identity_file``) to a private key to use for SSHauthentication.
+states.git.latest:target 	Name of the target directory where repository is about to be cloned
+states.git.present:name 	Path to the directory
+states.gpg.absent:gnupghome 	Override GNUPG Home directory
+states.gpg.present:gnupghome 	Override GNUPG Home directory
+states.hg.latest:target 	Target destination directory path on minion to clone into
+states.htpasswd.user_absent:htpasswd_file 	Path to the htpasswd file
+states.htpasswd.user_exists:htpasswd_file 	Path to the htpasswd file
+# states.icinga2.generate_ticket:output 	grain: output in a grainother: the file to store resultsNone:  output to the result comment (default)
+states.incron.absent:path 	The path that should be watched
+states.incron.present:path 	The path that should be watched
+# states.jenkins.present:config 	The Salt URL for the file to use forconfiguring the job.
+states.lxc.absent:path 	path to the container parentdefault: /var/lib/lxc (system default)
+states.lxc.frozen:path 	path to the container parentdefault: /var/lib/lxc (system default)
+states.lxc.present:path 	path to the container parentdefault: /var/lib/lxc (system default)
+states.lxc.running:path 	path to the container parentdefault: /var/lib/lxc (system default)
+states.lxc.stopped:path 	path to the container parentdefault: /var/lib/lxc (system default)
+states.mac_assistive.installed:name 	The bundle ID or path to command
+states.mac_keychain.uninstalled:name 	The certificate to uninstall, this can be a path for a .p12 or the friendlyname
+states.mac_package.installed:name 	The pkg or dmg file to install
+states.mac_package.installed:target 	The location in which to install the package. This can be a path or LocalSystem
+states.mac_xattr.delete:name 	The path to the file/directory
+states.mac_xattr.exists:name 	The path to the file/directory
+states.mount.mounted:name 	The path to the location where the device is to be mounted
+states.mount.mounted:config 	Set an alternative location for the fstab, Default is ``/etc/fstab``
+states.mount.unmounted:name 	The path to the location where the device is to be unmounted from
+states.mount.unmounted:config 	Set an alternative location for the fstab, Default is ``/etc/fstab``
+states.mysql_query.run:output 	grain: output in a grainother: the file to store resultsNone:  output to the result comment (default)
+states.mysql_query.run_file:query_file 	The file of mysql commands to run
+states.mysql_query.run_file:output 	grain: output in a grainother: the file to store resultsNone:  output to the result comment (default)
+states.netconfig.managed:template_name 	Identifies path to the template source. The template can be either stored on the local machine,either remotely.The recommended location is under the ``file_roots`` as specified in the master config file.For example, let's suppose the ``file_roots`` is configured as:
+states.npm.installed:dir 	The target directory in which to install the package, or None forglobal installation
+states.npm.removed:dir 	The target directory in which to install the package, or None forglobal installation
+states.openstack_config.absent:filename 	The full path to the configuration file
+states.openstack_config.present:filename 	The full path to the configuration file
+states.pcs.cib_present:cibname 	name/path of the file containing the CIB
+states.pcs.cib_pushed:cibname 	name/path of the file containing the CIB
+states.pip_state.installed:requirements 	Path to a pip requirements file. If the path begins with salt://the file will be transferred from the master file server.
+states.pip_state.installed:log 	Log file where a complete (maximum verbosity) record will be kept
+# states.pip_state.installed:exists_action 	Default action when a path already exists: (s)witch, (i)gnore, (w)ipe,(b)ackup
+states.pip_state.installed:cwd 	Current working directory to run pip from
+states.pip_state.installed:cert 	Provide a path to an alternate CA bundle
+states.pkgbuild.built:dest_dir 	The directory on the minion to place the built package(s)
+states.pkgbuild.built:spec 	The location of the spec file (used for rpms)
+# states.pkgbuild.built:template 	Run the spec file through a templating engine
+states.pkgbuild.repo:name 	The directory to find packages that will be in the repository
+states.pkgrepo.managed:name 	This value will be used in two ways: Firstly, it will be the repo ID,as seen in the entry in square brackets (e.g. ``[foo]``) for a givenrepo. Secondly, it will be the name of the file as stored in/etc/yum.repos.d (e.g. ``/etc/yum.repos.d/foo.conf``).
+states.postgres_initdb.present:name 	The name of the directory to initialize
+states.postgres_tablespace.present:directory 	The directory where the tablespace will be located, must already exist
+states.rsync.synchronized:passwordfile 	Read daemon-access password from the file (path)
+states.rsync.synchronized:excludefrom 	Read exclude patterns from the file (path)
+# states.saltmod.state:top 	Should be the name of a top file. If set state.top is called with thistop file instead of state.sls.
+states.selinux.module_install:name 	Path to file with module to install
+states.sqlite3.row_absent:db 	The database file name
+states.sqlite3.row_present:db 	The database file name
+states.sqlite3.table_absent:db 	The name of the database file
+states.sqlite3.table_present:db 	The name of the database file
+# states.ssh_auth.absent:user 	The user who owns the SSH authorized keys file to modify
+# states.ssh_auth.absent:source 	The source file for the key(s). Can contain any number of public keys,in standard "authorized_keys" format. If this is set, comment, enc andoptions will be ignored.
+# states.ssh_auth.absent:config 	The location of the authorized keys file relative to the user's homedirectory, defaults to ".ssh/authorized_keys". Token expansion %u and%h for username and home path supported.
+# states.ssh_auth.present:user 	The user who owns the SSH authorized keys file to modify
+# states.ssh_auth.present:source 	The source file for the key(s). Can contain any number of public keys,in standard "authorized_keys" format. If this is set, comment and encwill be ignored.
+# states.ssh_auth.present:config 	The location of the authorized keys file relative to the user's homedirectory, defaults to ".ssh/authorized_keys". Token expansion %u and%h for username and home path supported.
+# states.ssh_known_hosts.absent:user 	The user who owns the ssh authorized keys file to modify
+# states.ssh_known_hosts.absent:config 	The location of the authorized keys file relative to the user's homedirectory, defaults to ".ssh/known_hosts". If no user is specified,defaults to "/etc/ssh/ssh_known_hosts". If present, must be anabsolute path when a user is not specified.
+# states.ssh_known_hosts.present:user 	The user who owns the ssh authorized keys file to modify
+# states.ssh_known_hosts.present:config 	The location of the authorized keys file relative to the user's homedirectory, defaults to ".ssh/known_hosts". If no user is specified,defaults to "/etc/ssh/ssh_known_hosts". If present, must be anabsolute path when a user is not specified.
+# states.stormpath_account.absent:directory_id 	Optional. The ID of the directory that the account is expected to belongto. If not specified, then a list of directories will be retrieved, andeach will be scanned for the account. Specifying a directory_id willtherefore cut down on the number of requests to Stormpath, and increaseperformance of this state.
+# states.supervisord.dead:name 	Service name as defined in the supervisor configuration file
+states.supervisord.dead:conf_file 	path to supervisorctl config file
+states.supervisord.dead:bin_env 	path to supervisorctl bin or path to virtualenv with supervisorinstalled
+# states.supervisord.running:name 	Service name as defined in the supervisor configuration file
+states.supervisord.running:conf_file 	path to supervisorctl config file
+states.supervisord.running:bin_env 	path to supervisorctl bin or path to virtualenv with supervisorinstalled
+states.svn.export:name 	Address and path to the file or directory to be exported.
+states.svn.export:target 	Name of the target directory where the checkout will put the workingdirectory
+states.svn.latest:target 	Name of the target directory where the checkout will put the workingdirectory
+states.tomcat.undeployed:name 	The context path to undeploy.
+states.tomcat.war_deployed:name 	The context path to deploy (incl. forward slash) the WAR to.
+states.tomcat.war_deployed:war 	Absolute path to WAR file (should be accessible by the user runningTomcat) or a path supported by the ``salt.modules.cp.get_url`` function.
+# states.user.present:home 	The custom login directory of user. Uses default value of underlyingsystem if not set. Notice that this directory does not have to exist.This also the location of the home directory to create if createhome isset to True.
+states.zcbuildout.installed:name 	directory to execute in
+# states.zookeeper.absent:name 	path to znode
+# states.zookeeper.acls:name 	path to znode
+# states.zookeeper.present:name 	path to znode
+states.kapacitor.task_present:tick_script 	Path to the TICK script for the task. Can be a salt:// source.
+# states.boto_rds.present:domain 	The identifier of the Active Directory Domain.
+# states.boto_rds.present:domain_iam_role_name 	Specify the name of the IAM role to be used when making API calls tothe Directory Service.
+states.heat.deployed:template 	File of template
+states.heat.deployed:enviroment 	File of enviroment
+states.virtualenv_mod.manage:name 	Path to the virtualenv.
+states.virtualenv_mod.managed:name 	Path to the virtualenv.
+states.composer.installed:composer 	Location of the composer.phar file. If not set composer willjust execute "composer" as if it is installed globally.(i.e. /path/to/composer.phar)
+states.composer.installed:php 	Location of the php executable to use with composer.(i.e. /usr/bin/php)
+states.composer.update:composer 	Location of the composer.phar file. If not set composer willjust execute "composer" as if it is installed globally.(i.e. /path/to/composer.phar)
+states.composer.update:php 	Location of the php executable to use with composer.(i.e. /usr/bin/php)
+states.dellchassis.firmware_update:directory 	Directory name where firmwarefilewill be downloaded
+states.archive.extracted:name 	Directory into which the archive should be extracted
+states.artifactory.downloaded:target_dir 	Directory where the artifact should be downloaded. By default it is downloaded to /tmp directory.
+states.docker_image.present:build 	Path to directory on the Minion containing a Dockerfile
+states.docker_image.present:dockerfile 	Allows for an alternative Dockerfile to be specified.  Path to alternativeDockefile is relative to the build path for the Docker container.
+states.esxi.ssh_configured:ssh_key_file 	File containing the public SSH key to be added to the authorized_keys file onthe ESXi host. You can use ``ssh_key_file`` or ``ssh_key``, but not both.
+# states.file.append:source 	A single source file to append. This source file can be hosted on eitherthe salt master server, or on an HTTP or FTP server. Both HTTPS andHTTP are supported as well as downloading directly from Amazon S3compatible URLs with both pre-configured and automatic IAM credentials(see s3.get state documentation). File retrieval from Openstack Swiftobject storage is supported via swift://container/object_path URLs(see swift.get documentation).
+states.file.decode:name 	Path of the file to be written.
+states.file.shortcut:icon_location 	Location of shortcut's icon
+states.git.config_set:repo 	Location of the git repository for which the config value should beset. Required unless ``global`` is set to ``True``.
+states.git.config_unset:repo 	Location of the git repository for which the config value should beset. Required unless ``global`` is set to ``True``.
+states.git.latest:identity 	Path to a private key to use for ssh URLs. This can be either a singlestring, or a list of strings. For example:
+states.git.present:name 	Path to the directory
+states.htpasswd.user_absent:htpasswd_file 	Path to the htpasswd file
+states.htpasswd.user_exists:htpasswd_file 	Path to the htpasswd file
+states.pip_state.installed:requirements 	Path to a pip requirements file. If the path begins with salt://the file will be transferred from the master file server.
+states.selinux.module_install:name 	Path to file with module to install
+# modules.chef.client:logfile 	Set the log file location
+# modules.chef.solo:logfile 	Set the log file location
+modules.composer.did_composer_install:dir 	Directory location of the composer.json file
+modules.composer.install:directory 	Directory location of the composer.json file.
+modules.composer.update:directory 	Directory location of the composer.json file.
+modules.genesis.bootstrap:root 	Local path to create the root of the image filesystem.
+# modules.genesis.bootstrap:img_format 	Which format to create the image in. By default, just copies files intoa directory on the local filesystem (``dir``). Future support will existfor ``sparse``.
+# modules.genesis.bootstrap:flavor 	Which flavor of operating system to install. This correlates to aspecific directory on the distribution repositories. For instance,``wheezy`` on Debian.
+modules.genesis.bootstrap:static_qemu 	Local path to the static qemu binary required for this arch.(e.x.: /usr/bin/qemu-amd64-static)
+modules.genesis.bootstrap:mount_dir 	If img_format is not ``dir``, then the image must be mounted somewhere.If the ``mount_dir`` is not specified, then it will be created at``/opt/salt-genesis.<random_uuid>``. This directory will be unmountedand removed when the process is finished.
+modules.genesis.bootstrap:pkg_cache 	This points to a directory containing a cache of package files to becopied to the image. It does not need to be specified.
+modules.gentoolkitmod.revdep_rebuild:lib 	Search for reverse dependencies for a particular library ratherthan every library on the system. It can be a full path to alibrary or basic regular expression.
+# modules.jboss7.deploy:source_file 	Source file to deploy from
+modules.mac_keychain.set_default_keychain:keychain 	The location of the keychain to set as default
+# modules.openstack_config.delete:filename 	The full path to the configuration file
+# modules.openstack_config.get:filename 	The full path to the configuration file
+# modules.openstack_config.set_:filename 	The full path to the configuration file
+modules.pcs.cib_create:cibfile 	name/path of the file containing the CIB
+modules.pcs.cib_push:cibfile 	name/path of the file containing the CIB
+modules.pcs.config_show:cibfile 	name/path of the file containing the CIB
+modules.supervisord.add:conf_file 	path to supervisord config file
+modules.supervisord.add:bin_env 	path to supervisorctl bin or path to virtualenv with supervisorinstalled
+modules.supervisord.custom:conf_file 	path to supervisord config file
+modules.supervisord.custom:bin_env 	path to supervisorctl bin or path to virtualenv with supervisorinstalled
+modules.supervisord.options:conf_file 	path to supervisord config file
+modules.supervisord.remove:conf_file 	path to supervisord config file
+modules.supervisord.remove:bin_env 	path to supervisorctl bin or path to virtualenv with supervisorinstalled
+modules.supervisord.reread:conf_file 	path to supervisord config file
+modules.supervisord.reread:bin_env 	path to supervisorctl bin or path to virtualenv with supervisorinstalled
+modules.supervisord.restart:conf_file 	path to supervisord config file
+modules.supervisord.restart:bin_env 	path to supervisorctl bin or path to virtualenv with supervisorinstalled
+modules.supervisord.start:conf_file 	path to supervisord config file
+modules.supervisord.start:bin_env 	path to supervisorctl bin or path to virtualenv with supervisorinstalled
+modules.supervisord.status:conf_file 	path to supervisord config file
+modules.supervisord.status:bin_env 	path to supervisorctl bin or path to virtualenv with supervisorinstalled
+modules.supervisord.status_raw:conf_file 	path to supervisord config file
+modules.supervisord.status_raw:bin_env 	path to supervisorctl bin or path to virtualenv with supervisorinstalled
+modules.supervisord.stop:conf_file 	path to supervisord config file
+modules.supervisord.stop:bin_env 	path to supervisorctl bin or path to virtualenv with supervisorinstalled
+modules.supervisord.update:conf_file 	path to supervisord config file
+modules.supervisord.update:bin_env 	path to supervisorctl bin or path to virtualenv with supervisorinstalled
+modules.svn.add:cwd 	The path to the Subversion repository
+modules.svn.checkout:cwd 	The path to the Subversion repository
+modules.svn.commit:cwd 	The path to the Subversion repository
+modules.svn.diff:cwd 	The path to the Subversion repository
+modules.svn.export:cwd 	The path to the Subversion repository
+modules.svn.info:cwd 	The path to the Subversion repository
+modules.svn.remove:cwd 	The path to the Subversion repository
+modules.svn.status:cwd 	The path to the Subversion repository
+modules.svn.switch:cwd 	The path to the Subversion repository
+modules.svn.update:cwd 	The path to the Subversion repository
+modules.win_certutil.add_store:source 	The source certificate file this can be in the formsalt://path/to/file
+modules.win_certutil.del_store:source 	The source certificate file this can be in the formsalt://path/to/file
+modules.win_certutil.get_cert_serial:cert_file 	The certificate file to find the serial for
+# modules.apk.install:name 	The name of the package to be installed. Note that this parameter isignored if either "pkgs" or "sources" is passed. Additionally, pleasenote that this option can only be used to install packages from asoftware repository. To install a package file manually, use the"sources" option.
+modules.apk.install:sources 	A list of IPK packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.  Dependencies are automatically resolvedand marked as auto-installed.
+modules.debconfmod.set_template:path 	location of the file containing the package selections
+modules.dnsmasq.get_config:config_file 	The location of the config file from which to obtain contents.Defaults to ``/etc/dnsmasq.conf``.
+modules.hg.archive:cwd 	The path to the Mercurial repository
+modules.hg.archive:output 	The path to the archive tarball
+modules.hg.clone:cwd 	The path to the Mercurial repository
+modules.hg.describe:cwd 	The path to the Mercurial repository
+modules.hg.pull:cwd 	The path to the Mercurial repository
+modules.hg.revision:cwd 	The path to the Mercurial repository
+modules.hg.status:cwd 	The path to the Mercurial repository
+modules.hg.update:cwd 	The path to the Mercurial repository
+modules.seed.apply_:path 	Full path to the directory, device, or disk image  on the targetminion's file system.
+modules.seed.mkconfig:pub_key 	absolute path or file content of an optional preseeded salt key
+modules.seed.mkconfig:priv_key 	absolute path or file content of an optional preseeded salt key
+modules.sensehat.show_image:image 	The path to the image to display. The image must be 8 x 8 pixels in size.
+# modules.sysfs.read:key 	file or path in SysFS
+# modules.sysfs.target:key 	the location to resolve within SysFS
+# modules.sysfs.target:full 	full path instead of basename
+# modules.augeas_cfg.execute:load_path 	A colon-spearated list of directories that modules should be searchedin. This is in addition to the standard load path and the directoriesin AUGEAS_LENS_LIB.
+# modules.augeas_cfg.get:path 	The path to get the value of
+# modules.augeas_cfg.get:load_path 	A colon-spearated list of directories that modules should be searchedin. This is in addition to the standard load path and the directoriesin AUGEAS_LENS_LIB.
+# modules.augeas_cfg.ls:path 	The path to list
+# modules.augeas_cfg.ls:load_path 	A colon-spearated list of directories that modules should be searchedin. This is in addition to the standard load path and the directoriesin AUGEAS_LENS_LIB.
+# modules.augeas_cfg.match:path 	The path to match
+# modules.augeas_cfg.match:load_path 	A colon-spearated list of directories that modules should be searchedin. This is in addition to the standard load path and the directoriesin AUGEAS_LENS_LIB.
+# modules.augeas_cfg.remove:path 	The path to remove
+# modules.augeas_cfg.remove:load_path 	A colon-spearated list of directories that modules should be searchedin. This is in addition to the standard load path and the directoriesin AUGEAS_LENS_LIB.
+# modules.augeas_cfg.tree:load_path 	A colon-spearated list of directories that modules should be searchedin. This is in addition to the standard load path and the directoriesin AUGEAS_LENS_LIB.
+modules.glusterfs.set_quota_volume:path 	Folder path for restriction in volume ("/")
+modules.glusterfs.unset_quota_volume:path 	Folder path for restriction in volume
+modules.htpasswd.useradd:pwfile 	Path to htpasswd file
+modules.htpasswd.userdel:pwfile 	Path to htpasswd file
+modules.htpasswd.verify:pwfile 	Fully qualified path to htpasswd file
+modules.mac_sysctl.persist:config 	The location of the sysctl configuration file.
+modules.slsutil.renderer:path 	The path to a file on the filesystem.
+# modules.slsutil.renderer:string 	An inline string to be used as the file to send through the renderer system. Note, not all renderer modules can work with strings
+# modules.slsutil.renderer:default_renderer 	The renderer pipe to send the file through
+modules.artifactory.get_latest_release:target_dir 	Target directory to download artifact to (default: /tmp)
+modules.artifactory.get_latest_release:target_file 	Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
+modules.artifactory.get_latest_snapshot:target_dir 	Target directory to download artifact to (default: /tmp)
+modules.artifactory.get_latest_snapshot:target_file 	Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
+modules.artifactory.get_release:target_dir 	Target directory to download artifact to (default: /tmp)
+modules.artifactory.get_release:target_file 	Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
+modules.artifactory.get_snapshot:target_dir 	Target directory to download artifact to (default: /tmp)
+modules.artifactory.get_snapshot:target_file 	Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
+# modules.boto_efs.create_file_system:name 	(string) - The name for the new file system
+# modules.boto_efs.create_file_system:performance_mode 	(string) - The PerformanceMode of the file system. Can be eithergeneralPurpose or maxIO
+# modules.boto_efs.create_mount_target:filesystemid 	(string) - ID of the file system for which to create the mount target.
+# modules.boto_efs.create_tags:filesystemid 	(string) - ID of the file system for whose tags will be modified.
+# modules.boto_efs.create_tags:tags 	(dict) - The tags to add to the file system
+# modules.boto_efs.delete_file_system:filesystemid 	(string) - ID of the file system to delete.
+# modules.boto_efs.delete_tags:filesystemid 	(string) - ID of the file system for whose tags will be removed.
+# modules.boto_efs.delete_tags:tags 	(list[string]) - The tag keys to delete to the file system
+# modules.boto_efs.get_file_systems:filesystemid 	(string) - ID of the file system to retrieve properties
+# modules.boto_efs.get_mount_targets:filesystemid 	(string) - ID of the file system whose mount targets to listMust be specified if mounttargetid is not
+# modules.boto_efs.get_tags:filesystemid 	(string) - ID of the file system whose tags to list
+modules.bower.install:dir 	The target directory in which to install the package
+modules.bower.list_:dir 	The directory whose packages will be listed
+modules.bower.prune:dir 	The directory whose packages will be pruned
+modules.bower.uninstall:dir 	The target directory from which to uninstall the package
+modules.debbuild.make_repo:repodir 	The directory to find packages that will be in the repository.
+modules.dockercompose.build:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.create:path 	Path where the docker-compose file will be stored on the server
+# modules.dockercompose.create:docker_compose 	docker_compose file
+modules.dockercompose.get:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.kill:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.pause:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.ps:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.pull:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.restart:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.rm:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.start:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.stop:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.unpause:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.up:path 	Path where the docker-compose file is stored on the server
+modules.dpkg.bin_pkg_info:path 	Path to the file. Can either be an absolute path to a file on theminion, or a salt fileserver URL (e.g. ``salt://path/to/file.rpm``).If a salt fileserver URL is passed, the file will be cached to theminion so that it can be examined.
+# modules.dracr.set_chassis_location:location 	The name of the location to be set on the chassis.
+modules.hashutil.digest_file:infile 	A file path
+modules.ini_manage.set_option:file_name 	path of ini_file
+modules.jenkins.create_job:config_xml 	The configuration file to use to create the job.
+# modules.jenkins.create_job:saltenv 	The environment to look for the file in.
+modules.jenkins.update_job:config_xml 	The configuration file to use to create the job.
+# modules.jenkins.update_job:saltenv 	The environment to look for the file in.
+modules.npm.install:dir 	The target directory in which to install the package, or None forglobal installation
+modules.npm.list_:dir 	The directory whose packages will be listed, or None for globalinstallation
+modules.npm.uninstall:dir 	The target directory from which to uninstall the package, or None forglobal installation
+modules.pillar.file_exists:path 	The path to the file in question. Will be treated as a relative path
+modules.postgres.datadir_exists:name 	Name of the directory to check
+modules.postgres.datadir_init:name 	The name of the directory to initialize
+modules.rpm.bin_pkg_info:path 	Path to the file. Can either be an absolute path to a file on theminion, or a salt fileserver URL (e.g. ``salt://path/to/file.rpm``).If a salt fileserver URL is passed, the file will be cached to theminion so that it can be examined.
+# modules.rpm.diff:path 	Full path to the installed file
+modules.rvm.do:cwd 	The directory from which to run the rvm command. Defaults to the user'shome directory.
+# modules.solaris_user.chhome:home 	New home directory to set
+modules.vbox_guest.additions_umount:mount_point 	directory VirtualBox Guest Additions is mounted to
+# modules.vsphere.coredump_network_enable:host 	The location of the host.
+modules.vsphere.coredump_network_enable:credstore 	Optionally set to path to the credential store file.
+# modules.vsphere.enable_firewall_ruleset:host 	The location of the host.
+modules.vsphere.enable_firewall_ruleset:credstore 	Optionally set to path to the credential store file.
+# modules.vsphere.esxcli_cmd:host 	The location of the host.
+modules.vsphere.esxcli_cmd:credstore 	Optionally set to path to the credential store file.
+# modules.vsphere.get_coredump_network_config:host 	The location of the host.
+modules.vsphere.get_coredump_network_config:credstore 	Optionally set to path to the credential store file.
+# modules.vsphere.get_firewall_status:host 	The location of the host.
+modules.vsphere.get_firewall_status:credstore 	Optionally set to path to the credential store file.
+# modules.vsphere.get_syslog_config:host 	The location of the host.
+modules.vsphere.get_syslog_config:credstore 	Optionally set to path to the credential store file.
+# modules.vsphere.reset_syslog_config:host 	The location of the host.
+modules.vsphere.reset_syslog_config:credstore 	Optionally set to path to the credential store file.
+# modules.vsphere.set_coredump_network_config:host 	The location of the host.
+modules.vsphere.set_coredump_network_config:credstore 	Optionally set to path to the credential store file.
+modules.vsphere.set_syslog_config:credstore 	Optionally set to path to the credential store file.
+# modules.vsphere.syslog_service_reload:host 	The location of the host.
+modules.vsphere.syslog_service_reload:credstore 	Optionally set to path to the credential store file.
+# modules.boto_iam.upload_server_cert:cert_name 	The name for the server certificate. Do not include the path in this value.
+modules.boto_iam.upload_server_cert:path 	The path for the server certificate.
+# modules.pw_user.chhome:home 	New home directory to set
+modules.tomcat.deploy_war:war 	absolute path to WAR file (should be accessible by the user runningtomcat) or a path supported by the salt.modules.cp.get_file function
+modules.tomcat.deploy_war:context 	the context path to deploy
+modules.tomcat.reload_:app 	the webapp context path
+modules.tomcat.sessions:app 	the webapp context path
+modules.tomcat.start:app 	the webapp context path
+modules.tomcat.status_webapp:app 	the webapp context path
+modules.tomcat.stop:app 	the webapp context path
+modules.tomcat.undeploy:app 	the webapp context path
+# modules.zk_concurrency.lock:path 	The path in zookeeper where the lock is
+# modules.zk_concurrency.lock_holders:path 	The path in zookeeper where the lock is
+# modules.zk_concurrency.party_members:path 	The path in zookeeper where the lock is
+# modules.zk_concurrency.unlock:path 	The path in zookeeper where the lock is
+modules.acme.cert:webroot 	True or a full path to use to use webroot. Otherwise use standalone mode
+# modules.aptpkg.install:name 	The name of the package to be installed. Note that this parameter isignored if either "pkgs" or "sources" is passed. Additionally, pleasenote that this option can only be used to install packages from asoftware repository. To install a package file manually, use the"sources" option.
+modules.aptpkg.install:debconf 	Provide the path to a debconf answers file, processed beforeinstallation.
+modules.aptpkg.install:sources 	A list of DEB packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.  Dependencies are automatically resolvedand marked as auto-installed.
+# modules.archive.cmd_unzip:zip_file 	Path of zip file to be unpacked
+# modules.archive.cmd_unzip:dest 	The destination directory into which the file should be unpacked
+# modules.archive.cmd_zip:zip_file 	Path of zip file to be created
+modules.archive.is_encrypted:name 	The path / URL of the archive to check.
+# modules.archive.rar:rarfile 	Path of rar file to be created
+# modules.archive.tar:dest 	The destination directory into which to **unpack** the tarfile
+# modules.archive.unrar:rarfile 	Name of rar file to be unpacked
+# modules.archive.unrar:dest 	The destination directory into which to **unpack** the rar file
+# modules.archive.unzip:zip_file 	Path of zip file to be unpacked
+# modules.archive.unzip:dest 	The destination directory into which the file should be unpacked
+# modules.archive.zip_:zip_file 	Path of zip file to be created
+# modules.cisconso.get_data:path 	The device path to set the value at, a list of element names in order, / separated
+# modules.cisconso.set_data_value:path 	The device path to set the value at, a list of element names in order, / separated
+# modules.cisconso.set_data_value:data 	The new value at the given path
+modules.cmdmod.run_chroot:cwd 	The current working directory to execute the command in. defaults to/root
+# modules.cp.get_url:path 	A URL to download a file from. Supported URL schemes are: ``salt://``,``http://``, ``https://``, ``ftp://``, ``s3://``, ``swift://`` and``file://`` (local filesystem). If no scheme was specified, this isequivalent of using ``file://``.If a ``file://`` URL is given, the function just returns absolute pathto that file on a local filesystem.The function returns ``False`` if Salt was unable to fetch a file froma ``salt://`` URL.
+modules.cp.get_url:dest 	The default behaviour is to write the fetched file to the givendestination path. If this parameter is omitted or set as empty string(``''``), the function places the remote file on the local filesysteminside the Minion cache directory and returns the path to that file.
+# modules.cp.push:upload_path 	Provide a different path inside the master's minion files cachedir
+# modules.cp.push_dir:upload_path 	Provide a different path and directory name inside the master's minionfiles cachedir
+modules.dockermod.build:path 	Path to directory on the Minion containing a Dockerfile
+# modules.dockermod.build:fileobj 	Allows for a file-like object containing the contents of the Dockerfileto be passed in place of a file ``path`` argument. This argument shouldnot be used from the CLI, only from other Salt code.
+# modules.dockermod.build:dockerfile 	Allows for an alternative Dockerfile to be specified.  Path to alternativeDockefile is relative to the build path for the Docker container.
+modules.dockermod.import_:source 	Content to import (URL or absolute path to a tarball).  URL can be afile on the Salt fileserver (i.e.``salt://path/to/rootfs/tarball.tar.xz``. To import a file from asaltenv other than ``base`` (e.g. ``dev``), pass it at the end of theURL (ex. ``salt://path/to/rootfs/tarball.tar.xz?saltenv=dev``).
+modules.dockermod.load:path 	Path to docker tar archive. Path can be a file on the Minion, or theURL of a file on the Salt fileserver (i.e.``salt://path/to/docker/saved/image.tar``). To load a file from asaltenv other than ``base`` (e.g. ``dev``), pass it at the end of theURL (ex. ``salt://path/to/rootfs/tarball.tar.xz?saltenv=dev``).
+modules.dockermod.save:path 	Absolute path on the Minion where the image will be exported
+modules.dockermod.script:source 	Path to the script. Can be a local path on the Minion or a remote filefrom the Salt fileserver.
+modules.dockermod.script_retcode:source 	Path to the script. Can be a local path on the Minion or a remote filefrom the Salt fileserver.
+modules.ebuild.install:sources 	A list of tbz2 packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+# modules.file.append:path 	path to file
+# modules.file.blockreplace:path 	Filesystem path to the file to be edited
+# modules.file.blockreplace:backup 	The file extension to use for a backup of the file if any edit is made.Set to ``False`` to skip making a backup.
+modules.file.check_file_meta:name 	Path to file destination
+# modules.file.check_file_meta:sfn 	Template-processed source file contents
+# modules.file.check_file_meta:source 	URL to file source
+# modules.file.check_file_meta:user 	Destination file user owner
+# modules.file.check_file_meta:group 	Destination file group owner
+# modules.file.check_file_meta:mode 	Destination file permissions mode
+# modules.file.check_hash:path 	Path to a file local to the minion.
+# modules.file.chgrp:path 	path to the file or directory
+# modules.file.chown:path 	path to the file or directory
+# modules.file.comment:path 	The full path to the file to be edited
+# modules.file.comment_line:path 	string The full path to the text file.
+# modules.file.comment_line:char 	string The character used to comment a line in the type of file you
+# modules.file.comment_line:backup 	string The file extension to give the backup file. Default is
+# modules.file.delete_backup:path 	The path on the minion to check for backups
+# modules.file.get_gid:path 	file or directory of which to get the gid
+# modules.file.get_group:path 	file or directory of which to get the group
+# modules.file.get_hash:path 	path to the file or directory
+modules.file.get_managed:name 	location where the file lives on the server
+# modules.file.get_managed:source 	managed source file
+# modules.file.get_managed:source_hash 	hash of the source file
+# modules.file.get_managed:user 	Owner of file
+# modules.file.get_managed:group 	Group owner of file
+# modules.file.get_managed:mode 	Permissions of file
+# modules.file.get_mode:path 	file or directory of which to get the mode
+modules.file.get_source_sum:file_name 	Optional file name being managed, for matching with:py:func:`file.extract_hash <salt.modules.file.extract_hash>`.
+# modules.file.get_source_sum:source 	Source file, as used in :py:mod:`file <salt.states.file>` and otherstates. If ``source_hash`` refers to a file containing hashes, thenthis filename will be used to match a filename in that file. If the``source_hash`` is a hash expression, then this argument will beignored.
+# modules.file.get_source_sum:source_hash 	Hash file/expression, as used in :py:mod:`file <salt.states.file>` andother states. If this value refers to a remote URL or absolute path toa local file, it will be cached and :py:func:`file.extract_hash<salt.modules.file.extract_hash>` will be used to obtain a hash fromit.
+# modules.file.get_source_sum:source_hash_name 	Specific file name to look for when ``source_hash`` refers to a remotefile, used to disambiguate ambiguous matches.
+# modules.file.get_sum:path 	path to the file or directory
+# modules.file.get_uid:path 	file or directory of which to get the uid
+# modules.file.get_user:path 	file or directory of which to get the user
+# modules.file.grep:path 	Path to the file to be searched
+# modules.file.lchown:path 	path to the file or directory
+# modules.file.line:path 	Filesystem path to the file to be edited.
+# modules.file.line:location 	Defines where to place content in the line. Note this option is onlyused when ``mode=insert`` is specified. If a location is passed in, ittakes precedence over both the ``before`` and ``after`` kwargs. Validlocations are:
+# modules.file.list_backup:path 	The path on the minion to check for backups
+# modules.file.list_backups:path 	The path on the minion to check for backups
+# modules.file.list_backups_dir:path 	The directory on the minion to check for backups
+# modules.file.manage_file:name 	location to place the file
+# modules.file.manage_file:sfn 	location of cached file on the minion
+# modules.file.manage_file:source 	file reference on the master
+modules.file.patch:originalfile 	The full path to the file or directory to be patched
+modules.file.patch:patchfile 	A patch file to apply to ``originalfile``
+# modules.file.prepend:path 	path to file
+# modules.file.psed:path 	The full path to the file to be edited
+# modules.file.remove_backup:path 	The path on the minion to check for backups
+# modules.file.replace:path 	Filesystem path to the file to be edited. If a symlink is specified, itwill be resolved to its target.
+# modules.file.restore_backup:path 	The path on the minion to check for backups
+# modules.file.sed:path 	The full path to the file to be edited
+# modules.file.seek_read:path 	path to file
+# modules.file.seek_read:offset 	offset to start into the file
+# modules.file.seek_write:path 	path to file
+# modules.file.seek_write:data 	data to write to file
+# modules.file.seek_write:offset 	position in file to start writing
+# modules.file.set_mode:path 	file or directory of which to set the mode
+# modules.file.set_mode:mode 	mode to set the path to
+# modules.file.truncate:path 	path to file
+# modules.file.truncate:length 	offset into file to truncate
+# modules.file.uncomment:path 	The full path to the file to be edited
+# modules.file.write:path 	path to file
+modules.freebsdpkg.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.git.add:cwd 	The path to the git checkout
+# modules.git.add:filename 	The location of the file/directory to add, relative to ``cwd``
+modules.git.archive:cwd 	The path to be archived
+modules.git.archive:output 	The path of the archive to be created
+# modules.git.archive:prefix 	Prepend ``<prefix>`` to every filename in the archive. If unspecified,the name of the directory at the top level of the repository will beused as the prefix (e.g. if ``cwd`` is set to ``/foo/bar/baz``, theprefix will be ``baz``, and the resulting archive will contain atop-level directory by that name).
+modules.git.branch:cwd 	The path to the git checkout
+modules.git.checkout:cwd 	The path to the git checkout
+# modules.git.clone:name 	Optional alternate name for the top-level directory to be created bythe clone
+modules.git.commit:cwd 	The path to the git checkout
+# modules.git.commit:filename 	The location of the file/directory to commit, relative to ``cwd``.This argument is optional, and can be used to commit a file withoutfirst staging it.
+modules.git.config_get:cwd 	The path to the git checkout
+modules.git.config_get_regex:cwd 	The path to the git checkout
+modules.git.config_get_regexp:cwd 	The path to the git checkout
+modules.git.config_set:cwd 	The path to the git checkout. Must be an absolute path, or the word``global`` to indicate that a global key should be set.
+modules.git.config_unset:cwd 	The path to the git checkout. Must be an absolute path, or the word``global`` to indicate that a global key should be unset.
+modules.git.current_branch:cwd 	The path to the git checkout
+modules.git.describe:cwd 	The path to the git checkout
+modules.git.diff:cwd 	The path to the git checkout
+modules.git.fetch:cwd 	The path to the git checkout
+modules.git.init:cwd 	The path to the directory to be initialized
+modules.git.is_worktree:cwd 	path to the worktree to be removed
+modules.git.list_branches:cwd 	The path to the git checkout
+modules.git.list_tags:cwd 	The path to the git checkout
+modules.git.list_worktrees:cwd 	The path to the git checkout
+modules.git.ls_remote:cwd 	The path to the git checkout. Optional (and ignored if present) when``remote`` is set to a URL instead of a remote name.
+modules.git.merge:cwd 	The path to the git checkout
+modules.git.merge_base:cwd 	The path to the git checkout
+modules.git.merge_tree:cwd 	The path to the git checkout
+modules.git.pull:cwd 	The path to the git checkout
+modules.git.push:cwd 	The path to the git checkout
+modules.git.rebase:cwd 	The path to the git checkout
+modules.git.remote_get:cwd 	The path to the git checkout
+modules.git.remote_set:cwd 	The path to the git checkout
+modules.git.remotes:cwd 	The path to the git checkout
+modules.git.reset:cwd 	The path to the git checkout
+modules.git.rev_parse:cwd 	The path to the git checkout
+modules.git.revision:cwd 	The path to the git checkout
+modules.git.rm_:cwd 	The path to the git checkout
+modules.git.rm_:filename 	The location of the file/directory to remove, relative to ``cwd``
+modules.git.stash:cwd 	The path to the git checkout
+modules.git.status:cwd 	The path to the git checkout
+modules.git.submodule:cwd 	The path to the submodule
+modules.git.symbolic_ref:cwd 	The path to the git checkout
+modules.git.worktree_add:cwd 	The path to the git checkout
+modules.git.worktree_prune:cwd 	The path to the main git checkout or a linked worktree
+# modules.git.worktree_rm:user 	Used for path expansion when ``cwd`` is not an absolute path. Bydefault, when ``cwd`` is not absolute, the path will be assumed to berelative to the home directory of the user under which the minion isrunning. Setting this option will change the home directory from whichpath expansion is performed.
+# modules.gpg.decrypt:user 	Which user's keychain to access, defaults to user Salt is running as.Passing the user as ``salt`` will set the GnuPG home directory to the``/etc/salt/gpgkeys``.
+modules.gpg.decrypt:gnupghome 	Specify the location where GPG keyring and related files are stored.
+# modules.gpg.delete_key:user 	Which user's keychain to access, defaults to user Salt is running as.Passing the user as ``salt`` will set the GnuPG home directory to the``/etc/salt/gpgkeys``.
+modules.gpg.delete_key:gnupghome 	Specify the location where GPG keyring and related files are stored.
+# modules.gpg.encrypt:user 	Which user's keychain to access, defaults to user Salt is running as.Passing the user as ``salt`` will set the GnuPG home directory to the``/etc/salt/gpgkeys``.
+modules.gpg.encrypt:output 	The filename where the signed file will be written, default is standard out.
+modules.gpg.encrypt:gnupghome 	Specify the location where GPG keyring and related files are stored.
+# modules.gpg.export_key:user 	Which user's keychain to access, defaults to user Salt is running as.Passing the user as ``salt`` will set the GnuPG home directory to the``/etc/salt/gpgkeys``.
+modules.gpg.export_key:gnupghome 	Specify the location where GPG keyring and related files are stored.
+# modules.gpg.get_key:user 	Which user's keychain to access, defaults to user Salt is running as.Passing the user as ``salt`` will set the GnuPG home directory to the``/etc/salt/gpgkeys``.
+modules.gpg.get_key:gnupghome 	Specify the location where GPG keyring and related files are stored.
+# modules.gpg.get_secret_key:user 	Which user's keychain to access, defaults to user Salt is running as.Passing the user as ``salt`` will set the GnuPG home directory to the``/etc/salt/gpgkeys``.
+modules.gpg.get_secret_key:gnupghome 	Specify the location where GPG keyring and related files are stored.
+# modules.gpg.list_keys:user 	Which user's keychain to access, defaults to user Salt is running as.Passing the user as ``salt`` will set the GnuPG home directory to the``/etc/salt/gpgkeys``.
+modules.gpg.list_keys:gnupghome 	Specify the location where GPG keyring and related files are stored.
+# modules.gpg.list_secret_keys:user 	Which user's keychain to access, defaults to user Salt is running as.Passing the user as ``salt`` will set the GnuPG home directory to the``/etc/salt/gpgkeys``.
+modules.gpg.list_secret_keys:gnupghome 	Specify the location where GPG keyring and related files are stored.
+# modules.gpg.search_keys:user 	Which user's keychain to access, defaults to user Salt is running as.Passing the user as ``salt`` will set the GnuPG home directory to the``/etc/salt/gpgkeys``.
+# modules.gpg.sign:user 	Which user's keychain to access, defaults to user Salt is running as.Passing the user as ``salt`` will set the GnuPG home directory to the``/etc/salt/gpgkeys``.
+modules.gpg.sign:output 	The filename where the signed file will be written, default is standard out.
+modules.gpg.sign:gnupghome 	Specify the location where GPG keyring and related files are stored.
+# modules.gpg.trust_key:user 	Which user's keychain to access, defaults to user Salt is running as.Passing the user as ``salt`` will set the GnuPG home directory to the``/etc/salt/gpgkeys``.
+# modules.gpg.verify:user 	Which user's keychain to access, defaults to user Salt is running as.Passing the user as ``salt`` will set the GnuPG home directory to the``/etc/salt/gpgkeys``.
+modules.gpg.verify:gnupghome 	Specify the location where GPG keyring and related files are stored.
+modules.libcloud_compute.import_key_pair:key 	Public key material, the string or a path to a file
+# modules.libcloud_compute.list_images:location_id 	The location key, from list_locations
+# modules.libcloud_compute.list_sizes:location_id 	The location key, from list_locations
+modules.libcloud_storage.download_object:destination_path 	Full path to a file or a directory where the incoming file will be saved.
+# modules.libcloud_storage.download_object:delete_on_failure 	True to delete a partially downloaded file if the download was not successful
+modules.lxc.apply_network_profile:path 	path to the container parent
+modules.lxc.attachable:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.bootstrap:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.copy_to:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.cp:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.create:config 	The config file to use for the container. Defaults to system-wideconfig (usually in /etc/lxc/lxc.conf).
+modules.lxc.destroy:path 	path to the container parent directory (default: /var/lib/lxc)
+modules.lxc.exists:path 	path to the container parent directory (default: /var/lib/lxc)
+modules.lxc.get_parameter:path 	path to the container parent directorydefault: /var/lib/lxc (system)
+modules.lxc.info:path 	path to the container parent directorydefault: /var/lib/lxc (system)
+modules.lxc.list_:path 	path to the container parent directorydefault: /var/lib/lxc (system)
+modules.lxc.ls_:path 	path to the container parent directorydefault: /var/lib/lxc (system)
+modules.lxc.reboot:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.reconfigure:path 	path to the container parent
+modules.lxc.remove:path 	path to the container parent directory (default: /var/lib/lxc)
+modules.lxc.restart:path 	path to the container parent directorydefault: /var/lib/lxc (system)
+modules.lxc.restart:lxc_config 	path to a lxc config fileconfig file will be guessed from container name otherwise
+modules.lxc.retcode:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.run:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.run_all:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.run_stderr:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.run_stdout:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.running_systemd:path 	path to the container parent
+modules.lxc.set_parameter:path 	path to the container parent directorydefault: /var/lib/lxc (system)
+modules.lxc.set_pass:path 	path to the container parent directorydefault: /var/lib/lxc (system)
+modules.lxc.set_password:path 	path to the container parent directorydefault: /var/lib/lxc (system)
+modules.lxc.state:path 	path to the container parent directory (default: /var/lib/lxc)
+modules.lxc.stop:path 	path to the container parent directorydefault: /var/lib/lxc (system)
+modules.lxc.systemd_running_state:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.test_bare_started_state:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.test_sd_started_state:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.unfreeze:path 	path to the container parent directorydefault: /var/lib/lxc (system)
+modules.lxc.update_lxc_conf:path 	path to the container parentdefault: /var/lib/lxc (system default)
+modules.lxc.wait_started:path 	path to the container parentdefault: /var/lib/lxc (system default)
+# modules.opkg.install:name 	The name of the package to be installed. Note that this parameter isignored if either "pkgs" or "sources" is passed. Additionally, pleasenote that this option can only be used to install packages from asoftware repository. To install a package file manually, use the"sources" option.
+modules.opkg.install:sources 	A list of IPK packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.  Dependencies are automatically resolvedand marked as auto-installed.
+# modules.pacman.install:name 	The name of the package to be installed. Note that this parameter isignored if either ``pkgs`` or ``sources`` is passed. Additionally,please note that this option can only be used to install packages froma software repository. To install a package file manually, use the``sources`` option.
+modules.pacman.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.pip.freeze:bin_env 	path to pip bin or path to virtualenv. If doing an uninstall fromthe system python and want to use a specific pip bin (pip-2.7,pip-2.6, etc..) just specify the pip bin you want.If uninstalling from a virtualenv, just use the path to the virtualenv(/home/code/path/to/virtualenv/)
+modules.pip.freeze:cwd 	Current working directory to run pip from
+modules.pip.install:bin_env 	Path to pip bin or path to virtualenv. If doing a system install,and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) justspecify the pip bin you want.
+modules.pip.install:log 	Log file where a complete (maximum verbosity) record will be kept
+modules.pip.install:exists_action 	Default action when a path already exists: (s)witch, (i)gnore, (w)ipe,(b)ackup
+modules.pip.install:install_options 	Extra arguments to be supplied to the setup.py install command (e.g.like ``--install-option='--install-scripts=/usr/local/bin'``).  Usemultiple --install-option options to pass multiple options to setup.pyinstall. If you are using an option with a directory path, be sure touse absolute path.
+modules.pip.install:cwd 	Current working directory to run pip from
+modules.pip.install:cert 	Provide a path to an alternate CA bundle
+# modules.pip.install:env_vars 	Set environment variables that some builds will depend on. For example,a Python C-module may have a Makefile that needs INCLUDE_PATH set topick up a header file while compiling.  This must be in the form of adictionary or a mapping.
+modules.pip.uninstall:requirements 	path to requirements.
+modules.pip.uninstall:bin_env 	path to pip bin or path to virtualenv. If doing an uninstall fromthe system python and want to use a specific pip bin (pip-2.7,pip-2.6, etc..) just specify the pip bin you want.If uninstalling from a virtualenv, just use the path to the virtualenv(/home/code/path/to/virtualenv/)
+modules.pip.uninstall:log 	Log file where a complete (maximum verbosity) record will be kept
+modules.pip.uninstall:cwd 	Current working directory to run pip from
+modules.pkgin.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.pkgng.backup:jail 	Backup packages from the specified jail. Note that this will run thecommand within the jail, and so the path to the backup file will berelative to the root of the jail
+modules.pkgng.backup:chroot 	Backup packages from the specified chroot (ignored if ``jail`` isspecified). Note that this will run the command within the chroot, andso the path to the backup file will be relative to the root of thechroot.
+modules.pkgng.backup:root 	Backup packages from the specified root (ignored if ``jail`` isspecified). Note that this will run the command within the root, andso the path to the backup file will be relative to the root of theroot.
+modules.pkgng.restore:jail 	Restore database to the specified jail. Note that this will run thecommand within the jail, and so the path to the file from which the pkgdatabase will be restored is relative to the root of the jail.
+modules.pkgng.restore:chroot 	Restore database to the specified chroot (ignored if ``jail`` isspecified). Note that this will run the command within the chroot, andso the path to the file from which the pkg database will be restored isrelative to the root of the chroot.
+modules.pkgng.restore:root 	Restore database to the specified root (ignored if ``jail`` isspecified). Note that this will run the command within the root, andso the path to the file from which the pkg database will be restored isrelative to the root of the root.
+modules.pkgng.updating:filename 	Defines an alternative location of the UPDATING file.
+modules.rpmbuild.make_repo:repodir 	The directory to find packages that will be in the repository.
+modules.rsync.rsync:src 	The source location where files will be rsynced from.
+modules.rsync.rsync:dst 	The destination location where files will be rsynced to.
+modules.rsync.rsync:passwordfile 	A file that contains a password for accessing anrsync daemon.  The file should contain just thepassword.
+modules.runit.add_svc_avail_path:path 	directory to add to AVAIL_SVR_DIRS
+# modules.ssh.hash_known_hosts:config 	path to known hosts file: can be absolute or relative to user's homedirectory
+# modules.ssh.set_known_host:user 	The user who owns the ssh authorized keys file to modify
+# modules.ssh.set_known_host:config 	The location of the authorized keys file relative to the user's homedirectory, defaults to ".ssh/known_hosts". If no user is specified,defaults to "/etc/ssh/ssh_known_hosts". If present, must be anabsolute path when a user is not specified.
+# modules.state.event:sock_dir 	path to the Salt master
+# modules.state.show_low_sls:pillarenv 	Specify a Pillar environment to be used when applying states. Thiscan also be set in the minion config file using the:conf_minion:`pillarenv` option. When neither the:conf_minion:`pillarenv` minion config option nor this CLI argument isused, all Pillar environments will be merged together.
+# modules.state.sls:pillarenv 	Specify a Pillar environment to be used when applying states. Thiscan also be set in the minion config file using the:conf_minion:`pillarenv` option. When neither the:conf_minion:`pillarenv` minion config option nor this CLI argument isused, all Pillar environments will be merged together.
+# modules.state.sls_id:pillarenv 	Specify a Pillar environment to be used when applying states. Thiscan also be set in the minion config file using the:conf_minion:`pillarenv` option. When neither the:conf_minion:`pillarenv` minion config option nor this CLI argument isused, all Pillar environments will be merged together.
+# modules.state.top:pillarenv 	Specify a Pillar environment to be used when applying states. Thiscan also be set in the minion config file using the:conf_minion:`pillarenv` option. When neither the:conf_minion:`pillarenv` minion config option nor this CLI argument isused, all Pillar environments will be merged together.
+modules.tls.ca_exists:cacert_path 	absolute path to ca certificates root directory
+modules.tls.cert_base_path:cacert_path 	absolute path to ca certificates root directory
+modules.tls.cert_info:cert_path 	path to the cert file
+modules.tls.create_ca:cacert_path 	absolute path to ca certificates root directory
+modules.tls.create_ca_signed_cert:cacert_path 	absolute path to ca certificates root directory
+modules.tls.create_ca_signed_cert:cert_path 	full path to the certificates directory
+modules.tls.create_empty_crl:cacert_path 	absolute path to ca certificates root directory
+modules.tls.create_empty_crl:crl_file 	full path to the CRL file
+modules.tls.create_pkcs12:cacert_path 	absolute path to ca certificates root directory
+# modules.tls.create_self_signed_cert:tls_dir 	location appended to the ca.cert_base_path, default is 'tls'
+modules.tls.create_self_signed_cert:cacert_path 	absolute path to ca certificates root directory
+modules.tls.get_ca:cacert_path 	absolute path to ca certificates root directory
+modules.tls.get_ca_signed_cert:cacert_path 	absolute path to certificates root directory
+modules.tls.get_ca_signed_key:cacert_path 	absolute path to certificates root directory
+modules.tls.maybe_fix_ssl_version:cacert_path 	absolute path to ca certificates root directory
+modules.tls.revoke_cert:cacert_path 	Absolute path to ca certificates root directory.
+modules.tls.revoke_cert:crl_file 	Full path to the CRL file.
+modules.virtualenv_mod.create:path 	The path to the virtualenv to be created
+modules.virtualenv_mod.create:venv_bin 	The name (and optionally path) of the virtualenv command. This can alsobe set globally in the minion config file as ``virtualenv.venv_bin``.Defaults to ``virtualenv``.
+# modules.virtualenv_mod.get_resource_path:resource 	Name of the resource of which the path is to be returned
+modules.win_file.append:path 	path to file
+modules.win_file.blockreplace:path 	Filesystem path to the file to be edited
+# modules.win_file.blockreplace:backup 	The file extension to use for a backup of the file if any edit is made.Set to ``False`` to skip making a backup.
+modules.win_file.check_file_meta:name 	Path to file destination
+# modules.win_file.check_file_meta:sfn 	Template-processed source file contents
+# modules.win_file.check_file_meta:source 	URL to file source
+# modules.win_file.check_file_meta:user 	Destination file user owner
+# modules.win_file.check_file_meta:group 	Destination file group owner
+# modules.win_file.check_file_meta:mode 	Destination file permissions mode
+# modules.win_file.check_hash:path 	Path to a file local to the minion.
+# modules.win_file.comment:path 	The full path to the file to be edited
+# modules.win_file.comment_line:path 	string The full path to the text file.
+# modules.win_file.comment_line:char 	string The character used to comment a line in the type of file you
+# modules.win_file.comment_line:backup 	string The file extension to give the backup file. Default is
+# modules.win_file.delete_backup:path 	The path on the minion to check for backups
+# modules.win_file.get_hash:path 	path to the file or directory
+# modules.win_file.get_managed:name 	location where the file lives on the server
+# modules.win_file.get_managed:source 	managed source file
+# modules.win_file.get_managed:source_hash 	hash of the source file
+# modules.win_file.get_managed:user 	Owner of file
+# modules.win_file.get_managed:group 	Group owner of file
+# modules.win_file.get_managed:mode 	Permissions of file
+# modules.win_file.get_source_sum:file_name 	Optional file name being managed, for matching with:py:func:`file.extract_hash <salt.modules.file.extract_hash>`.
+# modules.win_file.get_source_sum:source 	Source file, as used in :py:mod:`file <salt.states.file>` and otherstates. If ``source_hash`` refers to a file containing hashes, thenthis filename will be used to match a filename in that file. If the``source_hash`` is a hash expression, then this argument will beignored.
+# modules.win_file.get_source_sum:source_hash 	Hash file/expression, as used in :py:mod:`file <salt.states.file>` andother states. If this value refers to a remote URL or absolute path toa local file, it will be cached and :py:func:`file.extract_hash<salt.modules.file.extract_hash>` will be used to obtain a hash fromit.
+# modules.win_file.get_source_sum:source_hash_name 	Specific file name to look for when ``source_hash`` refers to a remotefile, used to disambiguate ambiguous matches.
+# modules.win_file.get_sum:path 	path to the file or directory
+# modules.win_file.line:path 	Filesystem path to the file to be edited.
+# modules.win_file.line:location 	Defines where to place content in the line. Note this option is onlyused when ``mode=insert`` is specified. If a location is passed in, ittakes precedence over both the ``before`` and ``after`` kwargs. Validlocations are:
+# modules.win_file.list_backups:path 	The path on the minion to check for backups
+# modules.win_file.list_backups_dir:path 	The directory on the minion to check for backups
+# modules.win_file.manage_file:name 	location to place the file
+# modules.win_file.manage_file:sfn 	location of cached file on the minion
+# modules.win_file.manage_file:source 	file reference on the master
+# modules.win_file.prepend:path 	path to file
+# modules.win_file.psed:path 	The full path to the file to be edited
+# modules.win_file.replace:path 	Filesystem path to the file to be edited. If a symlink is specified, itwill be resolved to its target.
+# modules.win_file.restore_backup:path 	The path on the minion to check for backups
+# modules.win_file.seek_read:path 	path to file
+# modules.win_file.seek_read:offset 	offset to start into the file
+# modules.win_file.seek_write:path 	path to file
+# modules.win_file.seek_write:data 	data to write to file
+# modules.win_file.seek_write:offset 	position in file to start writing
+# modules.win_file.truncate:path 	path to file
+# modules.win_file.truncate:length 	offset into file to truncate
+# modules.win_file.uncomment:path 	The full path to the file to be edited
+# modules.win_file.write:path 	path to file
+modules.xbpspkg.add_repo:conffile 	path to xbps conf file to add this repodefault: /usr/share/xbps.d/15-saltstack.conf
+modules.xbpspkg.install:sources 	A list of packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.yumpkg.diff:path 	Full path to the installed file
+# modules.yumpkg.install:name 	The name of the package to be installed. Note that this parameter isignored if either "pkgs" or "sources" is passed. Additionally, pleasenote that this option can only be used to install packages from asoftware repository. To install a package file manually, use the"sources" option.
+modules.yumpkg.install:sources 	A list of RPM packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.zabbix.mediatype_create:exec_path 	exec path
+modules.zabbix.mediatype_create:gsm_modem 	exec path
+# modules.zookeeper.create:path 	path of znode to create
+# modules.zookeeper.delete:path 	path to znode
+# modules.zookeeper.ensure_path:path 	Parent path to create
+# modules.zookeeper.exists:path 	path to check
+# modules.zookeeper.get:path 	path to check
+# modules.zookeeper.get_acls:path 	path to znode
+# modules.zookeeper.get_children:path 	path to check
+# modules.zookeeper.set_acls:path 	path to znode
+modules.zypper.diff:path 	Full path to the installed file
+# modules.zypper.install:name 	The name of the package to be installed. Note that this parameter isignored if either ``pkgs`` or ``sources`` is passed. Additionally,please note that this option can only be used to install packages froma software repository. To install a package file manually, use the``sources`` option.
+modules.zypper.install:sources 	A list of RPM packages to install. Must be passed as a list of dicts,with the keys being package names, and the values being the source URIor local path to the package.
+modules.apache.config:name 	File for the virtual host
+modules.composer.did_composer_install:dir 	Directory location of the composer.json file
+modules.composer.install:directory 	Directory location of the composer.json file.
+modules.composer.install:composer 	Location of the composer.phar file. If not set composer willjust execute "composer" as if it is installed globally.(i.e. /path/to/composer.phar)
+modules.composer.install:php 	Location of the php executable to use with composer.(i.e. /usr/bin/php)
+modules.composer.selfupdate:composer 	Location of the composer.phar file. If not set composer willjust execute "composer" as if it is installed globally.(i.e. /path/to/composer.phar)
+modules.composer.selfupdate:php 	Location of the php executable to use with composer.(i.e. /usr/bin/php)
+modules.composer.update:directory 	Directory location of the composer.json file.
+modules.composer.update:composer 	Location of the composer.phar file. If not set composer willjust execute "composer" as if it is installed globally.(i.e. /path/to/composer.phar)
+modules.composer.update:php 	Location of the php executable to use with composer.(i.e. /usr/bin/php)
+modules.gentoolkitmod.eclean_dist:exclude_file 	Path to exclusion file. Default is /etc/eclean/distfiles.excludeThis is the same default eclean-dist uses. Use None if this fileexists and you want to ignore.
+modules.gentoolkitmod.eclean_pkg:exclude_file 	Path to exclusion file. Default is /etc/eclean/packages.excludeThis is the same default eclean-pkg uses. Use None if this fileexists and you want to ignore.
+modules.kapacitor.define_task:tick_script 	Path to the TICK script for the task. Can be a salt:// source.
+modules.htpasswd.useradd:pwfile 	Path to htpasswd file
+modules.htpasswd.userdel:pwfile 	Path to htpasswd file
+modules.dockercompose.build:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.create:path 	Path where the docker-compose file will be stored on the server
+modules.dockercompose.get:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.kill:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.pause:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.ps:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.pull:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.restart:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.rm:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.start:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.stop:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.unpause:path 	Path where the docker-compose file is stored on the server
+modules.dockercompose.up:path 	Path where the docker-compose file is stored on the server
+modules.dpkg.bin_pkg_info:path 	Path to the file. Can either be an absolute path to a file on theminion, or a salt fileserver URL (e.g. ``salt://path/to/file.rpm``).If a salt fileserver URL is passed, the file will be cached to theminion so that it can be examined.
+modules.heat.create_stack:template_file 	File of template
+modules.heat.create_stack:enviroment 	File of enviroment
+modules.heat.update_stack:template_file 	File of template
+modules.heat.update_stack:enviroment 	File of enviroment
+modules.namecheap_ssl.parse_csr:csr_file 	string  Certificate Signing Request File
+modules.napalm_snmp.remove_config:location 	Location
+modules.napalm_snmp.update_config:location 	Location
+modules.rpm.bin_pkg_info:path 	Path to the file. Can either be an absolute path to a file on theminion, or a salt fileserver URL (e.g. ``salt://path/to/file.rpm``).If a salt fileserver URL is passed, the file will be cached to theminion so that it can be examined.
+# modules.archive.cmd_unzip:zip_file 	Path of zip file to be unpacked
+# modules.archive.cmd_zip:zip_file 	Path of zip file to be created
+# modules.archive.rar:rarfile 	Path of rar file to be created
+# modules.archive.unzip:zip_file 	Path of zip file to be unpacked
+# modules.archive.zip_:zip_file 	Path of zip file to be created
+modules.cmdmod.run_chroot:root 	Path to the root of the jail to use.
+modules.dockermod.build:path 	Path to directory on the Minion containing a Dockerfile
+modules.dockermod.build:dockerfile 	Allows for an alternative Dockerfile to be specified.  Path to alternativeDockefile is relative to the build path for the Docker container.
+modules.dockermod.load:path 	Path to docker tar archive. Path can be a file on the Minion, or theURL of a file on the Salt fileserver (i.e.``salt://path/to/docker/saved/image.tar``). To load a file from asaltenv other than ``base`` (e.g. ``dev``), pass it at the end of theURL (ex. ``salt://path/to/rootfs/tarball.tar.xz?saltenv=dev``).
+modules.dockermod.script:source 	Path to the script. Can be a local path on the Minion or a remote filefrom the Salt fileserver.
+modules.dockermod.script_retcode:source 	Path to the script. Can be a local path on the Minion or a remote filefrom the Salt fileserver.
+modules.file.check_file_meta:name 	Path to file destination
+# modules.file.check_file_meta:source_sum 	File checksum information as a dictionary
+# modules.file.check_file_meta:contents 	File contents
+modules.file.check_hash:path 	Path to a file local to the minion.
+modules.file.grep:path 	Path to the file to be searched
+modules.git.clone:cwd 	Location of git clone
+modules.git.clone:identity 	Path to a private key to use for ssh URLs
+modules.git.diff:paths 	File paths to pass to the ``git diff`` command. Can be passed as acomma-separated list or a Python list.
+modules.git.fetch:identity 	Path to a private key to use for ssh URLs
+modules.git.ls_remote:identity 	Path to a private key to use for ssh URLs
+modules.git.pull:identity 	Path to a private key to use for ssh URLs
+modules.git.push:identity 	Path to a private key to use for ssh URLs
+modules.git.remote_refs:identity 	Path to a private key to use for ssh URLs
+modules.git.submodule:identity 	Path to a private key to use for ssh URLs
+modules.git.worktree_add:worktree_path 	Path to the new worktree. Can be either absolute, or relative to``cwd``.
+modules.git.worktree_rm:cwd 	Path to the worktree to be removed
+modules.libcloud_storage.upload_object:file_path 	Path to the object on disk.
+modules.lxc.copy_to:source 	File to be copied to the container
+modules.lxc.cp:source 	File to be copied to the container
+modules.pip.install:requirements 	Path to requirements
+modules.pip.install:bin_env 	Path to pip bin or path to virtualenv. If doing a system install,and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) justspecify the pip bin you want.
+modules.snapper.create_config:subvolume 	Path to the related subvolume.
+modules.tls.revoke_cert:cert_path 	Path to the cert file.
+modules.virtualenv_mod.get_distribution_path:venv 	Path to the virtualenv.
+modules.virtualenv_mod.get_resource_content:venv 	Path to the virtualenv
+modules.virtualenv_mod.get_resource_path:venv 	Path to the virtualenv
+modules.virtualenv_mod.get_site_packages:venv 	Path to the virtualenv.
+modules.win_file.check_file_meta:name 	Path to file destination
+# modules.win_file.check_file_meta:source_sum 	File checksum information as a dictionary
+modules.win_file.check_file_meta:contents 	File contents
+modules.win_file.check_hash:path 	Path to a file local to the minion.

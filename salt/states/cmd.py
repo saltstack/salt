@@ -502,6 +502,7 @@ def wait(name,
         interactively to the console and the logs.
         This is experimental.
     '''
+    cwd, creates = salt.utils.expanduser(cwd, creates)
     # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
@@ -622,6 +623,7 @@ def wait_script(name,
         regardless, unless ``quiet`` is used for this value.
 
     '''
+    cwd = salt.utils.expanduser(cwd)
     # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
@@ -775,6 +777,7 @@ def run(name,
                 - reload_modules: True
 
     '''
+    cwd, creates = salt.utils.expanduser(cwd, creates)
     ### NOTE: The keyword arguments in **kwargs are passed directly to the
     ###       ``cmd.run_all`` function and cannot be removed from the function
     ###       definition, otherwise the use of unsupported arguments in a
@@ -993,6 +996,7 @@ def script(name,
         regardless, unless ``quiet`` is used for this value.
 
     '''
+    cwd, creates = salt.utils.expanduser(cwd, creates)
     test_name = None
     if not isinstance(stateful, list):
         stateful = stateful is True

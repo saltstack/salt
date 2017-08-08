@@ -650,6 +650,7 @@ def cib_present(name, cibname, scope=None, extra_args=None):
                 - scope: None
                 - extra_args: None
     '''
+    cibname = salt.utils.expanduser(cibname)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     cib_hash_form = 'sha256'
@@ -766,6 +767,7 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
                 - scope: None
                 - extra_args: None
     '''
+    cibname = salt.utils.expanduser(cibname)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     cib_hash_form = 'sha256'

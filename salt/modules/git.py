@@ -444,6 +444,7 @@ def add(cwd,
         salt myminion git.add /path/to/repo foo/bar.py
         salt myminion git.add /path/to/repo foo/bar.py opts='--dry-run'
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     if not isinstance(filename, six.string_types):
         filename = str(filename)
@@ -568,6 +569,7 @@ def archive(cwd,
 
         salt myminion git.archive /path/to/repo /path/to/archive.tar
     '''
+    cwd, output = salt.utils.expanduser(cwd, output)
     cwd = _expand_path(cwd, user)
     output = _expand_path(output, user)
     # Sanitize kwargs and make sure that no invalid ones were passed. This
@@ -680,6 +682,7 @@ def branch(cwd,
         # Rename branch (2015.8.0 and later)
         salt myminion git.branch /path/to/repo newbranch opts='-m oldbranch'
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
     command.append('branch')
@@ -768,6 +771,7 @@ def checkout(cwd,
         # Checking out current revision into new branch (2015.8.0 and later)
         salt myminion git.checkout /path/to/repo opts='-b newbranch'
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
     command.append('checkout')
@@ -903,6 +907,7 @@ def clone(cwd,
 
         salt myminion git.clone /path/to/repo_parent_dir git://github.com/saltstack/salt.git
     '''
+    cwd, identity = salt.utils.expanduser(cwd, identity)
     cwd = _expand_path(cwd, user)
 
     if not url:
@@ -1022,6 +1027,7 @@ def commit(cwd,
         salt myminion git.commit /path/to/repo 'The commit message'
         salt myminion git.commit /path/to/repo 'The commit message' filename=foo/bar.py
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
     command.extend(['commit', '-m', message])
@@ -1097,6 +1103,7 @@ def config_get(key,
         salt myminion git.config_get user.email global=True
         salt myminion git.config_get core.gitproxy cwd=/path/to/repo all=True
     '''
+    cwd = salt.utils.expanduser(cwd)
     # Sanitize kwargs and make sure that no invalid ones were passed. This
     # allows us to accept 'all' as an argument to this function without
     # shadowing all(), while also not allowing unwanted arguments to be passed.
@@ -1186,6 +1193,7 @@ def config_get_regexp(key,
         # Matches any key starting with 'user.'
         salt myminion git.config_get_regexp '^user\.' global=True
     '''
+    cwd = salt.utils.expanduser(cwd)
     result = _config_getter('--get-regexp',
                             key,
                             value_regex=value_regex,
@@ -1281,6 +1289,7 @@ def config_set(key,
         salt myminion git.config_set user.email me@example.com cwd=/path/to/repo
         salt myminion git.config_set user.email foo@bar.com global=True
     '''
+    cwd = salt.utils.expanduser(cwd)
     kwargs = salt.utils.clean_kwargs(**kwargs)
     add_ = kwargs.pop('add', False)
     global_ = kwargs.pop('global', False)
@@ -1408,6 +1417,7 @@ def config_unset(key,
         salt myminion git.config_unset /path/to/repo foo.bar
         salt myminion git.config_unset /path/to/repo foo.bar all=True
     '''
+    cwd = salt.utils.expanduser(cwd)
     kwargs = salt.utils.clean_kwargs(**kwargs)
     all_ = kwargs.pop('all', False)
     global_ = kwargs.pop('global', False)
@@ -1507,6 +1517,7 @@ def current_branch(cwd,
 
         salt myminion git.current_branch /path/to/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     command = ['git', 'rev-parse', '--abbrev-ref', 'HEAD']
     return _git_run(command,
@@ -1557,6 +1568,7 @@ def describe(cwd,
         salt myminion git.describe /path/to/repo
         salt myminion git.describe /path/to/repo develop
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
@@ -1670,6 +1682,7 @@ def diff(cwd,
         # Diff two files with one being outside the working tree
         salt myminion git.diff /path/to/repo no_index=True paths=path/to/file1,/absolute/path/to/file2
     '''
+    cwd, paths = salt.utils.expanduser(cwd, paths)
     if no_index and cached:
         raise CommandExecutionError(
             'The \'no_index\' and \'cached\' options cannot be used together'
@@ -1718,6 +1731,8 @@ def diff(cwd,
             command.append(value)
 
     if paths:
+        paths = paths.split(';') if isinstance(paths, six.string_types) else paths
+        paths = salt.utils.expanduser(paths)
         command.append('--')
         command.extend(paths)
 
@@ -1840,6 +1855,7 @@ def fetch(cwd,
         salt myminion git.fetch /path/to/repo upstream
         salt myminion git.fetch /path/to/repo identity=/root/.ssh/id_rsa
     '''
+    cwd, identity = salt.utils.expanduser(cwd, identity)
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
     command.append('fetch')
@@ -1986,6 +2002,7 @@ def init(cwd,
         # Init a bare repo (2015.8.0 and later)
         salt myminion git.init /path/to/bare/repo.git bare=True
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
     command.append('init')
@@ -2046,6 +2063,7 @@ def is_worktree(cwd,
 
         salt myminion git.is_worktree /path/to/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     try:
         toplevel = _get_toplevel(cwd, user=user, password=password)
@@ -2121,6 +2139,7 @@ def list_branches(cwd,
         salt myminion git.list_branches /path/to/repo
         salt myminion git.list_branches /path/to/repo remote=True
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     command = ['git', 'for-each-ref', '--format', '%(refname:short)',
                'refs/{0}/'.format('heads' if not remote else 'remotes')]
@@ -2166,6 +2185,7 @@ def list_tags(cwd,
 
         salt myminion git.list_tags /path/to/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     command = ['git', 'for-each-ref', '--format', '%(refname:short)',
                'refs/tags/']
@@ -2233,6 +2253,7 @@ def list_worktrees(cwd,
         salt myminion git.list_worktrees /path/to/repo all=True
         salt myminion git.list_worktrees /path/to/repo stale=True
     '''
+    cwd = salt.utils.expanduser(cwd)
     if not _check_worktree_support(failhard=True):
         return {}
     cwd = _expand_path(cwd, user)
@@ -2589,6 +2610,7 @@ def ls_remote(cwd=None,
         salt myminion git.ls_remote /path/to/repo origin master
         salt myminion git.ls_remote remote=https://mydomain.tld/repo.git ref=mytag opts='--tags'
     '''
+    cwd, identity = salt.utils.expanduser(cwd, identity)
     if cwd is not None:
         cwd = _expand_path(cwd, user)
     try:
@@ -2693,6 +2715,7 @@ def merge(cwd,
         # .. or merge another rev
         salt myminion git.merge /path/to/repo rev=upstream/foo
     '''
+    cwd = salt.utils.expanduser(cwd)
     kwargs = salt.utils.clean_kwargs(**kwargs)
     if kwargs:
         salt.utils.invalid_kwargs(kwargs)
@@ -2824,6 +2847,7 @@ def merge_base(cwd,
         salt myminion git.merge_base /path/to/repo fork_point=upstream/master
         salt myminion git.merge_base /path/to/repo refs=mybranch fork_point=upstream/master
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     kwargs = salt.utils.clean_kwargs(**kwargs)
     all_ = kwargs.pop('all', False)
@@ -2967,6 +2991,7 @@ def merge_tree(cwd,
         salt myminion git.merge_tree /path/to/repo HEAD upstream/dev
         salt myminion git.merge_tree /path/to/repo HEAD upstream/dev base=aaf3c3d
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     command = ['git', 'merge-tree']
     if not isinstance(ref1, six.string_types):
@@ -3073,6 +3098,7 @@ def pull(cwd,
 
         salt myminion git.pull /path/to/repo opts='--rebase origin master'
     '''
+    cwd, identity = salt.utils.expanduser(cwd, identity)
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
     command.append('pull')
@@ -3191,6 +3217,7 @@ def push(cwd,
         # Delete remote branch 'upstream/temp'
         salt myminion git.push /path/to/repo upstream :temp
     '''
+    cwd, identity = salt.utils.expanduser(cwd, identity)
     kwargs = salt.utils.clean_kwargs(**kwargs)
     if kwargs:
         salt.utils.invalid_kwargs(kwargs)
@@ -3274,6 +3301,7 @@ def rebase(cwd,
         salt myminion git.rebase /path/to/repo 'origin master'
         salt myminion git.rebase /path/to/repo origin/master opts='--onto newbranch'
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     opts = _format_opts(opts)
     if any(x for x in opts if x in ('-i', '--interactive')):
@@ -3342,6 +3370,7 @@ def remote_get(cwd,
         salt myminion git.remote_get /path/to/repo
         salt myminion git.remote_get /path/to/repo upstream
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     all_remotes = remotes(cwd,
                           user=user,
@@ -3434,6 +3463,7 @@ def remote_refs(url,
 
         salt myminion git.remote_refs https://github.com/saltstack/salt.git
     '''
+    identity = salt.utils.expanduser(identity)
     command = ['git', 'ls-remote']
     if heads:
         command.append('--heads')
@@ -3535,6 +3565,7 @@ def remote_set(cwd,
         salt myminion git.remote_set /path/to/repo git@github.com:user/repo.git remote=upstream
         salt myminion git.remote_set /path/to/repo https://github.com/user/repo.git remote=upstream push_url=git@github.com:user/repo.git
     '''
+    cwd = salt.utils.expanduser(cwd)
     # Check if remote exists
     if remote in remotes(cwd, user=user, password=password):
         log.debug(
@@ -3635,6 +3666,7 @@ def remotes(cwd,
 
         salt myminion git.remotes /path/to/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     command = ['git', 'remote', '--verbose']
     ret = {}
@@ -3724,6 +3756,7 @@ def reset(cwd,
         # Hard reset
         salt myminion git.reset /path/to/repo opts='--hard origin/master'
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
     command.append('reset')
@@ -3805,6 +3838,7 @@ def rev_parse(cwd,
         # Find out whether or not the repo at /path/to/repo is a bare repository
         salt myminion git.rev_parse /path/to/repo opts='--is-bare-repository'
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
     command.append('rev-parse')
@@ -3860,6 +3894,7 @@ def revision(cwd,
 
         salt myminion git.revision /path/to/repo mybranch
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
@@ -3939,6 +3974,7 @@ def rm_(cwd,
         salt myminion git.rm /path/to/repo foo/bar.py opts='--dry-run'
         salt myminion git.rm /path/to/repo foo/baz opts='-r'
     '''
+    cwd, filename = salt.utils.expanduser(cwd, filename)
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
     command.append('rm')
@@ -4009,6 +4045,7 @@ def stash(cwd,
         salt myminion git.stash /path/to/repo drop opts='stash@{1}'
         salt myminion git.stash /path/to/repo list
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     if not isinstance(action, six.string_types):
         # No numeric actions but this will prevent a traceback when the git
@@ -4060,6 +4097,7 @@ def status(cwd,
 
         salt myminion git.status /path/to/repo
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     state_map = {
         'M': 'modified',
@@ -4203,6 +4241,7 @@ def submodule(cwd,
         # Unregister submodule (2015.8.0 and later)
         salt myminion git.submodule /path/to/repo/sub/repo deinit
     '''
+    cwd, identity = salt.utils.expanduser(cwd, identity)
     kwargs = salt.utils.clean_kwargs(**kwargs)
     init_ = kwargs.pop('init', False)
     if kwargs:
@@ -4300,6 +4339,7 @@ def symbolic_ref(cwd,
         # Delete symbolic ref 'FOO'
         salt myminion git.symbolic_ref /path/to/repo FOO opts='--delete'
     '''
+    cwd = salt.utils.expanduser(cwd)
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
     command.append('symbolic-ref')
@@ -4467,6 +4507,7 @@ def worktree_add(cwd,
         salt myminion git.worktree_add /path/to/repo/main ../hotfix ref=origin/master
         salt myminion git.worktree_add /path/to/repo/main ../hotfix branch=hotfix21 ref=v2.1.9.3
     '''
+    cwd, worktree_path = salt.utils.expanduser(cwd, worktree_path)
     _check_worktree_support()
     kwargs = salt.utils.clean_kwargs(**kwargs)
     branch_ = kwargs.pop('branch', None)
@@ -4594,6 +4635,7 @@ def worktree_prune(cwd,
         salt myminion git.worktree_prune /path/to/repo dry_run=True
         salt myminion git.worktree_prune /path/to/repo expire=1.day.ago
     '''
+    cwd = salt.utils.expanduser(cwd)
     _check_worktree_support()
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
@@ -4646,6 +4688,7 @@ def worktree_rm(cwd, user=None):
 
         salt myminion git.worktree_rm /path/to/worktree
     '''
+    cwd = salt.utils.expanduser(cwd)
     _check_worktree_support()
     cwd = _expand_path(cwd, user)
     if not os.path.exists(cwd):

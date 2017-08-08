@@ -97,6 +97,7 @@ from __future__ import absolute_import
 
 # Import Salt libs
 import salt.ext.six as six
+import salt.utils
 
 try:
     import sqlite3
@@ -133,6 +134,7 @@ def row_absent(name, db, table, where_sql, where_args=None):
     where_args
         The list parameters to substitute in where_sql
     """
+    db = salt.utils.expanduser(db)
     changes = {'name': name,
                'changes': {},
                'result': None,
@@ -229,6 +231,7 @@ def row_present(name,
         When False and the row exists and data does not equal
         the row data then the state will fail
     """
+    db = salt.utils.expanduser(db)
     changes = {'name': name,
                'changes': {},
                'result': None,
@@ -340,6 +343,7 @@ def table_absent(name, db):
     db
         The name of the database file
     """
+    db = salt.utils.expanduser(db)
     changes = {'name': name,
                'changes': {},
                'result': None,
@@ -397,6 +401,7 @@ def table_present(name, db, schema, force=False):
         the state will fail.  If force is set to True, the existing
         table will be replaced with the new table
     """
+    db = salt.utils.expanduser(db)
     changes = {'name': name,
                'changes': {},
                'result': None,

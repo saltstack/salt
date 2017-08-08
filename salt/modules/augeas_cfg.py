@@ -103,7 +103,7 @@ def _lstrip_word(word, prefix):
 def _check_load_paths(load_path):
     '''
     Checks the validity of the load_path, returns a sanitized version
-    with invalid paths removed.
+    with invalid paths removed and home directories expanded.
     '''
     if load_path is None or not isinstance(load_path, six.string_types):
         return None
@@ -119,7 +119,7 @@ def _check_load_paths(load_path):
     if len(_paths) == 0:
         return None
 
-    return ':'.join(_paths)
+    return ':'.join(salt.utils.expanduser(_paths))
 
 
 def execute(context=None, lens=None, commands=(), load_path=None):

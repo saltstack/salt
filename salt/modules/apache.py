@@ -446,6 +446,7 @@ def config(name, config, edit=True):
 
         salt '*' apache.config /etc/httpd/conf.d/ports.conf config="[{'Listen': '22'}]"
     '''
+    name = salt.utils.expanduser(name)
 
     for entry in config:
         key = next(six.iterkeys(entry))

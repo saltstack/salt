@@ -53,6 +53,7 @@ def did_composer_install(dir):
 
         salt '*' composer.did_composer_install /var/www/application
     '''
+    dir = salt.utils.expanduser(dir)
     lockFile = "{0}/vendor".format(dir)
     if os.path.exists(lockFile):
         return True
@@ -265,6 +266,7 @@ def install(directory,
         salt '*' composer.install /var/www/application \
             no_dev=True optimize=True
     '''
+    directory, composer, php = salt.utils.expanduser(directory, composer, php)
     result = _run_composer('install',
                            directory=directory,
                            composer=composer,
@@ -351,6 +353,7 @@ def update(directory,
         salt '*' composer.update /var/www/application \
             no_dev=True optimize=True
     '''
+    directory, composer, php = salt.utils.expanduser(directory, composer, php)
     result = _run_composer('update',
                            directory=directory,
                            extra_flags='--no-progress',
@@ -404,6 +407,7 @@ def selfupdate(composer=None,
 
         salt '*' composer.selfupdate
     '''
+    composer, php = salt.utils.expanduser(composer, php)
     result = _run_composer('selfupdate',
                            extra_flags='--no-progress',
                            composer=composer,

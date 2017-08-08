@@ -89,6 +89,7 @@ def start(name='all', user=None, conf_file=None, bin_env=None):
         salt '*' supervisord.start <service>
         salt '*' supervisord.start <group>:
     '''
+    conf_file, bin_env = salt.utils.expanduser(conf_file, bin_env)
     if name.endswith(':*'):
         name = name[:-1]
     ret = __salt__['cmd.run_all'](
@@ -119,6 +120,7 @@ def restart(name='all', user=None, conf_file=None, bin_env=None):
         salt '*' supervisord.restart <service>
         salt '*' supervisord.restart <group>:
     '''
+    conf_file, bin_env = salt.utils.expanduser(conf_file, bin_env)
     if name.endswith(':*'):
         name = name[:-1]
     ret = __salt__['cmd.run_all'](
@@ -149,6 +151,7 @@ def stop(name='all', user=None, conf_file=None, bin_env=None):
         salt '*' supervisord.stop <service>
         salt '*' supervisord.stop <group>:
     '''
+    conf_file, bin_env = salt.utils.expanduser(conf_file, bin_env)
     if name.endswith(':*'):
         name = name[:-1]
     ret = __salt__['cmd.run_all'](
@@ -177,6 +180,7 @@ def add(name, user=None, conf_file=None, bin_env=None):
 
         salt '*' supervisord.add <name>
     '''
+    conf_file, bin_env = salt.utils.expanduser(conf_file, bin_env)
     if name.endswith(':'):
         name = name[:-1]
     elif name.endswith(':*'):
@@ -207,6 +211,7 @@ def remove(name, user=None, conf_file=None, bin_env=None):
 
         salt '*' supervisord.remove <name>
     '''
+    conf_file, bin_env = salt.utils.expanduser(conf_file, bin_env)
     if name.endswith(':'):
         name = name[:-1]
     elif name.endswith(':*'):
@@ -237,6 +242,7 @@ def reread(user=None, conf_file=None, bin_env=None):
 
         salt '*' supervisord.reread
     '''
+    conf_file, bin_env = salt.utils.expanduser(conf_file, bin_env)
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('reread', None, conf_file, bin_env),
         runas=user,
@@ -266,6 +272,7 @@ def update(user=None, conf_file=None, bin_env=None, name=None):
 
         salt '*' supervisord.update
     '''
+    conf_file, bin_env = salt.utils.expanduser(conf_file, bin_env)
 
     if isinstance(name, string_types):
         if name.endswith(':'):
@@ -299,6 +306,7 @@ def status(name=None, user=None, conf_file=None, bin_env=None):
 
         salt '*' supervisord.status
     '''
+    conf_file, bin_env = salt.utils.expanduser(conf_file, bin_env)
     all_process = {}
     for line in status_raw(name, user, conf_file, bin_env).splitlines():
         if len(line.split()) > 2:
@@ -327,6 +335,7 @@ def status_raw(name=None, user=None, conf_file=None, bin_env=None):
 
         salt '*' supervisord.status_raw
     '''
+    conf_file, bin_env = salt.utils.expanduser(conf_file, bin_env)
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('status', name, conf_file, bin_env),
         runas=user,
@@ -353,6 +362,7 @@ def custom(command, user=None, conf_file=None, bin_env=None):
 
         salt '*' supervisord.custom "mstop '*gunicorn*'"
     '''
+    conf_file, bin_env = salt.utils.expanduser(conf_file, bin_env)
     ret = __salt__['cmd.run_all'](
         _ctl_cmd(command, None, conf_file, bin_env),
         runas=user,
@@ -402,6 +412,7 @@ def options(name, conf_file=None):
 
         salt '*' supervisord.options foo
     '''
+    conf_file = salt.utils.expanduser(conf_file)
     config = _read_config(conf_file)
     section_name = 'program:{0}'.format(name)
     if section_name not in config.sections():

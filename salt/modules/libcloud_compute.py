@@ -37,6 +37,7 @@ import logging
 import os.path
 
 # Import salt libs
+import salt.utils
 import salt.utils.compat
 from salt.utils import clean_kwargs
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -714,6 +715,7 @@ def import_key_pair(name, key, profile, key_type=None, **libcloud_kwargs):
         salt myminion libcloud_compute.import_key_pair pair1 key_value_data123 profile1
         salt myminion libcloud_compute.import_key_pair pair1 /path/to/key profile1
     '''
+    key = salt.utils.expanduser(key)
     conn = _get_driver(profile=profile)
     libcloud_kwargs = clean_kwargs(**libcloud_kwargs)
     if os.path.exists(key) or key_type == 'FILE':

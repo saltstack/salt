@@ -127,6 +127,7 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
     prep_install
         Prepare the bootstrap script, but don't run it. Default: false
     '''
+    path = salt.utils.expanduser(path)
     stats = __salt__['file.stats'](path, follow_symlinks=True)
     if not stats:
         return '{0} does not exist'.format(path)
@@ -209,6 +210,7 @@ def mkconfig(config=None,
         salt 'minion' seed.mkconfig [config=config_data] [tmp=tmp_dir] \\
                 [id_=minion_id] [approve_key=(true|false)]
     '''
+    pub_key, priv_key = salt.utils.expanduser(pub_key, priv_key)
     if tmp is None:
         tmp = tempfile.mkdtemp()
     if config is None:
