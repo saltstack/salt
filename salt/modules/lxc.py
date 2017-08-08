@@ -894,7 +894,8 @@ def _get_lxc_default_data(**kwargs):
             ret['lxc.start.auto'] = '0'
     memory = kwargs.get('memory')
     if memory is not None:
-        ret['lxc.cgroup.memory.limit_in_bytes'] = memory * 1024
+        # converting the config value from MB to bytes
+        ret['lxc.cgroup.memory.limit_in_bytes'] = memory * 1024 * 1024
     cpuset = kwargs.get('cpuset')
     if cpuset:
         ret['lxc.cgroup.cpuset.cpus'] = cpuset
