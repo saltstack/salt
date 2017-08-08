@@ -1078,6 +1078,10 @@ VALID_OPTS = {
     # (in other words, require that minions have 'minion_sign_messages'
     # turned on)
     'require_minion_sign_messages': bool,
+
+    # The list of config entries to be used as pillar overrides
+    # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
+    'add_to_pillar': (six.string_types, list),
 }
 
 # default configurations

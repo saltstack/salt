@@ -23,6 +23,7 @@ import salt.transport
 import salt.utils.url
 import salt.utils.cache
 import salt.utils.crypt
+import salt.utils.dictupdate
 from salt.exceptions import SaltClientError
 from salt.template import compile_template
 from salt.utils.dictupdate import merge
@@ -75,7 +76,50 @@ def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None
                  pillar_override=pillar_override, pillarenv=pillarenv)
 
 
-class AsyncRemotePillar(object):
+class RemotePillarMixin(object):
+    '''
+    Common remote pillar functionality
+    '''
+    def get_pillar_override_from_opts(self, opts):
+        '''
+        Returns the pillar overrides from the opts dict (the config file)
+        '''
+        def get_subconfig(opts_key):
+            '''
+            Returns a dict containing the opts key subtree, while maintaining
+            the opts structure
+            '''
+            ret_dict = aux_dict = {}
+            config_val = opts
+            subkeys = opts_key.split(':')
+            # Build an empty dict with the opts path
+            for subkey in subkeys[:-1]:
+                aux_dict[subkey] = {}
+                aux_dict = aux_dict[subkey]
+                if not config_val.get(subkey):
+                    # The subkey is not in the config
+                    return {}
+                config_val = config_val[subkey]
+            if subkeys[-1] not in config_val:
+                return {}
+            aux_dict[subkeys[-1]] = config_val[subkeys[-1]]
+            return ret_dict
+
+        pillar_override = {}
+        if 'add_to_pillar' in opts:
+            if not isinstance(opts['add_to_pillar'], list):
+                log.exception('\'add_to_pillar\' config is malformed.')
+                raise SaltClientError('\'add_to_pillar\' config is malformed.')
+            for key in opts['add_to_pillar']:
+                salt.utils.dictupdate.update(pillar_override,
+                                             get_subconfig(key),
+                                             recursive_update=True,
+                                             merge_lists=True)
+        log.trace('opts_pillar_override = {0}'.format(pillar_override))
+        return pillar_override
+
+
+class AsyncRemotePillar(RemotePillarMixin):
     '''
     Get the pillar from the master
     '''
@@ -89,10 +133,12 @@ class AsyncRemotePillar(object):
         self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
         if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
-        self.pillar_override = pillar_override or {}
-        if not isinstance(self.pillar_override, dict):
-            self.pillar_override = {}
+        if pillar_override and not isinstance(pillar_override, dict):
+            pillar_override = {}
             log.error('Pillar data must be a dictionary')
+        self.pillar_override = salt.utils.dictupdate.update(
+            self.get_pillar_override_from_opts(opts),
+            pillar_override or {})
 
     @tornado.gen.coroutine
     def compile_pillar(self):
@@ -126,7 +172,7 @@ class AsyncRemotePillar(object):
         raise tornado.gen.Return(ret_pillar)
 
 
-class RemotePillar(object):
+class RemotePillar(RemotePillarMixin):
     '''
     Get the pillar from the master
     '''
@@ -140,10 +186,12 @@ class RemotePillar(object):
         self.channel = salt.transport.Channel.factory(opts)
         if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
-        self.pillar_override = pillar_override or {}
-        if not isinstance(self.pillar_override, dict):
-            self.pillar_override = {}
+        if pillar_override and not isinstance(pillar_override, dict):
+            pillar_override = {}
             log.error('Pillar data must be a dictionary')
+        self.pillar_override = salt.utils.dictupdate.update(
+            self.get_pillar_override_from_opts(opts),
+            pillar_override or {})
 
     def compile_pillar(self):
         '''
