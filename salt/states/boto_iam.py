@@ -274,10 +274,20 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
             if profile_deleted:
                 ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} login profile is deleted.'.format(name)])
     if __opts__['test']:
-        ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} policies are set to be deleted.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} managed policies are set to be detached.'.format(name)])
         ret['result'] = None
     else:
         _ret = _user_policies_detached(name, region, key, keyid, profile)
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
+    if __opts__['test']:
+        ret['comment'] = ' '.join([ret['comment'], 'IAM user {0} inline policies are set to be deleted.'.format(name)])
+        ret['result'] = None
+    else:
+        _ret = _user_policies_deleted(name, region, key, keyid, profile)
         ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
         if not _ret['result']:
             ret['result'] = _ret['result']
@@ -738,7 +748,49 @@ def _user_policies_detached(
     newpolicies = [x.get('policy_arn') for x in _list]
     ret['changes']['new'] = {'managed_policies': newpolicies}
     msg = '{0} policies detached from user {1}.'
-    ret['comment'] = msg.format(', '.join(newpolicies), name)
+    ret['comment'] = msg.format(', '.join(oldpolicies), name)
+    return ret
+
+
+def _user_policies_deleted(
+        name,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    oldpolicies = __salt__['boto_iam.get_all_user_policies'](user_name=name,
+                        region=region, key=key, keyid=keyid, profile=profile)
+    if not oldpolicies:
+        msg = 'No inline policies in user {0}.'.format(name)
+        ret['comment'] = msg
+        return ret
+    if __opts__['test']:
+        msg = '{0} policies to be deleted from user {1}.'
+        ret['comment'] = msg.format(', '.join(oldpolicies), name)
+        ret['result'] = None
+        return ret
+    ret['changes']['old'] = {'inline_policies': oldpolicies}
+    for policy_name in oldpolicies:
+        policy_deleted = __salt__['boto_iam.delete_user_policy'](name,
+                                                                 policy_name,
+                                                                 region=region, key=key,
+                                                                 keyid=keyid,
+                                                                 profile=profile)
+        if not policy_deleted:
+            newpolicies = __salt__['boto_iam.get_all_user_policies'](name, region=region,
+                                                                     key=key, keyid=keyid,
+                                                                     profile=profile)
+            ret['changes']['new'] = {'inline_policies': newpolicies}
+            ret['result'] = False
+            msg = 'Failed to detach {0} from user {1}'
+            ret['comment'] = msg.format(policy_name, name)
+            return ret
+    newpolicies = __salt__['boto_iam.get_all_user_policies'](name, region=region, key=key,
+                                                             keyid=keyid, profile=profile)
+    ret['changes']['new'] = {'inline_policies': newpolicies}
+    msg = '{0} policies deleted from user {1}.'
+    ret['comment'] = msg.format(', '.join(oldpolicies), name)
     return ret
 
 
@@ -790,10 +842,20 @@ def group_absent(name, region=None, key=None, keyid=None, profile=None):
         ret['comment'] = 'IAM Group {0} does not exist.'.format(name)
         return ret
     if __opts__['test']:
-        ret['comment'] = ' '.join([ret['comment'], 'IAM group {0} policies are set to be deleted.'.format(name)])
+        ret['comment'] = ' '.join([ret['comment'], 'IAM group {0} managed policies are set to be detached.'.format(name)])
         ret['result'] = None
     else:
         _ret = _group_policies_detached(name, region, key, keyid, profile)
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
+    if __opts__['test']:
+        ret['comment'] = ' '.join([ret['comment'], 'IAM group {0} inline policies are set to be deleted.'.format(name)])
+        ret['result'] = None
+    else:
+        _ret = _group_policies_deleted(name, region, key, keyid, profile)
         ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
         if not _ret['result']:
             ret['result'] = _ret['result']
@@ -1149,6 +1211,48 @@ def _group_policies_detached(
     ret['changes']['new'] = {'managed_policies': newpolicies}
     msg = '{0} policies detached from group {1}.'
     ret['comment'] = msg.format(', '.join(newpolicies), name)
+    return ret
+
+
+def _group_policies_deleted(
+        name,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    oldpolicies = __salt__['boto_iam.get_all_group_policies'](group_name=name,
+                        region=region, key=key, keyid=keyid, profile=profile)
+    if not oldpolicies:
+        msg = 'No inline policies in group {0}.'.format(name)
+        ret['comment'] = msg
+        return ret
+    if __opts__['test']:
+        msg = '{0} policies to be deleted from group {1}.'
+        ret['comment'] = msg.format(', '.join(oldpolicies), name)
+        ret['result'] = None
+        return ret
+    ret['changes']['old'] = {'inline_policies': oldpolicies}
+    for policy_name in oldpolicies:
+        policy_deleted = __salt__['boto_iam.delete_group_policy'](name,
+                                                                 policy_name,
+                                                                 region=region, key=key,
+                                                                 keyid=keyid,
+                                                                 profile=profile)
+        if not policy_deleted:
+            newpolicies = __salt__['boto_iam.get_all_group_policies'](name, region=region,
+                                                                     key=key, keyid=keyid,
+                                                                     profile=profile)
+            ret['changes']['new'] = {'inline_policies': newpolicies}
+            ret['result'] = False
+            msg = 'Failed to detach {0} from group {1}'
+            ret['comment'] = msg.format(policy_name, name)
+            return ret
+    newpolicies = __salt__['boto_iam.get_all_group_policies'](name, region=region, key=key,
+                                                             keyid=keyid, profile=profile)
+    ret['changes']['new'] = {'inline_policies': newpolicies}
+    msg = '{0} policies deleted from group {1}.'
+    ret['comment'] = msg.format(', '.join(oldpolicies), name)
     return ret
 
 
