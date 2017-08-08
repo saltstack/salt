@@ -73,6 +73,8 @@ The kubernetes module is used to manage different kubernetes resources.
             key1: value1
             key2: value2
             key3: value3
+
+.. versionadded: 2017.7.0
 '''
 from __future__ import absolute_import
 

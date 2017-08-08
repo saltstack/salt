@@ -2378,6 +2378,10 @@ def _zpool_data(grains):
     if salt.utils.is_windows() or 'proxyminion' in __opts__:
         return {}
 
+    # quickly return if NetBSD (ZFS still under development)
+    if salt.utils.is_netbsd():
+        return {}
+
     # quickly return if no zpool and zfs command
     if not salt.utils.which('zpool'):
         return {}
