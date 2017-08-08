@@ -165,6 +165,12 @@ class BaseCaller(object):
             ret['jid']
         )
         if fun not in self.minion.functions:
+            docs = self.minion.functions['sys.doc']('{0}*'.format(fun))
+            if docs:
+                docs[fun] = self.minion.functions.missing_fun_string(fun)
+                ret['out'] = 'nested'
+                ret['return'] = docs
+                return ret
             sys.stderr.write(self.minion.functions.missing_fun_string(fun))
             mod_name = fun.split('.')[0]
             if mod_name in self.minion.function_errors:

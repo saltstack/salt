@@ -495,6 +495,7 @@ def container_setting(name, container, settings=None):
                     processModel.maxProcesses: 1
                     processModel.userName: TestUser
                     processModel.password: TestPassword
+                    processModel.identityType: SpecificUser
 
     Example of usage for the ``Sites`` container:
 
