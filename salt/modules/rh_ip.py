@@ -683,7 +683,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         for sysctl in bridgectls:
             try:
                 __salt__['sysctl.persist'](sysctl, sysctl_value)
-            except CommandExectionError:
+            except CommandExecutionError:
                 log.warning('Failed to set sysctl: {0}'.format(sysctl))
 
     else:
