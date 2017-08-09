@@ -37,7 +37,7 @@ from Crypto.PublicKey import RSA
 import json
 import salt.syspaths as syspaths
 import salt.cache
-import salt.utils
+import salt.utils.files
 import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
 
@@ -188,7 +188,7 @@ def gen_csr(
 
     tmppriv = '{0}/priv'.format(tmpdir)
     tmpcsr = '{0}/csr'.format(tmpdir)
-    with salt.utils.fopen(tmppriv, 'w') as if_:
+    with salt.utils.files.fopen(tmppriv, 'w') as if_:
         if_.write(data['private_key'])
 
     if country is None:
@@ -232,7 +232,7 @@ def gen_csr(
             'country, state, loc, org, org_unit'
         )
 
-    with salt.utils.fopen(tmpcsr, 'r') as of_:
+    with salt.utils.files.fopen(tmpcsr, 'r') as of_:
         csr = of_.read()
 
     data['minion_id'] = minion_id

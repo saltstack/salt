@@ -844,18 +844,21 @@ def check_hash(path, file_hash):
 
     hash
         The hash to check against the file specified in the ``path`` argument.
-        For versions 2016.11.4 and newer, the hash can be specified without an
+
+        .. versionchanged:: 2016.11.4
+
+        For this and newer versions the hash can be specified without an
         accompanying hash type (e.g. ``e138491e9d5b97023cea823fe17bac22``),
         but for earlier releases it is necessary to also specify the hash type
-        in the format ``<hash_type>:<hash_value>`` (e.g.
-        ``md5:e138491e9d5b97023cea823fe17bac22``).
+        in the format ``<hash_type>=<hash_value>`` (e.g.
+        ``md5=e138491e9d5b97023cea823fe17bac22``).
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.check_hash /etc/fstab e138491e9d5b97023cea823fe17bac22
-        salt '*' file.check_hash /etc/fstab md5:e138491e9d5b97023cea823fe17bac22
+        salt '*' file.check_hash /etc/fstab md5=e138491e9d5b97023cea823fe17bac22
     '''
     path = os.path.expanduser(path)
 
@@ -1233,8 +1236,8 @@ def psed(path,
 
     shutil.copy2(path, '{0}{1}'.format(path, backup))
 
-    with salt.utils.fopen(path, 'w') as ofile:
-        with salt.utils.fopen('{0}{1}'.format(path, backup), 'r') as ifile:
+    with salt.utils.files.fopen(path, 'w') as ofile:
+        with salt.utils.files.fopen('{0}{1}'.format(path, backup), 'r') as ifile:
             if multi is True:
                 for line in ifile.readline():
                     ofile.write(_psed(line, before, after, limit, flags))
@@ -1442,7 +1445,7 @@ def comment_line(path,
     bufsize = os.path.getsize(path)
     try:
         # Use a read-only handle to open the file
-        with salt.utils.fopen(path,
+        with salt.utils.files.fopen(path,
                               mode='rb',
                               buffering=bufsize) as r_file:
             # Loop through each line of the file and look for a match
@@ -1481,12 +1484,12 @@ def comment_line(path,
 
     try:
         # Open the file in write mode
-        with salt.utils.fopen(path,
+        with salt.utils.files.fopen(path,
                               mode='wb',
                               buffering=bufsize) as w_file:
             try:
                 # Open the temp file in read mode
-                with salt.utils.fopen(temp_file,
+                with salt.utils.files.fopen(temp_file,
                                       mode='rb',
                                       buffering=bufsize) as r_file:
                     # Loop through each line of the file and look for a match
@@ -1857,7 +1860,7 @@ def line(path, content=None, match=None, mode=None, location=None,
     if before is None and after is None and not match:
         match = content
 
-    with salt.utils.fopen(path, mode='r') as fp_:
+    with salt.utils.files.fopen(path, mode='r') as fp_:
         body = fp_.read()
     body_before = hashlib.sha256(salt.utils.to_bytes(body)).hexdigest()
     after = _regex_to_static(body, after)
@@ -2000,7 +2003,7 @@ def line(path, content=None, match=None, mode=None, location=None,
 
     if changed:
         if show_changes:
-            with salt.utils.fopen(path, 'r') as fp_:
+            with salt.utils.files.fopen(path, 'r') as fp_:
                 path_content = _splitlines_preserving_trailing_newline(
                     fp_.read())
             changes_diff = ''.join(difflib.unified_diff(
@@ -2032,6 +2035,7 @@ def replace(path,
             show_changes=True,
             ignore_if_missing=False,
             preserve_inode=True,
+            backslash_literal=False,
         ):
     '''
     .. versionadded:: 0.17.0
@@ -2132,6 +2136,14 @@ def replace(path,
         filename. Hard links will then share an inode with the backup, instead
         (if using ``backup`` to create a backup copy).
 
+    backslash_literal : False
+        .. versionadded:: 2016.11.7
+
+        Interpret backslashes as literal backslashes for the repl and not
+        escape characters.  This will help when using append/prepend so that
+        the backslashes are not interpreted for the repl on the second run of
+        the state.
+
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
     processing can be bypassed in order to pass an equal sign through to the
@@ -2212,7 +2224,7 @@ def replace(path,
         # Searching first avoids modifying the time stamp if there are no changes
         r_data = None
         # Use a read-only handle to open the file
-        with salt.utils.fopen(path,
+        with salt.utils.files.fopen(path,
                               mode='rb',
                               buffering=bufsize) as r_file:
             try:
@@ -2228,7 +2240,10 @@ def replace(path,
                 if re.search(cpattern, r_data):
                     return True  # `with` block handles file closure
             else:
-                result, nrepl = re.subn(cpattern, repl, r_data, count)
+                result, nrepl = re.subn(cpattern,
+                                        repl.replace('\\', '\\\\') if backslash_literal else repl,
+                                        r_data,
+                                        count)
 
                 # found anything? (even if no change)
                 if nrepl > 0:
@@ -2271,19 +2286,21 @@ def replace(path,
         r_data = None
         try:
             # Open the file in write mode
-            with salt.utils.fopen(path,
+            with salt.utils.files.fopen(path,
                         mode='w',
                         buffering=bufsize) as w_file:
                 try:
                     # Open the temp file in read mode
-                    with salt.utils.fopen(temp_file,
+                    with salt.utils.files.fopen(temp_file,
                                           mode='r',
                                           buffering=bufsize) as r_file:
                         r_data = mmap.mmap(r_file.fileno(),
                                            0,
                                            access=mmap.ACCESS_READ)
-                        result, nrepl = re.subn(cpattern, repl,
-                                                r_data, count)
+                        result, nrepl = re.subn(cpattern,
+                                                repl.replace('\\', '\\\\') if backslash_literal else repl,
+                                                r_data,
+                                                count)
                         try:
                             w_file.write(salt.utils.to_str(result))
                         except (OSError, IOError) as exc:
@@ -2792,7 +2809,7 @@ def contains_regex(path, regex, lchar=''):
         return False
 
     try:
-        with salt.utils.fopen(path, 'r') as target:
+        with salt.utils.files.fopen(path, 'r') as target:
             for line in target:
                 if lchar:
                     line = line.lstrip(lchar)
@@ -2876,7 +2893,7 @@ def append(path, *args, **kwargs):
 
     # Make sure we have a newline at the end of the file. Do this in binary
     # mode so SEEK_END with nonzero offset will work.
-    with salt.utils.fopen(path, 'rb+') as ofile:
+    with salt.utils.files.fopen(path, 'rb+') as ofile:
         linesep = salt.utils.to_bytes(os.linesep)
         try:
             ofile.seek(-len(linesep), os.SEEK_END)
@@ -2892,7 +2909,7 @@ def append(path, *args, **kwargs):
                 ofile.write(linesep)
 
     # Append lines in text mode
-    with salt.utils.fopen(path, 'a') as ofile:
+    with salt.utils.files.fopen(path, 'a') as ofile:
         for new_line in args:
             ofile.write('{0}{1}'.format(new_line, os.linesep))
 
@@ -2941,7 +2958,7 @@ def prepend(path, *args, **kwargs):
             args = [kwargs['args']]
 
     try:
-        with salt.utils.fopen(path) as fhr:
+        with salt.utils.files.fopen(path) as fhr:
             contents = fhr.readlines()
     except IOError:
         contents = []
@@ -2950,7 +2967,7 @@ def prepend(path, *args, **kwargs):
     for line in args:
         preface.append('{0}\n'.format(line))
 
-    with salt.utils.fopen(path, "w") as ofile:
+    with salt.utils.files.fopen(path, "w") as ofile:
         contents = preface + contents
         ofile.write(''.join(contents))
     return 'Prepended {0} lines to "{1}"'.format(len(args), path)
@@ -2999,7 +3016,7 @@ def write(path, *args, **kwargs):
     contents = []
     for line in args:
         contents.append('{0}\n'.format(line))
-    with salt.utils.fopen(path, "w") as ofile:
+    with salt.utils.files.fopen(path, "w") as ofile:
         ofile.write(''.join(contents))
     return 'Wrote {0} lines to "{1}"'.format(len(contents), path)
 
@@ -3030,7 +3047,7 @@ def touch(name, atime=None, mtime=None):
         mtime = int(mtime)
     try:
         if not os.path.exists(name):
-            with salt.utils.fopen(name, 'a') as fhw:
+            with salt.utils.files.fopen(name, 'a') as fhw:
                 fhw.write('')
 
         if not atime and not mtime:
@@ -3133,7 +3150,7 @@ def truncate(path, length):
         salt '*' file.truncate /path/to/file 512
     '''
     path = os.path.expanduser(path)
-    with salt.utils.fopen(path, 'rb+') as seek_fh:
+    with salt.utils.files.fopen(path, 'rb+') as seek_fh:
         seek_fh.truncate(int(length))
 
 
@@ -3380,7 +3397,7 @@ def read(path, binary=False):
     access_mode = 'r'
     if binary is True:
         access_mode += 'b'
-    with salt.utils.fopen(path, access_mode) as file_obj:
+    with salt.utils.files.fopen(path, access_mode) as file_obj:
         return file_obj.read()
 
 
@@ -4145,7 +4162,7 @@ def extract_hash(hash_fn,
     partial = None
     found = {}
 
-    with salt.utils.fopen(hash_fn, 'r') as fp_:
+    with salt.utils.files.fopen(hash_fn, 'r') as fp_:
         for line in fp_:
             line = line.strip()
             hash_re = r'(?i)(?<![a-z0-9])([a-f0-9]{' + hash_len_expr + '})(?![a-z0-9])'
@@ -4671,9 +4688,9 @@ def check_file_meta(
                     if bdiff:
                         changes['diff'] = bdiff
                     else:
-                        with salt.utils.fopen(sfn, 'r') as src:
+                        with salt.utils.files.fopen(sfn, 'r') as src:
                             slines = src.readlines()
-                        with salt.utils.fopen(name, 'r') as name_:
+                        with salt.utils.files.fopen(name, 'r') as name_:
                             nlines = name_.readlines()
                         changes['diff'] = \
                             ''.join(difflib.unified_diff(nlines, slines))
@@ -4687,12 +4704,12 @@ def check_file_meta(
         if salt.utils.is_windows():
             contents = os.linesep.join(
                 _splitlines_preserving_trailing_newline(contents))
-        with salt.utils.fopen(tmp, 'w') as tmp_:
+        with salt.utils.files.fopen(tmp, 'w') as tmp_:
             tmp_.write(str(contents))
         # Compare the static contents with the named file
-        with salt.utils.fopen(tmp, 'r') as src:
+        with salt.utils.files.fopen(tmp, 'r') as src:
             slines = src.readlines()
-        with salt.utils.fopen(name, 'r') as name_:
+        with salt.utils.files.fopen(name, 'r') as name_:
             nlines = name_.readlines()
         __clean_tmp(tmp)
         if ''.join(nlines) != ''.join(slines):
@@ -4758,9 +4775,9 @@ def get_diff(
 
     sfn = __salt__['cp.cache_file'](masterfile, saltenv)
     if sfn:
-        with salt.utils.fopen(sfn, 'r') as src:
+        with salt.utils.files.fopen(sfn, 'r') as src:
             slines = src.readlines()
-        with salt.utils.fopen(minionfile, 'r') as name_:
+        with salt.utils.files.fopen(minionfile, 'r') as name_:
             nlines = name_.readlines()
         if ''.join(nlines) != ''.join(slines):
             bdiff = _binary_replace(minionfile, sfn)
@@ -4983,9 +5000,9 @@ def manage_file(name,
                 if bdiff:
                     ret['changes']['diff'] = bdiff
                 else:
-                    with salt.utils.fopen(sfn, 'r') as src:
+                    with salt.utils.files.fopen(sfn, 'r') as src:
                         slines = src.readlines()
-                    with salt.utils.fopen(real_name, 'r') as name_:
+                    with salt.utils.files.fopen(real_name, 'r') as name_:
                         nlines = name_.readlines()
 
                     sndiff = ''.join(difflib.unified_diff(nlines, slines))
@@ -5010,7 +5027,7 @@ def manage_file(name,
             if salt.utils.is_windows():
                 contents = os.linesep.join(
                     _splitlines_preserving_trailing_newline(contents))
-            with salt.utils.fopen(tmp, 'w') as tmp_:
+            with salt.utils.files.fopen(tmp, 'w') as tmp_:
                 if encoding:
                     log.debug('File will be encoded with {0}'.format(encoding))
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
@@ -5018,9 +5035,9 @@ def manage_file(name,
                     tmp_.write(str(contents))
 
             # Compare contents of files to know if we need to replace
-            with salt.utils.fopen(tmp, 'r') as src:
+            with salt.utils.files.fopen(tmp, 'r') as src:
                 slines = src.readlines()
-            with salt.utils.fopen(real_name, 'r') as name_:
+            with salt.utils.files.fopen(real_name, 'r') as name_:
                 nlines = name_.readlines()
                 different = ''.join(slines) != ''.join(nlines)
 
@@ -5220,7 +5237,7 @@ def manage_file(name,
             if salt.utils.is_windows():
                 contents = os.linesep.join(
                     _splitlines_preserving_trailing_newline(contents))
-            with salt.utils.fopen(tmp, 'w') as tmp_:
+            with salt.utils.files.fopen(tmp, 'w') as tmp_:
                 if encoding:
                     log.debug('File will be encoded with {0}'.format(encoding))
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))

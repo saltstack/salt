@@ -20,6 +20,7 @@ import copy
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.decorators as decorators
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
@@ -138,7 +139,7 @@ def add(name,
         defs_file = '/etc/login.defs'
         if __grains__['kernel'] != 'OpenBSD':
             try:
-                with salt.utils.fopen(defs_file) as fp_:
+                with salt.utils.files.fopen(defs_file) as fp_:
                     for line in fp_:
                         if 'USERGROUPS_ENAB' not in line[:15]:
                             continue
@@ -158,7 +159,7 @@ def add(name,
         else:
             usermgmt_file = '/etc/usermgmt.conf'
             try:
-                with salt.utils.fopen(usermgmt_file) as fp_:
+                with salt.utils.files.fopen(usermgmt_file) as fp_:
                     for line in fp_:
                         if 'group' not in line[:5]:
                             continue

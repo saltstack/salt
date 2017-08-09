@@ -41,10 +41,12 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.pkg
 import salt.ext.six as six
 import salt.utils.itertools
 import salt.utils.systemd
+import salt.utils.lazy
 import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -181,7 +183,16 @@ def _check_versionlock():
     Ensure that the appropriate versionlock plugin is present
     '''
     if _yum() == 'dnf':
-        vl_plugin = 'python-dnf-plugins-extras-versionlock'
+        if int(__grains__.get('osmajorrelease')) >= 26:
+            if six.PY3:
+                vl_plugin = 'python3-dnf-plugin-versionlock'
+            else:
+                vl_plugin = 'python2-dnf-plugin-versionlock'
+        else:
+            if six.PY3:
+                vl_plugin = 'python3-dnf-plugins-extras-versionlock'
+            else:
+                vl_plugin = 'python-dnf-plugins-extras-versionlock'
     else:
         vl_plugin = 'yum-versionlock' \
             if __grains__.get('osmajorrelease') == '5' \
@@ -1034,6 +1045,11 @@ def refresh_db(**kwargs):
 
     clean_cmd = [_yum(), '--quiet', 'clean', 'expire-cache']
     update_cmd = [_yum(), '--quiet', 'check-update']
+
+    if __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '7':
+        # This feature is disable because it is not used by Salt and lasts a lot with using large repo like EPEL
+        update_cmd.append('--setopt=autocheck_running_kernel=false')
+
     for args in (repo_arg, exclude_arg, branch_arg):
         if args:
             clean_cmd.extend(args)
@@ -1063,6 +1079,21 @@ def clean_metadata(**kwargs):
         salt '*' pkg.clean_metadata
     '''
     return refresh_db(**kwargs)
+
+
+class AvailablePackages(salt.utils.lazy.LazyDict):
+    def __init__(self, *args, **kwargs):
+        super(AvailablePackages, self).__init__()
+        self._args = args
+        self._kwargs = kwargs
+
+    def _load(self, key):
+        self._load_all()
+        return True
+
+    def _load_all(self):
+        self._dict = list_repo_pkgs(*self._args, **self._kwargs)
+        self.loaded = True
 
 
 def install(name=None,
@@ -1278,7 +1309,7 @@ def install(name=None,
                     has_comparison.append(pkgname)
             except (TypeError, ValueError):
                 continue
-        _available = list_repo_pkgs(
+        _available = AvailablePackages(
             *has_wildcards + has_comparison,
             byrepo=False,
             **kwargs)
@@ -2581,7 +2612,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
             content += '\n{0}={1}'.format(line, filerepos[stanza][line])
         content += '\n{0}\n'.format(comments)
 
-    with salt.utils.fopen(repofile, 'w') as fileout:
+    with salt.utils.files.fopen(repofile, 'w') as fileout:
         fileout.write(content)
 
     return 'Repo {0} has been removed from {1}'.format(repo, repofile)
@@ -2722,7 +2753,7 @@ def mod_repo(repo, basedir=None, **kwargs):
             )
         content += '\n{0}\n'.format(comments)
 
-    with salt.utils.fopen(repofile, 'w') as fileout:
+    with salt.utils.files.fopen(repofile, 'w') as fileout:
         fileout.write(content)
 
     return {repofile: filerepos}
@@ -2735,7 +2766,7 @@ def _parse_repo_file(filename):
     repos = {}
     header = ''
     repo = ''
-    with salt.utils.fopen(filename, 'r') as rfile:
+    with salt.utils.files.fopen(filename, 'r') as rfile:
         for line in rfile:
             if line.startswith('['):
                 repo = line.strip().replace('[', '').replace(']', '')

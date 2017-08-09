@@ -18,6 +18,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -94,7 +95,7 @@ def getenforce():
         return 'Disabled'
     try:
         enforce = os.path.join(_selinux_fs_path, 'enforce')
-        with salt.utils.fopen(enforce, 'r') as _fp:
+        with salt.utils.files.fopen(enforce, 'r') as _fp:
             if _fp.readline().strip() == '0':
                 return 'Permissive'
             else:
@@ -115,7 +116,7 @@ def getconfig():
     '''
     try:
         config = '/etc/selinux/config'
-        with salt.utils.fopen(config, 'r') as _fp:
+        with salt.utils.files.fopen(config, 'r') as _fp:
             for line in _fp:
                 if line.strip().startswith('SELINUX='):
                     return line.split('=')[1].capitalize().strip()
@@ -158,7 +159,7 @@ def setenforce(mode):
     if getenforce() != 'Disabled':
         enforce = os.path.join(selinux_fs_path(), 'enforce')
         try:
-            with salt.utils.fopen(enforce, 'w') as _fp:
+            with salt.utils.files.fopen(enforce, 'w') as _fp:
                 _fp.write(mode)
         except (IOError, OSError) as exc:
             msg = 'Could not write SELinux enforce file: {0}'
@@ -166,10 +167,10 @@ def setenforce(mode):
 
     config = '/etc/selinux/config'
     try:
-        with salt.utils.fopen(config, 'r') as _cf:
+        with salt.utils.files.fopen(config, 'r') as _cf:
             conf = _cf.read()
         try:
-            with salt.utils.fopen(config, 'w') as _cf:
+            with salt.utils.files.fopen(config, 'w') as _cf:
                 conf = re.sub(r"\nSELINUX=.*\n", "\nSELINUX=" + modestring + "\n", conf)
                 _cf.write(conf)
         except (IOError, OSError) as exc:

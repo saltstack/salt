@@ -12,7 +12,7 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.ext.six as six
-import salt.utils
+import salt.utils.files
 from salt.exceptions import SaltException
 
 
@@ -57,7 +57,7 @@ class BufferedReader(object):
         if 'a' in mode or 'w' in mode:
             raise InvalidFileMode("Cannot open file in write or append mode")
         self.__path = path
-        self.__file = salt.utils.fopen(self.__path, mode)  # pylint: disable=resource-leakage
+        self.__file = salt.utils.files.fopen(self.__path, mode)  # pylint: disable=resource-leakage
         self.__max_in_mem = max_in_mem
         self.__chunk_size = chunk_size
         self.__buffered = None

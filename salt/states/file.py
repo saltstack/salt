@@ -320,7 +320,7 @@ def _load_accumulators():
         serial = salt.payload.Serial(__opts__)
         ret = {'accumulators': {}, 'accumulators_deps': {}}
         try:
-            with salt.utils.fopen(path, 'rb') as f:
+            with salt.utils.files.fopen(path, 'rb') as f:
                 loaded = serial.load(f)
                 return loaded if loaded else ret
         except (IOError, NameError):
@@ -338,7 +338,7 @@ def _persist_accummulators(accumulators, accumulators_deps):
 
     serial = salt.payload.Serial(__opts__)
     try:
-        with salt.utils.fopen(_get_accumulator_filepath(), 'w+b') as f:
+        with salt.utils.files.fopen(_get_accumulator_filepath(), 'w+b') as f:
             serial.dump(accumm_data, f)
     except NameError:
         # msgpack error from salt-ssh
@@ -1065,7 +1065,7 @@ def _get_template_texts(source_list=None,
         log.debug(msg.format(rndrd_templ_fn, source))
         if rndrd_templ_fn:
             tmplines = None
-            with salt.utils.fopen(rndrd_templ_fn, 'rb') as fp_:
+            with salt.utils.files.fopen(rndrd_templ_fn, 'rb') as fp_:
                 tmplines = fp_.read()
                 if six.PY3:
                     tmplines = tmplines.decode(__salt_system_encoding__)
@@ -1436,7 +1436,10 @@ def absent(name):
             ret['comment'] = 'File {0} is set for removal'.format(name)
             return ret
         try:
-            __salt__['file.remove'](name)
+            if salt.utils.is_windows():
+                __salt__['file.remove'](name, force=True)
+            else:
+                __salt__['file.remove'](name)
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
@@ -2452,12 +2455,16 @@ def managed(name,
                 if sfn and os.path.isfile(sfn):
                     os.remove(sfn)
                 return ret
+
+            if sfn and os.path.isfile(sfn):
+                os.remove(sfn)
+
             # Since we generated a new tempfile and we are not returning here
             # lets change the original sfn to the new tempfile or else we will
             # get file not found
-            if sfn and os.path.isfile(sfn):
-                os.remove(sfn)
-                sfn = tmp_filename
+
+            sfn = tmp_filename
+
         else:
             ret = {'changes': {},
                    'comment': '',
@@ -3756,7 +3763,13 @@ def line(name, content=None, match=None, mode=None, location=None,
     if not name:
         return _error(ret, 'Must provide name to file.line')
 
-    managed(name, create=create, user=user, group=group, mode=file_mode)
+    managed(
+        name,
+        create=create,
+        user=user,
+        group=group,
+        mode=file_mode,
+        replace=False)
 
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -3804,7 +3817,8 @@ def replace(name,
             not_found_content=None,
             backup='.bak',
             show_changes=True,
-            ignore_if_missing=False):
+            ignore_if_missing=False,
+            backslash_literal=False):
     r'''
     Maintain an edit in a file.
 
@@ -3818,12 +3832,13 @@ def replace(name,
         A regular expression, to be matched using Python's
         :py:func:`~re.search`.
 
-        ..note::
+        .. note::
+
             If you need to match a literal string that contains regex special
             characters, you may want to use salt's custom Jinja filter,
             ``escape_regex``.
 
-            ..code-block:: jinja
+            .. code-block:: jinja
 
                 {{ 'http://example.com?foo=bar%20baz' | escape_regex }}
 
@@ -3903,6 +3918,14 @@ def replace(name,
         state will display an error raised by the execution module. If set to
         ``True``, the state will simply report no changes.
 
+    backslash_literal : False
+        .. versionadded:: 2016.11.7
+
+        Interpret backslashes as literal backslashes for the repl and not
+        escape characters.  This will help when using append/prepend so that
+        the backslashes are not interpreted for the repl on the second run of
+        the state.
+
     For complex regex patterns, it can be useful to avoid the need for complex
     quoting and escape sequences by making use of YAML's multiline string
     syntax.
@@ -3951,7 +3974,8 @@ def replace(name,
                                        backup=backup,
                                        dry_run=__opts__['test'],
                                        show_changes=show_changes,
-                                       ignore_if_missing=ignore_if_missing)
+                                       ignore_if_missing=ignore_if_missing,
+                                       backslash_literal=backslash_literal)
 
     if changes:
         ret['pchanges']['diff'] = changes
@@ -4314,7 +4338,7 @@ def comment(name, regex, char='#', backup='.bak'):
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
         return ret
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         slines = fp_.read()
         if six.PY3:
             slines = slines.decode(__salt_system_encoding__)
@@ -4323,7 +4347,7 @@ def comment(name, regex, char='#', backup='.bak'):
     # Perform the edit
     __salt__['file.comment_line'](name, regex, char, True, backup)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         nlines = fp_.read()
         if six.PY3:
             nlines = nlines.decode(__salt_system_encoding__)
@@ -4422,7 +4446,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
         ret['result'] = None
         return ret
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         slines = fp_.read()
         if six.PY3:
             slines = slines.decode(__salt_system_encoding__)
@@ -4431,7 +4455,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     # Perform the edit
     __salt__['file.comment_line'](name, regex, char, False, backup)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         nlines = fp_.read()
         if six.PY3:
             nlines = nlines.decode(__salt_system_encoding__)
@@ -4655,7 +4679,7 @@ def append(name,
 
     text = _validate_str_list(text)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         slines = fp_.read()
         if six.PY3:
             slines = slines.decode(__salt_system_encoding__)
@@ -4706,7 +4730,7 @@ def append(name,
     else:
         ret['comment'] = 'File {0} is in correct state'.format(name)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         nlines = fp_.read()
         if six.PY3:
             nlines = nlines.decode(__salt_system_encoding__)
@@ -4847,7 +4871,7 @@ def prepend(name,
 
     text = _validate_str_list(text)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         slines = fp_.read()
         if six.PY3:
             slines = slines.decode(__salt_system_encoding__)
@@ -4896,7 +4920,7 @@ def prepend(name,
 
     # if header kwarg is True, use verbatim compare
     if header:
-        with salt.utils.fopen(name, 'rb') as fp_:
+        with salt.utils.files.fopen(name, 'rb') as fp_:
             # read as many lines of target file as length of user input
             contents = fp_.read()
             if six.PY3:
@@ -4917,7 +4941,7 @@ def prepend(name,
     else:
         __salt__['file.prepend'](name, *preface)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         nlines = fp_.read()
         if six.PY3:
             nlines = nlines.decode(__salt_system_encoding__)
@@ -5732,7 +5756,7 @@ def serialize(name,
                         'name': name,
                         'result': False}
 
-            with salt.utils.fopen(name, 'r') as fhr:
+            with salt.utils.files.fopen(name, 'r') as fhr:
                 existing_data = __serializers__[deserializer_name](fhr)
 
             if existing_data is not None:

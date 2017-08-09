@@ -35,6 +35,7 @@ import salt.loader
 import salt.utils
 import salt.utils.args
 import salt.utils.event
+import salt.utils.files
 import salt.utils.minions
 import salt.utils.verify
 import salt.utils.jid
@@ -193,7 +194,7 @@ class LocalClient(object):
                                                self.skip_perm_errors)
 
         try:
-            with salt.utils.fopen(keyfile, 'r') as key:
+            with salt.utils.files.fopen(keyfile, 'r') as key:
                 return key.read()
         except (OSError, IOError):
             # Fall back to eauth
@@ -544,6 +545,7 @@ class LocalClient(object):
             {'stewart': {...}}
         '''
         if 'expr_form' in kwargs:
+            import salt
             salt.utils.warn_until(
                 'Fluorine',
                 'The target type should be passed using the \'tgt_type\' '
@@ -741,7 +743,7 @@ class LocalClient(object):
                         ret[mid] = (data if full_return
                                 else data.get('ret', {}))
 
-            for failed in list(set(pub_data['minions']) ^ set(ret)):
+            for failed in list(set(pub_data['minions']) - set(ret)):
                 ret[failed] = False
             return ret
         finally:

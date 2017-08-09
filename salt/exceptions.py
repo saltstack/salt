@@ -389,6 +389,13 @@ class TemplateError(SaltException):
     '''
 
 
+# Validation related exceptions
+class InvalidConfigError(CommandExecutionError):
+    '''
+    Used when the input is invalid
+    '''
+
+
 # VMware related exceptions
 class VMwareSaltError(CommandExecutionError):
     '''

@@ -59,6 +59,7 @@ import salt.loader
 import salt.template
 import salt.utils
 import salt.utils.event
+import salt.utils.files
 from salt.utils import vt
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.utils.yamldumper import SafeOrderedDumper
@@ -109,12 +110,12 @@ def __render_script(path, vm_=None, opts=None, minion=''):
     '''
     log.info('Rendering deploy script: {0}'.format(path))
     try:
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             template = Template(fp_.read())
             return str(template.render(opts=opts, vm=vm_, minion=minion))
     except AttributeError:
         # Specified renderer was not found
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             return fp_.read()
 
 
@@ -161,9 +162,9 @@ def gen_keys(keysize=2048):
     salt.crypt.gen_keys(tdir, 'minion', keysize)
     priv_path = os.path.join(tdir, 'minion.pem')
     pub_path = os.path.join(tdir, 'minion.pub')
-    with salt.utils.fopen(priv_path) as fp_:
+    with salt.utils.files.fopen(priv_path) as fp_:
         priv = fp_.read()
-    with salt.utils.fopen(pub_path) as fp_:
+    with salt.utils.files.fopen(pub_path) as fp_:
         pub = fp_.read()
     shutil.rmtree(tdir)
     return priv, pub
@@ -181,12 +182,12 @@ def accept_key(pki_dir, pub, id_):
             os.makedirs(key_path)
 
     key = os.path.join(pki_dir, 'minions', id_)
-    with salt.utils.fopen(key, 'w+') as fp_:
+    with salt.utils.files.fopen(key, 'w+') as fp_:
         fp_.write(pub)
 
     oldkey = os.path.join(pki_dir, 'minions_pre', id_)
     if os.path.isfile(oldkey):
-        with salt.utils.fopen(oldkey) as fp_:
+        with salt.utils.files.fopen(oldkey) as fp_:
             if fp_.read() == pub:
                 os.remove(oldkey)
 
@@ -450,6 +451,9 @@ def bootstrap(vm_, opts):
         ),
         'maxtries': salt.config.get_cloud_config_value(
             'wait_for_passwd_maxtries', vm_, opts, default=15
+        ),
+        'preflight_cmds': salt.config.get_cloud_config_value(
+            'preflight_cmds', vm_, __opts__, default=[]
         ),
     }
 
@@ -1076,7 +1080,7 @@ def deploy_windows(host,
             # Read master-sign.pub file
             log.debug("Copying master_sign.pub file from {0} to minion".format(master_sign_pub_file))
             try:
-                with salt.utils.fopen(master_sign_pub_file, 'rb') as master_sign_fh:
+                with salt.utils.files.fopen(master_sign_pub_file, 'rb') as master_sign_fh:
                     smb_conn.putFile('C$', 'salt\\conf\\pki\\minion\\master_sign.pub', master_sign_fh.read)
             except Exception as e:
                 log.debug("Exception copying master_sign.pub file {0} to minion".format(master_sign_pub_file))
@@ -1088,7 +1092,7 @@ def deploy_windows(host,
         comps = win_installer.split('/')
         local_path = '/'.join(comps[:-1])
         installer = comps[-1]
-        with salt.utils.fopen(win_installer, 'rb') as inst_fh:
+        with salt.utils.files.fopen(win_installer, 'rb') as inst_fh:
             smb_conn.putFile('C$', 'salttemp/{0}'.format(installer), inst_fh.read)
 
         if use_winrm:
@@ -1463,6 +1467,15 @@ def deploy_script(host,
                         raise SaltCloudSystemExit(
                             'Can\'t set ownership for {0}'.format(
                                 preseed_minion_keys_tempdir))
+
+            # Run any pre-flight commands before running deploy scripts
+            preflight_cmds = kwargs.get('preflight_cmds', [])
+            for command in preflight_cmds:
+                cmd_ret = root_cmd(command, tty, sudo, **ssh_kwargs)
+                if cmd_ret:
+                    raise SaltCloudSystemExit(
+                        'Pre-flight command failed: \'{0}\''.format(command)
+                    )
 
             # The actual deploy script
             if script:
@@ -2506,7 +2519,7 @@ def lock_file(filename, interval=.5, timeout=15):
         else:
             break
 
-    with salt.utils.fopen(lock, 'a'):
+    with salt.utils.files.fopen(lock, 'a'):
         pass
 
 
@@ -2546,7 +2559,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
 
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
-        with salt.utils.fopen(index_file, mode) as fh_:
+        with salt.utils.files.fopen(index_file, mode) as fh_:
             index = msgpack.load(fh_)
     else:
         index = {}
@@ -2563,7 +2576,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     })
 
     mode = 'wb' if six.PY3 else 'w'
-    with salt.utils.fopen(index_file, mode) as fh_:
+    with salt.utils.files.fopen(index_file, mode) as fh_:
         msgpack.dump(index, fh_)
 
     unlock_file(index_file)
@@ -2580,7 +2593,7 @@ def cachedir_index_del(minion_id, base=None):
 
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
-        with salt.utils.fopen(index_file, mode) as fh_:
+        with salt.utils.files.fopen(index_file, mode) as fh_:
             index = msgpack.load(fh_)
     else:
         return
@@ -2589,7 +2602,7 @@ def cachedir_index_del(minion_id, base=None):
         del index[minion_id]
 
     mode = 'wb' if six.PY3 else 'w'
-    with salt.utils.fopen(index_file, mode) as fh_:
+    with salt.utils.files.fopen(index_file, mode) as fh_:
         msgpack.dump(index, fh_)
 
     unlock_file(index_file)
@@ -2646,7 +2659,7 @@ def request_minion_cachedir(
 
     fname = '{0}.p'.format(minion_id)
     path = os.path.join(base, 'requested', fname)
-    with salt.utils.fopen(path, 'w') as fh_:
+    with salt.utils.files.fopen(path, 'w') as fh_:
         msgpack.dump(data, fh_)
 
 
@@ -2678,12 +2691,12 @@ def change_minion_cachedir(
     fname = '{0}.p'.format(minion_id)
     path = os.path.join(base, cachedir, fname)
 
-    with salt.utils.fopen(path, 'r') as fh_:
+    with salt.utils.files.fopen(path, 'r') as fh_:
         cache_data = msgpack.load(fh_)
 
     cache_data.update(data)
 
-    with salt.utils.fopen(path, 'w') as fh_:
+    with salt.utils.files.fopen(path, 'w') as fh_:
         msgpack.dump(cache_data, fh_)
 
 
@@ -2756,7 +2769,7 @@ def list_cache_nodes_full(opts=None, provider=None, base=None):
                 # Finally, get a list of full minion data
                 fpath = os.path.join(min_dir, fname)
                 minion_id = fname[:-2]  # strip '.p' from end of msgpack filename
-                with salt.utils.fopen(fpath, 'r') as fh_:
+                with salt.utils.files.fopen(fpath, 'r') as fh_:
                     minions[driver][prov][minion_id] = msgpack.load(fh_)
 
     return minions
@@ -2813,7 +2826,7 @@ def update_bootstrap(config, url=None):
         else:
             script_name = os.path.basename(url)
     elif os.path.exists(url):
-        with salt.utils.fopen(url) as fic:
+        with salt.utils.files.fopen(url) as fic:
             script_content = fic.read()
         script_name = os.path.basename(url)
     # in last case, assuming we got a script content
@@ -2902,7 +2915,7 @@ def update_bootstrap(config, url=None):
         deploy_path = os.path.join(entry, script_name)
         try:
             finished_full.append(deploy_path)
-            with salt.utils.fopen(deploy_path, 'w') as fp_:
+            with salt.utils.files.fopen(deploy_path, 'w') as fp_:
                 fp_.write(script_content)
         except (OSError, IOError) as err:
             log.debug(
@@ -2935,7 +2948,7 @@ def cache_node_list(nodes, provider, opts):
     for node in nodes:
         diff_node_cache(prov_dir, node, nodes[node], opts)
         path = os.path.join(prov_dir, '{0}.p'.format(node))
-        with salt.utils.fopen(path, 'w') as fh_:
+        with salt.utils.files.fopen(path, 'w') as fh_:
             msgpack.dump(nodes[node], fh_)
 
 
@@ -2960,7 +2973,7 @@ def cache_node(node, provider, opts):
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)
     path = os.path.join(prov_dir, '{0}.p'.format(node['name']))
-    with salt.utils.fopen(path, 'w') as fh_:
+    with salt.utils.files.fopen(path, 'w') as fh_:
         msgpack.dump(node, fh_)
 
 
@@ -3034,7 +3047,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
         )
         return
 
-    with salt.utils.fopen(path, 'r') as fh_:
+    with salt.utils.files.fopen(path, 'r') as fh_:
         try:
             cache_data = msgpack.load(fh_)
         except ValueError:

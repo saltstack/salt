@@ -16,6 +16,7 @@ from tests.support.paths import FILES
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 # Setup logging
 log = logging.getLogger(__name__)
@@ -56,7 +57,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
     @staticmethod
     def _clear_archive_dir():
         try:
-            salt.utils.rm_rf(ARCHIVE_DIR)
+            salt.utils.files.rm_rf(ARCHIVE_DIR)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise

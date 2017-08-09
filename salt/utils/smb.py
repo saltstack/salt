@@ -8,7 +8,7 @@ Utility functions for SMB connections
 from __future__ import absolute_import
 
 # Import python libs
-import salt.utils
+import salt.utils.files
 import logging
 
 log = logging.getLogger(__name__)
@@ -116,5 +116,5 @@ def put_file(local_path, path, share='C$', conn=None, host=None, username=None, 
     if conn is False:
         return False
 
-    with salt.utils.fopen(local_path, 'rb') as fh_:
+    with salt.utils.files.fopen(local_path, 'rb') as fh_:
         conn.putFile(share, path, fh_.read)

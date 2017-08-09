@@ -231,7 +231,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                 distro_mock = MagicMock(
                                     return_value=('SUSE test', 'version', 'arch')
                                 )
-                                with patch("salt.utils.fopen", mock_open()) as suse_release_file:
+                                with patch('salt.utils.files.fopen', mock_open()) as suse_release_file:
                                     suse_release_file.return_value.__iter__.return_value = os_release_map.get('suse_release_file', '').splitlines()
                                     with patch.object(core, 'linux_distribution', distro_mock):
                                         with patch.object(core, '_linux_gpu_data', empty_mock):
@@ -445,7 +445,7 @@ PATCHLEVEL = 3
                                 # Mock linux_distribution to give us the OS
                                 # name that we want.
                                 distro_mock = MagicMock(return_value=('Ubuntu', '16.04', 'xenial'))
-                                with patch("salt.utils.fopen", mock_open()) as suse_release_file:
+                                with patch('salt.utils.files.fopen', mock_open()) as suse_release_file:
                                     suse_release_file.return_value.__iter__.return_value = os_release_map.get(
                                         'suse_release_file', '').splitlines()
                                     with patch.object(core, 'linux_distribution', distro_mock):

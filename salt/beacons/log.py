@@ -12,6 +12,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 
 try:
@@ -79,7 +80,7 @@ def beacon(config):
         ret.append(event)
         return ret
 
-    with salt.utils.fopen(config['file'], 'r') as fp_:
+    with salt.utils.files.fopen(config['file'], 'r') as fp_:
         loc = __context__.get(LOC_KEY, 0)
         if loc == 0:
             fp_.seek(0, 2)

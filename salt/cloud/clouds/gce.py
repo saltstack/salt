@@ -90,6 +90,7 @@ except ImportError:
 from salt.utils import namespaced_function
 import salt.ext.six as six
 import salt.utils.cloud
+import salt.utils.files
 import salt.config as config
 from salt.utils import http
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
@@ -2626,7 +2627,7 @@ def update_pricing(kwargs=None, call=None):
     outfile = os.path.join(
         __opts__['cachedir'], 'gce-pricing.p'
     )
-    with salt.utils.fopen(outfile, 'w') as fho:
+    with salt.utils.files.fopen(outfile, 'w') as fho:
         msgpack.dump(price_json['dict'], fho)
 
     return True
@@ -2665,7 +2666,7 @@ def show_pricing(kwargs=None, call=None):
     if not os.path.exists(pricefile):
         update_pricing()
 
-    with salt.utils.fopen(pricefile, 'r') as fho:
+    with salt.utils.files.fopen(pricefile, 'r') as fho:
         sizes = msgpack.load(fho)
 
     per_hour = float(sizes['gcp_price_list'][size][region])

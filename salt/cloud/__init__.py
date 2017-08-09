@@ -1400,7 +1400,7 @@ class Cloud(object):
             vm_overrides = {}
 
         try:
-            with salt.utils.fopen(self.opts['conf_file'], 'r') as mcc:
+            with salt.utils.files.fopen(self.opts['conf_file'], 'r') as mcc:
                 main_cloud_config = yaml.safe_load(mcc)
             if not main_cloud_config:
                 main_cloud_config = {}
@@ -2110,7 +2110,7 @@ class Map(Cloud):
             # Generate the fingerprint of the master pubkey in order to
             # mitigate man-in-the-middle attacks
             master_temp_pub = salt.utils.files.mkstemp()
-            with salt.utils.fopen(master_temp_pub, 'w') as mtp:
+            with salt.utils.files.fopen(master_temp_pub, 'w') as mtp:
                 mtp.write(pub)
             master_finger = salt.utils.pem_finger(master_temp_pub, sum_type=self.opts['hash_type'])
             os.unlink(master_temp_pub)

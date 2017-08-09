@@ -15,6 +15,7 @@ import salt.minion
 import salt.utils
 import salt.utils.args
 import salt.utils.event
+import salt.utils.files
 from salt.client import mixins
 from salt.output import display_output
 from salt.utils.lazy import verify_fun
@@ -204,7 +205,7 @@ class Runner(RunnerClient):
                 if self.opts.get('eauth'):
                     if 'token' in self.opts:
                         try:
-                            with salt.utils.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
+                            with salt.utils.files.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
                                 low['key'] = fp_.readline()
                         except IOError:
                             low['token'] = self.opts['token']
@@ -275,7 +276,16 @@ class Runner(RunnerClient):
                                 'fun_args': fun_args,
                                 'jid': self.jid},
                                tag='salt/run/{0}/ret'.format(self.jid))
-                ret = '{0}'.format(exc)
+                # Attempt to grab documentation
+                if 'fun' in low:
+                    ret = self.get_docs('{0}*'.format(low['fun']))
+                else:
+                    ret = None
+
+                # If we didn't get docs returned then
+                # return the `not availble` message.
+                if not ret:
+                    ret = '{0}'.format(exc)
                 if not self.opts.get('quiet', False):
                     display_output(ret, 'nested', self.opts)
             else:

@@ -97,6 +97,7 @@ import subprocess
 
 # Import Salt libs
 import salt.utils
+import salt.utils.files
 from salt.roster import get_roster_file
 
 # Import 3rd-party libs
@@ -183,7 +184,7 @@ class Inventory(Target):
         blocks = re.compile(r'^\[.*\]$')
         hostvar = re.compile(r'^\[([^:]+):vars\]$')
         parents = re.compile(r'^\[([^:]+):children\]$')
-        with salt.utils.fopen(inventory_file) as config:
+        with salt.utils.files.fopen(inventory_file) as config:
             for line in config.read().split('\n'):
                 if not line or line.startswith('#'):
                     continue

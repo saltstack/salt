@@ -32,9 +32,11 @@ import salt.loader
 import salt.minion
 import salt.pillar
 import salt.fileclient
+import salt.utils.args
 import salt.utils.crypt
 import salt.utils.dictupdate
 import salt.utils.event
+import salt.utils.files
 import salt.utils.url
 import salt.utils.process
 import salt.syspaths as syspaths
@@ -97,6 +99,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'reload_grains',
     'reload_pillar',
     'runas',
+    'runas_password',
     'fire_event',
     'saltenv',
     'use',
@@ -1702,7 +1705,7 @@ class State(object):
                 # Looks like the directory was created between the check
                 # and the attempt, we are safe to pass
                 pass
-        with salt.utils.fopen(tfile, 'wb+') as fp_:
+        with salt.utils.files.fopen(tfile, 'wb+') as fp_:
             fp_.write(msgpack.dumps(ret))
 
     def call_parallel(self, cdata, low):
@@ -1751,6 +1754,11 @@ class State(object):
             ret = {'result': False, 'name': low['name'], 'changes': {}}
 
         self.state_con['runas'] = low.get('runas', None)
+
+        if low['state'] == 'cmd' and 'password' in low:
+            self.state_con['runas_password'] = low['password']
+        else:
+            self.state_con['runas_password'] = low.get('runas_password', None)
 
         if not low.get('__prereq__'):
             log.info(
@@ -1863,6 +1871,9 @@ class State(object):
             if low.get('__prereq__'):
                 sys.modules[self.states[cdata['full']].__module__].__opts__[
                     'test'] = test
+
+            self.state_con.pop('runas')
+            self.state_con.pop('runas_password')
 
         # If format_call got any warnings, let's show them to the user
         if 'warnings' in cdata:
@@ -2045,7 +2056,7 @@ class State(object):
                                'name': running[tag]['name'],
                                'changes': {}}
                     try:
-                        with salt.utils.fopen(ret_cache, 'rb') as fp_:
+                        with salt.utils.files.fopen(ret_cache, 'rb') as fp_:
                             ret = msgpack.loads(fp_.read())
                     except (OSError, IOError):
                         ret = {'result': False,
@@ -3623,7 +3634,7 @@ class BaseHighState(object):
 
         if cache:
             if os.path.isfile(cfn):
-                with salt.utils.fopen(cfn, 'rb') as fp_:
+                with salt.utils.files.fopen(cfn, 'rb') as fp_:
                     high = self.serial.load(fp_)
                     return self.state.call_high(high, orchestration_jid)
         # File exists so continue
@@ -3668,7 +3679,7 @@ class BaseHighState(object):
             if salt.utils.is_windows():
                 # Make sure cache file isn't read-only
                 self.state.functions['cmd.run']('attrib -R "{0}"'.format(cfn), output_loglevel='quiet')
-            with salt.utils.fopen(cfn, 'w+b') as fp_:
+            with salt.utils.files.fopen(cfn, 'w+b') as fp_:
                 try:
                     self.serial.dump(high, fp_)
                 except TypeError:

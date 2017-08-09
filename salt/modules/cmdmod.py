@@ -142,14 +142,14 @@ def _render_cmd(cmd, cwd, template, saltenv='base', pillarenv=None, pillar_overr
     def _render(contents):
         # write out path to temp file
         tmp_path_fn = salt.utils.files.mkstemp()
-        with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
+        with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](
             tmp_path_fn,
             to_str=True,
             **kwargs
         )
-        salt.utils.safe_rm(tmp_path_fn)
+        salt.utils.files.safe_rm(tmp_path_fn)
         if not data['result']:
             # Failed to render the template
             raise CommandExecutionError(
@@ -293,6 +293,9 @@ def _run(cmd,
 
     if runas is None and '__context__' in globals():
         runas = __context__.get('runas')
+
+    if password is None and '__context__' in globals():
+        password = __context__.get('runas_password')
 
     # Set the default working directory to the home directory of the user
     # salt-minion is running as. Defaults to home directory of user under which
@@ -770,6 +773,7 @@ def run(cmd,
         bg=False,
         password=None,
         encoded_cmd=False,
+        raise_err=False,
         **kwargs):
     r'''
     Execute the passed command and return the output as a string
@@ -873,6 +877,10 @@ def run(cmd,
     :param bool encoded_cmd: Specify if the supplied command is encoded.
       Only applies to shell 'powershell'.
 
+    :param bool raise_err: Specifies whether to raise a CommandExecutionError.
+      If False, the error will be logged, but no exception will be raised.
+      Default is False.
+
     .. warning::
         This function does not process commands through a shell
         unless the python_shell flag is set to True. This means that any
@@ -962,6 +970,8 @@ def run(cmd,
                 )
             )
             log.error(log_callback(msg))
+            if raise_err:
+                raise CommandExecutionError(log_callback(ret['stdout']))
         log.log(lvl, 'output: {0}'.format(log_callback(ret['stdout'])))
     return ret['stdout']
 
@@ -1638,7 +1648,7 @@ def run_all(cmd,
     :param bool encoded_cmd: Specify if the supplied command is encoded.
       Only applies to shell 'powershell'.
 
-      .. versionadded:: Nitrogen
+      .. versionadded:: Oxygen
 
     :param bool redirect_stderr: If set to ``True``, then stderr will be
       redirected to stdout. This is helpful for cases where obtaining both the
@@ -2419,7 +2429,7 @@ def exec_code_all(lang, code, cwd=None):
     else:
         codefile = salt.utils.files.mkstemp()
 
-    with salt.utils.fopen(codefile, 'w+t', binary=False) as fp_:
+    with salt.utils.files.fopen(codefile, 'w+t', binary=False) as fp_:
         fp_.write(code)
 
     if powershell:
@@ -2450,7 +2460,7 @@ def tty(device, echo=''):
     else:
         return {'Error': 'The specified device is not a valid TTY'}
     try:
-        with salt.utils.fopen(teletype, 'wb') as tty_device:
+        with salt.utils.files.fopen(teletype, 'wb') as tty_device:
             tty_device.write(salt.utils.to_bytes(echo))
         return {
             'Success': 'Message was successfully echoed to {0}'.format(teletype)
@@ -2662,7 +2672,7 @@ def _is_valid_shell(shell):
     available_shells = []
     if os.path.exists(shells):
         try:
-            with salt.utils.fopen(shells, 'r') as shell_fp:
+            with salt.utils.files.fopen(shells, 'r') as shell_fp:
                 lines = shell_fp.read().splitlines()
             for line in lines:
                 if line.startswith('#'):
@@ -2694,7 +2704,7 @@ def shells():
     ret = []
     if os.path.exists(shells_fn):
         try:
-            with salt.utils.fopen(shells_fn, 'r') as shell_fp:
+            with salt.utils.files.fopen(shells_fn, 'r') as shell_fp:
                 lines = shell_fp.read().splitlines()
             for line in lines:
                 line = line.strip()
@@ -3199,7 +3209,7 @@ def powershell_all(cmd,
         salt '*' cmd.run_all '$PSVersionTable.CLRVersion' shell=powershell
         salt '*' cmd.run_all 'Get-NetTCPConnection' shell=powershell
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     .. warning::
 
