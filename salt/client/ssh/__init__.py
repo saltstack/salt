@@ -332,19 +332,19 @@ class SSH(object):
                                              python3_bin=self.opts[u'python3_bin'])
         self.mods = mod_data(self.fsclient)
 
-    def _update_roster(self):
+    def _get_roster(self):
         '''
-        Update default flat roster with the passed in information.
+        Read roster filename as a key to the data.
         :return:
         '''
         roster_file = salt.roster.get_roster_file(self.opts)
-        if os.access(roster_file, os.W_OK):
+        if roster_file not in self.__parsed_rosters:
             roster_data = compile_template(roster_file, salt.loader.render(self.opts, {}),
                                            self.opts['renderer'], self.opts['renderer_blacklist'],
                                            self.opts['renderer_whitelist'])
-            for host_id in roster_data:
-                print ('host ID: ', host_id)
-            if self.opts['tgt'] not in roster_data:
+            self.__parsed_rosters[roster_file] = roster_data
+        return roster_file
+
     def _expand_target(self):
         '''
         Figures out if the target is a reachable host without wildcards, expands if any.
@@ -366,6 +366,15 @@ class SSH(object):
 
         if needs_expansion:
             self.opts['tgt'] = hostname
+
+    def _update_roster(self):
+        '''
+        Update default flat roster with the passed in information.
+        :return:
+        '''
+        roster_file = self._get_roster()
+        if os.access(roster_file, os.W_OK):
+            if self.__parsed_rosters[self.ROSTER_UPDATE_FLAG]:
                 with open(roster_file, 'a') as roster_fp:
                     roster_fp.write('# Automatically added by "{s_user}" at {s_time}\n{hostname}:\n    host: '
                                     '{hostname}\n    user: {user}'
@@ -401,6 +410,8 @@ class SSH(object):
                 'host': hostname,
                 'user': user,
             }
+            if not self.opts.get('ssh_skip_roster'):
+                self._update_roster()
 
     def get_pubkey(self):
         '''
