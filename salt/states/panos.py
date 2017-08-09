@@ -62,10 +62,6 @@ commit to the device.
 from __future__ import absolute_import
 import logging
 
-# Import Salt Libs
-import salt.proxy.panos
-from salt._compat import ElementTree as ET
-
 log = logging.getLogger(__name__)
 
 
@@ -349,7 +345,7 @@ def edit_config(name, xpath=None, value=None, commit=False):
              'xpath': xpath,
               'element': value}
 
-    response = __proxy__['panos.call'](set_query)
+    response = __proxy__['panos.call'](query)
 
     ret.update({
         'changes': response,
