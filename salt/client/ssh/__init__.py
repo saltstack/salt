@@ -361,12 +361,10 @@ class SSH(object):
                 if not isinstance(roster_data, bool):
                     for host_id in roster_data:
                         if hostname in [host_id, roster_data.get('host')]:
-                            needs_expansion = hostname != self.opts['tgt']
+                            if hostname != self.opts['tgt']:
+                                self.opts['tgt'] = hostname
                             self.__parsed_rosters[self.ROSTER_UPDATE_FLAG] = False
-                            break
-
-        if needs_expansion:
-            self.opts['tgt'] = hostname
+                            return
 
     def _update_roster(self):
         '''
