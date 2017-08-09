@@ -3038,6 +3038,14 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             action='store_true',
             help='Run command via sudo.'
         )
+        auth_group.add_option(
+            '--skip-roster',
+            dest='ssh_skip_roster',
+            default=False,
+            action='store_true',
+            help='If hostname is not found in the roster, do not store the information'
+                 'into the default roster file (flat).'
+        )
         self.add_option_group(auth_group)
 
         scan_group = optparse.OptionGroup(
