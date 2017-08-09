@@ -212,8 +212,11 @@ class SSH(object):
     '''
     Create an SSH execution system
     '''
+    ROSTER_UPDATE_FLAG = '#__needs_update'
+
     def __init__(self, opts):
-        pull_sock = os.path.join(opts[u'sock_dir'], u'master_event_pull.ipc')
+        self.__parsed_rosters = {SSH.ROSTER_UPDATE_FLAG: True}
+        pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
         if os.path.isfile(pull_sock) and HAS_ZMQ:
             self.event = salt.utils.event.get_event(
                     u'master',
@@ -224,15 +227,15 @@ class SSH(object):
         else:
             self.event = None
         self.opts = opts
-        self.opts['__salt_ssh'] = True
-        if self.opts[u'regen_thin']:
-            self.opts[u'ssh_wipe'] = True
-        if not salt.utils.path.which(u'ssh'):
-            raise salt.exceptions.SaltSystemExit(u'No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
-        self.opts[u'_ssh_version'] = ssh_version()
-        self.tgt_type = self.opts[u'selected_target_option'] \
-            if self.opts[u'selected_target_option'] else u'glob'
-        self.roster = salt.roster.Roster(opts, opts.get(u'roster', u'flat'))
+        if self.opts['regen_thin']:
+            self.opts['ssh_wipe'] = True
+        if not salt.utils.which('ssh'):
+            raise salt.exceptions.SaltSystemExit('No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
+        self.opts['_ssh_version'] = ssh_version()
+        self.tgt_type = self.opts['selected_target_option'] \
+            if self.opts['selected_target_option'] else 'glob'
+        self._expand_target()
+        self.roster = salt.roster.Roster(opts, opts.get('roster', 'flat'))
         self.targets = self.roster.targets(
                 self.opts[u'tgt'],
                 self.tgt_type)
@@ -342,6 +345,27 @@ class SSH(object):
             for host_id in roster_data:
                 print ('host ID: ', host_id)
             if self.opts['tgt'] not in roster_data:
+    def _expand_target(self):
+        '''
+        Figures out if the target is a reachable host without wildcards, expands if any.
+        :return:
+        '''
+        hostname = self.opts['tgt'].split('@')[-1]
+        needs_expansion = '*' not in hostname and salt.utils.network.is_reachable_host(hostname)
+        if needs_expansion:
+            hostname = salt.utils.network.ip_to_host(hostname)
+            self._get_roster()
+            for roster_filename in self.__parsed_rosters:
+                roster_data = self.__parsed_rosters[roster_filename]
+                if not isinstance(roster_data, bool):
+                    for host_id in roster_data:
+                        if hostname in [host_id, roster_data.get('host')]:
+                            needs_expansion = hostname != self.opts['tgt']
+                            self.__parsed_rosters[self.ROSTER_UPDATE_FLAG] = False
+                            break
+
+        if needs_expansion:
+            self.opts['tgt'] = hostname
                 with open(roster_file, 'a') as roster_fp:
                     roster_fp.write('# Automatically added by "{s_user}" at {s_time}\n{hostname}:\n    host: '
                                     '{hostname}\n    user: {user}'
