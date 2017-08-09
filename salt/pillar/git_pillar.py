@@ -344,13 +344,6 @@ from salt.pillar import Pillar
 
 # Import third party libs
 from salt.ext import six
-# pylint: disable=import-error
-try:
-    import git
-    HAS_GITPYTHON = True
-except ImportError:
-    HAS_GITPYTHON = False
-# pylint: enable=import-error
 
 PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify', 'refspecs')
 PER_REMOTE_ONLY = ('name', 'mountpoint')
