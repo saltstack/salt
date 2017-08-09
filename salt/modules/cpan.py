@@ -13,6 +13,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -107,7 +108,7 @@ def remove(module, details=False):
         if 'MANIFEST' not in contents:
             continue
         mfile = os.path.join(build_dir, 'MANIFEST')
-        with salt.utils.fopen(mfile, 'r') as fh_:
+        with salt.utils.files.fopen(mfile, 'r') as fh_:
             for line in fh_.readlines():
                 if line.startswith('lib/'):
                     files.append(line.replace('lib/', ins_path).strip())

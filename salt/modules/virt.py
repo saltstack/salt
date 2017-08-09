@@ -1439,7 +1439,7 @@ def create_xml_path(path):
         salt '*' virt.create_xml_path <path to XML file on the node>
     '''
     try:
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             return create_xml_str(fp_.read())
     except (OSError, IOError):
         return False
@@ -1471,7 +1471,7 @@ def define_xml_path(path):
 
     '''
     try:
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             return define_xml_str(fp_.read())
     except (OSError, IOError):
         return False
@@ -1505,7 +1505,7 @@ def define_vol_xml_path(path):
 
     '''
     try:
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             return define_vol_xml_str(fp_.read())
     except (OSError, IOError):
         return False
@@ -1698,7 +1698,7 @@ def is_kvm_hyper():
         salt '*' virt.is_kvm_hyper
     '''
     try:
-        with salt.utils.fopen('/proc/modules') as fp_:
+        with salt.utils.files.fopen('/proc/modules') as fp_:
             if 'kvm_' not in fp_.read():
                 return False
     except IOError:
@@ -1724,7 +1724,7 @@ def is_xen_hyper():
         # virtual_subtype isn't set everywhere.
         return False
     try:
-        with salt.utils.fopen('/proc/modules') as fp_:
+        with salt.utils.files.fopen('/proc/modules') as fp_:
             if 'xen_' not in fp_.read():
                 return False
     except (OSError, IOError):
@@ -2158,7 +2158,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
     if full and not getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', False):
         # Try do it by ourselves
         # Find the models in cpu_map.xml and iterate over them for as long as entries have submodels
-        with salt.utils.fopen('/usr/share/libvirt/cpu_map.xml', 'r') as cpu_map:
+        with salt.utils.files.fopen('/usr/share/libvirt/cpu_map.xml', 'r') as cpu_map:
             cpu_map = minidom.parse(cpu_map)
 
         cpu_model = cpu.getElementsByTagName('model')[0].childNodes[0].nodeValue

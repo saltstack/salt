@@ -262,7 +262,7 @@ def create_keytab(name, keytab, enctypes=None):
 
     .. code-block:: bash
 
-        salt 'kdc.example.com' host/host1.example.com host1.example.com.keytab
+        salt 'kdc.example.com' kerberos.create_keytab host/host1.example.com host1.example.com.keytab
     '''
     ret = {}
 
