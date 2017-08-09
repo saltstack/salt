@@ -17,12 +17,10 @@ import os
 import re
 import sys
 import time
-import yaml
 import uuid
 import tempfile
 import binascii
 import sys
-import ntpath
 
 # Import salt libs
 import salt.output
