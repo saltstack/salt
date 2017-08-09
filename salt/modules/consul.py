@@ -1972,6 +1972,8 @@ def acl_create(consul_url=None, **kwargs):
     Create a new ACL token.
 
     :param consul_url: The Consul server URL.
+    :param id: Unique identifier for the ACL to create
+               leave it blank to let consul server generate one
     :param name: Meaningful indicator of the ACL's purpose.
     :param type: Type is either client or management. A management
                  token is comparable to a root user and has the
@@ -2001,6 +2003,9 @@ def acl_create(consul_url=None, **kwargs):
         data['Name'] = kwargs['name']
     else:
         raise SaltInvocationError('Required argument "name" is missing.')
+
+    if 'id' in kwargs:
+        data['ID'] = kwargs['id']
 
     if 'type' in kwargs:
         data['Type'] = kwargs['type']
@@ -2120,7 +2125,7 @@ def acl_delete(consul_url=None, **kwargs):
         ret['res'] = False
         return ret
 
-    function = 'acl/delete/{0}'.format(kwargs['id'])
+    function = 'acl/destroy/{0}'.format(kwargs['id'])
     res = _query(consul_url=consul_url,
                  data=data,
                  method='PUT',
