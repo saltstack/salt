@@ -233,6 +233,7 @@ class SSH(object):
         self.targets = self.roster.targets(
                 self.opts[u'tgt'],
                 self.tgt_type)
+        self._update_targets()
         # If we're in a wfunc, we need to get the ssh key location from the
         # top level opts, stored in __master_opts__
         if u'__master_opts__' in self.opts:
@@ -323,6 +324,29 @@ class SSH(object):
                                              python2_bin=self.opts[u'python2_bin'],
                                              python3_bin=self.opts[u'python3_bin'])
         self.mods = mod_data(self.fsclient)
+
+    def _update_targets(self):
+        '''
+        Uptade targets in case hostname was directly passed without the roster.
+        :return:
+        '''
+
+        hostname = self.opts.get('tgt', '')
+        if '@' in hostname:
+            user, hostname = hostname.split('@', 1)
+        else:
+            user = self.opts.get('ssh_user')
+        if hostname == '*':
+            hostname = ''
+
+        if salt.utils.network.is_reachable_host(hostname):
+            hostname = salt.utils.network.ip_to_host(hostname)
+            self.opts['tgt'] = hostname
+            self.targets[hostname] = {
+                'passwd': self.opts.get('ssh_passwd', ''),
+                'host': hostname,
+                'user': user,
+            }
 
     def get_pubkey(self):
         '''
