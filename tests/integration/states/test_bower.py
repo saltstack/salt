@@ -13,10 +13,10 @@ from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 
-@skipIf(salt.utils.which('bower') is None, 'bower not installed')
+@skipIf(salt.utils.path.which('bower') is None, 'bower not installed')
 class BowerStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest

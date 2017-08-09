@@ -26,7 +26,7 @@ from salt.exceptions import get_error_message as _get_error_message
 
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import pymongo
     HAS_MONGODB = True

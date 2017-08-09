@@ -386,7 +386,7 @@ import yaml
 from jinja2 import FileSystemLoader, Environment
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
 
 
