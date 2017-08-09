@@ -441,9 +441,13 @@ class AESReqServerMixin(object):
             else:
                 # the master has its own signing-keypair, compute the master.pub's
                 # signature and append that to the auth-reply
+
+                # get the key_pass for the signing key
+                key_pass = salt.utils.sdb.sdb_get(self.opts['signing_key_pass'], self.opts)
+
                 log.debug("Signing master public key before sending")
                 pub_sign = salt.crypt.sign_message(self.master_key.get_sign_paths()[1],
-                                                   ret['pub_key'])
+                                                   ret['pub_key'], key_pass)
                 ret.update({'pub_sig': binascii.b2a_base64(pub_sign)})
 
         mcipher = PKCS1_OAEP.new(self.master_key.key)

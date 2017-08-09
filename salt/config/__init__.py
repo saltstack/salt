@@ -353,7 +353,7 @@ VALID_OPTS = {
     # The TCP port on which minion events should be pulled if ipc_mode is TCP
     'tcp_pull_port': int,
 
-    # The TCP port on which events for the master should be pulled if ipc_mode is TCP
+    # The TCP port on which events for the master should be published if ipc_mode is TCP
     'tcp_master_pub_port': int,
 
     # The TCP port on which events for the master should be pulled if ipc_mode is TCP
@@ -457,6 +457,12 @@ VALID_OPTS = {
 
     # Allow a daemon to function even if the key directories are not secured
     'permissive_pki_access': bool,
+
+    # The passphrase of the master's private key
+    'key_pass': str,
+
+    # The passphrase of the master's private signing key
+    'signing_key_pass': str,
 
     # The path to a directory to pull in configuration file includes
     'default_include': str,
@@ -1557,6 +1563,8 @@ DEFAULT_MASTER_OPTS = {
     'key_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'key'),
     'verify_env': True,
     'permissive_pki_access': False,
+    'key_pass': None,
+    'signing_key_pass': None,
     'default_include': 'master.d/*.conf',
     'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
     'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),

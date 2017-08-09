@@ -866,10 +866,13 @@ def required_module_list(docstring=None):
     Return a list of python modules required by a salt module that aren't
     in stdlib and don't exist on the current pythonpath.
     '''
+    # Late import to avoid circular import.
+    import salt.utils.doc
+
     if not docstring:
         return []
     ret = []
-    modules = parse_docstring(docstring).get('deps', [])
+    modules = salt.utils.doc.parse_docstring(docstring).get('deps', [])
     for mod in modules:
         try:
             if six.PY3:
@@ -1448,6 +1451,24 @@ def expr_match(line, expr):
 def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     '''
     Check a whitelist and/or blacklist to see if the value matches it.
+
+    value
+        The item to check the whitelist and/or blacklist against.
+
+    whitelist
+        The list of items that are white-listed. If ``value`` is found
+        in the whitelist, then the function returns ``True``. Otherwise,
+        it returns ``False``.
+
+    blacklist
+        The list of items that are black-listed. If ``value`` is found
+        in the blacklist, then the function returns ``False``. Otherwise,
+        it returns ``True``.
+
+    If both a whitelist and a blacklist are provided, value membership
+    in the blacklist will be examined first. If the value is not found
+    in the blacklist, then the whitelist is checked. If the value isn't
+    found in the whitelist, the function returns ``False``.
     '''
     if blacklist is not None:
         if not hasattr(blacklist, '__iter__'):
@@ -2170,30 +2191,18 @@ def parse_docstring(docstring):
             'full': full docstring,
             'deps': list of dependencies (empty list if none)
         }
+
+    .. deprecated:: Oxygen
     '''
-    # First try with regex search for :depends:
-    ret = {}
-    ret['full'] = docstring
-    regex = r'([ \t]*):depends:[ \t]+- (\w+)[^\n]*\n(\1[ \t]+- (\w+)[^\n]*\n)*'
-    match = re.search(regex, docstring, re.M)
-    if match:
-        deps = []
-        regex = r'- (\w+)'
-        for line in match.group(0).strip().splitlines():
-            deps.append(re.search(regex, line).group(1))
-        ret['deps'] = deps
-        return ret
-    # Try searching for a one-liner instead
-    else:
-        txt = 'Required python modules: '
-        data = docstring.splitlines()
-        dep_list = list(x for x in data if x.strip().startswith(txt))
-        if not dep_list:
-            ret['deps'] = []
-            return ret
-        deps = dep_list[0].replace(txt, '').strip().split(', ')
-        ret['deps'] = deps
-        return ret
+    warn_until(
+        'Neon',
+        'Use of \'salt.utils.parse_docstring\' detected. This function has been moved to '
+        '\'salt.utils.doc.parse_docstring\' as of Salt Oxygen. This warning will be '
+        'removed in Salt Neon.'
+    )
+    # Late import to avoid circular import.
+    import salt.utils.doc
+    return salt.utils.doc.parse_docstring(docstring)
 
 
 def print_cli(msg, retries=10, step=0.01):

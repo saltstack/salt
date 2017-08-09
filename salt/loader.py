@@ -195,7 +195,7 @@ def minion_mods(
                             generated modules in __context__
 
     :param dict utils: Utility functions which should be made available to
-                            Salt modules in __utils__. See `utils_dir` in
+                            Salt modules in __utils__. See `utils_dirs` in
                             salt.config for additional information about
                             configuration.
 
@@ -1100,7 +1100,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             virtual_funcs = []
         self.virtual_funcs = virtual_funcs
 
-        self.disabled = set(self.opts.get('disable_{0}s'.format(self.tag), []))
+        self.disabled = set(self.opts.get('disable_{0}{1}'.format(
+            self.tag, '' if self.tag[-1] == 's' else 's'), []))
 
         self.refresh_file_mapping()
 

@@ -221,17 +221,18 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         loop_instance_map = cls.instance_map[io_loop]
 
         key = cls.__key(opts, **kwargs)
-        if key not in loop_instance_map:
+        obj = loop_instance_map.get(key)
+        if obj is None:
             log.debug('Initializing new AsyncTCPReqChannel for {0}'.format(key))
             # we need to make a local variable for this, as we are going to store
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
-            new_obj = object.__new__(cls)
-            new_obj.__singleton_init__(opts, **kwargs)
-            loop_instance_map[key] = new_obj
+            obj = object.__new__(cls)
+            obj.__singleton_init__(opts, **kwargs)
+            loop_instance_map[key] = obj
         else:
             log.debug('Re-using AsyncTCPReqChannel for {0}'.format(key))
-        return loop_instance_map[key]
+        return obj
 
     @classmethod
     def __key(cls, opts, **kwargs):

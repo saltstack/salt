@@ -38,6 +38,9 @@ import salt.utils.files
 import salt.utils.itertools
 import salt.utils.templates
 
+if salt.utils.is_windows():
+    import win32file
+
 # TODO: Check that the passed arguments are correct
 
 # Don't shadow built-in's.
@@ -1059,15 +1062,19 @@ def unzip(zip_file,
                             continue
                     zfile.extract(target, dest, password)
                     if extract_perms:
-                        perm = zfile.getinfo(target).external_attr >> 16
-                        if perm == 0:
-                            umask_ = os.umask(0)
-                            os.umask(umask_)
-                            if target.endswith('/'):
-                                perm = 0o777 & ~umask_
-                            else:
-                                perm = 0o666 & ~umask_
-                        os.chmod(os.path.join(dest, target), perm)
+                        if not salt.utils.is_windows():
+                            perm = zfile.getinfo(target).external_attr >> 16
+                            if perm == 0:
+                                umask_ = os.umask(0)
+                                os.umask(umask_)
+                                if target.endswith('/'):
+                                    perm = 0o777 & ~umask_
+                                else:
+                                    perm = 0o666 & ~umask_
+                            os.chmod(os.path.join(dest, target), perm)
+                        else:
+                            win32_attr = zfile.getinfo(target).external_attr & 0xFF
+                            win32file.SetFileAttributes(os.path.join(dest, target), win32_attr)
     except Exception as exc:
         if runas:
             os.seteuid(euid)

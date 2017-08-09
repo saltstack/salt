@@ -54,10 +54,11 @@ import salt.payload
 import salt.transport.client
 import salt.transport.frame
 import salt.utils.rsax931
+import salt.utils.sdb
 import salt.utils.verify
 import salt.version
 from salt.exceptions import (
-    AuthenticationError, SaltClientError, SaltReqTimeoutError
+    AuthenticationError, SaltClientError, SaltReqTimeoutError, MasterExit
 )
 
 import tornado.gen
@@ -94,7 +95,7 @@ def dropfile(cachedir, user=None):
         os.umask(mask)  # restore original umask
 
 
-def gen_keys(keydir, keyname, keysize, user=None):
+def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     '''
     Generate a RSA public keypair for use with salt
 
@@ -102,6 +103,7 @@ def gen_keys(keydir, keyname, keysize, user=None):
     :param str keyname: The type of salt server for whom this key should be written. (i.e. 'master' or 'minion')
     :param int keysize: The number of bits in the key
     :param str user: The user on the system who should own this keypair
+    :param str passphrase: The passphrase which should be used to encrypt the private key
 
     :rtype: str
     :return: Path on the filesystem to the RSA private key
@@ -123,7 +125,7 @@ def gen_keys(keydir, keyname, keysize, user=None):
 
     cumask = os.umask(191)
     with salt.utils.files.fopen(priv, 'wb+') as f:
-        f.write(gen.exportKey('PEM'))
+        f.write(gen.exportKey('PEM', passphrase))
     os.umask(cumask)
     with salt.utils.files.fopen(pub, 'wb+') as f:
         f.write(gen.publickey().exportKey('PEM'))
@@ -142,7 +144,7 @@ def gen_keys(keydir, keyname, keysize, user=None):
 
 
 @salt.utils.decorators.memoize
-def _get_key_with_evict(path, timestamp):
+def _get_key_with_evict(path, timestamp, passphrase):
     '''
     Load a key from disk.  `timestamp` above is intended to be the timestamp
     of the file's last modification. This fn is memoized so if it is called with the
@@ -152,11 +154,11 @@ def _get_key_with_evict(path, timestamp):
     '''
     log.debug('salt.crypt._get_key_with_evict: Loading private key')
     with salt.utils.files.fopen(path) as f:
-        key = RSA.importKey(f.read())
+        key = RSA.importKey(f.read(), passphrase)
     return key
 
 
-def _get_rsa_key(path):
+def _get_rsa_key(path, passphrase):
     '''
     Read a key off the disk.  Poor man's simple cache in effect here,
     we memoize the result of calling _get_rsa_with_evict.  This means
@@ -168,14 +170,14 @@ def _get_rsa_key(path):
     retrieve the key from disk.
     '''
     log.debug('salt.crypt._get_rsa_key: Loading private key')
-    return _get_key_with_evict(path, str(os.path.getmtime(path)))
+    return _get_key_with_evict(path, str(os.path.getmtime(path)), passphrase)
 
 
-def sign_message(privkey_path, message):
+def sign_message(privkey_path, message, passphrase=None):
     '''
     Use Crypto.Signature.PKCS1_v1_5 to sign a message. Returns the signature.
     '''
-    key = _get_rsa_key(privkey_path)
+    key = _get_rsa_key(privkey_path, passphrase)
     log.debug('salt.crypt.sign_message: Signing message.')
     signer = PKCS1_v1_5.new(key)
     return signer.sign(SHA.new(message))
@@ -194,7 +196,7 @@ def verify_signature(pubkey_path, message, signature):
     return verifier.verify(SHA.new(message), signature)
 
 
-def gen_signature(priv_path, pub_path, sign_path):
+def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
     '''
     creates a signature for the given public-key with
     the given private key and writes it to sign_path
@@ -203,7 +205,7 @@ def gen_signature(priv_path, pub_path, sign_path):
     with salt.utils.files.fopen(pub_path) as fp_:
         mpub_64 = fp_.read()
 
-    mpub_sig = sign_message(priv_path, mpub_64)
+    mpub_sig = sign_message(priv_path, mpub_64, passphrase)
     mpub_sig_64 = binascii.b2a_base64(mpub_sig)
     if os.path.isfile(sign_path):
         return False
@@ -261,7 +263,9 @@ class MasterKeys(dict):
         self.pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
 
-        self.key = self.__get_keys()
+        key_pass = salt.utils.sdb.sdb_get(self.opts['key_pass'], self.opts)
+        self.key = self.__get_keys(passphrase=key_pass)
+
         self.pub_signature = None
 
         # set names for the signing key-pairs
@@ -288,11 +292,15 @@ class MasterKeys(dict):
             # create a new signing key-pair to sign the masters
             # auth-replies when a minion tries to connect
             else:
+
+                key_pass = salt.utils.sdb.sdb_get(self.opts['signing_key_pass'], self.opts)
+
                 self.pub_sign_path = os.path.join(self.opts['pki_dir'],
                                                   opts['master_sign_key_name'] + '.pub')
                 self.rsa_sign_path = os.path.join(self.opts['pki_dir'],
                                                   opts['master_sign_key_name'] + '.pem')
-                self.sign_key = self.__get_keys(name=opts['master_sign_key_name'])
+                self.sign_key = self.__get_keys(name=opts['master_sign_key_name'],
+                                                passphrase=key_pass)
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # some of the member variables correspond to Cython objects which are
@@ -305,7 +313,7 @@ class MasterKeys(dict):
     def __getstate__(self):
         return {'opts': self.opts}
 
-    def __get_keys(self, name='master'):
+    def __get_keys(self, name='master', passphrase=None):
         '''
         Returns a key object for a key in the pki-dir
         '''
@@ -313,16 +321,22 @@ class MasterKeys(dict):
                             name + '.pem')
         if os.path.exists(path):
             with salt.utils.files.fopen(path) as f:
-                key = RSA.importKey(f.read())
+                try:
+                    key = RSA.importKey(f.read(), passphrase)
+                except ValueError as e:
+                    message = 'Unable to read key: {0}; passphrase may be incorrect'.format(path)
+                    log.error(message)
+                    raise MasterExit(message)
             log.debug('Loaded {0} key: {1}'.format(name, path))
         else:
             log.info('Generating {0} keys: {1}'.format(name, self.opts['pki_dir']))
             gen_keys(self.opts['pki_dir'],
                      name,
                      self.opts['keysize'],
-                     self.opts.get('user'))
-            with salt.utils.files.fopen(self.rsa_path) as f:
-                key = RSA.importKey(f.read())
+                     self.opts.get('user'),
+                     passphrase)
+            with salt.utils.files.fopen(path) as f:
+                key = RSA.importKey(f.read(), passphrase)
         return key
 
     def get_pub_str(self, name='master'):
@@ -375,17 +389,18 @@ class AsyncAuth(object):
         loop_instance_map = AsyncAuth.instance_map[io_loop]
 
         key = cls.__key(opts)
-        if key not in loop_instance_map:
+        auth = loop_instance_map.get(key)
+        if auth is None:
             log.debug('Initializing new AsyncAuth for {0}'.format(key))
             # we need to make a local variable for this, as we are going to store
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
-            new_auth = object.__new__(cls)
-            new_auth.__singleton_init__(opts, io_loop=io_loop)
-            loop_instance_map[key] = new_auth
+            auth = object.__new__(cls)
+            auth.__singleton_init__(opts, io_loop=io_loop)
+            loop_instance_map[key] = auth
         else:
             log.debug('Re-using AsyncAuth for {0}'.format(key))
-        return loop_instance_map[key]
+        return auth
 
     @classmethod
     def __key(cls, opts, io_loop=None):
@@ -1011,14 +1026,15 @@ class SAuth(AsyncAuth):
         Only create one instance of SAuth per __key()
         '''
         key = cls.__key(opts)
-        if key not in SAuth.instances:
+        auth = SAuth.instances.get(key)
+        if auth is None:
             log.debug('Initializing new SAuth for {0}'.format(key))
-            new_auth = object.__new__(cls)
-            new_auth.__singleton_init__(opts)
-            SAuth.instances[key] = new_auth
+            auth = object.__new__(cls)
+            auth.__singleton_init__(opts)
+            SAuth.instances[key] = auth
         else:
             log.debug('Re-using SAuth for {0}'.format(key))
-        return SAuth.instances[key]
+        return auth
 
     @classmethod
     def __key(cls, opts, io_loop=None):
