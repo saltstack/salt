@@ -236,7 +236,8 @@ class SSH(object):
         self.targets = self.roster.targets(
                 self.opts[u'tgt'],
                 self.tgt_type)
-        self._update_targets()
+        if not self.targets:
+            self._update_targets()
         # If we're in a wfunc, we need to get the ssh key location from the
         # top level opts, stored in __master_opts__
         if u'__master_opts__' in self.opts:
