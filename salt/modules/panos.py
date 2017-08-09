@@ -214,9 +214,6 @@ def download_antivirus():
         salt '*' panos.download_antivirus
 
     """
-    if not isinstance(synch, bool):
-        raise salt.exception.CommandExecutionError("Synch option must be boolean..")
-
     query = {'type': 'op',
              'cmd': '<request><anti-virus><upgrade><download>'
                     '<latest></latest></download></upgrade></anti-virus></request>'}
