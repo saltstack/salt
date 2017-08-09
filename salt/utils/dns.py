@@ -28,6 +28,8 @@ from salt.utils.odict import OrderedDict
 # Salt
 import salt.modules.cmdmod
 import salt.utils
+import salt.utils.files
+import salt.utils.network
 
 # Debug & Logging
 import logging
@@ -948,7 +950,7 @@ def services(services_file='/etc/services'):
     }
     '''
     res = {}
-    with salt.utils.fopen(services_file, 'r') as svc_defs:
+    with salt.utils.files.fopen(services_file, 'r') as svc_defs:
         for svc_def in svc_defs.readlines():
             svc_def = svc_def.strip()
             if not len(svc_def) or svc_def.startswith('#'):
@@ -1011,7 +1013,7 @@ def parse_resolv(src='/etc/resolv.conf'):
     options = []
 
     try:
-        with salt.utils.fopen(src) as src_file:
+        with salt.utils.files.fopen(src) as src_file:
             # pylint: disable=too-many-nested-blocks
             for line in src_file:
                 line = line.strip().split()

@@ -32,6 +32,8 @@ import logging
 # Import salt libs
 import salt.fileserver
 import salt.utils
+import salt.utils.files
+import salt.utils.gzip_util
 import salt.utils.url
 
 # Import third party libs
@@ -129,7 +131,7 @@ def serve_file(load, fnd):
     # AP
     # May I sleep here to slow down serving of big files?
     # How many threads are serving files?
-    with salt.utils.fopen(fpath, 'rb') as fp_:
+    with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
         if data and six.PY3 and not salt.utils.is_bin_file(fpath):
@@ -191,7 +193,7 @@ def file_hash(load, fnd):
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.fopen(cache_path, 'rb') as fp_:
+            with salt.utils.files.fopen(cache_path, 'rb') as fp_:
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
@@ -222,7 +224,7 @@ def file_hash(load, fnd):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
     cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
-    with salt.utils.flopen(cache_path, 'w') as fp_:
+    with salt.utils.files.flopen(cache_path, 'w') as fp_:
         fp_.write(cache_object)
     return ret
 

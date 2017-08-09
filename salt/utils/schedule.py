@@ -333,10 +333,14 @@ import logging
 import errno
 import random
 import yaml
+import copy
 
 # Import Salt libs
 import salt.config
 import salt.utils
+import salt.utils.error
+import salt.utils.event
+import salt.utils.files
 import salt.utils.jid
 import salt.utils.process
 import salt.utils.args
@@ -472,7 +476,7 @@ class Schedule(object):
         schedule_conf = os.path.join(minion_d_dir, '_schedule.conf')
         log.debug('Persisting schedule')
         try:
-            with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
+            with salt.utils.files.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(
                     salt.utils.to_bytes(
                         yaml.dump(
@@ -817,7 +821,7 @@ class Schedule(object):
                 log.debug('schedule.handle_func: adding this job to the jobcache '
                           'with data {0}'.format(ret))
                 # write this to /var/cache/salt/minion/proc
-                with salt.utils.fopen(proc_fn, 'w+b') as fp_:
+                with salt.utils.files.fopen(proc_fn, 'w+b') as fp_:
                     fp_.write(salt.payload.Serial(self.opts).dumps(ret))
 
             args = tuple()
@@ -841,7 +845,7 @@ class Schedule(object):
             if argspec.keywords:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in six.iteritems(ret):
-                    kwargs['__pub_{0}'.format(key)] = val
+                    kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
 
             ret['return'] = self.functions[func](*args, **kwargs)
 
@@ -1129,21 +1133,28 @@ class Schedule(object):
                                 log.error('Invalid date string {0}. '
                                           'Ignoring job {1}.'.format(i, job))
                                 continue
-                        when = int(time.mktime(when__.timetuple()))
-                        if when >= now:
-                            _when.append(when)
+                        _when.append(int(time.mktime(when__.timetuple())))
 
                     if data['_splay']:
                         _when.append(data['_splay'])
 
+                    # Sort the list of "whens" from earlier to later schedules
                     _when.sort()
+
+                    for i in _when:
+                        if i < now and len(_when) > 1:
+                            # Remove all missed schedules except the latest one.
+                            # We need it to detect if it was triggered previously.
+                            _when.remove(i)
+
                     if _when:
-                        # Grab the first element
-                        # which is the next run time
+                        # Grab the first element, which is the next run time or
+                        # last scheduled time in the past.
                         when = _when[0]
 
                         if '_run' not in data:
-                            data['_run'] = True
+                            # Prevent run of jobs from the past
+                            data['_run'] = bool(when >= now)
 
                         if not data['_next_fire_time']:
                             data['_next_fire_time'] = when
@@ -1368,7 +1379,7 @@ def clean_proc_dir(opts):
 
     for basefilename in os.listdir(salt.minion.get_proc_dir(opts['cachedir'])):
         fn_ = os.path.join(salt.minion.get_proc_dir(opts['cachedir']), basefilename)
-        with salt.utils.fopen(fn_, 'rb') as fp_:
+        with salt.utils.files.fopen(fn_, 'rb') as fp_:
             job = None
             try:
                 job = salt.payload.Serial(opts).load(fp_)

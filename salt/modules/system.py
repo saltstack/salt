@@ -21,6 +21,7 @@ import os.path
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.ext.six as six
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -513,7 +514,7 @@ def get_computer_desc():
     else:
         pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
         try:
-            with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+            with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
                 for line in mach_info.readlines():
                     match = pattern.match(line)
                     if match:
@@ -557,14 +558,14 @@ def set_computer_desc(desc):
         return True if result == 0 else False
 
     if not os.path.isfile('/etc/machine-info'):
-        with salt.utils.fopen('/etc/machine-info', 'w'):
+        with salt.utils.files.fopen('/etc/machine-info', 'w'):
             pass
 
     is_pretty_hostname_found = False
     pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
     new_line = 'PRETTY_HOSTNAME="{0}"'.format(desc)
     try:
-        with salt.utils.fopen('/etc/machine-info', 'r+') as mach_info:
+        with salt.utils.files.fopen('/etc/machine-info', 'r+') as mach_info:
             lines = mach_info.readlines()
             for i, line in enumerate(lines):
                 if pattern.match(line):

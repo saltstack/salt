@@ -17,6 +17,7 @@ import traceback
 # Import salt libs
 import salt.loader
 import salt.utils
+import salt.utils.files
 import salt.ext.six as six
 from salt.utils import print_cli
 
@@ -97,7 +98,7 @@ def display_output(data, out=None, opts=None, **kwargs):
         # output filename can be either '' or None
         if output_filename:
             if not hasattr(output_filename, 'write'):
-                ofh = salt.utils.fopen(output_filename, 'a')  # pylint: disable=resource-leakage
+                ofh = salt.utils.files.fopen(output_filename, 'a')  # pylint: disable=resource-leakage
                 fh_opened = True
             else:
                 # Filehandle/file-like object
@@ -168,6 +169,13 @@ def get_printout(out, opts=None, **kwargs):
             opts['color'] = False
         else:
             opts['color'] = True
+    else:
+        if opts.get('force_color', False):
+            opts['color'] = True
+        elif opts.get('no_color', False) or salt.utils.is_windows():
+            opts['color'] = False
+        else:
+            pass
 
     outputters = salt.loader.outputters(opts)
     if out not in outputters:

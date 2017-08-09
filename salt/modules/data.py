@@ -11,7 +11,7 @@ import ast
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 import salt.payload
 
 # Import 3rd-party lib
@@ -52,7 +52,7 @@ def load():
 
     try:
         datastore_path = os.path.join(__opts__['cachedir'], 'datastore')
-        with salt.utils.fopen(datastore_path, 'rb') as rfh:
+        with salt.utils.files.fopen(datastore_path, 'rb') as rfh:
             return serial.loads(rfh.read())
     except (IOError, OSError, NameError):
         return {}
@@ -76,7 +76,7 @@ def dump(new_data):
 
     try:
         datastore_path = os.path.join(__opts__['cachedir'], 'datastore')
-        with salt.utils.fopen(datastore_path, 'w+b') as fn_:
+        with salt.utils.files.fopen(datastore_path, 'w+b') as fn_:
             serial = salt.payload.Serial(__opts__)
             serial.dump(new_data, fn_)
 

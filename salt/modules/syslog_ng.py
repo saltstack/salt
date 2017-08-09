@@ -35,6 +35,7 @@ import os.path
 
 # Import Salt libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -1174,7 +1175,7 @@ def _write_config(config, newlines=2):
         text = config[key]
 
     try:
-        with salt.utils.fopen(__SYSLOG_NG_CONFIG_FILE, 'a') as fha:
+        with salt.utils.files.fopen(__SYSLOG_NG_CONFIG_FILE, 'a') as fha:
             fha.write(text)
 
             for _ in range(0, newlines):

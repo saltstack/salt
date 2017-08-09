@@ -15,6 +15,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 default_conf = '/etc/logadm.conf'
@@ -69,7 +70,7 @@ def _parse_conf(conf_file=default_conf):
     Parse a logadm configuration file.
     '''
     ret = {}
-    with salt.utils.fopen(conf_file, 'r') as ifile:
+    with salt.utils.files.fopen(conf_file, 'r') as ifile:
         for line in ifile:
             line = line.strip()
             if not line:
@@ -153,8 +154,6 @@ def show_conf(conf_file=default_conf, name=None):
     '''
     Show configuration
 
-    .. versionchanged:: Nitrogen
-
     conf_file : string
         path to logadm.conf, defaults to /etc/logadm.conf
     name : string
@@ -182,7 +181,7 @@ def list_conf(conf_file=default_conf, log_file=None, include_unset=False):
     '''
     Show parsed configuration
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     conf_file : string
         path to logadm.conf, defaults to /etc/logadm.conf
@@ -221,7 +220,7 @@ def show_args():
     '''
     Show which arguments map to which flags and options.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     CLI Example:
 
@@ -241,8 +240,6 @@ def show_args():
 def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
     '''
     Set up pattern for logging.
-
-    .. versionchanged:: Nitrogen
 
     name : string
         alias for entryname

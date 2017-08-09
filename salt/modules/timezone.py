@@ -14,6 +14,7 @@ import string
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.itertools
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
@@ -54,7 +55,7 @@ def _timedatectl():
 
 def _get_zone_solaris():
     tzfile = '/etc/TIMEZONE'
-    with salt.utils.fopen(tzfile, 'r') as fp_:
+    with salt.utils.files.fopen(tzfile, 'r') as fp_:
         for line in fp_:
             if 'TZ=' in line:
                 zonepart = line.rstrip('\n').split('=')[-1]
@@ -81,7 +82,7 @@ def _get_adjtime_timezone():
 
 def _get_zone_sysconfig():
     tzfile = '/etc/sysconfig/clock'
-    with salt.utils.fopen(tzfile, 'r') as fp_:
+    with salt.utils.files.fopen(tzfile, 'r') as fp_:
         for line in fp_:
             if re.match(r'^\s*#', line):
                 continue
@@ -132,7 +133,7 @@ def _get_zone_etc_localtime():
 def _get_zone_etc_timezone():
     tzfile = '/etc/timezone'
     try:
-        with salt.utils.fopen(tzfile, 'r') as fp_:
+        with salt.utils.files.fopen(tzfile, 'r') as fp_:
             return fp_.read().strip()
     except IOError as exc:
         raise CommandExecutionError(
@@ -143,7 +144,7 @@ def _get_zone_etc_timezone():
 
 def _get_zone_aix():
     tzfile = '/etc/environment'
-    with salt.utils.fopen(tzfile, 'r') as fp_:
+    with salt.utils.files.fopen(tzfile, 'r') as fp_:
         for line in fp_:
             if 'TZ=' in line:
                 zonepart = line.rstrip('\n').split('=')[-1]
@@ -302,7 +303,7 @@ def set_zone(timezone):
         __salt__['file.sed'](
             '/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family'] or 'Gentoo' in __grains__['os_family']:
-        with salt.utils.fopen('/etc/timezone', 'w') as ofh:
+        with salt.utils.files.fopen('/etc/timezone', 'w') as ofh:
             ofh.write(timezone.strip())
             ofh.write('\n')
 
@@ -396,7 +397,7 @@ def get_hwclock():
         if 'Debian' in __grains__['os_family']:
             # Original way to look up hwclock on Debian-based systems
             try:
-                with salt.utils.fopen('/etc/default/rcS', 'r') as fp_:
+                with salt.utils.files.fopen('/etc/default/rcS', 'r') as fp_:
                     for line in fp_:
                         if re.match(r'^\s*#', line):
                             continue
@@ -415,7 +416,7 @@ def get_hwclock():
             if not os.path.exists('/etc/adjtime'):
                 offset_file = '/etc/conf.d/hwclock'
                 try:
-                    with salt.utils.fopen(offset_file, 'r') as fp_:
+                    with salt.utils.files.fopen(offset_file, 'r') as fp_:
                         for line in fp_:
                             if line.startswith('clock='):
                                 line = line.rstrip('\n')
@@ -438,7 +439,7 @@ def get_hwclock():
         if 'Solaris' in __grains__['os_family']:
             offset_file = '/etc/rtc_config'
             try:
-                with salt.utils.fopen(offset_file, 'r') as fp_:
+                with salt.utils.files.fopen(offset_file, 'r') as fp_:
                     for line in fp_:
                         if line.startswith('zone_info=GMT'):
                             return 'UTC'
@@ -455,7 +456,7 @@ def get_hwclock():
         if 'AIX' in __grains__['os_family']:
             offset_file = '/etc/environment'
             try:
-                with salt.utils.fopen(offset_file, 'r') as fp_:
+                with salt.utils.files.fopen(offset_file, 'r') as fp_:
                     for line in fp_:
                         if line.startswith('TZ=UTC'):
                             return 'UTC'

@@ -50,6 +50,7 @@ import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.log.setup
 from salt.utils.odict import OrderedDict
 
@@ -592,7 +593,7 @@ def cli_bin_dir(tempdir,
         if not os.path.isfile(script_path):
             log.info('Generating {0}'.format(script_path))
 
-            with salt.utils.fopen(script_path, 'w') as sfh:
+            with salt.utils.files.fopen(script_path, 'w') as sfh:
                 script_template = script_templates.get(original_script_name, None)
                 if script_template is None:
                     script_template = script_templates.get('common', None)

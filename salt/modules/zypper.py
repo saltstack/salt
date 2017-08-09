@@ -37,6 +37,7 @@ from xml.parsers.expat import ExpatError
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.pkg
 import salt.utils.systemd
 from salt.exceptions import (
@@ -276,7 +277,7 @@ class _Zypper(object):
 
             if os.path.exists(self.ZYPPER_LOCK):
                 try:
-                    with salt.utils.fopen(self.ZYPPER_LOCK) as rfh:
+                    with salt.utils.files.fopen(self.ZYPPER_LOCK) as rfh:
                         data = __salt__['ps.proc_info'](int(rfh.readline()),
                                                         attrs=['pid', 'name', 'cmdline', 'create_time'])
                         data['cmdline'] = ' '.join(data['cmdline'])
@@ -651,8 +652,8 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
 
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
-    List the packages currently installed as a dict with versions
-    as a comma separated string::
+    List the packages currently installed as a dict. By default, the dict
+    contains versions as a comma separated string::
 
         {'<package_name>': '<version>[,<version>...]'}
 
@@ -660,6 +661,18 @@ def list_pkgs(versions_as_list=False, **kwargs):
         If set to true, the versions are provided as a list
 
         {'<package_name>': ['<version>', '<version>']}
+
+    attr:
+        If a list of package attributes is specified, returned value will
+        contain them in addition to version, eg.::
+
+        {'<package_name>': [{'version' : 'version', 'arch' : 'arch'}]}
+
+        Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
+
+        If ``all`` is specified, all valid attributes will be returned.
+
+            .. versionadded:: Oxygen
 
     removed:
         not supported
@@ -672,6 +685,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.list_pkgs
+        salt '*' pkg.list_pkgs attr='["version", "arch"]'
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
     # not yet implemented or not applicable
@@ -679,29 +693,60 @@ def list_pkgs(versions_as_list=False, **kwargs):
             for x in ('removed', 'purge_desired')]):
         return {}
 
+    attr = kwargs.get("attr")
     if 'pkg.list_pkgs' in __context__:
-        if versions_as_list:
-            return __context__['pkg.list_pkgs']
-        else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
-            __salt__['pkg_resource.stringify'](ret)
-            return ret
+        return _format_pkg_list(__context__['pkg.list_pkgs'], versions_as_list, attr)
 
-    cmd = ['rpm', '-qa', '--queryformat', '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%|EPOCH?{%{EPOCH}}:{}|\\n']
+    cmd = ['rpm', '-qa', '--queryformat', (
+        "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-"
+        "%|EPOCH?{%{EPOCH}}:{}|_|-%{INSTALLTIME}\\n")]
     ret = {}
     for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
-        name, pkgver, rel, epoch = line.split('_|-')
+        name, pkgver, rel, arch, epoch, install_time = line.split('_|-')
         if epoch:
             pkgver = '{0}:{1}'.format(epoch, pkgver)
         if rel:
             pkgver += '-{0}'.format(rel)
-        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+        install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
+        install_date_time_t = int(install_time)
 
-    __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+        all_attr = {'version': pkgver, 'arch': arch, 'install_date': install_date,
+                    'install_date_time_t': install_date_time_t}
+        __salt__['pkg_resource.add_pkg'](ret, name, all_attr)
+
+    for pkgname in ret:
+        ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
+
+    __context__['pkg.list_pkgs'] = ret
+
+    return _format_pkg_list(ret, versions_as_list, attr)
+
+
+def _format_pkg_list(packages, versions_as_list, attr):
+    '''
+    Formats packages according to parameters.
+    '''
+    ret = copy.deepcopy(packages)
+    if attr:
+        requested_attr = set(['version', 'arch', 'install_date', 'install_date_time_t'])
+
+        if attr != 'all':
+            requested_attr &= set(attr + ['version'])
+
+        for name in ret:
+            versions = []
+            for all_attr in ret[name]:
+                filtered_attr = {}
+                for key in requested_attr:
+                    filtered_attr[key] = all_attr[key]
+                versions.append(filtered_attr)
+            ret[name] = versions
+        return ret
+
+    for name in ret:
+        ret[name] = [d['version'] for d in ret[name]]
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
-
     return ret
 
 
@@ -1068,11 +1113,42 @@ def install(name=None,
         Zypper returns error code 106 if one of the repositories are not available for various reasons.
         In case to set strict check, this parameter needs to be set to True. Default: False.
 
+    diff_attr:
+        If a list of package attributes is specified, returned value will
+        contain them, eg.::
+
+            {'<package>': {
+                'old': {
+                    'version': '<old-version>',
+                    'arch': '<old-arch>'},
+
+                'new': {
+                    'version': '<new-version>',
+                    'arch': '<new-arch>'}}}
+
+        Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
+
+        If ``all`` is specified, all valid attributes will be returned.
+
+        .. versionadded:: Oxygen
+
 
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
+
+    If an attribute list is specified in ``diff_attr``, the dict will also contain
+    any specified attribute, eg.::
+
+        {'<package>': {
+            'old': {
+                'version': '<old-version>',
+                'arch': '<old-arch>'},
+
+            'new': {
+                'version': '<new-version>',
+                'arch': '<new-arch>'}}}
     '''
     if refresh:
         refresh_db()
@@ -1110,7 +1186,8 @@ def install(name=None,
     else:
         targets = pkg_params
 
-    old = list_pkgs() if not downloadonly else list_downloaded()
+    diff_attr = kwargs.get("diff_attr")
+    old = list_pkgs(attr=diff_attr) if not downloadonly else list_downloaded()
     downgrades = []
     if fromrepo:
         fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
@@ -1148,7 +1225,7 @@ def install(name=None,
         __zypper__(no_repo_failure=ignore_repo_failure).call(*cmd)
 
     __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs() if not downloadonly else list_downloaded()
+    new = list_pkgs(attr=diff_attr) if not downloadonly else list_downloaded()
 
     # Handle packages which report multiple new versions
     # (affects only kernel packages at this point)
@@ -1432,7 +1509,7 @@ def list_locks():
     '''
     locks = {}
     if os.path.exists(LOCKS):
-        with salt.utils.fopen(LOCKS) as fhr:
+        with salt.utils.files.fopen(LOCKS) as fhr:
             for meta in [item.split('\n') for item in fhr.read().split('\n\n')]:
                 lock = {}
                 for element in [el for el in meta if el]:
@@ -1808,7 +1885,7 @@ def list_products(all=False, refresh=False):
         if 'productline' in p_nfo and p_nfo['productline']:
             oem_file = os.path.join(OEM_PATH, p_nfo['productline'])
             if os.path.isfile(oem_file):
-                with salt.utils.fopen(oem_file, 'r') as rfile:
+                with salt.utils.files.fopen(oem_file, 'r') as rfile:
                     oem_release = rfile.readline().strip()
                     if oem_release:
                         p_nfo['release'] = oem_release

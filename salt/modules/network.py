@@ -15,6 +15,7 @@ import socket
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+import salt.utils.files
 import salt.utils.network
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
@@ -1296,10 +1297,10 @@ def mod_hostname(hostname):
 
     # Modify the /etc/hosts file to replace the old hostname with the
     # new hostname
-    with salt.utils.fopen('/etc/hosts', 'r') as fp_:
+    with salt.utils.files.fopen('/etc/hosts', 'r') as fp_:
         host_c = fp_.readlines()
 
-    with salt.utils.fopen('/etc/hosts', 'w') as fh_:
+    with salt.utils.files.fopen('/etc/hosts', 'w') as fh_:
         for host in host_c:
             host = host.split()
 
@@ -1316,10 +1317,10 @@ def mod_hostname(hostname):
     # Modify the /etc/sysconfig/network configuration file to set the
     # new hostname
     if __grains__['os_family'] == 'RedHat':
-        with salt.utils.fopen('/etc/sysconfig/network', 'r') as fp_:
+        with salt.utils.files.fopen('/etc/sysconfig/network', 'r') as fp_:
             network_c = fp_.readlines()
 
-        with salt.utils.fopen('/etc/sysconfig/network', 'w') as fh_:
+        with salt.utils.files.fopen('/etc/sysconfig/network', 'w') as fh_:
             for net in network_c:
                 if net.startswith('HOSTNAME'):
                     old_hostname = net.split('=', 1)[1].rstrip()
@@ -1329,17 +1330,17 @@ def mod_hostname(hostname):
                 else:
                     fh_.write(net)
     elif __grains__['os_family'] in ('Debian', 'NILinuxRT'):
-        with salt.utils.fopen('/etc/hostname', 'w') as fh_:
+        with salt.utils.files.fopen('/etc/hostname', 'w') as fh_:
             fh_.write(hostname + '\n')
     elif __grains__['os_family'] == 'OpenBSD':
-        with salt.utils.fopen('/etc/myname', 'w') as fh_:
+        with salt.utils.files.fopen('/etc/myname', 'w') as fh_:
             fh_.write(hostname + '\n')
 
     # Update /etc/nodename and /etc/defaultdomain on SunOS
     if salt.utils.is_sunos():
-        with salt.utils.fopen('/etc/nodename', 'w') as fh_:
+        with salt.utils.files.fopen('/etc/nodename', 'w') as fh_:
             fh_.write(hostname.split('.')[0] + '\n')
-        with salt.utils.fopen('/etc/defaultdomain', 'w') as fh_:
+        with salt.utils.files.fopen('/etc/defaultdomain', 'w') as fh_:
             fh_.write(".".join(hostname.split('.')[1:]) + '\n')
 
     return True

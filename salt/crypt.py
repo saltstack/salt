@@ -21,7 +21,6 @@ import weakref
 import getpass
 
 # Import third party libs
-import salt.ext.six as six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 try:
     from Cryptodome.Cipher import AES, PKCS1_OAEP
@@ -45,17 +44,21 @@ if not CDOME:
         pass
 
 # Import salt libs
+import salt.ext.six as six
 import salt.defaults.exitcodes
 import salt.utils
 import salt.utils.decorators
+import salt.utils.event
+import salt.utils.files
 import salt.payload
 import salt.transport.client
 import salt.transport.frame
 import salt.utils.rsax931
+import salt.utils.sdb
 import salt.utils.verify
 import salt.version
 from salt.exceptions import (
-    AuthenticationError, SaltClientError, SaltReqTimeoutError
+    AuthenticationError, SaltClientError, SaltReqTimeoutError, MasterExit
 )
 
 import tornado.gen
@@ -78,7 +81,7 @@ def dropfile(cachedir, user=None):
 
         if os.path.isfile(dfn) and not os.access(dfn, os.W_OK):
             os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
-        with salt.utils.fopen(dfn, 'wb+') as fp_:
+        with salt.utils.files.fopen(dfn, 'wb+') as fp_:
             fp_.write(b'')
         os.chmod(dfn, stat.S_IRUSR)
         if user:
@@ -92,7 +95,7 @@ def dropfile(cachedir, user=None):
         os.umask(mask)  # restore original umask
 
 
-def gen_keys(keydir, keyname, keysize, user=None):
+def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     '''
     Generate a RSA public keypair for use with salt
 
@@ -100,6 +103,7 @@ def gen_keys(keydir, keyname, keysize, user=None):
     :param str keyname: The type of salt server for whom this key should be written. (i.e. 'master' or 'minion')
     :param int keysize: The number of bits in the key
     :param str user: The user on the system who should own this keypair
+    :param str passphrase: The passphrase which should be used to encrypt the private key
 
     :rtype: str
     :return: Path on the filesystem to the RSA private key
@@ -120,10 +124,10 @@ def gen_keys(keydir, keyname, keysize, user=None):
         raise IOError('Write access denied to "{0}" for user "{1}".'.format(os.path.abspath(keydir), getpass.getuser()))
 
     cumask = os.umask(191)
-    with salt.utils.fopen(priv, 'wb+') as f:
-        f.write(gen.exportKey('PEM'))
+    with salt.utils.files.fopen(priv, 'wb+') as f:
+        f.write(gen.exportKey('PEM', passphrase))
     os.umask(cumask)
-    with salt.utils.fopen(pub, 'wb+') as f:
+    with salt.utils.files.fopen(pub, 'wb+') as f:
         f.write(gen.publickey().exportKey('PEM'))
     os.chmod(priv, 256)
     if user:
@@ -140,7 +144,7 @@ def gen_keys(keydir, keyname, keysize, user=None):
 
 
 @salt.utils.decorators.memoize
-def _get_key_with_evict(path, timestamp):
+def _get_key_with_evict(path, timestamp, passphrase):
     '''
     Load a key from disk.  `timestamp` above is intended to be the timestamp
     of the file's last modification. This fn is memoized so if it is called with the
@@ -149,12 +153,12 @@ def _get_key_with_evict(path, timestamp):
     then the params are different and the key is loaded from disk.
     '''
     log.debug('salt.crypt._get_key_with_evict: Loading private key')
-    with salt.utils.fopen(path) as f:
-        key = RSA.importKey(f.read())
+    with salt.utils.files.fopen(path) as f:
+        key = RSA.importKey(f.read(), passphrase)
     return key
 
 
-def _get_rsa_key(path):
+def _get_rsa_key(path, passphrase):
     '''
     Read a key off the disk.  Poor man's simple cache in effect here,
     we memoize the result of calling _get_rsa_with_evict.  This means
@@ -166,14 +170,14 @@ def _get_rsa_key(path):
     retrieve the key from disk.
     '''
     log.debug('salt.crypt._get_rsa_key: Loading private key')
-    return _get_key_with_evict(path, str(os.path.getmtime(path)))
+    return _get_key_with_evict(path, str(os.path.getmtime(path)), passphrase)
 
 
-def sign_message(privkey_path, message):
+def sign_message(privkey_path, message, passphrase=None):
     '''
     Use Crypto.Signature.PKCS1_v1_5 to sign a message. Returns the signature.
     '''
-    key = _get_rsa_key(privkey_path)
+    key = _get_rsa_key(privkey_path, passphrase)
     log.debug('salt.crypt.sign_message: Signing message.')
     signer = PKCS1_v1_5.new(key)
     return signer.sign(SHA.new(message))
@@ -185,23 +189,23 @@ def verify_signature(pubkey_path, message, signature):
     Returns True for valid signature.
     '''
     log.debug('salt.crypt.verify_signature: Loading public key')
-    with salt.utils.fopen(pubkey_path) as f:
+    with salt.utils.files.fopen(pubkey_path) as f:
         pubkey = RSA.importKey(f.read())
     log.debug('salt.crypt.verify_signature: Verifying signature')
     verifier = PKCS1_v1_5.new(pubkey)
     return verifier.verify(SHA.new(message), signature)
 
 
-def gen_signature(priv_path, pub_path, sign_path):
+def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
     '''
     creates a signature for the given public-key with
     the given private key and writes it to sign_path
     '''
 
-    with salt.utils.fopen(pub_path) as fp_:
+    with salt.utils.files.fopen(pub_path) as fp_:
         mpub_64 = fp_.read()
 
-    mpub_sig = sign_message(priv_path, mpub_64)
+    mpub_sig = sign_message(priv_path, mpub_64, passphrase)
     mpub_sig_64 = binascii.b2a_base64(mpub_sig)
     if os.path.isfile(sign_path):
         return False
@@ -213,7 +217,7 @@ def gen_signature(priv_path, pub_path, sign_path):
         log.trace('Signature file {0} already exists, please '
                   'remove it first and try again'.format(sign_path))
     else:
-        with salt.utils.fopen(sign_path, 'wb+') as sig_f:
+        with salt.utils.files.fopen(sign_path, 'wb+') as sig_f:
             sig_f.write(salt.utils.to_bytes(mpub_sig_64))
         log.trace('Wrote signature to {0}'.format(sign_path))
     return True
@@ -259,7 +263,9 @@ class MasterKeys(dict):
         self.pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
 
-        self.key = self.__get_keys()
+        key_pass = salt.utils.sdb.sdb_get(self.opts['key_pass'], self.opts)
+        self.key = self.__get_keys(passphrase=key_pass)
+
         self.pub_signature = None
 
         # set names for the signing key-pairs
@@ -270,7 +276,7 @@ class MasterKeys(dict):
                 self.sig_path = os.path.join(self.opts['pki_dir'],
                                              opts['master_pubkey_signature'])
                 if os.path.isfile(self.sig_path):
-                    with salt.utils.fopen(self.sig_path) as fp_:
+                    with salt.utils.files.fopen(self.sig_path) as fp_:
                         self.pub_signature = fp_.read()
                     log.info('Read {0}\'s signature from {1}'
                              ''.format(os.path.basename(self.pub_path),
@@ -286,11 +292,15 @@ class MasterKeys(dict):
             # create a new signing key-pair to sign the masters
             # auth-replies when a minion tries to connect
             else:
+
+                key_pass = salt.utils.sdb.sdb_get(self.opts['signing_key_pass'], self.opts)
+
                 self.pub_sign_path = os.path.join(self.opts['pki_dir'],
                                                   opts['master_sign_key_name'] + '.pub')
                 self.rsa_sign_path = os.path.join(self.opts['pki_dir'],
                                                   opts['master_sign_key_name'] + '.pem')
-                self.sign_key = self.__get_keys(name=opts['master_sign_key_name'])
+                self.sign_key = self.__get_keys(name=opts['master_sign_key_name'],
+                                                passphrase=key_pass)
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # some of the member variables correspond to Cython objects which are
@@ -303,24 +313,30 @@ class MasterKeys(dict):
     def __getstate__(self):
         return {'opts': self.opts}
 
-    def __get_keys(self, name='master'):
+    def __get_keys(self, name='master', passphrase=None):
         '''
         Returns a key object for a key in the pki-dir
         '''
         path = os.path.join(self.opts['pki_dir'],
                             name + '.pem')
         if os.path.exists(path):
-            with salt.utils.fopen(path) as f:
-                key = RSA.importKey(f.read())
+            with salt.utils.files.fopen(path) as f:
+                try:
+                    key = RSA.importKey(f.read(), passphrase)
+                except ValueError as e:
+                    message = 'Unable to read key: {0}; passphrase may be incorrect'.format(path)
+                    log.error(message)
+                    raise MasterExit(message)
             log.debug('Loaded {0} key: {1}'.format(name, path))
         else:
             log.info('Generating {0} keys: {1}'.format(name, self.opts['pki_dir']))
             gen_keys(self.opts['pki_dir'],
                      name,
                      self.opts['keysize'],
-                     self.opts.get('user'))
-            with salt.utils.fopen(self.rsa_path) as f:
-                key = RSA.importKey(f.read())
+                     self.opts.get('user'),
+                     passphrase)
+            with salt.utils.files.fopen(path) as f:
+                key = RSA.importKey(f.read(), passphrase)
         return key
 
     def get_pub_str(self, name='master'):
@@ -332,9 +348,9 @@ class MasterKeys(dict):
                             name + '.pub')
         if not os.path.isfile(path):
             key = self.__get_keys()
-            with salt.utils.fopen(path, 'wb+') as wfh:
+            with salt.utils.files.fopen(path, 'wb+') as wfh:
                 wfh.write(key.publickey().exportKey('PEM'))
-        with salt.utils.fopen(path) as rfh:
+        with salt.utils.files.fopen(path) as rfh:
             return rfh.read()
 
     def get_mkey_paths(self):
@@ -373,17 +389,18 @@ class AsyncAuth(object):
         loop_instance_map = AsyncAuth.instance_map[io_loop]
 
         key = cls.__key(opts)
-        if key not in loop_instance_map:
+        auth = loop_instance_map.get(key)
+        if auth is None:
             log.debug('Initializing new AsyncAuth for {0}'.format(key))
             # we need to make a local variable for this, as we are going to store
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
-            new_auth = object.__new__(cls)
-            new_auth.__singleton_init__(opts, io_loop=io_loop)
-            loop_instance_map[key] = new_auth
+            auth = object.__new__(cls)
+            auth.__singleton_init__(opts, io_loop=io_loop)
+            loop_instance_map[key] = auth
         else:
             log.debug('Re-using AsyncAuth for {0}'.format(key))
-        return loop_instance_map[key]
+        return auth
 
     @classmethod
     def __key(cls, opts, io_loop=None):
@@ -674,7 +691,7 @@ class AsyncAuth(object):
         salt.utils.verify.check_path_traversal(self.opts['pki_dir'], user)
 
         if os.path.exists(self.rsa_path):
-            with salt.utils.fopen(self.rsa_path) as f:
+            with salt.utils.files.fopen(self.rsa_path) as f:
                 key = RSA.importKey(f.read())
             log.debug('Loaded minion key: {0}'.format(self.rsa_path))
         else:
@@ -683,7 +700,7 @@ class AsyncAuth(object):
                      'minion',
                      self.opts['keysize'],
                      self.opts.get('user'))
-            with salt.utils.fopen(self.rsa_path) as f:
+            with salt.utils.files.fopen(self.rsa_path) as f:
                 key = RSA.importKey(f.read())
         return key
 
@@ -712,13 +729,13 @@ class AsyncAuth(object):
         payload['id'] = self.opts['id']
         try:
             pubkey_path = os.path.join(self.opts['pki_dir'], self.mpub)
-            with salt.utils.fopen(pubkey_path) as f:
+            with salt.utils.files.fopen(pubkey_path) as f:
                 pub = RSA.importKey(f.read())
             cipher = PKCS1_OAEP.new(pub)
             payload['token'] = cipher.encrypt(self.token)
         except Exception:
             pass
-        with salt.utils.fopen(self.pub_path) as f:
+        with salt.utils.files.fopen(self.pub_path) as f:
             payload['pub'] = f.read()
         return payload
 
@@ -760,7 +777,7 @@ class AsyncAuth(object):
             m_path = os.path.join(self.opts['pki_dir'], self.mpub)
             if os.path.exists(m_path):
                 try:
-                    with salt.utils.fopen(m_path) as f:
+                    with salt.utils.files.fopen(m_path) as f:
                         mkey = RSA.importKey(f.read())
                 except Exception:
                     return '', ''
@@ -829,7 +846,7 @@ class AsyncAuth(object):
                          'from master {0}'.format(self.opts['master']))
                 m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
                 uid = salt.utils.get_uid(self.opts.get('user', None))
-                with salt.utils.fpopen(m_pub_fn, 'wb+', uid=uid) as wfh:
+                with salt.utils.files.fpopen(m_pub_fn, 'wb+', uid=uid) as wfh:
                     wfh.write(salt.utils.to_bytes(payload['pub_key']))
                 return True
             else:
@@ -926,7 +943,7 @@ class AsyncAuth(object):
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         m_pub_exists = os.path.isfile(m_pub_fn)
         if m_pub_exists and master_pub and not self.opts['open_mode']:
-            with salt.utils.fopen(m_pub_fn) as fp_:
+            with salt.utils.files.fopen(m_pub_fn) as fp_:
                 local_master_pub = fp_.read()
 
             if payload['pub_key'].replace('\n', '').replace('\r', '') != \
@@ -977,7 +994,7 @@ class AsyncAuth(object):
                 if not m_pub_exists:
                     # the minion has not received any masters pubkey yet, write
                     # the newly received pubkey to minion_master.pub
-                    with salt.utils.fopen(m_pub_fn, 'wb+') as fp_:
+                    with salt.utils.files.fopen(m_pub_fn, 'wb+') as fp_:
                         fp_.write(salt.utils.to_bytes(payload['pub_key']))
                 return self.extract_aes(payload, master_pub=False)
 
@@ -1009,14 +1026,15 @@ class SAuth(AsyncAuth):
         Only create one instance of SAuth per __key()
         '''
         key = cls.__key(opts)
-        if key not in SAuth.instances:
+        auth = SAuth.instances.get(key)
+        if auth is None:
             log.debug('Initializing new SAuth for {0}'.format(key))
-            new_auth = object.__new__(cls)
-            new_auth.__singleton_init__(opts)
-            SAuth.instances[key] = new_auth
+            auth = object.__new__(cls)
+            auth.__singleton_init__(opts)
+            SAuth.instances[key] = auth
         else:
             log.debug('Re-using SAuth for {0}'.format(key))
-        return SAuth.instances[key]
+        return auth
 
     @classmethod
     def __key(cls, opts, io_loop=None):

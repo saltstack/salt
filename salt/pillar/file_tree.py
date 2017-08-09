@@ -180,8 +180,8 @@ import os
 
 # Import salt libs
 import salt.loader
-import salt.utils
 import salt.utils.dictupdate
+import salt.utils.files
 import salt.utils.minions
 import salt.utils.stringio
 import salt.template
@@ -261,7 +261,7 @@ def _construct_pillar(top_dir,
 
             contents = ''
             try:
-                with salt.utils.fopen(file_path, 'rb') as fhr:
+                with salt.utils.files.fopen(file_path, 'rb') as fhr:
                     buf = fhr.read(__opts__['file_buffer_size'])
                     while buf:
                         contents += buf

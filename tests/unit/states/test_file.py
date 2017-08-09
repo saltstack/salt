@@ -100,7 +100,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     def test_contents_pillar_doesnt_add_more_newlines(self):
         # make sure the newline
-        pillar_value = 'i am the pillar value\n'
+        pillar_value = 'i am the pillar value{0}'.format(os.linesep)
 
         self.run_contents_pillar(pillar_value, expected=pillar_value)
 
@@ -167,7 +167,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_empty,
-                                             'file.group_to_gid': mock_empty}):
+                                             'file.group_to_gid': mock_empty,
+                                             'user.info': mock_empty,
+                                             'user.current': mock_user}):
             comt = ('User {0} does not exist. Group {1} does not exist.'.format(user, group))
             ret.update({'comment': comt, 'name': name})
             self.assertDictEqual(filestate.symlink(name, target, user=user,
@@ -176,7 +178,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
-                                             'file.is_link': mock_f}):
+                                             'file.is_link': mock_f,
+                                             'user.info': mock_empty,
+                                             'user.current': mock_user}):
             with patch.dict(filestate.__opts__, {'test': True}):
                 with patch.object(os.path, 'exists', mock_f):
                     comt = ('Symlink {0} to {1}'
@@ -191,7 +195,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
-                                             'file.is_link': mock_f}):
+                                             'file.is_link': mock_f,
+                                             'user.info': mock_empty,
+                                             'user.current': mock_user}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_f):
                     with patch.object(os.path, 'exists', mock_f):
@@ -207,7 +213,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
                                              'file.is_link': mock_t,
-                                             'file.readlink': mock_target}):
+                                             'file.readlink': mock_target,
+                                             'user.info': mock_empty,
+                                             'user.current': mock_user}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_t):
                     with patch.object(salt.states.file, '_check_symlink_ownership', mock_t):
@@ -224,7 +232,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
                                              'file.is_link': mock_f,
-                                             'file.readlink': mock_target}):
+                                             'file.readlink': mock_target,
+                                             'user.info': mock_empty,
+                                             'user.current': mock_user}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_t):
                     with patch.object(os.path, 'exists', mock_f):
@@ -243,7 +253,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
                                              'file.is_link': mock_f,
-                                             'file.readlink': mock_target}):
+                                             'file.readlink': mock_target,
+                                             'user.info': mock_empty,
+                                             'user.current': mock_user}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_t):
                     with patch.object(os.path, 'exists', mock_f):
@@ -538,7 +550,10 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                               'G12', 'G12', 'G12', 'G12', 'G12'])
             mock_if = MagicMock(side_effect=[True, False, False, False, False,
                                              False, False, False])
-            mock_ret = MagicMock(return_value=(ret, None))
+            if salt.utils.is_windows():
+                mock_ret = MagicMock(return_value=ret)
+            else:
+                mock_ret = MagicMock(return_value=(ret, None))
             mock_dict = MagicMock(return_value={})
             mock_cp = MagicMock(side_effect=[Exception, True])
             mock_ex = MagicMock(side_effect=[Exception, {'changes': {name: name}},
@@ -573,8 +588,14 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(filestate.managed(name, create=False),
                                          ret)
 
-                comt = ('User salt is not available Group saltstack'
-                        ' is not available')
+                # Group argument is ignored on Windows systems. Group is set to
+                # user
+                if salt.utils.is_windows():
+                    comt = ('User salt is not available Group salt'
+                            ' is not available')
+                else:
+                    comt = ('User salt is not available Group saltstack'
+                            ' is not available')
                 ret.update({'comment': comt, 'result': False})
                 self.assertDictEqual(filestate.managed(name, user=user,
                                                        group=group), ret)
@@ -711,17 +732,28 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
-        mock_perms = MagicMock(return_value=(ret, ''))
+        if salt.utils.is_windows():
+            mock_perms = MagicMock(return_value=ret)
+        else:
+            mock_perms = MagicMock(return_value=(ret, ''))
         mock_uid = MagicMock(side_effect=['', 'U12', 'U12', 'U12', 'U12', 'U12',
                                           'U12', 'U12', 'U12', 'U12', 'U12'])
         mock_gid = MagicMock(side_effect=['', 'G12', 'G12', 'G12', 'G12', 'G12',
                                           'G12', 'G12', 'G12', 'G12', 'G12'])
+        mock_check = MagicMock(return_value=(
+            None,
+            'The directory "{0}" will be changed'.format(name),
+            {'directory': 'new'}))
+        mock_error = CommandExecutionError
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
                                              'file.stats': mock_f,
                                              'file.check_perms': mock_perms,
-                                             'file.mkdir': mock_t}):
+                                             'file.mkdir': mock_t}), \
+             patch('salt.utils.win_dacl.get_sid', mock_error), \
+             patch('os.path.isdir', mock_t), \
+             patch('salt.states.file._check_directory_win', mock_check):
             if salt.utils.is_windows():
                 comt = ('User salt is not available Group salt'
                         ' is not available')
@@ -729,8 +761,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 comt = ('User salt is not available Group saltstack'
                         ' is not available')
             ret.update({'comment': comt, 'name': name})
-            self.assertDictEqual(filestate.directory(name, user=user,
-                                                     group=group), ret)
+            self.assertDictEqual(
+                filestate.directory(name, user=user, group=group), ret)
 
             with patch.object(os.path, 'isabs', mock_f):
                 comt = ('Specified file {0} is not an absolute path'
@@ -771,9 +803,19 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                 with patch.object(os.path, 'isfile', mock_f):
                     with patch.dict(filestate.__opts__, {'test': True}):
-                        comt = ('The following files will be changed:\n{0}:'
-                                ' directory - new\n'.format(name))
-                        ret.update({'comment': comt, 'result': None, 'pchanges': {'/etc/grub.conf': {'directory': 'new'}}})
+                        if salt.utils.is_windows():
+                            comt = 'The directory "{0}" will be changed' \
+                                   ''.format(name)
+                            p_chg = {'directory': 'new'}
+                        else:
+                            comt = ('The following files will be changed:\n{0}:'
+                                    ' directory - new\n'.format(name))
+                            p_chg = {'/etc/grub.conf': {'directory': 'new'}}
+                        ret.update({
+                            'comment': comt,
+                            'result': None,
+                            'pchanges': p_chg
+                        })
                         self.assertDictEqual(filestate.directory(name,
                                                                  user=user,
                                                                  group=group),
@@ -845,8 +887,14 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.source_list': mock_lst,
                                              'cp.list_master_dirs': mock_emt,
                                              'cp.list_master': mock_l}):
-            comt = ('User salt is not available Group saltstack'
-                    ' is not available')
+
+            # Group argument is ignored on Windows systems. Group is set to user
+            if salt.utils.is_windows():
+                comt = ('User salt is not available Group salt'
+                        ' is not available')
+            else:
+                comt = ('User salt is not available Group saltstack'
+                        ' is not available')
             ret.update({'comment': comt})
             self.assertDictEqual(filestate.recurse(name, source, user=user,
                                                    group=group), ret)
@@ -954,7 +1002,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': comt, 'name': name})
                 self.assertDictEqual(filestate.blockreplace(name), ret)
 
-            with patch.object(os.path, 'isabs', mock_t):
+            with patch.object(os.path, 'isabs', mock_t), \
+                    patch.object(os.path, 'exists', mock_t):
                 with patch.dict(filestate.__salt__, {'file.blockreplace': mock_t}):
                     with patch.dict(filestate.__opts__, {'test': True}):
                         comt = ('Changes would be made')
@@ -1011,7 +1060,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         self.assertDictEqual(filestate.comment(name, regex), ret)
 
                     with patch.dict(filestate.__opts__, {'test': False}):
-                        with patch.object(salt.utils, 'fopen',
+                        with patch.object(salt.utils.files, 'fopen',
                                           MagicMock(mock_open())):
                             comt = ('Commented lines successfully')
                             ret.update({'comment': comt, 'result': True})
@@ -1066,7 +1115,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
                     with patch.dict(filestate.__opts__, {'test': False}):
-                        with patch.object(salt.utils, 'fopen',
+                        with patch.object(salt.utils.files, 'fopen',
                                           MagicMock(mock_open())):
                             comt = ('Uncommented lines successfully')
                             ret.update({'comment': comt, 'result': True})
@@ -1130,7 +1179,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                     ret.pop('data', None)
                     ret.update({'name': name})
-                    with patch.object(salt.utils, 'fopen',
+                    with patch.object(salt.utils.files, 'fopen',
                                       MagicMock(mock_open(read_data=''))):
                         with patch.object(salt.utils, 'istextfile', mock_f):
                             with patch.dict(filestate.__opts__, {'test': True}):
@@ -1312,8 +1361,15 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                  'file.get_group': mock_grp,
                                  'file.get_mode': mock_grp,
                                  'file.check_perms': mock_t}):
-                    comt = ('User salt is not available Group '
-                            'saltstack is not available')
+
+                    # Group argument is ignored on Windows systems. Group is set
+                    # to user
+                    if salt.utils.is_windows():
+                        comt = ('User salt is not available Group salt'
+                                ' is not available')
+                    else:
+                        comt = ('User salt is not available Group saltstack'
+                                ' is not available')
                     ret.update({'comment': comt, 'result': False})
                     self.assertDictEqual(filestate.copy(name, source, user=user,
                                                         group=group), ret)

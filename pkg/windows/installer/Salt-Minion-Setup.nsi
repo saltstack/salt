@@ -379,8 +379,7 @@ Section -Post
     WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\bin\"
 
     ; Register the Salt-Minion Service
-    nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
-    nsExec::Exec "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
+    nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe -E -s $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
     nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
     nsExec::Exec "nssm.exe set salt-minion Start SERVICE_AUTO_START"
     nsExec::Exec "nssm.exe set salt-minion AppNoConsole 1"

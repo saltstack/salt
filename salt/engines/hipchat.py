@@ -14,25 +14,25 @@ keys make the engine interactive.
     .. code-block:: yaml
 
         engines:
-          - hipchat:
-              api_url: http://api.hipchat.myteam.com
-              token: 'XXXXXX'
-              room: 'salt'
-              control: True
-              valid_users:
-                 - SomeUser
-              valid_commands:
-                 - test.ping
-                 - cmd.run
-                 - list_jobs
-                 - list_commands
-              aliases:
-                 list_jobs:
-                     cmd: jobs.list_jobs
-                 list_commands:
-                     cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster tgt_type=list
-              max_rooms: 0
-              wait_time: 1
+            - hipchat:
+                api_url: http://api.hipchat.myteam.com
+                token: 'XXXXXX'
+                room: 'salt'
+                control: True
+                valid_users:
+                    - SomeUser
+                valid_commands:
+                    - test.ping
+                    - cmd.run
+                    - list_jobs
+                    - list_commands
+                aliases:
+                    list_jobs:
+                        cmd: jobs.list_jobs
+                    list_commands:
+                        cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster
+                max_rooms: 0
+                wait_time: 1
 '''
 
 from __future__ import absolute_import
@@ -49,7 +49,9 @@ except ImportError:
     HAS_HYPCHAT = False
 
 import salt.utils
+import salt.utils.event
 import salt.utils.files
+import salt.utils.http
 import salt.runner
 import salt.client
 import salt.loader
@@ -93,7 +95,7 @@ def _publish_file(token, room, filepath, message='', outputter=None, api_url=Non
     headers['Authorization'] = "Bearer " + token
     msg = json.dumps({'message': message})
 
-    with salt.utils.fopen(filepath, 'rb') as rfh:
+    with salt.utils.files.fopen(filepath, 'rb') as rfh:
         payload = """\
 --boundary123456
 Content-Type: application/json; charset=UTF-8
@@ -411,8 +413,8 @@ def start(token,
                 _publish_code_message(token, room, ret, message=message_string, outputter=outputter, api_url=api_url)
             else:
                 tmp_path_fn = salt.utils.files.mkstemp()
-                with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
+                with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
                     fp_.write(json.dumps(ret, sort_keys=True, indent=4))
                 _publish_file(token, room, tmp_path_fn, message=message_string, api_url=api_url)
-                salt.utils.safe_rm(tmp_path_fn)
+                salt.utils.files.safe_rm(tmp_path_fn)
         time.sleep(wait_time or _DEFAULT_SLEEP)

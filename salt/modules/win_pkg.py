@@ -51,6 +51,7 @@ from salt.exceptions import (CommandExecutionError,
                              SaltInvocationError,
                              SaltRenderError)
 import salt.utils
+import salt.utils.files
 import salt.utils.pkg
 import salt.syspaths
 import salt.payload
@@ -762,7 +763,7 @@ def genrepo(**kwargs):
                     )
     serial = salt.payload.Serial(__opts__)
     mode = 'w+' if six.PY2 else 'wb+'
-    with salt.utils.fopen(repo_details.winrepo_file, mode) as repo_cache:
+    with salt.utils.files.fopen(repo_details.winrepo_file, mode) as repo_cache:
         repo_cache.write(serial.dumps(ret))
     # save reading it back again. ! this breaks due to utf8 issues
     #__context__['winrepo.data'] = ret
@@ -1693,7 +1694,7 @@ def get_repo_data(saltenv='base'):
 
     try:
         serial = salt.payload.Serial(__opts__)
-        with salt.utils.fopen(repo_details.winrepo_file, 'rb') as repofile:
+        with salt.utils.files.fopen(repo_details.winrepo_file, 'rb') as repofile:
             try:
                 repodata = serial.loads(repofile.read()) or {}
                 __context__['winrepo.data'] = repodata

@@ -17,6 +17,7 @@ import salt.fileclient
 import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.templates
 import salt.utils.url
 import salt.crypt
 import salt.transport
@@ -86,7 +87,7 @@ def recv(dest, chunk, append=False, compressed=True, mode=None):
 
     open_mode = 'ab' if append else 'wb'
     try:
-        fh_ = salt.utils.fopen(dest, open_mode)  # pylint: disable=W8470
+        fh_ = salt.utils.files.fopen(dest, open_mode)  # pylint: disable=W8470
     except (IOError, OSError) as exc:
         if exc.errno != errno.ENOENT:
             # Parent dir does not exist, we need to create it
@@ -96,7 +97,7 @@ def recv(dest, chunk, append=False, compressed=True, mode=None):
         except (IOError, OSError) as makedirs_exc:
             # Failed to make directory
             return _error(makedirs_exc.__str__())
-        fh_ = salt.utils.fopen(dest, open_mode)  # pylint: disable=W8470
+        fh_ = salt.utils.files.fopen(dest, open_mode)  # pylint: disable=W8470
 
     try:
         # Write the chunk to disk
@@ -178,14 +179,14 @@ def _render_filenames(path, dest, saltenv, template, **kw):
         '''
         # write out path to temp file
         tmp_path_fn = salt.utils.files.mkstemp()
-        with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
+        with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](
             tmp_path_fn,
             to_str=True,
             **kwargs
         )
-        salt.utils.safe_rm(tmp_path_fn)
+        salt.utils.files.safe_rm(tmp_path_fn)
         if not data['result']:
             # Failed to render the template
             raise CommandExecutionError(
@@ -391,7 +392,7 @@ def get_file_str(path, saltenv='base'):
     fn_ = cache_file(path, saltenv)
     if isinstance(fn_, six.string_types):
         try:
-            with salt.utils.fopen(fn_, 'r') as fp_:
+            with salt.utils.files.fopen(fn_, 'r') as fp_:
                 return fp_.read()
         except IOError:
             return False
@@ -768,7 +769,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
             'path': load_path_list,
             'tok': auth.gen_token('salt')}
     channel = salt.transport.Channel.factory(__opts__)
-    with salt.utils.fopen(path, 'rb') as fp_:
+    with salt.utils.files.fopen(path, 'rb') as fp_:
         init_send = False
         while True:
             load['loc'] = fp_.tell()
@@ -776,7 +777,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
             if not load['data'] and init_send:
                 if remove_source:
                     try:
-                        salt.utils.rm_rf(path)
+                        salt.utils.files.rm_rf(path)
                         log.debug('Removing source file \'{0}\''.format(path))
                     except IOError:
                         log.error('cp.push failed to remove file \

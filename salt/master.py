@@ -67,6 +67,8 @@ import salt.log.setup
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.event
+import salt.utils.files
+import salt.utils.gitfs
 import salt.utils.job
 import salt.utils.verify
 import salt.utils.minions
@@ -988,7 +990,7 @@ class AESFuncs(object):
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
 
         try:
-            with salt.utils.fopen(pub_path, 'r') as fp_:
+            with salt.utils.files.fopen(pub_path, 'r') as fp_:
                 minion_pub = fp_.read()
                 pub = RSA.importKey(minion_pub)
         except (IOError, OSError):
@@ -1300,13 +1302,11 @@ class AESFuncs(object):
             mode = 'ab'
         else:
             mode = 'wb'
-        with salt.utils.fopen(cpath, mode) as fp_:
+        with salt.utils.files.fopen(cpath, mode) as fp_:
             if load['loc']:
                 fp_.seek(load['loc'])
-            if six.PY3:
-                fp_.write(load['data'].encode(__salt_system_encoding__))
-            else:
-                fp_.write(load['data'])
+
+            fp_.write(load['data'])
         return True
 
     def _pillar(self, load):
@@ -1444,7 +1444,7 @@ class AESFuncs(object):
             path_name = os.path.split(syndic_cache_path)[0]
             if not os.path.exists(path_name):
                 os.makedirs(path_name)
-            with salt.utils.fopen(syndic_cache_path, 'w') as wfh:
+            with salt.utils.files.fopen(syndic_cache_path, 'w') as wfh:
                 wfh.write('')
 
         # Format individual return loads
@@ -1500,7 +1500,7 @@ class AESFuncs(object):
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
         jid_fn = os.path.join(auth_cache, str(load['jid']))
-        with salt.utils.fopen(jid_fn, 'r') as fp_:
+        with salt.utils.files.fopen(jid_fn, 'r') as fp_:
             if not load['id'] == fp_.read():
                 return {}
         # Grab the latest and return

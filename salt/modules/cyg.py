@@ -17,6 +17,7 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: dis
 
 # Import Salt libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import SaltInvocationError
 
 
@@ -146,7 +147,7 @@ def _run_silent_cygwin(cyg_arch='x86_64',
         os.remove(cyg_setup_path)
 
     file_data = _urlopen(cyg_setup_source)
-    with salt.utils.fopen(cyg_setup_path, "wb") as fhw:
+    with salt.utils.files.fopen(cyg_setup_path, "wb") as fhw:
         fhw.write(file_data.read())
 
     setup_command = cyg_setup_path

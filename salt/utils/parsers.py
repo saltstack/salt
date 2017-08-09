@@ -32,6 +32,7 @@ import salt.syspaths as syspaths
 import salt.version as version
 import salt.utils
 import salt.utils.args
+import salt.utils.files
 import salt.utils.xdg
 import salt.utils.jid
 from salt.utils import kinds
@@ -1339,7 +1340,7 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
         if self.options.output_file is not None and self.options.output_file_append is False:
             if os.path.isfile(self.options.output_file):
                 try:
-                    with salt.utils.fopen(self.options.output_file, 'w') as ofh:
+                    with salt.utils.files.fopen(self.options.output_file, 'w') as ofh:
                         # Make this a zero length filename instead of removing
                         # it. This way we keep the file permissions.
                         ofh.write('')
