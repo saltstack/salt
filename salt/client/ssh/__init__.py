@@ -21,6 +21,7 @@ import uuid
 import tempfile
 import binascii
 import sys
+import datetime
 
 # Import salt libs
 import salt.output
@@ -49,6 +50,8 @@ import salt.utils.verify
 from salt.utils.locales import sdecode
 from salt.utils.platform import is_windows
 from salt.utils.process import MultiprocessingProcess
+import salt.roster
+from salt.template import compile_template
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -324,6 +327,32 @@ class SSH(object):
                                              python2_bin=self.opts[u'python2_bin'],
                                              python3_bin=self.opts[u'python3_bin'])
         self.mods = mod_data(self.fsclient)
+
+    def _update_roster(self):
+        '''
+        Update default flat roster with the passed in information.
+        :return:
+        '''
+        roster_file = salt.roster.get_roster_file(self.opts)
+        if os.access(roster_file, os.W_OK):
+            roster_data = compile_template(roster_file, salt.loader.render(self.opts, {}),
+                                           self.opts['renderer'], self.opts['renderer_blacklist'],
+                                           self.opts['renderer_whitelist'])
+            for host_id in roster_data:
+                print ('host ID: ', host_id)
+            if self.opts['tgt'] not in roster_data:
+                with open(roster_file, 'a') as roster_fp:
+                    roster_fp.write('# Automatically added by "{s_user}" at {s_time}\n{hostname}:\n    host: '
+                                    '{hostname}\n    user: {user}'
+                                    '\n    passwd: {passwd}\n'.format(s_user=getpass.getuser(),
+                                                                      s_time=datetime.datetime.utcnow().isoformat(),
+                                                                      hostname=self.opts.get('tgt', ''),
+                                                                      user=self.opts.get('ssh_user', ''),
+                                                                      passwd=self.opts.get('ssh_passwd', '')))
+                log.info('The host {0} has been added to the roster {1}'.format(self.opts.get('tgt', ''),
+                                                                                roster_file))
+        else:
+            log.error('Unable to update roster {0}: access denied'.format(roster_file))
 
     def _update_targets(self):
         '''
