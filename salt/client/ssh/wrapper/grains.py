@@ -24,7 +24,9 @@ __grains__ = {}
 
 
 def _serial_sanitizer(instr):
-    u'''Replaces the last 1/4 of a string with X's'''
+    '''
+    Replaces the last 1/4 of a string with X's
+    '''
     length = len(instr)
     index = int(math.floor(length * .75))
     return u'{0}{1}'.format(instr[:index], u'X' * (length - index))
