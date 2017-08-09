@@ -14,9 +14,9 @@ import logging
 import subprocess
 
 # Import salt libs
-import salt.utils
 import salt.utils.path
 import salt.utils.stringutils
+import salt.utils.versions
 
 __virtualname__ = 'trafficserver'
 
@@ -215,7 +215,7 @@ def match_var(regex):
 
         salt '*' trafficserver.match_var regex
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'The \'match_var\' function has been deprecated and will be removed in Salt '
         '{version}. Please use \'match_metric\' or \'match_config\' instead.'
@@ -357,7 +357,7 @@ def read_var(*args):
 
         salt '*' trafficserver.read_var proxy.process.http.tcp_hit_count_stat
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'The \'read_var\' function has been deprecated and will be removed in Salt '
         '{version}. Please use \'read_metric\' or \'read_config\' instead.'
@@ -386,7 +386,7 @@ def set_var(variable, value):
 
         salt '*' trafficserver.set_var proxy.config.http.server_ports
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'The \'set_var\' function has been deprecated and will be removed in Salt '
         '{version}. Please use \'set_config\' instead.'

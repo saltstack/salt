@@ -137,6 +137,7 @@ import random
 import salt.utils.boto
 import salt.utils.boto3
 import salt.utils.compat
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -2456,9 +2457,10 @@ def describe_route_table(route_table_id=None, route_table_name=None,
 
     '''
 
-    salt.utils.warn_until('Oxygen',
-         'The \'describe_route_table\' method has been deprecated and '
-         'replaced by \'describe_route_tables\'.'
+    salt.utils.versions.warn_until(
+        'Oxygen',
+        'The \'describe_route_table\' method has been deprecated and '
+        'replaced by \'describe_route_tables\'.'
     )
     if not any((route_table_id, route_table_name, tags)):
         raise SaltInvocationError('At least one of the following must be specified: '

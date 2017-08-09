@@ -80,10 +80,11 @@ import logging
 import os
 import re
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils  # Can be removed once gen_state_tag is moved
 import salt.utils.pkg
 import salt.utils.platform
+import salt.utils.versions
 from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict

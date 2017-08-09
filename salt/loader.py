@@ -21,7 +21,6 @@ from zipimport import zipimporter
 # Import salt libs
 import salt.config
 import salt.syspaths
-import salt.utils  # Can be removed after warn_until is moved
 import salt.utils.context
 import salt.utils.dictupdate
 import salt.utils.event
@@ -29,6 +28,7 @@ import salt.utils.files
 import salt.utils.lazy
 import salt.utils.odict
 import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
@@ -1717,7 +1717,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     log.trace(u'Loaded %s as virtual %s', module_name, virtual)
 
                     if not hasattr(mod, u'__virtualname__'):
-                        salt.utils.warn_until(
+                        salt.utils.versions.warn_until(
                             u'Hydrogen',
                             u'The \'{0}\' module is renaming itself in its '
                             u'__virtual__() function ({1} => {2}). Please '

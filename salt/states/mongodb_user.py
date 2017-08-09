@@ -9,7 +9,7 @@ Management of Mongodb users
 
 from __future__ import absolute_import
 
-import salt.utils
+import salt.utils.versions
 
 # Define the module's virtual name
 __virtualname__ = 'mongodb_user'
@@ -85,7 +85,7 @@ def present(name,
 
     '''
 
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'The \'mongodb_user.present\' function has been deprecated and will be removed in Salt '
         '{version}. Please use \'mongodb.user_present\' instead.'
@@ -189,7 +189,7 @@ def absent(name,
         The database in which to authenticate
     '''
 
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'The \'mongodb_user.absent\' function has been deprecated and will be removed in Salt '
         '{version}. Please use \'mongodb.user_absent\' instead.'

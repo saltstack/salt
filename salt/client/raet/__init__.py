@@ -12,8 +12,8 @@ import logging
 # Import Salt libs
 import salt.config
 import salt.client
-import salt.utils
 import salt.utils.kinds as kinds
+import salt.utils.versions
 import salt.syspaths as syspaths
 
 try:
@@ -50,7 +50,7 @@ class LocalClient(salt.client.LocalClient):
         Publish the command!
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
