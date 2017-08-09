@@ -235,7 +235,7 @@ class SSH(object):
         self.tgt_type = self.opts['selected_target_option'] \
             if self.opts['selected_target_option'] else 'glob'
         self._expand_target()
-        self.roster = salt.roster.Roster(opts, opts.get('roster', 'flat'))
+        self.roster = salt.roster.Roster(self.opts, self.opts.get('roster', 'flat'))
         self.targets = self.roster.targets(
                 self.opts[u'tgt'],
                 self.tgt_type)
