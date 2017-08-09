@@ -1453,7 +1453,7 @@ def absent(name):
             ret['comment'] = 'Directory {0} is set for removal'.format(name)
             return ret
         try:
-        	if salt.utils.is_windows():
+            if salt.utils.is_windows():
                 __salt__['file.remove'](name, force=True)
             else:
                 __salt__['file.remove'](name)
