@@ -351,6 +351,11 @@ class SSH(object):
         Figures out if the target is a reachable host without wildcards, expands if any.
         :return:
         '''
+        # TODO: Support -L
+        target = self.opts['tgt']
+        if isinstance(target, list):
+            return
+
         hostname = self.opts['tgt'].split('@')[-1]
         needs_expansion = '*' not in hostname and salt.utils.network.is_reachable_host(hostname)
         if needs_expansion:
