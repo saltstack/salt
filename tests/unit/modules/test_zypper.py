@@ -23,6 +23,7 @@ from tests.support.mock import (
 # Import Salt libs
 import salt.utils.files
 import salt.modules.zypper as zypper
+import salt.modules.pkg_resource as pkg_resource
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -496,20 +497,20 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             'jakarta-commons-discovery_|-0.4_|-129.686_|-noarch_|-_|-1498636511',
             'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-noarch_|-_|-1498636510',
         ]
-        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}):
-            with patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}):
-                with patch.dict(zypper.__salt__, {'pkg_resource.sort_pkglist': MagicMock()}):
-                    with patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
-                        pkgs = zypper.list_pkgs()
-                        for pkg_name, pkg_version in {
-                            'jakarta-commons-discovery': '0.4-129.686',
-                            'yast2-ftp-server': '3.1.8-8.1',
-                            'protobuf-java': '2.6.1-3.1.develHead',
-                            'susemanager-build-keys-web': '12.0-5.1.develHead',
-                            'apache-commons-cli': '1.2-1.233',
-                            'jose4j': '0.4.4-2.1.develHead'}.items():
-                            self.assertTrue(pkgs.get(pkg_name))
-                            self.assertEqual(pkgs[pkg_name], [pkg_version])
+        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
+            pkgs = zypper.list_pkgs(versions_as_list=True)
+            for pkg_name, pkg_version in {
+                'jakarta-commons-discovery': '0.4-129.686',
+                'yast2-ftp-server': '3.1.8-8.1',
+                'protobuf-java': '2.6.1-3.1.develHead',
+                'susemanager-build-keys-web': '12.0-5.1.develHead',
+                'apache-commons-cli': '1.2-1.233',
+                'jose4j': '0.4.4-2.1.develHead'}.items():
+                self.assertTrue(pkgs.get(pkg_name))
+                self.assertEqual(pkgs[pkg_name], [pkg_version])
 
     def test_list_pkgs_with_attr(self):
         '''
@@ -528,42 +529,44 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             'jakarta-commons-discovery_|-0.4_|-129.686_|-noarch_|-_|-1498636511',
             'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-noarch_|-_|-1498636510',
         ]
-        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}):
-            with patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}):
-                pkgs = zypper.list_pkgs(attr=['arch', 'install_date_time_t'])
-                for pkg_name, pkg_attr in {
-                    'jakarta-commons-discovery': {
-                        'version': '0.4-129.686',
-                        'arch': 'noarch',
-                        'install_date_time_t': 1498636511,
-                    },
-                    'yast2-ftp-server': {
-                        'version': '3.1.8-8.1',
-                        'arch': 'x86_64',
-                        'install_date_time_t': 1499257798,
-                    },
-                    'protobuf-java': {
-                        'version': '2.6.1-3.1.develHead',
-                        'arch': 'noarch',
-                        'install_date_time_t': 1499257756,
-                    },
-                    'susemanager-build-keys-web': {
-                        'version': '12.0-5.1.develHead',
-                        'arch': 'noarch',
-                        'install_date_time_t': 1498636510,
-                    },
-                    'apache-commons-cli': {
-                        'version': '1.2-1.233',
-                        'arch': 'noarch',
-                        'install_date_time_t': 1498636510,
-                    },
-                    'jose4j': {
-                        'version': '0.4.4-2.1.develHead',
-                        'arch': 'noarch',
-                        'install_date_time_t': 1499257756,
-                    }}.items():
-                    self.assertTrue(pkgs.get(pkg_name))
-                    self.assertEqual(pkgs[pkg_name], [pkg_attr])
+        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
+            pkgs = zypper.list_pkgs(attr=['arch', 'install_date_time_t'])
+            for pkg_name, pkg_attr in {
+                'jakarta-commons-discovery': {
+                    'version': '0.4-129.686',
+                    'arch': 'noarch',
+                    'install_date_time_t': 1498636511,
+                },
+                'yast2-ftp-server': {
+                    'version': '3.1.8-8.1',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1499257798,
+                },
+                'protobuf-java': {
+                    'version': '2.6.1-3.1.develHead',
+                    'arch': 'noarch',
+                    'install_date_time_t': 1499257756,
+                },
+                'susemanager-build-keys-web': {
+                    'version': '12.0-5.1.develHead',
+                    'arch': 'noarch',
+                    'install_date_time_t': 1498636510,
+                },
+                'apache-commons-cli': {
+                    'version': '1.2-1.233',
+                    'arch': 'noarch',
+                    'install_date_time_t': 1498636510,
+                },
+                'jose4j': {
+                    'version': '0.4.4-2.1.develHead',
+                    'arch': 'noarch',
+                    'install_date_time_t': 1499257756,
+                }}.items():
+                self.assertTrue(pkgs.get(pkg_name))
+                self.assertEqual(pkgs[pkg_name], [pkg_attr])
 
     def test_list_patches(self):
         '''

@@ -14,7 +14,6 @@ Package support for openSUSE via the zypper package manager
 
 # Import python libs
 from __future__ import absolute_import
-import copy
 import fnmatch
 import logging
 import re
@@ -694,7 +693,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     attr = kwargs.get("attr")
     if 'pkg.list_pkgs' in __context__:
-        return _format_pkg_list(__context__['pkg.list_pkgs'], versions_as_list, attr)
+        cached = __context__['pkg.list_pkgs']
+        return __salt__['pkg_resource.format_pkg_list'](cached, versions_as_list, attr)
 
     cmd = ['rpm', '-qa', '--queryformat', (
         "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-"
@@ -718,35 +718,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     __context__['pkg.list_pkgs'] = ret
 
-    return _format_pkg_list(ret, versions_as_list, attr)
-
-
-def _format_pkg_list(packages, versions_as_list, attr):
-    '''
-    Formats packages according to parameters.
-    '''
-    ret = copy.deepcopy(packages)
-    if attr:
-        requested_attr = set(['version', 'arch', 'install_date', 'install_date_time_t'])
-
-        if attr != 'all':
-            requested_attr &= set(attr + ['version'])
-
-        for name in ret:
-            versions = []
-            for all_attr in ret[name]:
-                filtered_attr = {}
-                for key in requested_attr:
-                    filtered_attr[key] = all_attr[key]
-                versions.append(filtered_attr)
-            ret[name] = versions
-        return ret
-
-    for name in ret:
-        ret[name] = [d['version'] for d in ret[name]]
-    if not versions_as_list:
-        __salt__['pkg_resource.stringify'](ret)
-    return ret
+    return __salt__['pkg_resource.format_pkg_list'](ret, versions_as_list, attr)
 
 
 def _get_configured_repos():
