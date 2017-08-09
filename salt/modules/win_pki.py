@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Microsoft certificate management via the PKIClient PowerShell module.
+Microsoft certificate management via the PKI Client PowerShell module.
 https://technet.microsoft.com/en-us/itpro/powershell/windows/pkiclient/pkiclient
 
 The PKI Client PowerShell module is only available on Windows 8+ and Windows
@@ -11,7 +11,7 @@ https://technet.microsoft.com/en-us/library/hh848636(v=wps.620).aspx
 
 :depends:
     - PowerShell 4
-    - PKIClient Module (Windows 8+ / Windows Server 2012+)
+    - PKI Client Module (Windows 8+ / Windows Server 2012+)
 
 .. versionadded:: 2016.11.0
 '''
@@ -41,7 +41,7 @@ def __virtual__():
     Requires Windows
     Requires Windows 8+ / Windows Server 2012+
     Requires PowerShell
-    Requires PKIClient PowerShell module installed.
+    Requires PKI Client PowerShell module installed.
     '''
     if not salt.utils.is_windows():
         return False, 'Only available on Windows Systems'
