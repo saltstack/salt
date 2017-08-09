@@ -10,7 +10,8 @@ import json
 
 # Import salt libs
 import salt.utils
-import salt.ext.six as six
+import salt.utils.path
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ _OUTPUT = '--output json'
 
 
 def __virtual__():
-    if salt.utils.which('aws'):
+    if salt.utils.path.which('aws'):
         # awscli is installed, load the module
         return True
     return (False, 'The module aws_sqs could not be loaded: aws command not found')

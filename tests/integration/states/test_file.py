@@ -4,7 +4,7 @@
 Tests for the file state
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import errno
 import glob
@@ -31,9 +31,11 @@ from tests.support.helpers import (
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils  # Can be removed once normalize_mode is moved
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 
 HAS_PWD = True
 try:
@@ -48,10 +50,10 @@ except ImportError:
     HAS_GRP = False
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
-IS_WINDOWS = salt.utils.is_windows()
+IS_WINDOWS = salt.utils.platform.is_windows()
 
 STATE_DIR = os.path.join(FILES, 'file', 'base')
 if IS_WINDOWS:
@@ -547,9 +549,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         Test file.managed passing a basic check_cmd kwarg. See Issue #38111.
         '''
         r_group = 'root'
-        if salt.utils.is_darwin():
+        if salt.utils.platform.is_darwin():
             r_group = 'wheel'
-        if not salt.utils.which('visudo'):
+        if not salt.utils.path.which('visudo'):
             self.fail('sudo is missing')
         try:
             ret = self.run_state(
@@ -2058,66 +2060,62 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         This is more generic than just a file test. Feel free to move
         '''
-        # Get a path to the temporary file
-        # 한국어 시험 (korean)
-        # '\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98' (utf-8)
-        # u'\ud55c\uad6d\uc5b4 \uc2dc\ud5d8' (unicode)
-        korean_1 = '한국어 시험'
-        korean_utf8_1 = ('\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4'
-                         ' \xec\x8b\x9c\xed\x97\x98')
-        korean_unicode_1 = u'\ud55c\uad6d\uc5b4 \uc2dc\ud5d8'
-        korean_2 = '첫 번째 행'
-        korean_utf8_2 = '\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89'
-        korean_unicode_2 = u'\uccab \ubc88\uc9f8 \ud589'
-        korean_3 = '마지막 행'
-        korean_utf8_3 = '\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89'
-        korean_unicode_3 = u'\ub9c8\uc9c0\ub9c9 \ud589'
-        test_file = os.path.join(TMP,
-                                 'salt_utf8_tests/'+korean_utf8_1+'.txt'
+        korean_1 = u'한국어 시험'
+        korean_2 = u'첫 번째 행'
+        korean_3 = u'마지막 행'
+        test_file = os.path.join(
+            TMP,
+            u'salt_utf8_tests',
+            u'{0}.txt'.format(korean_1)
         )
+        test_file_encoded = salt.utils.stringutils.to_str(test_file)
         template_path = os.path.join(TMP_STATE_TREE, 'issue-8947.sls')
         # create the sls template
         template_lines = [
-            '# -*- coding: utf-8 -*-',
-            'some-utf8-file-create:',
-            '  file.managed:',
-            "    - name: '{0}'".format(test_file),
-            "    - contents: {0}".format(korean_utf8_1),
-            '    - makedirs: True',
-            '    - replace: True',
-            '    - show_diff: True',
-            'some-utf8-file-create2:',
-            '  file.managed:',
-            "    - name: '{0}'".format(test_file),
-            '    - contents: |',
-            '       {0}'.format(korean_utf8_2),
-            '       {0}'.format(korean_utf8_1),
-            '       {0}'.format(korean_utf8_3),
-            '    - replace: True',
-            '    - show_diff: True',
-            'some-utf8-file-exists:',
-            '  file.exists:',
-            "    - name: '{0}'".format(test_file),
-            '    - require:',
-            '      - file: some-utf8-file-create2',
-            'some-utf8-file-content-test:',
-            '  cmd.run:',
-            '    - name: \'cat "{0}"\''.format(test_file),
-            '    - require:',
-            '      - file: some-utf8-file-exists',
-            'some-utf8-file-content-remove:',
-            '  cmd.run:',
-            '    - name: \'rm -f "{0}"\''.format(test_file),
-            '    - require:',
-            '      - cmd: some-utf8-file-content-test',
-            'some-utf8-file-removed:',
-            '  file.missing:',
-            "    - name: '{0}'".format(test_file),
-            '    - require:',
-            '      - cmd: some-utf8-file-content-remove',
+            u'# -*- coding: utf-8 -*-',
+            u'some-utf8-file-create:',
+            u'  file.managed:',
+            u"    - name: '{0}'".format(test_file),
+            u"    - contents: {0}".format(korean_1),
+            u'    - makedirs: True',
+            u'    - replace: True',
+            u'    - show_diff: True',
+            u'some-utf8-file-create2:',
+            u'  file.managed:',
+            u"    - name: '{0}'".format(test_file),
+            u'    - contents: |',
+            u'       {0}'.format(korean_2),
+            u'       {0}'.format(korean_1),
+            u'       {0}'.format(korean_3),
+            u'    - replace: True',
+            u'    - show_diff: True',
+            u'some-utf8-file-exists:',
+            u'  file.exists:',
+            u"    - name: '{0}'".format(test_file),
+            u'    - require:',
+            u'      - file: some-utf8-file-create2',
+            u'some-utf8-file-content-test:',
+            u'  cmd.run:',
+            u'    - name: \'cat "{0}"\''.format(test_file),
+            u'    - require:',
+            u'      - file: some-utf8-file-exists',
+            u'some-utf8-file-content-remove:',
+            u'  cmd.run:',
+            u'    - name: \'rm -f "{0}"\''.format(test_file),
+            u'    - require:',
+            u'      - cmd: some-utf8-file-content-test',
+            u'some-utf8-file-removed:',
+            u'  file.missing:',
+            u"    - name: '{0}'".format(test_file),
+            u'    - require:',
+            u'      - cmd: some-utf8-file-content-remove',
         ]
-        with salt.utils.files.fopen(template_path, 'w') as fp_:
-            fp_.write(os.linesep.join(template_lines))
+        with salt.utils.files.fopen(template_path, 'wb') as fp_:
+            fp_.write(
+                salt.utils.stringutils.to_bytes(
+                    os.linesep.join(template_lines)
+                )
+            )
         try:
             ret = self.run_function('state.sls', mods='issue-8947')
             if not isinstance(ret, dict):
@@ -2130,54 +2128,52 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 utf_diff = '---  \n+++  \n@@ -1,1 +1,3 @@\n'
             else:
                 utf_diff = '--- \n+++ \n@@ -1 +1,3 @@\n'
-            utf_diff += '+\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89\n \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98\n+\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89\n'
+            #utf_diff += '+\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89\n \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98\n+\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89\n'
+            utf_diff += salt.utils.stringutils.to_str(
+                u'+첫 번째 행\n'
+                u' 한국어 시험\n'
+                u'+마지막 행\n'
+            )
             # using unicode.encode('utf-8') we should get the same as
             # an utf-8 string
             expected = {
-                ('file_|-some-utf8-file-create_|-{0}'
-                '_|-managed').format(test_file): {
-                    'name': '{0}'.format(test_file),
+                'file_|-some-utf8-file-create_|-{0}_|-managed'.format(test_file_encoded): {
+                    'name': '{0}'.format(test_file_encoded),
                     '__run_num__': 0,
-                    'comment': 'File {0} updated'.format(test_file),
+                    'comment': 'File {0} updated'.format(test_file_encoded),
                     'diff': 'New file'
                 },
-                ('file_|-some-utf8-file-create2_|-{0}'
-                '_|-managed').format(test_file): {
-                    'name': '{0}'.format(test_file),
+                'file_|-some-utf8-file-create2_|-{0}_|-managed'.format(test_file_encoded): {
+                    'name': '{0}'.format(test_file_encoded),
                     '__run_num__': 1,
-                    'comment': 'File {0} updated'.format(test_file),
+                    'comment': 'File {0} updated'.format(test_file_encoded),
                     'diff': utf_diff
                 },
-                ('file_|-some-utf8-file-exists_|-{0}'
-                '_|-exists').format(test_file): {
-                    'name': '{0}'.format(test_file),
+                'file_|-some-utf8-file-exists_|-{0}_|-exists'.format(test_file_encoded): {
+                    'name': '{0}'.format(test_file_encoded),
                     '__run_num__': 2,
-                    'comment': 'Path {0} exists'.format(test_file)
+                    'comment': 'Path {0} exists'.format(test_file_encoded)
                 },
-                ('cmd_|-some-utf8-file-content-test_|-cat "{0}"'
-                 '_|-run').format(test_file): {
-                    'name': 'cat "{0}"'.format(test_file),
+                'cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run'.format(test_file_encoded): {
+                    'name': 'cat "{0}"'.format(test_file_encoded),
                     '__run_num__': 3,
-                    'comment': 'Command "cat "{0}"" run'.format(test_file),
+                    'comment': 'Command "cat "{0}"" run'.format(test_file_encoded),
                     'stdout': '{0}\n{1}\n{2}'.format(
-                        korean_unicode_2.encode('utf-8'),
-                        korean_unicode_1.encode('utf-8'),
-                        korean_unicode_3.encode('utf-8')
+                        salt.utils.stringutils.to_str(korean_2),
+                        salt.utils.stringutils.to_str(korean_1),
+                        salt.utils.stringutils.to_str(korean_3),
                     )
                 },
-                ('cmd_|-some-utf8-file-content-remove_|-rm -f "{0}"'
-                 '_|-run').format(test_file): {
-                    'name': 'rm -f "{0}"'.format(test_file),
+                'cmd_|-some-utf8-file-content-remove_|-rm -f "{0}"_|-run'.format(test_file_encoded): {
+                    'name': 'rm -f "{0}"'.format(test_file_encoded),
                     '__run_num__': 4,
-                    'comment': 'Command "rm -f "{0}"" run'.format(test_file),
+                    'comment': 'Command "rm -f "{0}"" run'.format(test_file_encoded),
                     'stdout': ''
                 },
-                ('file_|-some-utf8-file-removed_|-{0}'
-                '_|-missing').format(test_file): {
-                    'name': '{0}'.format(test_file),
+                'file_|-some-utf8-file-removed_|-{0}_|-missing'.format(test_file_encoded): {
+                    'name': '{0}'.format(test_file_encoded),
                     '__run_num__': 5,
-                    'comment':
-                          'Path {0} is missing'.format(test_file),
+                    'comment': 'Path {0} is missing'.format(test_file_encoded),
                 }
             }
             result = {}
@@ -2197,11 +2193,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.maxDiff = None
 
             self.assertEqual(expected, result)
-            cat_id = ('cmd_|-some-utf8-file-content-test_|-cat "{0}"'
-                      '_|-run').format(test_file)
+            cat_id = 'cmd_|-some-utf8-file-content-test_|-cat "{0}"_|-run'.format(test_file_encoded)
             self.assertEqual(
                 result[cat_id]['stdout'],
-                korean_2 + '\n' + korean_1 + '\n' + korean_3
+                salt.utils.stringutils.to_str(
+                    korean_2 + '\n' + korean_1 + '\n' + korean_3
+                )
             )
         finally:
             if os.path.isdir(test_file):
@@ -2248,7 +2245,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
             self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, 'root')
             self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
-            if salt.utils.which('id'):
+            if salt.utils.path.which('id'):
                 root_group = self.run_function('user.primary_group', ['root'])
                 self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, root_group)
         finally:

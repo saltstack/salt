@@ -21,13 +21,10 @@ import re
 import os
 import time
 import datetime
-from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
-import salt.ext.six as six
-from salt.exceptions import SaltInvocationError
-import salt.utils.event
+from salt.ext import six
 from salt.ext.six.moves import configparser
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
@@ -37,11 +34,13 @@ from xml.parsers.expat import ExpatError
 
 # Import salt libs
 import salt.utils
+import salt.utils.event
 import salt.utils.files
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.systemd
-from salt.exceptions import (
-    CommandExecutionError, MinionError)
+from salt.utils.versions import LooseVersion
+from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +61,7 @@ def __virtual__():
     if __grains__.get('os_family', '') != 'Suse':
         return (False, "Module zypper: non SUSE OS not suppored by zypper package manager")
     # Not all versions of SUSE use zypper, check that it is available
-    if not salt.utils.which('zypper'):
+    if not salt.utils.path.which('zypper'):
         return (False, "Module zypper: zypper package manager not found")
     return __virtualname__
 

@@ -18,8 +18,9 @@ try:
 except ImportError:
     from pipes import quote as _cmd_quote
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
+import salt.utils.platform
 import salt.utils.powershell
 
 log = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ def __virtual__():
     '''
     Load only on windows with servermanager module
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False
 
     if salt.utils.version_cmp(__grains__['osversion'], '6.1.7600') == -1:

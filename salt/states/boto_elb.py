@@ -245,7 +245,7 @@ import re
 import salt.utils.dictupdate as dictupdate
 from salt.utils import exactly_one
 from salt.exceptions import SaltInvocationError
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

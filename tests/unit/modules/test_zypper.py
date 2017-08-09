@@ -27,7 +27,7 @@ from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext.six.moves import configparser
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.pkg
 
 
@@ -1151,7 +1151,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         """
         _zpr = MagicMock()
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
-        assert isinstance(zypper.Wildcard(_zpr)('libzypp', '*.1'), str)
+        assert isinstance(zypper.Wildcard(_zpr)('libzypp', '*.1'), six.string_types)
 
     def test_wildcard_to_query_condition_preservation(self):
         '''

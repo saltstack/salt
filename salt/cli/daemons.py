@@ -41,10 +41,11 @@ import salt.log.setup
 # the try block below bypasses an issue at build time so that modules don't
 # cause the build to fail
 from salt.utils import migrations
-from salt.utils import kinds
+import salt.utils.kinds as kinds
 
 try:
-    from salt.utils import parsers, ip_bracket
+    from salt.utils import ip_bracket
+    import salt.utils.parsers
     from salt.utils.verify import check_user, verify_env, verify_socket
 except ImportError as exc:
     if exc.args[0] != 'No module named _msgpack':
@@ -109,7 +110,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         self.shutdown(error)
 
 
-class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-init
+class Master(salt.utils.parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Creates a master server
     '''
@@ -220,7 +221,7 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
         super(Master, self).shutdown(exitcode, exitmsg)
 
 
-class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
+class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Create a minion server
     '''
@@ -398,7 +399,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
     # pylint: enable=no-member
 
 
-class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
+class ProxyMinion(salt.utils.parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Create a proxy minion server
     '''
@@ -549,7 +550,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
     # pylint: enable=no-member
 
 
-class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-init
+class Syndic(salt.utils.parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Create a syndic server
     '''

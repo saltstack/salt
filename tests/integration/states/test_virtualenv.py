@@ -7,7 +7,7 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
 import shutil
@@ -19,13 +19,14 @@ from tests.support.helpers import destructiveTest, skip_if_not_root
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
-@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+@skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
     @skip_if_not_root
@@ -35,7 +36,7 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
 
         uinfo = self.run_function('user.info', [user])
 
-        if salt.utils.is_darwin():
+        if salt.utils.platform.is_darwin():
             # MacOS does not support createhome with user.present
             self.assertSaltTrueReturn(self.run_state('file.directory', name=uinfo['home'], user=user, group=uinfo['groups'][0], dir_mode=755))
 

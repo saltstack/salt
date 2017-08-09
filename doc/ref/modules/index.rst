@@ -429,7 +429,7 @@ similar to the following:
        Confine this module to Mac OS with Homebrew.
        '''
 
-       if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
+       if salt.utils.path.which('brew') and __grains__['os'] == 'MacOS':
            return __virtualname__
        return False
 

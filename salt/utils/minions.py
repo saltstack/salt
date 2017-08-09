@@ -20,7 +20,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError, SaltCacheError
 import salt.auth.ldap
 import salt.cache
-import salt.ext.six as six
+from salt.ext import six
 
 # Import 3rd-party libs
 if six.PY3:
@@ -706,7 +706,7 @@ class CkMinions(object):
         functions
         '''
         vals = []
-        if isinstance(fun, str):
+        if isinstance(fun, six.string_types):
             fun = [fun]
         for func in fun:
             try:

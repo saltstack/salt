@@ -12,7 +12,7 @@ import pprint
 
 # Import third party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
 import salt.utils
