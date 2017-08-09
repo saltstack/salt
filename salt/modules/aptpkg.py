@@ -28,7 +28,7 @@ import json
 # Import third party libs
 import yaml
 # pylint: disable=no-name-in-module,import-error,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.six.moves.urllib.error import HTTPError
 from salt.ext.six.moves.urllib.request import Request as _Request, urlopen as _urlopen
@@ -39,8 +39,10 @@ import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
+import salt.utils.args
 import salt.utils.files
 import salt.utils.itertools
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.pkg.deb
 import salt.utils.systemd
@@ -2198,7 +2200,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
             # secure PPAs cannot be supported as of the time of this code
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
-            if salt.utils.which('apt-add-repository') \
+            if salt.utils.path.which('apt-add-repository') \
                     and 'ppa_auth' not in kwargs:
                 repo_info = get_repo(repo)
                 if repo_info:
@@ -2813,10 +2815,10 @@ def info_installed(*names, **kwargs):
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
         salt '*' pkg.info_installed <package1> failhard=false
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     failhard = kwargs.pop('failhard', True)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     ret = dict()
     for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard).items():

@@ -18,9 +18,10 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import zip
 
 # Import third party libs
@@ -37,7 +38,7 @@ def __virtual__():
     Confine this module to Mac OS with Homebrew.
     '''
 
-    if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
+    if salt.utils.path.which('brew') and __grains__['os'] == 'MacOS':
         return __virtualname__
     return (False, 'The brew module could not be loaded: brew not found or grain os != MacOS')
 

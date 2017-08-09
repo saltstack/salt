@@ -3,11 +3,11 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 
-from salt.utils import parsers
+import salt.utils.parsers
 from salt.utils.verify import check_user, verify_log
 
 
-class SaltKey(parsers.SaltKeyOptionParser):
+class SaltKey(salt.utils.parsers.SaltKeyOptionParser):
     '''
     Initialize the Salt key manager
     '''

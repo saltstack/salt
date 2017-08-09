@@ -24,16 +24,18 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed when is_true, compare_versions, compare_dicts are moved
+import salt.utils.args
 import salt.utils.files
-import salt.utils.pkg
 import salt.utils.itertools
+import salt.utils.path
+import salt.utils.pkg
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
@@ -929,7 +931,7 @@ def info_installed(*names, **kwargs):
     attr = kwargs.pop('attr', None)
     if attr is None:
         filter_attrs = None
-    elif isinstance(attr, str):
+    elif isinstance(attr, six.string_types):
         filter_attrs = set(attr.split(','))
     else:
         filter_attrs = set(attr)
@@ -1014,7 +1016,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
     opkg_version = output.split(' ')[2].strip()
     if _LooseVersion(opkg_version) >= _LooseVersion('0.3.4'):
         cmd_compare = ['opkg', 'compare-versions']
-    elif salt.utils.which('opkg-compare-versions'):
+    elif salt.utils.path.which('opkg-compare-versions'):
         cmd_compare = ['opkg-compare-versions']
     else:
         log.warning('Unable to find a compare-versions utility installed. Either upgrade opkg to '
@@ -1058,7 +1060,7 @@ def list_repos():
                             line = line[1:]
                         else:
                             repo['enabled'] = True
-                        cols = salt.utils.shlex_split(line.strip())
+                        cols = salt.utils.args.shlex_split(line.strip())
                         if cols[0] in 'src':
                             repo['compressed'] = False
                         else:
@@ -1103,7 +1105,7 @@ def _del_repo_from_file(alias, filepath):
             if regex.search(line):
                 if line.startswith('#'):
                     line = line[1:]
-                cols = salt.utils.shlex_split(line.strip())
+                cols = salt.utils.args.shlex_split(line.strip())
                 if alias != cols[1]:
                     output.append(line)
     with salt.utils.files.fopen(filepath, 'w') as fhandle:
@@ -1134,7 +1136,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
     with salt.utils.files.fopen(filepath) as fhandle:
         output = []
         for line in fhandle:
-            cols = salt.utils.shlex_split(line.strip())
+            cols = salt.utils.args.shlex_split(line.strip())
             if alias not in cols:
                 output.append(line)
             else:

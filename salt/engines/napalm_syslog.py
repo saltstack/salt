@@ -190,8 +190,8 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.event as event
 import salt.utils.network
-from salt.utils import event
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties

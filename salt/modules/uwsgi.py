@@ -12,7 +12,7 @@ from __future__ import absolute_import
 import json
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 
 
 def __virtual__():
@@ -20,7 +20,7 @@ def __virtual__():
     Only load the module if uwsgi is installed
     '''
     cmd = 'uwsgi'
-    if salt.utils.which(cmd):
+    if salt.utils.path.which(cmd):
         return cmd
     return (False, 'The uwsgi execution module failed to load: the uwsgi binary is not in the path.')
 

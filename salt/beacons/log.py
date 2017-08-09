@@ -11,8 +11,8 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.platform
 
 
 try:
@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if not salt.utils.is_windows() and HAS_REGEX:
+    if not salt.utils.platform.is_windows() and HAS_REGEX:
         return __virtualname__
     return False
 

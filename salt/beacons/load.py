@@ -9,7 +9,7 @@ import logging
 import os
 
 # Import Salt libs
-import salt.utils
+import salt.utils.platform
 
 # Import Py3 compat
 from salt.ext.six.moves import zip
@@ -22,7 +22,7 @@ LAST_STATUS = {}
 
 
 def __virtual__():
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return False
     else:
         return __virtualname__

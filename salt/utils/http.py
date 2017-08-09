@@ -36,20 +36,22 @@ except ImportError:
             HAS_MATCHHOSTNAME = False
 
 # Import salt libs
-import salt.utils
-import salt.utils.xmlutil as xml
+import salt.config
+import salt.loader
+import salt.syspaths
+import salt.utils  # Can be removed once refresh_dns is moved
 import salt.utils.args
 import salt.utils.files
-import salt.loader
-import salt.config
+import salt.utils.platform
+import salt.utils.stringutils
 import salt.version
+import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 from salt.template import compile_template
-from salt.utils.decorators import jinja_filter
-from salt import syspaths
+from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error,no-name-in-module
 import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
@@ -147,11 +149,11 @@ def query(url,
     if opts is None:
         if node == 'master':
             opts = salt.config.master_config(
-                os.path.join(syspaths.CONFIG_DIR, 'master')
+                os.path.join(salt.syspaths.CONFIG_DIR, 'master')
             )
         elif node == 'minion':
             opts = salt.config.minion_config(
-                os.path.join(syspaths.CONFIG_DIR, 'minion')
+                os.path.join(salt.syspaths.CONFIG_DIR, 'minion')
             )
         else:
             opts = {}
@@ -224,9 +226,9 @@ def query(url,
         header_list = []
 
     if cookie_jar is None:
-        cookie_jar = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cookies.txt')
+        cookie_jar = os.path.join(opts.get('cachedir', salt.syspaths.CACHE_DIR), 'cookies.txt')
     if session_cookie_jar is None:
-        session_cookie_jar = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cookies.session.p')
+        session_cookie_jar = os.path.join(opts.get('cachedir', salt.syspaths.CACHE_DIR), 'cookies.session.p')
 
     if persist_session is True and HAS_MSGPACK:
         # TODO: This is hackish; it will overwrite the session cookie jar with
@@ -602,7 +604,7 @@ def query(url,
             return ret
 
         if decode_type == 'json':
-            ret['dict'] = json.loads(salt.utils.to_str(result_text))
+            ret['dict'] = json.loads(salt.utils.stringutils.to_str(result_text))
         elif decode_type == 'xml':
             ret['dict'] = []
             items = ET.fromstring(result_text)
@@ -639,7 +641,7 @@ def get_ca_bundle(opts=None):
     if opts_bundle is not None and os.path.exists(opts_bundle):
         return opts_bundle
 
-    file_roots = opts.get('file_roots', {'base': [syspaths.SRV_ROOT_DIR]})
+    file_roots = opts.get('file_roots', {'base': [salt.syspaths.SRV_ROOT_DIR]})
 
     # Please do not change the order without good reason
 
@@ -667,7 +669,7 @@ def get_ca_bundle(opts=None):
         if os.path.exists(path):
             return path
 
-    if salt.utils.is_windows() and HAS_CERTIFI:
+    if salt.utils.platform.is_windows() and HAS_CERTIFI:
         return certifi.where()
 
     return None

@@ -38,7 +38,7 @@ import salt.daemons.masterapi
 
 # Import 3rd-party libs
 import ioflo.app.run  # pylint: disable=3rd-party-module-not-gated
-import salt.ext.six as six
+from salt.ext import six
 
 
 def explode_opts(opts):

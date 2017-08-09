@@ -81,7 +81,7 @@ class UrlTestCase(TestCase):
         '''
         url = 'salt://dir/file.ini'
 
-        with patch('salt.utils.is_windows', MagicMock(return_value=True)):
+        with patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
             self.assertFalse(salt.utils.url.is_escaped(url))
 
     def test_is_escaped_escaped_path(self):
@@ -132,7 +132,7 @@ class UrlTestCase(TestCase):
         '''
         url = 'salt://dir/file.ini'
 
-        with patch('salt.utils.is_windows', MagicMock(return_value=True)):
+        with patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
             self.assertEqual(salt.utils.url.escape(url), url)
 
     def test_escape_escaped_path(self):
@@ -186,7 +186,7 @@ class UrlTestCase(TestCase):
         '''
         url = 'salt://dir/file.ini'
 
-        with patch('salt.utils.is_windows', MagicMock(return_value=True)):
+        with patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
             self.assertEqual(salt.utils.url.unescape(url), url)
 
     def test_unescape_escaped_path(self):

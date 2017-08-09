@@ -38,22 +38,20 @@ Current known limitations
   - struct
   - salt.modules.reg
 '''
-
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
 import logging
 import re
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.files
-from salt.exceptions import CommandExecutionError
-from salt.exceptions import SaltInvocationError
+import salt.utils.platform
 import salt.utils.dictupdate as dictupdate
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
@@ -2650,7 +2648,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows() and HAS_WINDOWS_MODULES:
+    if salt.utils.platform.is_windows() and HAS_WINDOWS_MODULES:
         return __virtualname__
     return False
 

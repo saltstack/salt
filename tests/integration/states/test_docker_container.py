@@ -22,8 +22,8 @@ from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -50,8 +50,8 @@ def with_random_name(func):
 
 
 @destructiveTest
-@skipIf(not salt.utils.which('busybox'), 'Busybox not installed')
-@skipIf(not salt.utils.which('dockerd'), 'Docker not installed')
+@skipIf(not salt.utils.path.which('busybox'), 'Busybox not installed')
+@skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
 class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test docker_container states

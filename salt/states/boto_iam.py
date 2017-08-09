@@ -142,7 +142,7 @@ import salt.utils
 import salt.utils.files
 import salt.utils.odict as odict
 import salt.utils.dictupdate as dictupdate
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd party libs
@@ -350,7 +350,7 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
         return ret
     keys = __salt__['boto_iam.get_all_access_keys'](user_name=name, region=region, key=key,
                                                     keyid=keyid, profile=profile)
-    if isinstance(keys, str):
+    if isinstance(keys, six.string_types):
         log.debug('keys are : false {0}'.format(keys))
         error, message = _get_error(keys)
         ret['comment'] = 'Could not get keys.\n{0}\n{1}'.format(error, message)
@@ -369,7 +369,7 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
     new_keys = {}
     for i in range(number-len(keys)):
         created = __salt__['boto_iam.create_access_key'](name, region, key, keyid, profile)
-        if isinstance(created, str):
+        if isinstance(created, six.string_types):
             error, message = _get_error(created)
             ret['comment'] = 'Could not create keys.\n{0}\n{1}'.format(error, message)
             ret['result'] = False
@@ -436,7 +436,7 @@ def _delete_key(ret, access_key_id, user_name, region=None, key=None, keyid=None
     keys = __salt__['boto_iam.get_all_access_keys'](user_name=user_name, region=region, key=key,
                                                     keyid=keyid, profile=profile)
     log.debug('Keys for user {1} are : {0}.'.format(keys, user_name))
-    if isinstance(keys, str):
+    if isinstance(keys, six.string_types):
         log.debug('Keys {0} are a string. Something went wrong.'.format(keys))
         ret['comment'] = ' '.join([ret['comment'], 'Key {0} could not be deleted.'.format(access_key_id)])
         return ret

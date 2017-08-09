@@ -15,7 +15,7 @@ import salt.utils.files
 import salt.payload
 
 # Import 3rd-party lib
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

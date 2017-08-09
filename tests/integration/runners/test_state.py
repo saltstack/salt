@@ -22,6 +22,7 @@ from tests.support.paths import TMP
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.platform
 import salt.utils.event
 import salt.utils.files
 
@@ -102,7 +103,7 @@ class StateRunnerTest(ShellCase):
         server_thread.join()
 
 
-@skipIf(salt.utils.is_windows(), '*NIX-only test')
+@skipIf(salt.utils.platform.is_windows(), '*NIX-only test')
 class OrchEventTest(ShellCase):
     '''
     Tests for orchestration events

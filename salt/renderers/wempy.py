@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
 

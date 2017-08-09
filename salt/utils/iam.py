@@ -11,7 +11,7 @@ import logging
 import time
 import pprint
 from salt.ext.six.moves import range
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     import requests

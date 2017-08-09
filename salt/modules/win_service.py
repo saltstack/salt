@@ -5,13 +5,15 @@ Windows Service module.
 .. versionchanged:: 2016.11.0 - Rewritten to use PyWin32
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
-import salt.utils
-import time
-import logging
 import fnmatch
+import logging
 import re
+import time
+
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd party libs
@@ -93,7 +95,7 @@ def __virtual__():
     '''
     Only works on Windows systems with PyWin32 installed
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Module win_service: module only works on Windows.'
 
     if not HAS_WIN32_MODS:

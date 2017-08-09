@@ -42,7 +42,7 @@ from salt.exceptions import FileserverConfigError
 PER_REMOTE_OVERRIDES = ('mountpoint', 'root', 'trunk', 'branches', 'tags')
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 HAS_SVN = False
 try:
