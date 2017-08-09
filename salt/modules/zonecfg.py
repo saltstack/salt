@@ -97,11 +97,11 @@ def __virtual__():
     We are available if we are have zonecfg and are the global zone on
     Solaris 10, OmniOS, OpenIndiana, OpenSolaris, or Smartos.
     '''
-    ## note: we depend on PR#37472 to distinguish between Solaris and Oracle Solaris
     if _is_globalzone() and salt.utils.which('zonecfg'):
-        if __grains__['os'] in ['Solaris', 'OpenSolaris', 'SmartOS', 'OmniOS', 'OpenIndiana']:
+        if __grains__['os'] in ['OpenSolaris', 'SmartOS', 'OmniOS', 'OpenIndiana']:
             return __virtualname__
-
+        elif __grains__['os'] == 'Oracle Solaris' and int(__grains__['osmajorrelease']) == 10:
+            return __virtualname__
     return (
         False,
         '{0} module can only be loaded in a solaris globalzone.'.format(
@@ -190,14 +190,14 @@ def _sanitize_value(value):
         new_value.append(')')
         return "".join(str(v) for v in new_value).replace(',)', ')')
     else:
-        ## note: we can't use shelx or pipes quote here because it makes zonecfg barf
+        # note: we can't use shelx or pipes quote here because it makes zonecfg barf
         return '"{0}"'.format(value) if ' ' in value else value
 
 
 def _dump_cfg(cfg_file):
     '''Internal helper for debugging cfg files'''
     if __salt__['file.file_exists'](cfg_file):
-        with salt.utils.fopen(cfg_file, 'r') as fp_:
+        with salt.utils.files.fopen(cfg_file, 'r') as fp_:
             log.debug("zonecfg - configuration file:\n{0}".format("".join(fp_.readlines())))
 
 
@@ -222,14 +222,14 @@ def create(zone, brand, zonepath, force=False):
     '''
     ret = {'status': True}
 
-    ## write config
+    # write config
     cfg_file = salt.utils.files.mkstemp()
-    with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
+    with salt.utils.files.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
         fp_.write("create -b -F\n" if force else "create -b\n")
         fp_.write("set brand={0}\n".format(_sanitize_value(brand)))
         fp_.write("set zonepath={0}\n".format(_sanitize_value(zonepath)))
 
-    ## create
+    # create
     if not __salt__['file.directory_exists'](zonepath):
         __salt__['file.makedirs_perms'](zonepath if zonepath[-1] == '/' else '{0}/'.format(zonepath), mode='0700')
 
@@ -245,7 +245,7 @@ def create(zone, brand, zonepath, force=False):
     else:
         ret['message'] = _clean_message(ret['message'])
 
-    ## cleanup config file
+    # cleanup config file
     if __salt__['file.file_exists'](cfg_file):
         __salt__['file.remove'](cfg_file)
 
@@ -272,7 +272,7 @@ def create_from_template(zone, template):
     '''
     ret = {'status': True}
 
-    ## create from template
+    # create from template
     _dump_cfg(template)
     res = __salt__['cmd.run_all']('zonecfg -z {zone} create -t {tmpl} -F'.format(
         zone=zone,
@@ -303,7 +303,7 @@ def delete(zone):
     '''
     ret = {'status': True}
 
-    ## delete zone
+    # delete zone
     res = __salt__['cmd.run_all']('zonecfg -z {zone} delete -F'.format(
         zone=zone,
     ))
@@ -335,7 +335,7 @@ def export(zone, path=None):
     '''
     ret = {'status': True}
 
-    ## export zone
+    # export zone
     res = __salt__['cmd.run_all']('zonecfg -z {zone} export{path}'.format(
         zone=zone,
         path=' -f {0}'.format(path) if path else '',
@@ -367,7 +367,7 @@ def import_(zone, path):
     '''
     ret = {'status': True}
 
-    ## create from file
+    # create from file
     _dump_cfg(path)
     res = __salt__['cmd.run_all']('zonecfg -z {zone} -f {path}'.format(
         zone=zone,
@@ -406,7 +406,7 @@ def _property(methode, zone, key, value):
         ret['message'] = 'unkown methode {0}!'.format(methode)
     else:
         cfg_file = salt.utils.files.mkstemp()
-        with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
+        with salt.utils.files.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
             if methode == 'set':
                 if isinstance(value, dict) or isinstance(value, list):
                     value = _sanitize_value(value)
@@ -415,7 +415,7 @@ def _property(methode, zone, key, value):
             elif methode == 'clear':
                 fp_.write("{0} {1}\n".format(methode, key))
 
-    ## update property
+    # update property
     if cfg_file:
         _dump_cfg(cfg_file)
         res = __salt__['cmd.run_all']('zonecfg -z {zone} -f {path}'.format(
@@ -429,7 +429,7 @@ def _property(methode, zone, key, value):
         else:
             ret['message'] = _clean_message(ret['message'])
 
-        ## cleanup config file
+        # cleanup config file
         if __salt__['file.file_exists'](cfg_file):
             __salt__['file.remove'](cfg_file)
 
@@ -518,7 +518,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
 
     # generate update script
     cfg_file = salt.utils.files.mkstemp()
-    with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
+    with salt.utils.files.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
         if methode in ['add']:
             fp_.write("add {0}\n".format(resource_type))
         elif methode in ['update']:
@@ -542,7 +542,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
                 fp_.write("add {0} {1}\n".format(k, _sanitize_value(value)))
         fp_.write("end\n")
 
-    ## update property
+    # update property
     if cfg_file:
         _dump_cfg(cfg_file)
         res = __salt__['cmd.run_all']('zonecfg -z {zone} -f {path}'.format(
@@ -556,7 +556,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
         else:
             ret['message'] = _clean_message(ret['message'])
 
-        ## cleanup config file
+        # cleanup config file
         if __salt__['file.file_exists'](cfg_file):
             __salt__['file.remove'](cfg_file)
 
@@ -634,13 +634,13 @@ def remove_resource(zone, resource_type, resource_key, resource_value):
 
     # generate update script
     cfg_file = salt.utils.files.mkstemp()
-    with salt.utils.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
+    with salt.utils.files.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
         if resource_key:
             fp_.write("remove {0} {1}={2}\n".format(resource_type, resource_key, _sanitize_value(resource_value)))
         else:
             fp_.write("remove {0}\n".format(resource_type))
 
-    ## update property
+    # update property
     if cfg_file:
         _dump_cfg(cfg_file)
         res = __salt__['cmd.run_all']('zonecfg -z {zone} -f {path}'.format(
@@ -654,7 +654,7 @@ def remove_resource(zone, resource_type, resource_key, resource_value):
         else:
             ret['message'] = _clean_message(ret['message'])
 
-        ## cleanup config file
+        # cleanup config file
         if __salt__['file.file_exists'](cfg_file):
             __salt__['file.remove'](cfg_file)
 
@@ -678,7 +678,7 @@ def info(zone, show_all=False):
     '''
     ret = {}
 
-    ## dump zone
+    # dump zone
     res = __salt__['cmd.run_all']('zonecfg -z {zone} info'.format(
         zone=zone,
     ))

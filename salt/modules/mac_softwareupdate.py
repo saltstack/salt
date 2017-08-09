@@ -11,6 +11,7 @@ import os
 
 # import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -340,7 +341,7 @@ def list_downloads():
     ret = []
     for update in _get_available():
         for f in dist_files:
-            with salt.utils.fopen(f) as fhr:
+            with salt.utils.files.fopen(f) as fhr:
                 if update.rsplit('-', 1)[0] in fhr.read():
                     ret.append(update)
 

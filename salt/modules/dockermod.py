@@ -559,6 +559,21 @@ def _prep_pull():
     __context__['docker._pull_status'] = [x[:12] for x in images(all=True)]
 
 
+def _scrub_links(links, name):
+    '''
+    Remove container name from HostConfig:Links values to enable comparing
+    container configurations correctly.
+    '''
+    if isinstance(links, list):
+        ret = []
+        for l in links:
+            ret.append(l.replace('/{0}/'.format(name), '/', 1))
+    else:
+        ret = links
+
+    return ret
+
+
 def _size_fmt(num):
     '''
     Format bytes as human-readable file sizes
@@ -884,8 +899,15 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict][item]
             val2 = result2[conf_dict].get(item)
-            if val1 != val2:
-                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            if item in ('OomKillDisable',):
+                if bool(val1) != bool(val2):
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            else:
+                if item == 'Links':
+                    val1 = _scrub_links(val1, first)
+                    val2 = _scrub_links(val2, second)
+                if val1 != val2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
         # Check for optionally-present items that were in the second container
         # and not the first.
         for item in result2[conf_dict]:
@@ -895,8 +917,15 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict].get(item)
             val2 = result2[conf_dict][item]
-            if val1 != val2:
-                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            if item in ('OomKillDisable',):
+                if bool(val1) != bool(val2):
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            else:
+                if item == 'Links':
+                    val1 = _scrub_links(val1, first)
+                    val2 = _scrub_links(val2, second)
+                if val1 != val2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
     return ret
 
 
@@ -978,6 +1007,10 @@ def login(*registries):
             cmd = ['docker', 'login', '-u', username, '-p', password]
             if registry.lower() != 'hub':
                 cmd.append(registry)
+            log.debug(
+                'Attempting to login to docker registry \'%s\' as user \'%s\'',
+                registry, username
+            )
             login_cmd = __salt__['cmd.run_all'](
                 cmd,
                 python_shell=False,
@@ -2862,7 +2895,7 @@ def export(name,
             # open the filehandle. If not using gzip, we need to open the
             # filehandle here. We make sure to close it in the "finally" block
             # below.
-            out = salt.utils.fopen(path, 'wb')  # pylint: disable=resource-leakage
+            out = salt.utils.files.fopen(path, 'wb')  # pylint: disable=resource-leakage
         response = _client_wrapper('export', name)
         buf = None
         while buf != '':
@@ -3874,12 +3907,12 @@ def save(name,
             compressor = lzma.LZMACompressor()
 
         try:
-            with salt.utils.fopen(saved_path, 'rb') as uncompressed:
+            with salt.utils.files.fopen(saved_path, 'rb') as uncompressed:
                 if compression != 'gzip':
                     # gzip doesn't use a Compressor object, it uses a .open()
                     # method to open the filehandle. If not using gzip, we need
                     # to open the filehandle here.
-                    out = salt.utils.fopen(path, 'wb')
+                    out = salt.utils.files.fopen(path, 'wb')
                 buf = None
                 while buf != '':
                     buf = uncompressed.read(4096)

@@ -194,7 +194,7 @@ else:
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'vsphere'
-__proxyenabled__ = ['esxi']
+__proxyenabled__ = ['esxi', 'esxdatacenter']
 
 
 def __virtual__():
@@ -203,7 +203,8 @@ def __virtual__():
 
 def get_proxy_type():
     '''
-    Returns the proxy type
+    Returns the proxy type retrieved either from the pillar of from the proxy
+    minion's config.  Returns ``<undefined>`` otherwise.
 
     CLI Example:
 
@@ -211,7 +212,11 @@ def get_proxy_type():
 
         salt '*' vsphere.get_proxy_type
     '''
-    return __pillar__['proxy']['proxytype']
+    if __pillar__.get('proxy', {}).get('proxytype'):
+        return __pillar__['proxy']['proxytype']
+    if __opts__.get('proxy', {}).get('proxytype'):
+        return __opts__['proxy']['proxytype']
+    return '<undefined>'
 
 
 def _get_proxy_connection_details():
@@ -221,6 +226,8 @@ def _get_proxy_connection_details():
     proxytype = get_proxy_type()
     if proxytype == 'esxi':
         details = __salt__['esxi.get_details']()
+    elif proxytype == 'esxdatacenter':
+        details = __salt__['esxdatacenter.get_details']()
     else:
         raise CommandExecutionError('\'{0}\' proxy is not supported'
                                     ''.format(proxytype))
@@ -258,6 +265,8 @@ def gets_service_instance_via_proxy(fn):
     Decorator that connects to a target system (vCenter or ESXi host) using the
     proxy details and passes the connection (vim.ServiceInstance) to
     the decorated function.
+
+    Supported proxies: esxi, esxdatacenter.
 
     Notes:
         1. The decorated function must have a ``service_instance`` parameter
@@ -344,7 +353,7 @@ def gets_service_instance_via_proxy(fn):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi')
+@supports_proxies('esxi', 'esxdatacenter')
 def get_service_instance_via_proxy(service_instance=None):
     '''
     Returns a service instance to the proxied endpoint (vCenter/ESXi host).
@@ -363,7 +372,8 @@ def get_service_instance_via_proxy(service_instance=None):
     return salt.utils.vmware.get_service_instance(*connection_details)
 
 
-@supports_proxies('esxi')
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi', 'esxdatacenter')
 def disconnect(service_instance):
     '''
     Disconnects from a vCenter or ESXi host
@@ -1898,7 +1908,7 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi')
+@supports_proxies('esxi', 'esxdatacenter')
 @gets_service_instance_via_proxy
 def test_vcenter_connection(service_instance=None):
     '''
@@ -3586,6 +3596,68 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
     return ret
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter')
+@gets_service_instance_via_proxy
+def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
+    '''
+    Returns a list of dict representations of VMware datacenters.
+    Connection is done via the proxy details.
+
+    Supported proxies: esxdatacenter
+
+    datacenter_names
+        List of datacenter names.
+        Default is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.list_datacenters_via_proxy
+
+        salt '*' vsphere.list_datacenters_via_proxy dc1
+
+        salt '*' vsphere.list_datacenters_via_proxy dc1,dc2
+
+        salt '*' vsphere.list_datacenters_via_proxy datacenter_names=[dc1, dc2]
+    '''
+    if not datacenter_names:
+        dc_refs = salt.utils.vmware.get_datacenters(service_instance,
+                                                    get_all_datacenters=True)
+    else:
+        dc_refs = salt.utils.vmware.get_datacenters(service_instance,
+                                                    datacenter_names)
+
+    return [{'name': salt.utils.vmware.get_managed_object_name(dc_ref)}
+            for dc_ref in dc_refs]
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter')
+@gets_service_instance_via_proxy
+def create_datacenter(datacenter_name, service_instance=None):
+    '''
+    Creates a datacenter.
+
+    Supported proxies: esxdatacenter
+
+    datacenter_name
+        The datacenter name
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.create_datacenter dc1
+    '''
+    salt.utils.vmware.create_datacenter(service_instance, datacenter_name)
+    return {'create_datacenter': True}
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
@@ -4211,3 +4283,13 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
                 raise
 
     return ret
+
+
+def _get_esxdatacenter_proxy_details():
+    '''
+    Returns the running esxdatacenter's proxy details
+    '''
+    det = __salt__['esxdatacenter.get_details']()
+    return det.get('vcenter'), det.get('username'), det.get('password'), \
+            det.get('protocol'), det.get('port'), det.get('mechanism'), \
+            det.get('principal'), det.get('domain'), det.get('datacenter')
