@@ -135,6 +135,7 @@ def _safe_output(line):
     '''
     return not any([
         line.startswith('Listing') and line.endswith('...'),
+        line.startswith('Listing') and '\t' not in line,
         '...done' in line,
         line.startswith('WARNING:')
     ])

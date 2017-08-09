@@ -2214,7 +2214,7 @@ def detached(name,
 
     # Determine if supplied ref is a hash
     remote_rev_type = 'ref'
-    if len(ref) <= 40 \
+    if len(rev) <= 40 \
             and all(x in string.hexdigits for x in rev):
         rev = rev.lower()
         remote_rev_type = 'hash'
@@ -2420,7 +2420,7 @@ def detached(name,
                 https_pass=https_pass,
                 ignore_retcode=False)
 
-            if 'refs/remotes/'+remote+'/'+ref in all_remote_refs:
+            if 'refs/remotes/'+remote+'/'+rev in all_remote_refs:
                 checkout_commit_id = all_remote_refs['refs/remotes/' + remote + '/' + rev]
             elif 'refs/tags/' + rev in all_remote_refs:
                 checkout_commit_id = all_remote_refs['refs/tags/' + rev]

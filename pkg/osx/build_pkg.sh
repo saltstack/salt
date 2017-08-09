@@ -15,13 +15,16 @@
 #     This script can be passed 2 parameters
 #         $1 : <version> : the version name to give the package (overrides
 #              version of the git repo) (Defaults to the git repo version)
-#         $2 : <package dir> : the staging area for the package defaults to
+#         $2 : <python ver> : the version of python that was built (defaults
+#              to 2)
+#         $3 : <package dir> : the staging area for the package defaults to
 #              /tmp/salt_pkg
 #
 #     Example:
-#         The following will build Salt and stage all files in /tmp/salt_pkg:
+#         The following will build Salt version 2017.7.0 with Python 3 and
+#         stage all files in /tmp/salt_pkg:
 #
-#         ./build.sh
+#         ./build.sh 2017.7.0 3
 #
 ############################################################################
 
@@ -45,11 +48,18 @@ else
     VERSION=$1
 fi
 
-# Get/Set temp directory
+# Get/Set Python Version
 if [ "$2" == "" ]; then
+    PYVER=2
+else
+    PYVER=$2
+fi
+
+# Get/Set temp directory
+if [ "$3" == "" ]; then
     PKGDIR=/tmp/salt_pkg
 else
-    PKGDIR=$2
+    PKGDIR=$3
 fi
 
 CPUARCH=`uname -m`
@@ -114,7 +124,11 @@ sudo rm -rdf $PKGDIR/opt/salt/lib/engines
 sudo rm -rdf $PKGDIR/opt/salt/share/aclocal
 sudo rm -rdf $PKGDIR/opt/salt/share/doc
 sudo rm -rdf $PKGDIR/opt/salt/share/man/man1/pkg-config.1
-sudo rm -rdf $PKGDIR/opt/salt/lib/python2.7/test
+if [ "$PYVER" == "2" ]; then
+    sudo rm -rdf $PKGDIR/opt/salt/lib/python2.7/test
+else
+    sudo rm -rdf $PKGDIR/opt/salt/lib/python3.5/test
+fi
 
 echo -n -e "\033]0;Build_Pkg: Remove compiled python files\007"
 sudo find $PKGDIR/opt/salt -name '*.pyc' -type f -delete
@@ -133,15 +147,30 @@ cp $SRCDIR/conf/master $PKGDIR/etc/salt/master.dist
 ############################################################################
 echo -n -e "\033]0;Build_Pkg: Add Version to .xml\007"
 
+if [ "$PYVER" == "2" ]; then
+    TITLE="Salt $VERSION"
+    DESC="Salt $VERSION with Python 2"
+else
+    TITLE="Salt $VERSION (Python 3)"
+    DESC="Salt $VERSION with Python 3"
+fi
+
 cd $PKGRESOURCES
 cp distribution.xml.dist distribution.xml
-SEDSTR="s/@VERSION@/$VERSION/"
-echo $SEDSTR
-sed -i '' $SEDSTR distribution.xml
+SEDSTR="s/@TITLE@/$TITLE/g"
+sed -E -i '' "$SEDSTR" distribution.xml
 
-SEDSTR="s/@CPUARCH@/$CPUARCH/"
-echo $SEDSTR
-sed -i '' $SEDSTR distribution.xml
+SEDSTR="s/@DESC@/$DESC/g"
+sed -E -i '' "$SEDSTR" distribution.xml
+
+SEDSTR="s/@VERSION@/$VERSION/g"
+sed -E -i '' "$SEDSTR" distribution.xml
+
+SEDSTR="s/@PYVER@/$PYVER/g"
+sed -E -i '' "$SEDSTR" distribution.xml
+
+SEDSTR="s/@CPUARCH@/$CPUARCH/g"
+sed -i '' "$SEDSTR" distribution.xml
 
 ############################################################################
 # Build the Package
@@ -152,10 +181,10 @@ pkgbuild --root=$PKGDIR \
          --scripts=pkg-scripts \
          --identifier=com.saltstack.salt \
          --version=$VERSION \
-         --ownership=recommended salt-src-$VERSION-$CPUARCH.pkg
+         --ownership=recommended salt-src-$VERSION-py$PYVER-$CPUARCH.pkg
 
 productbuild --resources=pkg-resources \
              --distribution=distribution.xml  \
-             --package-path=salt-src-$VERSION-$CPUARCH.pkg \
-             --version=$VERSION salt-$VERSION-$CPUARCH.pkg
+             --package-path=salt-src-$VERSION-py$PYVER-$CPUARCH.pkg \
+             --version=$VERSION salt-$VERSION-py$PYVER-$CPUARCH.pkg
 

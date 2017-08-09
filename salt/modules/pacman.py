@@ -569,33 +569,33 @@ def install(name=None,
                     continue
                 targets.append('{0}{1}{2}'.format(param, prefix, verstr))
 
-    if wildcards:
-        # Resolve wildcard matches
-        _available = list_repo_pkgs(*[x[0] for x in wildcards], refresh=refresh)
-        for pkgname, verstr in wildcards:
-            candidates = _available.get(pkgname, [])
-            match = salt.utils.fnmatch_multiple(candidates, verstr)
-            if match is not None:
-                targets.append('='.join((pkgname, match)))
-            else:
-                errors.append(
-                    'No version matching \'{0}\' found for package \'{1}\' '
-                    '(available: {2})'.format(
-                        verstr,
-                        pkgname,
-                        ', '.join(candidates) if candidates else 'none'
+        if wildcards:
+            # Resolve wildcard matches
+            _available = list_repo_pkgs(*[x[0] for x in wildcards], refresh=refresh)
+            for pkgname, verstr in wildcards:
+                candidates = _available.get(pkgname, [])
+                match = salt.utils.fnmatch_multiple(candidates, verstr)
+                if match is not None:
+                    targets.append('='.join((pkgname, match)))
+                else:
+                    errors.append(
+                        'No version matching \'{0}\' found for package \'{1}\' '
+                        '(available: {2})'.format(
+                            verstr,
+                            pkgname,
+                            ', '.join(candidates) if candidates else 'none'
+                        )
                     )
-                )
 
-        if refresh:
-            try:
-                # Prevent a second refresh when we run the install command
-                cmd.remove('-y')
-            except ValueError:
-                # Shouldn't happen since we only add -y when refresh is True,
-                # but just in case that code above is inadvertently changed,
-                # don't let this result in a traceback.
-                pass
+            if refresh:
+                try:
+                    # Prevent a second refresh when we run the install command
+                    cmd.remove('-y')
+                except ValueError:
+                    # Shouldn't happen since we only add -y when refresh is True,
+                    # but just in case that code above is inadvertently changed,
+                    # don't let this result in a traceback.
+                    pass
 
     if not errors:
         cmd.extend(targets)
