@@ -325,6 +325,7 @@ class LocalClient(object):
 
         arg = salt.utils.args.condition_input(arg, kwarg)
 
+        log.debug('==== tgt {} ===='.format(tgt))
         try:
             pub_data = self.pub(
                 tgt,
@@ -1578,6 +1579,7 @@ class LocalClient(object):
         connected_minions = None
         return_count = 0
 
+        log.debug('==== minions {} ==='.format(minions))
         for ret in self.get_iter_returns(jid,
                                          minions,
                                          timeout=timeout,

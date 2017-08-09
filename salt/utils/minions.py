@@ -207,8 +207,15 @@ class CkMinions(object):
         '''
         Return the minions found by looking via a list
         '''
+        import inspect
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+        log.debug('=== {} called _check_list_minions ==='.format(calframe[1][3]))
+
+        log.debug('== calling _check_list_minions ==')
         if isinstance(expr, six.string_types):
             expr = [m for m in expr.split(',') if m]
+        log.debug('== expr {} =='.format(expr))
         minions = self._pki_minions()
         return [x for x in expr if x in minions]
 
@@ -437,7 +444,7 @@ class CkMinions(object):
         '''
         Return the minions found by looking via compound matcher
         '''
-        log.debug('_check_compound_minions({0}, {1}, {2}, {3})'.format(expr, delimiter, greedy, pillar_exact))
+        log.debug('=== _check_compound_minions({0}, {1}, {2}, {3})'.format(expr, delimiter, greedy, pillar_exact))
         if not isinstance(expr, six.string_types) and not isinstance(expr, (list, tuple)):
             log.error('Compound target that is neither string, list nor tuple')
             return []
@@ -545,6 +552,7 @@ class CkMinions(object):
                     engine_args.append(greedy)
 
                     results.append(str(set(engine(*engine_args))))
+                    log.debug('== results {} =='.format(results))
                     if unmatched and unmatched[-1] == '-':
                         results.append(')')
                         unmatched.pop()
@@ -562,6 +570,7 @@ class CkMinions(object):
             results = ' '.join(results)
             log.debug('Evaluating final compound matching expr: {0}'
                       .format(results))
+            log.debug('=== unmatched {} ==='.format(unmatched))
             try:
                 return list(eval(results))  # pylint: disable=W0123
             except Exception:
@@ -633,6 +642,11 @@ class CkMinions(object):
         match the regex, this will then be used to parse the returns to
         make sure everyone has checked back in.
         '''
+        import inspect
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+        log.debug('=== {} called check_minions ==='.format(calframe[1][3]))
+
         try:
             if expr is None:
                 expr = ''
