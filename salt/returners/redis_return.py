@@ -12,6 +12,19 @@ config, these are the defaults:
     redis.host: 'salt'
     redis.port: 6379
 
+Cluster Mode Example:
+
+.. code-block::yaml
+
+    redis.db: '0'
+    redis.cluster_mode: true
+    redis.cluster.skip_full_coverage_check: true
+    redis.cluster.startup_nodes:
+      - host: redis-member-1
+        port: 6379
+      - host: redis-member-2
+        port: 6379
+
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
 the default location:
@@ -44,6 +57,32 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 
     salt '*' test.ping --return redis --return_kwargs '{"db": "another-salt"}'
 
+Redis Cluster Mode Options:
+
+cluster_mode: ``False``
+    Whether cluster_mode is enabled or not
+
+cluster.startup_nodes:
+    A list of host, port dictionaries pointing to cluster members. At least one is required
+    but multiple nodes are better
+
+    .. code-block::yaml
+
+        cache.redis.cluster.startup_nodes
+          - host: redis-member-1
+            port: 6379
+          - host: redis-member-2
+            port: 6379
+
+cluster.skip_full_coverage_check: ``False``
+    Some cluster providers restrict certain redis commands such as CONFIG for enhanced security.
+    Set this option to true to skip checks that required advanced privileges.
+
+    .. note::
+
+        Most cloud hosted redis clusters will require this to be set to ``True``
+
+
 '''
 
 # Import python libs
@@ -66,14 +105,28 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+try:
+    from rediscluster import StrictRedisCluster
+    HAS_REDIS_CLUSTER = True
+except ImportError:
+    HAS_REDIS_CLUSTER = False
+
 # Define the module's virtual name
 __virtualname__ = 'redis'
 
 
 def __virtual__():
+    '''
+    The redis library must be installed for this module to work.
+
+    The redis redis cluster library must be installed if cluster_mode is True
+    '''
+
     if not HAS_REDIS:
         return False, 'Could not import redis returner; ' \
                       'redis python client is not installed.'
+    if not HAS_REDIS_CLUSTER and _get_options()['cluster_mode']:
+        return (False, "Please install the redis-py-cluster package.")
     return __virtualname__
 
 
@@ -83,13 +136,20 @@ def _get_options(ret=None):
     '''
     attrs = {'host': 'host',
              'port': 'port',
-             'db': 'db'}
+             'db': 'db',
+             'cluster_mode': 'cluster_mode',
+             'startup_nodes': 'cluster.startup_nodes',
+             'skip_full_coverage_check': 'cluster.skip_full_coverage_check',
+        }
 
     if salt.utils.is_proxy():
         return {
             'host': __opts__.get('redis.host', 'salt'),
             'port': __opts__.get('redis.port', 6379),
-            'db': __opts__.get('redis.db', '0')
+            'db': __opts__.get('redis.db', '0'),
+            'cluster_mode': __opts__.get('redis.cluster_mode', False),
+            'startup_nodes': __opts__.get('redis.cluster.startup_nodes', {}),
+            'skip_full_coverage_check': __opts__.get('redis.cluster.skip_full_coverage_check', False)
         }
 
     _options = salt.returners.get_returner_options(__virtualname__,
@@ -103,10 +163,12 @@ def _get_options(ret=None):
 CONN_POOL = None
 
 
-def _get_conn_pool():
+def _get_conn_pool(_options):
     global CONN_POOL
     if CONN_POOL is None:
-        CONN_POOL = redis.ConnectionPool()
+        CONN_POOL = redis.ConnectionPool(host=_options.get('host'),
+                                         port=_options.get('port'),
+                                         db=_options.get('db'))
     return CONN_POOL
 
 
@@ -115,16 +177,14 @@ def _get_serv(ret=None):
     Return a redis server object
     '''
     _options = _get_options(ret)
-    host = _options.get('host')
-    port = _options.get('port')
-    db = _options.get('db')
-    pool = _get_conn_pool()
 
-    return redis.Redis(
-            host=host,
-            port=port,
-            db=db,
-            connection_pool=pool)
+    if _options.get('cluster_mode'):
+        return StrictRedisCluster(startup_nodes=_options.get('startup_nodes'),
+                                  skip_full_coverage_check=_options.get('skip_full_coverage_check'),
+                                  decode_responses=True)
+    else:
+        pool = _get_conn_pool(_options)
+        return redis.StrictRedis(connection_pool=pool)
 
 
 def _get_ttl():
@@ -150,7 +210,7 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid
     '''
     serv = _get_serv(ret=None)
-    serv.setex('load:{0}'.format(jid), json.dumps(load), _get_ttl())
+    serv.setex('load:{0}'.format(jid), _get_ttl(), json.dumps(load))
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
