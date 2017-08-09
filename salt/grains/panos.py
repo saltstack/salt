@@ -9,7 +9,6 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Libs
-from salt.exceptions import SaltSystemExit
 import salt.utils
 import salt.proxy.panos
 
