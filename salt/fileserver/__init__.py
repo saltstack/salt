@@ -22,7 +22,7 @@ import salt.utils.url
 from salt.utils.args import get_function_argspec as _argspec
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)

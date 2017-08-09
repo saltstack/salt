@@ -43,11 +43,12 @@ from functools import partial
 from salt.loader import minion_mods
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 import salt.utils
+import salt.utils.stringutils
 
 # Import third party libs
 # pylint: disable=import-error
@@ -109,7 +110,7 @@ def _get_profile(service, region, key, keyid, profile):
     if keyid:
         hash_string = region + keyid + key
         if six.PY3:
-            hash_string = salt.utils.to_bytes(hash_string)
+            hash_string = salt.utils.stringutils.to_bytes(hash_string)
         cxkey = label + hashlib.md5(hash_string).hexdigest()
     else:
         cxkey = label + region

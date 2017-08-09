@@ -18,7 +18,7 @@ import salt.defaults.exitcodes
 
 # Import 3rd-party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

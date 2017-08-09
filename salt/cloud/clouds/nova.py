@@ -209,7 +209,7 @@ import pprint
 import yaml
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.pycrypto

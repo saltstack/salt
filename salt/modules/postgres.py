@@ -47,15 +47,16 @@ except ImportError:
     HAS_CSV = False
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 import salt.utils.itertools
 import salt.utils.odict
+import salt.utils.path
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import StringIO
 
@@ -121,7 +122,7 @@ def __virtual__():
     if not HAS_CSV:
         return False
     for util in utils:
-        if not salt.utils.which(util):
+        if not salt.utils.path.which(util):
             if not _find_pg_binary(util):
                 return (False, '{0} was not found'.format(util))
     return True
@@ -134,10 +135,10 @@ def _find_pg_binary(util):
     Helper function to locate various psql related binaries
     '''
     pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
-    util_bin = salt.utils.which(util)
+    util_bin = salt.utils.path.which(util)
     if not util_bin:
         if pg_bin_dir:
-            return salt.utils.which(os.path.join(pg_bin_dir, util))
+            return salt.utils.path.which(os.path.join(pg_bin_dir, util))
     else:
         return util_bin
 
@@ -1006,7 +1007,7 @@ def _maybe_encrypt_password(role,
         password = str(password)
     if encrypted and password and not password.startswith('md5'):
         password = "md5{0}".format(
-            hashlib.md5(salt.utils.to_bytes('{0}{1}'.format(password, role))).hexdigest())
+            hashlib.md5(salt.utils.stringutils.to_bytes('{0}{1}'.format(password, role))).hexdigest())
     return password
 
 

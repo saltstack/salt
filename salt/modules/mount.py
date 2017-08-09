@@ -10,13 +10,14 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once test_mode is moved
 import salt.utils.files
-from salt.utils import which as _which
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import filter, zip  # pylint: disable=import-error,redefined-builtin
 
 # Set up logger
@@ -31,7 +32,7 @@ def __virtual__():
     Only load on POSIX-like systems
     '''
     # Disable on Windows, a specific file module exists:
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The mount module cannot be loaded: not a POSIX-like system.')
     return True
 
@@ -1115,12 +1116,12 @@ def is_fuse_exec(cmd):
 
         salt '*' mount.is_fuse_exec sshfs
     '''
-    cmd_path = _which(cmd)
+    cmd_path = salt.utils.path.which(cmd)
 
     # No point in running ldd on a command that doesn't exist
     if not cmd_path:
         return False
-    elif not _which('ldd'):
+    elif not salt.utils.path.which('ldd'):
         raise CommandNotFoundError('ldd')
 
     out = __salt__['cmd.run']('ldd {0}'.format(cmd_path), python_shell=False)

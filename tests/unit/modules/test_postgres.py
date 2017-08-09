@@ -53,7 +53,7 @@ test_privileges_list_group_csv = (
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PostgresTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
+        patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/pgsql'))
         patcher.start()
         self.addCleanup(patcher.stop)
         return {

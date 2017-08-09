@@ -19,7 +19,7 @@ from distutils.version import LooseVersion as _LooseVersion
 # pylint: enable=blacklisted-module
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class StrictVersion(_StrictVersion):

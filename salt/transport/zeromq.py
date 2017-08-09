@@ -21,6 +21,7 @@ import salt.crypt
 import salt.utils
 import salt.utils.verify
 import salt.utils.event
+import salt.utils.stringutils
 import salt.payload
 import salt.transport.client
 import salt.transport.server
@@ -46,7 +47,7 @@ import tornado.gen
 import tornado.concurrent
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     from Cryptodome.Cipher import PKCS1_OAEP
 except ImportError:
@@ -304,7 +305,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         else:
             self._socket.setsockopt(zmq.SUBSCRIBE, b'')
 
-        self._socket.setsockopt(zmq.IDENTITY, salt.utils.to_bytes(self.opts['id']))
+        self._socket.setsockopt(zmq.IDENTITY, salt.utils.stringutils.to_bytes(self.opts['id']))
 
         # TODO: cleanup all the socket opts stuff
         if hasattr(zmq, 'TCP_KEEPALIVE'):

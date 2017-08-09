@@ -3,11 +3,11 @@
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
 
-    tests.unit.utils.path_join_test
+    tests.unit.utils.salt.utils.path.join_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
 import sys
@@ -17,14 +17,15 @@ import platform
 import tempfile
 
 # Import Salt Testing libs
-import salt.utils
 from tests.support.unit import TestCase, skipIf
+from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
-# Import salt libs
-from salt.utils import path_join
+# Import Salt libs
+import salt.utils.path
+import salt.utils.platform
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class PathJoinTestCase(TestCase):
@@ -52,10 +53,10 @@ class PathJoinTestCase(TestCase):
     def test_nix_paths(self):
         if platform.system().lower() == "windows":
             self.skipTest(
-                "Windows platform found. not running *nix path_join tests"
+                "Windows platform found. not running *nix salt.utils.path.join tests"
             )
         for idx, (parts, expected) in enumerate(self.NIX_PATHS):
-            path = path_join(*parts)
+            path = salt.utils.path.join(*parts)
             self.assertEqual(
                 '{0}: {1}'.format(idx, path),
                 '{0}: {1}'.format(idx, expected)
@@ -66,11 +67,11 @@ class PathJoinTestCase(TestCase):
         if platform.system().lower() != "windows":
             self.skipTest(
                 'Non windows platform found. not running non patched os.path '
-                'path_join tests'
+                'salt.utils.path.join tests'
             )
 
         for idx, (parts, expected) in enumerate(self.WIN_PATHS):
-            path = path_join(*parts)
+            path = salt.utils.path.join(*parts)
             self.assertEqual(
                 '{0}: {1}'.format(idx, path),
                 '{0}: {1}'.format(idx, expected)
@@ -81,13 +82,13 @@ class PathJoinTestCase(TestCase):
         if platform.system().lower() == "windows":
             self.skipTest(
                 'Windows platform found. not running patched os.path '
-                'path_join tests'
+                'salt.utils.path.join tests'
             )
 
         self.__patch_path()
 
         for idx, (parts, expected) in enumerate(self.WIN_PATHS):
-            path = path_join(*parts)
+            path = salt.utils.path.join(*parts)
             self.assertEqual(
                 '{0}: {1}'.format(idx, path),
                 '{0}: {1}'.format(idx, expected)
@@ -95,7 +96,7 @@ class PathJoinTestCase(TestCase):
 
         self.__unpatch_path()
 
-    @skipIf(salt.utils.is_windows(), '*nix-only test')
+    @skipIf(salt.utils.platform.is_windows(), '*nix-only test')
     def test_mixed_unicode_and_binary(self):
         '''
         This tests joining paths that contain a mix of components with unicode
@@ -109,7 +110,7 @@ class PathJoinTestCase(TestCase):
         a = u'/foo/bar'
         b = 'Д'
         expected = u'/foo/bar/\u0414'
-        actual = path_join(a, b)
+        actual = salt.utils.path.join(a, b)
         self.assertEqual(actual, expected)
 
     def __patch_path(self):
@@ -136,3 +137,22 @@ class PathJoinTestCase(TestCase):
 
         for module in (posixpath, os, os.path, tempfile, platform):
             reload(module)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class WhichTestCase(TestCase):
+    def test_which_bin(self):
+        ret = salt.utils.path.which_bin('str')
+        self.assertIs(None, ret)
+
+        test_exes = ['ls', 'echo']
+        with patch('salt.utils.path.which', return_value='/tmp/dummy_path'):
+            ret = salt.utils.path.which_bin(test_exes)
+            self.assertEqual(ret, '/tmp/dummy_path')
+
+            ret = salt.utils.path.which_bin([])
+            self.assertIs(None, ret)
+
+        with patch('salt.utils.path.which', return_value=''):
+            ret = salt.utils.path.which_bin(test_exes)
+            self.assertIs(None, ret)

@@ -32,13 +32,13 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 # Impot salt exceptions
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 __virtualname__ = 'acl'
 
@@ -47,7 +47,7 @@ def __virtual__():
     '''
     Ensure getfacl & setfacl exist
     '''
-    if salt.utils.which('getfacl') and salt.utils.which('setfacl'):
+    if salt.utils.path.which('getfacl') and salt.utils.path.which('setfacl'):
         return __virtualname__
 
     return False

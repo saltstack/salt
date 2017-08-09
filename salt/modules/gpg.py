@@ -21,13 +21,13 @@ import re
 import time
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ def _gpg():
     Returns the path to the gpg binary
     '''
     # Get the path to the gpg binary.
-    return salt.utils.which('gpg')
+    return salt.utils.path.which('gpg')
 
 
 def __virtual__():

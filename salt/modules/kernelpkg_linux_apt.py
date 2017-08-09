@@ -8,7 +8,7 @@ import logging
 import re
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     from salt.utils.versions import LooseVersion as _LooseVersion

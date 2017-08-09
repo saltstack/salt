@@ -22,10 +22,12 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
+from salt.ext import six
 
 # Import third party libs
 HAS_PORTAGE = False
@@ -422,7 +424,7 @@ def refresh_db():
         # GPG sign verify is supported only for "webrsync"
         cmd = 'emerge-webrsync -q'
         # We prefer 'delta-webrsync' to 'webrsync'
-        if salt.utils.which('emerge-delta-webrsync'):
+        if salt.utils.path.which('emerge-delta-webrsync'):
             cmd = 'emerge-delta-webrsync -q'
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
     else:
@@ -432,7 +434,7 @@ def refresh_db():
         # We fall back to "webrsync" if "rsync" fails for some reason
         cmd = 'emerge-webrsync -q'
         # We prefer 'delta-webrsync' to 'webrsync'
-        if salt.utils.which('emerge-delta-webrsync'):
+        if salt.utils.path.which('emerge-delta-webrsync'):
             cmd = 'emerge-delta-webrsync -q'
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
 
@@ -1109,10 +1111,10 @@ def version_cmp(pkg1, pkg2, **kwargs):
     # definition (and thus have it show up in the docs), we just pop it out of
     # the kwargs dict and then raise an exception if any kwargs other than
     # ignore_epoch were passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     kwargs.pop('ignore_epoch', None)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     regex = r'^~?([^:\[]+):?[^\[]*\[?.*$'
     ver1 = re.match(regex, pkg1)

@@ -10,8 +10,8 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import Mock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
+import salt.utils.systemd as _systemd
 from salt.exceptions import SaltInvocationError
-from salt.utils import systemd as _systemd
 
 
 def _booted_effect(path):
