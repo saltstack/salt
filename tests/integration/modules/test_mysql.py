@@ -11,11 +11,11 @@ from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 from salt.modules import mysql as mysqlmod
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ try:
 except Exception:
     NO_MYSQL = True
 
-if not salt.utils.which('mysqladmin'):
+if not salt.utils.path.which('mysqladmin'):
     NO_MYSQL = True
 
 

@@ -44,7 +44,7 @@ import copy
 import json
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.utils.dictdiffer import DictDiffer
 
 

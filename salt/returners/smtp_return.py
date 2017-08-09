@@ -113,7 +113,7 @@ import smtplib
 from email.utils import formatdate
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.jid
 import salt.returners
 import salt.loader
