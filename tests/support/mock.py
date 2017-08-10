@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import sys
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     if sys.version_info >= (3,):
@@ -68,7 +68,7 @@ except ImportError as exc:
 
     class MagicMock(object):
 
-        __name__ = '{0}.fakemock'.format(__name__)
+        __name__ = '{0}.fakemock'.format(__name__)  # future lint: disable=non-unicode-string
 
         def __init__(self, *args, **kwargs):
             pass

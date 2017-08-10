@@ -46,9 +46,8 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import zip
-from salt.ext.six import string_types
 
 # Import Third Party Libs
 try:
@@ -209,7 +208,7 @@ def get_image(vm_):
     vm_image = config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
     )
-    if not isinstance(vm_image, string_types):
+    if not isinstance(vm_image, six.string_types):
         vm_image = str(vm_image)
 
     for image in images:

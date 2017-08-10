@@ -24,10 +24,10 @@ log = logging.getLogger(__name__)
 def _publish(tgt,
              fun,
              arg=None,
-             tgt_type='glob',
-             returner='',
+             tgt_type=u'glob',
+             returner=u'',
              timeout=None,
-             form='clean',
+             form=u'clean',
              roster=None):
     '''
     Publish a command "from the minion out to other minions". In reality, the
@@ -53,13 +53,13 @@ def _publish(tgt,
 
         salt-ssh system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
     '''
-    if fun.startswith('publish.'):
-        log.info('Cannot publish publish calls. Returning {}')
+    if fun.startswith(u'publish.'):
+        log.info(u'Cannot publish publish calls. Returning {}')
         return {}
 
     # TODO: implement returners? Do they make sense for salt-ssh calls?
     if returner:
-        log.warning('Returners currently not supported in salt-ssh publish')
+        log.warning(u'Returners currently not supported in salt-ssh publish')
 
     # Make sure args have been processed
     if arg is None:
@@ -72,17 +72,17 @@ def _publish(tgt,
         arg = []
 
     # Set up opts for the SSH object
-    opts = copy.deepcopy(__context__['master_opts'])
+    opts = copy.deepcopy(__context__[u'master_opts'])
     minopts = copy.deepcopy(__opts__)
     opts.update(minopts)
     if roster:
-        opts['roster'] = roster
+        opts[u'roster'] = roster
     if timeout:
-        opts['timeout'] = timeout
-    opts['argv'] = [fun] + arg
-    opts['selected_target_option'] = tgt_type
-    opts['tgt'] = tgt
-    opts['arg'] = arg
+        opts[u'timeout'] = timeout
+    opts[u'argv'] = [fun] + arg
+    opts[u'selected_target_option'] = tgt_type
+    opts[u'tgt'] = tgt
+    opts[u'arg'] = arg
 
     # Create the SSH object to handle the actual call
     ssh = salt.client.ssh.SSH(opts)
@@ -92,11 +92,11 @@ def _publish(tgt,
     for ret in ssh.run_iter():
         rets.update(ret)
 
-    if form == 'clean':
+    if form == u'clean':
         cret = {}
         for host in rets:
-            if 'return' in rets[host]:
-                cret[host] = rets[host]['return']
+            if u'return' in rets[host]:
+                cret[host] = rets[host][u'return']
             else:
                 cret[host] = rets[host]
         return cret
@@ -107,8 +107,8 @@ def _publish(tgt,
 def publish(tgt,
             fun,
             arg=None,
-            tgt_type='glob',
-            returner='',
+            tgt_type=u'glob',
+            returner=u'',
             timeout=5,
             roster=None,
             expr_form=None):
@@ -174,10 +174,10 @@ def publish(tgt,
     # performing the cleanup on this deprecation.
     if expr_form is not None:
         salt.utils.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
+            u'Fluorine',
+            u'the target type should be passed using the \'tgt_type\' '
+            u'argument instead of \'expr_form\'. Support for using '
+            u'\'expr_form\' will be removed in Salt Fluorine.'
         )
         tgt_type = expr_form
 
@@ -187,15 +187,15 @@ def publish(tgt,
                     tgt_type=tgt_type,
                     returner=returner,
                     timeout=timeout,
-                    form='clean',
+                    form=u'clean',
                     roster=roster)
 
 
 def full_data(tgt,
               fun,
               arg=None,
-              tgt_type='glob',
-              returner='',
+              tgt_type=u'glob',
+              returner=u'',
               timeout=5,
               roster=None,
               expr_form=None):
@@ -224,10 +224,10 @@ def full_data(tgt,
     # performing the cleanup on this deprecation.
     if expr_form is not None:
         salt.utils.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
+            u'Fluorine',
+            u'the target type should be passed using the \'tgt_type\' '
+            u'argument instead of \'expr_form\'. Support for using '
+            u'\'expr_form\' will be removed in Salt Fluorine.'
         )
         tgt_type = expr_form
 
@@ -237,7 +237,7 @@ def full_data(tgt,
                     tgt_type=tgt_type,
                     returner=returner,
                     timeout=timeout,
-                    form='full',
+                    form=u'full',
                     roster=roster)
 
 
@@ -260,5 +260,5 @@ def runner(fun, arg=None, timeout=5):
         arg = []
 
     # Create and run the runner
-    runner = salt.runner.RunnerClient(__opts__['__master_opts__'])
+    runner = salt.runner.RunnerClient(__opts__[u'__master_opts__'])
     return runner.cmd(fun, arg)

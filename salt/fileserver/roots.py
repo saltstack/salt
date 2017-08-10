@@ -29,7 +29,7 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.path
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

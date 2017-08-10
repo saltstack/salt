@@ -9,6 +9,7 @@ import time
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
 import salt.utils.vt
 
 __virtualname__ = 'sh'
@@ -21,7 +22,7 @@ def __virtual__():
     '''
     Only load if strace is installed
     '''
-    return __virtualname__ if salt.utils.which('strace') else False
+    return __virtualname__ if salt.utils.path.which('strace') else False
 
 
 def _get_shells():

@@ -19,7 +19,7 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltSystemExit
 
 log = logging.getLogger(__name__)

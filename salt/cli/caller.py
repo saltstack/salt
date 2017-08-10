@@ -20,19 +20,17 @@ import salt.minion
 import salt.output
 import salt.payload
 import salt.transport
+import salt.utils  # Can be removed once print_cli, activate_profile, and output_profile are moved
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.kinds as kinds
 import salt.utils.minion
 import salt.defaults.exitcodes
-from salt.log import LOG_LEVELS
-from salt.utils import is_windows
-from salt.utils import print_cli
-from salt.utils import kinds
-from salt.utils import activate_profile
-from salt.utils import output_profile
-from salt.utils.process import MultiprocessingProcess
 from salt.cli import daemons
+from salt.log import LOG_LEVELS
+from salt.utils.platform import is_windows
+from salt.utils.process import MultiprocessingProcess
 
 try:
     from raet import raeting, nacling
@@ -47,7 +45,7 @@ except ImportError:
     pass
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Custom exceptions
 from salt.exceptions import (
@@ -115,7 +113,7 @@ class BaseCaller(object):
                     docs[name] = func.__doc__
         for name in sorted(docs):
             if name.startswith(self.opts.get('fun', '')):
-                print_cli('{0}:\n{1}\n'.format(name, docs[name]))
+                salt.utils.print_cli('{0}:\n{1}\n'.format(name, docs[name]))
 
     def print_grains(self):
         '''
@@ -130,14 +128,14 @@ class BaseCaller(object):
         '''
         profiling_enabled = self.opts.get('profiling_enabled', False)
         try:
-            pr = activate_profile(profiling_enabled)
+            pr = salt.utils.activate_profile(profiling_enabled)
             try:
                 ret = self.call()
             finally:
-                output_profile(pr,
-                               stats_path=self.opts.get('profiling_path',
-                                                        '/tmp/stats'),
-                               stop=True)
+                salt.utils.output_profile(
+                    pr,
+                    stats_path=self.opts.get('profiling_path', '/tmp/stats'),
+                    stop=True)
             out = ret.get('out', 'nested')
             if self.opts['print_metadata']:
                 print_ret = ret
@@ -211,7 +209,7 @@ class BaseCaller(object):
                 ret['return'] = func(*args, **kwargs)
             except TypeError as exc:
                 sys.stderr.write('\nPassed invalid arguments: {0}.\n\nUsage:\n'.format(exc))
-                print_cli(func.__doc__)
+                salt.utils.print_cli(func.__doc__)
                 active_level = LOG_LEVELS.get(
                     self.opts['log_level'].lower(), logging.ERROR)
                 if active_level <= logging.DEBUG:

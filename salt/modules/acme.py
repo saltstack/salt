@@ -31,11 +31,11 @@ import datetime
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
-LEA = salt.utils.which_bin(['certbot', 'letsencrypt',
+LEA = salt.utils.path.which_bin(['certbot', 'letsencrypt',
                             'certbot-auto', 'letsencrypt-auto',
                             '/opt/letsencrypt/letsencrypt-auto'])
 LE_LIVE = '/etc/letsencrypt/live/'

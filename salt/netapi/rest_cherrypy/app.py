@@ -584,7 +584,7 @@ from multiprocessing import Process, Pipe
 # pylint: disable=import-error
 import cherrypy  # pylint: disable=3rd-party-module-not-gated
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 # pylint: enable=import-error
 
 
@@ -593,6 +593,7 @@ import salt
 import salt.auth
 import salt.utils
 import salt.utils.event
+import salt.utils.stringutils
 
 # Import salt-api libs
 import salt.netapi
@@ -868,7 +869,7 @@ def hypermedia_handler(*args, **kwargs):
     try:
         response = out(ret)
         if six.PY3:
-            response = salt.utils.to_bytes(response)
+            response = salt.utils.stringutils.to_bytes(response)
         return response
     except Exception:
         msg = 'Could not serialize the return data from Salt.'
@@ -926,7 +927,7 @@ def urlencoded_processor(entity):
         entity.fp.read(fp_out=contents)
         contents.seek(0)
         body_str = contents.read()
-        body_bytes = salt.utils.to_bytes(body_str)
+        body_bytes = salt.utils.stringutils.to_bytes(body_str)
         body_bytes = six.BytesIO(body_bytes)
         body_bytes.seek(0)
         # Patch fp

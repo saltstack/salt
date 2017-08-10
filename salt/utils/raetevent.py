@@ -18,7 +18,7 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils.event
-from salt.utils import kinds
+import salt.utils.kinds as kinds
 from salt import transport
 from salt import syspaths
 from raet import raeting, nacling
@@ -26,7 +26,7 @@ from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
