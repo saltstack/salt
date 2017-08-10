@@ -1651,7 +1651,7 @@ def set_ntp_authentication(target=None,
         if target == 'secondary' or target == 'both':
             query = {'type': 'config',
                      'action': 'set',
-                     'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/ntp-servers/''
+                     'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/ntp-servers/'
                               'secondary-ntp-server/authentication-type',
                      'element': '<symmetric-key><algorithm><{0}><authentication-key>{1}</authentication-key></{0}>'
                                 '</algorithm><key-id>{2}</key-id></symmetric-key>'.format(algorithm,
