@@ -861,56 +861,93 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     r'''
     Install the passed package(s) on the system using winrepo
 
-    :param name:
-        The name of a single package, or a comma-separated list of packages to
-        install. (no spaces after the commas)
-    :type name: str, list, or None
+    Args:
 
-    :param bool refresh: Boolean value representing whether or not to refresh
-        the winrepo db
+        name (str):
+            The name of a single package, or a comma-separated list of packages
+            to install. (no spaces after the commas)
 
-    :param pkgs: A list of packages to install from a software repository.
-        All packages listed under ``pkgs`` will be installed via a single
-        command.
+        refresh (bool):
+            Boolean value representing whether or not to refresh the winrepo db
 
-    :type pkgs: list or None
+        pkgs (list):
+            A list of packages to install from a software repository. All
+            packages listed under ``pkgs`` will be installed via a single
+            command.
 
-    *Keyword Arguments (kwargs)*
+            You can specify a version by passing the item as a dict:
 
-    :param str version:
-        The specific version to install. If omitted, the latest version will be
-        installed. If passed with multiple install, the version will apply to
-        all packages. Recommended for single installation only.
+            CLI Example:
 
-    :param str cache_file:
-        A single file to copy down for use with the installer. Copied to the
-        same location as the installer. Use this over ``cache_dir`` if there
-        are many files in the directory and you only need a specific file and
-        don't want to cache additional files that may reside in the installer
-        directory. Only applies to files on ``salt://``
+            .. code-block:: bash
 
-    :param bool cache_dir:
-        True will copy the contents of the installer directory. This is useful
-        for installations that are not a single file. Only applies to
-        directories on ``salt://``
+                # will install the latest version of foo and bar
+                salt '*' pkg.install pkgs='["foo", "bar"]'
 
-    :param str saltenv: Salt environment. Default 'base'
+                # will install the latest version of foo and version 1.2.3 of bar
+                salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3"}]'
 
-    :param bool report_reboot_exit_codes:
-        If the installer exits with a recognized exit code indicating that
-        a reboot is required, the module function
+    Kwargs:
+
+        version (str):
+            The specific version to install. If omitted, the latest version will
+            be installed. Recommend for use when installing a single package.
+
+            If passed with a list of packages in the ``pkgs`` parameter, the
+            version will be ignored.
+
+            CLI Example:
+
+             .. code-block:: bash
+
+                # Version is ignored
+                salt '*' pkg.install pkgs="['foo', 'bar']" version=1.2.3
+
+            If passed with a comma seperated list in the ``name`` parameter, the
+            version will apply to all packages in the list.
+
+            CLI Example:
+
+             .. code-block:: bash
+
+                # Version 1.2.3 will apply to packages foo and bar
+                salt '*' pkg.install foo,bar version=1.2.3
+
+        cache_file (str):
+            A single file to copy down for use with the installer. Copied to the
+            same location as the installer. Use this over ``cache_dir`` if there
+            are many files in the directory and you only need a specific file
+            and don't want to cache additional files that may reside in the
+            installer directory. Only applies to files on ``salt://``
+
+        cache_dir (bool):
+            True will copy the contents of the installer directory. This is
+            useful for installations that are not a single file. Only applies to
+            directories on ``salt://``
+
+        extra_install_flags (str):
+            Additional install flags that will be appended to the
+            ``install_flags`` defined in the software definition file. Only
+            applies when single package is passed.
+
+        saltenv (str):
+            Salt environment. Default 'base'
+
+        report_reboot_exit_codes (bool):
+            If the installer exits with a recognized exit code indicating that
+            a reboot is required, the module function
 
            *win_system.set_reboot_required_witnessed*
 
-        will be called, preserving the knowledge of this event
-        for the remainder of the current boot session. For the time being,
-        3010 is the only recognized exit code. The value of this param
-        defaults to True.
+            will be called, preserving the knowledge of this event
+            for the remainder of the current boot session. For the time being,
+            3010 is the only recognized exit code. The value of this param
+            defaults to True.
 
-        .. versionadded:: 2016.11.0
+            .. versionadded:: 2016.11.0
 
-    :return: Return a dict containing the new package names and versions::
-    :rtype: dict
+    Returns:
+        dict: Return a dict containing the new package names and versions:
 
         If the package is installed by ``pkg.install``:
 
@@ -989,13 +1026,22 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     # "sources" argument
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs, **kwargs)[0]
 
+    if len(pkg_params) > 1:
+        if kwargs.get('extra_install_flags') is not None:
+            log.warning('\'extra_install_flags\' argument will be ignored for '
+                        'multiple package targets')
+
+    # Windows expects an Options dictionary containing 'version'
+    for pkg in pkg_params:
+        pkg_params[pkg] = {'version': pkg_params[pkg]}
+
     if pkg_params is None or len(pkg_params) == 0:
         log.error('No package definition found')
         return {}
 
     if not pkgs and len(pkg_params) == 1:
-        # Only use the 'version' param if 'name' was not specified as a
-        # comma-separated list
+        # Only use the 'version' param if a single item was passed to the 'name'
+        # parameter
         pkg_params = {
             name: {
                 'version': kwargs.get('version'),
