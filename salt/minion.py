@@ -1270,11 +1270,6 @@ class Minion(MinionBase):
         else:
             return
 
-        if timeout_handler is None:
-            def timeout_handler(*_):
-                log.info('fire_master failed: master could not be contacted. Request timed out.')
-                return True
-
         if sync:
             try:
                 self._send_req_sync(load, timeout)
@@ -1285,6 +1280,12 @@ class Minion(MinionBase):
                 log.info('fire_master failed: {0}'.format(traceback.format_exc()))
                 return False
         else:
+            if timeout_handler is None:
+                def handle_timeout(*_):
+                    log.info('fire_master failed: master could not be contacted. Request timed out.')
+                    return True
+                timeout_handler = handle_timeout
+
             with tornado.stack_context.ExceptionStackContext(timeout_handler):
                 self._send_req_async(load, timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
         return True
