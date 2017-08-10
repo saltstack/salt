@@ -883,6 +883,7 @@ class LocalClient(object):
             else:
                 if kwargs.get(u'yield_pub_data'):
                     yield pub_data
+                kwargs.setdefault('expect_minions', True)
                 for fn_ret in self.get_iter_returns(pub_data[u'jid'],
                                                     pub_data[u'minions'],
                                                     timeout=self._get_timeout(timeout),
