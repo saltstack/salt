@@ -29,17 +29,17 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    from moto import mock_ec2
+    from moto import mock_ec2_deprecated
     HAS_MOTO = True
 except ImportError:
     HAS_MOTO = False
 
-    def mock_ec2(self):
+    def mock_ec2_deprecated(self):
         '''
-        if the mock_ec2 function is not available due to import failure
+        if the mock_ec2_deprecated function is not available due to import failure
         this replaces the decorated function with stub_function.
-        Allows boto_secgroup unit tests to use the @mock_ec2 decorator
-        without a "NameError: name 'mock_ec2' is not defined" error.
+        Allows boto_secgroup unit tests to use the @mock_ec2_deprecated decorator
+        without a "NameError: name 'mock_ec2_deprecated' is not defined" error.
         '''
         def stub_function(self):
             pass
@@ -111,7 +111,7 @@ class BotoSecgroupTestCase(TestCase):
                        {'to_port': 80, 'from_port': 80, 'ip_protocol': u'tcp', 'cidr_ip': u'0.0.0.0/0'}]
         self.assertEqual(boto_secgroup._split_rules(rules), split_rules)
 
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_create_ec2_classic(self):
         '''
         Test of creation of an EC2-Classic security group. The test ensures
@@ -131,7 +131,7 @@ class BotoSecgroupTestCase(TestCase):
                                   secgroup_created_group[0].vpc_id]
         self.assertEqual(expected_create_result, secgroup_create_result)
 
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_create_ec2_vpc(self):
         '''
         test of creation of an EC2-VPC security group. The test ensures that a
@@ -151,7 +151,7 @@ class BotoSecgroupTestCase(TestCase):
 
     @skipIf(True, 'test skipped due to error in moto return - fixed in'
                   ' https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f')
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_get_group_id_ec2_classic(self):
         '''
         tests that given a name of a group in EC2-Classic that the correct
@@ -173,7 +173,7 @@ class BotoSecgroupTestCase(TestCase):
 
     @skipIf(True, 'test skipped because moto does not yet support group'
                   ' filters https://github.com/spulec/moto/issues/154')
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_get_group_id_ec2_vpc(self):
         '''
         tests that given a name of a group in EC2-VPC that the correct
@@ -193,7 +193,7 @@ class BotoSecgroupTestCase(TestCase):
                                                         **conn_parameters)
         self.assertEqual(group_vpc.id, retrieved_group_id)
 
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_get_config_single_rule_group_name(self):
         '''
         tests return of 'config' when given group name. get_config returns an OrderedDict.
@@ -219,7 +219,7 @@ class BotoSecgroupTestCase(TestCase):
 
     @skipIf(True, 'test skipped due to error in moto return - fixed in '
                   'https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f')
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_exists_true_name_classic(self):
         '''
         tests 'true' existence of a group in EC2-Classic when given name
@@ -234,11 +234,11 @@ class BotoSecgroupTestCase(TestCase):
 
     @skipIf(True, 'test skipped because moto does not yet support group'
                   ' filters https://github.com/spulec/moto/issues/154')
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_exists_false_name_classic(self):
         pass
 
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_exists_true_name_vpc(self):
         '''
         tests 'true' existence of a group in EC2-VPC when given name and vpc_id
@@ -250,7 +250,7 @@ class BotoSecgroupTestCase(TestCase):
         salt_exists_result = boto_secgroup.exists(name=group_name, vpc_id=vpc_id, **conn_parameters)
         self.assertTrue(salt_exists_result)
 
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_exists_false_name_vpc(self):
         '''
         tests 'false' existence of a group in vpc when given name and vpc_id
@@ -259,7 +259,7 @@ class BotoSecgroupTestCase(TestCase):
         salt_exists_result = boto_secgroup.exists(group_name, vpc_id=vpc_id, **conn_parameters)
         self.assertFalse(salt_exists_result)
 
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_exists_true_group_id(self):
         '''
         tests 'true' existence of a group when given group_id
@@ -271,7 +271,7 @@ class BotoSecgroupTestCase(TestCase):
         salt_exists_result = boto_secgroup.exists(group_id=group.id, **conn_parameters)
         self.assertTrue(salt_exists_result)
 
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_exists_false_group_id(self):
         '''
         tests 'false' existence of a group when given group_id
@@ -282,7 +282,7 @@ class BotoSecgroupTestCase(TestCase):
 
     @skipIf(True, 'test skipped due to error in moto return - fixed in'
                   ' https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f')
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_delete_group_ec2_classic(self):
         '''
         test deletion of a group in EC2-Classic. Test does the following:
@@ -310,11 +310,11 @@ class BotoSecgroupTestCase(TestCase):
 
     @skipIf(True, 'test skipped because moto does not yet support group'
                   ' filters https://github.com/spulec/moto/issues/154')
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_delete_group_name_ec2_vpc(self):
         pass
 
-    @mock_ec2
+    @mock_ec2_deprecated
     def test__get_conn_true(self):
         '''
         tests ensures that _get_conn returns an boto.ec2.connection.EC2Connection object.
