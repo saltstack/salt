@@ -116,13 +116,13 @@ def _get_all_eip_addresses(addresses=None, allocation_ids=None, region=None,
 
     try:
         return conn.get_all_addresses(addresses=addresses, allocation_ids=allocation_ids)
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as ex:
+        log.error(ex)
         return []
 
 
 def get_all_eip_addresses(addresses=None, allocation_ids=None, region=None,
-                           key=None, keyid=None, profile=None):
+                          key=None, keyid=None, profile=None):
     '''
     Get public addresses of some, or all EIPs associated with the current account.
 
@@ -144,8 +144,12 @@ def get_all_eip_addresses(addresses=None, allocation_ids=None, region=None,
 
     .. versionadded:: 2016.3.0
     '''
-    return [x.public_ip for x in _get_all_eip_addresses(addresses, allocation_ids, region,
-                key, keyid, profile)]
+    return [x.public_ip for x in _get_all_eip_addresses(addresses,
+                                                        allocation_ids,
+                                                        region,
+                                                        key,
+                                                        keyid,
+                                                        profile)]
 
 
 def get_unassociated_eip_address(domain='standard', region=None, key=None,
@@ -222,7 +226,7 @@ def get_eip_address_info(addresses=None, allocation_ids=None, region=None, key=N
         allocation_ids = [allocation_ids]
 
     ret = _get_all_eip_addresses(addresses=addresses, allocation_ids=allocation_ids,
-                       region=region, key=key, keyid=keyid, profile=profile)
+                                 region=region, key=key, keyid=keyid, profile=profile)
 
     interesting = ['allocation_id', 'association_id', 'domain', 'instance_id',
                    'network_interface_id', 'network_interface_owner_id', 'public_ip',
@@ -260,8 +264,8 @@ def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile
 
     try:
         address = conn.allocate_address(domain=domain)
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as ex:
+        log.error(ex)
         return False
 
     interesting = ['allocation_id', 'association_id', 'domain', 'instance_id',
@@ -301,8 +305,8 @@ def release_eip_address(public_ip=None, allocation_id=None, region=None, key=Non
 
     try:
         return conn.release_address(public_ip, allocation_id)
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as ex:
+        log.error(ex)
         return False
 
 
@@ -357,8 +361,8 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
         try:
             instance_id = get_id(name=instance_name, region=region, key=key,
                                  keyid=keyid, profile=profile)
-        except boto.exception.BotoServerError as e:
-            log.error(e)
+        except boto.exception.BotoServerError as ex:
+            log.error(ex)
             return False
         if not instance_id:
             log.error("Given instance_name '{0}' cannot be mapped to an "
@@ -370,8 +374,8 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
             network_interface_id = get_network_interface_id(
                 network_interface_name, region=region, key=key, keyid=keyid,
                 profile=profile)
-        except boto.exception.BotoServerError as e:
-            log.error(e)
+        except boto.exception.BotoServerError as ex:
+            log.error(ex)
             return False
         if not network_interface_id:
             log.error("Given network_interface_name '{0}' cannot be mapped to "
@@ -385,8 +389,8 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
                                       network_interface_id=network_interface_id,
                                       private_ip_address=private_ip_address,
                                       allow_reassociation=allow_reassociation)
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as ex:
+        log.error(ex)
         return False
 
 
@@ -417,8 +421,8 @@ def disassociate_eip_address(public_ip=None, association_id=None, region=None,
 
     try:
         return conn.disassociate_address(public_ip, association_id)
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as ex:
+        log.error(ex)
         return False
 
 
@@ -430,15 +434,21 @@ def assign_private_ip_addresses(network_interface_name=None, network_interface_i
     Assigns one or more secondary private IP addresses to a network interface.
 
     network_interface_id
-        (string) - ID of the network interface to associate the IP with (exclusive with 'network_interface_name')
+        (string) - ID of the network interface to associate the IP with
+                   (exclusive with 'network_interface_name')
     network_interface_name
-        (string) - Name of the network interface to associate the IP with (exclusive with 'network_interface_id')
+        (string) - Name of the network interface to associate the IP with
+                   (exclusive with 'network_interface_id')
     private_ip_addresses
-        (list) - Assigns the specified IP addresses as secondary IP addresses to the network interface (exclusive with 'secondary_private_ip_address_count')
+        (list) - Assigns the specified IP addresses as secondary IP addresses
+                 to the network interface
+                 (exclusive with 'secondary_private_ip_address_count')
     secondary_private_ip_address_count
-        (int) - The number of secondary IP addresses to assign to the network interface. (exclusive with 'private_ip_addresses')
+        (int) - The number of secondary IP addresses to assign to the network interface.
+                (exclusive with 'private_ip_addresses')
     allow_reassociation
-        (bool)   – Allow a currently associated EIP to be re-associated with the new instance or interface.
+        (bool)   – Allow a currently associated EIP to be re-associated with
+                   the new instance or interface.
 
     returns
         (bool)   - True on success, False on failure.
@@ -464,8 +474,8 @@ def assign_private_ip_addresses(network_interface_name=None, network_interface_i
             network_interface_id = get_network_interface_id(
                 network_interface_name, region=region, key=key, keyid=keyid,
                 profile=profile)
-        except boto.exception.BotoServerError as e:
-            log.error(e)
+        except boto.exception.BotoServerError as ex:
+            log.error(ex)
             return False
         if not network_interface_id:
             log.error("Given network_interface_name '{0}' cannot be mapped to "
@@ -477,8 +487,8 @@ def assign_private_ip_addresses(network_interface_name=None, network_interface_i
                                                 private_ip_addresses=private_ip_addresses,
                                                 secondary_private_ip_address_count=secondary_private_ip_address_count,
                                                 allow_reassignment=allow_reassignment)
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as ex:
+        log.error(ex)
         return False
 
 
@@ -518,8 +528,8 @@ def unassign_private_ip_addresses(network_interface_name=None, network_interface
             network_interface_id = get_network_interface_id(
                 network_interface_name, region=region, key=key, keyid=keyid,
                 profile=profile)
-        except boto.exception.BotoServerError as e:
-            log.error(e)
+        except boto.exception.BotoServerError as ex:
+            log.error(ex)
             return False
         if not network_interface_id:
             log.error("Given network_interface_name '{0}' cannot be mapped to "
@@ -529,8 +539,8 @@ def unassign_private_ip_addresses(network_interface_name=None, network_interface
     try:
         return conn.unassign_private_ip_addresses(network_interface_id=network_interface_id,
                                                   private_ip_addresses=private_ip_addresses)
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as ex:
+        log.error(ex)
         return False
 
 
@@ -829,19 +839,19 @@ def _to_blockdev_map(thing):
         return None
 
     bdm = BlockDeviceMapping()
-    for d, t in six.iteritems(thing):
-        bdt = BlockDeviceType(ephemeral_name=t.get('ephemeral_name'),
-                              no_device=t.get('no_device', False),
-                              volume_id=t.get('volume_id'),
-                              snapshot_id=t.get('snapshot_id'),
-                              status=t.get('status'),
-                              attach_time=t.get('attach_time'),
-                              delete_on_termination=t.get('delete_on_termination', False),
-                              size=t.get('size'),
-                              volume_type=t.get('volume_type'),
-                              iops=t.get('iops'),
-                              encrypted=t.get('encrypted'))
-        bdm[d] = bdt
+    for devname, attributes in six.iteritems(thing):
+        bdt = BlockDeviceType(ephemeral_name=attributes.get('ephemeral_name'),
+                              no_device=attributes.get('no_device', False),
+                              volume_id=attributes.get('volume_id'),
+                              snapshot_id=attributes.get('snapshot_id'),
+                              status=attributes.get('status'),
+                              attach_time=attributes.get('attach_time'),
+                              delete_on_termination=attributes.get('delete_on_termination', False),
+                              size=attributes.get('size'),
+                              volume_type=attributes.get('volume_type'),
+                              iops=attributes.get('iops'),
+                              encrypted=attributes.get('encrypted'))
+        bdm[devname] = bdt
 
     return bdm
 
@@ -976,13 +986,13 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         raise SaltInvocationError('Only one of subnet_name or subnet_id may be '
                                   'provided.')
     if subnet_name:
-        r = __salt__['boto_vpc.get_resource_id']('subnet', subnet_name,
-                                                 region=region, key=key,
-                                                 keyid=keyid, profile=profile)
-        if 'id' not in r:
+        res = __salt__['boto_vpc.get_resource_id']('subnet', subnet_name,
+                                                   region=region, key=key,
+                                                   keyid=keyid, profile=profile)
+        if 'id' not in res:
             log.warning('Couldn\'t resolve subnet name {0}.').format(subnet_name)
             return False
-        subnet_id = r['id']
+        subnet_id = res['id']
 
     if all((security_group_ids, security_group_names)):
         raise SaltInvocationError('Only one of security_group_ids or '
@@ -990,22 +1000,22 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
     if security_group_names:
         security_group_ids = []
         for sgn in security_group_names:
-            r = __salt__['boto_secgroup.get_group_id'](sgn, vpc_name=vpc_name,
-                                                       region=region, key=key,
-                                                       keyid=keyid, profile=profile)
-            if not r:
+            res = __salt__['boto_secgroup.get_group_id'](sgn, vpc_id=vpc_id,
+                                                         vpc_name=vpc_name,
+                                                         region=region, key=key,
+                                                         keyid=keyid, profile=profile)
+            if not res:
                 log.warning('Couldn\'t resolve security group name ' + str(sgn))
                 return False
-            security_group_ids += [r]
+            security_group_ids += [res]
 
     if all((network_interface_id, network_interface_name)):
         raise SaltInvocationError('Only one of network_interface_id or '
                                   'network_interface_name may be provided.')
     if network_interface_name:
         result = get_network_interface_id(network_interface_name,
-                                                        region=region, key=key,
-                                                        keyid=keyid,
-                                                        profile=profile)
+                                          region=region, key=key,
+                                          keyid=keyid, profile=profile)
         network_interface_id = result['result']
         if not network_interface_id:
             log.warning(
@@ -1013,18 +1023,21 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                 "network_interface_id".format(network_interface_name)
             )
 
-    if network_interface_id:
-        interface = boto.ec2.networkinterface.NetworkInterfaceSpecification(
-            network_interface_id=network_interface_id,
-            device_index=0
-        )
+    if not network_interfaces:
+        if network_interface_id:
+            interface = boto.ec2.networkinterface.NetworkInterfaceSpecification(
+                network_interface_id=network_interface_id,
+                device_index=0
+            )
+        else:
+            interface = boto.ec2.networkinterface.NetworkInterfaceSpecification(
+                subnet_id=subnet_id,
+                groups=security_group_ids,
+                device_index=0
+            )
+        interfaces = boto.ec2.networkinterface.NetworkInterfaceCollection(interface)
     else:
-        interface = boto.ec2.networkinterface.NetworkInterfaceSpecification(
-            subnet_id=subnet_id,
-            groups=security_group_ids,
-            device_index=0
-        )
-    interfaces = boto.ec2.networkinterface.NetworkInterfaceCollection(interface)
+        interfaces = network_interfaces
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -1080,8 +1093,8 @@ def get_key(key_name, region=None, key=None, keyid=None, profile=None):
         if key is None:
             return False
         return key.name, key.fingerprint
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as ex:
+        log.debug(ex)
         return False
 
 
@@ -1104,8 +1117,8 @@ def create_key(key_name, save_path, region=None, key=None, keyid=None,
         log.debug("the key to return is : {0}".format(key))
         key.save(save_path)
         return key.material
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as ex:
+        log.debug(ex)
         return False
 
 
@@ -1132,8 +1145,8 @@ def import_key(key_name, public_key_material, region=None, key=None,
         key = conn.import_key_pair(key_name, public_key_material)
         log.debug("the key to return is : {0}".format(key))
         return key.fingerprint
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as ex:
+        log.debug(ex)
         return False
 
 
@@ -1153,8 +1166,8 @@ def delete_key(key_name, region=None, key=None, keyid=None, profile=None):
         key = conn.delete_key_pair(key_name)
         log.debug("the key to return is : {0}".format(key))
         return key
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as ex:
+        log.debug(ex)
         return False
 
 
@@ -1186,8 +1199,8 @@ def get_keys(keynames=None, filters=None, region=None, key=None,
             for key in keys:
                 key_values.append(key.name)
         return key_values
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as ex:
+        log.debug(ex)
         return False
 
 
@@ -1231,8 +1244,8 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
         raise SaltInvocationError('Attribute must be one of: {0}.'.format(attribute_list))
     try:
         if instance_name:
-            instances = find_instances(name=instance_name, region=region, key=key, keyid=keyid, profile=profile,
-                                      filters=filters)
+            instances = find_instances(name=instance_name, filters=filters,
+                                       region=region, key=key, keyid=keyid, profile=profile)
             if len(instances) > 1:
                 log.error('Found more than one EC2 instance matching the criteria.')
                 return False
@@ -1289,8 +1302,8 @@ def set_attribute(attribute, attribute_value, instance_name=None, instance_id=No
         raise SaltInvocationError('Attribute must be one of: {0}.'.format(attribute_list))
     try:
         if instance_name:
-            instances = find_instances(name=instance_name, region=region, key=key, keyid=keyid, profile=profile,
-                                      filters=filters)
+            instances = find_instances(name=instance_name, filters=filters,
+                                       region=region, key=key, keyid=keyid, profile=profile)
             if len(instances) != 1:
                 raise CommandExecutionError('Found more than one EC2 instance matching the criteria.')
             instance_id = instances[0]
@@ -1317,19 +1330,19 @@ def get_network_interface_id(name, region=None, key=None, keyid=None,
         salt myminion boto_ec2.get_network_interface_id name=my_eni
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    r = {}
+    ret = {}
     try:
         enis = conn.get_all_network_interfaces(filters={'tag:Name': name})
         if not enis:
-            r['error'] = {'message': 'No ENIs found.'}
+            ret['error'] = {'message': 'No ENIs found.'}
         elif len(enis) > 1:
-            r['error'] = {'message': 'Name specified is tagged on multiple ENIs.'}
+            ret['error'] = {'message': 'Name specified is tagged on multiple ENIs.'}
         else:
             eni = enis[0]
-            r['result'] = eni.id
-    except boto.exception.EC2ResponseError as e:
-        r['error'] = __utils__['boto.get_error'](e)
-    return r
+            ret['result'] = eni.id
+    except boto.exception.EC2ResponseError as ex:
+        ret['error'] = __utils__['boto.get_error'](ex)
+    return ret
 
 
 def get_network_interface(name=None, network_interface_id=None, region=None,
@@ -1346,20 +1359,23 @@ def get_network_interface(name=None, network_interface_id=None, region=None,
         salt myminion boto_ec2.get_network_interface name=my_eni
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    r = {}
+    ret = {}
     result = _get_network_interface(conn, name, network_interface_id)
     if 'error' in result:
         if result['error']['message'] == 'No ENIs found.':
-            r['result'] = None
-            return r
+            ret['result'] = None
+            return ret
         return result
     eni = result['result']
-    r['result'] = _describe_network_interface(eni)
-    return r
+    ret['result'] = _describe_network_interface(eni)
+    return ret
 
 
 def _get_network_interface(conn, name=None, network_interface_id=None):
-    r = {}
+    '''
+    Get an Elastic Network Interface.
+    '''
+    ret = {}
     if not (name or network_interface_id):
         raise SaltInvocationError(
             'Either name or network_interface_id must be provided.'
@@ -1371,43 +1387,46 @@ def _get_network_interface(conn, name=None, network_interface_id=None):
             enis = conn.get_all_network_interfaces(filters={'tag:Name': name})
 
         if not enis:
-            r['error'] = {'message': 'No ENIs found.'}
+            ret['error'] = {'message': 'No ENIs found.'}
         elif len(enis) > 1:
-            r['error'] = {'message': 'Name specified is tagged on multiple ENIs.'}
+            ret['error'] = {'message': 'Name specified is tagged on multiple ENIs.'}
         else:
             eni = enis[0]
-            r['result'] = eni
-    except boto.exception.EC2ResponseError as e:
-        r['error'] = __utils__['boto.get_error'](e)
-    return r
+            ret['result'] = eni
+    except boto.exception.EC2ResponseError as ex:
+        ret['error'] = __utils__['boto.get_error'](ex)
+    return ret
 
 
 def _describe_network_interface(eni):
-    r = {}
+    '''
+    Get Elastic Network Interface Description.
+    '''
+    ret = {}
     for attr in ['status', 'description', 'availability_zone', 'requesterId',
                  'requester_managed', 'mac_address', 'private_ip_address',
                  'vpc_id', 'id', 'source_dest_check', 'owner_id', 'tags',
                  'subnet_id', 'associationId', 'publicDnsName', 'owner_id',
                  'ipOwnerId', 'publicIp', 'allocationId']:
         if hasattr(eni, attr):
-            r[attr] = getattr(eni, attr)
-    r['region'] = eni.region.name
-    r['groups'] = []
+            ret[attr] = getattr(eni, attr)
+    ret['region'] = eni.region.name
+    ret['groups'] = []
     for group in eni.groups:
-        r['groups'].append({'name': group.name, 'id': group.id})
-    r['private_ip_addresses'] = []
+        ret['groups'].append({'name': group.name, 'id': group.id})
+    ret['private_ip_addresses'] = []
     for address in eni.private_ip_addresses:
-        r['private_ip_addresses'].append(
+        ret['private_ip_addresses'].append(
             {'private_ip_address': address.private_ip_address,
              'primary': address.primary}
         )
-    r['attachment'] = {}
+    ret['attachment'] = {}
     for attr in ['status', 'attach_time', 'device_index',
                  'delete_on_termination', 'instance_id',
                  'instance_owner_id', 'id']:
         if hasattr(eni.attachment, attr):
-            r['attachment'][attr] = getattr(eni.attachment, attr)
-    return r
+            ret['attachment'][attr] = getattr(eni.attachment, attr)
+    return ret
 
 
 def create_network_interface(name, subnet_id=None, subnet_name=None,
@@ -1441,19 +1460,19 @@ def create_network_interface(name, subnet_id=None, subnet_name=None,
         subnet_id = resource['id']
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    r = {}
+    ret = {}
     result = _get_network_interface(conn, name)
     if 'result' in result:
-        r['error'] = {'message': 'An ENI with this Name tag already exists.'}
-        return r
+        ret['error'] = {'message': 'An ENI with this Name tag already exists.'}
+        return ret
     vpc_id = __salt__['boto_vpc.get_subnet_association'](
         [subnet_id], region=region, key=key, keyid=keyid, profile=profile
     )
     vpc_id = vpc_id.get('vpc_id')
     if not vpc_id:
         msg = 'subnet_id {0} does not map to a valid vpc id.'.format(subnet_id)
-        r['error'] = {'message': msg}
-        return r
+        ret['error'] = {'message': msg}
+        return ret
     _groups = __salt__['boto_secgroup.convert_to_group_ids'](
         groups, vpc_id=vpc_id, region=region, key=key,
         keyid=keyid, profile=profile
@@ -1466,11 +1485,11 @@ def create_network_interface(name, subnet_id=None, subnet_name=None,
             groups=_groups
         )
         eni.add_tag('Name', name)
-    except boto.exception.EC2ResponseError as e:
-        r['error'] = __utils__['boto.get_error'](e)
-        return r
-    r['result'] = _describe_network_interface(eni)
-    return r
+    except boto.exception.EC2ResponseError as ex:
+        ret['error'] = __utils__['boto.get_error'](ex)
+        return ret
+    ret['result'] = _describe_network_interface(eni)
+    return ret
 
 
 def delete_network_interface(
@@ -1492,7 +1511,7 @@ def delete_network_interface(
             'Either name or network_interface_id must be provided.'
         )
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    r = {}
+    ret = {}
     result = _get_network_interface(conn, name, network_interface_id)
     if 'error' in result:
         return result
@@ -1501,13 +1520,13 @@ def delete_network_interface(
         info = _describe_network_interface(eni)
         network_interface_id = info['id']
     except KeyError:
-        r['error'] = {'message': 'ID not found for this network interface.'}
-        return r
+        ret['error'] = {'message': 'ID not found for this network interface.'}
+        return ret
     try:
-        r['result'] = conn.delete_network_interface(network_interface_id)
-    except boto.exception.EC2ResponseError as e:
-        r['error'] = __utils__['boto.get_error'](e)
-    return r
+        ret['result'] = conn.delete_network_interface(network_interface_id)
+    except boto.exception.EC2ResponseError as ex:
+        ret['error'] = __utils__['boto.get_error'](ex)
+    return ret
 
 
 def attach_network_interface(device_index, name=None, network_interface_id=None,
@@ -1537,7 +1556,7 @@ def attach_network_interface(device_index, name=None, network_interface_id=None,
         )
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    r = {}
+    ret = {}
     result = _get_network_interface(conn, name, network_interface_id)
     if 'error' in result:
         return result
@@ -1546,24 +1565,24 @@ def attach_network_interface(device_index, name=None, network_interface_id=None,
         info = _describe_network_interface(eni)
         network_interface_id = info['id']
     except KeyError:
-        r['error'] = {'message': 'ID not found for this network interface.'}
-        return r
+        ret['error'] = {'message': 'ID not found for this network interface.'}
+        return ret
 
     if instance_name:
         try:
             instance_id = get_id(name=instance_name, region=region, key=key,
                                  keyid=keyid, profile=profile)
-        except boto.exception.BotoServerError as e:
-            log.error(e)
+        except boto.exception.BotoServerError as ex:
+            log.error(ex)
             return False
 
     try:
-        r['result'] = conn.attach_network_interface(
+        ret['result'] = conn.attach_network_interface(
             network_interface_id, instance_id, device_index
         )
-    except boto.exception.EC2ResponseError as e:
-        r['error'] = __utils__['boto.get_error'](e)
-    return r
+    except boto.exception.EC2ResponseError as ex:
+        ret['error'] = __utils__['boto.get_error'](ex)
+    return ret
 
 
 def detach_network_interface(
@@ -1586,7 +1605,7 @@ def detach_network_interface(
             ' provided.'
         )
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    r = {}
+    ret = {}
     if not attachment_id:
         result = _get_network_interface(conn, name, network_interface_id)
         if 'error' in result:
@@ -1596,13 +1615,13 @@ def detach_network_interface(
         try:
             attachment_id = info['attachment']['id']
         except KeyError:
-            r['error'] = {'message': 'Attachment id not found for this ENI.'}
-            return r
+            ret['error'] = {'message': 'Attachment id not found for this ENI.'}
+            return ret
     try:
-        r['result'] = conn.detach_network_interface(attachment_id, force)
-    except boto.exception.EC2ResponseError as e:
-        r['error'] = __utils__['boto.get_error'](e)
-    return r
+        ret['result'] = conn.detach_network_interface(attachment_id, force)
+    except boto.exception.EC2ResponseError as ex:
+        ret['error'] = __utils__['boto.get_error'](ex)
+    return ret
 
 
 def modify_network_interface_attribute(
@@ -1627,7 +1646,7 @@ def modify_network_interface_attribute(
         raise SaltInvocationError(
             'attr and value must be provided.'
         )
-    r = {}
+    ret = {}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     result = _get_network_interface(conn, name, network_interface_id)
     if 'error' in result:
@@ -1651,29 +1670,29 @@ def modify_network_interface_attribute(
             keyid=keyid, profile=profile
         )
         if not _value:
-            r['error'] = {
+            ret['error'] = {
                 'message': ('Security groups do not map to valid security'
                             ' group ids')
             }
-            return r
+            return ret
     _attachment_id = None
     if _attr == 'deleteOnTermination':
         try:
             _attachment_id = info['attachment']['id']
         except KeyError:
-            r['error'] = {
+            ret['error'] = {
                 'message': ('No attachment id found for this ENI. The ENI must'
                             ' be attached before delete_on_termination can be'
                             ' modified')
             }
-            return r
+            return ret
     try:
-        r['result'] = conn.modify_network_interface_attribute(
+        ret['result'] = conn.modify_network_interface_attribute(
             network_interface_id, _attr, _value, attachment_id=_attachment_id
         )
-    except boto.exception.EC2ResponseError as e:
-        r['error'] = __utils__['boto.get_error'](e)
-    return r
+    except boto.exception.EC2ResponseError as ex:
+        ret['error'] = __utils__['boto.get_error'](ex)
+    return ret
 
 
 def get_all_volumes(volume_ids=None, filters=None, return_objs=False,
@@ -1723,13 +1742,13 @@ def get_all_volumes(volume_ids=None, filters=None, return_objs=False,
     try:
         ret = conn.get_all_volumes(volume_ids=volume_ids, filters=filters)
         return ret if return_objs else [r.id for r in ret]
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as ex:
+        log.error(ex)
         return []
 
 
 def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
-                    region=None, key=None, keyid=None, profile=None):
+                     region=None, key=None, keyid=None, profile=None):
     '''
     .. versionadded:: 2016.11.0
 
@@ -1784,31 +1803,32 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
     '''
     ret = {'success': True, 'comment': '', 'changes': {}}
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
-    ### First creeate a dictionary mapping all changes for a given volume to it's volume ID...
+    # First creeate a dictionary mapping all changes for a given volume to it's volume ID...
     tag_sets = {}
-    for tm in tag_maps:
-        filters = dict(tm.get('filters', {}))
-        tags = dict(tm.get('tags', {}))
+    for tagmap in tag_maps:
+        filters = dict(tagmap.get('filters', {}))
+        tags = dict(tagmap.get('tags', {}))
         args = {'return_objs': True, 'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
         new_filters = {}
         log.debug('got filters: {0}'.format(filters))
         instance_id = None
-        in_states = tm.get('in_states', running_states)
+        in_states = tagmap.get('in_states', running_states)
         try:
-            for k, v in filters.items():
-                if k == 'volume_ids':
-                    args['volume_ids'] = v
-                elif k == 'instance_name':
-                    instance_id = get_id(name=v, in_states=in_states, region=region, key=key,
+            for key, value in filters.items():
+                if key == 'volume_ids':
+                    args['volume_ids'] = value
+                elif key == 'instance_name':
+                    instance_id = get_id(name=value, in_states=in_states,
+                                         region=region, key=key,
                                          keyid=keyid, profile=profile)
                     if not instance_id:
-                        msg = "Couldn't resolve instance Name {0} to an ID.".format(v)
+                        msg = "Couldn't resolve instance Name {0} to an ID.".format(value)
                         raise CommandExecutionError(msg)
                     new_filters['attachment.instance_id'] = instance_id
                 else:
-                    new_filters[k] = v
-        except CommandExecutionError as e:
-            log.warning(e)
+                    new_filters[key] = value
+        except CommandExecutionError as ex:
+            log.warning(ex)
             continue  # Hmme, abort or do what we can...?  Guess the latter for now.
         args['filters'] = new_filters
         volumes = get_all_volumes(**args)
@@ -1817,7 +1837,7 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
             tag_sets.setdefault(vol.id.replace('-', '_'), {'vol': vol, 'tags': tags.copy()})['tags'].update(tags.copy())
     log.debug('tag_sets after munging: {0}'.format(tag_sets))
 
-    ### ...then loop through all those volume->tag pairs and apply them.
+    # ...then loop through all those volume->tag pairs and apply them.
     changes = {'old': {}, 'new': {}}
     for volume in tag_sets.values():
         vol, tags = volume['vol'], volume['tags']
@@ -1834,11 +1854,11 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
         else:
             log.debug('No changes needed for vol.id {0}'.format(vol.id))
         if len(add):
-            d = dict((k, tags[k]) for k in add)
-            log.debug('New tags for vol.id {0}: {1}'.format(vol.id, d))
+            addict = dict((k, tags[k]) for k in add)
+            log.debug('New tags for vol.id {0}: {1}'.format(vol.id, addict))
         if len(update):
-            d = dict((k, tags[k]) for k in update)
-            log.debug('Updated tags for vol.id {0}: {1}'.format(vol.id, d))
+            addict = dict((k, tags[k]) for k in update)
+            log.debug('Updated tags for vol.id {0}: {1}'.format(vol.id, addict))
         if not dry_run:
             if not create_tags(vol.id, tags, region=region, key=key, keyid=keyid, profile=profile):
                 ret['success'] = False
@@ -1878,13 +1898,13 @@ def get_all_tags(filters=None, region=None, key=None, keyid=None, profile=None):
     try:
         ret = conn.get_all_tags(filters)
         tags = {}
-        for t in ret:
-            if t.res_id not in tags:
-                tags[t.res_id] = {}
-            tags[t.res_id][t.name] = t.value
+        for tag in ret:
+            if tag.res_id not in tags:
+                tags[tag.res_id] = {}
+            tags[tag.res_id][tag.name] = tag.value
         return tags
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as ex:
+        log.error(ex)
         return {}
 
 
@@ -1916,8 +1936,8 @@ def create_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=N
     try:
         conn.create_tags(resource_ids, tags)
         return True
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as ex:
+        log.error(ex)
         return False
 
 
@@ -1953,8 +1973,8 @@ def delete_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=N
     try:
         conn.delete_tags(resource_ids, tags)
         return True
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as ex:
+        log.error(ex)
         return False
 
 
@@ -1998,12 +2018,12 @@ def detach_volume(volume_id, instance_id=None, device=None, force=False,
             log.error(timeout_msg)
             return False
         return ret
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as ex:
+        log.error(ex)
         return False
 
 
-def delete_volume(volume_id, instance_id=None, device=None, force=False,
+def delete_volume(volume_id, force=False,
                   region=None, key=None, keyid=None, profile=None):
     '''
     Detach an EBS volume from an EC2 instance.
@@ -2028,19 +2048,22 @@ def delete_volume(volume_id, instance_id=None, device=None, force=False,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         return conn.delete_volume(volume_id)
-    except boto.exception.BotoServerError as e:
+    except boto.exception.BotoServerError as ex:
         if not force:
-            log.error(e)
+            log.error(ex)
             return False
     try:
         conn.detach_volume(volume_id, force=force)
         return conn.delete_volume(volume_id)
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as ex:
+        log.error(ex)
         return False
 
 
 def _wait_for_volume_available(conn, volume_id, retries=5, interval=5):
+    '''
+    Sleeps with interval until volume with volume_id exists and has status 'available'.
+    '''
     i = 0
     while True:
         i = i + 1
