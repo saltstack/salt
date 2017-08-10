@@ -174,7 +174,7 @@ def get_printout(out, opts=None, **kwargs):
     else:
         if opts.get('force_color', False):
             opts['color'] = True
-        elif opts.get('no_color', False) or salt.utils.is_windows():
+        elif opts.get('no_color', False) or salt.utils.platform.is_windows():
             opts['color'] = False
         else:
             pass
