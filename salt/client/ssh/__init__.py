@@ -685,8 +685,21 @@ class SSH(object):
         '''
         Execute the overall routine, print results via outputters
         '''
-        fstr = u'{0}.prep_jid'.format(self.opts[u'master_job_cache'])
-        jid = self.returners[fstr](passed_jid=jid or self.opts.get(u'jid', None))
+        if self.opts['list_hosts']:
+            self._get_roster()
+            ret = {}
+            for roster_file in self.__parsed_rosters:
+                if roster_file.startswith('#'):
+                    continue
+                ret[roster_file] = {}
+                for host_id in self.__parsed_rosters[roster_file]:
+                    hostname = self.__parsed_rosters[roster_file][host_id]['host']
+                    ret[roster_file][host_id] = hostname
+            salt.output.display_output(ret, 'nested', self.opts)
+            sys.exit()
+
+        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+        jid = self.returners[fstr](passed_jid=jid or self.opts.get('jid', None))
 
         # Save the invocation information
         argv = self.opts[u'argv']
