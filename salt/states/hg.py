@@ -27,7 +27,7 @@ from salt.states.git import _fail, _neutral_test
 
 log = logging.getLogger(__name__)
 
-HG_BINARY = 'hg.exe' if salt.utils.is_windows() else 'hg'
+HG_BINARY = 'hg.exe' if salt.utils.platform.is_windows() else 'hg'
 
 
 def __virtual__():
