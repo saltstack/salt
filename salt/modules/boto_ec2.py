@@ -1814,10 +1814,10 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
         instance_id = None
         in_states = tagmap.get('in_states', running_states)
         try:
-            for key, value in filters.items():
-                if key == 'volume_ids':
+            for attrib, value in filters.items():
+                if attrib == 'volume_ids':
                     args['volume_ids'] = value
-                elif key == 'instance_name':
+                elif attrib == 'instance_name':
                     instance_id = get_id(name=value, in_states=in_states,
                                          region=region, key=key,
                                          keyid=keyid, profile=profile)
@@ -1826,7 +1826,7 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
                         raise CommandExecutionError(msg)
                     new_filters['attachment.instance_id'] = instance_id
                 else:
-                    new_filters[key] = value
+                    new_filters[attrib] = value
         except CommandExecutionError as ex:
             log.warning(ex)
             continue  # Hmme, abort or do what we can...?  Guess the latter for now.
