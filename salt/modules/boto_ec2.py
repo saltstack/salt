@@ -2202,7 +2202,8 @@ def modify_instances_secgroup(
         else:
             ret.update({'result': False})
     if len(ret['changes']) == 0:
-        ret.update({'result': True, 'comment': 'All selected security groups already as wanted. Nothing done.'})
+        ret.update({'result': True, 'comment': 'All selected security groups '
+                    'already configured as specified.'})
     return ret
 
 
@@ -2272,8 +2273,7 @@ def describe_instances(
 
     If you specify one or more instance IDs, Amazon EC2 returns information for those instances.
     If you do not specify instance IDs, Amazon EC2 returns information for all relevant instances.
-    If you specify an instance ID that is not valid, an error is returned.
-    If you specify an instance that you do not own, it is not included in the returned results.
+    If you specify an instance ID that is not valid, or you do not own, an EC2ResponseError is raised.
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     instances = conn.get_only_instances(instance_ids, filters, dry_run, max_results)
