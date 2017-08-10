@@ -86,7 +86,6 @@ import salt.payload
 import salt.pillar
 import salt.syspaths
 import salt.utils
-import salt.pillar
 import salt.utils.args
 import salt.utils.context
 import salt.utils.error
@@ -319,7 +318,7 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                     # list of positional arguments. This keyword argument is
                     # invalid.
                     for key, val in six.iteritems(string_kwarg):
-                        invalid_kwargs.append(r'{0}={1}'.format(key, val))
+                        invalid_kwargs.append(u'{0}={1}'.format(key, val))
             else:
                 _args.append(arg)
 
