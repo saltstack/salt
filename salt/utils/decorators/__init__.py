@@ -188,9 +188,8 @@ def memoize(func):
                 str_args.append(str(arg))
             else:
                 str_args.append(arg)
-        args = str_args
 
-        args_ = ','.join(list(args) + ['{0}={1}'.format(k, kwargs[k]) for k in sorted(kwargs)])
+        args_ = ','.join(list(str_args) + ['{0}={1}'.format(k, kwargs[k]) for k in sorted(kwargs)])
         if args_ not in cache:
             cache[args_] = func(*args, **kwargs)
         return cache[args_]
