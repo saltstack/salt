@@ -19,13 +19,16 @@ import multiprocessing.util
 
 # Import salt libs
 import salt.defaults.exitcodes
-import salt.utils
+import salt.utils  # Can be removed once appendproctitle is moved
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 import salt.log.setup
 import salt.defaults.exitcodes
 from salt.log.mixins import NewStyleClassMixIn
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import queue, range  # pylint: disable=import-error,redefined-builtin
 from tornado import gen
 
@@ -54,7 +57,8 @@ def notify_systemd():
     try:
         import systemd.daemon
     except ImportError:
-        if salt.utils.which('systemd-notify') and systemd_notify_call('--booted'):
+        if salt.utils.path.which('systemd-notify') \
+                and systemd_notify_call('--booted'):
             return systemd_notify_call('--ready')
         return False
 
@@ -74,13 +78,13 @@ def set_pidfile(pidfile, user):
     if not os.path.isdir(pdir) and pdir:
         os.makedirs(pdir)
     try:
-        with salt.utils.fopen(pidfile, 'w+') as ofile:
+        with salt.utils.files.fopen(pidfile, 'w+') as ofile:
             ofile.write(str(os.getpid()))
     except IOError:
         pass
 
     log.debug(('Created pidfile: {0}').format(pidfile))
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return True
 
     import pwd  # after confirming not running Windows
@@ -128,7 +132,7 @@ def get_pidfile(pidfile):
     '''
     Return the pid from a pidfile as an integer
     '''
-    with salt.utils.fopen(pidfile) as pdf:
+    with salt.utils.files.fopen(pidfile) as pdf:
         pid = pdf.read()
 
     return int(pid)
@@ -277,7 +281,7 @@ class ProcessManager(object):
         if kwargs is None:
             kwargs = {}
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # Need to ensure that 'log_queue' is correctly transferred to
             # processes that inherit from 'MultiprocessingProcess'.
             if type(MultiprocessingProcess) is type(tgt) and (
@@ -347,7 +351,7 @@ class ProcessManager(object):
         self._restart_processes = False
 
     def send_signal_to_processes(self, signal_):
-        if (salt.utils.is_windows() and
+        if (salt.utils.platform.is_windows() and
                 signal_ in (signal.SIGTERM, signal.SIGINT)):
             # On Windows, the subprocesses automatically have their signal
             # handlers invoked. If you send one of these signals while the
@@ -438,7 +442,7 @@ class ProcessManager(object):
                 return signal.default_int_handler(signal.SIGTERM)(*args)
             else:
                 return
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             if multiprocessing.current_process().name != 'MainProcess':
                 # Since the main process will kill subprocesses by tree,
                 # no need to do anything in the subprocesses.
@@ -446,7 +450,7 @@ class ProcessManager(object):
                 # call 'taskkill', it will leave a 'taskkill' zombie process.
                 # We want to avoid this.
                 return
-            with salt.utils.fopen(os.devnull, 'wb') as devnull:
+            with salt.utils.files.fopen(os.devnull, 'wb') as devnull:
                 for pid, p_map in six.iteritems(self._process_map):
                     # On Windows, we need to explicitly terminate sub-processes
                     # because the processes don't have a sigterm handler.
@@ -559,7 +563,7 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
         return instance
 
     def __init__(self, *args, **kwargs):
-        if (salt.utils.is_windows() and
+        if (salt.utils.platform.is_windows() and
                 not hasattr(self, '_is_child') and
                 self.__setstate__.__code__ is
                 MultiprocessingProcess.__setstate__.__code__):
@@ -590,7 +594,7 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
         # 'log_queue' from kwargs.
         super(MultiprocessingProcess, self).__init__(*args, **kwargs)
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # On Windows, the multiprocessing.Process object is reinitialized
             # in the child process via the constructor. Due to this, methods
             # such as ident() and is_alive() won't work properly. So we use
@@ -661,7 +665,7 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
 class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
     def __init__(self, *args, **kwargs):
         super(SignalHandlingMultiprocessingProcess, self).__init__(*args, **kwargs)
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             if hasattr(self, '_is_child'):
                 # On Windows, no need to call register_after_fork().
                 # register_after_fork() would only work on Windows if called

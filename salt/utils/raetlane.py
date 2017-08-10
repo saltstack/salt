@@ -56,7 +56,7 @@ import time
 # Import Salt Libs
 
 import logging
-from salt.utils import kinds
+import salt.utils.kinds as kinds
 
 log = logging.getLogger(__name__)
 

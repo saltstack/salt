@@ -23,7 +23,7 @@ try:
 except ImportError:
     pass
 import logging
-import salt.ext.six as six
+from salt.ext import six
 import sys
 
 log = logging.getLogger(__name__)

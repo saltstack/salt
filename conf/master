@@ -301,6 +301,22 @@
 
 #####        Security settings       #####
 ##########################################
+# Enable passphrase protection of Master private key.  Although a string value
+# is acceptable; passwords should be stored in an external vaulting mechanism
+# and retrieved via sdb. See https://docs.saltstack.com/en/latest/topics/sdb/.
+# Passphrase protection is off by default but an example of an sdb profile and
+# query is as follows.
+# masterkeyring:
+#  driver: keyring
+#  service: system
+#
+# key_pass: sdb://masterkeyring/key_pass
+
+# Enable passphrase protection of the Master signing_key. This only applies if
+# master_sign_pubkey is set to True.  This is disabled by default.
+# master_sign_pubkey: True
+# signing_key_pass: sdb://masterkeyring/signing_pass
+
 # Enable "open mode", this mode still maintains encryption, but turns off
 # authentication, this is only intended for highly secure environments or for
 # the situation where your keys end up in a bad state. If you run in open mode
@@ -310,6 +326,9 @@
 # Enable auto_accept, this setting will automatically accept all incoming
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
+
+# The size of key that should be generated when creating new keys.
+#keysize: 2048
 
 # Time in minutes that an incoming public key with a matching name found in
 # pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
@@ -980,6 +999,21 @@
 #         This may represent a substantial security risk.
 #
 #pillar_cache_backend: disk
+
+
+######        Reactor Settings        #####
+###########################################
+# Define a salt reactor. See https://docs.saltstack.com/en/latest/topics/reactor/
+#reactor: []
+
+#Set the TTL for the cache of the reactor configuration.
+#reactor_refresh_interval: 60
+
+#Configure the number of workers for the runner/wheel in the reactor.
+#reactor_worker_threads: 10
+
+#Define the queue size for workers in the reactor.
+#reactor_worker_hwm: 10000
 
 
 #####          Syndic settings       #####

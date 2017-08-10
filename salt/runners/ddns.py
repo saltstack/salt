@@ -28,7 +28,7 @@ except ImportError:
     HAS_LIBS = False
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def __virtual__():
 def _get_keyring(keyfile):
     keyring = None
     if keyfile and os.path.isfile(os.path.expanduser(keyfile)):
-        with salt.utils.fopen(keyfile) as _f:
+        with salt.utils.files.fopen(keyfile) as _f:
             keyring = dns.tsigkeyring.from_text(json.load(_f))
 
     return keyring

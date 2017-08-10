@@ -2,7 +2,7 @@
 '''
 Subversion Fileserver Backend
 
-After enabling this backend, branches, and tags in a remote subversion
+After enabling this backend, branches and tags in a remote subversion
 repository are exposed to salt as different environments. To enable this
 backend, add ``svn`` to the :conf_master:`fileserver_backend` option in the
 Master config file.
@@ -42,7 +42,7 @@ from salt.exceptions import FileserverConfigError
 PER_REMOTE_OVERRIDES = ('mountpoint', 'root', 'trunk', 'branches', 'tags')
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 HAS_SVN = False
 try:
@@ -55,6 +55,8 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
+import salt.utils.gzip_util
 import salt.utils.url
 import salt.fileserver
 from salt.utils.event import tagify
@@ -224,7 +226,7 @@ def init():
     if new_remote:
         remote_map = os.path.join(__opts__['cachedir'], 'svnfs/remote_map.txt')
         try:
-            with salt.utils.fopen(remote_map, 'w+') as fp_:
+            with salt.utils.files.fopen(remote_map, 'w+') as fp_:
                 timestamp = datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
                 fp_.write('# svnfs_remote map as of {0}\n'.format(timestamp))
                 for repo_conf in repos:
@@ -367,7 +369,7 @@ def lock(remote=None):
         failed = []
         if not os.path.exists(repo['lockfile']):
             try:
-                with salt.utils.fopen(repo['lockfile'], 'w+') as fp_:
+                with salt.utils.files.fopen(repo['lockfile'], 'w+') as fp_:
                     fp_.write('')
             except (IOError, OSError) as exc:
                 msg = ('Unable to set update lock for {0} ({1}): {2} '
@@ -453,7 +455,7 @@ def update():
             os.makedirs(env_cachedir)
         new_envs = envs(ignore_cache=True)
         serial = salt.payload.Serial(__opts__)
-        with salt.utils.fopen(env_cache, 'wb+') as fp_:
+        with salt.utils.files.fopen(env_cache, 'wb+') as fp_:
             fp_.write(serial.dumps(new_envs))
             log.trace('Wrote env cache data to {0}'.format(env_cache))
 
@@ -645,7 +647,7 @@ def serve_file(load, fnd):
     ret['dest'] = fnd['rel']
     gzip = load.get('gzip', None)
     fpath = os.path.normpath(fnd['path'])
-    with salt.utils.fopen(fpath, 'rb') as fp_:
+    with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
         if data and six.PY3 and not salt.utils.is_bin_file(fpath):
@@ -695,7 +697,7 @@ def file_hash(load, fnd):
                                                     __opts__['hash_type']))
     # If we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
-        with salt.utils.fopen(cache_path, 'rb') as fp_:
+        with salt.utils.files.fopen(cache_path, 'rb') as fp_:
             hsum, mtime = fp_.read().split(':')
             if os.path.getmtime(path) == mtime:
                 # check if mtime changed
@@ -709,7 +711,7 @@ def file_hash(load, fnd):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
-    with salt.utils.fopen(cache_path, 'w') as fp_:
+    with salt.utils.files.fopen(cache_path, 'w') as fp_:
         fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
 
     return ret
@@ -717,7 +719,7 @@ def file_hash(load, fnd):
 
 def _file_lists(load, form):
     '''
-    Return a dict containing the file lists for files, dirs, emtydirs and symlinks
+    Return a dict containing the file lists for files, dirs, emptydirs and symlinks
     '''
     if 'env' in load:
         salt.utils.warn_until(

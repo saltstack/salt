@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import json
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 #set up virtual function

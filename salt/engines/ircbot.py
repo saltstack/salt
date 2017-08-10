@@ -73,6 +73,9 @@ log = logging.getLogger(__name__)
 # Import salt libraries
 import salt.utils.event
 
+# Import 3rd-party libs
+from salt.ext import six
+
 # Nothing listening here
 Event = namedtuple("Event", "source code line")
 PrivEvent = namedtuple("PrivEvent", "source nick user host code channel command line")
@@ -212,7 +215,7 @@ class IRCClient(object):
         logging.info("on_closed")
 
     def send_message(self, line):
-        if isinstance(line, str):
+        if isinstance(line, six.string_types):
             line = line.encode('utf-8')
         log.debug("Sending:  %s", line)
         self._stream.write(line + b'\r\n')

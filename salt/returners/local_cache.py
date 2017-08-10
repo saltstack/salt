@@ -16,14 +16,15 @@ import bisect
 
 # Import salt libs
 import salt.payload
-import salt.utils
+import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.minions
 import salt.exceptions
 
 # Import 3rd-party libs
 import msgpack
-import salt.ext.six as six
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)
@@ -69,7 +70,7 @@ def _walk_through(job_dir):
             if not os.path.isfile(load_path):
                 continue
 
-            with salt.utils.fopen(load_path, 'rb') as rfh:
+            with salt.utils.files.fopen(load_path, 'rb') as rfh:
                 job = serial.load(rfh)
                 jid = job['jid']
                 yield jid, job, t_path, final
@@ -106,13 +107,13 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
                 return prep_jid(nocache=nocache, recurse_count=recurse_count+1)
 
     try:
-        with salt.utils.fopen(os.path.join(jid_dir, 'jid'), 'wb+') as fn_:
+        with salt.utils.files.fopen(os.path.join(jid_dir, 'jid'), 'wb+') as fn_:
             if six.PY2:
                 fn_.write(jid)
             else:
                 fn_.write(bytes(jid, 'utf-8'))
         if nocache:
-            with salt.utils.fopen(os.path.join(jid_dir, 'nocache'), 'wb+') as fn_:
+            with salt.utils.files.fopen(os.path.join(jid_dir, 'nocache'), 'wb+') as fn_:
                 fn_.write(b'')
     except IOError:
         log.warning('Could not write out jid file for job {0}. Retrying.'.format(jid))
@@ -209,7 +210,7 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
         else:
             raise
     try:
-        with salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b') as wfh:
+        with salt.utils.files.fopen(os.path.join(jid_dir, LOAD_P), 'w+b') as wfh:
             serial.dump(clear_load, wfh)
     except IOError as exc:
         log.warning(
@@ -274,7 +275,7 @@ def save_minions(jid, minions, syndic_id=None):
                 os.makedirs(jid_dir)
             except OSError:
                 pass
-        with salt.utils.fopen(minions_path, 'w+b') as wfh:
+        with salt.utils.files.fopen(minions_path, 'w+b') as wfh:
             serial.dump(minions, wfh)
     except IOError as exc:
         log.error(
@@ -292,7 +293,7 @@ def get_load(jid):
     if not os.path.exists(jid_dir) or not os.path.exists(load_fn):
         return {}
     serial = salt.payload.Serial(__opts__)
-    with salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'rb') as rfh:
+    with salt.utils.files.fopen(os.path.join(jid_dir, LOAD_P), 'rb') as rfh:
         ret = serial.load(rfh)
 
     minions_cache = [os.path.join(jid_dir, MINIONS_P)]
@@ -303,7 +304,7 @@ def get_load(jid):
     for minions_path in minions_cache:
         log.debug('Reading minion list from %s', minions_path)
         try:
-            with salt.utils.fopen(minions_path, 'rb') as rfh:
+            with salt.utils.files.fopen(minions_path, 'rb') as rfh:
                 all_minions.update(serial.load(rfh))
         except IOError as exc:
             salt.utils.files.process_read_exception(exc, minions_path)
@@ -335,7 +336,7 @@ def get_jid(jid):
                 continue
             while fn_ not in ret:
                 try:
-                    with salt.utils.fopen(retp, 'rb') as rfh:
+                    with salt.utils.files.fopen(retp, 'rb') as rfh:
                         ret_data = serial.load(rfh)
                     if not isinstance(ret_data, dict) or 'return' not in ret_data:
                         # Convert the old format in which return.p contains the only return data to
@@ -344,7 +345,7 @@ def get_jid(jid):
                         ret_data = {'return': ret_data}
                     ret[fn_] = ret_data
                     if os.path.isfile(outp):
-                        with salt.utils.fopen(outp, 'rb') as rfh:
+                        with salt.utils.files.fopen(outp, 'rb') as rfh:
                             ret[fn_]['out'] = serial.load(rfh)
                 except Exception as exc:
                     if 'Permission denied:' in str(exc):
@@ -455,7 +456,7 @@ def update_endtime(jid, time):
     try:
         if not os.path.exists(jid_dir):
             os.makedirs(jid_dir)
-        with salt.utils.fopen(os.path.join(jid_dir, ENDTIME), 'w') as etfile:
+        with salt.utils.files.fopen(os.path.join(jid_dir, ENDTIME), 'w') as etfile:
             etfile.write(time)
     except IOError as exc:
         log.warning('Could not write job invocation cache file: {0}'.format(exc))
@@ -471,7 +472,7 @@ def get_endtime(jid):
     etpath = os.path.join(jid_dir, ENDTIME)
     if not os.path.exists(etpath):
         return False
-    with salt.utils.fopen(etpath, 'r') as etfile:
+    with salt.utils.files.fopen(etpath, 'r') as etfile:
         endtime = etfile.read().strip('\n')
     return endtime
 
@@ -498,7 +499,7 @@ def save_reg(data):
         else:
             raise
     try:
-        with salt.utils.fopen(regfile, 'a') as fh_:
+        with salt.utils.files.fopen(regfile, 'a') as fh_:
             msgpack.dump(data, fh_)
     except:
         log.error('Could not write to msgpack file {0}'.format(__opts__['outdir']))
@@ -512,7 +513,7 @@ def load_reg():
     reg_dir = _reg_dir()
     regfile = os.path.join(reg_dir, 'register')
     try:
-        with salt.utils.fopen(regfile, 'r') as fh_:
+        with salt.utils.files.fopen(regfile, 'r') as fh_:
             return msgpack.load(fh_)
     except:
         log.error('Could not write to msgpack file {0}'.format(__opts__['outdir']))

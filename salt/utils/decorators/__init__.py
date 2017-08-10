@@ -12,14 +12,12 @@ from functools import wraps
 from collections import defaultdict
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
-from salt.exceptions import CommandNotFoundError, CommandExecutionError, SaltConfigurationError
-from salt.version import SaltStackVersion, __saltstack_version__
+from salt.exceptions import CommandExecutionError, SaltConfigurationError
 from salt.log import LOG_LEVELS
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -154,7 +152,7 @@ def timing(function):
     @wraps(function)
     def wrapped(*args, **kwargs):
         start_time = time.time()
-        ret = function(*args, **salt.utils.clean_kwargs(**kwargs))
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
         end_time = time.time()
         if function.__module__.startswith('salt.loaded.int.'):
             mod_name = function.__module__[16:]
@@ -169,67 +167,6 @@ def timing(function):
         )
         return ret
     return wrapped
-
-
-def which(exe):
-    '''
-    Decorator wrapper for salt.utils.which
-    '''
-    def wrapper(function):
-        def wrapped(*args, **kwargs):
-            if salt.utils.which(exe) is None:
-                raise CommandNotFoundError(
-                    'The \'{0}\' binary was not found in $PATH.'.format(exe)
-                )
-            return function(*args, **kwargs)
-        return identical_signature_wrapper(function, wrapped)
-    return wrapper
-
-
-def which_bin(exes):
-    '''
-    Decorator wrapper for salt.utils.which_bin
-    '''
-    def wrapper(function):
-        def wrapped(*args, **kwargs):
-            if salt.utils.which_bin(exes) is None:
-                raise CommandNotFoundError(
-                    'None of provided binaries({0}) was not found '
-                    'in $PATH.'.format(
-                        ['\'{0}\''.format(exe) for exe in exes]
-                    )
-                )
-            return function(*args, **kwargs)
-        return identical_signature_wrapper(function, wrapped)
-    return wrapper
-
-
-def identical_signature_wrapper(original_function, wrapped_function):
-    '''
-    Return a function with identical signature as ``original_function``'s which
-    will call the ``wrapped_function``.
-    '''
-    context = {'__wrapped__': wrapped_function}
-    function_def = compile(
-        'def {0}({1}):\n'
-        '    return __wrapped__({2})'.format(
-            # Keep the original function name
-            original_function.__name__,
-            # The function signature including defaults, i.e., 'timeout=1'
-            inspect.formatargspec(
-                *salt.utils.args.get_function_argspec(original_function)
-            )[1:-1],
-            # The function signature without the defaults
-            inspect.formatargspec(
-                formatvalue=lambda val: '',
-                *salt.utils.args.get_function_argspec(original_function)
-            )[1:-1]
-        ),
-        '<string>',
-        'exec'
-    )
-    six.exec_(function_def, context)
-    return wraps(original_function)(context[original_function.__name__])
 
 
 def memoize(func):
@@ -278,7 +215,7 @@ class _DeprecationDecorator(object):
         :param version: Expiration version
         :return:
         '''
-
+        from salt.version import SaltStackVersion, __saltstack_version__
         self._globals = globals
         self._exp_version_name = version
         self._exp_version = SaltStackVersion.from_name(self._exp_version_name)
@@ -542,8 +479,14 @@ class _WithDeprecated(_DeprecationDecorator):
                 f_name=function.__name__))
 
         opts = self._globals.get('__opts__', '{}')
-        use_deprecated = full_name in opts.get(self.CFG_USE_DEPRECATED, list())
-        use_superseded = full_name in opts.get(self.CFG_USE_SUPERSEDED, list())
+        pillar = self._globals.get('__pillar__', '{}')
+
+        use_deprecated = (full_name in opts.get(self.CFG_USE_DEPRECATED, list()) or
+                          full_name in pillar.get(self.CFG_USE_DEPRECATED, list()))
+
+        use_superseded = (full_name in opts.get(self.CFG_USE_SUPERSEDED, list()) or
+                          full_name in pillar.get(self.CFG_USE_SUPERSEDED, list()))
+
         if use_deprecated and use_superseded:
             raise SaltConfigurationError("Function '{0}' is mentioned both in deprecated "
                                          "and superseded sections. Please remove any of that.".format(full_name))
@@ -565,8 +508,11 @@ class _WithDeprecated(_DeprecationDecorator):
             f_name=self._orig_f_name)
 
         return func_path in self._globals.get('__opts__').get(
+            self.CFG_USE_DEPRECATED, list()) or func_path in self._globals.get('__pillar__').get(
             self.CFG_USE_DEPRECATED, list()) or (self._policy == self.OPT_IN
                                                  and not (func_path in self._globals.get('__opts__', {}).get(
+                                                          self.CFG_USE_SUPERSEDED, list()))
+                                                 and not (func_path in self._globals.get('__pillar__', {}).get(
                                                           self.CFG_USE_SUPERSEDED, list()))), func_path
 
     def __call__(self, function):
@@ -641,53 +587,3 @@ def ignores_kwargs(*kwarg_names):
             return fn(*args, **kwargs_filtered)
         return __ignores_kwargs
     return _ignores_kwargs
-
-
-class JinjaFilter(object):
-    '''
-    This decorator is used to specify that a function is to be loaded as a
-    Jinja filter.
-    '''
-    salt_jinja_filters = {}
-
-    def __init__(self, name=None):
-        '''
-        '''
-        self.name = name
-
-    def __call__(self, function):
-        '''
-        '''
-        name = self.name or function.__name__
-        if name not in self.salt_jinja_filters:
-            log.debug('Marking "{0}" as a jinja filter'.format(name))
-            self.salt_jinja_filters[name] = function
-        return function
-
-
-jinja_filter = JinjaFilter
-
-
-class JinjaTest(object):
-    '''
-    This decorator is used to specify that a function is to be loaded as a
-    Jinja test.
-    '''
-    salt_jinja_tests = {}
-
-    def __init__(self, name=None):
-        '''
-        '''
-        self.name = name
-
-    def __call__(self, function):
-        '''
-        '''
-        name = self.name or function.__name__
-        if name not in self.salt_jinja_tests:
-            log.debug('Marking "{0}" as a jinja test'.format(name))
-            self.salt_jinja_tests[name] = function
-        return function
-
-
-jinja_test = JinjaTest

@@ -86,7 +86,7 @@ import os.path
 import json
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

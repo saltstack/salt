@@ -8,7 +8,8 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    if not salt.utils.which('showmount'):
+    if not salt.utils.path.which('showmount'):
         return (False, 'The nfs3 execution module failed to load: the showmount binary is not in the path.')
     return True
 
@@ -33,7 +34,7 @@ def list_exports(exports='/etc/exports'):
         salt '*' nfs.list_exports
     '''
     ret = {}
-    with salt.utils.fopen(exports, 'r') as efl:
+    with salt.utils.files.fopen(exports, 'r') as efl:
         for line in efl.read().splitlines():
             if not line:
                 continue
@@ -85,7 +86,7 @@ def _write_exports(exports, edict):
         /media/storage *(ro,sync,no_subtree_check)
         /media/data *(ro,sync,no_subtree_check)
     '''
-    with salt.utils.fopen(exports, 'w') as efh:
+    with salt.utils.files.fopen(exports, 'w') as efh:
         for export in edict:
             line = export
             for perms in edict[export]:

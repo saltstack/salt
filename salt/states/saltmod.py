@@ -32,7 +32,7 @@ import time
 import salt.syspaths
 import salt.utils
 import salt.utils.event
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
@@ -259,14 +259,12 @@ def state(name,
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
 
-    # If pillarenv is directly defined, use it
-    if pillarenv:
+    if pillarenv is not None:
         cmd_kw['kwarg']['pillarenv'] = pillarenv
-    # Use pillarenv if it's passed from __opts__ (via state.orchestrate for example)
-    elif __opts__.get('pillarenv'):
-        cmd_kw['kwarg']['pillarenv'] = __opts__['pillarenv']
 
-    cmd_kw['kwarg']['saltenv'] = saltenv if saltenv is not None else __env__
+    if saltenv is not None:
+        cmd_kw['kwarg']['saltenv'] = saltenv
+
     cmd_kw['kwarg']['queue'] = queue
 
     if isinstance(concurrent, bool):
@@ -468,7 +466,7 @@ def function(
            'result': True}
     if kwarg is None:
         kwarg = {}
-    if isinstance(arg, str):
+    if isinstance(arg, six.string_types):
         func_ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
                            'Modifying in place, but please update SLS file '
                            'to remove this warning.']

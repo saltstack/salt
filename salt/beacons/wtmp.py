@@ -14,7 +14,10 @@ import os
 import struct
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+
+# Import 3rd-party libs
+from salt.ext import six
 
 __virtualname__ = 'wtmp'
 WTMP = '/var/log/wtmp'
@@ -73,7 +76,7 @@ def beacon(config):
           wtmp: {}
     '''
     ret = []
-    with salt.utils.fopen(WTMP, 'rb') as fp_:
+    with salt.utils.files.fopen(WTMP, 'rb') as fp_:
         loc = __context__.get(LOC_KEY, 0)
         if loc == 0:
             fp_.seek(0, 2)
@@ -90,7 +93,7 @@ def beacon(config):
             event = {}
             for ind, field in enumerate(FIELDS):
                 event[field] = pack[ind]
-                if isinstance(event[field], str):
+                if isinstance(event[field], six.string_types):
                     event[field] = event[field].strip('\x00')
             ret.append(event)
     return ret

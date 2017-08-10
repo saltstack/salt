@@ -23,9 +23,10 @@ import datetime
 import ast
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 import salt.exceptions
-import salt.ext.six as six
+from salt.ext import six
 from salt.utils.odict import OrderedDict
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import range
@@ -165,7 +166,7 @@ def _parse_openssl_req(csr_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )
@@ -214,7 +215,7 @@ def _parse_openssl_crl(crl_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )
@@ -315,7 +316,7 @@ def _text_or_file(input_):
     content to be parsed.
     '''
     if os.path.isfile(input_):
-        with salt.utils.fopen(input_) as fp_:
+        with salt.utils.files.fopen(input_) as fp_:
             return fp_.read()
     else:
         return input_
@@ -768,7 +769,7 @@ def write_pem(text, path, overwrite=True, pem_type=None):
             _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
         except salt.exceptions.SaltInvocationError:
             pass
-    with salt.utils.fopen(path, 'w') as _fp:
+    with salt.utils.files.fopen(path, 'w') as _fp:
         if pem_type and pem_type == 'CERTIFICATE' and _private_key:
             _fp.write(_private_key)
         _fp.write(text)
@@ -1373,10 +1374,19 @@ def create_certificate(
                 ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
 
-        cert_txt = __salt__['publish.publish'](
+        certs = __salt__['publish.publish'](
             tgt=ca_server,
             fun='x509.sign_remote_certificate',
-            arg=str(kwargs))[ca_server]
+            arg=str(kwargs))
+
+        if not any(certs):
+            raise salt.exceptions.SaltInvocationError(
+                    'ca_server did not respond'
+                    ' salt master must permit peers to'
+                    ' call the sign_remote_certificate function.')
+
+        cert_txt = certs[ca_server]
+
         if path:
             return write_pem(
                 text=cert_txt,
@@ -1736,7 +1746,7 @@ def verify_crl(crl, cert):
 
         salt '*' x509.verify_crl crl=/etc/pki/myca.crl cert=/etc/pki/myca.crt
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )

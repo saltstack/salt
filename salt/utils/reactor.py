@@ -12,12 +12,13 @@ import salt.state
 import salt.utils
 import salt.utils.cache
 import salt.utils.event
+import salt.utils.files
 import salt.utils.process
 import salt.defaults.exitcodes
 
 # Import 3rd-party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         reactors = []
         if isinstance(self.opts['reactor'], six.string_types):
             try:
-                with salt.utils.fopen(self.opts['reactor']) as fp_:
+                with salt.utils.files.fopen(self.opts['reactor']) as fp_:
                     react_map = yaml.safe_load(fp_.read())
             except (OSError, IOError):
                 log.error(
@@ -126,7 +127,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         if isinstance(self.minion.opts['reactor'], six.string_types):
             log.debug('Reading reactors from yaml {0}'.format(self.opts['reactor']))
             try:
-                with salt.utils.fopen(self.opts['reactor']) as fp_:
+                with salt.utils.files.fopen(self.opts['reactor']) as fp_:
                     react_map = yaml.safe_load(fp_.read())
             except (OSError, IOError):
                 log.error(
@@ -273,6 +274,8 @@ class ReactWrap(object):
         try:
             f_call = salt.utils.format_call(l_fun, low)
             kwargs = f_call.get('kwargs', {})
+            if 'kwarg' not in kwargs:
+                kwargs['kwarg'] = {}
 
             # TODO: Setting the user doesn't seem to work for actual remote publishes
             if low['state'] in ('runner', 'wheel'):
