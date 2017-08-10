@@ -411,33 +411,6 @@ def get_cli_permissions():
     return __proxy__['panos.call'](query)
 
 
-'''
-Due to inability to pull files through API, this is temporarily suspended.
-
-def get_config_diff(lines=0):
-    """
-    Get the configuration difference between the running and candidate configuration.
-
-    Args:
-        lines (str): The number of lines surrounding the changes to display. Set to 'all' for
-                     all lines. The valid options are 0, 1, 5, 10, 20, all.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' panos.get_config_diff
-        salt '*' panos.get_config_diff all
-        salt '*' panos.get_config_diff 10
-
-    """
-    query = {'type': 'op',
-             'cmd': '<diff><config><num-context-lines>{0}</num-context-lines></config></diff>'.format(lines)}
-
-    return _get_job_results(query)
-'''
-
-
 def get_disk_usage():
     """
     Report filesystem disk space usage.
@@ -535,9 +508,9 @@ def get_hostname():
         salt '*' panos.get_hostname
 
     """
-    query={'type': 'config',
-           'action': 'get',
-           'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/hostname'}
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/hostname'}
 
     return __proxy__['panos.call'](query)['hostname']
 
@@ -843,7 +816,6 @@ def get_panorama_status():
     query = {'type': 'op', 'cmd': '<show><panorama-status></panorama-status></show>'}
 
     return __proxy__['panos.call'](query)
-
 
 
 def get_permitted_ips():
@@ -1679,8 +1651,8 @@ def set_ntp_authentication(target=None,
         if target == 'secondary' or target == 'both':
             query = {'type': 'config',
                      'action': 'set',
-                     'xpath':'/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/ntp-servers/'
-                             'secondary-ntp-server/authentication-type',
+                     'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/ntp-servers/''
+                              'secondary-ntp-server/authentication-type',
                      'element': '<symmetric-key><algorithm><{0}><authentication-key>{1}</authentication-key></{0}>'
                                 '</algorithm><key-id>{2}</key-id></symmetric-key>'.format(algorithm,
                                                                                           authentication_key,
@@ -1832,7 +1804,7 @@ def set_timezone(tz=None, deploy=False):
     query = {'type': 'config',
              'action': 'set',
              'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/timezone/',
-             'element': '<timezone>{0}</timezone>'.format(profile)}
+             'element': '<timezone>{0}</timezone>'.format(tz)}
 
     ret.update(__proxy__['panos.call'](query))
 
