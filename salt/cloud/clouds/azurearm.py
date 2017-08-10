@@ -79,7 +79,6 @@ HAS_LIBS = False
 try:
     import salt.utils.msazure
     from salt.utils.msazure import object_to_dict
-    import azure.storage
     from azure.common.credentials import (
         UserPassCredentials,
         ServicePrincipalCredentials,
@@ -115,6 +114,7 @@ try:
     from azure.mgmt.storage import StorageManagementClient
     from azure.mgmt.web import WebSiteManagementClient
     from msrestazure.azure_exceptions import CloudError
+    from azure.multiapi.storage.v2016_05_31 import CloudStorageAccount
     HAS_LIBS = True
 except ImportError:
     pass
@@ -1728,7 +1728,7 @@ def list_containers(call=None, kwargs=None):  # pylint: disable=unused-argument
     if not storconn:
         storconn = get_conn(StorageManagementClient)
 
-    storageaccount = azure.storage.CloudStorageAccount(
+    storageaccount = CloudStorageAccount(
         config.get_cloud_config_value(
             'storage_account',
             get_configured_provider(), __opts__, search_global=False
@@ -1769,7 +1769,7 @@ def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
             'A container must be specified'
         )
 
-    storageaccount = azure.storage.CloudStorageAccount(
+    storageaccount = CloudStorageAccount(
         config.get_cloud_config_value(
             'storage_account',
             get_configured_provider(), __opts__, search_global=False
@@ -1809,7 +1809,7 @@ def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
             'A blob must be specified'
         )
 
-    storageaccount = azure.storage.CloudStorageAccount(
+    storageaccount = CloudStorageAccount(
         config.get_cloud_config_value(
             'storage_account',
             get_configured_provider(), __opts__, search_global=False
