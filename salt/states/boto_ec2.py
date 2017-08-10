@@ -91,8 +91,8 @@ def key_present(name, save_private=None, upload_public=None, region=None,
     if upload_public is not None and 'salt://' in upload_public:
         try:
             upload_public = __salt__['cp.get_file_str'](upload_public)
-        except IOError as e:
-            log.debug(e)
+        except IOError as ex:
+            log.debug(ex)
             ret['comment'] = 'File {0} not found.'.format(upload_public)
             ret['result'] = False
             return ret
@@ -217,10 +217,12 @@ def eni_present(
 
     arecords
         A list of arecord dicts with attributes needed for the DNS add_record state.
-        By default the boto_route53.add_record state will be used, which requires: name, zone, ttl, and identifier.
+        By default the boto_route53.add_record state will be used,
+        which requires: name, zone, ttl, and identifier.
         See the boto_route53 state for information about these attributes.
         Other DNS modules can be called by specifying the provider keyword.
-        By default, the private ENI IP address will be used, set 'public: True' in the arecord dict to use the ENI's public IP address
+        By default, the private ENI IP address will be used, set 'public: True'
+        in the arecord dict to use the ENI's public IP address
 
         .. versionadded:: 2016.3.0
 
@@ -247,16 +249,16 @@ def eni_present(
     if not isinstance(source_dest_check, bool):
         raise SaltInvocationError('source_dest_check must be a bool.')
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    r = __salt__['boto_ec2.get_network_interface'](
+    res = __salt__['boto_ec2.get_network_interface'](
         name=name, region=region, key=key, keyid=keyid, profile=profile
     )
-    if 'error' in r:
+    if 'error' in res:
         ret['result'] = False
         ret['comment'] = 'Error when attempting to find eni: {0}.'.format(
-            r['error']['message']
+            res['error']['message']
         )
         return ret
-    if not r['result']:
+    if not res['result']:
         if __opts__['test']:
             ret['comment'] = 'ENI is set to be created.'
             if allocate_eip:
@@ -276,12 +278,12 @@ def eni_present(
                 result_create['error']['message']
             )
             return ret
-        r['result'] = result_create['result']
+        res['result'] = result_create['result']
         ret['comment'] = 'Created ENI {0}'.format(name)
-        ret['changes']['id'] = r['result']['id']
+        ret['changes']['id'] = res['result']['id']
     else:
         _ret = _eni_attribute(
-            r['result'], 'description', description, region, key, keyid,
+            res['result'], 'description', description, region, key, keyid,
             profile
         )
         ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
@@ -291,7 +293,7 @@ def eni_present(
             if ret['result'] is False:
                 return ret
         _ret = _eni_groups(
-            r['result'], groups, region, key, keyid, profile
+            res['result'], groups, region, key, keyid, profile
         )
         ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
         ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
@@ -301,7 +303,7 @@ def eni_present(
                 return ret
     # Actions that need to occur whether creating or updating
     _ret = _eni_attribute(
-        r['result'], 'source_dest_check', source_dest_check, region, key,
+        res['result'], 'source_dest_check', source_dest_check, region, key,
         keyid, profile
     )
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
@@ -310,7 +312,7 @@ def eni_present(
         ret['result'] = _ret['result']
         return ret
     if allocate_eip:
-        if 'allocationId' not in r['result']:
+        if 'allocationId' not in res['result']:
             if __opts__['test']:
                 ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated and assocaited to the ENI.'])
             else:
@@ -325,7 +327,7 @@ def eni_present(
                                                                       instance_name=None,
                                                                       public_ip=None,
                                                                       allocation_id=eip_alloc['allocation_id'],
-                                                                      network_interface_id=r['result']['id'],
+                                                                      network_interface_id=res['result']['id'],
                                                                       private_ip_address=None,
                                                                       allow_reassociation=False,
                                                                       region=region,
@@ -340,7 +342,8 @@ def eni_present(
                                                                         keyid=keyid,
                                                                         profile=profile)
                         ret['result'] = False
-                        msg = 'Failed to assocaite the allocated EIP address with the ENI.  The EIP {0}'.format('was successfully released.' if _ret else 'was NOT RELEASED.')
+                        msg = 'Failed to assocaite the allocated EIP address with the ENI.' \
+                              ' The EIP {0}'.format('was successfully released.' if _ret else 'was NOT RELEASED.')
                         ret['comment'] = ' '.join([ret['comment'], msg])
                         return ret
                 else:
@@ -362,15 +365,16 @@ def eni_present(
             if 'public' in arecord:
                 public_ip_arecord = arecord.pop('public')
             if public_ip_arecord:
-                if 'publicIp' in r['result']:
-                    arecord['value'] = r['result']['publicIp']
+                if 'publicIp' in res['result']:
+                    arecord['value'] = res['result']['publicIp']
                 elif 'public_ip' in eip_alloc:
                     arecord['value'] = eip_alloc['public_ip']
                 else:
-                    msg = 'Unable to add an A record for the public IP address, a public IP address does not seem to be allocated to this ENI.'
+                    msg = 'Unable to add an A record for the public IP address, ' \
+                          'a public IP address does not seem to be allocated to this ENI.'
                     raise CommandExecutionError(msg)
             else:
-                arecord['value'] = r['result']['private_ip_address']
+                arecord['value'] = res['result']['private_ip_address']
             if 'provider' in arecord:
                 dns_provider = arecord.pop('provider')
             if dns_provider == 'boto_route53':
@@ -485,16 +489,16 @@ def eni_absent(
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    r = __salt__['boto_ec2.get_network_interface'](
+    res = __salt__['boto_ec2.get_network_interface'](
         name=name, region=region, key=key, keyid=keyid, profile=profile
     )
-    if 'error' in r:
+    if 'error' in res:
         ret['result'] = False
         ret['comment'] = 'Error when attempting to find eni: {0}.'.format(
-            r['error']['message']
+            res['error']['message']
         )
         return ret
-    if not r['result']:
+    if not res['result']:
         if __opts__['test']:
             ret['comment'] = 'ENI is set to be deleted.'
             ret['result'] = None
@@ -502,11 +506,11 @@ def eni_absent(
     else:
         if __opts__['test']:
             ret['comment'] = 'ENI is set to be deleted.'
-            if release_eip and 'allocationId' in r['result']:
+            if release_eip and 'allocationId' in res['result']:
                 ret['comment'] = ' '.join([ret['comment'], 'Allocated/associated EIP is set to be released'])
             ret['result'] = None
             return ret
-        if 'id' in r['result']['attachment']:
+        if 'id' in res['result']['attachment']:
             result_detach = __salt__['boto_ec2.detach_network_interface'](
                 name=name, force=True, region=region, key=key,
                 keyid=keyid, profile=profile
@@ -530,9 +534,9 @@ def eni_absent(
             return ret
         ret['comment'] = 'Deleted ENI {0}'.format(name)
         ret['changes']['id'] = None
-        if release_eip and 'allocationId' in r['result']:
+        if release_eip and 'allocationId' in res['result']:
             _ret = __salt__['boto_ec2.release_eip_address'](public_ip=None,
-                                                            allocation_id=r['result']['allocationId'],
+                                                            allocation_id=res['result']['allocationId'],
                                                             region=region,
                                                             key=key,
                                                             keyid=keyid,
@@ -604,7 +608,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                      attributes=None, target_state=None, public_ip=None,
                      allocation_id=None, allocate_eip=False, region=None,
                      key=None, keyid=None, profile=None):
-    ### TODO - implement 'target_state={running, stopped}'
+    # TODO - implement 'target_state={running, stopped}'
     '''
     Ensure an EC2 instance is running with the given attributes and state.
 
@@ -759,8 +763,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     ret = {'name': name,
            'result': True,
            'comment': '',
-           'changes': {}
-          }
+           'changes': {}}
     _create = False
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
     changed_attrs = {}
@@ -768,7 +771,8 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     if not salt.utils.data.exactly_one((image_id, image_name)):
         raise SaltInvocationError('Exactly one of image_id OR '
                                   'image_name must be provided.')
-    if (public_ip or allocation_id or allocate_eip) and not salt.utils.data.exactly_one((public_ip, allocation_id, allocate_eip)):
+    if (public_ip or allocation_id or allocate_eip) and \
+            not salt.utils.data.exactly_one((public_ip, allocation_id, allocate_eip)):
         raise SaltInvocationError('At most one of public_ip, allocation_id OR '
                                   'allocate_eip may be provided.')
 
@@ -802,33 +806,33 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                 image_id = image_ids[0]
             else:
                 image_id = image_name
-        r = __salt__['boto_ec2.run'](image_id, instance_name if instance_name else name,
-                                     tags=tags, key_name=key_name,
-                                     security_groups=security_groups, user_data=user_data,
-                                     instance_type=instance_type, placement=placement,
-                                     kernel_id=kernel_id, ramdisk_id=ramdisk_id, vpc_id=vpc_id,
-                                     vpc_name=vpc_name, monitoring_enabled=monitoring_enabled,
-                                     subnet_id=subnet_id, subnet_name=subnet_name,
-                                     private_ip_address=private_ip_address,
-                                     block_device_map=block_device_map,
-                                     disable_api_termination=disable_api_termination,
-                                     instance_initiated_shutdown_behavior=instance_initiated_shutdown_behavior,
-                                     placement_group=placement_group, client_token=client_token,
-                                     security_group_ids=security_group_ids,
-                                     security_group_names=security_group_names,
-                                     additional_info=additional_info, tenancy=tenancy,
-                                     instance_profile_arn=instance_profile_arn,
-                                     instance_profile_name=instance_profile_name,
-                                     ebs_optimized=ebs_optimized, network_interfaces=network_interfaces,
-                                     network_interface_name=network_interface_name,
-                                     network_interface_id=network_interface_id,
-                                     region=region, key=key, keyid=keyid, profile=profile)
-        if not r or 'instance_id' not in r:
+        res = __salt__['boto_ec2.run'](image_id, instance_name if instance_name else name,
+                                       tags=tags, key_name=key_name,
+                                       security_groups=security_groups, user_data=user_data,
+                                       instance_type=instance_type, placement=placement,
+                                       kernel_id=kernel_id, ramdisk_id=ramdisk_id, vpc_id=vpc_id,
+                                       vpc_name=vpc_name, monitoring_enabled=monitoring_enabled,
+                                       subnet_id=subnet_id, subnet_name=subnet_name,
+                                       private_ip_address=private_ip_address,
+                                       block_device_map=block_device_map,
+                                       disable_api_termination=disable_api_termination,
+                                       instance_initiated_shutdown_behavior=instance_initiated_shutdown_behavior,
+                                       placement_group=placement_group, client_token=client_token,
+                                       security_group_ids=security_group_ids,
+                                       security_group_names=security_group_names,
+                                       additional_info=additional_info, tenancy=tenancy,
+                                       instance_profile_arn=instance_profile_arn,
+                                       instance_profile_name=instance_profile_name,
+                                       ebs_optimized=ebs_optimized, network_interfaces=network_interfaces,
+                                       network_interface_name=network_interface_name,
+                                       network_interface_id=network_interface_id,
+                                       region=region, key=key, keyid=keyid, profile=profile)
+        if not res or 'instance_id' not in res:
             ret['result'] = False
             ret['comment'] = 'Failed to create instance {0}.'.format(instance_name if instance_name else name)
             return ret
 
-        instance_id = r['instance_id']
+        instance_id = res['instance_id']
         ret['changes'] = {'old': {}, 'new': {}}
         ret['changes']['old']['instance_id'] = None
         ret['changes']['new']['instance_id'] = instance_id
@@ -843,15 +847,15 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                 ret['result'] = None
                 return ret
             domain = 'vpc' if vpc_id or vpc_name else None
-            r = __salt__['boto_ec2.allocate_eip_address'](
+            res = __salt__['boto_ec2.allocate_eip_address'](
                     domain=domain, region=region, key=key, keyid=keyid,
                     profile=profile)
-            if not r:
+            if not res:
                 ret['result'] = False
                 ret['comment'] = 'Failed to allocate new EIP.'
                 return ret
-            allocation_id = r['allocation_id']
-            log.info("New EIP with address {0} allocated.".format(r['public_ip']))
+            allocation_id = res['allocation_id']
+            log.info("New EIP with address {0} allocated.".format(res['public_ip']))
         else:
             log.info("EIP not requested.")
 
@@ -859,39 +863,39 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
         # This can take a bit to show up, give it a chance to...
         tries = 10
         secs = 3
-        for t in range(tries):
-            r = __salt__['boto_ec2.get_eip_address_info'](
+        for attempt in range(tries):
+            res = __salt__['boto_ec2.get_eip_address_info'](
                     addresses=public_ip, allocation_ids=allocation_id,
                     region=region, key=key, keyid=keyid, profile=profile)
-            if r:
+            if res:
                 break
             else:
                 log.info("Waiting up to {0} secs for new EIP {1} to become available".format(
                         tries * secs, public_ip or allocation_id))
                 time.sleep(secs)
-        if not r:
+        if not res:
             ret['result'] = False
             ret['comment'] = 'Failed to lookup EIP {0}.'.format(public_ip or allocation_id)
             return ret
-        ip = r[0]['public_ip']
-        if r[0].get('instance_id'):
-            if r[0]['instance_id'] != instance_id:
+        ip_address = res[0]['public_ip']
+        if res[0].get('instance_id'):
+            if res[0]['instance_id'] != instance_id:
                 ret['result'] = False
                 ret['comment'] = ('EIP {0} is already associated with instance '
-                                  '{1}.'.format(public_ip if public_ip else
-                                  allocation_id, r[0]['instance_id']))
+                                  '{1}.'.format(public_ip if public_ip else allocation_id,
+                                                res[0]['instance_id']))
                 return ret
         else:
             if __opts__['test']:
                 ret['comment'] = 'Instance {0} to be updated.'.format(name)
                 ret['result'] = None
                 return ret
-            r = __salt__['boto_ec2.associate_eip_address'](
+            res = __salt__['boto_ec2.associate_eip_address'](
                     instance_id=instance_id, public_ip=public_ip,
                     allocation_id=allocation_id, region=region, key=key,
                     keyid=keyid, profile=profile)
-            if r:
-                ret['changes']['new']['public_ip'] = ip
+            if res:
+                ret['changes']['new']['public_ip'] = ip_address
             else:
                 ret['result'] = False
                 ret['comment'] = 'Failed to attach EIP to instance {0}.'.format(
@@ -899,28 +903,30 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                 return ret
 
     if attributes:
-        for k, v in six.iteritems(attributes):
-            curr = __salt__['boto_ec2.get_attribute'](k, instance_id=instance_id, region=region, key=key,
+        for attr, value in six.iteritems(attributes):
+            curr = __salt__['boto_ec2.get_attribute'](attr, instance_id=instance_id, region=region, key=key,
                                                       keyid=keyid, profile=profile)
             curr = {} if not isinstance(curr, dict) else curr
-            if curr.get(k) == v:
+            if curr.get(attr) == value:
                 continue
             else:
                 if __opts__['test']:
-                    changed_attrs[k] = 'The instance attribute {0} is set to be changed from \'{1}\' to \'{2}\'.'.format(
-                                       k, curr.get(k), v)
+                    changed_attrs[attr] = 'The instance attribute {0} is set to be ' \
+                                          'changed from \'{1}\' to \'{2}\'.'.format(
+                                          attr, curr.get(attr), value)
                     continue
                 try:
-                    r = __salt__['boto_ec2.set_attribute'](attribute=k, attribute_value=v,
-                                                           instance_id=instance_id, region=region,
-                                                           key=key, keyid=keyid, profile=profile)
-                except SaltInvocationError as e:
+                    res = __salt__['boto_ec2.set_attribute'](attribute=attr, attribute_value=value,
+                                                             instance_id=instance_id, region=region,
+                                                             key=key, keyid=keyid, profile=profile)
+                except SaltInvocationError:
                     ret['result'] = False
-                    ret['comment'] = 'Failed to set attribute {0} to {1} on instance {2}.'.format(k, v, instance_name)
+                    ret['comment'] = 'Failed to set attribute {0} to {1} on ' \
+                                     'instance {2}.'.format(attr, value, instance_name)
                     return ret
                 ret['changes'] = ret['changes'] if ret['changes'] else {'old': {}, 'new': {}}
-                ret['changes']['old'][k] = curr.get(k)
-                ret['changes']['new'][k] = v
+                ret['changes']['old'][attr] = curr.get(attr)
+                ret['changes']['new'][attr] = value
 
     if __opts__['test']:
         if changed_attrs:
@@ -933,7 +939,10 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     if tags and instance_id is not None:
         tags = dict(tags)
         curr_tags = dict(__salt__['boto_ec2.get_all_tags'](filters={'resource-id': instance_id},
-                region=region, key=key, keyid=keyid, profile=profile).get(instance_id, {}))
+                                                           region=region,
+                                                           key=key,
+                                                           keyid=keyid,
+                                                           profile=profile).get(instance_id, {}))
         current = set(curr_tags.keys())
         desired = set(tags.keys())
         remove = list(current - desired)  # Boto explicitly requires a list here and can't cope with a set...
@@ -955,7 +964,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                                                             region=region, key=key, keyid=keyid,
                                                             profile=profile):
                         msg = "Error while deleting tags on instance {0}".format(instance_name if
-                                                                                instance_name else name)
+                                                                                 instance_name else name)
                         log.error(msg)
                         ret['comment'] += '  ' + msg
                         ret['result'] = False
@@ -965,7 +974,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                                                             region=region, key=key, keyid=keyid,
                                                             profile=profile):
                         msg = "Error while creating tags on instance {0}".format(instance_name if
-                                                                                instance_name else name)
+                                                                                 instance_name else name)
                         log.error(msg)
                         ret['comment'] += '  ' + msg
                         ret['result'] = False
@@ -1015,13 +1024,12 @@ def instance_absent(name, instance_name=None, instance_id=None,
             vpc-id: vpc-abcdef12
 
     '''
-    ### TODO - Implement 'force' option??  Would automagically turn off
-    ###        'disableApiTermination', as needed, before trying to delete.
+    # TODO - Implement 'force' option??  Would automagically turn off
+    #        'disableApiTermination', as needed, before trying to delete.
     ret = {'name': name,
            'result': True,
            'comment': '',
-           'changes': {}
-          }
+           'changes': {}}
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
 
     if not instance_id:
@@ -1030,7 +1038,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
                                                       region=region, key=key, keyid=keyid,
                                                       profile=profile, in_states=running_states,
                                                       filters=filters)
-        except CommandExecutionError as e:
+        except CommandExecutionError:
             ret['result'] = None
             ret['comment'] = ("Couldn't determine current status of instance "
                               "{0}.".format(instance_name or name))
@@ -1045,7 +1053,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
         return ret
     instance = instances[0]
 
-    ### Honor 'disableApiTermination' - if you want to override it, first use set_attribute() to turn it off
+    # Honor 'disableApiTermination' - if you want to override it, first use set_attribute() to turn it off
     no_can_do = __salt__['boto_ec2.get_attribute']('disableApiTermination', instance_id=instance_id,
                                                    region=region, key=key, keyid=keyid, profile=profile)
     if no_can_do.get('disableApiTermination') is True:
@@ -1058,9 +1066,9 @@ def instance_absent(name, instance_name=None, instance_id=None,
         ret['result'] = None
         return ret
 
-    r = __salt__['boto_ec2.terminate'](instance_id=instance_id, name=instance_name, region=region,
-                                       key=key, keyid=keyid, profile=profile)
-    if not r:
+    res = __salt__['boto_ec2.terminate'](instance_id=instance_id, name=instance_name, region=region,
+                                         key=key, keyid=keyid, profile=profile)
+    if not res:
         ret['result'] = False
         ret['comment'] = 'Failed to terminate instance {0}.'.format(instance_id)
         return ret
@@ -1069,21 +1077,21 @@ def instance_absent(name, instance_name=None, instance_id=None,
     ret['changes']['new'] = None
 
     if release_eip:
-        ip = getattr(instance, 'ip_address', None)
-        if ip:
+        ip_address = getattr(instance, 'ip_address', None)
+        if ip_address:
             base_args = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
             public_ip = None
             alloc_id = None
             assoc_id = None
             if getattr(instance, 'vpc_id', None):
-                r = __salt__['boto_ec2.get_eip_address_info'](addresses=ip, **base_args)
-                if len(r) and 'allocation_id' in r[0]:
-                    alloc_id = r[0]['allocation_id']
-                    assoc_id = r[0].get('association_id')
+                res = __salt__['boto_ec2.get_eip_address_info'](addresses=ip_address, **base_args)
+                if len(res) and 'allocation_id' in res[0]:
+                    alloc_id = res[0]['allocation_id']
+                    assoc_id = res[0].get('association_id')
                 else:
                     # I /believe/ this situation is impossible but let's hedge our bets...
                     ret['result'] = False
-                    ret['comment'] = "Can't determine AllocationId for address {0}.".format(ip)
+                    ret['comment'] = "Can't determine AllocationId for address {0}.".format(ip_address)
                     return ret
             else:
                 public_ip = instance.ip_address
@@ -1092,17 +1100,16 @@ def instance_absent(name, instance_name=None, instance_id=None,
                 # Race here - sometimes the terminate above will already have dropped this
                 if not __salt__['boto_ec2.disassociate_eip_address'](association_id=assoc_id,
                                                                      **base_args):
-                    log.warning("Failed to disassociate EIP {0}.".format(ip))
+                    log.warning("Failed to disassociate EIP {0}.".format(ip_address))
 
             if __salt__['boto_ec2.release_eip_address'](allocation_id=alloc_id, public_ip=public_ip,
                                                         **base_args):
-                log.info("Released EIP address {0}".format(public_ip or r[0]['public_ip']))
-                ret['changes']['old']['public_ip'] = public_ip or r[0]['public_ip']
+                log.info("Released EIP address {0}".format(public_ip or res[0]['public_ip']))
+                ret['changes']['old']['public_ip'] = public_ip or res[0]['public_ip']
             else:
                 ret['result'] = False
-                ret['comment'] = "Failed to release EIP {0}.".format(ip)
+                ret['comment'] = "Failed to release EIP {0}.".format(ip_address)
                 return ret
-
     return ret
 
 
@@ -1150,11 +1157,7 @@ def volume_absent(name, volume_name=None, volume_id=None, instance_name=None,
 
     '''
 
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-          }
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     filters = {}
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
 
@@ -1269,31 +1272,27 @@ def volumes_tagged(name, tag_maps, authoritative=False, region=None, key=None,
 
     '''
 
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-          }
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     args = {'tag_maps': tag_maps, 'authoritative': authoritative,
             'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
 
     if __opts__['test']:
         args['dry_run'] = True
-        r = __salt__['boto_ec2.set_volumes_tags'](**args)
-        if r['success']:
-            if r.get('changes'):
+        res = __salt__['boto_ec2.set_volumes_tags'](**args)
+        if res['success']:
+            if res.get('changes'):
                 ret['comment'] = 'Tags would be updated.'
-                ret['changes'] = r['changes']
+                ret['changes'] = res['changes']
                 ret['result'] = None
         else:
             ret['comment'] = 'Error validating requested volume tags.'
             ret['result'] = False
         return ret
-    r = __salt__['boto_ec2.set_volumes_tags'](**args)
-    if r['success']:
-        if r.get('changes'):
+    res = __salt__['boto_ec2.set_volumes_tags'](**args)
+    if res['success']:
+        if res.get('changes'):
             ret['comment'] = 'Tags applied.'
-            ret['changes'] = r['changes']
+            ret['changes'] = res['changes']
     else:
         ret['comment'] = 'Error updating requested volume tags.'
         ret['result'] = False
@@ -1752,6 +1751,7 @@ def private_ips_absent(name, network_interface_name=None, network_interface_id=N
 
         # there were no changes since we did not attempt to remove ips
         ret['changes'] = {}
+    return ret
 
 
 def secgroup_present(
