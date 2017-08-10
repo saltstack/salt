@@ -1059,6 +1059,13 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
         )
         self.add_option_group(group)
         group.add_option(
+            '-H', '--hosts',
+            default=False,
+            action='store_true',
+            dest='list_hosts',
+            help='List all known hosts to currently visible or other specified rosters'
+        )
+        group.add_option(
             '-E', '--pcre',
             default=False,
             action='store_true',
