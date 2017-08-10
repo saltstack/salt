@@ -2,7 +2,7 @@
 '''
 Module for handling kubernetes calls.
 
-:optdepends:    - kubernetes Python client
+:optdepends:    - kubernetes Python client >= version 2.0.0
 :configuration: The k8s API settings are provided either in a pillar, in
     the minion's config file, or in master's config file::
 
@@ -762,7 +762,7 @@ def create_deployment(
     '''
     body = __create_object_body(
         kind='Deployment',
-        obj_class=kubernetes.client.V1beta1Deployment,
+        obj_class=kubernetes.client.AppsV1beta1Deployment,
         spec_creator=__dict_to_deployment_spec,
         name=name,
         namespace=namespace,
@@ -1013,7 +1013,7 @@ def replace_deployment(name,
     '''
     body = __create_object_body(
         kind='Deployment',
-        obj_class=kubernetes.client.V1beta1Deployment,
+        obj_class=kubernetes.client.AppsV1beta1Deployment,
         spec_creator=__dict_to_deployment_spec,
         name=name,
         namespace=namespace,
@@ -1276,9 +1276,9 @@ def __dict_to_object_meta(name, namespace, metadata):
 
 def __dict_to_deployment_spec(spec):
     '''
-    Converts a dictionary into kubernetes V1beta1DeploymentSpec instance.
+    Converts a dictionary into kubernetes AppsV1beta1DeploymentSpec instance.
     '''
-    spec_obj = kubernetes.client.V1beta1DeploymentSpec()
+    spec_obj = kubernetes.client.AppsV1beta1DeploymentSpec()
     for key, value in iteritems(spec):
         if hasattr(spec_obj, key):
             setattr(spec_obj, key, value)
