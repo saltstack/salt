@@ -14,7 +14,7 @@ import os
 
 # Import Salt libs
 import salt.cloud
-import salt.utils
+import salt.utils.args
 from salt.exceptions import SaltCloudConfigError
 
 # Get logging started
@@ -111,7 +111,7 @@ def profile(prof=None, instances=None, opts=None, **kwargs):
     client = _get_client()
     if isinstance(opts, dict):
         client.opts.update(opts)
-    info = client.profile(prof, instances, **salt.utils.clean_kwargs(**kwargs))
+    info = client.profile(prof, instances, **salt.utils.args.clean_kwargs(**kwargs))
     return info
 
 
@@ -120,7 +120,7 @@ def map_run(path=None, **kwargs):
     Execute a salt cloud map file
     '''
     client = _get_client()
-    info = client.map_run(path, **salt.utils.clean_kwargs(**kwargs))
+    info = client.map_run(path, **salt.utils.args.clean_kwargs(**kwargs))
     return info
 
 
@@ -157,7 +157,7 @@ def action(func=None,
             instances,
             provider,
             instance,
-            **salt.utils.clean_kwargs(**kwargs)
+            **salt.utils.args.clean_kwargs(**kwargs)
         )
     except SaltCloudConfigError as err:
         log.error(err)
@@ -179,5 +179,5 @@ def create(provider, instances, opts=None, **kwargs):
     client = _get_client()
     if isinstance(opts, dict):
         client.opts.update(opts)
-    info = client.create(provider, instances, **salt.utils.clean_kwargs(**kwargs))
+    info = client.create(provider, instances, **salt.utils.args.clean_kwargs(**kwargs))
     return info
