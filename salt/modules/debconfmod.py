@@ -11,6 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
 import salt.utils.files
 
 log = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ def __virtual__():
         return (False, 'The debconfmod module could not be loaded: '
                 'unsupported OS family')
 
-    if salt.utils.which('debconf-get-selections') is None:
+    if salt.utils.path.which('debconf-get-selections') is None:
         return (False, 'The debconfmod module could not be loaded: '
                 'debconf-utils is not installed.')
 

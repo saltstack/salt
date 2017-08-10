@@ -10,7 +10,12 @@ found by reading the salt documentation:
 
 # Import python libraries
 from __future__ import absolute_import
+
+# Import salt libs
 import salt.utils
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 class PublisherACL(object):
@@ -30,7 +35,7 @@ class PublisherACL(object):
 
     def cmd_is_blacklisted(self, cmd):
         # If this is a regular command, it is a single function
-        if isinstance(cmd, str):
+        if isinstance(cmd, six.string_types):
             cmd = [cmd]
         for fun in cmd:
             if not salt.utils.check_whitelist_blacklist(fun, blacklist=self.blacklist.get('modules', [])):

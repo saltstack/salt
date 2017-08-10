@@ -13,8 +13,8 @@ import socket
 import time
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -225,7 +225,7 @@ def _has_dig():
     because they are also DNS utilities, a compatibility layer exists. This
     function helps add that layer.
     '''
-    return salt.utils.which('dig') is not None
+    return salt.utils.path.which('dig') is not None
 
 
 def check_ip(ip_addr):

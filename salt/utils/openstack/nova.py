@@ -10,7 +10,7 @@ import logging
 import time
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 HAS_NOVA = False
 # pylint: disable=import-error
 try:

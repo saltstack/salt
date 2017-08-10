@@ -114,6 +114,7 @@ import salt.loader
 import salt.minion
 import salt.runner
 import salt.utils
+import salt.utils.args
 import salt.utils.event
 import salt.utils.http
 import salt.utils.slack
@@ -296,7 +297,7 @@ def commandline_to_list(cmdline_str, trigger_string):
     cmdline_str is the string of the command line
     trigger_string is the trigger string, to be removed
     """
-    cmdline = salt.utils.shlex_split(cmdline_str[len(trigger_string):])
+    cmdline = salt.utils.args.shlex_split(cmdline_str[len(trigger_string):])
     # Remove slack url parsing
     #  Translate target=<http://host.domain.net|host.domain.net>
     #  to target=host.domain.net

@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 logging.getLogger('boto').setLevel(logging.INFO)
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
 try:

@@ -26,12 +26,12 @@ from tests.support.paths import TMP
 from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.platform
 from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def _git_version():
         git_version = subprocess.Popen(
             ['git', '--version'],
             shell=False,
-            close_fds=False if salt.utils.is_windows() else True,
+            close_fds=False if salt.utils.platform.is_windows() else True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE).communicate()[0]
     except OSError:
@@ -160,7 +160,7 @@ class GitModuleTest(ModuleCase):
                 )
         ret = self.run_function('git.add', [self.repo, newdir])
         res = '\n'.join(sorted(['add \'{0}\''.format(x) for x in files_relpath]))
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             res = res.replace('\\', '/')
         self.assertEqual(ret, res)
 
@@ -598,7 +598,7 @@ class GitModuleTest(ModuleCase):
         # the full, unshortened name of the folder. Therefore you can't compare
         # the path returned by `tempfile.mkdtemp` and the results of `git.init`
         # exactly.
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             new_repo = new_repo.replace('\\', '/')
 
             # Get the name of the temp directory
@@ -835,7 +835,7 @@ class GitModuleTest(ModuleCase):
             sorted(['rm \'' + os.path.join(entire_dir, x) + '\''
                     for x in self.files])
         )
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             expected = expected.replace('\\', '/')
         self.assertEqual(
             self.run_function('git.rm', [self.repo, entire_dir], opts='-r'),
@@ -946,7 +946,7 @@ class GitModuleTest(ModuleCase):
         worktree_path2 = tempfile.mkdtemp(dir=TMP)
 
         # Even though this is Windows, git commands return a unix style path
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             worktree_path = worktree_path.replace('\\', '/')
             worktree_path2 = worktree_path2.replace('\\', '/')
 

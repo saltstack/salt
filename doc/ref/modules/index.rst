@@ -429,10 +429,33 @@ similar to the following:
        Confine this module to Mac OS with Homebrew.
        '''
 
-       if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
+       if salt.utils.path.which('brew') and __grains__['os'] == 'MacOS':
            return __virtualname__
        return False
 
+The ``__virtual__()`` function can return a ``True`` or ``False`` boolean, a tuple,
+or a string. If it returns a ``True`` value, this ``__virtualname__`` module-level
+attribute can be set as seen in the above example. This is the string that the module
+should be referred to as.
+
+When ``__virtual__()`` returns a tuple, the first item should be a boolean and the
+second should be a string. This is typically done when the module should not load. The
+first value of the tuple is ``False`` and the second is the error message to display
+for why the module did not load.
+
+For example:
+
+.. code-block:: python
+
+    def __virtual__():
+        '''
+        Only load if git exists on the system
+        '''
+        if salt.utils.which('git') is None:
+            return (False,
+                    'The git execution module cannot be loaded: git unavailable.')
+        else:
+            return True
 
 Documentation
 =============

@@ -8,7 +8,7 @@ import copy
 from tests.support.unit import TestCase
 
 # Import Salt libs
-from salt.utils import configcomparer
+import salt.utils.configcomparer as configcomparer
 
 
 class UtilConfigcomparerTestCase(TestCase):

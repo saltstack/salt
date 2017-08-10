@@ -9,7 +9,7 @@ from tests.support.unit import TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 
 # Import salt libs
-from salt.utils import network
+import salt.utils.network as network
 
 LINUX = '''\
 eth0      Link encap:Ethernet  HWaddr e0:3f:49:85:6a:af
@@ -227,7 +227,7 @@ class NetworkTestCase(TestCase):
         )
 
     def test_interfaces_ifconfig_solaris(self):
-        with patch('salt.utils.is_sunos', lambda: True):
+        with patch('salt.utils.platform.is_sunos', lambda: True):
             interfaces = network._interfaces_ifconfig(SOLARIS)
             expected_interfaces = {'ilbint0':
                                        {'inet6': [],
@@ -262,16 +262,16 @@ class NetworkTestCase(TestCase):
             self.assertEqual(interfaces, expected_interfaces)
 
     def test_freebsd_remotes_on(self):
-        with patch('salt.utils.is_sunos', lambda: False):
-            with patch('salt.utils.is_freebsd', lambda: True):
+        with patch('salt.utils.platform.is_sunos', lambda: False):
+            with patch('salt.utils.platform.is_freebsd', lambda: True):
                 with patch('subprocess.check_output',
                            return_value=FREEBSD_SOCKSTAT):
                     remotes = network._freebsd_remotes_on('4506', 'remote')
                     self.assertEqual(remotes, set(['127.0.0.1']))
 
     def test_freebsd_remotes_on_with_fat_pid(self):
-        with patch('salt.utils.is_sunos', lambda: False):
-            with patch('salt.utils.is_freebsd', lambda: True):
+        with patch('salt.utils.platform.is_sunos', lambda: False):
+            with patch('salt.utils.platform.is_freebsd', lambda: True):
                 with patch('subprocess.check_output',
                            return_value=FREEBSD_SOCKSTAT_WITH_FAT_PID):
                     remotes = network._freebsd_remotes_on('4506', 'remote')

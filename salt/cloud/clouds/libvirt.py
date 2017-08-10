@@ -63,7 +63,7 @@ import os
 from xml.etree import ElementTree
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import libvirt  # pylint: disable=import-error
     from libvirt import libvirtError
