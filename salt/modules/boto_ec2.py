@@ -2188,6 +2188,8 @@ def modify_instances_secgroup(
     if len(instances) == 0:
         return {'result': False, 'comment': 'No instances found with Name-tag: {0}'.format(name)}
     ret = {'result': True, 'comment': '', 'changes': {}}
+    if not isinstance(secgroup_names, list):
+        secgroup_names = [secgroup_names]
     for instance in instances:
         instance_name_or_id = instance['tags']['Name'] or instance['id']
         result = _modify_instance_secgroup(
