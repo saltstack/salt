@@ -71,7 +71,7 @@ import logging
 
 # Import 3rd-party libs
 # pylint: disable=import-error
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 try:
     import win32com.client
@@ -81,8 +81,9 @@ except ImportError:
     HAS_DEPENDENCIES = False
 # pylint: enable=import-error
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows() and HAS_DEPENDENCIES:
+    if salt.utils.platform.is_windows() and HAS_DEPENDENCIES:
         return True
     return False
 

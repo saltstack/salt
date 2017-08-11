@@ -65,7 +65,7 @@ import salt.config as config
 import salt.utils
 import salt.utils.cloud
 import salt.utils.files
-import salt.ext.six as six
+from salt.ext import six
 import salt.version
 from salt.exceptions import (
     SaltCloudSystemExit,

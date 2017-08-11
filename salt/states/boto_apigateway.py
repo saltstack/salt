@@ -56,7 +56,7 @@ import re
 import json
 import yaml
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.files
 from salt.utils.yamlloader import SaltYamlSafeLoader
 

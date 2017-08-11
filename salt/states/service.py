@@ -57,18 +57,18 @@ service, then set the reload value to True:
     :ref:`Requisites <requisites>` documentation.
 
 '''
-
 # Import Python libs
 from __future__ import absolute_import
 import time
 
 # Import Salt libs
 import salt.utils
+import salt.utils.platform
 from salt.utils.args import get_function_argspec as _argspec
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 SYSTEMD_ONLY = ('no_block', 'unmask', 'unmask_runtime')
 
@@ -432,7 +432,7 @@ def running(name,
         ret['comment'] = 'Service {0} is set to start'.format(name)
         return ret
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         if enable is True:
             ret.update(_enable(name, False, result=False, **kwargs))
 

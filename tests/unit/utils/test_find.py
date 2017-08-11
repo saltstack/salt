@@ -13,7 +13,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.paths import TMP
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.files
 import salt.utils.find
 

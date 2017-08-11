@@ -16,12 +16,13 @@ import logging
 import uuid
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt.key
 import salt.utils
+import salt.utils.compat
 import salt.utils.files
 import salt.utils.minions
 import salt.client
@@ -670,7 +671,7 @@ def versions():
             ver_diff = -2
         else:
             minion_version = salt.version.SaltStackVersion.parse(minions[minion])
-            ver_diff = cmp(minion_version, master_version)
+            ver_diff = salt.utils.compat.cmp(minion_version, master_version)
 
         if ver_diff not in version_status:
             version_status[ver_diff] = {}
