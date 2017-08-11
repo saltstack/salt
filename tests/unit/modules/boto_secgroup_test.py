@@ -209,7 +209,7 @@ class BotoSecgroupTestCase(TestCase):
         group = conn.create_security_group(name=group_name, description=group_name)
         group.authorize(ip_protocol=ip_protocol, from_port=from_port, to_port=to_port, cidr_ip=cidr_ip)
         # setup the expected get_config result
-        expected_get_config_result = OrderedDict([('name', group.name), ('group_id', group.id),('owner_id', u'123456789012'),
+        expected_get_config_result = OrderedDict([('name', group.name), ('group_id', group.id), ('owner_id', u'123456789012'),
                                                  ('description', group.description), ('tags', {}),
                                                  ('rules', [{'to_port': to_port, 'from_port': from_port,
                                                   'ip_protocol': ip_protocol, 'cidr_ip': cidr_ip}]),
