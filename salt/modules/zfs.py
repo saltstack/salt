@@ -11,7 +11,8 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.path
 import salt.modules.cmdmod
 import salt.utils.decorators as decorators
 from salt.utils.odict import OrderedDict
@@ -30,7 +31,7 @@ def _check_zfs():
     Looks to see if zfs is present on the system.
     '''
     # Get the path to the zfs binary.
-    return salt.utils.which('zfs')
+    return salt.utils.path.which('zfs')
 
 
 @decorators.memoize
@@ -39,7 +40,7 @@ def _check_features():
     Looks to see if zpool-features is available
     '''
     # get man location
-    man = salt.utils.which('man')
+    man = salt.utils.path.which('man')
     if not man:
         return False
 
@@ -62,13 +63,13 @@ def __virtual__():
     if on_freebsd:
         cmd = 'kldstat -q -m zfs'
     elif on_linux:
-        modinfo = salt.utils.which('modinfo')
+        modinfo = salt.utils.path.which('modinfo')
         if modinfo:
             cmd = '{0} zfs'.format(modinfo)
         else:
             cmd = 'ls /sys/module/zfs'
     elif on_solaris:
-        # not using salt.utils.which('zfs') to keep compatible with others
+        # not using salt.utils.path.which('zfs') to keep compatible with others
         cmd = 'which zfs'
 
     if cmd and salt.modules.cmdmod.retcode(
@@ -1142,7 +1143,7 @@ def set(*dataset, **kwargs):
         ret['error'] = 'one or more snapshots must be specified'
 
     # clean kwargs
-    properties = salt.utils.clean_kwargs(**kwargs)
+    properties = salt.utils.args.clean_kwargs(**kwargs)
     if len(properties) < 1:
         ret['error'] = '{0}one or more properties must be specified'.format(
             '{0},\n'.format(ret['error']) if 'error' in ret else ''

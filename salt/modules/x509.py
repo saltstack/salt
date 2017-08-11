@@ -23,10 +23,10 @@ import datetime
 import ast
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 import salt.exceptions
-import salt.ext.six as six
+from salt.ext import six
 from salt.utils.odict import OrderedDict
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import range
@@ -166,7 +166,7 @@ def _parse_openssl_req(csr_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )
@@ -215,7 +215,7 @@ def _parse_openssl_crl(crl_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )
@@ -1750,7 +1750,7 @@ def verify_crl(crl, cert):
 
         salt '*' x509.verify_crl crl=/etc/pki/myca.crl cert=/etc/pki/myca.crt
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )

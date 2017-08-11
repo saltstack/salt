@@ -38,12 +38,14 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
 import salt.utils.pkg
+import salt.utils.platform
 import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -55,10 +57,10 @@ def __virtual__():
     '''
     Confine this module to Mac OS with MacPorts.
     '''
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return False, 'mac_ports only available on MacOS'
 
-    if not salt.utils.which('port'):
+    if not salt.utils.path.which('port'):
         return False, 'mac_ports requires the "port" binary'
 
     return __virtualname__

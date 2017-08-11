@@ -14,17 +14,19 @@ Support for reboot, shutdown, etc on POSIX-like systems.
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 from datetime import datetime, timedelta, tzinfo
 import re
 import os.path
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.files
-import salt.ext.six as six
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
+# Import 3rd-party libs
+from salt.ext import six
 
 __virtualname__ = 'system'
 
@@ -34,13 +36,13 @@ def __virtual__():
     Only supported on POSIX-like systems
     Windows, Solaris, and Mac have their own modules
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'This module is not available on Windows')
 
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return (False, 'This module is not available on Mac OS')
 
-    if salt.utils.is_sunos():
+    if salt.utils.platform.is_sunos():
         return (False, 'This module is not available on SunOS')
 
     return __virtualname__
@@ -178,7 +180,7 @@ def has_settable_hwclock():
 
     salt '*' system.has_settable_hwclock
     '''
-    if salt.utils.which_bin(['hwclock']) is not None:
+    if salt.utils.path.which_bin(['hwclock']) is not None:
         res = __salt__['cmd.run_all'](['hwclock', '--test', '--systohc'], python_shell=False)
         return res['retcode'] == 0
     return False
@@ -505,7 +507,7 @@ def get_computer_desc():
         salt '*' system.get_computer_desc
     '''
     desc = None
-    hostname_cmd = salt.utils.which('hostnamectl')
+    hostname_cmd = salt.utils.path.which('hostnamectl')
     if hostname_cmd:
         desc = __salt__['cmd.run'](
             [hostname_cmd, 'status', '--pretty'],
@@ -549,7 +551,7 @@ def set_computer_desc(desc):
         desc = desc.replace('"', '\\"')
     else:
         desc = desc.encode('string_escape').replace('"', '\\"')
-    hostname_cmd = salt.utils.which('hostnamectl')
+    hostname_cmd = salt.utils.path.which('hostnamectl')
     if hostname_cmd:
         result = __salt__['cmd.retcode'](
             [hostname_cmd, 'set-hostname', '--pretty', desc],

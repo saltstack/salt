@@ -8,9 +8,9 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import map, range
-import salt.utils
+import salt.utils.path
 
 # Import third-party libs
 if six.PY3:
@@ -108,7 +108,7 @@ def __virtual__():
     '''
     Only load the module if ipset is installed
     '''
-    if salt.utils.which('ipset'):
+    if salt.utils.path.which('ipset'):
         return True
     return (False, 'The ipset execution modules cannot be loaded: ipset binary not in path.')
 
@@ -117,7 +117,7 @@ def _ipset_cmd():
     '''
     Return correct command
     '''
-    return salt.utils.which('ipset')
+    return salt.utils.path.which('ipset')
 
 
 def version():

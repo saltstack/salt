@@ -15,13 +15,13 @@ from tests.support.helpers import (
 )
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
-AVAILABLE_PYTHON_EXECUTABLE = salt.utils.which_bin([
+AVAILABLE_PYTHON_EXECUTABLE = salt.utils.path.which_bin([
     'python',
     'python2',
     'python2.6',

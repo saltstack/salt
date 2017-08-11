@@ -27,7 +27,7 @@ import logging
 import salt.utils.jid
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import pycassa  # pylint: disable=import-error
     HAS_PYCASSA = True

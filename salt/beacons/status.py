@@ -96,7 +96,7 @@ import datetime
 import salt.exceptions
 
 # Import salt libs
-import salt.utils
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +123,7 @@ def beacon(config):
     log.debug(config)
     ctime = datetime.datetime.utcnow().isoformat()
     ret = {}
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return [{
             'tag': ctime,
             'data': ret,

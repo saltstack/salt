@@ -53,6 +53,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.stringutils
 from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
 
@@ -643,7 +644,7 @@ class Terminal(object):
             if self.child_fde in rlist:
                 try:
                     stderr = self._translate_newlines(
-                        salt.utils.to_str(
+                        salt.utils.stringutils.to_str(
                             os.read(self.child_fde, maxsize)
                         )
                     )
@@ -676,7 +677,7 @@ class Terminal(object):
             if self.child_fd in rlist:
                 try:
                     stdout = self._translate_newlines(
-                        salt.utils.to_str(
+                        salt.utils.stringutils.to_str(
                             os.read(self.child_fd, maxsize)
                         )
                     )

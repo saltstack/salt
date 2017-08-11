@@ -255,10 +255,12 @@ all interfaces are ignored unless specified.
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import difflib
-import salt.utils
+
+# Import Salt libs
 import salt.utils.network
+import salt.utils.platform
 import salt.loader
 
 # Set up logging
@@ -271,7 +273,7 @@ def __virtual__():
     Confine this module to non-Windows systems with the required execution
     module available.
     '''
-    if not salt.utils.is_windows() and 'ip.get_interface' in __salt__:
+    if not salt.utils.platform.is_windows() and 'ip.get_interface' in __salt__:
         return True
     return False
 

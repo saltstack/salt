@@ -16,7 +16,7 @@ import subprocess
 from string import ascii_letters, digits
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 # Attempt to import wmi
 try:
@@ -26,13 +26,16 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
 from salt._compat import ipaddress
-from salt.utils.decorators import jinja_filter
+from salt.utils.decorators.jinja import jinja_filter
 
 # inet_pton does not exist in Windows, this is a workaround
-if salt.utils.is_windows():
+if salt.utils.platform.is_windows():
     from salt.ext import win_inet_pton  # pylint: disable=unused-import
 
 log = logging.getLogger(__name__)
@@ -144,7 +147,7 @@ def _generate_minion_id():
                     hosts.extend(hst)
 
     # include public and private ipaddresses
-    return hosts.extend([addr for addr in salt.utils.network.ip_addrs()
+    return hosts.extend([addr for addr in ip_addrs()
                          if not ipaddress.ip_address(addr).is_loopback])
 
 
@@ -681,7 +684,7 @@ def _interfaces_ifconfig(out):
 
     piface = re.compile(r'^([^\s:]+)')
     pmac = re.compile('.*?(?:HWaddr|ether|address:|lladdr) ([0-9a-fA-F:]+)')
-    if salt.utils.is_sunos():
+    if salt.utils.platform.is_sunos():
         pip = re.compile(r'.*?(?:inet\s+)([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)(.*)')
         pip6 = re.compile('.*?(?:inet6 )([0-9a-fA-F:]+)')
         pmask6 = re.compile(r'.*?(?:inet6 [0-9a-fA-F:]+/(\d+)).*')
@@ -708,7 +711,7 @@ def _interfaces_ifconfig(out):
                 iface = miface.group(1)
             if mmac:
                 data['hwaddr'] = mmac.group(1)
-                if salt.utils.is_sunos():
+                if salt.utils.platform.is_sunos():
                     expand_mac = []
                     for chunk in data['hwaddr'].split(':'):
                         expand_mac.append('0{0}'.format(chunk) if len(chunk) < 2 else '{0}'.format(chunk))
@@ -740,11 +743,11 @@ def _interfaces_ifconfig(out):
                 mmask6 = pmask6.match(line)
                 if mmask6:
                     addr_obj['prefixlen'] = mmask6.group(1) or mmask6.group(2)
-                    if not salt.utils.is_sunos():
+                    if not salt.utils.platform.is_sunos():
                         ipv6scope = mmask6.group(3) or mmask6.group(4)
                         addr_obj['scope'] = ipv6scope.lower() if ipv6scope is not None else ipv6scope
                 # SunOS sometimes has ::/0 as inet6 addr when using addrconf
-                if not salt.utils.is_sunos() \
+                if not salt.utils.platform.is_sunos() \
                         or addr_obj['address'] != '::' \
                         and addr_obj['prefixlen'] != 0:
                     data['inet6'].append(addr_obj)
@@ -773,8 +776,8 @@ def linux_interfaces():
     Obtain interface information for *NIX/BSD variants
     '''
     ifaces = dict()
-    ip_path = salt.utils.which('ip')
-    ifconfig_path = None if ip_path else salt.utils.which('ifconfig')
+    ip_path = salt.utils.path.which('ip')
+    ifconfig_path = None if ip_path else salt.utils.path.which('ifconfig')
     if ip_path:
         cmd1 = subprocess.Popen(
             '{0} link show'.format(ip_path),
@@ -789,15 +792,15 @@ def linux_interfaces():
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
         ifaces = _interfaces_ip("{0}\n{1}".format(
-            salt.utils.to_str(cmd1),
-            salt.utils.to_str(cmd2)))
+            salt.utils.stringutils.to_str(cmd1),
+            salt.utils.stringutils.to_str(cmd2)))
     elif ifconfig_path:
         cmd = subprocess.Popen(
             '{0} -a'.format(ifconfig_path),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
-        ifaces = _interfaces_ifconfig(salt.utils.to_str(cmd))
+        ifaces = _interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
     return ifaces
 
 
@@ -900,7 +903,7 @@ def interfaces():
     '''
     Return a dictionary of information about all the interfaces on the minion
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return win_interfaces()
     else:
         return linux_interfaces()
@@ -991,7 +994,7 @@ def hw_addr(iface):
         Added support for AIX
 
     '''
-    if salt.utils.is_aix():
+    if salt.utils.platform.is_aix():
         return _hw_addr_aix
 
     iface_info, error = _get_iface_info(iface)
@@ -1257,17 +1260,17 @@ def _remotes_on(port, which_end):
                         ret.add(iret[sl]['remote_addr'])
 
     if not proc_available:  # Fallback to use OS specific tools
-        if salt.utils.is_sunos():
+        if salt.utils.platform.is_sunos():
             return _sunos_remotes_on(port, which_end)
-        if salt.utils.is_freebsd():
+        if salt.utils.platform.is_freebsd():
             return _freebsd_remotes_on(port, which_end)
-        if salt.utils.is_netbsd():
+        if salt.utils.platform.is_netbsd():
             return _netbsd_remotes_on(port, which_end)
-        if salt.utils.is_openbsd():
+        if salt.utils.platform.is_openbsd():
             return _openbsd_remotes_on(port, which_end)
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             return _windows_remotes_on(port, which_end)
-        if salt.utils.is_aix():
+        if salt.utils.platform.is_aix():
             return _aix_remotes_on(port, which_end)
 
         return _linux_remotes_on(port, which_end)
@@ -1314,7 +1317,7 @@ def _sunos_remotes_on(port, which_end):
         log.error('Failed netstat')
         raise
 
-    lines = salt.utils.to_str(data).split('\n')
+    lines = salt.utils.stringutils.to_str(data).split('\n')
     for line in lines:
         if 'ESTABLISHED' not in line:
             continue
@@ -1354,13 +1357,13 @@ def _freebsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        cmd = salt.utils.shlex_split('sockstat -4 -c -p {0}'.format(port))
+        cmd = salt.utils.args.shlex_split('sockstat -4 -c -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = salt.utils.to_str(data).split('\n')
+    lines = salt.utils.stringutils.to_str(data).split('\n')
 
     for line in lines:
         chunks = line.split()
@@ -1414,13 +1417,13 @@ def _netbsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        cmd = salt.utils.shlex_split('sockstat -4 -c -n -p {0}'.format(port))
+        cmd = salt.utils.args.shlex_split('sockstat -4 -c -n -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = salt.utils.to_str(data).split('\n')
+    lines = salt.utils.stringutils.to_str(data).split('\n')
 
     for line in lines:
         chunks = line.split()
@@ -1509,7 +1512,7 @@ def _windows_remotes_on(port, which_end):
         log.error('Failed netstat')
         raise
 
-    lines = salt.utils.to_str(data).split('\n')
+    lines = salt.utils.stringutils.to_str(data).split('\n')
     for line in lines:
         if 'ESTABLISHED' not in line:
             continue
@@ -1556,7 +1559,7 @@ def _linux_remotes_on(port, which_end):
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = salt.utils.to_str(data).split('\n')
+    lines = salt.utils.stringutils.to_str(data).split('\n')
     for line in lines:
         chunks = line.split()
         if not chunks:
@@ -1615,7 +1618,7 @@ def _aix_remotes_on(port, which_end):
         log.error('Failed netstat')
         raise
 
-    lines = salt.utils.to_str(data).split('\n')
+    lines = salt.utils.stringutils.to_str(data).split('\n')
     for line in lines:
         if 'ESTABLISHED' not in line:
             continue

@@ -8,7 +8,7 @@ Provide authentication using simple LDAP binds
 # Import python libs
 from __future__ import absolute_import
 import logging
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
