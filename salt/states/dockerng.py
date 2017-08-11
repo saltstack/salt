@@ -2273,6 +2273,11 @@ def network_present(name, driver=None, containers=None):
             ret['result'] = result
 
     else:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = ('The network \'{0}\' will be created'.format(name))
+            return ret
+
         try:
             ret['changes']['created'] = __salt__['dockerng.create_network'](
                 name, driver=driver)
@@ -2330,6 +2335,11 @@ def network_absent(name, driver=None):
     if network is None:
         ret['result'] = True
         ret['comment'] = 'Network \'{0}\' already absent'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = ('The network \'{0}\' will be removed'.format(name))
         return ret
 
     for container in networks[0]['Containers']:
