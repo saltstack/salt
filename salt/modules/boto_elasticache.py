@@ -51,7 +51,7 @@ import logging
 import time
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltInvocationError
 import salt.utils.odict as odict
 
