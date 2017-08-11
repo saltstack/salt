@@ -229,7 +229,7 @@ class SSH(object):
         self.opts = opts
         if self.opts['regen_thin']:
             self.opts['ssh_wipe'] = True
-        if not salt.utils.which('ssh'):
+        if not salt.utils.path.which('ssh'):
             raise salt.exceptions.SaltSystemExit('No ssh binary found in path -- ssh must be '
                                                  'installed for salt-ssh to run. Exiting.')
         self.opts['_ssh_version'] = ssh_version()
