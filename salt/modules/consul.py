@@ -206,9 +206,9 @@ def get(consul_url=None, key=None, recurse=False, decode=False, raw=False):
         if decode:
             for item in ret['data']:
                 if item['Value'] != None:
-                   item['Value'] = base64.b64decode(item['Value'])
+                    item['Value'] = base64.b64decode(item['Value'])
                 else:
-                   item['Value'] = ""
+                    item['Value'] = ""
 
     return ret
 
