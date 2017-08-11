@@ -11,7 +11,7 @@
     because on python 3 you can no longer compare strings against integers.
 '''
 
-# Import pytohn libs
+# Import python libs
 from __future__ import absolute_import
 # pylint: disable=blacklisted-module
 from distutils.version import StrictVersion as _StrictVersion
@@ -19,7 +19,7 @@ from distutils.version import LooseVersion as _LooseVersion
 # pylint: enable=blacklisted-module
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class StrictVersion(_StrictVersion):

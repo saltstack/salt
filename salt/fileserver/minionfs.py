@@ -37,7 +37,7 @@ import salt.utils.gzip_util
 import salt.utils.url
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    if not salt.utils.which('showmount'):
+    if not salt.utils.path.which('showmount'):
         return (False, 'The nfs3 execution module failed to load: the showmount binary is not in the path.')
     return True
 

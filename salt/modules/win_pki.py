@@ -6,17 +6,17 @@ Microsoft certificate management via the Pki PowerShell module.
 
 .. versionadded:: 2016.11.0
 '''
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
+import ast
 import json
 import logging
+import os
 
 # Import salt libs
-from salt.exceptions import SaltInvocationError
-import ast
-import os
-import salt.utils
+import salt.utils.platform
 import salt.utils.powershell
+from salt.exceptions import SaltInvocationError
 
 _DEFAULT_CONTEXT = 'LocalMachine'
 _DEFAULT_FORMAT = 'cer'
@@ -31,7 +31,7 @@ def __virtual__():
     '''
     Only works on Windows systems with the PKI PowerShell module installed.
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Only available on Windows Systems'
 
     if not __salt__['cmd.shell_info']('powershell')['installed']:

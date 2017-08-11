@@ -4,7 +4,7 @@
 Tests for the salt-run command
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
 import shutil
@@ -19,9 +19,9 @@ from tests.support.helpers import skip_if_not_root
 # Import 3rd-party libs
 import yaml
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.files
+import salt.utils.platform
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
@@ -42,7 +42,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         try:
             add_user = self.run_call('user.add {0} createhome=False'.format(USERA))
             add_pwd = self.run_call('shadow.set_password {0} \'{1}\''.format(USERA,
-                                    USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD))
+                                    USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD))
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_call('user.list_users')
@@ -118,7 +118,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
             with_retcode=True
         )
         try:
-            self.assertIn("'doc.runner:'", ret[0])
+            self.assertIn('doc.runner:', ret[0])
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
         except AssertionError:
             if os.path.exists('/dev/log') and ret[2] != 2:

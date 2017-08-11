@@ -2,15 +2,14 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
-from salt.utils import parsers
-from salt.utils import activate_profile
-from salt.utils import output_profile
+import salt.utils  # Can be removed once activate_profile and output_profile are moved
+import salt.utils.parsers
 from salt.utils.verify import check_user, verify_log
 from salt.exceptions import SaltClientError
 import salt.defaults.exitcodes  # pylint: disable=W0611
 
 
-class SaltRun(parsers.SaltRunOptionParser):
+class SaltRun(salt.utils.parsers.SaltRunOptionParser):
     '''
     Used to execute Salt runners
     '''
@@ -36,7 +35,7 @@ class SaltRun(parsers.SaltRunOptionParser):
         # someone tries to use the runners via the python API
         try:
             if check_user(self.config['user']):
-                pr = activate_profile(profiling_enabled)
+                pr = salt.utils.activate_profile(profiling_enabled)
                 try:
                     ret = runner.run()
                     # In older versions ret['data']['retcode'] was used
@@ -50,7 +49,7 @@ class SaltRun(parsers.SaltRunOptionParser):
                     elif isinstance(ret, dict) and 'retcode' in ret.get('data', {}):
                         self.exit(ret['data']['retcode'])
                 finally:
-                    output_profile(
+                    salt.utils.output_profile(
                         pr,
                         stats_path=self.options.profiling_path,
                         stop=True)

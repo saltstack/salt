@@ -10,13 +10,14 @@ Support for PowerShell
 '''
 from __future__ import absolute_import, unicode_literals
 
-# Import python libs
+# Import Python libs
 import copy
 import logging
 import json
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Set up logging
@@ -31,7 +32,7 @@ def __virtual__():
     Set the system module of the kernel is Windows
     '''
     # Verify Windows
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         log.debug('Module PSGet: Only available on Windows systems')
         return False, 'Module PSGet: Only available on Windows systems'
 

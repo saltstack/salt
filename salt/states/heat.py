@@ -39,7 +39,7 @@ import json
 import logging
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.files
 import salt.exceptions
 import yaml

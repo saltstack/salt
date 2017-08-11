@@ -45,7 +45,7 @@ import re
 from salt.ext.six import string_types
 
 import logging
-import salt.ext.six as six
+from salt.ext import six
 log = logging.getLogger(__name__)
 
 
