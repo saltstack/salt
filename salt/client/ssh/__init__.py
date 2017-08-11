@@ -223,6 +223,7 @@ class SSH(object):
         else:
             self.event = None
         self.opts = opts
+        self.opts['__salt_ssh'] = True
         if self.opts[u'regen_thin']:
             self.opts[u'ssh_wipe'] = True
         if not salt.utils.path.which(u'ssh'):
