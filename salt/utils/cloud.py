@@ -47,6 +47,7 @@ import salt.config
 import salt.loader
 import salt.template
 import salt.utils  # Can be removed when pem_finger is moved
+import salt.utils.compat
 import salt.utils.event
 import salt.utils.files
 import salt.utils.platform
@@ -3055,7 +3056,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
     # Perform a simple diff between the old and the new data, and if it differs,
     # return both dicts.
     # TODO: Return an actual diff
-    diff = cmp(new_data, cache_data)
+    diff = salt.utils.compat.cmp(new_data, cache_data)
     if diff != 0:
         fire_event(
             'event',

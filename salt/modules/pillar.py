@@ -257,8 +257,8 @@ def items(*args, **kwargs):
         __opts__,
         __grains__,
         __opts__['id'],
-        pillar_override=kwargs.get('pillar'),
-        pillarenv=kwargs.get('pillarenv') or __opts__['pillarenv'])
+        pillar_override=pillar_override,
+        pillarenv=pillarenv)
 
     return pillar.compile_pillar()
 
