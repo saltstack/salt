@@ -537,6 +537,22 @@ syndic_user: salt
 # The renderer to use on the minions to render the state data
 #renderer: yaml_jinja
 
+# The Jinja renderer can accept Line Statements and/or Line Comments if
+# configured with a prefix for each.
+# See http://jinja.pocoo.org/docs/templates/#line-statements
+#
+# If this is set to a valid string, any line starting with this prefix
+# will be interpreted as a line statement by the jinja renderer.
+# This is set to "#" in the Jinja documentation's examples.
+# Defaults to None.
+#jinja_line_statement_prefix: None
+#
+# If this is set to a valid string, any line starting with this prefix
+# will be interpreted as a line comment statement by the jinja renderer.
+# This is set to "##" in the Jinja documentation's examples.
+# Defaults to None.
+#jinja_line_comment_prefix: None
+
 # The Jinja renderer can strip extra carriage returns and whitespace
 # See http://jinja.pocoo.org/docs/api/#high-level-api
 #

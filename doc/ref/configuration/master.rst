@@ -1924,6 +1924,42 @@ the cloud profile or master config file, no templating will be performed.
 
     userdata_template: jinja
 
+.. conf_master:: jinja_line_statement_prefix
+
+``jinja_line_statement_prefix``
+---------------------
+
+.. versionadded:: Oxygen
+
+Default: ``None``
+
+If this is set to a valid string, any line starting with this prefix
+will be interpreted as a line statement by the jinja renderer.
+Defaults to ``None`` and corresponds
+to the Jinja environment init variable ``line_statement_prefix``.
+
+.. code-block:: yaml
+
+    jinja_line_statement_prefix: None
+
+.. conf_master:: jinja_line_comment_prefix
+
+``jinja_line_comment_prefix``
+---------------------
+
+.. versionadded:: Oxygen
+
+Default: ``None``
+
+If this is set to a valid string, any line starting with this prefix
+will be interpreted as a line comment by the jinja renderer.
+Defaults to ``None`` and corresponds
+to the Jinja environment init variable ``line_comment_prefix``.
+
+.. code-block:: yaml
+
+    jinja_line_comment_prefix: None
+
 .. conf_master:: jinja_trim_blocks
 
 ``jinja_trim_blocks``
