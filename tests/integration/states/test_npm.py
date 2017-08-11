@@ -6,7 +6,6 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -17,6 +16,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 # Import salt libs
 import salt.utils
 import salt.modules.cmdmod as cmd
+from salt.utils.versions import LooseVersion
 
 MAX_NPM_VERSION = '5.0.0'
 
