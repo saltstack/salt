@@ -54,7 +54,8 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state('npm.installed', name=None, pkgs=['pm2', 'grunt'])
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION), 'Skip with npm >= 5.0.0 until #41770 is fixed')
+    @skipIf(salt.utils.which('npm') and LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION),
+            'Skip with npm >= 5.0.0 until #41770 is fixed')
     @destructiveTest
     def test_npm_cache_clean(self):
         '''
