@@ -14,6 +14,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 import salt.config
 import salt.loader
 import salt.utils.boto
+from salt.ext import six
 from salt.utils.versions import LooseVersion
 import salt.states.boto_vpc as boto_vpc
 
@@ -291,6 +292,9 @@ class BotoVpcInternetGatewayTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTe
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(six.PY3, 'Disabled for Python 3 due to upstream bugs: '
+                 'https://github.com/spulec/moto/issues/548 and '
+                 'https://github.com/gabrielfalcao/HTTPretty/issues/325')
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
