@@ -6,6 +6,7 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+from distutils.version import LooseVersion
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -15,6 +16,9 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
+import salt.modules.cmdmod as cmd
+
+MAX_NPM_VERSION = '5.0.0'
 
 
 @skipIf(salt.utils.which('npm') is None, 'npm not installed')
@@ -53,6 +57,8 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('npm.installed', name=None, pkgs=['pm2', 'grunt'])
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(salt.utils.which('npm') and LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION),
+            'Skip with npm >= 5.0.0 until #41770 is fixed')
     @destructiveTest
     def test_npm_cache_clean(self):
         '''
