@@ -311,6 +311,11 @@ def bootstrap(vm_, opts):
             }
         }
 
+    if vm_.get('driver', 'none:none').split(':')[1] == 'saltify':
+        saltify_driver = True
+    else:
+        saltify_driver = False
+
     key_filename = salt.config.get_cloud_config_value(
         'key_filename', vm_, opts, search_global=False,
         default=salt.config.get_cloud_config_value(
@@ -475,6 +480,9 @@ def bootstrap(vm_, opts):
         'make_minion', vm_, opts, default=True
     )
 
+    if saltify_driver:
+        deploy_kwargs['wait_for_passwd_maxtries'] = 0  # No need to wait/retry with Saltify
+
     win_installer = salt.config.get_cloud_config_value(
         'win_installer', vm_, opts
     )
@@ -499,6 +507,8 @@ def bootstrap(vm_, opts):
         deploy_kwargs['winrm_port'] = salt.config.get_cloud_config_value(
             'winrm_port', vm_, opts, default=5986
         )
+        if saltify_driver:
+            deploy_kwargs['port_timeout'] = 1  # No need to wait/retry with Saltify
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
