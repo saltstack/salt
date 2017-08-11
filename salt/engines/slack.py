@@ -62,6 +62,7 @@ import logging
 import time
 import re
 import yaml
+import ast
 
 try:
     import slackclient
@@ -246,6 +247,10 @@ def start(token,
                                     tgt_type = kwargs['tgt_type']
                                     del kwargs['tgt_type']
 
+                                # Check for pillar string representation of dict and convert it to dict
+                                if 'pillar' in kwargs:
+                                    kwargs.update(pillar=ast.literal_eval(kwargs['pillar']))
+
                                 ret = {}
 
                                 if cmd in runner_functions:
@@ -255,7 +260,7 @@ def start(token,
                                 # Default to trying to run as a client module.
                                 else:
                                     local = salt.client.LocalClient()
-                                    ret = local.cmd('{0}'.format(target), cmd, args, kwargs, tgt_type='{0}'.format(tgt_type))
+                                    ret = local.cmd('{0}'.format(target), cmd, arg=args, kwarg=kwargs, tgt_type='{0}'.format(tgt_type))
 
                                 if ret:
                                     return_text = json.dumps(ret, sort_keys=True, indent=1)
