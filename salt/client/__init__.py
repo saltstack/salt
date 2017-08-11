@@ -325,7 +325,6 @@ class LocalClient(object):
 
         arg = salt.utils.args.condition_input(arg, kwarg)
 
-        log.debug('==== tgt {} ===='.format(tgt))
         try:
             pub_data = self.pub(
                 tgt,
@@ -1143,6 +1142,7 @@ class LocalClient(object):
         minion_timeouts = {}
 
         found = set()
+        missing = []
         # Check to see if the jid is real, if not return the empty dict
         try:
             if self.returners[u'{0}.get_load'.format(self.opts[u'master_job_cache'])](jid) == {}:
@@ -1181,6 +1181,8 @@ class LocalClient(object):
                     break
                 if u'minions' in raw.get(u'data', {}):
                     minions.update(raw[u'data'][u'minions'])
+                    if u'missing' in raw.get(u'data', {}):
+                        missing.extend(raw[u'data'][u'missing'])
                     continue
                 if u'return' not in raw[u'data']:
                     continue
@@ -1321,6 +1323,10 @@ class LocalClient(object):
         if expect_minions:
             for minion in list((minions - found)):
                 yield {minion: {u'failed': True}}
+
+        if missing:
+            for minion in missing:
+                yield {minion: {'failed': True}}
 
     def get_returns(
             self,
@@ -1579,7 +1585,6 @@ class LocalClient(object):
         connected_minions = None
         return_count = 0
 
-        log.debug('==== minions {} ==='.format(minions))
         for ret in self.get_iter_returns(jid,
                                          minions,
                                          timeout=timeout,

@@ -1853,11 +1853,13 @@ class ClearFuncs(object):
 
         # Retrieve the minions list
         delimiter = clear_load.get(u'kwargs', {}).get(u'delimiter', DEFAULT_TARGET_DELIM)
-        minions = self.ckminions.check_minions(
+        _res = self.ckminions.check_minions(
             clear_load[u'tgt'],
             clear_load.get(u'tgt_type', u'glob'),
             delimiter
         )
+        minions = _res.get('minions', list())
+        missing = _res.get('missing', list())
 
         # Check for external auth calls
         if extra.get(u'token', False):
@@ -1962,7 +1964,7 @@ class ClearFuncs(object):
         if jid is None:
             return {u'enc': u'clear',
                     u'load': {u'error': u'Master failed to assign jid'}}
-        payload = self._prep_pub(minions, jid, clear_load, extra)
+        payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         # Send it!
         self._send_pub(payload)
@@ -1971,7 +1973,8 @@ class ClearFuncs(object):
             u'enc': u'clear',
             u'load': {
                 u'jid': clear_load[u'jid'],
-                u'minions': minions
+                u'minions': minions,
+                u'missing': missing
             }
         }
 
@@ -2008,7 +2011,7 @@ class ClearFuncs(object):
             chan = salt.transport.server.PubServerChannel.factory(opts)
             chan.publish(load)
 
-    def _prep_pub(self, minions, jid, clear_load, extra):
+    def _prep_pub(self, minions, jid, clear_load, extra, missing):
         '''
         Take a given load and perform the necessary steps
         to prepare a publication.
@@ -2029,6 +2032,7 @@ class ClearFuncs(object):
             u'fun': clear_load[u'fun'],
             u'arg': clear_load[u'arg'],
             u'minions': minions,
+            u'missing': missing,
             }
 
         # Announce the job on the event bus
