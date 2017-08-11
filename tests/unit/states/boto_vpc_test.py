@@ -15,10 +15,10 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt libs
-import salt.config
-import salt.loader
 import salt.utils.boto
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext import six
+from salt.utils.versions import LooseVersion
 
 # pylint: disable=import-error,unused-import
 from unit.modules.boto_vpc_test import BotoVpcTestCaseMixin
@@ -272,6 +272,9 @@ class BotoVpcInternetGatewayTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTe
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(six.PY3, 'Disabled for Python 3 due to upstream bugs: '
+                 'https://github.com/spulec/moto/issues/548 and '
+                 'https://github.com/gabrielfalcao/HTTPretty/issues/325')
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
