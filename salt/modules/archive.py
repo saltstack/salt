@@ -40,7 +40,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.templates
 
-if salt.utils.is_windows():
+if salt.utils.platform.is_windows():
     import win32file
 
 # TODO: Check that the passed arguments are correct
@@ -1063,7 +1063,7 @@ def unzip(zip_file,
                             continue
                     zfile.extract(target, dest, password)
                     if extract_perms:
-                        if not salt.utils.is_windows():
+                        if not salt.utils.platform.is_windows():
                             perm = zfile.getinfo(target).external_attr >> 16
                             if perm == 0:
                                 umask_ = os.umask(0)
