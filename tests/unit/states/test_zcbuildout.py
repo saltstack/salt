@@ -10,7 +10,7 @@ from tests.support.unit import skipIf
 from tests.support.helpers import requires_network
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 from tests.unit.modules.test_zcbuildout import Base, KNOWN_VIRTUALENV_BINARY_NAMES
 import salt.modules.zcbuildout as modbuildout
 import salt.states.zcbuildout as buildout
@@ -19,7 +19,7 @@ import salt.modules.cmdmod as cmd
 ROOT = os.path.join(FILES, 'file/base/buildout')
 
 
-@skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
+@skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         'The \'virtualenv\' packaged needs to be installed')
 class BuildoutTestCase(Base):
 

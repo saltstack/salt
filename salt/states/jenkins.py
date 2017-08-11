@@ -13,7 +13,7 @@ import difflib
 import logging
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import zip
 import salt.utils.files
 

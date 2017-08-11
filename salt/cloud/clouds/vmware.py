@@ -127,6 +127,7 @@ import subprocess
 import salt.utils
 import salt.utils.cloud
 import salt.utils.network
+import salt.utils.stringutils
 import salt.utils.xmlutil
 import salt.utils.vmware
 from salt.exceptions import SaltCloudSystemExit
@@ -135,7 +136,7 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     # Attempt to import pyVmomi libs
     from pyVmomi import vim
@@ -3800,7 +3801,7 @@ def add_host(kwargs=None, call=None):
             p1 = subprocess.Popen(('echo', '-n'), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             p2 = subprocess.Popen(('openssl', 's_client', '-connect', '{0}:443'.format(host_name)), stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             p3 = subprocess.Popen(('openssl', 'x509', '-noout', '-fingerprint', '-sha1'), stdin=p2.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out = salt.utils.to_str(p3.stdout.read())
+            out = salt.utils.stringutils.to_str(p3.stdout.read())
             ssl_thumbprint = out.split('=')[-1].strip()
             log.debug('SSL thumbprint received from the host system: {0}'.format(ssl_thumbprint))
             spec.sslThumbprint = ssl_thumbprint

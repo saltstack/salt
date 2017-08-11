@@ -14,15 +14,15 @@ import logging
 
 # Import Salt libs
 import salt.client
-import salt.utils
+import salt.utils.args
+import salt.utils.cloud
 import salt.utils.files
 import salt.utils.virt
-import salt.utils.cloud
 import salt.key
 from salt.utils.odict import OrderedDict as _OrderedDict
 
 # Import 3rd-party lib
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -276,7 +276,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         ret['result'] = False
         return ret
 
-    kw = salt.utils.clean_kwargs(**kwargs)
+    kw = salt.utils.args.clean_kwargs(**kwargs)
     pub_key = kw.get('pub_key', None)
     priv_key = kw.get('priv_key', None)
     explicit_auth = pub_key and priv_key
@@ -309,7 +309,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     cmds = []
     for name in names:
         args = [name]
-        kw = salt.utils.clean_kwargs(**kwargs)
+        kw = salt.utils.args.clean_kwargs(**kwargs)
         if saltcloud_mode:
             kw = copy.deepcopy(kw)
             kw['name'] = name

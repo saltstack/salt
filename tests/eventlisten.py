@@ -18,7 +18,7 @@ import os
 import salt.utils.event
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def parse():

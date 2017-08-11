@@ -73,11 +73,17 @@ The kubernetes module is used to manage different kubernetes resources.
             key1: value1
             key2: value2
             key3: value3
+
+.. versionadded: 2017.7.0
 '''
 from __future__ import absolute_import
 
 import copy
 import logging
+
+# Import 3rd-party libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 
@@ -400,7 +406,7 @@ def namespace_absent(name, **kwargs):
     if (
             res['code'] == 200 or
             (
-                isinstance(res['status'], str) and
+                isinstance(res['status'], six.string_types) and
                 'Terminating' in res['status']
             ) or
             (

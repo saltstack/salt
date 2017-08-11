@@ -60,7 +60,7 @@ import re
 import logging
 import json
 import copy
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
