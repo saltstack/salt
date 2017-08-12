@@ -125,7 +125,8 @@ def cert(name,
         salt 'gitlab.example.com' acme.cert dev.example.com "[gitlab.example.com]" test_cert=True renew=14 webroot=/opt/gitlab/embedded/service/gitlab-rails/public
     '''
 
-    cmd = [LEA, 'certonly', '--quiet']
+    # cmd = [LEA, 'certonly', '--quiet']
+    cmd = [LEA, 'certonly']
 
     cert_file = _cert_file(name, 'cert')
     if not __salt__['file.file_exists'](cert_file):
