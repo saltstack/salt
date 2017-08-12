@@ -821,7 +821,7 @@ class TranslateInputTestCase(TestCase):
             expected
         )
 
-    @assert_stringlist
+    @assert_string
     def test_domainname(self):
         '''
         Should be a list of strings or converted to one
