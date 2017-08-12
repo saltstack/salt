@@ -34,7 +34,7 @@ try:
     import salt._syspaths as __generated_syspaths  # pylint: disable=no-name-in-module
 except ImportError:
     import types
-   __generated_syspaths = types.ModuleType('salt._syspaths')
+    __generated_syspaths = types.ModuleType('salt._syspaths')
     for key in ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
                 'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'HOME_DIR',
                 'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
