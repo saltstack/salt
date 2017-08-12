@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 
 Proxy Minion interface module for managing Palo Alto firewall devices.
 
@@ -9,7 +9,7 @@ Proxy Minion interface module for managing Palo Alto firewall devices.
 :platform:   unix
 
 This proxy minion enables Palo Alto firewalls (hereafter referred to
-as simply 'panos' devices to be treated individually like a Salt Minion.
+as simply 'panos') to be treated individually like a Salt Minion.
 
 The panos proxy leverages the XML API functionality on the Palo Alto
 firewall. The Salt proxy must have access to the Palo Alto firewall on
@@ -183,7 +183,8 @@ apikey
 ^^^^^^^^
 The generated XML API key for the Panorama server. Required.
 
-"""
+'''
+
 from __future__ import absolute_import
 
 # Import Python Libs
@@ -191,7 +192,6 @@ import logging
 
 # Import Salt Libs
 import salt.exceptions
-import salt.utils.http
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ['panos']
@@ -208,18 +208,18 @@ __virtualname__ = 'panos'
 
 
 def __virtual__():
-    """
+    '''
     Only return if all the modules are available.
-    """
+    '''
     return __virtualname__
 
 
 def init(opts):
-    """
+    '''
     This function gets called when the proxy starts up. For
     panos devices, a determination is made on the connection type
     and the appropriate connection details that must be cached.
-    """
+    '''
     if 'host' not in opts['proxy']:
         log.critical('No \'host\' key found in pillar for this proxy.')
         return False
@@ -268,61 +268,61 @@ def init(opts):
 
 
 def call(payload=None):
-    """
+    '''
     This function captures the query string and sends it to the Palo Alto device.
-    """
+    '''
     ret = {}
     try:
         if DETAILS['method'] == 'dev_key':
             # Pass the api key without the target declaration
             conditional_payload = {'key': DETAILS['apikey']}
             payload.update(conditional_payload)
-            r = salt.utils.http.query(DETAILS['url'],
-                                      data=payload,
-                                      method='POST',
-                                      decode_type='xml',
-                                      decode=True,
-                                      verify_ssl=False,
-                                      raise_error=True)
+            r = __utils__['http.query'](DETAILS['url'],
+                                        data=payload,
+                                        method='POST',
+                                        decode_type='xml',
+                                        decode=True,
+                                        verify_ssl=False,
+                                        raise_error=True)
             ret = r['dict'][0]
         elif DETAILS['method'] == 'dev_pass':
             # Pass credentials without the target declaration
-            r = salt.utils.http.query(DETAILS['url'],
-                                      username=DETAILS['username'],
-                                      password=DETAILS['password'],
-                                      data=payload,
-                                      method='POST',
-                                      decode_type='xml',
-                                      decode=True,
-                                      verify_ssl=False,
-                                      raise_error=True)
+            r = __utils__['http.query'](DETAILS['url'],
+                                        username=DETAILS['username'],
+                                        password=DETAILS['password'],
+                                        data=payload,
+                                        method='POST',
+                                        decode_type='xml',
+                                        decode=True,
+                                        verify_ssl=False,
+                                        raise_error=True)
             ret = r['dict'][0]
         elif DETAILS['method'] == 'pan_key':
             # Pass the api key with the target declaration
             conditional_payload = {'key': DETAILS['apikey'],
                                    'target': DETAILS['serial']}
             payload.update(conditional_payload)
-            r = salt.utils.http.query(DETAILS['url'],
-                                      data=payload,
-                                      method='POST',
-                                      decode_type='xml',
-                                      decode=True,
-                                      verify_ssl=False,
-                                      raise_error=True)
+            r = __utils__['http.query'](DETAILS['url'],
+                                        data=payload,
+                                        method='POST',
+                                        decode_type='xml',
+                                        decode=True,
+                                        verify_ssl=False,
+                                        raise_error=True)
             ret = r['dict'][0]
         elif DETAILS['method'] == 'pan_pass':
             # Pass credentials with the target declaration
             conditional_payload = {'target': DETAILS['serial']}
             payload.update(conditional_payload)
-            r = salt.utils.http.query(DETAILS['url'],
-                                      username=DETAILS['username'],
-                                      password=DETAILS['password'],
-                                      data=payload,
-                                      method='POST',
-                                      decode_type='xml',
-                                      decode=True,
-                                      verify_ssl=False,
-                                      raise_error=True)
+            r = __utils__['http.query'](DETAILS['url'],
+                                        username=DETAILS['username'],
+                                        password=DETAILS['password'],
+                                        data=payload,
+                                        method='POST',
+                                        decode_type='xml',
+                                        decode=True,
+                                        verify_ssl=False,
+                                        raise_error=True)
             ret = r['dict'][0]
     except KeyError as err:
         raise salt.exceptions.CommandExecutionError("Did not receive a valid response from host.")
@@ -330,10 +330,10 @@ def call(payload=None):
 
 
 def is_required_version(required_version='0.0.0'):
-    """
+    '''
     Because different versions of Palo Alto support different command sets, this function
     will return true if the current version of Palo Alto supports the required command.
-    """
+    '''
     if 'sw-version' in DETAILS['grains_cache']:
         current_version = DETAILS['grains_cache']['sw-version']
     else:
@@ -366,18 +366,18 @@ def is_required_version(required_version='0.0.0'):
 
 
 def initialized():
-    """
+    '''
     Since grains are loaded in many different places and some of those
     places occur before the proxy can be initialized, return whether
     our init() function has been called
-    """
+    '''
     return DETAILS.get('initialized', False)
 
 
 def grains():
-    """
+    '''
     Get the grains from the proxied device
-    """
+    '''
     if not DETAILS.get('grains_cache', {}):
         DETAILS['grains_cache'] = GRAINS_CACHE
         try:
@@ -389,17 +389,17 @@ def grains():
 
 
 def grains_refresh():
-    """
+    '''
     Refresh the grains from the proxied device
-    """
+    '''
     DETAILS['grains_cache'] = None
     return grains()
 
 
 def ping():
-    """
+    '''
     Returns true if the device is reachable, else false.
-    """
+    '''
     try:
         query = {'type': 'op', 'cmd': '<show><system><info></info></system></show>'}
         if 'result' in call(query)['system']:
@@ -411,8 +411,8 @@ def ping():
 
 
 def shutdown():
-    """
+    '''
     Shutdown the connection to the proxy device. For this proxy,
     shutdown is a no-op.
-    """
+    '''
     log.debug('Panos proxy shutdown() called.')

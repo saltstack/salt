@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Generate baseline proxy minion grains for panos hosts.
 
-"""
+'''
 
 # Import Python Libs
 from __future__ import absolute_import
 import logging
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.platform
 import salt.proxy.panos
 
 __proxyenabled__ = ['panos']
@@ -22,7 +22,7 @@ GRAINS_CACHE = {'os_family': 'panos'}
 
 def __virtual__():
     try:
-        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'panos':
+        if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'panos':
             return __virtualname__
     except KeyError:
         pass
@@ -31,7 +31,7 @@ def __virtual__():
 
 
 def panos(proxy=None):
-    if proxy is None:
+    if not proxy:
         return {}
     if proxy['panos.initialized']() is False:
         return {}
