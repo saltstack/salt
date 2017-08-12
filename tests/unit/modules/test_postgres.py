@@ -335,6 +335,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     superuser=False,
                     replication=False,
                     rolepassword='test_role_pass',
+                    valid_until='2042-07-01',
                     groups='test_groups',
                     runas='foo'
                 )
@@ -345,9 +346,10 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 call = postgres._run_psql.call_args[0][0][14]
                 self.assertTrue(re.match('CREATE ROLE "testuser"', call))
                 for i in (
-                    'INHERIT NOCREATEDB NOCREATEROLE '
-                    'NOSUPERUSER NOREPLICATION LOGIN UNENCRYPTED PASSWORD'
-                ).split():
+                    'INHERIT', 'NOCREATEDB', 'NOCREATEROLE', 'NOSUPERUSER',
+                    'NOREPLICATION', 'LOGIN', 'UNENCRYPTED', 'PASSWORD',
+                    'VALID UNTIL',
+                ):
                     self.assertTrue(i in call, '{0} not in {1}'.format(i, call))
 
     def test_user_exists(self):
@@ -464,6 +466,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     login=True,
                     replication=False,
                     rolepassword='test_role_pass',
+                    valid_until='2017-07-01',
                     groups='test_groups',
                     runas='foo'
                 )
@@ -475,7 +478,8 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     re.match(
                         'ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
                         'NOCREATEROLE NOREPLICATION LOGIN '
-                        'UNENCRYPTED PASSWORD [\'"]{0,5}test_role_pass[\'"]{0,5};'
+                        'UNENCRYPTED PASSWORD [\'"]{0,5}test_role_pass[\'"]{0,5} '
+                        'VALID UNTIL \'2017-07-01\';'
                         ' GRANT "test_groups" TO "test_username"',
                         postgres._run_psql.call_args[0][0][14]
                     )
