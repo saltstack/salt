@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 A state module to manage Palo Alto network devices.
 
 :codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
@@ -57,7 +57,8 @@ commit to the device.
 .. seealso::
     :prox:`Palo Alto Proxy Module <salt.proxy.panos>`
 
-"""
+'''
+
 # Import Python Libs
 from __future__ import absolute_import
 import logging
@@ -70,10 +71,10 @@ def __virtual__():
 
 
 def _default_ret(name):
-    """
+    '''
     Set the default response values.
 
-    """
+    '''
     ret = {
         'name': name,
         'changes': {},
@@ -85,19 +86,19 @@ def _default_ret(name):
 
 
 def add_config_lock(name):
-    """
+    '''
     Prevent other users from changing configuration until the lock is released.
 
     name: The name of the module function to execute.
 
     SLS Example:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
         panos/takelock:
             panos.add_config_lock
 
-    """
+    '''
     ret = _default_ret(name)
 
     ret.update({
@@ -109,7 +110,7 @@ def add_config_lock(name):
 
 
 def clone_config(name, xpath=None, newname=None, commit=False):
-    """
+    '''
     Clone a specific XPATH and set it to a new name.
 
     name: The name of the module function to execute.
@@ -122,7 +123,7 @@ def clone_config(name, xpath=None, newname=None, commit=False):
 
     SLS Example:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
         panos/clonerule:
             panos.clone_config:
@@ -131,13 +132,13 @@ def clone_config(name, xpath=None, newname=None, commit=False):
               - value: rule2
               - commit: True
 
-    """
+    '''
     ret = _default_ret(name)
 
-    if xpath is None:
+    if not xpath:
         return ret
 
-    if newname is None:
+    if not newname:
         return ret
 
     query = {'type': 'config',
@@ -162,19 +163,19 @@ def clone_config(name, xpath=None, newname=None, commit=False):
 
 
 def commit(name):
-    """
+    '''
     Commits the candidate configuration to the running configuration.
 
     name: The name of the module function to execute.
 
     SLS Example:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
         panos/commit:
             panos.commit
 
-    """
+    '''
     ret = _default_ret(name)
 
     ret.update({
@@ -186,7 +187,7 @@ def commit(name):
 
 
 def delete_config(name, xpath=None, commit=False):
-    """
+    '''
     Deletes a Palo Alto XPATH to a specific value.
 
     Use the xpath parameter to specify the location of the object to be deleted.
@@ -199,17 +200,17 @@ def delete_config(name, xpath=None, commit=False):
 
     SLS Example:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
         panos/deletegroup:
             panos.delete_config:
               - xpath: /config/devices/entry/vsys/entry[@name='vsys1']/address-group/entry[@name='test']
               - commit: True
 
-    """
+    '''
     ret = _default_ret(name)
 
-    if xpath is None:
+    if not xpath:
         return ret
 
     query = {'type': 'config',
@@ -233,7 +234,7 @@ def delete_config(name, xpath=None, commit=False):
 
 
 def download_software(name, version=None, synch=False, check=False):
-    """
+    '''
     Ensures that a software version is downloaded.
 
     name: The name of the module function to execute.
@@ -248,7 +249,7 @@ def download_software(name, version=None, synch=False, check=False):
 
     SLS Example:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
         panos/version8.0.0:
             panos.download_software:
@@ -256,7 +257,7 @@ def download_software(name, version=None, synch=False, check=False):
               - synch: False
               - check: True
 
-    """
+    '''
     ret = _default_ret(name)
 
     if check is True:
@@ -306,7 +307,7 @@ def download_software(name, version=None, synch=False, check=False):
 
 
 def edit_config(name, xpath=None, value=None, commit=False):
-    """
+    '''
     Edits a Palo Alto XPATH to a specific value. This will always overwrite the existing value, even if it is not
     changed.
 
@@ -323,7 +324,7 @@ def edit_config(name, xpath=None, value=None, commit=False):
 
     SLS Example:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
         panos/addressgroup:
             panos.edit_config:
@@ -331,13 +332,13 @@ def edit_config(name, xpath=None, value=None, commit=False):
               - value: <static><entry name='test'><member>abc</member><member>xyz</member></entry></static>
               - commit: True
 
-    """
+    '''
     ret = _default_ret(name)
 
-    if xpath is None:
+    if not xpath:
         return ret
 
-    if value is None:
+    if not value:
         return ret
 
     query = {'type': 'config',
@@ -362,7 +363,7 @@ def edit_config(name, xpath=None, value=None, commit=False):
 
 
 def move_config(name, xpath=None, where=None, dst=None, commit=False):
-    """
+    '''
     Moves a XPATH value to a new location.
 
     Use the xpath parameter to specify the location of the object to be moved, the where parameter to
@@ -383,7 +384,7 @@ def move_config(name, xpath=None, where=None, dst=None, commit=False):
 
     SLS Example:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
         panos/moveruletop:
             panos.move_config:
@@ -398,13 +399,13 @@ def move_config(name, xpath=None, where=None, dst=None, commit=False):
               - dst: rule2
               - commit: True
 
-    """
+    '''
     ret = _default_ret(name)
 
-    if xpath is None:
+    if not xpath:
         return ret
 
-    if where is None:
+    if not where:
         return ret
 
     if where == 'after':
@@ -447,19 +448,19 @@ def move_config(name, xpath=None, where=None, dst=None, commit=False):
 
 
 def remove_config_lock(name):
-    """
+    '''
     Release config lock previously held.
 
     name: The name of the module function to execute.
 
     SLS Example:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
         panos/takelock:
             panos.remove_config_lock
 
-    """
+    '''
     ret = _default_ret(name)
 
     ret.update({
@@ -471,7 +472,7 @@ def remove_config_lock(name):
 
 
 def rename_config(name, xpath=None, newname=None, commit=False):
-    """
+    '''
     Rename a Palo Alto XPATH to a specific value. This will always rename the value even if a change is not needed.
 
     name: The name of the module function to execute.
@@ -484,7 +485,7 @@ def rename_config(name, xpath=None, newname=None, commit=False):
 
     SLS Example:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
         panos/renamegroup:
             panos.rename_config:
@@ -492,13 +493,13 @@ def rename_config(name, xpath=None, newname=None, commit=False):
               - value: new_address
               - commit: True
 
-    """
+    '''
     ret = _default_ret(name)
 
-    if xpath is None:
+    if not xpath:
         return ret
 
-    if newname is None:
+    if not newname:
         return ret
 
     query = {'type': 'config',
@@ -523,7 +524,7 @@ def rename_config(name, xpath=None, newname=None, commit=False):
 
 
 def set_config(name, xpath=None, value=None, commit=False):
-    """
+    '''
     Sets a Palo Alto XPATH to a specific value. This will always overwrite the existing value, even if it is not
     changed.
 
@@ -540,7 +541,7 @@ def set_config(name, xpath=None, value=None, commit=False):
 
     SLS Example:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
         panos/hostname:
             panos.set_config:
@@ -548,13 +549,13 @@ def set_config(name, xpath=None, value=None, commit=False):
               - value: <hostname>foobar</hostname>
               - commit: True
 
-    """
+    '''
     ret = _default_ret(name)
 
-    if xpath is None:
+    if not xpath:
         return ret
 
-    if value is None:
+    if not value:
         return ret
 
     query = {'type': 'config',

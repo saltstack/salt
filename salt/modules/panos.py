@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Module to provide Palo Alto compatibility to Salt.
 
 :codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
@@ -23,7 +23,7 @@ This execution module was designed to handle connections to a Palo Alto based
 firewall. This module adds support to send connections directly to the device
 through the XML API or through a brokered connection to Panorama.
 
-"""
+'''
 
 # Import Python Libs
 from __future__ import absolute_import
@@ -31,6 +31,7 @@ import logging
 import time
 
 # Import Salt Libs
+import salt.utils.platform
 import salt.proxy.panos
 
 log = logging.getLogger(__name__)
@@ -39,11 +40,11 @@ __virtualname__ = 'panos'
 
 
 def __virtual__():
-    """
+    '''
     Will load for the panos proxy minions.
-    """
+    '''
     try:
-        if salt.utils.is_proxy() and \
+        if salt.utils.platform.is_proxy() and \
            __opts__['proxy']['proxytype'] == 'panos':
             return __virtualname__
     except KeyError:
@@ -53,11 +54,11 @@ def __virtual__():
 
 
 def _get_job_results(query=None):
-    """
+    '''
     Executes a query that requires a job for completion. This funciton will wait for the job to complete
     and return the results.
-    """
-    if query is None:
+    '''
+    if not query:
         raise salt.exception.CommandExecutionError("Query parameters cannot be empty.")
 
     response = __proxy__['panos.call'](query)
@@ -75,7 +76,7 @@ def _get_job_results(query=None):
 
 
 def add_config_lock():
-    """
+    '''
     Prevent other users from changing configuration until the lock is released.
 
     CLI Example:
@@ -84,14 +85,14 @@ def add_config_lock():
 
         salt '*' panos.add_config_lock
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<request><config-lock><add></add></config-lock></request>'}
 
     return __proxy__['panos.call'](query)
 
 
 def check_antivirus():
-    """
+    '''
     Get anti-virus information from PaloAlto Networks server
 
     CLI Example:
@@ -100,14 +101,14 @@ def check_antivirus():
 
         salt '*' panos.check_antivirus
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<request><anti-virus><upgrade><check></check></upgrade></anti-virus></request>'}
 
     return __proxy__['panos.call'](query)
 
 
 def check_software():
-    """
+    '''
     Get software information from PaloAlto Networks server.
 
     CLI Example:
@@ -116,14 +117,14 @@ def check_software():
 
         salt '*' panos.check_software
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<request><system><software><check></check></software></system></request>'}
 
     return __proxy__['panos.call'](query)
 
 
 def clear_commit_tasks():
-    """
+    '''
     Clear all commit tasks.
 
     CLI Example:
@@ -132,14 +133,14 @@ def clear_commit_tasks():
 
         salt '*' panos.clear_commit_tasks
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<request><clear-commit-tasks></clear-commit-tasks></request>'}
 
     return __proxy__['panos.call'](query)
 
 
 def commit():
-    """
+    '''
     Commits the candidate configuration to the running configuration.
 
     CLI Example:
@@ -148,15 +149,16 @@ def commit():
 
         salt '*' panos.commit
 
-    """
+    '''
     query = {'type': 'commit', 'cmd': '<commit></commit>'}
 
     return _get_job_results(query)
 
 
 def deactivate_license(key_name=None):
-    """
+    '''
     Deactivates an installed license.
+    Required version 7.0.0 or greater.
 
     key_name(str): The file name of the license key installed.
 
@@ -166,13 +168,13 @@ def deactivate_license(key_name=None):
 
         salt '*' panos.deactivate_license key_name=License_File_Name.key
 
-    """
+    '''
 
     _required_version = '7.0.0'
     if not __proxy__['panos.is_required_version'](_required_version):
         return False, 'The panos device requires version {0} or greater for this command.'.format(_required_version)
 
-    if key_name is None:
+    if not key_name:
         return False, 'You must specify a key_name.'
     else:
         query = {'type': 'op', 'cmd': '<request><license><deactivate><key><features><member>{0}</member></features>'
@@ -182,7 +184,7 @@ def deactivate_license(key_name=None):
 
 
 def delete_license(key_name=None):
-    """
+    '''
     Remove license keys on disk.
 
     key_name(str): The file name of the license key to be deleted.
@@ -193,9 +195,9 @@ def delete_license(key_name=None):
 
         salt '*' panos.delete_license key_name=License_File_Name.key
 
-    """
+    '''
 
-    if key_name is None:
+    if not key_name:
         return False, 'You must specify a key_name.'
     else:
         query = {'type': 'op', 'cmd': '<delete><license><key>{0}</key></license></delete>'.format(key_name)}
@@ -204,7 +206,7 @@ def delete_license(key_name=None):
 
 
 def download_antivirus():
-    """
+    '''
     Download the most recent anti-virus package.
 
     CLI Example:
@@ -213,7 +215,7 @@ def download_antivirus():
 
         salt '*' panos.download_antivirus
 
-    """
+    '''
     query = {'type': 'op',
              'cmd': '<request><anti-virus><upgrade><download>'
                     '<latest></latest></download></upgrade></anti-virus></request>'}
@@ -222,7 +224,7 @@ def download_antivirus():
 
 
 def download_software_file(filename=None, synch=False):
-    """
+    '''
     Download software packages by filename.
 
     Args:
@@ -237,8 +239,8 @@ def download_software_file(filename=None, synch=False):
         salt '*' panos.download_software_file PanOS_5000-8.0.0
         salt '*' panos.download_software_file PanOS_5000-8.0.0 True
 
-    """
-    if filename is None:
+    '''
+    if not filename:
         raise salt.exception.CommandExecutionError("Filename option must not be none.")
 
     if not isinstance(synch, bool):
@@ -257,7 +259,7 @@ def download_software_file(filename=None, synch=False):
 
 
 def download_software_version(version=None, synch=False):
-    """
+    '''
     Download software packages by version number.
 
     Args:
@@ -272,8 +274,8 @@ def download_software_version(version=None, synch=False):
         salt '*' panos.download_software_version 8.0.0
         salt '*' panos.download_software_version 8.0.0 True
 
-    """
-    if version is None:
+    '''
+    if not version:
         raise salt.exception.CommandExecutionError("Version option must not be none.")
 
     if not isinstance(synch, bool):
@@ -292,7 +294,7 @@ def download_software_version(version=None, synch=False):
 
 
 def fetch_license(auth_code=None):
-    """
+    '''
     Get new license(s) using from the Palo Alto Network Server.
 
     auth_code
@@ -305,8 +307,8 @@ def fetch_license(auth_code=None):
         salt '*' panos.fetch_license
         salt '*' panos.fetch_license auth_code=foobar
 
-    """
-    if auth_code is None:
+    '''
+    if not auth_code:
         query = {'type': 'op', 'cmd': '<request><license><fetch></fetch></license></request>'}
     else:
         query = {'type': 'op', 'cmd': '<request><license><fetch><auth-code>{0}</auth-code></fetch></license>'
@@ -316,7 +318,7 @@ def fetch_license(auth_code=None):
 
 
 def get_admins_active():
-    """
+    '''
     Show active administrators.
 
     CLI Example:
@@ -325,14 +327,14 @@ def get_admins_active():
 
         salt '*' panos.get_admins_active
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><admins></admins></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_admins_all():
-    """
+    '''
     Show all administrators.
 
     CLI Example:
@@ -341,14 +343,14 @@ def get_admins_all():
 
         salt '*' panos.get_admins_all
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><admins><all></all></admins></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_antivirus_info():
-    """
+    '''
     Show information about available anti-virus packages.
 
     CLI Example:
@@ -357,14 +359,14 @@ def get_antivirus_info():
 
         salt '*' panos.get_antivirus_info
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<request><anti-virus><upgrade><info></info></upgrade></anti-virus></request>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_arp():
-    """
+    '''
     Show ARP information.
 
     CLI Example:
@@ -373,14 +375,14 @@ def get_arp():
 
         salt '*' panos.get_arp
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><arp><entry name = \'all\'/></arp></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_cli_idle_timeout():
-    """
+    '''
     Show timeout information for this administrative session.
 
     CLI Example:
@@ -389,14 +391,14 @@ def get_cli_idle_timeout():
 
         salt '*' panos.get_cli_idle_timeout
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><cli><idle-timeout></idle-timeout></cli></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_cli_permissions():
-    """
+    '''
     Show cli administrative permissions.
 
     CLI Example:
@@ -405,14 +407,14 @@ def get_cli_permissions():
 
         salt '*' panos.get_cli_permissions
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><cli><permissions></permissions></cli></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_disk_usage():
-    """
+    '''
     Report filesystem disk space usage.
 
     CLI Example:
@@ -421,14 +423,14 @@ def get_disk_usage():
 
         salt '*' panos.get_disk_usage
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><system><disk-space></disk-space></system></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_dns_server_config():
-    """
+    '''
     Get the DNS server configuration from the candidate configuration.
 
     CLI Example:
@@ -437,7 +439,7 @@ def get_dns_server_config():
 
         salt '*' panos.get_dns_server_config
 
-    """
+    '''
     query = {'type': 'config',
              'action': 'get',
              'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/dns-setting/servers'}
@@ -446,7 +448,7 @@ def get_dns_server_config():
 
 
 def get_domain_config():
-    """
+    '''
     Get the domain name configuration from the candidate configuration.
 
     CLI Example:
@@ -455,7 +457,7 @@ def get_domain_config():
 
         salt '*' panos.get_domain_config
 
-    """
+    '''
     query = {'type': 'config',
              'action': 'get',
              'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/domain'}
@@ -464,7 +466,7 @@ def get_domain_config():
 
 
 def get_fqdn_cache():
-    """
+    '''
     Print FQDNs used in rules and their IPs.
 
     CLI Example:
@@ -473,14 +475,14 @@ def get_fqdn_cache():
 
         salt '*' panos.get_fqdn_cache
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<request><system><fqdn><show></show></fqdn></system></request>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_ha_config():
-    """
+    '''
     Get the high availability configuration.
 
     CLI Example:
@@ -489,7 +491,7 @@ def get_ha_config():
 
         salt '*' panos.get_ha_config
 
-    """
+    '''
     query = {'type': 'config',
              'action': 'get',
              'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/high-availability'}
@@ -498,7 +500,7 @@ def get_ha_config():
 
 
 def get_hostname():
-    """
+    '''
     Get the hostname of the device.
 
     CLI Example:
@@ -507,7 +509,7 @@ def get_hostname():
 
         salt '*' panos.get_hostname
 
-    """
+    '''
     query = {'type': 'config',
              'action': 'get',
              'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/hostname'}
@@ -516,7 +518,7 @@ def get_hostname():
 
 
 def get_interface_counters(name='all'):
-    """
+    '''
     Get the counter statistics for interfaces.
 
     Args:
@@ -529,7 +531,7 @@ def get_interface_counters(name='all'):
         salt '*' panos.get_interface_counters
         salt '*' panos.get_interface_counters ethernet1/1
 
-    """
+    '''
     query = {'type': 'op',
              'cmd': '<show><counter><interface>{0}</interface></counter></show>'.format(name)}
 
@@ -537,7 +539,7 @@ def get_interface_counters(name='all'):
 
 
 def get_interfaces(name='all'):
-    """
+    '''
     Show interface information.
 
     Args:
@@ -550,7 +552,7 @@ def get_interfaces(name='all'):
         salt '*' panos.get_interfaces
         salt '*' panos.get_interfaces ethernet1/1
 
-    """
+    '''
     query = {'type': 'op',
              'cmd': '<show><interface>{0}</interface></show>'.format(name)}
 
@@ -558,7 +560,7 @@ def get_interfaces(name='all'):
 
 
 def get_job(jid=None):
-    """
+    '''
     List all a single job by ID.
 
     jid
@@ -570,8 +572,8 @@ def get_job(jid=None):
 
         salt '*' panos.get_job jid=15
 
-    """
-    if jid is None:
+    '''
+    if not jid:
         raise salt.exception.CommandExecutionError("ID option must not be none.")
 
     query = {'type': 'op', 'cmd': '<show><jobs><id>{0}</id></jobs></show>'.format(jid)}
@@ -580,7 +582,7 @@ def get_job(jid=None):
 
 
 def get_jobs(state='all'):
-    """
+    '''
     List all jobs on the device.
 
     state
@@ -595,7 +597,7 @@ def get_jobs(state='all'):
         salt '*' panos.get_jobs
         salt '*' panos.get_jobs state=pending
 
-    """
+    '''
     if state.lower() == 'all':
         query = {'type': 'op', 'cmd': '<show><jobs><all></all></jobs></show>'}
     elif state.lower() == 'pending':
@@ -609,7 +611,7 @@ def get_jobs(state='all'):
 
 
 def get_lacp():
-    """
+    '''
     Show LACP state.
 
     CLI Example:
@@ -618,14 +620,14 @@ def get_lacp():
 
         salt '*' panos.get_lacp
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><lacp><aggregate-ethernet>all</aggregate-ethernet></lacp></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_license_info():
-    """
+    '''
     Show information about owned license(s).
 
     CLI Example:
@@ -634,14 +636,14 @@ def get_license_info():
 
         salt '*' panos.get_license_info
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<request><license><info></info></license></request>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_license_tokens():
-    """
+    '''
     Show license token files for manual license deactivation.
 
     CLI Example:
@@ -650,14 +652,14 @@ def get_license_tokens():
 
         salt '*' panos.get_license_tokens
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><license-token-files></license-token-files></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_lldp_config():
-    """
+    '''
     Show lldp config for interfaces.
 
     CLI Example:
@@ -666,14 +668,14 @@ def get_lldp_config():
 
         salt '*' panos.get_lldp_config
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><lldp><config>all</config></lldp></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_lldp_counters():
-    """
+    '''
     Show lldp counters for interfaces.
 
     CLI Example:
@@ -682,14 +684,14 @@ def get_lldp_counters():
 
         salt '*' panos.get_lldp_counters
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><lldp><counters>all</counters></lldp></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_lldp_local():
-    """
+    '''
     Show lldp local info for interfaces.
 
     CLI Example:
@@ -698,14 +700,14 @@ def get_lldp_local():
 
         salt '*' panos.get_lldp_local
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><lldp><local>all</local></lldp></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_lldp_neighbors():
-    """
+    '''
     Show lldp neighbors info for interfaces.
 
     CLI Example:
@@ -714,14 +716,14 @@ def get_lldp_neighbors():
 
         salt '*' panos.get_lldp_neighbors
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><lldp><neighbors>all</neighbors></lldp></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_logdb_quota():
-    """
+    '''
     Report the logdb quotas.
 
     CLI Example:
@@ -730,14 +732,14 @@ def get_logdb_quota():
 
         salt '*' panos.get_logdb_quota
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><system><logdb-quota></logdb-quota></system></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_master_key():
-    """
+    '''
     Get the master key properties.
 
     CLI Example:
@@ -746,14 +748,14 @@ def get_master_key():
 
         salt '*' panos.get_master_key
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><system><masterkey-properties></masterkey-properties></system></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_ntp_config():
-    """
+    '''
     Get the NTP configuration from the candidate configuration.
 
     CLI Example:
@@ -762,7 +764,7 @@ def get_ntp_config():
 
         salt '*' panos.get_ntp_config
 
-    """
+    '''
     query = {'type': 'config',
              'action': 'get',
              'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/ntp-servers'}
@@ -771,7 +773,7 @@ def get_ntp_config():
 
 
 def get_ntp_servers():
-    """
+    '''
     Get list of configured NTP servers.
 
     CLI Example:
@@ -780,14 +782,14 @@ def get_ntp_servers():
 
         salt '*' panos.get_ntp_servers
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><ntp></ntp></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_operational_mode():
-    """
+    '''
     Show device operational mode setting.
 
     CLI Example:
@@ -796,14 +798,14 @@ def get_operational_mode():
 
         salt '*' panos.get_operational_mode
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><operational-mode></operational-mode></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_panorama_status():
-    """
+    '''
     Show panorama connection status.
 
     CLI Example:
@@ -812,14 +814,14 @@ def get_panorama_status():
 
         salt '*' panos.get_panorama_status
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><panorama-status></panorama-status></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_permitted_ips():
-    """
+    '''
     Get the IP addresses that are permitted to establish management connections to the device.
 
     CLI Example:
@@ -828,7 +830,7 @@ def get_permitted_ips():
 
         salt '*' panos.get_permitted_ips
 
-    """
+    '''
     query = {'type': 'config',
              'action': 'get',
              'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/permitted-ip'}
@@ -837,7 +839,7 @@ def get_permitted_ips():
 
 
 def get_platform():
-    """
+    '''
     Get the platform model information and limitations.
 
     CLI Example:
@@ -846,7 +848,7 @@ def get_platform():
 
         salt '*' panos.get_platform
 
-    """
+    '''
     query = {'type': 'config',
              'action': 'get',
              'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/platform'}
@@ -855,7 +857,7 @@ def get_platform():
 
 
 def get_snmp_config():
-    """
+    '''
     Get the SNMP configuration from the device.
 
     CLI Example:
@@ -864,7 +866,7 @@ def get_snmp_config():
 
         salt '*' panos.get_snmp_config
 
-    """
+    '''
     query = {'type': 'config',
              'action': 'get',
              'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/snmp-setting'}
@@ -873,7 +875,7 @@ def get_snmp_config():
 
 
 def get_software_info():
-    """
+    '''
     Show information about available software packages.
 
     CLI Example:
@@ -882,14 +884,14 @@ def get_software_info():
 
         salt '*' panos.get_software_info
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<request><system><software><info></info></software></system></request>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_system_date_time():
-    """
+    '''
     Get the system date/time.
 
     CLI Example:
@@ -898,14 +900,14 @@ def get_system_date_time():
 
         salt '*' panos.get_system_date_time
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><clock></clock></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_system_files():
-    """
+    '''
     List important files in the system.
 
     CLI Example:
@@ -914,14 +916,14 @@ def get_system_files():
 
         salt '*' panos.get_system_files
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><system><files></files></system></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_system_info():
-    """
+    '''
     Get the system information.
 
     CLI Example:
@@ -930,14 +932,14 @@ def get_system_info():
 
         salt '*' panos.get_system_info
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><system><info></info></system></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_system_services():
-    """
+    '''
     Show system services.
 
     CLI Example:
@@ -946,14 +948,14 @@ def get_system_services():
 
         salt '*' panos.get_system_services
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><system><services></services></system></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def get_system_state(filter=None):
-    """
+    '''
     Show the system state variables.
 
     filter
@@ -967,7 +969,7 @@ def get_system_state(filter=None):
         salt '*' panos.get_system_state filter=cfg.ha.config.enabled
         salt '*' panos.get_system_state filter=cfg.ha.*
 
-    """
+    '''
     if filter:
         query = {'type': 'op',
                  'cmd': '<show><system><state><filter>{0}</filter></state></system></show>'.format(filter)}
@@ -978,7 +980,7 @@ def get_system_state(filter=None):
 
 
 def get_users_config():
-    """
+    '''
     Get the local administrative user account configuration.
 
     CLI Example:
@@ -987,7 +989,7 @@ def get_users_config():
 
         salt '*' panos.get_users_config
 
-    """
+    '''
     query = {'type': 'config',
              'action': 'get',
              'xpath': '/config/mgt-config/users'}
@@ -996,7 +998,7 @@ def get_users_config():
 
 
 def get_vlans():
-    """
+    '''
     Show all VLAN information.
 
     CLI Example:
@@ -1005,14 +1007,14 @@ def get_vlans():
 
         salt '*' panos.get_vlans
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<show><vlan>all</vlan></show>'}
 
     return __proxy__['panos.call'](query)
 
 
 def install_antivirus(version=None, latest=False, synch=False, skip_commit=False,):
-    """
+    '''
     Install anti-virus packages.
 
     Args:
@@ -1031,8 +1033,8 @@ def install_antivirus(version=None, latest=False, synch=False, skip_commit=False
 
         salt '*' panos.install_antivirus 8.0.0
 
-    """
-    if version is None and latest is False:
+    '''
+    if not version and latest is False:
         raise salt.exception.CommandExecutionError("Version option must not be none.")
 
     if synch is True:
@@ -1060,7 +1062,7 @@ def install_antivirus(version=None, latest=False, synch=False, skip_commit=False
 
 
 def install_license():
-    """
+    '''
     Install the license key(s).
 
     CLI Example:
@@ -1069,14 +1071,14 @@ def install_license():
 
         salt '*' panos.install_license
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<request><license><install></install></license></request>'}
 
     return __proxy__['panos.call'](query)
 
 
 def install_software(version=None):
-    """
+    '''
     Upgrade to a software package by version.
 
     Args:
@@ -1088,8 +1090,8 @@ def install_software(version=None):
 
         salt '*' panos.install_license 8.0.0
 
-    """
-    if version is None:
+    '''
+    if not version:
         raise salt.exception.CommandExecutionError("Version option must not be none.")
 
     query = {'type': 'op',
@@ -1100,7 +1102,7 @@ def install_software(version=None):
 
 
 def reboot():
-    """
+    '''
     Reboot a running system.
 
     CLI Example:
@@ -1109,14 +1111,14 @@ def reboot():
 
         salt '*' panos.reboot
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<request><restart><system></system></restart></request>'}
 
     return __proxy__['panos.call'](query)
 
 
 def refresh_fqdn_cache(force=False):
-    """
+    '''
     Force refreshes all FQDNs used in rules.
 
     force
@@ -1129,7 +1131,7 @@ def refresh_fqdn_cache(force=False):
         salt '*' panos.refresh_fqdn_cache
         salt '*' panos.refresh_fqdn_cache force=True
 
-    """
+    '''
     if not isinstance(force, bool):
         raise salt.exception.CommandExecutionError("Force option must be boolean.")
 
@@ -1143,7 +1145,7 @@ def refresh_fqdn_cache(force=False):
 
 
 def remove_config_lock():
-    """
+    '''
     Release config lock previously held.
 
     CLI Example:
@@ -1152,15 +1154,16 @@ def remove_config_lock():
 
         salt '*' panos.remove_config_lock
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<request><config-lock><remove></remove></config-lock></request>'}
 
     return __proxy__['panos.call'](query)
 
 
 def resolve_address(address=None, vsys=None):
-    """
+    '''
     Resolve address to ip address.
+    Required version 7.0.0 or greater.
 
     address
         Address name you want to resolve.
@@ -1175,15 +1178,15 @@ def resolve_address(address=None, vsys=None):
         salt '*' panos.resolve_address foo.bar.com
         salt '*' panos.resolve_address foo.bar.com vsys=2
 
-    """
+    '''
     _required_version = '7.0.0'
     if not __proxy__['panos.is_required_version'](_required_version):
         return False, 'The panos device requires version {0} or greater for this command.'.format(_required_version)
 
-    if address is None:
+    if not address:
         raise salt.exception.CommandExecutionError("FQDN to resolve must be provided as address.")
 
-    if vsys is None:
+    if not vsys:
         query = {'type': 'op',
                  'cmd': '<request><resolve><address>{0}</address></resolve></request>'.format(address)}
     else:
@@ -1195,7 +1198,7 @@ def resolve_address(address=None, vsys=None):
 
 
 def save_device_config(filename=None):
-    """
+    '''
     Save device configuration to a named file.
 
     filename
@@ -1207,8 +1210,8 @@ def save_device_config(filename=None):
 
         salt '*' panos.save_device_config foo.xml
 
-    """
-    if filename is None:
+    '''
+    if not filename:
         raise salt.exception.CommandExecutionError("Filename must not be empty.")
 
     query = {'type': 'op', 'cmd': '<save><config><to>{0}</to></config></save>'.format(filename)}
@@ -1217,7 +1220,7 @@ def save_device_config(filename=None):
 
 
 def save_device_state():
-    """
+    '''
     Save files needed to restore device to local disk.
 
     CLI Example:
@@ -1226,14 +1229,14 @@ def save_device_state():
 
         salt '*' panos.save_device_state
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<save><device-state></device-state></save>'}
 
     return __proxy__['panos.call'](query)
 
 
 def set_authentication_profile(profile=None, deploy=False):
-    """
+    '''
     Set the authentication profile of the Palo Alto proxy minion. A commit will be required before this is processed.
 
     CLI Example:
@@ -1248,9 +1251,9 @@ def set_authentication_profile(profile=None, deploy=False):
         salt '*' panos.set_authentication_profile foo
         salt '*' panos.set_authentication_profile foo deploy=True
 
-    """
+    '''
 
-    if profile is None:
+    if not profile:
         salt.exception.CommandExecutionError("Profile name option must not be none.")
 
     ret = {}
@@ -1270,7 +1273,7 @@ def set_authentication_profile(profile=None, deploy=False):
 
 
 def set_hostname(hostname=None, deploy=False):
-    """
+    '''
     Set the hostname of the Palo Alto proxy minion. A commit will be required before this is processed.
 
     CLI Example:
@@ -1285,9 +1288,9 @@ def set_hostname(hostname=None, deploy=False):
         salt '*' panos.set_hostname newhostname
         salt '*' panos.set_hostname newhostname deploy=True
 
-    """
+    '''
 
-    if hostname is None:
+    if not hostname:
         salt.exception.CommandExecutionError("Hostname option must not be none.")
 
     ret = {}
@@ -1306,7 +1309,7 @@ def set_hostname(hostname=None, deploy=False):
 
 
 def set_management_icmp(enabled=True, deploy=False):
-    """
+    '''
     Enables or disables the ICMP management service on the device.
 
     CLI Example:
@@ -1321,7 +1324,7 @@ def set_management_icmp(enabled=True, deploy=False):
         salt '*' panos.set_management_icmp
         salt '*' panos.set_management_icmp enabled=False deploy=True
 
-    """
+    '''
 
     if enabled is True:
         value = "no"
@@ -1346,7 +1349,7 @@ def set_management_icmp(enabled=True, deploy=False):
 
 
 def set_management_http(enabled=True, deploy=False):
-    """
+    '''
     Enables or disables the HTTP management service on the device.
 
     CLI Example:
@@ -1361,7 +1364,7 @@ def set_management_http(enabled=True, deploy=False):
         salt '*' panos.set_management_http
         salt '*' panos.set_management_http enabled=False deploy=True
 
-    """
+    '''
 
     if enabled is True:
         value = "no"
@@ -1386,7 +1389,7 @@ def set_management_http(enabled=True, deploy=False):
 
 
 def set_management_https(enabled=True, deploy=False):
-    """
+    '''
     Enables or disables the HTTPS management service on the device.
 
     CLI Example:
@@ -1401,7 +1404,7 @@ def set_management_https(enabled=True, deploy=False):
         salt '*' panos.set_management_https
         salt '*' panos.set_management_https enabled=False deploy=True
 
-    """
+    '''
 
     if enabled is True:
         value = "no"
@@ -1426,7 +1429,7 @@ def set_management_https(enabled=True, deploy=False):
 
 
 def set_management_ocsp(enabled=True, deploy=False):
-    """
+    '''
     Enables or disables the HTTP OCSP management service on the device.
 
     CLI Example:
@@ -1441,7 +1444,7 @@ def set_management_ocsp(enabled=True, deploy=False):
         salt '*' panos.set_management_ocsp
         salt '*' panos.set_management_ocsp enabled=False deploy=True
 
-    """
+    '''
 
     if enabled is True:
         value = "no"
@@ -1466,7 +1469,7 @@ def set_management_ocsp(enabled=True, deploy=False):
 
 
 def set_management_snmp(enabled=True, deploy=False):
-    """
+    '''
     Enables or disables the SNMP management service on the device.
 
     CLI Example:
@@ -1481,7 +1484,7 @@ def set_management_snmp(enabled=True, deploy=False):
         salt '*' panos.set_management_snmp
         salt '*' panos.set_management_snmp enabled=False deploy=True
 
-    """
+    '''
 
     if enabled is True:
         value = "no"
@@ -1506,7 +1509,7 @@ def set_management_snmp(enabled=True, deploy=False):
 
 
 def set_management_ssh(enabled=True, deploy=False):
-    """
+    '''
     Enables or disables the SSH management service on the device.
 
     CLI Example:
@@ -1521,7 +1524,7 @@ def set_management_ssh(enabled=True, deploy=False):
         salt '*' panos.set_management_ssh
         salt '*' panos.set_management_ssh enabled=False deploy=True
 
-    """
+    '''
 
     if enabled is True:
         value = "no"
@@ -1546,7 +1549,7 @@ def set_management_ssh(enabled=True, deploy=False):
 
 
 def set_management_telnet(enabled=True, deploy=False):
-    """
+    '''
     Enables or disables the Telnet management service on the device.
 
     CLI Example:
@@ -1561,7 +1564,7 @@ def set_management_telnet(enabled=True, deploy=False):
         salt '*' panos.set_management_telnet
         salt '*' panos.set_management_telnet enabled=False deploy=True
 
-    """
+    '''
 
     if enabled is True:
         value = "no"
@@ -1591,7 +1594,7 @@ def set_ntp_authentication(target=None,
                            authentication_key=None,
                            algorithm=None,
                            deploy=False):
-    """
+    '''
     Set the NTP authentication of the Palo Alto proxy minion. A commit will be required before this is processed.
 
     CLI Example:
@@ -1616,7 +1619,7 @@ def set_ntp_authentication(target=None,
         salt '*' ntp.set_authentication target=both authentication_type=symmetric key_id=15 authentication_key=mykey algorithm=md5
         salt '*' ntp.set_authentication target=both authentication_type=symmetric key_id=15 authentication_key=mykey algorithm=md5 deploy=True
 
-    """
+    '''
     ret = {}
 
     if target not in ['primary', 'secondary', 'both']:
@@ -1625,11 +1628,11 @@ def set_ntp_authentication(target=None,
     if authentication_type not in ['symmetric', 'autokey', 'none']:
         raise salt.exceptions.CommandExecutionError("Type option must be symmetric, autokey, or both.")
 
-    if authentication_type == "symmetric" and authentication_key is None:
+    if authentication_type == "symmetric" and not authentication_key:
         raise salt.exceptions.CommandExecutionError("When using symmetric authentication, authentication_key must be "
                                                     "provided.")
 
-    if authentication_type == "symmetric" and key_id is None:
+    if authentication_type == "symmetric" and not key_id:
         raise salt.exceptions.CommandExecutionError("When using symmetric authentication, key_id must be provided.")
 
     if authentication_type == "symmetric" and algorithm not in ['md5', 'sha1']:
@@ -1698,7 +1701,7 @@ def set_ntp_authentication(target=None,
 
 
 def set_ntp_servers(primary_server=None, secondary_server=None, deploy=False):
-    """
+    '''
     Set the NTP servers of the Palo Alto proxy minion. A commit will be required before this is processed.
 
     CLI Example:
@@ -1716,10 +1719,10 @@ def set_ntp_servers(primary_server=None, secondary_server=None, deploy=False):
         salt '*' ntp.set_servers primary_server=0.pool.ntp.org secondary_server=1.pool.ntp.org
         salt '*' ntp.ser_servers 0.pool.ntp.org 1.pool.ntp.org deploy=True
 
-    """
+    '''
     ret = {}
 
-    if primary_server is not None:
+    if primary_server:
         query = {'type': 'config',
                  'action': 'set',
                  'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/ntp-servers/'
@@ -1727,7 +1730,7 @@ def set_ntp_servers(primary_server=None, secondary_server=None, deploy=False):
                  'element': '<ntp-server-address>{0}</ntp-server-address>'.format(primary_server)}
         ret.update({'primary_server': __proxy__['panos.call'](query)})
 
-    if secondary_server is not None:
+    if secondary_server:
         query = {'type': 'config',
                  'action': 'set',
                  'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/ntp-servers/'
@@ -1742,7 +1745,7 @@ def set_ntp_servers(primary_server=None, secondary_server=None, deploy=False):
 
 
 def set_permitted_ip(address=None, deploy=False):
-    """
+    '''
     Add an IPv4 address or network to the permitted IP list.
 
     CLI Example:
@@ -1758,9 +1761,9 @@ def set_permitted_ip(address=None, deploy=False):
         salt '*' panos.set_permitted_ip 10.0.0.0/24
         salt '*' panos.set_permitted_ip 10.0.0.1 deploy=True
 
-    """
+    '''
 
-    if address is None:
+    if not address:
         salt.exception.CommandExecutionError("Address option must not be empty.")
 
     ret = {}
@@ -1779,7 +1782,7 @@ def set_permitted_ip(address=None, deploy=False):
 
 
 def set_timezone(tz=None, deploy=False):
-    """
+    '''
     Set the timezone of the Palo Alto proxy minion. A commit will be required before this is processed.
 
     CLI Example:
@@ -1794,9 +1797,9 @@ def set_timezone(tz=None, deploy=False):
         salt '*' panos.set_timezone UTC
         salt '*' panos.set_timezone UTC deploy=True
 
-    """
+    '''
 
-    if tz is None:
+    if not tz:
         salt.exception.CommandExecutionError("Timezone name option must not be none.")
 
     ret = {}
@@ -1815,7 +1818,7 @@ def set_timezone(tz=None, deploy=False):
 
 
 def shutdown():
-    """
+    '''
     Shutdown a running system.
 
     CLI Example:
@@ -1824,14 +1827,14 @@ def shutdown():
 
         salt '*' panos.shutdown
 
-    """
+    '''
     query = {'type': 'op', 'cmd': '<request><shutdown><system></system></shutdown></request>'}
 
     return __proxy__['panos.call'](query)
 
 
 def unlock_admin(username=None):
-    """
+    '''
     Unlocks a locked administrator account.
 
     username
@@ -1843,8 +1846,8 @@ def unlock_admin(username=None):
 
         salt '*' panos.unlock_admin username=bob
 
-    """
-    if username is None:
+    '''
+    if not username:
         raise salt.exception.CommandExecutionError("Username option must not be none.")
 
     query = {'type': 'op',
