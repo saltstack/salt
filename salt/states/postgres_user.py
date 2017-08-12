@@ -208,8 +208,11 @@ def present(name,
                 'SELECT \'{0}\'::timestamp(0) as dt;'.format(
                     valid_until.replace('\'', '\'\'')),
                 **db_args)[0]['dt']
-            valid_until_dt = datetime.datetime.strptime(
-                valid_until_dt, '%Y-%m-%d %H:%M:%S')
+            try:
+                valid_until_dt = datetime.datetime.strptime(
+                    valid_until_dt, '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                valid_until_dt = None
             if valid_until_dt != user_attr['expiry time']:
                 update['valid_until'] = valid_until
         if groups is not None:
