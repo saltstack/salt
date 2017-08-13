@@ -88,11 +88,11 @@ except ImportError:
 
 # Import salt libs
 from salt.utils import namespaced_function
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.cloud
 import salt.utils.files
+import salt.utils.http
 import salt.config as config
-from salt.utils import http
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
     SaltCloudSystemExit,
@@ -2622,7 +2622,7 @@ def update_pricing(kwargs=None, call=None):
     .. versionadded:: 2015.8.0
     '''
     url = 'https://cloudpricingcalculator.appspot.com/static/data/pricelist.json'
-    price_json = http.query(url, decode=True, decode_type='json')
+    price_json = salt.utils.http.query(url, decode=True, decode_type='json')
 
     outfile = os.path.join(
         __opts__['cachedir'], 'gce-pricing.p'

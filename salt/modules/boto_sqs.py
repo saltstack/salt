@@ -50,9 +50,8 @@ from __future__ import absolute_import
 import logging
 import json
 
-# Import Salt libs
-import salt.ext.six as six
-from salt.ext.six import string_types
+# Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
@@ -87,7 +86,7 @@ def _preprocess_attributes(attributes):
     '''
     Pre-process incoming queue attributes before setting them
     '''
-    if isinstance(attributes, string_types):
+    if isinstance(attributes, six.string_types):
         attributes = json.loads(attributes)
 
     def stringified(val):

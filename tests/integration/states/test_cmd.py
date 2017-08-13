@@ -2,7 +2,7 @@
 '''
 Tests for the file state
 '''
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import errno
 import os
@@ -14,11 +14,11 @@ from tests.support.case import ModuleCase
 from tests.support.paths import TMP_STATE_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.files
+import salt.utils.platform
 
-IS_WINDOWS = salt.utils.is_windows()
+IS_WINDOWS = salt.utils.platform.is_windows()
 
 
 class CMDTest(ModuleCase, SaltReturnAssertsMixin):
