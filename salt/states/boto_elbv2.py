@@ -50,7 +50,11 @@ def __virtual__():
     '''
     Only load if boto is available.
     '''
-    return 'boto_elbv2' if 'boto_elbv2.target_group_exists' in __salt__ else False
+    if 'boto_elbv2.target_group_exists' in __salt__:
+        return 'boto_elbv2'
+    else
+        return (False, "The boto_elbv2 module cannot be loaded: boto3 library not found")
+
 
 
 def targets_registered(name, targets, region=None, key=None, keyid=None,
