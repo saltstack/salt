@@ -10,8 +10,9 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -29,11 +30,11 @@ def disks():
     '''
     Return list of disk devices
     '''
-    if salt.utils.is_freebsd():
+    if salt.utils.platform.is_freebsd():
         return _freebsd_geom()
-    elif salt.utils.is_linux():
+    elif salt.utils.platform.is_linux():
         return _linux_disks()
-    elif salt.utils.is_windows():
+    elif salt.utils.platform.is_windows():
         return _windows_disks()
     else:
         log.trace('Disk grain does not support OS')
@@ -91,7 +92,7 @@ _geom_attribs = [_geomconsts.__dict__[key] for key in
 
 
 def _freebsd_geom():
-    geom = salt.utils.which('geom')
+    geom = salt.utils.path.which('geom')
     ret = {'disks': {}, 'SSDs': []}
 
     devices = __salt__['cmd.run']('{0} disk list'.format(geom))

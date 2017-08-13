@@ -15,7 +15,7 @@ import salt.utils.validate.net
 import salt.exceptions
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import pyconnman
     HAS_PYCONNMAN = True

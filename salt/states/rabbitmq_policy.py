@@ -21,7 +21,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ def __virtual__():
     '''
     Only load if RabbitMQ is installed.
     '''
-    return salt.utils.which('rabbitmqctl') is not None
+    return salt.utils.path.which('rabbitmqctl') is not None
 
 
 def present(name,

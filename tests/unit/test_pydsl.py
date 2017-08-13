@@ -23,7 +23,7 @@ from salt.utils.pydsl import PyDslError
 
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO
 
 

@@ -17,13 +17,13 @@ import os
 import re
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 _SELINUX_FILETYPES = {
@@ -47,7 +47,7 @@ def __virtual__():
     # Iterate over all of the commands this module uses and make sure
     # each of them are available in the standard PATH to prevent breakage
     for cmd in required_cmds:
-        if not salt.utils.which(cmd):
+        if not salt.utils.path.which(cmd):
             return (False, cmd + ' is not in the path')
     # SELinux only makes sense on Linux *obviously*
     if __grains__['kernel'] == 'Linux':

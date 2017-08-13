@@ -4,7 +4,7 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import pwd
 import grp
@@ -14,8 +14,8 @@ import random
 from tests.support.case import ShellCase
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.utils.pycrypto import gen_hash
 
 # Import 3rd-party libs
@@ -77,7 +77,7 @@ class AuthTest(ShellCase):
         # set user password
         set_pw_cmd = "shadow.set_password {0} '{1}'".format(
                 self.userA,
-                password if salt.utils.is_darwin() else hashed_pwd
+                password if salt.utils.platform.is_darwin() else hashed_pwd
         )
         self.run_call(set_pw_cmd)
 
@@ -109,7 +109,7 @@ class AuthTest(ShellCase):
         # set user password
         set_pw_cmd = "shadow.set_password {0} '{1}'".format(
                 self.userB,
-                password if salt.utils.is_darwin() else hashed_pwd
+                password if salt.utils.platform.is_darwin() else hashed_pwd
         )
         self.run_call(set_pw_cmd)
 

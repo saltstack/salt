@@ -32,7 +32,7 @@ import types
 
 # Import 3rd-party libs
 import psutil  # pylint: disable=3rd-party-module-not-gated
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,redefined-builtin
 try:
     from pytestsalt.utils import get_unused_localhost_port  # pylint: disable=unused-import
@@ -1025,6 +1025,7 @@ def requires_salt_modules(*names):
 
 def skip_if_binaries_missing(*binaries, **kwargs):
     import salt.utils
+    import salt.utils.path
     if len(binaries) == 1:
         if isinstance(binaries[0], (list, tuple, set, frozenset)):
             binaries = binaries[0]
@@ -1039,14 +1040,14 @@ def skip_if_binaries_missing(*binaries, **kwargs):
         )
     if check_all:
         for binary in binaries:
-            if salt.utils.which(binary) is None:
+            if salt.utils.path.which(binary) is None:
                 return skip(
                     '{0}The {1!r} binary was not found'.format(
                         message and '{0}. '.format(message) or '',
                         binary
                     )
                 )
-    elif salt.utils.which_bin(binaries) is None:
+    elif salt.utils.path.which_bin(binaries) is None:
         return skip(
             '{0}None of the following binaries was found: {1}'.format(
                 message and '{0}. '.format(message) or '',

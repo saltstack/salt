@@ -7,7 +7,7 @@ Manage HP ILO
 from __future__ import absolute_import
 
 from salt._compat import ElementTree as ET
-import salt.utils
+import salt.utils.path
 import os
 import tempfile
 
@@ -20,7 +20,7 @@ def __virtual__():
     '''
     Make sure hponcfg tool is accessible
     '''
-    if salt.utils.which('hponcfg'):
+    if salt.utils.path.which('hponcfg'):
         return True
 
     return (False, 'ilo execution module not loaded: the hponcfg binary is not in the path.')

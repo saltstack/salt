@@ -20,7 +20,7 @@ import re
 import json
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from salt.utils.odict import OrderedDict

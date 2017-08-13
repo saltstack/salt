@@ -17,7 +17,7 @@ import copy
 import salt.utils
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
+from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'pkgutil'

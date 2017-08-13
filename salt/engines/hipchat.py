@@ -48,7 +48,7 @@ try:
 except ImportError:
     HAS_HYPCHAT = False
 
-import salt.utils
+import salt.utils.args
 import salt.utils.event
 import salt.utils.files
 import salt.utils.http
@@ -56,7 +56,7 @@ import salt.runner
 import salt.client
 import salt.loader
 import salt.output
-import salt.ext.six as six
+from salt.ext import six
 
 
 def __virtual__():
@@ -341,13 +341,13 @@ def start(token,
             args = []
             kwargs = {}
 
-            cmdline = salt.utils.shlex_split(text)
+            cmdline = salt.utils.args.shlex_split(text)
             cmd = cmdline[0]
 
             # Evaluate aliases
             if aliases and isinstance(aliases, dict) and cmd in aliases.keys():
                 cmdline = aliases[cmd].get('cmd')
-                cmdline = salt.utils.shlex_split(cmdline)
+                cmdline = salt.utils.args.shlex_split(cmdline)
                 cmd = cmdline[0]
 
             # Parse args and kwargs

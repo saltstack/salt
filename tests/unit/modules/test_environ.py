@@ -52,7 +52,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(os.environ, {}), \
                 patch.dict(environ.__salt__, {'reg.set_value': MagicMock(),
                                               'reg.delete_value': MagicMock()}), \
-                    patch('salt.utils.is_windows', MagicMock(return_value=True)):
+                    patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
 
             environ.setval('key', 'Test', permanent=True)
             environ.__salt__['reg.set_value'].assert_called_with('HKCU', 'Environment', 'key', 'Test')
