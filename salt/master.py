@@ -1146,6 +1146,8 @@ class AESFuncs(object):
         mopts[u'state_auto_order'] = self.opts[u'state_auto_order']
         mopts[u'state_events'] = self.opts[u'state_events']
         mopts[u'state_aggregate'] = self.opts[u'state_aggregate']
+        mopts[u'jinja_line_statement_prefix'] = self.opts[u'jinja_line_statement_prefix']
+        mopts[u'jinja_line_comment_prefix'] = self.opts[u'jinja_line_comment_prefix']
         mopts[u'jinja_lstrip_blocks'] = self.opts[u'jinja_lstrip_blocks']
         mopts[u'jinja_trim_blocks'] = self.opts[u'jinja_trim_blocks']
         return mopts

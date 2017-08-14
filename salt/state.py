@@ -2722,6 +2722,8 @@ class BaseHighState(object):
             opts[u'default_top'] = mopts.get(u'default_top', opts.get(u'default_top'))
             opts[u'state_events'] = mopts.get(u'state_events')
             opts[u'state_aggregate'] = mopts.get(u'state_aggregate', opts.get(u'state_aggregate', False))
+            opts[u'jinja_line_statement_prefix'] = mopts.get(u'jinja_line_statement_prefix', None)
+            opts[u'jinja_line_comment_prefix'] = mopts.get(u'jinja_line_comment_prefix', None)
             opts[u'jinja_lstrip_blocks'] = mopts.get(u'jinja_lstrip_blocks', False)
             opts[u'jinja_trim_blocks'] = mopts.get(u'jinja_trim_blocks', False)
         return opts

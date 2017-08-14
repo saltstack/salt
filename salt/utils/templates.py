@@ -314,6 +314,17 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         env_args['extensions'].append('jinja2.ext.loopcontrols')
     env_args['extensions'].append(salt.utils.jinja.SerializerExtension)
 
+    # Pass through line_statement_prefix and line_comment_prefix to the jinja environment.
+    jinja_line_statement_prefix = opts.get('jinja_line_statement_prefix', None)
+    if jinja_line_statement_prefix:
+        log.debug('Jinja2 line_statement_prefix is {}'.format(jinja_line_statement_prefix))
+        env_args['line_statement_prefix'] = jinja_line_statement_prefix
+
+    jinja_line_comment_prefix = opts.get('jinja_line_comment_prefix', None)
+    if jinja_line_comment_prefix:
+        log.debug('Jinja2 line_comment_prefix is {}'.format(jinja_line_comment_prefix))
+        env_args['line_comment_prefix'] = jinja_line_comment_prefix
+
     # Pass through trim_blocks and lstrip_blocks Jinja parameters
     # trim_blocks removes newlines around Jinja blocks
     # lstrip_blocks strips tabs and spaces from the beginning of
