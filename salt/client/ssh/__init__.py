@@ -379,7 +379,7 @@ class SSH(object):
         roster_file = self._get_roster()
         if os.access(roster_file, os.W_OK):
             if self.__parsed_rosters[self.ROSTER_UPDATE_FLAG]:
-                with open(roster_file, 'a') as roster_fp:
+                with salt.utils.files.fopen(roster_file, 'a') as roster_fp:
                     roster_fp.write('# Automatically added by "{s_user}" at {s_time}\n{hostname}:\n    host: '
                                     '{hostname}\n    user: {user}'
                                     '\n    passwd: {passwd}\n'.format(s_user=getpass.getuser(),
