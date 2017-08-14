@@ -2790,6 +2790,12 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
             action='store_true',
             help=('Start the runner operation and immediately return control.')
         )
+        self.add_option(
+            '--skip-grains',
+            default=False,
+            action='store_true',
+            help=('Do not load grains.')
+        )
         group = self.output_options_group = optparse.OptionGroup(
             self, 'Output Options', 'Configure your preferred output format.'
         )
