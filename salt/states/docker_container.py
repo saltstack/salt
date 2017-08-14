@@ -146,7 +146,7 @@ def running(name,
     .. _docker-container-running-skip-translate:
 
     skip_translate
-        This function translates Salt CLI input into the format which
+        This function translates Salt CLI or SLS input into the format which
         docker-py_ expects. However, in the event that Salt's translation logic
         fails (due to potential changes in the Docker Remote API, or to bugs in
         the translation code), this argument can be used to exert granular
@@ -678,24 +678,14 @@ def running(name,
                   - foo2.domain.tld
 
     domainname
-        Set custom DNS search domains. Can be expressed as a comma-separated
-        list or a YAML list. The below two examples are equivalent:
+        The domain name to use for the container
 
         .. code-block:: yaml
 
             foo:
               docker_container.running:
                 - image: bar/baz:latest
-                - dommainname: domain.tld,domain2.tld
-
-        .. code-block:: yaml
-
-            foo:
-              docker_container.running:
-                - image: bar/baz:latest
-                - dommainname:
-                  - domain.tld
-                  - domain2.tld
+                - dommainname: domain.tld
 
     entrypoint
         Entrypoint for the container
