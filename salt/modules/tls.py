@@ -101,7 +101,7 @@ Create a server req + cert with non-CN filename for the cert
 from __future__ import absolute_import
 # pylint: disable=C0103
 
-# Import python libs
+# Import Python libs
 import os
 import re
 import time
@@ -109,15 +109,15 @@ import calendar
 import logging
 import math
 import binascii
-import salt.utils
-import salt.utils.files
 from datetime import datetime
 
-# Import salt libs
+# Import Salt libs
+import salt.utils.files
+import salt.utils.stringutils
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range as _range
 
 HAS_SSL = False
@@ -264,7 +264,7 @@ def _get_basic_info(ca_name, cert, ca_dir=None):
 
     expire_date = _four_digit_year_to_two_digit(
         datetime.strptime(
-            salt.utils.to_str(cert.get_notAfter()),
+            salt.utils.stringutils.to_str(cert.get_notAfter()),
             four_digit_year_fmt)
     )
     serial_number = format(cert.get_serial_number(), 'X')
@@ -1010,9 +1010,9 @@ def create_csr(ca_name,
 
         for ext, value in extensions.items():
             if six.PY3:
-                ext = salt.utils.to_bytes(ext)
+                ext = salt.utils.stringutils.to_bytes(ext)
                 if isinstance(value, six.string_types):
-                    value = salt.utils.to_bytes(value)
+                    value = salt.utils.stringutils.to_bytes(value)
             extension_adds.append(
                 OpenSSL.crypto.X509Extension(
                     ext, False, value))
@@ -1022,7 +1022,7 @@ def create_csr(ca_name,
 
     if subjectAltName:
         if X509_EXT_ENABLED:
-            if isinstance(subjectAltName, str):
+            if isinstance(subjectAltName, six.string_types):
                 subjectAltName = [subjectAltName]
 
             extension_adds.append(
@@ -1566,21 +1566,21 @@ def cert_info(cert_path, digest='sha256'):
     issuer = {}
     for key, value in cert.get_issuer().get_components():
         if isinstance(key, bytes):
-            key = salt.utils.to_str(key, __salt_system_encoding__)
+            key = salt.utils.stringutils.to_str(key, __salt_system_encoding__)
         if isinstance(value, bytes):
-            value = salt.utils.to_str(value, __salt_system_encoding__)
+            value = salt.utils.stringutils.to_str(value, __salt_system_encoding__)
         issuer[key] = value
 
     subject = {}
     for key, value in cert.get_subject().get_components():
         if isinstance(key, bytes):
-            key = salt.utils.to_str(key, __salt_system_encoding__)
+            key = salt.utils.stringutils.to_str(key, __salt_system_encoding__)
         if isinstance(value, bytes):
-            value = salt.utils.to_str(value, __salt_system_encoding__)
+            value = salt.utils.stringutils.to_str(value, __salt_system_encoding__)
         subject[key] = value
 
     ret = {
-        'fingerprint': salt.utils.to_str(cert.digest(digest)),
+        'fingerprint': salt.utils.stringutils.to_str(cert.digest(digest)),
         'subject': subject,
         'issuer': issuer,
         'serial_number': cert.get_serial_number(),
@@ -1616,7 +1616,7 @@ def cert_info(cert_path, digest='sha256'):
         try:
             value = cert.get_signature_algorithm()
             if isinstance(value, bytes):
-                value = salt.utils.to_str(value, __salt_system_encoding__)
+                value = salt.utils.stringutils.to_str(value, __salt_system_encoding__)
             ret['signature_algorithm'] = value
         except AttributeError:
             # On py3 at least

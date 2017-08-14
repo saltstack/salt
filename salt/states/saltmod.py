@@ -32,7 +32,7 @@ import time
 import salt.syspaths
 import salt.utils
 import salt.utils.event
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
@@ -466,7 +466,7 @@ def function(
            'result': True}
     if kwarg is None:
         kwarg = {}
-    if isinstance(arg, str):
+    if isinstance(arg, six.string_types):
         func_ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
                            'Modifying in place, but please update SLS file '
                            'to remove this warning.']

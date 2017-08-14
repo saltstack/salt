@@ -36,8 +36,9 @@ import uuid
 import string
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
 import salt.utils.files
+import salt.utils.path
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
 from salt.ext import six
@@ -50,7 +51,7 @@ def __virtual__():
     '''
     Only load the module if iptables is installed
     '''
-    if not salt.utils.which('iptables'):
+    if not salt.utils.path.which('iptables'):
         return (False, 'The iptables execution module cannot be loaded: iptables not installed.')
 
     return True
@@ -61,9 +62,9 @@ def _iptables_cmd(family='ipv4'):
     Return correct command based on the family, e.g. ipv4 or ipv6
     '''
     if family == 'ipv6':
-        return salt.utils.which('ip6tables')
+        return salt.utils.path.which('ip6tables')
     else:
-        return salt.utils.which('iptables')
+        return salt.utils.path.which('iptables')
 
 
 def _has_option(option, family='ipv4'):
@@ -998,7 +999,7 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
             ret[table][chain]['rules'] = []
             ret[table][chain]['rules_comment'] = {}
         elif line.startswith('-A'):
-            args = salt.utils.shlex_split(line)
+            args = salt.utils.args.shlex_split(line)
             index = 0
             while index + 1 < len(args):
                 swap = args[index] == '!' and args[index + 1].startswith('-')

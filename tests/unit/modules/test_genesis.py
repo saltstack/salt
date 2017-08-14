@@ -65,7 +65,7 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for Return which platforms are available
         '''
-        with patch('salt.utils.which', MagicMock(return_value=False)):
+        with patch('salt.utils.path.which', MagicMock(return_value=False)):
             self.assertFalse(genesis.avail_platforms()['deb'])
 
     def test_pack(self):

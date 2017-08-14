@@ -24,7 +24,9 @@ from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils
-import salt.utils.decorators as decorators
+import salt.utils.args
+import salt.utils.decorators.path
+import salt.utils.stringutils
 from salt.utils.locales import sdecode as _sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -95,7 +97,7 @@ def add(name,
     if info(name):
         raise CommandExecutionError('User \'{0}\' already exists'.format(name))
 
-    if salt.utils.contains_whitespace(name):
+    if salt.utils.stringutils.contains_whitespace(name):
         raise SaltInvocationError('Username cannot contain whitespace')
 
     if uid is None:
@@ -142,7 +144,7 @@ def delete(name, remove=False, force=False):
 
         salt '*' user.delete name remove=True force=True
     '''
-    if salt.utils.contains_whitespace(name):
+    if salt.utils.stringutils.contains_whitespace(name):
         raise SaltInvocationError('Username cannot contain whitespace')
     if not info(name):
         return True
@@ -271,10 +273,10 @@ def chhome(name, home, **kwargs):
 
         salt '*' user.chhome foo /Users/foo
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     persist = kwargs.pop('persist', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
     if persist:
         log.info('Ignoring unsupported \'persist\' argument to user.chhome')
 
@@ -358,7 +360,7 @@ def chgroups(name, groups, append=False):
     if isinstance(groups, string_types):
         groups = groups.split(',')
 
-    bad_groups = [x for x in groups if salt.utils.contains_whitespace(x)]
+    bad_groups = [x for x in groups if salt.utils.stringutils.contains_whitespace(x)]
     if bad_groups:
         raise SaltInvocationError(
             'Invalid group name(s): {0}'.format(', '.join(bad_groups))
@@ -418,7 +420,7 @@ def _format_info(data):
             'fullname': data.pw_gecos}
 
 
-@decorators.which('id')
+@salt.utils.decorators.path.which('id')
 def primary_group(name):
     '''
     Return the primary group of the named user

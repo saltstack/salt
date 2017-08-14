@@ -11,6 +11,9 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 # Import Salt Libs
 import salt.pillar.consul_pillar as consul_pillar
 
+# Import 3rd-party libs
+from salt.ext import six
+
 OPTS = {'consul_config': {'consul.port': 8500, 'consul.host': '172.17.0.15'}}
 
 PILLAR_DATA = [
@@ -66,7 +69,7 @@ class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(consul_pillar.__salt__, {'grains.get': MagicMock(return_value=({}))}):
             with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
                 pillar_data = consul_pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
-                assert isinstance(pillar_data[u'user'][u'dontsplit'], str)
+                assert isinstance(pillar_data[u'user'][u'dontsplit'], six.string_types)
 
     def test_dict_merge(self):
         test_dict = {}

@@ -10,8 +10,8 @@ Manage groups on Windows
 '''
 from __future__ import absolute_import
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 
 try:
@@ -30,7 +30,7 @@ def __virtual__():
     '''
     Set the group module if the kernel is Windows
     '''
-    if salt.utils.is_windows() and HAS_DEPENDENCIES:
+    if salt.utils.platform.is_windows() and HAS_DEPENDENCIES:
         return __virtualname__
     return (False, "Module win_groupadd: module only works on Windows systems")
 

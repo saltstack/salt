@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import os
 import logging
 from salt.ext.six import string_types
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import zip
 
 

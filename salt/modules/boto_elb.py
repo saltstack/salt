@@ -57,7 +57,7 @@ import salt.utils.odict as odict
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six import string_types
 try:
     import boto
@@ -706,7 +706,7 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     '''
     # convert instances to list type, enabling consistent use of instances
     # variable throughout the register_instances method
-    if isinstance(instances, str) or isinstance(instances, six.text_type):
+    if isinstance(instances, six.string_types) or isinstance(instances, six.text_type):
         instances = [instances]
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -750,7 +750,7 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
     '''
     # convert instances to list type, enabling consistent use of instances
     # variable throughout the deregister_instances method
-    if isinstance(instances, str) or isinstance(instances, six.text_type):
+    if isinstance(instances, six.string_types) or isinstance(instances, six.text_type):
         instances = [instances]
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 

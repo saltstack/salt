@@ -41,7 +41,7 @@ import time
 
 # Import salt libs
 import salt.config as config
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode  # pylint: disable=E0611
 from salt.exceptions import (
     SaltCloudConfigError,

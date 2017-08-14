@@ -169,14 +169,15 @@ import inspect
 from functools import wraps
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
-import salt.utils.vmware
+import salt.utils.args
+import salt.utils.dictupdate as dictupdate
 import salt.utils.http
-from salt.utils import dictupdate
+import salt.utils.path
+import salt.utils.vmware
 from salt.exceptions import CommandExecutionError, VMwareSaltError
 from salt.utils.decorators import depends, ignores_kwargs
-from salt.utils import clean_kwargs
 
 # Import Third Party Libs
 try:
@@ -185,7 +186,7 @@ try:
 except ImportError:
     HAS_PYVMOMI = False
 
-esx_cli = salt.utils.which('esxcli')
+esx_cli = salt.utils.path.which('esxcli')
 if esx_cli:
     HAS_ESX_CLI = True
 else:
@@ -255,7 +256,7 @@ def supports_proxies(*proxy_types):
                 raise CommandExecutionError(
                     '\'{0}\' proxy is not supported by function {1}'
                     ''.format(proxy_type, fn.__name__))
-            return fn(*args, **clean_kwargs(**kwargs))
+            return fn(*args, **salt.utils.args.clean_kwargs(**kwargs))
         return __supports_proxies
     return _supports_proxies
 
@@ -338,7 +339,7 @@ def gets_service_instance_via_proxy(fn):
                             *connection_details)
                 kwargs['service_instance'] = local_service_instance
         try:
-            ret = fn(*args, **clean_kwargs(**kwargs))
+            ret = fn(*args, **salt.utils.args.clean_kwargs(**kwargs))
             # Disconnect if connected in the decorator
             if local_service_instance:
                 salt.utils.vmware.disconnect(local_service_instance)

@@ -160,7 +160,7 @@ import logging
 import os
 
 # Import Salt lobs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 # Get logging started
