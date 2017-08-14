@@ -274,6 +274,8 @@ class ReactWrap(object):
         try:
             f_call = salt.utils.format_call(l_fun, low)
             kwargs = f_call.get('kwargs', {})
+            if 'arg' not in kwargs:
+                kwargs['arg'] = []
             if 'kwarg' not in kwargs:
                 kwargs['kwarg'] = {}
 

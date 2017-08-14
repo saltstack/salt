@@ -34,7 +34,7 @@ def disks():
         return _freebsd_geom()
     elif salt.utils.platform.is_linux():
         return _linux_disks()
-    elif salt.utils.is_windows():
+    elif salt.utils.platform.is_windows():
         return _windows_disks()
     else:
         log.trace('Disk grain does not support OS')
