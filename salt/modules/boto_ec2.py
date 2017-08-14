@@ -43,7 +43,7 @@ Connection module for Amazon EC2
 
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
+# pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import
@@ -867,7 +867,7 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         instance_profile_name=None, ebs_optimized=None,
         network_interface_id=None, network_interface_name=None,
         region=None, key=None, keyid=None, profile=None, network_interfaces=None):
-    #TODO: support multi-instance reservations
+    # TODO: support multi-instance reservations
     '''
     Create and start an EC2 instance.
 
@@ -2178,18 +2178,52 @@ def modify_instances_secgroup(
     Modifies the network-interface with device_index of all AWS EC2
     instances which match the 'name'-argument (wildcards allowed)
     with regards to the operation and given secgroup_names.
+
+    name:
+        EC2 Instance name (tag:Name), wildcards are allowed to match multiple instances;
+        or EC2 Instance ID (when starting with 'i-' and followed by a hexadecimal number).
+    device_index:
+        NIC device index
+    operation:
+        One of 'add', 'remove', or 'equals'
+    secgroup_names:
+        Singular secgroup name or list of secgroup names
     '''
-    instances = __salt__['boto_ec2.describe_instances'](
-            filters={'tag:Name': name},
-            region=region,
-            key=key,
-            keyid=keyid,
-            profile=profile)
+    ret = {'result': False, 'comment': '', 'changes': {}}
+    instance_id = None
+    if name.startswith('i-') and len(name) > 2:
+        try:
+            int(name[2:], 16)
+            instance_id = name
+        except ValueError:
+            ret['comment'] = '"{}" is not a valid EC2 instance ID'.format(name)
+            return ret
+    if instance_id:
+        instances = describe_instances(
+                filters={},
+                instance_ids=[instance_id],
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile)
+    else:
+        instances = describe_instances(
+                filters={'tag:Name': name},
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile)
     if len(instances) == 0:
-        return {'result': False, 'comment': 'No instances found with Name-tag: {0}'.format(name)}
-    ret = {'result': True, 'comment': '', 'changes': {}}
+        if instance_id:
+            ret['comment'] = 'No instances found with ID: {}'.format(name)
+        else:
+            ret['comment'] = 'No instances found with Name-tag: {}'.format(name)
+        return ret
     if not isinstance(secgroup_names, list):
         secgroup_names = [secgroup_names]
+    # One instance modification failure fails the whole state (though changes
+    # that have already been applied will not be reverted).
+    ret['result'] = True
     for instance in instances:
         instance_name_or_id = instance['tags']['Name'] or instance['id']
         result = _modify_instance_secgroup(
@@ -2198,14 +2232,13 @@ def modify_instances_secgroup(
                 operation=operation,
                 secgroup_names=secgroup_names,
                 region=region, key=key, keyid=keyid, profile=profile)
-        if result['result']:
-            if len(result['changes']) > 0:
-                ret['changes'].update({instance_name_or_id: result['changes']})
-        else:
-            ret.update({'result': False})
+        ret['result'] &= result['result']
+        if result['result'] and result['changes']:
+            ret['changes'].update({instance_name_or_id: result['changes']})
+        if not ret['result']:
+            break
     if len(ret['changes']) == 0:
-        ret.update({'result': True, 'comment': 'All selected security groups '
-                    'already configured as specified.'})
+        ret['comment'] = 'All selected security groups already configured as specified.'
     return ret
 
 
@@ -2225,6 +2258,7 @@ def _modify_instance_secgroup(
 
     The other arguments are the same as for modify_instances_secgroup
     '''
+    ret = {'result': False, 'changes': {}}
     for interface in instance['interfaces']:
         if interface['attachment']['device_index'] == device_index:
             eni_id = interface['id']
@@ -2243,11 +2277,17 @@ def _modify_instance_secgroup(
     else:
         log.error('Invalid operation "{0}" specified. Please use one of "add" \
                   "remove" or "equals"'.format(operation))
-        return {'result': False}
+        return ret
     if len(new_groups ^ current_groups) == 0:
-        return {'result': True, 'changes': {}}
+        ret['result'] = True
+        return ret
     else:
-        result = __salt__['boto_ec2.modify_network_interface_attribute'](
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Test mode, changes would have been made.'
+            ret['changes'] = changes
+            return ret
+        result = modify_network_interface_attribute(
                 network_interface_id=eni_id,
                 attr='groups',
                 value=list(new_groups),
@@ -2255,10 +2295,10 @@ def _modify_instance_secgroup(
                 key=key,
                 keyid=keyid,
                 profile=profile)
-        if result:
-            return {'result': result, 'changes': changes}
+        if result.get('result', False):
+            return {'result': result['result'], 'changes': changes}
         else:
-            return {'result': result}
+            return {'result': False}
 
 
 def describe_instances(
