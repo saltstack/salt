@@ -39,9 +39,9 @@ specified target expression.
     desitination will be assumed to be a directory. Finally, recursion is now
     supported, allowing for entire directories to be copied.
 
-.. versionchanged:: 2016.11.7,Nitrogen
-    Returned tha old mode when salt-cp copies all files in one command back.
-    The new chunked mode is available with the new ``-C``, ``--cunked`` argument.
+.. versionchanged:: 2016.11.7,2017.7.2
+    Returned the old mode when salt-cp copies all files in one command back.
+    The new chunked mode is available with the new ``-C``, ``--chunked`` argument.
     The compression and directories copying and large files support is available
     in the chunked mode only.
 
@@ -67,7 +67,7 @@ Options
     Use new chunked mode to copy files. This mode supports large files, recursive
     directories copying and compression.
 
-    .. versionadded:: 2016.11.7,Nitrogen
+    .. versionadded:: 2016.11.7,2017.7.2
 
 .. option:: -n, --no-compression
 
