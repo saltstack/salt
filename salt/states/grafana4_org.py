@@ -42,10 +42,12 @@ Basic auth setup
 '''
 from __future__ import absolute_import
 
-from salt.ext.six import string_types
-from salt.utils import dictupdate
+import salt.utils.dictupdate as dictupdate
 from salt.utils.dictdiffer import deep_diff
 from requests.exceptions import HTTPError
+
+# Import 3rd-party libs
+from salt.ext.six import string_types
 
 
 def __virtual__():
