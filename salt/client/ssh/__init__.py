@@ -17,12 +17,11 @@ import os
 import re
 import sys
 import time
-import yaml
 import uuid
 import tempfile
 import binascii
 import sys
-import ntpath
+import datetime
 
 # Import salt libs
 import salt.output
@@ -51,6 +50,8 @@ import salt.utils.verify
 from salt.utils.locales import sdecode
 from salt.utils.platform import is_windows
 from salt.utils.process import MultiprocessingProcess
+import salt.roster
+from salt.template import compile_template
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -211,8 +212,11 @@ class SSH(object):
     '''
     Create an SSH execution system
     '''
+    ROSTER_UPDATE_FLAG = '#__needs_update'
+
     def __init__(self, opts):
-        pull_sock = os.path.join(opts[u'sock_dir'], u'master_event_pull.ipc')
+        self.__parsed_rosters = {SSH.ROSTER_UPDATE_FLAG: True}
+        pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
         if os.path.isfile(pull_sock) and HAS_ZMQ:
             self.event = salt.utils.event.get_event(
                     u'master',
@@ -223,17 +227,21 @@ class SSH(object):
         else:
             self.event = None
         self.opts = opts
-        if self.opts[u'regen_thin']:
-            self.opts[u'ssh_wipe'] = True
-        if not salt.utils.path.which(u'ssh'):
-            raise salt.exceptions.SaltSystemExit(u'No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
-        self.opts[u'_ssh_version'] = ssh_version()
-        self.tgt_type = self.opts[u'selected_target_option'] \
-            if self.opts[u'selected_target_option'] else u'glob'
-        self.roster = salt.roster.Roster(opts, opts.get(u'roster', u'flat'))
+        if self.opts['regen_thin']:
+            self.opts['ssh_wipe'] = True
+        if not salt.utils.path.which('ssh'):
+            raise salt.exceptions.SaltSystemExit('No ssh binary found in path -- ssh must be '
+                                                 'installed for salt-ssh to run. Exiting.')
+        self.opts['_ssh_version'] = ssh_version()
+        self.tgt_type = self.opts['selected_target_option'] \
+            if self.opts['selected_target_option'] else 'glob'
+        self._expand_target()
+        self.roster = salt.roster.Roster(self.opts, self.opts.get('roster', 'flat'))
         self.targets = self.roster.targets(
                 self.opts[u'tgt'],
                 self.tgt_type)
+        if not self.targets:
+            self._update_targets()
         # If we're in a wfunc, we need to get the ssh key location from the
         # top level opts, stored in __master_opts__
         if u'__master_opts__' in self.opts:
@@ -324,6 +332,90 @@ class SSH(object):
                                              python2_bin=self.opts[u'python2_bin'],
                                              python3_bin=self.opts[u'python3_bin'])
         self.mods = mod_data(self.fsclient)
+
+    def _get_roster(self):
+        '''
+        Read roster filename as a key to the data.
+        :return:
+        '''
+        roster_file = salt.roster.get_roster_file(self.opts)
+        if roster_file not in self.__parsed_rosters:
+            roster_data = compile_template(roster_file, salt.loader.render(self.opts, {}),
+                                           self.opts['renderer'], self.opts['renderer_blacklist'],
+                                           self.opts['renderer_whitelist'])
+            self.__parsed_rosters[roster_file] = roster_data
+        return roster_file
+
+    def _expand_target(self):
+        '''
+        Figures out if the target is a reachable host without wildcards, expands if any.
+        :return:
+        '''
+        # TODO: Support -L
+        target = self.opts['tgt']
+        if isinstance(target, list):
+            return
+
+        hostname = self.opts['tgt'].split('@')[-1]
+        needs_expansion = '*' not in hostname and salt.utils.network.is_reachable_host(hostname)
+        if needs_expansion:
+            hostname = salt.utils.network.ip_to_host(hostname)
+            self._get_roster()
+            for roster_filename in self.__parsed_rosters:
+                roster_data = self.__parsed_rosters[roster_filename]
+                if not isinstance(roster_data, bool):
+                    for host_id in roster_data:
+                        if hostname in [host_id, roster_data.get('host')]:
+                            if hostname != self.opts['tgt']:
+                                self.opts['tgt'] = hostname
+                            self.__parsed_rosters[self.ROSTER_UPDATE_FLAG] = False
+                            return
+
+    def _update_roster(self):
+        '''
+        Update default flat roster with the passed in information.
+        :return:
+        '''
+        roster_file = self._get_roster()
+        if os.access(roster_file, os.W_OK):
+            if self.__parsed_rosters[self.ROSTER_UPDATE_FLAG]:
+                with salt.utils.files.fopen(roster_file, 'a') as roster_fp:
+                    roster_fp.write('# Automatically added by "{s_user}" at {s_time}\n{hostname}:\n    host: '
+                                    '{hostname}\n    user: {user}'
+                                    '\n    passwd: {passwd}\n'.format(s_user=getpass.getuser(),
+                                                                      s_time=datetime.datetime.utcnow().isoformat(),
+                                                                      hostname=self.opts.get('tgt', ''),
+                                                                      user=self.opts.get('ssh_user', ''),
+                                                                      passwd=self.opts.get('ssh_passwd', '')))
+                log.info('The host {0} has been added to the roster {1}'.format(self.opts.get('tgt', ''),
+                                                                                roster_file))
+        else:
+            log.error('Unable to update roster {0}: access denied'.format(roster_file))
+
+    def _update_targets(self):
+        '''
+        Uptade targets in case hostname was directly passed without the roster.
+        :return:
+        '''
+
+        hostname = self.opts.get('tgt', '')
+        if '@' in hostname:
+            user, hostname = hostname.split('@', 1)
+        else:
+            user = self.opts.get('ssh_user')
+        if hostname == '*':
+            hostname = ''
+
+        if salt.utils.network.is_reachable_host(hostname):
+            hostname = salt.utils.network.ip_to_host(hostname)
+            self.opts['tgt'] = hostname
+            self.targets[hostname] = {
+                'passwd': self.opts.get('ssh_passwd', ''),
+                'host': hostname,
+                'user': user,
+            }
+            if not self.opts.get('ssh_skip_roster'):
+                self._update_roster()
 
     def get_pubkey(self):
         '''
@@ -593,8 +685,21 @@ class SSH(object):
         '''
         Execute the overall routine, print results via outputters
         '''
-        fstr = u'{0}.prep_jid'.format(self.opts[u'master_job_cache'])
-        jid = self.returners[fstr](passed_jid=jid or self.opts.get(u'jid', None))
+        if self.opts['list_hosts']:
+            self._get_roster()
+            ret = {}
+            for roster_file in self.__parsed_rosters:
+                if roster_file.startswith('#'):
+                    continue
+                ret[roster_file] = {}
+                for host_id in self.__parsed_rosters[roster_file]:
+                    hostname = self.__parsed_rosters[roster_file][host_id]['host']
+                    ret[roster_file][host_id] = hostname
+            salt.output.display_output(ret, 'nested', self.opts)
+            sys.exit()
+
+        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+        jid = self.returners[fstr](passed_jid=jid or self.opts.get('jid', None))
 
         # Save the invocation information
         argv = self.opts[u'argv']
