@@ -225,10 +225,11 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
         if minions is None:
             ckminions = salt.utils.minions.CkMinions(__opts__)
             # Retrieve the minions list
-            minions = ckminions.check_minions(
+            _res = ckminions.check_minions(
                     clear_load['tgt'],
                     clear_load.get('tgt_type', 'glob')
                     )
+            minions = _res['minions']
         # save the minions to a cache so we can see in the UI
         save_minions(jid, minions)
 
