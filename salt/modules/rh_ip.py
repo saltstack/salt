@@ -18,6 +18,7 @@ import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
+from salt.exceptions import CommandExecutionError
 from salt.ext import six
 
 # Set up logging
@@ -667,14 +668,24 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                     bypassfirewall = False
                 else:
                     _raise_error_iface(iface, opts[opt], valid)
+
+        bridgectls = [
+            'net.bridge.bridge-nf-call-ip6tables',
+            'net.bridge.bridge-nf-call-iptables',
+            'net.bridge.bridge-nf-call-arptables',
+            ]
+
         if bypassfirewall:
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-ip6tables', '0')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables', '0')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-arptables', '0')
+            sysctl_value = 0
         else:
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-ip6tables', '1')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables', '1')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-arptables', '1')
+            sysctl_value = 1
+
+        for sysctl in bridgectls:
+            try:
+                __salt__['sysctl.persist'](sysctl, sysctl_value)
+            except CommandExecutionError:
+                log.warning('Failed to set sysctl: {0}'.format(sysctl))
+
     else:
         if 'bridge' in opts:
             result['bridge'] = opts['bridge']

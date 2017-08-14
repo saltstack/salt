@@ -63,10 +63,10 @@ environments (i.e. ``saltenvs``) have been added:
    available as saltenvs.
 
 Salt Cloud Features
-===================
+-------------------
 
 Pre-Flight Commands
--------------------
+===================
 
 Support has been added for specified "preflight commands" to run on a VM before
 the deploy script is run. These must be defined as a list in a cloud configuration
@@ -99,22 +99,22 @@ populated as a list of domain roles.
 
 
 Deprecations
-============
+------------
 
 Configuration Option Deprecations
----------------------------------
+=================================
 
 - The ``requests_lib`` configuration option has been removed. Please use
   ``backend`` instead.
 
 Profitbricks Cloud Updated Dependency
--------------------------------------
+=====================================
 
-The minimum version of the `profitbrick` python package for the `profitbricks`
+The minimum version of the ``profitbrick`` python package for the ``profitbricks``
 cloud driver has changed from 3.0.0 to 3.1.0.
 
 Module Deprecations
--------------------
+===================
 
 The ``blockdev`` execution module has been removed. Its functions were merged
 with the ``disk`` module. Please use the ``disk`` execution module instead.
@@ -154,7 +154,7 @@ The ``win_service`` module had the following changes:
   ``service_type`` instead.
 
 Runner Deprecations
--------------------
+===================
 
 The ``manage`` runner had the following changes:
 
@@ -162,7 +162,7 @@ The ``manage`` runner had the following changes:
   use ``salt-ssh`` roster entries for the host instead.
 
 State Deprecations
-------------------
+==================
 
 The ``archive`` state had the following changes:
 
@@ -185,7 +185,7 @@ The ``file`` state had the following changes:
 - The ``show_diff`` option was removed. Please use ``show_changes`` instead.
 
 Grain Deprecations
-------------------
+==================
 
 For ``smartos`` some grains have been deprecated. These grains will be removed in Neon.
 
@@ -193,7 +193,7 @@ For ``smartos`` some grains have been deprecated. These grains will be removed i
 - The ``datacenter`` has been replaced with ``mdata:sdc:datacenter_name`` grain.
 
 Utils Deprecations
-------------------
+==================
 
 The ``salt.utils.cloud.py`` file had the following change:
 
@@ -201,7 +201,7 @@ The ``salt.utils.cloud.py`` file had the following change:
   optional.
 
 Other Miscellaneous Deprecations
---------------------------------
+================================
 
 The ``version.py`` file had the following changes:
 
