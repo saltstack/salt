@@ -386,8 +386,6 @@ Section -Post
     nsExec::Exec "nssm.exe set salt-minion AppStopMethodConsole 24000"
     nsExec::Exec "nssm.exe set salt-minion AppStopMethodWindow 2000"
 
-    RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
-
     Call updateMinionConfig
 
     Push "C:\salt"
