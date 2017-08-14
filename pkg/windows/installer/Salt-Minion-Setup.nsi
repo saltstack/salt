@@ -383,6 +383,8 @@ Section -Post
     nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
     nsExec::Exec "nssm.exe set salt-minion Start SERVICE_AUTO_START"
     nsExec::Exec "nssm.exe set salt-minion AppNoConsole 1"
+    nsExec::Exec "nssm.exe set salt-minion AppStopMethodConsole 24000"
+    nsExec::Exec "nssm.exe set salt-minion AppStopMethodWindow 2000"
 
     RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
 
