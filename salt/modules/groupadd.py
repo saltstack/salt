@@ -12,6 +12,7 @@ Manage groups on Linux, OpenBSD and NetBSD
 # Import python libs
 from __future__ import absolute_import
 import logging
+import string
 
 try:
     import grp
@@ -34,6 +35,26 @@ def __virtual__():
       ' only available on Linux, OpenBSD and NetBSD')
 
 
+def _syno_manage_group(action, group, name):
+    '''
+    Modify group membership on a Synology NAS
+
+    :param action: either `remove` or `add`
+    :param group: group name we are changing
+    :param name: username to add/remove
+    '''
+    cmd = ['synogroup', '--get', group]
+    ret = __salt__['cmd.run_stdout'](cmd, python_shell=False)
+    group_users = set(x.split(':')[1].strip('[]')
+                      for x
+                      in ret.split('\n')
+                      if x
+                      and x[0] in string.digits)
+    getattr(group_users, action)(name)
+    cmd = ['synogroup', '--member', group, ' '.join(group_users)]
+    return __salt__['cmd.retcode'](cmd, python_shell=False)
+
+
 def add(name, gid=None, system=False, root=None):
     '''
     Add the specified group
@@ -44,15 +65,18 @@ def add(name, gid=None, system=False, root=None):
 
         salt '*' group.add foo 3456
     '''
-    cmd = 'groupadd '
-    if gid:
-        cmd += '-g {0} '.format(gid)
-    if system and __grains__['kernel'] != 'OpenBSD':
-        cmd += '-r '
-    cmd += name
+    if __grains__['os_family'] == 'Synology':
+        cmd = ['synogroup', '--add', name]
+    else:
+        cmd = 'groupadd '
+        if gid:
+            cmd += '-g {0} '.format(gid)
+        if system and __grains__['kernel'] != 'OpenBSD':
+            cmd += '-r '
+        cmd += name
 
-    if root is not None:
-        cmd.extend(('-R', root))
+        if root is not None:
+            cmd.extend(('-R', root))
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -69,10 +93,13 @@ def delete(name, root=None):
 
         salt '*' group.delete foo
     '''
-    cmd = ('groupdel', name)
+    if __grains__['os_family'] == 'Synology':
+        cmd = ('synogroup', '--del', name)
+    else:
+        cmd = ('groupdel', name)
 
-    if root is not None:
-        cmd.extend(('-R', root))
+        if root is not None:
+            cmd.extend(('-R', root))
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -140,6 +167,11 @@ def chgid(name, gid, root=None):
     pre_gid = __salt__['file.group_to_gid'](name)
     if gid == pre_gid:
         return True
+
+    if __grains__['os_family'] == 'Synology':
+        log.error('group.chgid is not yet supported on this platform')
+        return False
+
     cmd = ('groupmod', '-g', gid, name)
 
     if root is not None:
@@ -168,7 +200,12 @@ def adduser(name, username, root=None):
     on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
     on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osmajorrelease') == '11'
 
-    if __grains__['kernel'] == 'Linux':
+    if __grains__['os_family'] == 'Synology':
+        if username not in __salt__['user.list_users']():
+            return False
+        return not _syno_manage_group('add', name, username)
+
+    elif __grains__['kernel'] == 'Linux':
         if on_redhat_5:
             cmd = ('gpasswd', '-a', username, name)
         elif on_suse_11:
@@ -202,6 +239,9 @@ def deluser(name, username, root=None):
     '''
     on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
     on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osmajorrelease') == '11'
+
+    if __grains__['os_family'] == 'Synology':
+        return not _syno_manage_group('remove', name, username)
 
     grp_info = __salt__['group.info'](name)
     try:
@@ -247,7 +287,13 @@ def members(name, members_list, root=None):
     on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
     on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osmajorrelease') == '11'
 
-    if __grains__['kernel'] == 'Linux':
+    if __grains__['os_family'] == 'Synology':
+        cmd = ['synogroup', '--member', name]
+        cmd.extend(members_list.split(','))
+
+        retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
+
+    elif __grains__['kernel'] == 'Linux':
         if on_redhat_5:
             cmd = ('gpasswd', '-M', members_list, name)
         elif on_suse_11:

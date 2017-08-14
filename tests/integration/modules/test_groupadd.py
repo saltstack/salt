@@ -7,7 +7,7 @@ import random
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest, skip_if_not_root, requires_system_grains
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range
@@ -58,16 +58,18 @@ class GroupModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    def test_add(self):
+    @requires_system_grains
+    def test_add(self, grains):
         '''
         Test the add group function
         '''
-        #add a new group
+        # add a new group
         self.assertTrue(self.run_function('group.add', [self._group, self._gid]))
         group_info = self.run_function('group.info', [self._group])
         self.assertEqual(group_info['name'], self._group)
-        self.assertEqual(group_info['gid'], self._gid)
-        #try adding the group again
+        if grains['os_family'] not in ('Synology', ):
+            self.assertEqual(group_info['gid'], self._gid)
+        # try adding the group again
         self.assertFalse(self.run_function('group.add', [self._group, self._gid]))
 
     @destructiveTest
@@ -77,14 +79,15 @@ class GroupModuleTest(ModuleCase):
         '''
         self.assertTrue(self.run_function('group.add', [self._group]))
 
-        #correct functionality
+        # correct functionality
         self.assertTrue(self.run_function('group.delete', [self._group]))
 
-        #group does not exist
+        # group does not exist
         self.assertFalse(self.run_function('group.delete', [self._no_group]))
 
     @destructiveTest
-    def test_info(self):
+    @requires_system_grains
+    def test_info(self, grains):
         '''
         Test the info group function
         '''
@@ -94,14 +97,18 @@ class GroupModuleTest(ModuleCase):
         group_info = self.run_function('group.info', [self._group])
 
         self.assertEqual(group_info['name'], self._group)
-        self.assertEqual(group_info['gid'], self._gid)
+        if grains['os_family'] not in ('Synology', ):
+            self.assertEqual(group_info['gid'], self._gid)
         self.assertIn(self._user, group_info['members'])
 
     @destructiveTest
-    def test_chgid(self):
+    @requires_system_grains
+    def test_chgid(self, grains):
         '''
         Test the change gid function
         '''
+        if grains['os_family'] in ('Synology', ):
+            return
         self.run_function('group.add', [self._group, self._gid])
         self.assertTrue(self.run_function('group.chgid', [self._group, self._new_gid]))
         group_info = self.run_function('group.info', [self._group])
@@ -117,11 +124,11 @@ class GroupModuleTest(ModuleCase):
         self.assertTrue(self.run_function('group.adduser', [self._group, self._user]))
         group_info = self.run_function('group.info', [self._group])
         self.assertIn(self._user, group_info['members'])
-        #try add a non existing user
+        # try add a non existing user
         self.assertFalse(self.run_function('group.adduser', [self._group, self._no_user]))
-        #try add a user to non existing group
+        # try add a user to non existing group
         self.assertFalse(self.run_function('group.adduser', [self._no_group, self._user]))
-        #try add a non existing user to a non existing group
+        # try add a non existing user to a non existing group
         self.assertFalse(self.run_function('group.adduser', [self._no_group, self._no_user]))
 
     @destructiveTest
