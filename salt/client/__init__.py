@@ -348,7 +348,8 @@ class LocalClient(object):
         return self._check_pub_data(pub_data)
 
     def gather_minions(self, tgt, expr_form):
-        return salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
+        _res = salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
+        return _res['minions']
 
     @tornado.gen.coroutine
     def run_job_async(

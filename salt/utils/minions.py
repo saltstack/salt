@@ -208,17 +208,9 @@ class CkMinions(object):
         '''
         Return the minions found by looking via a list
         '''
-        import inspect
-        curframe = inspect.currentframe()
-        calframe = inspect.getouterframes(curframe, 2)
-        log.debug('=== {} called _check_list_minions ==='.format(calframe[1][3]))
-
         if isinstance(expr, six.string_types):
             expr = [m for m in expr.split(',') if m]
-        log.debug('== expr {} =='.format(expr))
         minions = self._pki_minions()
-        log.debug('== missing {} =='.format([x for x in expr if x not in minions]))
-        #return [x for x in expr if x in minions]
         return {'minions': [x for x in expr if x in minions],
                 'missing': [x for x in expr if x not in minions]}
 
@@ -458,11 +450,6 @@ class CkMinions(object):
         '''
         Return the minions found by looking via compound matcher
         '''
-        import inspect
-        curframe = inspect.currentframe()
-        calframe = inspect.getouterframes(curframe, 2)
-        log.debug('=== {} called _check_compound_minions ==='.format(calframe[1][3]))
-
         if not isinstance(expr, six.string_types) and not isinstance(expr, (list, tuple)):
             log.error('Compound target that is neither string, list nor tuple')
             return {'minions': list(), 'missing': list()}
@@ -571,13 +558,8 @@ class CkMinions(object):
                     engine_args.append(greedy)
 
                     _results = engine(*engine_args)
-                    log.debug('== _results from engine {} =='.format(_results))
-                    #results.append(str(set(engine(*engine_args))))
                     results.append(str(set(_results['minions'])))
                     missing.extend(_results['missing'])
-                    log.debug('=== extending missing {} ==='.format(missing))
-                    log.debug('== results {} =='.format(results))
-                    log.debug('== missing {} =='.format(missing))
                     if unmatched and unmatched[-1] == '-':
                         results.append(')')
                         unmatched.pop()
@@ -585,9 +567,7 @@ class CkMinions(object):
                 else:
                     # The match is not explicitly defined, evaluate as a glob
                     _results = self._check_glob_minions(word, True)
-                    log.debug('=== running glob here {} ==='.format(_results))
                     results.append(str(set(_results['minions'])))
-                    log.debug('=== results after glob {} ==='.format(results))
                     if unmatched and unmatched[-1] == '-':
                         results.append(')')
                         unmatched.pop()
@@ -671,13 +651,7 @@ class CkMinions(object):
         match the regex, this will then be used to parse the returns to
         make sure everyone has checked back in.
         '''
-        import inspect
-        curframe = inspect.currentframe()
-        calframe = inspect.getouterframes(curframe, 2)
-        log.debug('=== {} called check_minions ==='.format(calframe[1][3]))
-        log.debug('=== tgt_type {} ==='.format(tgt_type))
 
-        missing = []
         try:
             if expr is None:
                 expr = ''
@@ -697,7 +671,6 @@ class CkMinions(object):
                     'Failed matching available minions with {0} pattern: {1}'
                     .format(tgt_type, expr))
             _res = {'minions': list(), 'missing': list()}
-        log.debug('== inside check_minions, returning _res {} =='.format(_res))
         return _res
 
     def _expand_matching(self, auth_entry):
@@ -718,7 +691,8 @@ class CkMinions(object):
         v_matcher = ref.get(target_info['engine'])
         v_expr = target_info['pattern']
 
-        return set(self.check_minions(v_expr, v_matcher))
+        _res = self.check_minions(v_expr, v_matcher)
+        return set(_res['minions'])
 
     def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
         '''
@@ -738,7 +712,8 @@ class CkMinions(object):
 
         v_minions = self._expand_matching(valid)
         if minions is None:
-            minions = set(self.check_minions(expr, tgt_type))
+            _res = self.check_minions(expr, tgt_type)
+            minions = set(_res['minions'])
         else:
             minions = set(minions)
         d_bool = not bool(minions.difference(v_minions))
@@ -827,8 +802,12 @@ class CkMinions(object):
             v_tgt_type = 'pillar_exact'
         elif tgt_type.lower() == 'compound':
             v_tgt_type = 'compound_pillar_exact'
-        v_minions = set(self.check_minions(tgt, v_tgt_type))
-        minions = set(self.check_minions(tgt, tgt_type))
+        _res = self.check_minions(tgt, v_tgt_type)
+        v_minions = set(_res['minions'])
+
+        _res = self.check_minions(tgt, tgt_type)
+        minions = set(_res['minions'])
+
         mismatch = bool(minions.difference(v_minions))
         # If the non-exact match gets more minions than the exact match
         # then pillar globbing or PCRE is being used, and we have a
@@ -915,8 +894,12 @@ class CkMinions(object):
                 v_tgt_type = 'pillar_exact'
             elif tgt_type.lower() == 'compound':
                 v_tgt_type = 'compound_pillar_exact'
-            v_minions = set(self.check_minions(tgt, v_tgt_type))
-            minions = set(self.check_minions(tgt, tgt_type))
+            _res = self.check_minions(tgt, v_tgt_type)
+            v_minions = set(_res['minions'])
+
+            _res = self.check_minions(tgt, tgt_type)
+            minions = set(_res['minions'])
+
             mismatch = bool(minions.difference(v_minions))
             # If the non-exact match gets more minions than the exact match
             # then pillar globbing or PCRE is being used, and we have a
@@ -1138,9 +1121,10 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
     ret = {}
     serial = salt.payload.Serial(opts)
     checker = CkMinions(opts)
-    minions = checker.check_minions(
+    _res = checker.check_minions(
             tgt,
             tgt_type)
+    minions = _res['minions']
     cache = salt.cache.factory(opts)
     for minion in minions:
         mdata = cache.fetch('minions/{0}'.format(minion), 'mine')
