@@ -1257,7 +1257,7 @@ class RemoteClient(Client):
             if not os.path.isfile(path):
                 msg = 'specified file {0} is not present to generate hash: {1}'
                 log.warning(msg.format(path, err))
-                return {}
+                return {}, None
             else:
                 ret = {}
                 hash_type = self.opts.get('hash_type', 'md5')
