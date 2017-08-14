@@ -312,7 +312,7 @@ def bootstrap(vm_, opts):
             }
         }
 
-    if vm_.get('driver', 'none:none').split(':')[1] == 'saltify':
+    if vm_.get('driver') == 'saltify':
         saltify_driver = True
     else:
         saltify_driver = False
