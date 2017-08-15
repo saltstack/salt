@@ -10,9 +10,10 @@ import os
 
 # Import salt libs
 import salt.config
-import salt.ext.six as six
+from salt.ext import six
 import salt.log
 import salt.utils
+import salt.utils.args
 import salt.utils.master
 import salt.payload
 import salt.cache
@@ -321,10 +322,10 @@ def clear_git_lock(role, remote=None, **kwargs):
 
         salt-run cache.clear_git_lock git_pillar
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     type_ = salt.utils.split_input(kwargs.pop('type', ['update', 'checkout']))
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if role == 'gitfs':
         git_objects = [salt.utils.gitfs.GitFS(__opts__)]

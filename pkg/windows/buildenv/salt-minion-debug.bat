@@ -12,5 +12,4 @@ Set Script=%SaltDir%\bin\Scripts\salt-minion
 net stop salt-minion
 
 :: Launch Script
-"%Python%" "%Script%" -l debug
-
+"%Python%" -E -s "%Script%" -l debug

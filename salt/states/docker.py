@@ -61,6 +61,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -87,7 +88,7 @@ def running(name, **kwargs):
     '''
     ret = __states__['docker_container.running'](
         name,
-        **salt.utils.clean_kwargs(**kwargs)
+        **salt.utils.args.clean_kwargs(**kwargs)
     )
     msg = (
         'The docker.running state has been renamed to '
@@ -106,7 +107,7 @@ def stopped(**kwargs):
         <salt.states.docker_container.stopped>`.
     '''
     ret = __states__['docker_container.stopped'](
-        **salt.utils.clean_kwargs(**kwargs)
+        **salt.utils.args.clean_kwargs(**kwargs)
     )
     msg = (
         'The docker.stopped state has been renamed to '
@@ -126,7 +127,7 @@ def absent(name, **kwargs):
     '''
     ret = __states__['docker_container.absent'](
         name,
-        **salt.utils.clean_kwargs(**kwargs)
+        **salt.utils.args.clean_kwargs(**kwargs)
     )
     msg = (
         'The docker.absent state has been renamed to '
@@ -146,7 +147,7 @@ def network_present(name, **kwargs):
     '''
     ret = __states__['docker_network.present'](
         name,
-        **salt.utils.clean_kwargs(**kwargs)
+        **salt.utils.args.clean_kwargs(**kwargs)
     )
     msg = (
         'The docker.network_present state has been renamed to '
@@ -166,7 +167,7 @@ def network_absent(name, **kwargs):
     '''
     ret = __states__['docker_network.absent'](
         name,
-        **salt.utils.clean_kwargs(**kwargs)
+        **salt.utils.args.clean_kwargs(**kwargs)
     )
     msg = (
         'The docker.network_absent state has been renamed to '
@@ -186,7 +187,7 @@ def image_present(name, **kwargs):
     '''
     ret = __states__['docker_image.present'](
         name,
-        **salt.utils.clean_kwargs(**kwargs)
+        **salt.utils.args.clean_kwargs(**kwargs)
     )
     msg = (
         'The docker.image_present state has been renamed to '
@@ -205,7 +206,7 @@ def image_absent(**kwargs):
         <salt.states.docker_image.absent>`.
     '''
     ret = __states__['docker_image.absent'](
-        **salt.utils.clean_kwargs(**kwargs)
+        **salt.utils.args.clean_kwargs(**kwargs)
     )
     msg = (
         'The docker.image_absent state has been renamed to '

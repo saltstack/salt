@@ -12,14 +12,14 @@ from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 INIT_DELAY = 5
 SERVICE_NAME = 'crond'
 
 
 @destructiveTest
-@skipIf(salt.utils.which('crond') is None, 'crond not installed')
+@skipIf(salt.utils.path.which('crond') is None, 'crond not installed')
 class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the service state

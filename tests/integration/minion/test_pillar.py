@@ -21,11 +21,11 @@ from tests.support.helpers import requires_system_grains
 
 # Import 3rd-party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 import salt.pillar as pillar
 
 log = logging.getLogger(__name__)
@@ -191,7 +191,7 @@ GPG_PILLAR_DECRYPTED = {
 }
 
 
-@skipIf(not salt.utils.which('gpg'), 'GPG is not installed')
+@skipIf(not salt.utils.path.which('gpg'), 'GPG is not installed')
 class DecryptGPGPillarTest(ModuleCase):
     '''
     Tests for pillar decryption

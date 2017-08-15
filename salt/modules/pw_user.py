@@ -44,12 +44,13 @@ except ImportError:
     HAS_PWD = False
 
 # Import 3rd party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
+import salt.utils.locales
 from salt.exceptions import CommandExecutionError
-from salt.utils import locales
 
 log = logging.getLogger(__name__)
 
@@ -82,10 +83,10 @@ def _get_gecos(name):
         # Assign empty strings for any unspecified trailing GECOS fields
         while len(gecos_field) < 4:
             gecos_field.append('')
-        return {'fullname': locales.sdecode(gecos_field[0]),
-                'roomnumber': locales.sdecode(gecos_field[1]),
-                'workphone': locales.sdecode(gecos_field[2]),
-                'homephone': locales.sdecode(gecos_field[3])}
+        return {'fullname': salt.utils.locales.sdecode(gecos_field[0]),
+                'roomnumber': salt.utils.locales.sdecode(gecos_field[1]),
+                'workphone': salt.utils.locales.sdecode(gecos_field[2]),
+                'homephone': salt.utils.locales.sdecode(gecos_field[3])}
 
 
 def _build_gecos(gecos_dict):
@@ -141,7 +142,7 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if salt.utils.is_true(kwargs.pop('system', False)):
         log.warning('pw_user module does not support the \'system\' argument')
     if kwargs:
