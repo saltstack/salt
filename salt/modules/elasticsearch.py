@@ -83,10 +83,11 @@ def _get_instance(hosts=None, profile=None):
     Return the elasticsearch instance
     '''
     es = None
-    proxies = {}
+    proxies = None
     use_ssl = False
-    ca_certs = False
-    verify_certs = False
+    ca_certs = None
+    verify_certs = True
+    http_auth = None
 
     if profile is None:
         profile = 'elasticsearch'
@@ -96,37 +97,25 @@ def _get_instance(hosts=None, profile=None):
     elif isinstance(profile, dict):
         _profile = profile
     if _profile:
-        hosts = _profile.get('host', None)
+        hosts = _profile.get('host', hosts)
         if not hosts:
-            hosts = _profile.get('hosts', None)
-        proxies = _profile.get('proxies', {})
+            hosts = _profile.get('hosts', hosts)
+        proxies = _profile.get('proxies', None)
         use_ssl = _profile.get('use_ssl', False)
-        ca_certs = _profile.get('ca_certs', False)
-        verify_certs = _profile.get('verify_certs', False)
+        ca_certs = _profile.get('ca_certs', None)
+        verify_certs = _profile.get('verify_certs', True)
         username = _profile.get('username', None)
         password = _profile.get('password', None)
+
+        if username and password:
+            http_auth = (username, password)
 
     if not hosts:
         hosts = ['127.0.0.1:9200']
     if isinstance(hosts, string_types):
         hosts = [hosts]
     try:
-        if proxies == {}:
-            es = elasticsearch.Elasticsearch(
-                    hosts,
-                    use_ssl=use_ssl,
-                    ca_certs=ca_certs,
-                    verify_certs=verify_certs,
-                )
-        elif username and password:
-            es = elasticsearch.Elasticsearch(
-                    hosts,
-                    use_ssl=use_ssl,
-                    ca_certs=ca_certs,
-                    verify_certs=verify_certs,
-                    http_auth=(username, password)
-                )
-        else:
+        if proxies:
             # Custom connection class to use requests module with proxies
             class ProxyConnection(RequestsHttpConnection):
                 def __init__(self, *args, **kwargs):
@@ -137,14 +126,23 @@ def _get_instance(hosts=None, profile=None):
             es = elasticsearch.Elasticsearch(
                 hosts,
                 connection_class=ProxyConnection,
-                proxies=_profile.get('proxies', {}),
+                proxies=proxies,
                 use_ssl=use_ssl,
                 ca_certs=ca_certs,
                 verify_certs=verify_certs,
+                http_auth=http_auth,
             )
+        else:
+            es = elasticsearch.Elasticsearch(
+                    hosts,
+                    use_ssl=use_ssl,
+                    ca_certs=ca_certs,
+                    verify_certs=verify_certs,
+                    http_auth=http_auth,
+                )
 
-        if not es.ping():
-            raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}, is it unhealthy?'.format(hosts))
+        # Try the connection
+        es.info()
     except elasticsearch.exceptions.TransportError as e:
         raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0} due to {1}'.format(hosts, str(e)))
     return es
