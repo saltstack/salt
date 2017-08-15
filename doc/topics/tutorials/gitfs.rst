@@ -166,13 +166,15 @@ Ubuntu 14.04 LTS and Debian Wheezy (7.x) also have a compatible version packaged
 
     # apt-get install python-git
 
-If your master is running an older version (such as Ubuntu 12.04 LTS or Debian
-Squeeze), then you will need to install GitPython using either pip_ or
-easy_install (it is recommended to use pip). Version 0.3.2.RC1 is now marked as
-the stable release in PyPI, so it should be a simple matter of running ``pip
-install GitPython`` (or ``easy_install GitPython``) as root.
+GitPython_ requires the ``git`` CLI utility to work. If installed from a system
+package, then git should already be installed, but if installed via pip_ then
+it may still be necessary to install git separately. For MacOS users,
+GitPython_ comes bundled in with the Salt installer, but git must still be
+installed for it to work properly. Git can be installed in several ways,
+including by installing XCode_.
 
-.. _`pip`: http://www.pip-installer.org/
+.. _pip: http://www.pip-installer.org/
+.. _XCode: https://developer.apple.com/xcode/
 
 .. warning::
 

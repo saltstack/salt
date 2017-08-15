@@ -27,7 +27,7 @@ except ImportError:
 PY2 = sys.version_info[0] == 2
 # The following used to make sure we are not
 # testing already existing data
-# Note strftime retunrns a str, so we need to make it unicode
+# Note strftime returns a str, so we need to make it unicode
 TIMEINT = int(time.time())
 
 if PY2:

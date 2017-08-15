@@ -14,7 +14,7 @@ import logging
 import salt.utils.files
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 __outputter__ = {

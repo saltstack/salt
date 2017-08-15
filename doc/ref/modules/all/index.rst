@@ -197,6 +197,7 @@ execution modules
     keyboard
     keystone
     kmod
+    kubernetes
     launchctl
     layman
     ldap3
@@ -398,7 +399,6 @@ execution modules
     state
     status
     statuspage
-    stormpath
     supervisord
     suse_apache
     svn

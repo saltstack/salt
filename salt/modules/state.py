@@ -29,14 +29,16 @@ import salt.config
 import salt.payload
 import salt.state
 import salt.utils
+import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.platform
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.runners.state import orchestrate as _orchestrate
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 __proxyenabled__ = ['*']
 
@@ -265,14 +267,14 @@ def _get_opts(**kwargs):
 
     if 'saltenv' in kwargs:
         saltenv = kwargs['saltenv']
-        if not isinstance(saltenv, six.string_types):
+        if saltenv is not None and not isinstance(saltenv, six.string_types):
             opts['environment'] = str(kwargs['saltenv'])
         else:
             opts['environment'] = kwargs['saltenv']
 
     if 'pillarenv' in kwargs:
         pillarenv = kwargs['pillarenv']
-        if not isinstance(pillarenv, six.string_types):
+        if pillarenv is not None and not isinstance(pillarenv, six.string_types):
             opts['pillarenv'] = str(kwargs['pillarenv'])
         else:
             opts['pillarenv'] = kwargs['pillarenv']
@@ -629,7 +631,7 @@ def request(mods=None,
         })
     cumask = os.umask(0o77)
     try:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # Make sure cache file isn't read-only
             __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
         with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
@@ -693,7 +695,7 @@ def clear_request(name=None):
             return False
         cumask = os.umask(0o77)
         try:
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Make sure cache file isn't read-only
                 __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
             with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
@@ -1105,7 +1107,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
             return errors
 
         if exclude:
-            if isinstance(exclude, str):
+            if isinstance(exclude, six.string_types):
                 exclude = exclude.split(',')
             if '__exclude__' in high_:
                 high_['__exclude__'].extend(exclude)
@@ -1120,7 +1122,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
     cumask = os.umask(0o77)
     try:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # Make sure cache file isn't read-only
             __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
         with salt.utils.files.fopen(cache_file, 'w+b') as fp_:
@@ -1723,7 +1725,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
 
     st_._mod_init(kwargs)
     snapper_pre = _snapper_pre(opts, kwargs.get('__pub_jid', 'called localy'))
-    ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
+    ret = {u'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to

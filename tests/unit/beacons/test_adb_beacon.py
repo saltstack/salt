@@ -27,7 +27,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     def test_no_adb_command(self):
-        with patch('salt.utils.which') as mock:
+        with patch('salt.utils.path.which') as mock:
             mock.return_value = None
 
             ret = adb.__virtual__()
@@ -36,7 +36,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(ret)
 
     def test_with_adb_command(self):
-        with patch('salt.utils.which') as mock:
+        with patch('salt.utils.path.which') as mock:
             mock.return_value = '/usr/bin/adb'
 
             ret = adb.__virtual__()

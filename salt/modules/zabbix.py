@@ -31,6 +31,7 @@ import json
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=import-error,no-name-in-module
 
@@ -46,7 +47,7 @@ def __virtual__():
     '''
     Only load the module if Zabbix server is installed
     '''
-    if salt.utils.which('zabbix_server'):
+    if salt.utils.path.which('zabbix_server'):
         return __virtualname__
     return (False, 'The zabbix execution module cannot be loaded: zabbix not installed.')
 

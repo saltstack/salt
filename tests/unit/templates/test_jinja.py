@@ -19,14 +19,13 @@ from tests.support.paths import TMP_CONF_DIR
 
 # Import salt libs
 import salt.config
-import salt.ext.six as six
+from salt.ext import six
 import salt.loader
-import salt.utils
 import salt.utils.files
+from salt.utils import get_context
 from salt.exceptions import SaltRenderError
 from salt.ext.six.moves import builtins
-from salt.utils import get_context
-from salt.utils.decorators import JinjaFilter
+from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import (
     SaltCacheLoader,
     SerializerExtension,
@@ -537,7 +536,7 @@ class TestCustomExtensions(TestCase):
         env.filters.update(JinjaFilter.salt_jinja_filters)
         if six.PY3:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'{}").split("', '")
-            self.assertEqual(rendered, list(unique))
+            self.assertEqual(sorted(rendered), sorted(list(unique)))
         else:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset)
             self.assertEqual(rendered, u"{0}".format(unique))

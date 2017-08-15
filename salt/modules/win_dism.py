@@ -7,12 +7,13 @@ Windows 10.
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import re
 import logging
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
@@ -22,7 +23,7 @@ def __virtual__():
     '''
     Only work on Windows
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, "Only available on Windows systems"
 
     return __virtualname__

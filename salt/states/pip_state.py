@@ -30,7 +30,7 @@ from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 try:
     import pip
@@ -527,7 +527,7 @@ def installed(name,
     # prepro = lambda pkg: pkg if type(pkg) == str else \
     #     ' '.join((pkg.items()[0][0], pkg.items()[0][1].replace(',', ';')))
     # pkgs = ','.join([prepro(pkg) for pkg in pkgs])
-    prepro = lambda pkg: pkg if isinstance(pkg, str) else \
+    prepro = lambda pkg: pkg if isinstance(pkg, six.string_types) else \
         ' '.join((six.iteritems(pkg)[0][0], six.iteritems(pkg)[0][1]))
     pkgs = [prepro(pkg) for pkg in pkgs]
 

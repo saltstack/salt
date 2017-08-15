@@ -56,7 +56,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 # Import third party libs

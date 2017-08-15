@@ -2,7 +2,7 @@
 '''
 Subversion Fileserver Backend
 
-After enabling this backend, branches, and tags in a remote subversion
+After enabling this backend, branches and tags in a remote subversion
 repository are exposed to salt as different environments. To enable this
 backend, add ``svn`` to the :conf_master:`fileserver_backend` option in the
 Master config file.
@@ -42,7 +42,7 @@ from salt.exceptions import FileserverConfigError
 PER_REMOTE_OVERRIDES = ('mountpoint', 'root', 'trunk', 'branches', 'tags')
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 HAS_SVN = False
 try:
@@ -719,7 +719,7 @@ def file_hash(load, fnd):
 
 def _file_lists(load, form):
     '''
-    Return a dict containing the file lists for files, dirs, emtydirs and symlinks
+    Return a dict containing the file lists for files, dirs, emptydirs and symlinks
     '''
     if 'env' in load:
         salt.utils.warn_until(

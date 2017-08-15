@@ -18,7 +18,7 @@ import salt.defaults.exitcodes
 
 # Import 3rd-party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -274,6 +274,10 @@ class ReactWrap(object):
         try:
             f_call = salt.utils.format_call(l_fun, low)
             kwargs = f_call.get('kwargs', {})
+            if 'arg' not in kwargs:
+                kwargs['arg'] = []
+            if 'kwarg' not in kwargs:
+                kwargs['kwarg'] = {}
 
             # TODO: Setting the user doesn't seem to work for actual remote publishes
             if low['state'] in ('runner', 'wheel'):

@@ -26,14 +26,15 @@ from tests.support.helpers import (
     skip_if_not_root
 )
 # Import salt libs
-from tests.support.case import ModuleCase
-import salt.utils
+import salt.utils  # Can be removed once compare_versions is moved
 import salt.utils.files
+import salt.utils.path
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.exceptions import CommandExecutionError
+from tests.support.case import ModuleCase
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class VirtualEnv(object):
@@ -50,7 +51,7 @@ class VirtualEnv(object):
             shutil.rmtree(self.venv_dir)
 
 
-@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+@skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skip_if_not_root

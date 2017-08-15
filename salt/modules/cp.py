@@ -17,6 +17,7 @@ import salt.fileclient
 import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.locales
 import salt.utils.templates
 import salt.utils.url
 import salt.crypt
@@ -25,7 +26,7 @@ from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -428,7 +429,11 @@ def cache_file(path, saltenv='base'):
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
     '''
-    contextkey = '{0}_|-{1}_|-{2}'.format('cp.cache_file', path, saltenv)
+    path = salt.utils.locales.sdecode(path)
+    saltenv = salt.utils.locales.sdecode(saltenv)
+
+    contextkey = u'{0}_|-{1}_|-{2}'.format('cp.cache_file', path, saltenv)
+
     path_is_remote = _urlparse(path).scheme in ('http', 'https', 'ftp')
     try:
         if path_is_remote and contextkey in __context__:
@@ -454,9 +459,8 @@ def cache_file(path, saltenv='base'):
     result = _client().cache_file(path, saltenv)
     if not result:
         log.error(
-            'Unable to cache file \'{0}\' from saltenv \'{1}\'.'.format(
-                path, saltenv
-            )
+            u'Unable to cache file \'%s\' from saltenv \'%s\'.',
+            path, saltenv
         )
     if path_is_remote:
         # Cache was successful, store the result in __context__ to prevent

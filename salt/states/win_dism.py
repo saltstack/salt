@@ -15,12 +15,13 @@ Install windows features/capabilties with DISM
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
 import os
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
@@ -30,7 +31,7 @@ def __virtual__():
     '''
     Only work on Windows where the DISM module is available
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Module only available on Windows'
 
     return __virtualname__

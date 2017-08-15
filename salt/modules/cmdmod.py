@@ -25,13 +25,17 @@ import tempfile
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.powershell
-import salt.utils.timed_subprocess
-import salt.grains.extra
-import salt.ext.six as six
-from salt.utils import vt
+import salt.utils.stringutils
 import salt.utils.templates
+import salt.utils.timed_subprocess
+import salt.utils.vt
+import salt.grains.extra
+from salt.ext import six
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
     SaltInvocationError
 from salt.log import LOG_LEVELS
@@ -45,7 +49,7 @@ try:
 except ImportError:
     pass
 
-if salt.utils.is_windows():
+if salt.utils.platform.is_windows():
     from salt.utils.win_runas import runas as win_runas
     HAS_WIN_RUNAS = True
 else:
@@ -294,6 +298,9 @@ def _run(cmd,
     if runas is None and '__context__' in globals():
         runas = __context__.get('runas')
 
+    if password is None and '__context__' in globals():
+        password = __context__.get('runas_password')
+
     # Set the default working directory to the home directory of the user
     # salt-minion is running as. Defaults to home directory of user under which
     # the minion is running.
@@ -306,18 +313,18 @@ def _run(cmd,
         # the euid might not have access to it. See issue #1844
         if not os.access(cwd, os.R_OK):
             cwd = '/'
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 cwd = os.path.abspath(os.sep)
     else:
         # Handle edge cases where numeric/other input is entered, and would be
         # yaml-ified into non-string types
-        cwd = str(cwd)
+        cwd = six.text_type(cwd)
 
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
             raise CommandExecutionError(msg)
-    if salt.utils.is_windows() and use_vt:  # Memozation so not much overhead
+    if salt.utils.platform.is_windows() and use_vt:  # Memozation so not much overhead
         raise CommandExecutionError('VT not available on windows')
 
     if shell.lower().strip() == 'powershell':
@@ -362,8 +369,8 @@ def _run(cmd,
     def _get_stripped(cmd):
         # Return stripped command string copies to improve logging.
         if isinstance(cmd, list):
-            return [x.strip() if isinstance(x, str) else x for x in cmd]
-        elif isinstance(cmd, str):
+            return [x.strip() if isinstance(x, six.string_types) else x for x in cmd]
+        elif isinstance(cmd, six.string_types):
             return cmd.strip()
         else:
             return cmd
@@ -373,7 +380,7 @@ def _run(cmd,
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
         msg = (
-            'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
+            u'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
                 '\'' if not isinstance(cmd, list) else '',
                 _get_stripped(cmd),
                 'as user \'{0}\' '.format(runas) if runas else '',
@@ -384,7 +391,7 @@ def _run(cmd,
         )
         log.info(log_callback(msg))
 
-    if runas and salt.utils.is_windows():
+    if runas and salt.utils.platform.is_windows():
         if not password:
             msg = 'password is a required argument for runas on Windows'
             raise CommandExecutionError(msg)
@@ -394,7 +401,7 @@ def _run(cmd,
             raise CommandExecutionError(msg)
 
         if not isinstance(cmd, list):
-            cmd = salt.utils.shlex_split(cmd, posix=False)
+            cmd = salt.utils.args.shlex_split(cmd, posix=False)
 
         cmd = ' '.join(cmd)
 
@@ -457,7 +464,7 @@ def _run(cmd,
             )
 
     if reset_system_locale is True:
-        if not salt.utils.is_windows():
+        if not salt.utils.platform.is_windows():
             # Default to C!
             # Salt only knows how to parse English words
             # Don't override if the user has passed LC_ALL
@@ -520,7 +527,7 @@ def _run(cmd,
             runas,
             _umask)
 
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
         # stdin/stdout/stderr
         if kwargs['shell'] is True:
@@ -535,9 +542,9 @@ def _run(cmd,
 
     if python_shell is not True and not isinstance(cmd, list):
         posix = True
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             posix = False
-        cmd = salt.utils.shlex_split(cmd, posix=posix)
+        cmd = salt.utils.args.shlex_split(cmd, posix=posix)
     if not use_vt:
         # This is where the magic happens
         try:
@@ -574,17 +581,21 @@ def _run(cmd,
             ret['retcode'] = 1
             return ret
 
-        out, err = proc.stdout, proc.stderr
-        if err is None:
-            # Will happen if redirect_stderr is True, since stderr was sent to
-            # stdout.
-            err = ''
+        try:
+            out = proc.stdout.decode(__salt_system_encoding__)
+        except AttributeError:
+            out = u''
+
+        try:
+            err = proc.stderr.decode(__salt_system_encoding__)
+        except AttributeError:
+            err = u''
 
         if rstrip:
             if out is not None:
-                out = salt.utils.to_str(out).rstrip()
+                out = out.rstrip()
             if err is not None:
-                err = salt.utils.to_str(err).rstrip()
+                err = err.rstrip()
         ret['pid'] = proc.process.pid
         ret['retcode'] = proc.process.returncode
         ret['stdout'] = out
@@ -603,7 +614,7 @@ def _run(cmd,
         else:
             will_timeout = -1
         try:
-            proc = vt.Terminal(cmd,
+            proc = salt.utils.vt.Terminal(cmd,
                                shell=True,
                                log_stdout=True,
                                log_stderr=True,
@@ -642,7 +653,7 @@ def _run(cmd,
                         ret['stderr'] = 'SALT: User break\n{0}'.format(stderr)
                         ret['retcode'] = 1
                         break
-                except vt.TerminalException as exc:
+                except salt.utils.vt.TerminalException as exc:
                     log.error(
                         'VT: {0}'.format(exc),
                         exc_info_on_loglevel=logging.DEBUG)
@@ -770,6 +781,7 @@ def run(cmd,
         bg=False,
         password=None,
         encoded_cmd=False,
+        raise_err=False,
         **kwargs):
     r'''
     Execute the passed command and return the output as a string
@@ -873,6 +885,10 @@ def run(cmd,
     :param bool encoded_cmd: Specify if the supplied command is encoded.
       Only applies to shell 'powershell'.
 
+    :param bool raise_err: Specifies whether to raise a CommandExecutionError.
+      If False, the error will be logged, but no exception will be raised.
+      Default is False.
+
     .. warning::
         This function does not process commands through a shell
         unless the python_shell flag is set to True. This means that any
@@ -962,7 +978,9 @@ def run(cmd,
                 )
             )
             log.error(log_callback(msg))
-        log.log(lvl, 'output: {0}'.format(log_callback(ret['stdout'])))
+            if raise_err:
+                raise CommandExecutionError(log_callback(ret['stdout']))
+        log.log(lvl, u'output: %s', log_callback(ret['stdout']))
     return ret['stdout']
 
 
@@ -1638,7 +1656,7 @@ def run_all(cmd,
     :param bool encoded_cmd: Specify if the supplied command is encoded.
       Only applies to shell 'powershell'.
 
-      .. versionadded:: Nitrogen
+      .. versionadded:: Oxygen
 
     :param bool redirect_stderr: If set to ``True``, then stderr will be
       redirected to stdout. This is helpful for cases where obtaining both the
@@ -1720,9 +1738,9 @@ def run_all(cmd,
             )
             log.error(log_callback(msg))
         if ret['stdout']:
-            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
+            log.log(lvl, u'stdout: {0}'.format(log_callback(ret['stdout'])))
         if ret['stderr']:
-            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
+            log.log(lvl, u'stderr: {0}'.format(log_callback(ret['stderr'])))
         if ret['retcode']:
             log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret
@@ -2109,7 +2127,7 @@ def script(source,
             )
         kwargs.pop('__env__')
 
-    if salt.utils.is_windows() and runas and cwd is None:
+    if salt.utils.platform.is_windows() and runas and cwd is None:
         cwd = tempfile.mkdtemp(dir=__opts__['cachedir'])
         __salt__['win_dacl.add_ace'](
             cwd, 'File', runas, 'READ&EXECUTE', 'ALLOW',
@@ -2127,7 +2145,7 @@ def script(source,
                                           saltenv,
                                           **kwargs)
         if not fn_:
-            if salt.utils.is_windows() and runas:
+            if salt.utils.platform.is_windows() and runas:
                 _cleanup_tempfile(cwd)
             else:
                 _cleanup_tempfile(path)
@@ -2139,7 +2157,7 @@ def script(source,
     else:
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         if not fn_:
-            if salt.utils.is_windows() and runas:
+            if salt.utils.platform.is_windows() and runas:
                 _cleanup_tempfile(cwd)
             else:
                 _cleanup_tempfile(path)
@@ -2149,7 +2167,7 @@ def script(source,
                     'stderr': '',
                     'cache_error': True}
         shutil.copyfile(fn_, path)
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
     ret = _run(path + ' ' + str(args) if args else path,
@@ -2169,7 +2187,7 @@ def script(source,
                bg=bg,
                password=password,
                **kwargs)
-    if salt.utils.is_windows() and runas:
+    if salt.utils.platform.is_windows() and runas:
         _cleanup_tempfile(cwd)
     else:
         _cleanup_tempfile(path)
@@ -2355,7 +2373,7 @@ def which(cmd):
 
         salt '*' cmd.which cat
     '''
-    return salt.utils.which(cmd)
+    return salt.utils.path.which(cmd)
 
 
 def which_bin(cmds):
@@ -2368,7 +2386,7 @@ def which_bin(cmds):
 
         salt '*' cmd.which_bin '[pip2, pip, pip-python]'
     '''
-    return salt.utils.which_bin(cmds)
+    return salt.utils.path.which_bin(cmds)
 
 
 def has_exec(cmd):
@@ -2451,7 +2469,7 @@ def tty(device, echo=''):
         return {'Error': 'The specified device is not a valid TTY'}
     try:
         with salt.utils.files.fopen(teletype, 'wb') as tty_device:
-            tty_device.write(salt.utils.to_bytes(echo))
+            tty_device.write(salt.utils.stringutils.to_bytes(echo))
         return {
             'Success': 'Message was successfully echoed to {0}'.format(teletype)
         }
@@ -2656,7 +2674,7 @@ def _is_valid_shell(shell):
     Attempts to search for valid shells on a system and
     see if a given shell is in the list
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return True  # Don't even try this for Windows
     shells = '/etc/shells'
     available_shells = []
@@ -2767,7 +2785,7 @@ def shell_info(shell, list_modules=False):
     }
     # Ensure ret['installed'] always as a value of True, False or None (not sure)
     ret = {'installed': False}
-    if salt.utils.is_windows() and shell == 'powershell':
+    if salt.utils.platform.is_windows() and shell == 'powershell':
         pw_keys = __salt__['reg.list_keys'](
             'HKEY_LOCAL_MACHINE',
             'Software\\Microsoft\\PowerShell')
@@ -2831,7 +2849,7 @@ def shell_info(shell, list_modules=False):
         # We need to assume ports of unix shells to windows will look after
         # themselves in setting HOME as they do it in many different ways
         newenv = os.environ
-        if ('HOME' not in newenv) and (not salt.utils.is_windows()):
+        if ('HOME' not in newenv) and (not salt.utils.platform.is_windows()):
             newenv['HOME'] = os.path.expanduser('~')
             log.debug('HOME environment set to {0}'.format(newenv['HOME']))
         try:
@@ -3199,7 +3217,7 @@ def powershell_all(cmd,
         salt '*' cmd.run_all '$PSVersionTable.CLRVersion' shell=powershell
         salt '*' cmd.run_all 'Get-NetTCPConnection' shell=powershell
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     .. warning::
 

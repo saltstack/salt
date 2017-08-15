@@ -35,7 +35,7 @@ import datetime
 
 # Import Salt Libs
 import salt.config as config
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.exceptions import (
     SaltCloudConfigError,
