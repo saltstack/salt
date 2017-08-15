@@ -5,7 +5,7 @@ Beacon to fire events at failed login of users
 .. code-block:: yaml
 
     beacons:
-      btmp: {}
+      btmp: []
 '''
 
 # Import python libs
@@ -52,14 +52,14 @@ def _get_loc():
         return __context__[LOC_KEY]
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
     # Configuration for load beacon should be a list of dicts
-    if not isinstance(config, dict):
+    if not isinstance(config, list):
         return False, ('Configuration for btmp beacon must '
-                       'be a list of dictionaries.')
+                       'be a list.')
     return True, 'Valid beacon configuration'
 
 
@@ -71,7 +71,7 @@ def beacon(config):
     .. code-block:: yaml
 
         beacons:
-          btmp: {}
+          btmp: []
     '''
     ret = []
     with salt.utils.files.fopen(BTMP, 'rb') as fp_:
