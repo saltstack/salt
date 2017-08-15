@@ -38,6 +38,14 @@ In previous releases the bind credentials would only be used to determine
 the LDAP user's existence and group membership.  The user's LDAP credentials
 were used from then on.
 
+Stormpath External Authentication Removed
+-----------------------------------------
+
+Per Stormpath's announcement, their API will be shutting down on 8/17/2017 at
+noon PST so the Stormpath external authentication module has been removed.
+
+https://stormpath.com/oktaplusstormpath
+
 New GitFS Features
 ------------------
 

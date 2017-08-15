@@ -1286,7 +1286,7 @@ class RemoteClient(Client):
                     u'specified file %s is not present to generate hash: %s',
                     path, err
                 )
-                return {}
+                return {}, None
             else:
                 ret = {}
                 hash_type = self.opts.get(u'hash_type', u'md5')

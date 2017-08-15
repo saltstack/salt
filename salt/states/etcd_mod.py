@@ -143,6 +143,13 @@ def set_(name, value, profile=None):
     profile
         Optional, defaults to ``None``. Sets the etcd profile to use which has
         been defined in the Salt Master config.
+
+        .. code-block:: yaml
+
+            my_etd_config:
+              etcd.host: 127.0.0.1
+              etcd.port: 4001
+
     '''
 
     created = False
@@ -184,6 +191,13 @@ def wait_set(name, value, profile=None):
     profile
         The etcd profile to use that has been configured on the Salt Master,
         this is optional and defaults to ``None``.
+
+        .. code-block:: yaml
+
+            my_etd_config:
+              etcd.host: 127.0.0.1
+              etcd.port: 4001
+
     '''
 
     return {
@@ -192,6 +206,48 @@ def wait_set(name, value, profile=None):
         'result': True,
         'comment': ''
     }
+
+
+def directory(name, profile=None):
+    '''
+    Create a directory in etcd.
+
+    name
+        The etcd directory name, for example: ``/foo/bar/baz``.
+    profile
+        Optional, defaults to ``None``. Sets the etcd profile to use which has
+        been defined in the Salt Master config.
+
+        .. code-block:: yaml
+
+            my_etd_config:
+              etcd.host: 127.0.0.1
+              etcd.port: 4001
+    '''
+
+    created = False
+
+    rtn = {
+        'name': name,
+        'comment': 'Directory exists',
+        'result': True,
+        'changes': {}
+    }
+
+    current = __salt__['etcd.get'](name, profile=profile, recurse=True)
+    if not current:
+        created = True
+
+    result = __salt__['etcd.set'](name, None, directory=True, profile=profile)
+
+    if result and result != current:
+        if created:
+            rtn['comment'] = 'New directory created'
+            rtn['changes'] = {
+                name: 'Created'
+            }
+
+    return rtn
 
 
 def rm_(name, recurse=False, profile=None):
@@ -205,6 +261,12 @@ def rm_(name, recurse=False, profile=None):
     profile
         Optional, defaults to ``None``. Sets the etcd profile to use which has
         been defined in the Salt Master config.
+
+        .. code-block:: yaml
+
+            my_etd_config:
+              etcd.host: 127.0.0.1
+              etcd.port: 4001
     '''
 
     rtn = {
@@ -241,6 +303,12 @@ def wait_rm(name, recurse=False, profile=None):
     profile
         Optional, defaults to ``None``. Sets the etcd profile to use which has
         been defined in the Salt Master config.
+
+        .. code-block:: yaml
+
+            my_etd_config:
+              etcd.host: 127.0.0.1
+              etcd.port: 4001
     '''
 
     return {
