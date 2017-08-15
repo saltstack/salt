@@ -729,15 +729,15 @@ def request_instance(vm_=None, call=None):
             try:
                 floating_ip = conn.floating_ip_create(pool)['ip']
             except Exception:
-                log.info('A new ip address was unable to be allocated. '
-                         'An ip address will be pulled from the already allocated list, '
+                log.info('A new IP address was unable to be allocated. '
+                         'An IP address will be pulled from the already allocated list, '
                          'This will cause a race condition when building in parallel.')
                 for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
                     if opts['fixed_ip'] is None and opts['pool'] == pool:
                         floating_ip = fl_ip
                         break
                 if floating_ip is None:
-                    log.error('No ip addresses available to allocate for this server: {0}'.format(vm_['name']))
+                    log.error('No IP addresses available to allocate for this server: {0}'.format(vm_['name']))
 
         def __query_node_data(vm_):
             try:
