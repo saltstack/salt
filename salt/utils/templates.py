@@ -316,12 +316,12 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     # Pass through line_statement_prefix and line_comment_prefix to the jinja environment.
     jinja_line_statement_prefix = opts.get('jinja_line_statement_prefix', None)
-    if jinja_line_statement_prefix:
+    if jinja_line_statement_prefix and jinja_line_statement_prefix.lower() != 'none':
         log.debug('Jinja2 line_statement_prefix is {}'.format(jinja_line_statement_prefix))
         env_args['line_statement_prefix'] = jinja_line_statement_prefix
 
     jinja_line_comment_prefix = opts.get('jinja_line_comment_prefix', None)
-    if jinja_line_comment_prefix:
+    if jinja_line_comment_prefix and jinja_line_comment_prefix.lower() != 'none':
         log.debug('Jinja2 line_comment_prefix is {}'.format(jinja_line_comment_prefix))
         env_args['line_comment_prefix'] = jinja_line_comment_prefix
 
