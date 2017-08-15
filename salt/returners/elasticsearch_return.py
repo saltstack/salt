@@ -107,7 +107,7 @@ import salt.returners
 import salt.utils.jid
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 __virtualname__ = 'elasticsearch'
 

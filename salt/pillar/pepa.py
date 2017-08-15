@@ -280,7 +280,7 @@ import re
 from os.path import isfile, join
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 import salt.utils.files
 from salt.utils.yamlloader import SaltYamlSafeLoader

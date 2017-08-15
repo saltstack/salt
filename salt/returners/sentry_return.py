@@ -48,7 +48,7 @@ import logging
 
 # Import Salt libs
 import salt.utils.jid
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     from raven import Client
