@@ -37,8 +37,9 @@ class Beacon(object):
         .. code_block:: yaml
             beacons:
               inotify:
-                - /etc/fstab: {}
-                - /var/cache/foo: {}
+                - files:
+                    - /etc/fstab: {}
+                    - /var/cache/foo: {}
         '''
         ret = []
         b_config = copy.deepcopy(config)
@@ -69,6 +70,7 @@ class Beacon(object):
 
             log.trace('Beacon processing: {0}'.format(mod))
             fun_str = '{0}.beacon'.format(mod)
+            validate_str = '{0}.validate'.format(mod)
             if fun_str in self.beacons:
                 runonce = self._determine_beacon_config(current_beacon_config, 'run_once')
                 interval = self._determine_beacon_config(current_beacon_config, 'interval')
@@ -95,6 +97,17 @@ class Beacon(object):
                         continue
                 # Update __grains__ on the beacon
                 self.beacons[fun_str].__globals__['__grains__'] = grains
+
+                # Run the validate function if it's available,
+                # otherwise there is a warning about it being missing
+                if validate_str in self.beacons:
+                    valid, vcomment = self.beacons[validate_str](b_config[mod])
+
+                    if not valid:
+                        log.info('Beacon %s configuration invalid, '
+                                 'not running.\n%s', mod, vcomment)
+                        continue
+
                 # Fire the beacon!
                 raw = self.beacons[fun_str](b_config[mod])
                 for data in raw:
@@ -193,6 +206,8 @@ class Beacon(object):
         # Fire the complete event back along with the list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
         b_conf = self.functions['config.merge']('beacons')
+        if not isinstance(self.opts['beacons'], dict):
+            self.opts['beacons'] = {}
         self.opts['beacons'].update(b_conf)
         evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
                        tag='/salt/minion/minion_beacons_list_complete')

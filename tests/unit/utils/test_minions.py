@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.utils import minions
+import salt.utils.minions as minions
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase

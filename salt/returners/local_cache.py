@@ -24,7 +24,7 @@ import salt.exceptions
 
 # Import 3rd-party libs
 import msgpack
-import salt.ext.six as six
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)

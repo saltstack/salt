@@ -17,18 +17,21 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Output the data in lines, very nice for running commands
     '''
-    ret = ''
-    if hasattr(data, 'keys'):
+    ret = u''
+    if hasattr(data, u'keys'):
         for key in data:
             value = data[key]
             # Don't blow up on non-strings
             try:
                 for line in value.splitlines():
-                    ret += '{0}: {1}\n'.format(key, line)
+                    ret += u'{0}: {1}\n'.format(key, line)
             except AttributeError:
-                ret += '{0}: {1}\n'.format(key, value)
+                ret += u'{0}: {1}\n'.format(key, value)
     else:
-        # For non-dictionary data, just use print
-        ret += '{0}\n'.format(pprint.pformat(data))
+        try:
+            ret += data + u'\n'
+        except TypeError:
+            # For non-dictionary, non-string data, just use print
+            ret += u'{0}\n'.format(pprint.pformat(data))
 
     return ret

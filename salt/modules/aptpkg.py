@@ -28,7 +28,7 @@ import json
 # Import third party libs
 import yaml
 # pylint: disable=no-name-in-module,import-error,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.six.moves.urllib.error import HTTPError
 from salt.ext.six.moves.urllib.request import Request as _Request, urlopen as _urlopen
@@ -39,11 +39,14 @@ import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
+import salt.utils.args
 import salt.utils.files
 import salt.utils.itertools
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.pkg.deb
 import salt.utils.systemd
+import salt.utils.versions
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -250,7 +253,7 @@ def latest_version(*names, **kwargs):
 
     if 'repo' in kwargs:
         # Remember to kill _get_repo() too when removing this warning.
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Hydrogen',
             'The \'repo\' argument to apt.latest_version is deprecated, and '
             'will be removed in Salt {version}. Please use \'fromrepo\' '
@@ -317,7 +320,7 @@ def latest_version(*names, **kwargs):
             # to the install candidate, then the candidate is an upgrade, so
             # add it to the return dict
             if not any(
-                (salt.utils.compare_versions(ver1=x,
+                (salt.utils.versions.compare(ver1=x,
                                              oper='>=',
                                              ver2=candidate,
                                              cmp_func=version_cmp)
@@ -762,12 +765,12 @@ def install(name=None,
 
             cver = old.get(pkgname, '')
             if reinstall and cver \
-                    and salt.utils.compare_versions(ver1=version_num,
+                    and salt.utils.versions.compare(ver1=version_num,
                                                     oper='==',
                                                     ver2=cver,
                                                     cmp_func=version_cmp):
                 to_reinstall[pkgname] = pkgstr
-            elif not cver or salt.utils.compare_versions(ver1=version_num,
+            elif not cver or salt.utils.versions.compare(ver1=version_num,
                                                          oper='>=',
                                                          ver2=cver,
                                                          cmp_func=version_cmp):
@@ -2198,7 +2201,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
             # secure PPAs cannot be supported as of the time of this code
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
-            if salt.utils.which('apt-add-repository') \
+            if salt.utils.path.which('apt-add-repository') \
                     and 'ppa_auth' not in kwargs:
                 repo_info = get_repo(repo)
                 if repo_info:
@@ -2813,10 +2816,10 @@ def info_installed(*names, **kwargs):
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
         salt '*' pkg.info_installed <package1> failhard=false
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     failhard = kwargs.pop('failhard', True)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     ret = dict()
     for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard).items():

@@ -40,7 +40,9 @@ from __future__ import absolute_import
 import logging
 import copy
 
-# Import Salt Libs
+# Import 3rd-party libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 
@@ -83,7 +85,7 @@ def targets_registered(name, targets, region=None, key=None, keyid=None,
         changes = False
         newhealth_mock = copy.copy(health)
 
-        if isinstance(targets, str):
+        if isinstance(targets, six.string_types):
             targets = [targets]
 
         for target in targets:
@@ -154,7 +156,7 @@ def targets_deregistered(name, targets, region=None, key=None, keyid=None,
         failure = False
         changes = False
         newhealth_mock = copy.copy(health)
-        if isinstance(targets, str):
+        if isinstance(targets, six.string_types):
             targets = [targets]
         for target in targets:
             if target not in health or health.get(target) == "draining":

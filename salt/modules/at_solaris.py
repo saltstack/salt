@@ -25,8 +25,9 @@ import logging
 from salt.ext.six.moves import map
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'at'
@@ -36,11 +37,11 @@ def __virtual__():
     '''
     We only deal with Solaris' specific version of at
     '''
-    if not salt.utils.is_sunos():
+    if not salt.utils.platform.is_sunos():
         return (False, 'The at module could not be loaded: unsupported platform')
-    if not salt.utils.which('at') or \
-        not salt.utils.which('atq') or \
-        not salt.utils.which('atrm'):
+    if not salt.utils.path.which('at') or \
+        not salt.utils.path.which('atq') or \
+        not salt.utils.path.which('atrm'):
         return (False, 'The at module could not be loaded: at command not found')
     return __virtualname__
 
