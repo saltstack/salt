@@ -12,8 +12,9 @@ import datetime
 
 # Import Salt libs
 import salt.utils
+import salt.utils.decorators.path
 import salt.utils.itertools
-import salt.utils.decorators as decorators
+import salt.utils.path
 import salt.utils.pkg.rpm
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import zip
@@ -44,7 +45,7 @@ def __virtual__():
     '''
     Confine this module to rpm based systems
     '''
-    if not salt.utils.which('rpm'):
+    if not salt.utils.path.which('rpm'):
         return (False, 'The rpm execution module failed to load: rpm binary is not in the path.')
     try:
         os_grain = __grains__['os'].lower()
@@ -420,9 +421,9 @@ def owner(*paths):
     return ret
 
 
-@decorators.which('rpm2cpio')
-@decorators.which('cpio')
-@decorators.which('diff')
+@salt.utils.decorators.path.which('rpm2cpio')
+@salt.utils.decorators.path.which('cpio')
+@salt.utils.decorators.path.which('diff')
 def diff(package, path):
     '''
     Return a formatted diff between current file and original in a package.
@@ -658,7 +659,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                 log.debug('rpmUtils.miscutils.compareEVR is not available')
 
         if cmp_func is None:
-            if salt.utils.which('rpmdev-vercmp'):
+            if salt.utils.path.which('rpmdev-vercmp'):
                 # rpmdev-vercmp always uses epochs, even when zero
                 def _ensure_epoch(ver):
                     def _prepend(ver):
@@ -705,8 +706,8 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
             # otherwise would be equal, ignore the release. This can happen if
             # e.g. you are checking if a package version 3.2 is satisfied by
             # 3.2-1.
-            (ver1_e, ver1_v, ver1_r) = salt.utils.str_version_to_evr(ver1)
-            (ver2_e, ver2_v, ver2_r) = salt.utils.str_version_to_evr(ver2)
+            (ver1_e, ver1_v, ver1_r) = salt.utils.pkg.rpm.version_to_evr(ver1)
+            (ver2_e, ver2_v, ver2_r) = salt.utils.pkg.rpm.version_to_evr(ver2)
             if not ver1_r or not ver2_r:
                 ver1_r = ver2_r = ''
 

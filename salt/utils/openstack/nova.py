@@ -10,7 +10,7 @@ import logging
 import time
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 HAS_NOVA = False
 # pylint: disable=import-error
 try:
@@ -36,7 +36,8 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-import salt.utils
+import salt.utils.cloud
+import salt.utils.files
 from salt.exceptions import SaltCloudSystemExit
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -763,7 +764,7 @@ class SaltNova(object):
         '''
         nt_ks = self.compute_conn
         if pubfile:
-            with salt.utils.fopen(pubfile, 'r') as fp_:
+            with salt.utils.files.fopen(pubfile, 'r') as fp_:
                 pubkey = fp_.read()
         if not pubkey:
             return False

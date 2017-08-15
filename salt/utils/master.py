@@ -29,7 +29,7 @@ from salt.utils.cache import CacheCli as cache_cli
 from salt.utils.process import MultiprocessingProcess
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import zmq
     HAS_ZMQ = True
@@ -610,7 +610,7 @@ class ConnectedCache(MultiprocessingProcess):
                 log.debug('ConCache Received request: {0}'.format(msg))
 
                 # requests to the minion list are send as str's
-                if isinstance(msg, str):
+                if isinstance(msg, six.string_types):
                     if msg == 'minions':
                         # Send reply back to client
                         reply = serial.dumps(self.minions)
@@ -642,7 +642,7 @@ class ConnectedCache(MultiprocessingProcess):
 
                     data = new_c_data[0]
 
-                    if isinstance(data, str):
+                    if isinstance(data, six.string_types):
                         if data not in self.minions:
                             log.debug('ConCache Adding minion {0} to cache'.format(new_c_data[0]))
                             self.minions.append(data)

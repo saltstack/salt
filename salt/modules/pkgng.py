@@ -45,9 +45,11 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
+import salt.utils.itertools
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -151,7 +153,7 @@ def parse_config(file_name='/usr/local/etc/pkg.conf'):
     if not os.path.isfile(file_name):
         return 'Unable to find {0} on file system'.format(file_name)
 
-    with salt.utils.fopen(file_name) as ifile:
+    with salt.utils.files.fopen(file_name) as ifile:
         for line in ifile:
             if line.startswith('#') or line.startswith('\n'):
                 pass

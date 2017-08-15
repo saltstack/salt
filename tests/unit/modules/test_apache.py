@@ -200,6 +200,6 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.apache._parse_config',
                    MagicMock(return_value='Listen 22')):
-            with patch('salt.utils.fopen', mock_open()):
+            with patch('salt.utils.files.fopen', mock_open()):
                 self.assertEqual(apache.config('/ports.conf',
                                                [{'Listen': '22'}]), 'Listen 22')

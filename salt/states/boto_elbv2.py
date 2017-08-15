@@ -2,7 +2,7 @@
 '''
 Manage AWS Application Load Balancer
 
-.. versionadded:: TBD
+.. versionadded:: 2017.7.0
 
 Add and remove targets from an ALB target group.
 
@@ -40,7 +40,9 @@ from __future__ import absolute_import
 import logging
 import copy
 
-# Import Salt Libs
+# Import 3rd-party libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 
@@ -54,6 +56,8 @@ def __virtual__():
 def targets_registered(name, targets, region=None, key=None, keyid=None,
                        profile=None, **kwargs):
     '''
+    .. versionadded:: 2017.7.0
+
     Add targets to an Application Load Balancer target group. This state will not remove targets.
 
     name
@@ -62,8 +66,6 @@ def targets_registered(name, targets, region=None, key=None, keyid=None,
     targets
         A list of target IDs or a string of a single target that this target group should
         distribute traffic to.
-
-    .. versionadded:: TBD
 
     .. code-block:: yaml
 
@@ -83,7 +85,7 @@ def targets_registered(name, targets, region=None, key=None, keyid=None,
         changes = False
         newhealth_mock = copy.copy(health)
 
-        if isinstance(targets, str):
+        if isinstance(targets, six.string_types):
             targets = [targets]
 
         for target in targets:
@@ -154,7 +156,7 @@ def targets_deregistered(name, targets, region=None, key=None, keyid=None,
         failure = False
         changes = False
         newhealth_mock = copy.copy(health)
-        if isinstance(targets, str):
+        if isinstance(targets, six.string_types):
             targets = [targets]
         for target in targets:
             if target not in health or health.get(target) == "draining":

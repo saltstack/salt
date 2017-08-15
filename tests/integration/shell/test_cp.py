@@ -24,10 +24,10 @@ from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
@@ -53,7 +53,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 'files', 'file', 'base', 'testfile'
             )
         )
-        with salt.utils.fopen(testfile, 'r') as fh_:
+        with salt.utils.files.fopen(testfile, 'r') as fh_:
             testfile_contents = fh_.read()
 
         for idx, minion in enumerate(minions):
@@ -125,10 +125,10 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 raise
 
         config_file_name = 'master'
-        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
             config = yaml.load(fhr.read())
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
                 fhw.write(
                     yaml.dump(config, default_flow_style=False)
                 )
@@ -137,7 +137,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
             fd_, fn_ = tempfile.mkstemp()
             os.close(fd_)
 
-            with salt.utils.fopen(fn_, 'w') as fp_:
+            with salt.utils.files.fopen(fn_, 'w') as fp_:
                 fp_.write('Hello world!\n')
 
             ret = self.run_script(

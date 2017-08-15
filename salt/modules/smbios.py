@@ -18,8 +18,7 @@ import uuid
 import re
 
 # Import salt libs
-# import salt.log
-import salt.utils
+import salt.utils.path
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -30,7 +29,7 @@ from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-bui
 
 log = logging.getLogger(__name__)
 
-DMIDECODER = salt.utils.which_bin(['dmidecode', 'smbios'])
+DMIDECODER = salt.utils.path.which_bin(['dmidecode', 'smbios'])
 
 
 def __virtual__():

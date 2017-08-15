@@ -97,8 +97,8 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 # Get Logging Started
@@ -757,7 +757,7 @@ def ssh_configured(name,
             if not ssh_key:
                 ssh_key = ''
                 # Open ssh key file and read in contents to create one key string
-                with salt.utils.fopen(ssh_key_file, 'r') as key_file:
+                with salt.utils.files.fopen(ssh_key_file, 'r') as key_file:
                     for line in key_file:
                         if line.startswith('#'):
                             # Commented line

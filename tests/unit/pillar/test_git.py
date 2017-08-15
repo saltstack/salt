@@ -16,6 +16,7 @@ import tempfile
 import shutil
 import subprocess
 import yaml
+import stat
 
 # Import Salt Testing libs
 from tests.integration import AdaptedConfigurationTestCaseMixin
@@ -34,7 +35,7 @@ FILE_DATA = {
              }
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.files
 from salt.pillar import Pillar
 import salt.pillar.git_pillar as git_pillar
 
@@ -74,8 +75,12 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
         git_pillar._update('master', 'file://{0}'.format(self.repo_path))
 
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        shutil.rmtree(self.tmpdir, onerror=self._rmtree_error)
         super(GitPillarTestCase, self).tearDown()
+
+    def _rmtree_error(self, func, path, excinfo):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
 
     def _create_repo(self):
         'create source Git repo in temp directory'
@@ -83,7 +88,7 @@ class GitPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModul
         os.makedirs(repo)
         subprocess.check_call(['git', 'init', repo])
         for filename in FILE_DATA:
-            with salt.utils.fopen(os.path.join(repo, filename), 'w') as data_file:
+            with salt.utils.files.fopen(os.path.join(repo, filename), 'w') as data_file:
                 yaml.dump(FILE_DATA[filename], data_file)
 
         subprocess.check_call(['git', 'add', '.'], cwd=repo)

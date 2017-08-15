@@ -36,7 +36,8 @@ import logging
 import difflib
 
 # Import Salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.files
 
 from salt.modules.augeas_cfg import METHOD_MAP
 
@@ -74,7 +75,7 @@ def _check_filepath(changes):
                 error = 'Command {0} is not supported (yet)'.format(cmd)
                 raise ValueError(error)
             method = METHOD_MAP[cmd]
-            parts = salt.utils.shlex_split(arg)
+            parts = salt.utils.args.shlex_split(arg)
             if method in ['set', 'setm', 'move', 'remove']:
                 filename_ = parts[0]
             else:
@@ -200,7 +201,7 @@ def change(name, context=None, changes=None, lens=None,
 
         redis-conf:
           augeas.change:
-            - lens: redis
+            - lens: redis.lns
             - context: /files/etc/redis/redis.conf
             - changes:
               - set bind 0.0.0.0
@@ -224,21 +225,34 @@ def change(name, context=None, changes=None, lens=None,
 
         zabbix-service:
           augeas.change:
-            - lens: services
+            - lens: services.lns
             - context: /files/etc/services
             - changes:
               - ins service-name after service-name[last()]
-              - set service-name[last()] zabbix-agent
-              - set service-name[. = 'zabbix-agent']/#comment "Zabbix Agent service"
-              - set service-name[. = 'zabbix-agent']/port 10050
-              - set service-name[. = 'zabbix-agent']/protocol tcp
-              - rm service-name[. = 'im-obsolete']
+              - set service-name[last()] "zabbix-agent"
+              - set "service-name[. = 'zabbix-agent']/port" 10050
+              - set "service-name[. = 'zabbix-agent']/protocol" tcp
+              - set "service-name[. = 'zabbix-agent']/#comment" "Zabbix Agent service"
+              - rm "service-name[. = 'im-obsolete']"
             - unless: grep "zabbix-agent" /etc/services
 
     .. warning::
 
-        Don't forget the ``unless`` here, otherwise a new entry will be added
-        every time this state is run.
+        Don't forget the ``unless`` here, otherwise it will fail on next runs
+        because the service is already defined. Additionally you have to quote
+        lines containing ``service-name[. = 'zabbix-agent']`` otherwise
+        :mod:`augeas_cfg <salt.modules.augeas_cfg>` execute will fail because
+        it will receive more parameters than expected.
+
+    .. note::
+
+        Order is important when defining a service with Augeas, in this case
+        it's ``port``, ``protocol`` and ``#comment``. For more info about
+        the lens check `services lens documentation`_.
+
+    .. _services lens documentation:
+
+    http://augeas.net/docs/references/lenses/files/services-aug.html#Services.record
 
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
@@ -275,7 +289,7 @@ def change(name, context=None, changes=None, lens=None,
     old_file = []
     if filename is not None:
         if os.path.isfile(filename):
-            with salt.utils.fopen(filename, 'r') as file_:
+            with salt.utils.files.fopen(filename, 'r') as file_:
                 old_file = file_.readlines()
 
     result = __salt__['augeas.execute'](
@@ -288,7 +302,7 @@ def change(name, context=None, changes=None, lens=None,
         return ret
 
     if old_file:
-        with salt.utils.fopen(filename, 'r') as file_:
+        with salt.utils.files.fopen(filename, 'r') as file_:
             diff = ''.join(
                 difflib.unified_diff(old_file, file_.readlines(), n=0))
 

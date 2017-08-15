@@ -24,7 +24,7 @@ from xml.etree import ElementTree
 import yaml
 import jinja2
 import jinja2.exceptions
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
 from xml.dom import minidom
 try:
@@ -37,6 +37,8 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -196,14 +198,14 @@ def _libvirt_creds():
         stdout = subprocess.Popen(g_cmd,
                     shell=True,
                     stdout=subprocess.PIPE).communicate()[0]
-        group = salt.utils.to_str(stdout).split('"')[1]
+        group = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         group = 'root'
     try:
         stdout = subprocess.Popen(u_cmd,
                     shell=True,
                     stdout=subprocess.PIPE).communicate()[0]
-        user = salt.utils.to_str(stdout).split('"')[1]
+        user = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         user = 'root'
     return {'user': user, 'group': group}
@@ -395,7 +397,7 @@ def _qemu_image_create(vm_name,
         sfn = __salt__['cp.cache_file'](disk_image, saltenv)
 
         qcow2 = False
-        if salt.utils.which('qemu-img'):
+        if salt.utils.path.which('qemu-img'):
             res = __salt__['cmd.run']('qemu-img info {}'.format(sfn))
             imageinfo = yaml.load(res)
             qcow2 = imageinfo['file format'] == 'qcow2'
@@ -1086,7 +1088,7 @@ def get_disks(vm_):
                         ['qemu-img', 'info', disks[dev]['file']],
                         shell=False,
                         stdout=subprocess.PIPE).communicate()[0]
-            qemu_output = salt.utils.to_str(stdout)
+            qemu_output = salt.utils.stringutils.to_str(stdout)
             snapshots = False
             columns = None
             lines = qemu_output.strip().split('\n')
@@ -1439,7 +1441,7 @@ def create_xml_path(path):
         salt '*' virt.create_xml_path <path to XML file on the node>
     '''
     try:
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             return create_xml_str(fp_.read())
     except (OSError, IOError):
         return False
@@ -1471,7 +1473,7 @@ def define_xml_path(path):
 
     '''
     try:
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             return define_xml_str(fp_.read())
     except (OSError, IOError):
         return False
@@ -1505,7 +1507,7 @@ def define_vol_xml_path(path):
 
     '''
     try:
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             return define_vol_xml_str(fp_.read())
     except (OSError, IOError):
         return False
@@ -1527,7 +1529,7 @@ def migrate_non_shared(vm_, target, ssh=False):
     stdout = subprocess.Popen(cmd,
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0]
-    return salt.utils.to_str(stdout)
+    return salt.utils.stringutils.to_str(stdout)
 
 
 def migrate_non_shared_inc(vm_, target, ssh=False):
@@ -1546,7 +1548,7 @@ def migrate_non_shared_inc(vm_, target, ssh=False):
     stdout = subprocess.Popen(cmd,
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0]
-    return salt.utils.to_str(stdout)
+    return salt.utils.stringutils.to_str(stdout)
 
 
 def migrate(vm_, target, ssh=False):
@@ -1565,7 +1567,7 @@ def migrate(vm_, target, ssh=False):
     stdout = subprocess.Popen(cmd,
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0]
-    return salt.utils.to_str(stdout)
+    return salt.utils.stringutils.to_str(stdout)
 
 
 def seed_non_shared_migrate(disks, force=False):
@@ -1698,7 +1700,7 @@ def is_kvm_hyper():
         salt '*' virt.is_kvm_hyper
     '''
     try:
-        with salt.utils.fopen('/proc/modules') as fp_:
+        with salt.utils.files.fopen('/proc/modules') as fp_:
             if 'kvm_' not in fp_.read():
                 return False
     except IOError:
@@ -1724,7 +1726,7 @@ def is_xen_hyper():
         # virtual_subtype isn't set everywhere.
         return False
     try:
-        with salt.utils.fopen('/proc/modules') as fp_:
+        with salt.utils.files.fopen('/proc/modules') as fp_:
             if 'xen_' not in fp_.read():
                 return False
     except (OSError, IOError):
@@ -2158,7 +2160,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
     if full and not getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', False):
         # Try do it by ourselves
         # Find the models in cpu_map.xml and iterate over them for as long as entries have submodels
-        with salt.utils.fopen('/usr/share/libvirt/cpu_map.xml', 'r') as cpu_map:
+        with salt.utils.files.fopen('/usr/share/libvirt/cpu_map.xml', 'r') as cpu_map:
             cpu_map = minidom.parse(cpu_map)
 
         cpu_model = cpu.getElementsByTagName('model')[0].childNodes[0].nodeValue

@@ -386,3 +386,24 @@ script, a cloud profile using ``file_map`` might look like:
       file_map:
         /local/path/to/custom/script: /remote/path/to/use/custom/script
         /local/path/to/package: /remote/path/to/store/package
+
+Running Pre-Flight Commands
+===========================
+
+.. versionadded:: Oxygen
+
+To execute specified preflight shell commands on a VM before the deploy script is
+run, use the ``preflight_cmds`` option. These must be defined as a list in a cloud
+configuration file. For example:
+
+.. code-block:: yaml
+
+       my-cloud-profile:
+         provider: linode-config
+         image: Ubuntu 16.04 LTS
+         size: Linode 2048
+         preflight_cmds:
+           - whoami
+           - echo 'hello world!'
+
+These commands will run in sequence **before** the bootstrap script is executed.

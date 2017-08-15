@@ -15,8 +15,11 @@ try:
 except ImportError:
     import json
 
-from salt.ext.six import string_types
+# Import Salt libs
 from salt.serializers import DeserializationError, SerializationError
+
+# Import 3rd-party libs
+from salt.ext import six
 
 __all__ = ['deserialize', 'serialize', 'available']
 
@@ -32,7 +35,7 @@ def deserialize(stream_or_string, **options):
     '''
 
     try:
-        if not isinstance(stream_or_string, (bytes, string_types)):
+        if not isinstance(stream_or_string, (bytes, six.string_types)):
             return json.load(stream_or_string, **options)
 
         if isinstance(stream_or_string, bytes):

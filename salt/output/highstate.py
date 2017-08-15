@@ -109,11 +109,12 @@ import textwrap
 
 # Import salt libs
 import salt.utils
+import salt.utils.stringutils
 import salt.output
 from salt.utils.locales import sdecode
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 import logging
 
@@ -168,7 +169,7 @@ def _format_host(host, data):
     nchanges = 0
     strip_colors = __opts__.get('strip_colors', True)
 
-    if isinstance(data, int) or isinstance(data, str):
+    if isinstance(data, int) or isinstance(data, six.string_types):
         # Data in this format is from saltmod.function,
         # so it is always a 'change'
         nchanges = 1
@@ -319,7 +320,7 @@ def _format_host(host, data):
                     if six.PY2:
                         ret['comment'] = str(ret['comment']).decode('utf-8')
                     else:
-                        ret['comment'] = salt.utils.to_str(ret['comment'])
+                        ret['comment'] = salt.utils.stringutils.to_str(ret['comment'])
             except UnicodeDecodeError:
                 # but try to continue on errors
                 pass
@@ -547,7 +548,7 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
         if __opts__.get('state_output_profile', True) and 'start_time' in ret:
             fmt_string += u'{6[start_time]!s} [{6[duration]!s:>7} ms] '
         fmt_string += u'{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
-    elif isinstance(tabular, str):
+    elif isinstance(tabular, six.string_types):
         fmt_string = tabular
     else:
         fmt_string = ''

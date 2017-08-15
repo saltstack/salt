@@ -19,14 +19,16 @@
 #         $1 : <version> : the version of salt to build
 #                          (a git tag, not a branch)
 #                          (defaults to git-repo state)
-#         $2 : <package dir> : the staging area for the package
+#         $2 : <pythin ver> : The version of Python to use in the
+#                             build. Default is 2
+#         $3 : <package dir> : the staging area for the package
 #                              defaults to /tmp/salt_pkg
 #
 #     Example:
-#         The following will build Salt v2015.8.3 and stage all files
-#         in /tmp/custom_pkg:
+#         The following will build Salt v2015.8.3 with Python 2 and
+#         stage all files in /tmp/custom_pkg:
 #
-#         ./build.sh v2015.8.3 /tmp/custom_pkg
+#         ./build.sh v2015.8.3 2 /tmp/custom_pkg
 #
 ############################################################################
 echo -n -e "\033]0;Build: Variables\007"
@@ -41,9 +43,15 @@ else
 fi
 
 if [ "$2" == "" ]; then
+    PYVER=2
+else
+    PYVER=$2
+fi
+
+if [ "$3" == "" ]; then
     PKGDIR=/tmp/salt_pkg
 else
-    PKGDIR=$2
+    PKGDIR=$3
 fi
 
 ############################################################################
@@ -51,6 +59,12 @@ fi
 ############################################################################
 SRCDIR=`git rev-parse --show-toplevel`
 PKGRESOURCES=$SRCDIR/pkg/osx
+if [ "$PYVER" == "2" ]; then
+    PYTHON=/opt/salt/bin/python
+else
+    PYTHON=/opt/salt/bin/python3
+fi
+CPUARCH=`uname -m`
 
 ############################################################################
 # Make sure this is the Salt Repository
@@ -66,16 +80,23 @@ fi
 # Create the Build Environment
 ############################################################################
 echo -n -e "\033]0;Build: Build Environment\007"
-sudo $PKGRESOURCES/build_env.sh
+sudo $PKGRESOURCES/build_env.sh $PYVER
 
 ############################################################################
 # Install Salt
 ############################################################################
 echo -n -e "\033]0;Build: Install Salt\007"
-sudo /opt/salt/bin/python $SRCDIR/setup.py install
+sudo rm -rf $SRCDIR/build
+sudo rm -rf $SRCDIR/dist
+sudo $PYTHON $SRCDIR/setup.py build -e "$PYTHON -E -s" install
 
 ############################################################################
 # Build Package
 ############################################################################
 echo -n -e "\033]0;Build: Package Salt\007"
-sudo $PKGRESOURCES/build_pkg.sh $VERSION $PKGDIR
+sudo $PKGRESOURCES/build_pkg.sh $VERSION $PYVER $PKGDIR
+
+############################################################################
+# Sign Package
+############################################################################
+sudo $PKGRESOURCES/build_sig.sh salt-$VERSION-py$PYVER-$CPUARCH.pkg salt-$VERSION-py$PYVER-$CPUARCH-signed.pkg

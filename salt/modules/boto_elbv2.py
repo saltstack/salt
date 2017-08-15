@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon ALB
 
-.. versionadded:: TBD
+.. versionadded:: 2017.7.0
 
 :configuration: This module accepts explicit elb credentials but can also utilize
     IAM roles assigned to the instance through Instance Profiles. Dynamic
@@ -47,7 +47,7 @@ log = logging.getLogger(__name__)
 # Import Salt libs
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     # pylint: disable=unused-import
@@ -253,7 +253,7 @@ def register_targets(name, targets, region=None, key=None, keyid=None,
         salt myminion boto_elbv2.register_targets myelb "[instance_id,instance_id]"
     '''
     targetsdict = []
-    if isinstance(targets, str) or isinstance(targets, six.text_type):
+    if isinstance(targets, six.string_types) or isinstance(targets, six.text_type):
         targetsdict.append({"Id": targets})
     else:
         for target in targets:
@@ -290,7 +290,7 @@ def deregister_targets(name, targets, region=None, key=None, keyid=None,
         salt myminion boto_elbv2.deregister_targets myelb "[instance_id,instance_id]"
     '''
     targetsdict = []
-    if isinstance(targets, str) or isinstance(targets, six.text_type):
+    if isinstance(targets, six.string_types) or isinstance(targets, six.text_type):
         targetsdict.append({"Id": targets})
     else:
         for target in targets:

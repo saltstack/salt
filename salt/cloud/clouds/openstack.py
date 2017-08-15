@@ -135,6 +135,14 @@ Alternatively, one could use the private IP to connect by specifying:
       ssh_interface: private_ips
 
 
+.. note::
+
+    When using floating ips from networks, if the OpenStack driver is unable to
+    allocate a new ip address for the server, it will check that for
+    unassociated ip addresses in the floating ip pool.  If SaltCloud is running
+    in parallel mode, it is possible that more than one server will attempt to
+    use the same ip address.
+
 '''
 
 # Import python libs
@@ -174,13 +182,11 @@ except Exception:
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 
 # Import salt libs
-import salt.utils
-
-# Import salt.cloud libs
+import salt.utils  # Can be removed once namespaced_function and warn_until have been moved
 import salt.utils.cloud
-import salt.utils.pycrypto as sup
+import salt.utils.files
+import salt.utils.pycrypto
 import salt.config as config
-from salt.utils import namespaced_function
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
@@ -205,19 +211,19 @@ __virtualname__ = 'openstack'
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
 # this module namespace
-get_size = namespaced_function(get_size, globals())
-get_image = namespaced_function(get_image, globals())
-avail_locations = namespaced_function(avail_locations, globals())
-avail_images = namespaced_function(avail_images, globals())
-avail_sizes = namespaced_function(avail_sizes, globals())
-script = namespaced_function(script, globals())
-destroy = namespaced_function(destroy, globals())
-reboot = namespaced_function(reboot, globals())
-list_nodes = namespaced_function(list_nodes, globals())
-list_nodes_full = namespaced_function(list_nodes_full, globals())
-list_nodes_select = namespaced_function(list_nodes_select, globals())
-show_instance = namespaced_function(show_instance, globals())
-get_node = namespaced_function(get_node, globals())
+get_size = salt.utils.namespaced_function(get_size, globals())
+get_image = salt.utils.namespaced_function(get_image, globals())
+avail_locations = salt.utils.namespaced_function(avail_locations, globals())
+avail_images = salt.utils.namespaced_function(avail_images, globals())
+avail_sizes = salt.utils.namespaced_function(avail_sizes, globals())
+script = salt.utils.namespaced_function(script, globals())
+destroy = salt.utils.namespaced_function(destroy, globals())
+reboot = salt.utils.namespaced_function(reboot, globals())
+list_nodes = salt.utils.namespaced_function(list_nodes, globals())
+list_nodes_full = salt.utils.namespaced_function(list_nodes_full, globals())
+list_nodes_select = salt.utils.namespaced_function(list_nodes_select, globals())
+show_instance = salt.utils.namespaced_function(show_instance, globals())
+get_node = salt.utils.namespaced_function(get_node, globals())
 
 
 # Only load in this module is the OPENSTACK configurations are in place
@@ -529,7 +535,7 @@ def request_instance(vm_=None, call=None):
     if files:
         kwargs['ex_files'] = {}
         for src_path in files:
-            with salt.utils.fopen(files[src_path], 'r') as fp_:
+            with salt.utils.files.fopen(files[src_path], 'r') as fp_:
                 kwargs['ex_files'][src_path] = fp_.read()
 
     userdata_file = config.get_cloud_config_value(
@@ -537,7 +543,7 @@ def request_instance(vm_=None, call=None):
     )
     if userdata_file is not None:
         try:
-            with salt.utils.fopen(userdata_file, 'r') as fp_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fp_:
                 kwargs['ex_userdata'] = salt.utils.cloud.userdata_template(
                     __opts__, vm_, fp_.read()
                 )
@@ -761,7 +767,7 @@ def create(vm_):
             )
         data = conn.ex_get_node_details(vm_['instance_id'])
         if vm_['key_filename'] is None and 'change_password' in __opts__ and __opts__['change_password'] is True:
-            vm_['password'] = sup.secure_password()
+            vm_['password'] = salt.utils.pycrypto.secure_password()
             conn.ex_set_password(data, vm_['password'])
         networks(vm_)
     else:
@@ -855,40 +861,43 @@ def _assign_floating_ips(vm_, conn, kwargs):
                     pool = OpenStack_1_1_FloatingIpPool(
                         net['floating'], conn.connection
                     )
-                    for idx in pool.list_floating_ips():
-                        if idx.node_id is None:
-                            floating.append(idx)
+                    try:
+                        floating.append(pool.create_floating_ip())
+                    except Exception as e:
+                        log.debug('Cannot allocate IP from floating pool \'%s\'. Checking for unassociated ips.',
+                                  net['floating'])
+                        for idx in pool.list_floating_ips():
+                            if idx.node_id is None:
+                                floating.append(idx)
+                                break
                     if not floating:
-                        try:
-                            floating.append(pool.create_floating_ip())
-                        except Exception as e:
-                            raise SaltCloudSystemExit(
-                                'Floating pool \'{0}\' does not have any more '
-                                'please create some more or use a different '
-                                'pool.'.format(net['floating'])
-                            )
+                        raise SaltCloudSystemExit(
+                            'There are no more floating IP addresses '
+                            'available, please create some more'
+                        )
         # otherwise, attempt to obtain list without specifying pool
         # this is the same as 'nova floating-ip-list'
         elif ssh_interface(vm_) != 'private_ips':
             try:
                 # This try/except is here because it appears some
-                # *cough* Rackspace *cough*
                 # OpenStack providers return a 404 Not Found for the
                 # floating ip pool URL if there are no pools setup
                 pool = OpenStack_1_1_FloatingIpPool(
                     '', conn.connection
                 )
-                for idx in pool.list_floating_ips():
-                    if idx.node_id is None:
-                        floating.append(idx)
+                try:
+                    floating.append(pool.create_floating_ip())
+                except Exception as e:
+                    log.debug('Cannot allocate IP from the default floating pool. Checking for unassociated ips.')
+                    for idx in pool.list_floating_ips():
+                        if idx.node_id is None:
+                            floating.append(idx)
+                            break
                 if not floating:
-                    try:
-                        floating.append(pool.create_floating_ip())
-                    except Exception as e:
-                        raise SaltCloudSystemExit(
-                            'There are no more floating IP addresses '
-                            'available, please create some more'
-                        )
+                    log.warning(
+                        'There are no more floating IP addresses '
+                        'available, please create some more if necessary'
+                    )
             except Exception as e:
                 if str(e).startswith('404'):
                     pass

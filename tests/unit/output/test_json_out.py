@@ -16,7 +16,7 @@ from tests.support.mock import patch
 import salt.output.json_out as json_out
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class JsonTestCase(TestCase, LoaderModuleMockMixin):

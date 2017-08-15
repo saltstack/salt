@@ -11,7 +11,8 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
 
 
 try:
@@ -34,7 +35,7 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if not salt.utils.is_windows() and HAS_REGEX:
+    if not salt.utils.platform.is_windows() and HAS_REGEX:
         return __virtualname__
     return False
 
@@ -79,7 +80,7 @@ def beacon(config):
         ret.append(event)
         return ret
 
-    with salt.utils.fopen(config['file'], 'r') as fp_:
+    with salt.utils.files.fopen(config['file'], 'r') as fp_:
         loc = __context__.get(LOC_KEY, 0)
         if loc == 0:
             fp_.seek(0, 2)

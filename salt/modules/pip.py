@@ -83,10 +83,12 @@ import shutil
 import logging
 import sys
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
+import salt.utils.files
 import tempfile
 import salt.utils.locales
+import salt.utils.platform
 import salt.utils.url
 from salt.ext import six
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
@@ -124,7 +126,7 @@ def _get_pip_bin(bin_env):
              'pip{0}'.format(sys.version_info[0]),
              'pip', 'pip-python']
         )
-        if salt.utils.is_windows() and six.PY2:
+        if salt.utils.platform.is_windows() and six.PY2:
             which_result.encode('string-escape')
         if which_result is None:
             raise CommandNotFoundError('Could not find a `pip` binary')
@@ -132,7 +134,7 @@ def _get_pip_bin(bin_env):
 
     # try to get pip bin from virtualenv, bin_env
     if os.path.isdir(bin_env):
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             if six.PY2:
                 pip_bin = os.path.join(
                     bin_env, 'Scripts', 'pip.exe').encode('string-escape')
@@ -191,7 +193,7 @@ def _get_env_activate(bin_env):
         raise CommandNotFoundError('Could not find a `activate` binary')
 
     if os.path.isdir(bin_env):
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             activate_bin = os.path.join(bin_env, 'Scripts', 'activate.bat')
         else:
             activate_bin = os.path.join(bin_env, 'bin', 'activate')
@@ -204,7 +206,7 @@ def _find_req(link):
 
     logger.info('_find_req -- link = %s', str(link))
 
-    with salt.utils.fopen(link) as fh_link:
+    with salt.utils.files.fopen(link) as fh_link:
         child_links = rex_pip_chain_read.findall(fh_link.read())
 
     base_path = os.path.dirname(link)
@@ -936,7 +938,7 @@ def uninstall(pkgs=None,
             pkgs = [p.strip() for p in pkgs.split(',')]
         if requirements:
             for requirement in requirements:
-                with salt.utils.fopen(requirement) as rq_:
+                with salt.utils.files.fopen(requirement) as rq_:
                     for req in rq_:
                         try:
                             req_pkg, _ = req.split('==')

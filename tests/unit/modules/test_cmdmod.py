@@ -11,6 +11,7 @@ import tempfile
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.platform
 import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.log import LOG_LEVELS
@@ -121,7 +122,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         and os.path.isfile returns False
         '''
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
-            with patch('salt.utils.is_windows', MagicMock(return_value=False)):
+            with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=False)):
                     self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar')
 
@@ -131,7 +132,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         os.path.isfile returns True, but os.access returns False
         '''
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
-            with patch('salt.utils.is_windows', MagicMock(return_value=False)):
+            with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=False)):
                         self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar')
@@ -141,7 +142,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         Tests error raised when runas is passed on windows
         '''
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
-            with patch('salt.utils.is_windows', MagicMock(return_value=True)):
+            with patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
                 with patch.dict(cmdmod.__grains__, {'os': 'fake_os'}):
                     self.assertRaises(CommandExecutionError,
                                       cmdmod._run,
@@ -161,7 +162,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         Tests error raised when umask is set to zero
         '''
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
-            with patch('salt.utils.is_windows', MagicMock(return_value=False)):
+            with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
                         self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar', umask=0)
@@ -171,7 +172,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         Tests error raised when an invalid umask is given
         '''
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
-            with patch('salt.utils.is_windows', MagicMock(return_value=False)):
+            with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
                         self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar', umask='baz')
@@ -181,7 +182,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         Tests error raised when cwd is not an absolute path
         '''
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
-            with patch('salt.utils.is_windows', MagicMock(return_value=False)):
+            with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
                         self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar')
@@ -191,7 +192,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         Tests error raised when cwd is not a dir
         '''
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
-            with patch('salt.utils.is_windows', MagicMock(return_value=False)):
+            with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
                         with patch('os.path.isabs', MagicMock(return_value=True)):
@@ -202,7 +203,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         Tests error raised when not useing vt and OSError is provided
         '''
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
-            with patch('salt.utils.is_windows', MagicMock(return_value=False)):
+            with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
                         with patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=OSError)):
@@ -213,19 +214,19 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         Tests error raised when not useing vt and IOError is provided
         '''
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
-            with patch('salt.utils.is_windows', MagicMock(return_value=False)):
+            with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
                         with patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=IOError)):
                             self.assertRaises(CommandExecutionError, cmdmod._run, 'foo')
 
-    @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
     def test_run(self):
         '''
         Tests end result when a command is not found
         '''
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
-            with patch('salt.utils.is_windows', MagicMock(return_value=False)):
+            with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
                         ret = cmdmod._run('foo', use_vt=True).get('stderr')
@@ -235,10 +236,10 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests return if running on windows
         '''
-        with patch('salt.utils.is_windows', MagicMock(return_value=True)):
+        with patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
             self.assertTrue(cmdmod._is_valid_shell('foo'))
 
-    @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
     def test_is_valid_shell_none(self):
         '''
         Tests return of when os.path.exists(/etc/shells) isn't available
@@ -251,16 +252,16 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         Tests return when provided shell is available
         '''
         with patch('os.path.exists', MagicMock(return_value=True)):
-            with patch('salt.utils.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
+            with patch('salt.utils.files.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
                 self.assertTrue(cmdmod._is_valid_shell('/bin/bash'))
 
-    @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
     def test_is_valid_shell_unavailable(self):
         '''
         Tests return when provided shell is not available
         '''
         with patch('os.path.exists', MagicMock(return_value=True)):
-            with patch('salt.utils.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
+            with patch('salt.utils.files.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
                 self.assertFalse(cmdmod._is_valid_shell('foo'))
 
     def test_os_environment_remains_intact(self):

@@ -22,6 +22,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ def rotate(name, **kwargs):
            'comment': ''}
 
     ## cleanup kwargs
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     ## inject name as entryname
     if 'entryname' not in kwargs:

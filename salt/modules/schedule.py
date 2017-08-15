@@ -14,11 +14,12 @@ import os
 import yaml
 
 # Import salt libs
-import salt.utils
+import salt.utils.event
+import salt.utils.files
 import salt.utils.odict
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 __proxyenabled__ = ['*']
 
@@ -800,7 +801,7 @@ def reload_():
     # move this file into an configurable opt
     sfn = '{0}/{1}/schedule.conf'.format(__opts__['config_dir'], os.path.dirname(__opts__['default_include']))
     if os.path.isfile(sfn):
-        with salt.utils.fopen(sfn, 'rb') as fp_:
+        with salt.utils.files.fopen(sfn, 'rb') as fp_:
             try:
                 schedule = yaml.safe_load(fp_.read())
             except yaml.YAMLError as exc:
