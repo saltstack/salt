@@ -840,11 +840,11 @@ VALID_OPTS = {
     # check in with their lists of expected minions before giving up
     'syndic_wait': int,
 
-    # If this is set to a valid string, any line starting with this prefix
+    # If this is set to a string that is not empty, any line starting with this prefix
     # will be interpreted as a line statement by the jinja renderer.
     'jinja_line_statement_prefix': str,
 
-    # If this is set to a valid string, any line starting with this prefix
+    # If this is set to a string that is not empty, any line starting with this prefix
     # will be interpreted as a line comment statement by the jinja renderer.
     'jinja_line_comment_prefix': str,
 
@@ -1586,8 +1586,8 @@ DEFAULT_MASTER_OPTS = {
     'winrepo_passphrase': '',
     'winrepo_refspecs': _DFLT_REFSPECS,
     'syndic_wait': 5,
-    'jinja_line_statement_prefix': None,
-    'jinja_line_comment_prefix': None,
+    'jinja_line_statement_prefix': '',
+    'jinja_line_comment_prefix': '',
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
     'tcp_keepalive': True,

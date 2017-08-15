@@ -1931,16 +1931,16 @@ the cloud profile or master config file, no templating will be performed.
 
 .. versionadded:: Oxygen
 
-Default: ``None``
+Default: ``''``
 
-If this is set to a valid string, any line starting with this prefix
+If this is set to a string that is not empty, any line starting with this prefix
 will be interpreted as a line statement by the jinja renderer.
-Defaults to ``None`` and corresponds
+Defaults to ``''`` and corresponds
 to the Jinja environment init variable ``line_statement_prefix``.
 
 .. code-block:: yaml
 
-    jinja_line_statement_prefix: None
+    jinja_line_statement_prefix: ''
 
 .. conf_master:: jinja_line_comment_prefix
 
@@ -1949,16 +1949,16 @@ to the Jinja environment init variable ``line_statement_prefix``.
 
 .. versionadded:: Oxygen
 
-Default: ``None``
+Default: ``''``
 
-If this is set to a valid string, any line starting with this prefix
+If this is set to a string that is not empty, any line starting with this prefix
 will be interpreted as a line comment by the jinja renderer.
-Defaults to ``None`` and corresponds
+Defaults to ``''`` and corresponds
 to the Jinja environment init variable ``line_comment_prefix``.
 
 .. code-block:: yaml
 
-    jinja_line_comment_prefix: None
+    jinja_line_comment_prefix: ''
 
 .. conf_master:: jinja_trim_blocks
 
