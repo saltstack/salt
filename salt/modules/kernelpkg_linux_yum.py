@@ -6,11 +6,13 @@ from __future__ import absolute_import
 import functools
 import logging
 
-# Import Salt libs
-from salt.ext import six
-
 try:
+    # Import Salt libs
+    from salt.ext import six
     from salt.utils.versions import LooseVersion as _LooseVersion
+    from salt.exceptions import CommandExecutionError
+    import salt.utils.systemd
+    import salt.modules.yumpkg
     HAS_REQUIRED_LIBS = True
 except ImportError:
     HAS_REQUIRED_LIBS = False
@@ -19,6 +21,9 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'kernelpkg'
+
+# Import functions from yumpkg
+_yum = salt.utils.namespaced_function(salt.modules.yumpkg._yum, globals())
 
 
 def __virtual__():
@@ -184,6 +189,54 @@ def upgrade_available():
         salt '*' kernelpkg.upgrade_available
     '''
     return _LooseVersion(latest_available()) > _LooseVersion(latest_installed())
+
+
+def remove(release):
+    '''
+    Remove a specific version of the kernel.
+
+    release
+        The release number of an installed kernel. This must be the entire release
+        number as returned by :py:func:`~salt.modules.kernelpkg.list_installed`,
+        not the package name.
+    '''
+    if release not in list_installed():
+        raise CommandExecutionError('Kernel release \'{0}\' is not installed'.format(release))
+
+    if release == active():
+        raise CommandExecutionError('Active kernel cannot be removed')
+
+    target = '{0}-{1}'.format(_package_name(), release)
+    log.info('Removing kernel package {0}'.format(target))
+    old = __salt__['pkg.list_pkgs']()
+
+    # Build the command string
+    cmd = []
+    if salt.utils.systemd.has_scope(__context__) \
+            and __salt__['config.get']('systemd.scope', True):
+        cmd.extend(['systemd-run', '--scope'])
+    cmd.extend([_yum(), '-y', 'remove', target])
+
+    # Execute the command
+    out = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='trace',
+        python_shell=False
+    )
+
+    # Look for the changes in installed packages
+    __context__.pop('pkg.list_pkgs', None)
+    new = __salt__['pkg.list_pkgs']()
+    ret = salt.utils.compare_dicts(old, new)
+
+    # Look for command execution errors
+    if out['retcode'] != 0:
+        raise CommandExecutionError(
+            'Error occurred removing package(s)',
+            info={'errors': [out['stderr']], 'changes': ret}
+        )
+
+    return {'removed': [target]}
 
 
 def _package_name():
