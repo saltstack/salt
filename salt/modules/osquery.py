@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import json
+import shlex
 
 # Import Salt libs
 import salt.utils
@@ -55,8 +56,8 @@ def _osquery(sql, format='json'):
         'result': True,
     }
 
-    cmd = 'osqueryi --json "{0}"'.format(sql)
-    res = __salt__['cmd.run_all'](cmd, python_shell=True)
+    cmd = ['osqueryi'] + ['--json'] + [sql]
+    res = __salt__['cmd.run_all'](cmd)
     if res['retcode'] == 0:
         ret['data'] = json.loads(res['stdout'])
     else:
