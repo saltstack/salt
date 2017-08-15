@@ -180,7 +180,7 @@ def _fulfills_version_spec(versions, oper, desired_version,
             versions = versions['version']
     for ver in versions:
         if (oper == '==' and fnmatch.fnmatch(ver, desired_version)) \
-                or salt.utils.compare_versions(ver1=ver,
+                or salt.utils.versions.compare(ver1=ver,
                                                oper=oper,
                                                ver2=desired_version,
                                                cmp_func=cmp_func,
