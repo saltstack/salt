@@ -887,7 +887,7 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
             try:
                 retrow[date_key] = datetime.datetime.strptime(
                     row[date_key], '%Y-%m-%d %H:%M:%S')
-            except (ValueError, KeyError):
+            except ValueError:
                 retrow[date_key] = None
         retrow['defaults variables'] = row['defaults variables']
         if return_password:
