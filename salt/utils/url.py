@@ -12,6 +12,7 @@ import sys
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils
 import salt.utils.platform
+import salt.utils.versions
 from salt.utils.locales import sdecode
 
 
@@ -26,7 +27,7 @@ def parse(url):
     resource = url.split('salt://', 1)[-1]
 
     if '?env=' in resource:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the salt:// URL.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '

@@ -118,9 +118,9 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 import salt.defaults.exitcodes
 import salt.log
 import salt.utils.dictupdate
+import salt.utils.versions
 import salt.version
 from salt.utils.decorators.jinja import jinja_filter
-from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.textformat import TextFormat
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,
@@ -930,6 +930,7 @@ def format_call(fun,
               arguments.
     '''
     # Late import to avoid circular import
+    import salt.utils.versions
     import salt.utils.args
     ret = initial_ret is not None and initial_ret or {}
 
@@ -997,7 +998,7 @@ def format_call(fun,
 
     # We'll be showing errors to the users until Salt Oxygen comes out, after
     # which, errors will be raised instead.
-    warn_until(
+    salt.utils.versions.warn_until(
         'Oxygen',
         'It\'s time to start raising `SaltInvocationError` instead of '
         'returning warnings',
@@ -1701,32 +1702,6 @@ def option(value, default='', opts=None, pillar=None):
     return default
 
 
-def parse_docstring(docstring):
-    '''
-    Parse a docstring into its parts.
-
-    Currently only parses dependencies, can be extended to parse whatever is
-    needed.
-
-    Parses into a dictionary:
-        {
-            'full': full docstring,
-            'deps': list of dependencies (empty list if none)
-        }
-
-    .. deprecated:: Oxygen
-    '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.parse_docstring\' detected. This function has been moved to '
-        '\'salt.utils.doc.parse_docstring\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
-    # Late import to avoid circular import.
-    import salt.utils.doc
-    return salt.utils.doc.parse_docstring(docstring)
-
-
 def print_cli(msg, retries=10, step=0.01):
     '''
     Wrapper around print() that suppresses tracebacks on broken pipes (i.e.
@@ -1955,228 +1930,6 @@ def date_format(date=None, format="%Y-%m-%d"):
     '2002-12-25'
     '''
     return date_cast(date).strftime(format)
-
-
-def warn_until(version,
-               message,
-               category=DeprecationWarning,
-               stacklevel=None,
-               _version_info_=None,
-               _dont_call_warnings=False):
-    '''
-    Helper function to raise a warning, by default, a ``DeprecationWarning``,
-    until the provided ``version``, after which, a ``RuntimeError`` will
-    be raised to remind the developers to remove the warning because the
-    target version has been reached.
-
-    :param version: The version info or name after which the warning becomes a
-                    ``RuntimeError``. For example ``(0, 17)`` or ``Hydrogen``
-                    or an instance of :class:`salt.version.SaltStackVersion`.
-    :param message: The warning message to be displayed.
-    :param category: The warning class to be thrown, by default
-                     ``DeprecationWarning``
-    :param stacklevel: There should be no need to set the value of
-                       ``stacklevel``. Salt should be able to do the right thing.
-    :param _version_info_: In order to reuse this function for other SaltStack
-                           projects, they need to be able to provide the
-                           version info to compare to.
-    :param _dont_call_warnings: This parameter is used just to get the
-                                functionality until the actual error is to be
-                                issued. When we're only after the salt version
-                                checks to raise a ``RuntimeError``.
-    '''
-    if not isinstance(version, (tuple,
-                                six.string_types,
-                                salt.version.SaltStackVersion)):
-        raise RuntimeError(
-            'The \'version\' argument should be passed as a tuple, string or '
-            'an instance of \'salt.version.SaltStackVersion\'.'
-        )
-    elif isinstance(version, tuple):
-        version = salt.version.SaltStackVersion(*version)
-    elif isinstance(version, six.string_types):
-        version = salt.version.SaltStackVersion.from_name(version)
-
-    if stacklevel is None:
-        # Attribute the warning to the calling function, not to warn_until()
-        stacklevel = 2
-
-    if _version_info_ is None:
-        _version_info_ = salt.version.__version_info__
-
-    _version_ = salt.version.SaltStackVersion(*_version_info_)
-
-    if _version_ >= version:
-        import inspect
-        caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
-        raise RuntimeError(
-            'The warning triggered on filename \'{filename}\', line number '
-            '{lineno}, is supposed to be shown until version '
-            '{until_version} is released. Current version is now '
-            '{salt_version}. Please remove the warning.'.format(
-                filename=caller.filename,
-                lineno=caller.lineno,
-                until_version=version.formatted_version,
-                salt_version=_version_.formatted_version
-            ),
-        )
-
-    if _dont_call_warnings is False:
-        def _formatwarning(message,
-                           category,
-                           filename,
-                           lineno,
-                           line=None):  # pylint: disable=W0613
-            '''
-            Replacement for warnings.formatwarning that disables the echoing of
-            the 'line' parameter.
-            '''
-            return '{0}:{1}: {2}: {3}\n'.format(
-                filename, lineno, category.__name__, message
-            )
-        saved = warnings.formatwarning
-        warnings.formatwarning = _formatwarning
-        warnings.warn(
-            message.format(version=version.formatted_version),
-            category,
-            stacklevel=stacklevel
-        )
-        warnings.formatwarning = saved
-
-
-def kwargs_warn_until(kwargs,
-                      version,
-                      category=DeprecationWarning,
-                      stacklevel=None,
-                      _version_info_=None,
-                      _dont_call_warnings=False):
-    '''
-    Helper function to raise a warning (by default, a ``DeprecationWarning``)
-    when unhandled keyword arguments are passed to function, until the
-    provided ``version_info``, after which, a ``RuntimeError`` will be raised
-    to remind the developers to remove the ``**kwargs`` because the target
-    version has been reached.
-    This function is used to help deprecate unused legacy ``**kwargs`` that
-    were added to function parameters lists to preserve backwards compatibility
-    when removing a parameter. See
-    :ref:`the deprecation development docs <deprecations>`
-    for the modern strategy for deprecating a function parameter.
-
-    :param kwargs: The caller's ``**kwargs`` argument value (a ``dict``).
-    :param version: The version info or name after which the warning becomes a
-                    ``RuntimeError``. For example ``(0, 17)`` or ``Hydrogen``
-                    or an instance of :class:`salt.version.SaltStackVersion`.
-    :param category: The warning class to be thrown, by default
-                     ``DeprecationWarning``
-    :param stacklevel: There should be no need to set the value of
-                       ``stacklevel``. Salt should be able to do the right thing.
-    :param _version_info_: In order to reuse this function for other SaltStack
-                           projects, they need to be able to provide the
-                           version info to compare to.
-    :param _dont_call_warnings: This parameter is used just to get the
-                                functionality until the actual error is to be
-                                issued. When we're only after the salt version
-                                checks to raise a ``RuntimeError``.
-    '''
-    if not isinstance(version, (tuple,
-                                six.string_types,
-                                salt.version.SaltStackVersion)):
-        raise RuntimeError(
-            'The \'version\' argument should be passed as a tuple, string or '
-            'an instance of \'salt.version.SaltStackVersion\'.'
-        )
-    elif isinstance(version, tuple):
-        version = salt.version.SaltStackVersion(*version)
-    elif isinstance(version, six.string_types):
-        version = salt.version.SaltStackVersion.from_name(version)
-
-    if stacklevel is None:
-        # Attribute the warning to the calling function,
-        # not to kwargs_warn_until() or warn_until()
-        stacklevel = 3
-
-    if _version_info_ is None:
-        _version_info_ = salt.version.__version_info__
-
-    _version_ = salt.version.SaltStackVersion(*_version_info_)
-
-    if kwargs or _version_.info >= version.info:
-        arg_names = ', '.join('\'{0}\''.format(key) for key in kwargs)
-        warn_until(
-            version,
-            message='The following parameter(s) have been deprecated and '
-                    'will be removed in \'{0}\': {1}.'.format(version.string,
-                                                              arg_names),
-            category=category,
-            stacklevel=stacklevel,
-            _version_info_=_version_.info,
-            _dont_call_warnings=_dont_call_warnings
-        )
-
-
-def version_cmp(pkg1, pkg2, ignore_epoch=False):
-    '''
-    Compares two version strings using salt.utils.versions.LooseVersion. This is
-    a fallback for providers which don't have a version comparison utility
-    built into them.  Return -1 if version1 < version2, 0 if version1 ==
-    version2, and 1 if version1 > version2. Return None if there was a problem
-    making the comparison.
-    '''
-    normalize = lambda x: str(x).split(':', 1)[-1] if ignore_epoch else str(x)
-    pkg1 = normalize(pkg1)
-    pkg2 = normalize(pkg2)
-
-    try:
-        # pylint: disable=no-member
-        if _LooseVersion(pkg1) < _LooseVersion(pkg2):
-            return -1
-        elif _LooseVersion(pkg1) == _LooseVersion(pkg2):
-            return 0
-        elif _LooseVersion(pkg1) > _LooseVersion(pkg2):
-            return 1
-    except Exception as exc:
-        log.exception(exc)
-    return None
-
-
-def compare_versions(ver1='',
-                     oper='==',
-                     ver2='',
-                     cmp_func=None,
-                     ignore_epoch=False):
-    '''
-    Compares two version numbers. Accepts a custom function to perform the
-    cmp-style version comparison, otherwise uses version_cmp().
-    '''
-    cmp_map = {'<': (-1,), '<=': (-1, 0), '==': (0,),
-               '>=': (0, 1), '>': (1,)}
-    if oper not in ('!=',) and oper not in cmp_map:
-        log.error('Invalid operator \'%s\' for version comparison', oper)
-        return False
-
-    if cmp_func is None:
-        cmp_func = version_cmp
-
-    cmp_result = cmp_func(ver1, ver2, ignore_epoch=ignore_epoch)
-    if cmp_result is None:
-        return False
-
-    # Check if integer/long
-    if not isinstance(cmp_result, numbers.Integral):
-        log.error('The version comparison function did not return an '
-                  'integer/long.')
-        return False
-
-    if oper == '!=':
-        return cmp_result not in cmp_map['==']
-    else:
-        # Gracefully handle cmp_result not in (-1, 0, 1).
-        if cmp_result < -1:
-            cmp_result = -1
-        elif cmp_result > 1:
-            cmp_result = 1
-
-        return cmp_result in cmp_map[oper]
 
 
 @jinja_filter('compare_dicts')
@@ -2825,13 +2578,15 @@ def to_bytes(s, encoding=None):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.to_bytes\' detected. This function has been moved to '
-        '\'salt.utils.stringutils.to_bytes\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.stringutils
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.to_bytes\' detected. This function has been '
+        'moved to \'salt.utils.stringutils.to_bytes\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
     return salt.utils.stringutils.to_bytes(s, encoding)
 
 
@@ -2841,13 +2596,15 @@ def to_str(s, encoding=None):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.to_str\' detected. This function has been moved to '
-        '\'salt.utils.stringutils.to_str\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.stringutils
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.to_str\' detected. This function has been moved '
+        'to \'salt.utils.stringutils.to_str\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.stringutils.to_str(s, encoding)
 
 
@@ -2857,13 +2614,15 @@ def to_unicode(s, encoding=None):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.to_unicode\' detected. This function has been moved to '
-        '\'salt.utils.stringutils.to_unicode\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.stringutils
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.to_unicode\' detected. This function has been '
+        'moved to \'salt.utils.stringutils.to_unicode\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
     return salt.utils.stringutils.to_unicode(s, encoding)
 
 
@@ -2876,13 +2635,15 @@ def str_to_num(text):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.str_to_num\' detected. This function has been moved to '
-        '\'salt.utils.stringutils.to_num\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.stringutils
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.str_to_num\' detected. This function has been '
+        'moved to \'salt.utils.stringutils.to_num\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.stringutils.to_num(text)
 
 
@@ -2893,13 +2654,15 @@ def is_quoted(value):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_quoted\' detected. This function has been moved to '
-        '\'salt.utils.stringutils.is_quoted\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.stringutils
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_quoted\' detected. This function has been '
+        'moved to \'salt.utils.stringutils.is_quoted\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
     return salt.utils.stringutils.is_quoted(value)
 
 
@@ -2909,13 +2672,15 @@ def dequote(value):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.dequote\' detected. This function has been moved to '
-        '\'salt.utils.stringutils.dequote\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.stringutils
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.dequote\' detected. This function has been moved '
+        'to \'salt.utils.stringutils.dequote\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.stringutils.dequote(value)
 
 
@@ -2925,13 +2690,15 @@ def is_hex(value):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_hex\' detected. This function has been moved to '
-        '\'salt.utils.stringutils.is_hex\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.stringutils
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_hex\' detected. This function has been moved '
+        'to \'salt.utils.stringutils.is_hex\' as of Salt Oxygen. This warning '
+        'will be removed in Salt Neon.'
+    )
     return salt.utils.stringutils.is_hex(value)
 
 
@@ -2941,13 +2708,15 @@ def is_bin_str(data):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_bin_str\' detected. This function has been moved to '
-        '\'salt.utils.stringutils.is_binary\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.stringutils
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_bin_str\' detected. This function has been '
+        'moved to \'salt.utils.stringutils.is_binary\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
     return salt.utils.stringutils.is_binary(data)
 
 
@@ -2955,13 +2724,15 @@ def rand_string(size=32):
     '''
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.rand_string\' detected. This function has been moved to '
-        '\'salt.utils.stringutils.random\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.stringutils
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.rand_string\' detected. This function has been '
+        'moved to \'salt.utils.stringutils.random\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.stringutils.random(size)
 
 
@@ -2971,13 +2742,15 @@ def contains_whitespace(text):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.contains_whitespace\' detected. This function has been moved to '
-        '\'salt.utils.stringutils.contains_whitespace\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.stringutils
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.contains_whitespace\' detected. This function '
+        'has been moved to \'salt.utils.stringutils.contains_whitespace\' as '
+        'of Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
     return salt.utils.stringutils.contains_whitespace(text)
 
 
@@ -2991,13 +2764,15 @@ def clean_kwargs(**kwargs):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.clean_kwargs\' detected. This function has been moved to '
-        '\'salt.utils.args.clean_kwargs\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.args
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.clean_kwargs\' detected. This function has been '
+        'moved to \'salt.utils.args.clean_kwargs\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.args.clean_kwargs(**kwargs)
 
 
@@ -3007,13 +2782,15 @@ def invalid_kwargs(invalid_kwargs, raise_exc=True):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.invalid_kwargs\' detected. This function has been moved to '
-        '\'salt.utils.args.invalid_kwargs\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.args
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.invalid_kwargs\' detected. This function has '
+        'been moved to \'salt.utils.args.invalid_kwargs\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
     return salt.utils.args.invalid_kwargs(invalid_kwargs, raise_exc)
 
 
@@ -3023,13 +2800,15 @@ def shlex_split(s, **kwargs):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.shlex_split\' detected. This function has been moved to '
-        '\'salt.utils.args.shlex_split\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.args
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.shlex_split\' detected. This function has been '
+        'moved to \'salt.utils.args.shlex_split\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.args.shlex_split(s, **kwargs)
 
 
@@ -3039,13 +2818,15 @@ def which(exe=None):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.path
+    salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.which\' detected. This function has been moved to '
         '\'salt.utils.path.which\' as of Salt Oxygen. This warning will be '
         'removed in Salt Neon.'
     )
-    import salt.utils.path
     return salt.utils.path.which(exe)
 
 
@@ -3055,13 +2836,15 @@ def which_bin(exes):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.which_bin\' detected. This function has been moved to '
-        '\'salt.utils.path.which_bin\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.path
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.which_bin\' detected. This function has been '
+        'moved to \'salt.utils.path.which_bin\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.path.which_bin(exes)
 
 
@@ -3078,13 +2861,15 @@ def path_join(*parts, **kwargs):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.path_join\' detected. This function has been moved to '
-        '\'salt.utils.path.join\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.path
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.path_join\' detected. This function has been '
+        'moved to \'salt.utils.path.join\' as of Salt Oxygen. This warning '
+        'will be removed in Salt Neon.'
+    )
     return salt.utils.path.join(*parts, **kwargs)
 
 
@@ -3094,13 +2879,15 @@ def rand_str(size=9999999999, hash_type=None):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.rand_str\' detected. This function has been moved to '
-        '\'salt.utils.hashutils.random_hash\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.hashutils
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.rand_str\' detected. This function has been '
+        'moved to \'salt.utils.hashutils.random_hash\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
     return salt.utils.hashutils.random_hash(size, hash_type)
 
 
@@ -3110,13 +2897,15 @@ def is_windows():
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_windows\' detected. This function has been moved to '
-        '\'salt.utils.platform.is_windows\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.platform
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_windows\' detected. This function has been '
+        'moved to \'salt.utils.platform.is_windows\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.platform.is_windows()
 
 
@@ -3130,13 +2919,15 @@ def is_proxy():
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_proxy\' detected. This function has been moved to '
-        '\'salt.utils.platform.is_proxy\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.platform
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_proxy\' detected. This function has been '
+        'moved to \'salt.utils.platform.is_proxy\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.platform.is_proxy()
 
 
@@ -3147,13 +2938,15 @@ def is_linux():
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_linux\' detected. This function has been moved to '
-        '\'salt.utils.platform.is_linux\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.platform
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_linux\' detected. This function has been '
+        'moved to \'salt.utils.platform.is_linux\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.platform.is_linux()
 
 
@@ -3163,13 +2956,15 @@ def is_darwin():
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_darwin\' detected. This function has been moved to '
-        '\'salt.utils.platform.is_darwin\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.platform
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_darwin\' detected. This function has been '
+        'moved to \'salt.utils.platform.is_darwin\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.platform.is_darwin()
 
 
@@ -3179,13 +2974,15 @@ def is_sunos():
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_sunos\' detected. This function has been moved to '
-        '\'salt.utils.platform.is_sunos\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.platform
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_sunos\' detected. This function has been '
+        'moved to \'salt.utils.platform.is_sunos\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.platform.is_sunos()
 
 
@@ -3195,13 +2992,15 @@ def is_smartos():
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_smartos\' detected. This function has been moved to '
-        '\'salt.utils.platform.is_smartos\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.platform
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_smartos\' detected. This function has been '
+        'moved to \'salt.utils.platform.is_smartos\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.platform.is_smartos()
 
 
@@ -3211,13 +3010,15 @@ def is_smartos_globalzone():
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_smartos_globalzone\' detected. This function has been moved to '
-        '\'salt.utils.platform.is_smartos_globalzone\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.platform
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_smartos_globalzone\' detected. This function '
+        'has been moved to \'salt.utils.platform.is_smartos_globalzone\' as '
+        'of Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
     return salt.utils.platform.is_smartos_globalzone()
 
 
@@ -3227,13 +3028,15 @@ def is_smartos_zone():
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_smartos_zone\' detected. This function has been moved to '
-        '\'salt.utils.platform.is_smartos_zone\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.platform
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_smartos_zone\' detected. This function has '
+        'been moved to \'salt.utils.platform.is_smartos_zone\' as of Salt '
+        'Oxygen. This warning will be removed in Salt Neon.'
+    )
     return salt.utils.platform.is_smartos_zone()
 
 
@@ -3243,13 +3046,15 @@ def is_freebsd():
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_freebsd\' detected. This function has been moved to '
-        '\'salt.utils.platform.is_freebsd\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.platform
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_freebsd\' detected. This function has been '
+        'moved to \'salt.utils.platform.is_freebsd\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.platform.is_freebsd()
 
 
@@ -3259,13 +3064,15 @@ def is_netbsd():
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_netbsd\' detected. This function has been moved to '
-        '\'salt.utils.platform.is_netbsd\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.platform
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_netbsd\' detected. This function has been '
+        'moved to \'salt.utils.platform.is_netbsd\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.platform.is_netbsd()
 
 
@@ -3275,13 +3082,15 @@ def is_openbsd():
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
-        'Neon',
-        'Use of \'salt.utils.is_openbsd\' detected. This function has been moved to '
-        '\'salt.utils.platform.is_openbsd\' as of Salt Oxygen. This warning will be '
-        'removed in Salt Neon.'
-    )
+    # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.platform
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_openbsd\' detected. This function has been '
+        'moved to \'salt.utils.platform.is_openbsd\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
     return salt.utils.platform.is_openbsd()
 
 
@@ -3291,13 +3100,15 @@ def is_aix():
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.platform
+    salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.is_aix\' detected. This function has been moved to '
         '\'salt.utils.platform.is_aix\' as of Salt Oxygen. This warning will be '
         'removed in Salt Neon.'
     )
-    import salt.utils.platform
     return salt.utils.platform.is_aix()
 
 
@@ -3307,14 +3118,15 @@ def safe_rm(tgt):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.files
+    salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.safe_rm\' detected. This function has been moved to '
         '\'salt.utils.files.safe_rm\' as of Salt Oxygen. This warning will be '
         'removed in Salt Neon.'
     )
-    # Late import to avoid circular import.
-    import salt.utils.files
     return salt.utils.files.safe_rm(tgt)
 
 
@@ -3325,14 +3137,15 @@ def is_empty(filename):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.files
+    salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.is_empty\' detected. This function has been moved to '
         '\'salt.utils.files.is_empty\' as of Salt Oxygen. This warning will be '
         'removed in Salt Neon.'
     )
-    # Late import to avoid circular import.
-    import salt.utils.files
     return salt.utils.files.is_empty(filename)
 
 
@@ -3350,14 +3163,15 @@ def fopen(*args, **kwargs):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.files
+    salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.fopen\' detected. This function has been moved to '
         '\'salt.utils.files.fopen\' as of Salt Oxygen. This warning will be '
         'removed in Salt Neon.'
     )
-    # Late import to avoid circular import.
-    import salt.utils.files
     return salt.utils.files.fopen(*args, **kwargs)  # pylint: disable=W8470
 
 
@@ -3368,14 +3182,15 @@ def flopen(*args, **kwargs):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.files
+    salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.flopen\' detected. This function has been moved to '
         '\'salt.utils.files.flopen\' as of Salt Oxygen. This warning will be '
         'removed in Salt Neon.'
     )
-    # Late import to avoid circular import.
-    import salt.utils.files
     return salt.utils.files.flopen(*args, **kwargs)
 
 
@@ -3400,14 +3215,15 @@ def fpopen(*args, **kwargs):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.files
+    salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.fpopen\' detected. This function has been moved to '
         '\'salt.utils.files.fpopen\' as of Salt Oxygen. This warning will be '
         'removed in Salt Neon.'
     )
-    # Late import to avoid circular import.
-    import salt.utils.files
     return salt.utils.files.fpopen(*args, **kwargs)
 
 
@@ -3418,14 +3234,15 @@ def rm_rf(path):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.files
+    salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.rm_rf\' detected. This function has been moved to '
         '\'salt.utils.files.rm_rf\' as of Salt Oxygen. This warning will be '
         'removed in Salt Neon.'
     )
-    # Late import to avoid circular import.
-    import salt.utils.files
     return salt.utils.files.rm_rf(path)
 
 
@@ -3438,14 +3255,15 @@ def mkstemp(*args, **kwargs):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.files
+    salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.mkstemp\' detected. This function has been moved to '
         '\'salt.utils.files.mkstemp\' as of Salt Oxygen. This warning will be '
         'removed in Salt Neon.'
     )
-    # Late import to avoid circular import.
-    import salt.utils.files
     return salt.utils.files.mkstemp(*args, **kwargs)
 
 
@@ -3463,12 +3281,152 @@ def str_version_to_evr(verstring):
 
     .. deprecated:: Oxygen
     '''
-    warn_until(
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.pkg.rpm
+    salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.str_version_to_evr\' detected. This function has '
         'been moved to \'salt.utils.pkg.rpm.version_to_evr\' as of Salt '
         'Oxygen. This warning will be removed in Salt Neon.'
     )
-    # Late import to avoid circular import.
-    import salt.utils.pkg.rpm
     return salt.utils.pkg.rpm.version_to_evr(verstring)
+
+
+def parse_docstring(docstring):
+    '''
+    Parse a docstring into its parts.
+
+    Currently only parses dependencies, can be extended to parse whatever is
+    needed.
+
+    Parses into a dictionary:
+        {
+            'full': full docstring,
+            'deps': list of dependencies (empty list if none)
+        }
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.doc
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.parse_docstring\' detected. This function has '
+        'been moved to \'salt.utils.doc.parse_docstring\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.doc.parse_docstring(docstring)
+
+
+def compare_versions(ver1='', oper='==', ver2='', cmp_func=None, ignore_epoch=False):
+    '''
+    Compares two version numbers. Accepts a custom function to perform the
+    cmp-style version comparison, otherwise uses version_cmp().
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.compare_versions\' detected. This function has '
+        'been moved to \'salt.utils.versions.compare\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.versions.compare(ver1=ver1,
+                                       oper=oper,
+                                       ver2=ver2,
+                                       cmp_func=cmp_func,
+                                       ignore_epoch=ignore_epoch)
+
+
+def version_cmp(pkg1, pkg2, ignore_epoch=False):
+    '''
+    Compares two version strings using salt.utils.versions.LooseVersion. This
+    is a fallback for providers which don't have a version comparison utility
+    built into them.  Return -1 if version1 < version2, 0 if version1 ==
+    version2, and 1 if version1 > version2. Return None if there was a problem
+    making the comparison.
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.version_cmp\' detected. This function has '
+        'been moved to \'salt.utils.versions.version_cmp\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.versions.version_cmp(pkg1,
+                                           pkg2,
+                                           ignore_epoch=ignore_epoch)
+
+
+def warn_until(version,
+               message,
+               category=DeprecationWarning,
+               stacklevel=None,
+               _version_info_=None,
+               _dont_call_warnings=False):
+    '''
+    Helper function to raise a warning, by default, a ``DeprecationWarning``,
+    until the provided ``version``, after which, a ``RuntimeError`` will
+    be raised to remind the developers to remove the warning because the
+    target version has been reached.
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.warn_until\' detected. This function has '
+        'been moved to \'salt.utils.versions.warn_until\' as of Salt '
+        'Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.versions.warn_until(version,
+                                          message,
+                                          category=category,
+                                          stacklevel=stacklevel,
+                                          _version_info_=_version_info_,
+                                          _dont_call_warnings=_dont_call_warnings)
+
+
+def kwargs_warn_until(kwargs,
+                      version,
+                      category=DeprecationWarning,
+                      stacklevel=None,
+                      _version_info_=None,
+                      _dont_call_warnings=False):
+    '''
+    Helper function to raise a warning (by default, a ``DeprecationWarning``)
+    when unhandled keyword arguments are passed to function, until the
+    provided ``version_info``, after which, a ``RuntimeError`` will be raised
+    to remind the developers to remove the ``**kwargs`` because the target
+    version has been reached.
+    This function is used to help deprecate unused legacy ``**kwargs`` that
+    were added to function parameters lists to preserve backwards compatibility
+    when removing a parameter. See
+    :ref:`the deprecation development docs <deprecations>`
+    for the modern strategy for deprecating a function parameter.
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.kwargs_warn_until\' detected. This function has '
+        'been moved to \'salt.utils.versions.kwargs_warn_until\' as of Salt '
+        'Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.versions.kwargs_warn_until(
+        kwargs,
+        version,
+        category=category,
+        stacklevel=stacklevel,
+        _version_info_=_version_info_,
+        _dont_call_warnings=_dont_call_warnings)

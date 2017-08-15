@@ -21,10 +21,10 @@ import re
 import string
 
 # Import salt libs
-import salt.utils  # Can be removed when warn_until is moved
 import salt.utils.args
 import salt.utils.files
 import salt.utils.url
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -2132,7 +2132,7 @@ def detached(name,
             'consistency. Please update your SLS to reflect this.'
         )
         ret.setdefault('warnings', []).append(deprecation_msg)
-        salt.utils.warn_until('Fluorine', deprecation_msg)
+        salt.utils.versions.warn_until('Fluorine', deprecation_msg)
 
     if not rev:
         return _fail(

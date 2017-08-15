@@ -27,6 +27,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.url
+import salt.utils.versions
 import salt.fileserver
 from salt.config import DEFAULT_MASTER_OPTS as __DEFAULT_MASTER_OPTS
 from salt.utils.odict import OrderedDict
@@ -330,7 +331,7 @@ class GitProvider(object):
         for item in ('env_whitelist', 'env_blacklist'):
             val = getattr(self, item, None)
             if val:
-                salt.utils.warn_until(
+                salt.utils.versions.warn_until(
                     'Neon',
                     'The gitfs_{0} config option (and {0} per-remote config '
                     'option) have been renamed to gitfs_salt{0} (and '
@@ -2635,7 +2636,7 @@ class GitFS(GitBase):
         Return a chunk from a file based on the data received
         '''
         if 'env' in load:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Oxygen',
                 'Parameter \'env\' has been detected in the argument list.  This '
                 'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -2675,7 +2676,7 @@ class GitFS(GitBase):
         Return a file hash, the hash type is set in the master config file
         '''
         if 'env' in load:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Oxygen',
                 'Parameter \'env\' has been detected in the argument list.  This '
                 'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -2709,7 +2710,7 @@ class GitFS(GitBase):
         Return a dict containing the file lists for files and dirs
         '''
         if 'env' in load:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Oxygen',
                 'Parameter \'env\' has been detected in the argument list.  This '
                 'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -2783,7 +2784,7 @@ class GitFS(GitBase):
         Return a dict of all symlinks based on a given path in the repo
         '''
         if 'env' in load:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Oxygen',
                 'Parameter \'env\' has been detected in the argument list.  This '
                 'parameter is no longer used and has been replaced by \'saltenv\' '

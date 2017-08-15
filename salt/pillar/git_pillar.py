@@ -473,10 +473,10 @@ import hashlib
 import os
 
 # Import salt libs
-import salt.utils
 import salt.utils.gitfs
 import salt.utils.dictupdate
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import FileserverConfigError
 from salt.pillar import Pillar
 
@@ -738,7 +738,7 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
     '''
     Support pre-Beryllium config schema
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Oxygen',
         'The git ext_pillar configuration is deprecated. Please refer to the '
         'documentation at '

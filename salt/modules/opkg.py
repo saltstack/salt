@@ -24,13 +24,13 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils  # Can be removed when is_true, compare_versions, compare_dicts are moved
+import salt.utils  # Can be removed when is_true, compare_dicts are moved
 import salt.utils.args
 import salt.utils.files
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.pkg
-from salt.utils.versions import LooseVersion as _LooseVersion
+import salt.utils.versions
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -327,13 +327,13 @@ def install(name=None,
             else:
                 pkgstr = '{0}={1}'.format(pkgname, version_num)
                 cver = old.get(pkgname, '')
-                if reinstall and cver and salt.utils.compare_versions(
+                if reinstall and cver and salt.utils.versions.compare(
                         ver1=version_num,
                         oper='==',
                         ver2=cver,
                         cmp_func=version_cmp):
                     to_reinstall.append(pkgstr)
-                elif not cver or salt.utils.compare_versions(
+                elif not cver or salt.utils.versions.compare(
                         ver1=version_num,
                         oper='>=',
                         ver2=cver,
@@ -1014,7 +1014,8 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
                                         output_loglevel='trace',
                                         python_shell=False)
     opkg_version = output.split(' ')[2].strip()
-    if _LooseVersion(opkg_version) >= _LooseVersion('0.3.4'):
+    if salt.utils.versions.LooseVersion(opkg_version) >= \
+            salt.utils.versions.LooseVersion('0.3.4'):
         cmd_compare = ['opkg', 'compare-versions']
     elif salt.utils.path.which('opkg-compare-versions'):
         cmd_compare = ['opkg-compare-versions']
