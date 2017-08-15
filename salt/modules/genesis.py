@@ -17,7 +17,7 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 import salt.utils.yast
 import salt.utils.preseed
 import salt.utils.kickstart
@@ -549,7 +549,7 @@ def avail_platforms():
     for platform in CMD_MAP:
         ret[platform] = True
         for cmd in CMD_MAP[platform]:
-            if not salt.utils.which(cmd):
+            if not salt.utils.path.which(cmd):
                 ret[platform] = False
     return ret
 
@@ -663,7 +663,7 @@ def ldd_deps(filename, ret=None):
         salt myminion genesis.ldd_deps /bin/bash
     '''
     if not os.path.exists(filename):
-        filename = salt.utils.which(filename)
+        filename = salt.utils.path.which(filename)
 
     if ret is None:
         ret = []

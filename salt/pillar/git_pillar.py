@@ -476,11 +476,12 @@ import os
 import salt.utils
 import salt.utils.gitfs
 import salt.utils.dictupdate
+import salt.utils.stringutils
 from salt.exceptions import FileserverConfigError
 from salt.pillar import Pillar
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 try:
     import git
@@ -630,7 +631,7 @@ class _LegacyGitPillar(object):
 
         hash_type = getattr(hashlib, opts['hash_type'])
         hash_str = '{0} {1}'.format(self.branch, self.rp_location)
-        repo_hash = hash_type(salt.utils.to_bytes(hash_str)).hexdigest()
+        repo_hash = hash_type(salt.utils.stringutils.to_bytes(hash_str)).hexdigest()
         rp_ = os.path.join(self.opts['cachedir'], 'pillar_gitfs', repo_hash)
 
         if not os.path.isdir(rp_):
