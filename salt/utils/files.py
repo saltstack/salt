@@ -57,7 +57,7 @@ def recursive_copy(source, dest):
     (identical to cp -r on a unix machine)
     '''
     for root, _, files in os.walk(source):
-        path_from_source = root.replace(source, '').lstrip('/')
+        path_from_source = root.replace(source, '').lstrip(os.sep)
         target_directory = os.path.join(dest, path_from_source)
         if not os.path.exists(target_directory):
             os.makedirs(target_directory)
