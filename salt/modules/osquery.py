@@ -56,7 +56,7 @@ def _osquery(sql, format='json'):
     }
 
     cmd = 'osqueryi --json "{0}"'.format(sql)
-    res = __salt__['cmd.run_all'](cmd)
+    res = __salt__['cmd.run_all'](cmd, python_shell=True)
     if res['retcode'] == 0:
         ret['data'] = json.loads(res['stdout'])
     else:
