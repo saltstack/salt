@@ -235,7 +235,7 @@ class MasterACLTestCase(ModuleCase):
         self.valid_clear_load['tgt'] = requested_tgt
         self.valid_clear_load['fun'] = requested_function
         _check_minions_return = {'minions': ['minion_glob1'], 'missing': []}
-        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_check_minions_return)): # Assume that there is a listening minion match
+        with patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value=_check_minions_return)):  # Assume that there is a listening minion match
             self.clear.publish(self.valid_clear_load)
         self.assertTrue(self.fire_event_mock.called, 'Did not fire {0} for minion tgt {1}'.format(requested_function, requested_tgt))
         self.assertEqual(self.fire_event_mock.call_args[0][0]['fun'], requested_function, 'Did not fire {0} for minion glob'.format(requested_function))
