@@ -1255,6 +1255,54 @@ def set_container_setting(name, container, settings):
         salt '*' win_iis.set_container_setting name='MyTestPool' container='AppPools'
             settings="{'managedPipeLineMode': 'Integrated'}"
     '''
+
+    def identity_type_map(identity_id,map_type):
+        '''
+
+        :param identity_id: app pool identity type id - string or string number   
+        :return: the equivalent id number ot string
+         mapping:
+                'LocalSystem' <--> '0'
+                'LocalService' <--> '1'
+                'NetworkService' <--> '2'
+                'SpecificUser' <--> '3'
+                'ApplicationPoolIdentity' <--> '4'
+        '''
+
+        available_ids = ('0','1','2','3','4','LocalSystem','LocalSystem','NetworkService','SpecificUser','ApplicationPoolIdentity')
+        ID = str(identity_id)
+
+        if ID in available_ids:
+            if map_type == "numeric":
+                if ID == 'LocalSystem':
+                    return '0'
+                elif ID == 'LocalSystem':
+                    return '1'
+                elif ID == 'NetworkService':
+                    return '2'
+                elif ID == 'SpecificUser':
+                    return '3'
+                elif ID == 'ApplicationPoolIdentity':
+                    return '4'
+                else:
+                    return ID
+
+            if map_type == "string":
+                if ID == '0':
+                    return 'LocalSystem'
+                elif ID == '1':
+                    return 'LocalService'
+                elif ID == '2':
+                    return 'NetworkService'
+                elif ID == '3':
+                    return 'SpecificUser'
+                elif ID == '4':
+                    return 'ApplicationPoolIdentity'
+                else:
+                    return ID
+        else:
+            raise CommandExecutionError('no such identity type {0}'.format(identity_id))
+
     ps_cmd = list()
     container_path = r"IIS:\{0}\{1}".format(container, name)
 
@@ -1300,6 +1348,10 @@ def set_container_setting(name, container, settings):
     failed_settings = dict()
 
     for setting in settings:
+        # map identity type from numeric to string for comparing
+        if (container == 'AppPools' and setting == 'processModel.identityType'):
+            settings[setting] = identity_type_map(settings[setting],'string')
+
         if str(settings[setting]) != str(new_settings[setting]):
             failed_settings[setting] = settings[setting]
 
