@@ -37,7 +37,7 @@ def _table_attrs(table):
     '''
     Helper function to find valid table attributes
     '''
-    cmd = 'osqueryi --json "pragma table_info({0})"'.format(table)
+    cmd = ['osqueryi'] + ['--json'] + ['pragma table_info{0}'.format(table)]
     res = __salt__['cmd.run_all'](cmd)
     if res['retcode'] == 0:
         attrs = []
