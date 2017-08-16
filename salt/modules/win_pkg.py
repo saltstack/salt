@@ -50,11 +50,12 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.exceptions import (CommandExecutionError,
                              SaltInvocationError,
                              SaltRenderError)
-import salt.utils
+import salt.utils  # Can be removed once is_true, get_hash, compare_dicts are moved
 import salt.utils.args
 import salt.utils.files
 import salt.utils.pkg
 import salt.utils.platform
+import salt.utils.versions
 import salt.syspaths
 import salt.payload
 from salt.exceptions import MinionError
@@ -149,7 +150,7 @@ def latest_version(*names, **kwargs):
 
             # check, whether latest available version
             # is newer than latest installed version
-            if salt.utils.compare_versions(ver1=str(latest_available),
+            if salt.utils.versions.compare(ver1=str(latest_available),
                                            oper='>',
                                            ver2=str(latest_installed)):
                 log.debug('Upgrade of {0} from {1} to {2} '
@@ -1815,4 +1816,4 @@ def compare_versions(ver1='', oper='==', ver2=''):
 
         salt '*' pkg.compare_versions 1.2 >= 1.3
     '''
-    return salt.utils.compare_versions(ver1, oper, ver2)
+    return salt.utils.versions.compare(ver1, oper, ver2)

@@ -46,6 +46,7 @@ import salt.utils.path
 import salt.utils.pkg
 import salt.utils.pkg.deb
 import salt.utils.systemd
+import salt.utils.versions
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -252,7 +253,7 @@ def latest_version(*names, **kwargs):
 
     if 'repo' in kwargs:
         # Remember to kill _get_repo() too when removing this warning.
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Hydrogen',
             'The \'repo\' argument to apt.latest_version is deprecated, and '
             'will be removed in Salt {version}. Please use \'fromrepo\' '
@@ -319,7 +320,7 @@ def latest_version(*names, **kwargs):
             # to the install candidate, then the candidate is an upgrade, so
             # add it to the return dict
             if not any(
-                (salt.utils.compare_versions(ver1=x,
+                (salt.utils.versions.compare(ver1=x,
                                              oper='>=',
                                              ver2=candidate,
                                              cmp_func=version_cmp)
@@ -764,12 +765,12 @@ def install(name=None,
 
             cver = old.get(pkgname, '')
             if reinstall and cver \
-                    and salt.utils.compare_versions(ver1=version_num,
+                    and salt.utils.versions.compare(ver1=version_num,
                                                     oper='==',
                                                     ver2=cver,
                                                     cmp_func=version_cmp):
                 to_reinstall[pkgname] = pkgstr
-            elif not cver or salt.utils.compare_versions(ver1=version_num,
+            elif not cver or salt.utils.versions.compare(ver1=version_num,
                                                          oper='>=',
                                                          ver2=cver,
                                                          cmp_func=version_cmp):

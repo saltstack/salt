@@ -80,10 +80,11 @@ import logging
 import os
 import re
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils  # Can be removed once gen_state_tag is moved
 import salt.utils.pkg
 import salt.utils.platform
+import salt.utils.versions
 from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
@@ -179,7 +180,7 @@ def _fulfills_version_spec(versions, oper, desired_version,
             versions = versions['version']
     for ver in versions:
         if (oper == '==' and fnmatch.fnmatch(ver, desired_version)) \
-                or salt.utils.compare_versions(ver1=ver,
+                or salt.utils.versions.compare(ver1=ver,
                                                oper=oper,
                                                ver2=desired_version,
                                                cmp_func=cmp_func,
