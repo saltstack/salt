@@ -19,6 +19,7 @@ try:
     # Import Salt Libs
     from tests.unit.modules.test_kernelpkg import KernelPkgTestCase
     import salt.modules.kernelpkg_linux_apt as kernelpkg
+    from salt.exceptions import CommandExecutionError
     HAS_MODULES = True
 except ImportError:
     HAS_MODULES = False
@@ -51,6 +52,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
                     'pkg.install': MagicMock(return_value={}),
                     'pkg.latest_version': MagicMock(return_value=self.LATEST),
                     'pkg.list_pkgs': MagicMock(return_value=self.PACKAGE_DICT),
+                    'pkg.purge': MagicMock(return_value=None),
                     'system.reboot': MagicMock(return_value=None)
                 }
             }
@@ -73,3 +75,26 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=None)
         with patch.dict(self._kernelpkg.__salt__, {'pkg.list_pkgs': mock}):
             self.assertListEqual(self._kernelpkg.list_installed(), [])
+
+    def test_remove_success(self):
+        '''
+        Test - remove kernel package
+        '''
+        with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
+            with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
+                result = self._kernelpkg.remove(release=self.KERNEL_LIST[0])
+                self._kernelpkg.__salt__['pkg.purge'].assert_called_once()
+                self.assertIn('removed', result)
+                target = '{0}-{1}'.format(self._kernelpkg._package_prefix(), self.KERNEL_LIST[0])
+                self.assertListEqual(result['removed'], [target])
+
+    def test_remove_error(self):
+        '''
+        Test - remove kernel package
+        '''
+        mock = MagicMock(side_effect=CommandExecutionError())
+        with patch.dict(self._kernelpkg.__salt__, {'pkg.purge': mock}):
+            with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
+                with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
+                    self.assertRaises(CommandExecutionError, self._kernelpkg.remove, release=self.KERNEL_LIST[0])
+                    self._kernelpkg.__salt__['pkg.purge'].assert_called_once()

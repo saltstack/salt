@@ -7,12 +7,12 @@ import functools
 import logging
 import re
 
-# Import Salt libs
-from salt.ext import six
-
 try:
+    # Import Salt libs
+    from salt.ext import six
     from salt.utils.versions import LooseVersion as _LooseVersion
     from salt.ext.six.moves import filter  # pylint: disable=import-error,redefined-builtin
+    from salt.exceptions import CommandExecutionError
     HAS_REQUIRED_LIBS = True
 except ImportError:
     HAS_REQUIRED_LIBS = False
@@ -198,6 +198,29 @@ def upgrade_available():
         salt '*' kernelpkg.upgrade_available
     '''
     return _LooseVersion(latest_available()) > _LooseVersion(latest_installed())
+
+
+def remove(release):
+    '''
+    Remove a specific version of the kernel.
+
+    release
+        The release number of an installed kernel. This must be the entire release
+        number as returned by :py:func:`~salt.modules.kernelpkg.list_installed`,
+        not the package name.
+    '''
+    if release not in list_installed():
+        raise CommandExecutionError('Kernel release \'{0}\' is not installed'.format(release))
+
+    if release == active():
+        raise CommandExecutionError('Active kernel cannot be removed')
+
+    target = '{0}-{1}'.format(_package_prefix(), release)
+    log.info('Removing kernel package {0}'.format(target))
+
+    __salt__['pkg.purge'](target)
+
+    return {'removed': [target]}
 
 
 def _package_prefix():
