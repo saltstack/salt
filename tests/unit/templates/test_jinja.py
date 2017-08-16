@@ -501,8 +501,10 @@ class TestJinjaDefaultOptions(TestCase):
             'extension_modules': os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
                 'extmods'),
-            'jinja_line_comment_prefix': '##',
-            'jinja_line_statement_prefix': '%',
+            'jinja_env': {
+                'line_comment_prefix': '##',
+                'line_statement_prefix': '%',
+            },
         }
         self.local_salt = {
              'myvar': 'zero',

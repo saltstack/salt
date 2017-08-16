@@ -519,8 +519,8 @@ class RemoteFuncs(object):
         mopts['state_auto_order'] = self.opts['state_auto_order']
         mopts['state_events'] = self.opts['state_events']
         mopts['state_aggregate'] = self.opts['state_aggregate']
-        mopts['jinja_line_statement_prefix'] = self.opts['jinja_line_statement_prefix']
-        mopts['jinja_line_comment_prefix'] = self.opts['jinja_line_comment_prefix']
+        mopts['jinja_env'] = self.opts['jinja_env']
+        mopts['jinja_sls_env'] = self.opts['jinja_sls_env']
         mopts['jinja_lstrip_blocks'] = self.opts['jinja_lstrip_blocks']
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts

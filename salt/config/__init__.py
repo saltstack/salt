@@ -840,19 +840,19 @@ VALID_OPTS = {
     # check in with their lists of expected minions before giving up
     'syndic_wait': int,
 
-    # If this is set to a string that is not empty, any line starting with this prefix
-    # will be interpreted as a line statement by the jinja renderer.
-    'jinja_line_statement_prefix': str,
+    # TODO documentation
+    'jinja_env': dict,
 
-    # If this is set to a string that is not empty, any line starting with this prefix
-    # will be interpreted as a line comment statement by the jinja renderer.
-    'jinja_line_comment_prefix': str,
+    # TODO documentation
+    'jinja_sls_env': dict,
 
     # If this is set to True leading spaces and tabs are stripped from the start
     # of a line to a block.
+    # TODO deprecated
     'jinja_lstrip_blocks': bool,
 
     # If this is set to True the first newline after a Jinja block is removed
+    # TODO deprecated
     'jinja_trim_blocks': bool,
 
     # Cache minion ID to file
@@ -1586,8 +1586,8 @@ DEFAULT_MASTER_OPTS = {
     'winrepo_passphrase': '',
     'winrepo_refspecs': _DFLT_REFSPECS,
     'syndic_wait': 5,
-    'jinja_line_statement_prefix': '',
-    'jinja_line_comment_prefix': '',
+    'jinja_env': {},
+    'jinja_sls_env': {},
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
     'tcp_keepalive': True,
