@@ -319,7 +319,7 @@ function into ``__salt__`` that's actually a MagicMock instance.
 
     def show_patch(self):
         with patch.dict(my_module.__salt__,
-                        {'function.to_replace': MagicMock()}:
+                        {'function.to_replace': MagicMock()}):
             # From this scope, carry on with testing, with a modified __salt__!
 
 
