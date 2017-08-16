@@ -5,6 +5,7 @@
     :maturity: develop
     versionadded:: oxygen
 '''
+# pylint: disable=invalid-name,no-member
 
 # Import Python Libs
 from __future__ import absolute_import
@@ -28,6 +29,9 @@ except ImportError:
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_MODULES, 'Salt modules could not be loaded')
 class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
+    '''
+    Test cases for salt.modules.kernelpkg_linux_yum
+    '''
 
     _kernelpkg = kernelpkg
     KERNEL_LIST = ['3.10.0-327.el7', '3.11.0-327.el7', '4.9.1-100.el7']
@@ -85,7 +89,7 @@ class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
                     result = self._kernelpkg.remove(release=self.KERNEL_LIST[0])
                     self._kernelpkg.__salt__['cmd.run_all'].assert_called_once()
                     self.assertIn('removed', result)
-                    target = '{0}-{1}'.format(self._kernelpkg._package_name(), self.KERNEL_LIST[0])
+                    target = '{0}-{1}'.format(self._kernelpkg._package_name(), self.KERNEL_LIST[0])  # pylint: disable=protected-access
                     self.assertListEqual(result['removed'], [target])
 
     def test_remove_error(self):
