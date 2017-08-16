@@ -1322,9 +1322,9 @@ def latest(name,
                 ])
                 if set(all_local_tags) != remote_tags:
                     has_remote_rev = False
-                    ret['changes']['new_tags'] = remote_tags.symmetric_difference(
+                    ret['changes']['new_tags'] = list(remote_tags.symmetric_difference(
                         all_local_tags
-                    )
+                    ))
 
                 if not has_remote_rev:
                     try:
