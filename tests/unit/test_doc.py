@@ -39,7 +39,7 @@ class DocTestCase(TestCase):
             # No grep in Windows, use findstr
             # findstr in windows doesn't prepend 'Binary` to binary files, so
             # use the '/P' switch to skip files with unprintable characters
-            cmd = 'findstr /C:":doc:" /S /P {0}\*'.format(salt_dir)
+            cmd = 'findstr /C:":doc:" /S /P {0}\\*'.format(salt_dir)
         else:
             salt_dir += '/'
             cmd = 'grep -r :doc: ' + salt_dir
@@ -76,8 +76,6 @@ class DocTestCase(TestCase):
                 test_ret[key] = [val.strip()]
             else:
                 test_ret[key].append(val.strip())
-
-        print('*' * 68)
 
         # Allow test results to show files with :doc: ref, rather than truncating
         self.maxDiff = None
