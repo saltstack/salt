@@ -2122,11 +2122,14 @@ class State(object):
                                 reqs[r_state].append(chunk)
                             continue
                         try:
-                            if (fnmatch.fnmatch(chunk['name'], req_val) or
-                                fnmatch.fnmatch(chunk['__id__'], req_val)):
-                                if req_key == 'id' or chunk['state'] == req_key:
-                                    found = True
-                                    reqs[r_state].append(chunk)
+                            if isinstance(req_val, six.string_types):
+                                if (fnmatch.fnmatch(chunk['name'], req_val) or
+                                        fnmatch.fnmatch(chunk['__id__'], req_val)):
+                                    if req_key == 'id' or chunk['state'] == req_key:
+                                        found = True
+                                        reqs[r_state].append(chunk)
+                            else:
+                                raise KeyError
                         except KeyError as exc:
                             raise SaltRenderError(
                                 'Could not locate requisite of [{0}] present in state with name [{1}]'.format(
