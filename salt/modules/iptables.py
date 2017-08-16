@@ -501,11 +501,18 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
                 after_jump.append('--{0} {1}'.format(after_jump_argument, value))
             del kwargs[after_jump_argument]
 
-    for key, value in kwargs.items():
-        negation = maybe_add_negation(key)
-        flag = '-' if len(key) == 1 else '--'
-        value = '' if value in (None, '') else ' {0}'.format(value)
-        rule.append('{0}{1}{2}{3}'.format(negation, flag, key, value))
+    for item in kwargs:
+        rule.append(maybe_add_negation(item))
+        if len(item) == 1:
+            if kwargs[item] in (None, ''):
+                rule.append('-{0}'.format(item))
+            else:
+                rule.append('-{0} {1}'.format(item, kwargs[item]))
+        else:
+            if kwargs[item] in (None, ''):
+                rule.append('--{0}'.format(item))
+            else:
+                rule.append('--{0} {1}'.format(item, kwargs[item]))
 
     rule += after_jump
 
