@@ -481,7 +481,7 @@ def container_setting(name, container, settings=None):
     :param str container: The type of IIS container. The container types are:
         AppPools, Sites, SslBindings
     :param str settings: A dictionary of the setting names and their values.
-
+    
     Example of usage for the ``AppPools`` container:
 
     .. code-block:: yaml
@@ -496,7 +496,8 @@ def container_setting(name, container, settings=None):
                     processModel.userName: TestUser
                     processModel.password: TestPassword
                     processModel.identityType: SpecificUser
-
+      
+    
     Example of usage for the ``Sites`` container:
 
     .. code-block:: yaml
@@ -510,6 +511,55 @@ def container_setting(name, container, settings=None):
                     logFile.period: Daily
                     limits.maxUrlSegments: 32
     '''
+
+    def identity_type_map(identity_id,map_type):
+        '''
+
+        :param identity_id: app pool identity type id - string or string number   
+        :return: the equivalent id number ot string
+         mapping:
+                'LocalSystem' <--> '0'
+                'LocalService' <--> '1'
+                'NetworkService' <--> '2'
+                'SpecificUser' <--> '3'
+                'ApplicationPoolIdentity' <--> '4'
+        '''
+        
+        available_ids = ('0','1','2','3','4','LocalSystem','LocalSystem','NetworkService','SpecificUser','ApplicationPoolIdentity')
+        ID = str(identity_id)
+
+        if ID in available_ids:
+            if map_type == "numeric":
+                if ID == 'LocalSystem':
+                    return '0'
+                elif ID == 'LocalSystem':
+                    return '1'
+                elif ID == 'NetworkService':
+                    return '2'
+                elif ID == 'SpecificUser':
+                    return '3'
+                elif ID == 'ApplicationPoolIdentity':
+                    return '4'
+                else:
+                    return ID
+
+            if map_type == "string":
+                if ID == '0':
+                    return 'LocalSystem'
+                elif ID == '1':
+                    return 'LocalService'
+                elif ID == '2':
+                    return 'NetworkService'
+                elif ID == '3':
+                    return 'SpecificUser'
+                elif ID == '4':
+                    return 'ApplicationPoolIdentity'
+                else:
+                    return ID
+        else:
+            return 'no such identity type {0}'.format(identity_id)
+
+
     ret = {'name': name,
            'changes': {},
            'comment': str(),
@@ -529,6 +579,10 @@ def container_setting(name, container, settings=None):
                                                                  container=container,
                                                                  settings=settings.keys())
     for setting in settings:
+        # map identity type from numeric to string for comparing
+        if (container == 'AppPools' and setting == 'processModel.identityType'):
+            settings[setting] = identity_type_map(settings[setting],'string')
+
         if str(settings[setting]) != str(current_settings[setting]):
             ret_settings['changes'][setting] = {'old': current_settings[setting],
                                                 'new': settings[setting]}
@@ -540,6 +594,10 @@ def container_setting(name, container, settings=None):
         ret['comment'] = 'Settings will be changed.'
         ret['changes'] = ret_settings
         return ret
+
+    if settings['processModel.identityType']:
+        # map identity type back to numeric in order to run set container
+        settings['processModel.identityType'] = identity_type_map(settings['processModel.identityType'],'numeric')
 
     __salt__['win_iis.set_container_setting'](name=name, container=container,
                                               settings=settings)
