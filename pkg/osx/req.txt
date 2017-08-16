@@ -7,7 +7,7 @@ CherryPy==11.0.0
 click==6.7
 enum34==1.1.6
 gitdb==0.6.4
-GitPython==2.1.5
+GitPython==2.1.1
 idna==2.5
 ipaddress==1.0.18
 Jinja2==2.9.6

@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import json
 import logging
 import threading
-import salt.ext.six as six
+from salt.ext import six
 
 import salt.netapi
 

@@ -65,7 +65,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import http_client  # pylint: disable=import-error,no-name-in-module
 import salt.utils.cloud
 import salt.utils.files

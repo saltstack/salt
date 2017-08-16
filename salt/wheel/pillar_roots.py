@@ -13,7 +13,7 @@ import salt.utils
 import salt.utils.files
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def find(path, saltenv='base'):
