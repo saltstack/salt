@@ -2,6 +2,7 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function
+import datetime
 import re
 
 # Import Salt Testing libs
@@ -370,6 +371,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                                    'replication': None,
                                    'password': 'test_password',
                                    'connections': '-1',
+                                   'expiry time': '',
                                    'defaults variables': None
                                    }])):
                     ret = postgres.user_exists(
@@ -400,6 +402,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                                    'can login': 't',
                                    'replication': None,
                                    'connections': '-1',
+                                   'expiry time': '2017-08-16 08:57:46',
                                    'defaults variables': None
                                }])):
                     ret = postgres.user_list(
@@ -418,7 +421,8 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                                       'can create roles': True,
                                       'connections': None,
                                       'replication': None,
-                                      'expiry time': None,
+                                      'expiry time': datetime.datetime(
+                                          2017, 8, 16, 8, 57, 46),
                                       'can login': True,
                                       'can update system catalogs': True,
                                       'groups': [],
