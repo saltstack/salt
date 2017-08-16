@@ -5,6 +5,8 @@
     :maturity: develop
     versionadded:: oxygen
 '''
+# pylint: disable=invalid-name,no-member
+
 from __future__ import absolute_import
 
 # Salt testing libs
@@ -17,7 +19,7 @@ except ImportError:
 
 class KernelPkgTestCase(object):
     '''
-    Test cases for salt.modules.yumkernelpkg
+    Test cases shared by all kernelpkg virtual modules
     '''
 
     def test_active(self):

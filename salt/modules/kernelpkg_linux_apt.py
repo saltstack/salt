@@ -241,11 +241,11 @@ def _cmp_version(item1, item2):
     '''
     Compare function for package version sorting
     '''
-    v1 = _LooseVersion(item1)
-    v2 = _LooseVersion(item2)
+    vers1 = _LooseVersion(item1)
+    vers2 = _LooseVersion(item2)
 
-    if v1 < v2:
+    if vers1 < vers2:
         return -1
-    if v1 > v2:
+    if vers1 > vers2:
         return 1
     return 0

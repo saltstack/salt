@@ -114,7 +114,8 @@ def latest_active(name, at_time=None, **kwargs):  # pylint: disable=unused-argum
         state will reboot the system.
 
         See :mod:`kernelpkg.upgrade <salt.modules.kernelpkg.upgrade>` and
-        :mod:`kernelpkg.latest_installed <salt.states.kernelpkg.latest_installed>` for ways to install new kernel packages.
+        :mod:`kernelpkg.latest_installed <salt.states.kernelpkg.latest_installed>`
+        for ways to install new kernel packages.
 
         This module does not attempt to understand or manage boot loader configurations
         it is possible to have a new kernel installed, but a boot loader configuration
@@ -122,7 +123,8 @@ def latest_active(name, at_time=None, **kwargs):  # pylint: disable=unused-argum
         schedule this state to run automatically.
 
         Because this state function may cause the system to reboot, it may be preferable
-        to move it to the very end of the state run. See :mod:`kernelpkg.latest_wait <salt.states.kernelpkg.latest_wait>`
+        to move it to the very end of the state run.
+        See :mod:`kernelpkg.latest_wait <salt.states.kernelpkg.latest_wait>`
         for a waitable state that can be called with the `listen` requesite.
 
     name
