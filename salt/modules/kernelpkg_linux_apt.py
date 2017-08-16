@@ -116,9 +116,9 @@ def latest_installed():
     .. note::
 
         This function may not return the same value as
-        :py:func:`~salt.modules.kernelpkg.active` if a new kernel
+        :py:func:`~salt.modules.kernelpkg_linux_apt.active` if a new kernel
         has been installed and the system has not yet been rebooted.
-        The :py:func:`~salt.modules.kernelpkg.needs_reboot` function
+        The :py:func:`~salt.modules.kernelpkg_linux_apt.needs_reboot` function
         exists to detect this condition.
     '''
     pkgs = list_installed()
@@ -206,8 +206,14 @@ def remove(release):
 
     release
         The release number of an installed kernel. This must be the entire release
-        number as returned by :py:func:`~salt.modules.kernelpkg.list_installed`,
+        number as returned by :py:func:`~salt.modules.kernelpkg_linux_apt.list_installed`,
         not the package name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' kernelpkg.remove 4.4.0-70-generic
     '''
     if release not in list_installed():
         raise CommandExecutionError('Kernel release \'{0}\' is not installed'.format(release))
@@ -231,6 +237,12 @@ def cleanup(keep_latest=True):
         In the event that the active kernel is not the latest one installed, setting this to True
         will retain the latest kernel package, in addition to the active one. If False, all kernel
         packages other than the active one will be removed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' kernelpkg.cleanup
     '''
     removed = []
 
