@@ -89,13 +89,13 @@ def add_export(exports='/etc/exports', path=None, hosts=None, options=None):
 
         salt '*' nfs3.add_export path='/srv/test' hosts='127.0.0.1' options=['rw']
     '''
-    if options == None:
+    if options is None:
         options = []
-    if not type(hosts) is str:
+    if type(hosts) is not str:
         # Lists, etc would silently mangle /etc/exports
         raise TypeError('hosts argument must be a string')
     edict = list_exports(exports)
-    if not path in edict:
+    if path not in edict:
         edict[path] = []
     new = {'hosts': hosts, 'options': options}
     edict[path].append(new)
