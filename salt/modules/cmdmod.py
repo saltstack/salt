@@ -2403,33 +2403,39 @@ def has_exec(cmd):
     return which(cmd) is not None
 
 
-def exec_code(lang, code, cwd=None):
+def exec_code(lang, code, cwd=None, args=None, **kwargs):
     '''
     Pass in two strings, the first naming the executable language, aka -
     python2, python3, ruby, perl, lua, etc. the second string containing
     the code you wish to execute. The stdout will be returned.
+
+    All parameters from :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` except python_shell can be used.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' cmd.exec_code ruby 'puts "cheese"'
+        salt '*' cmd.exec_code ruby 'puts "cheese"' args='["arg1", "arg2"]' env='{"FOO": "bar"}'
     '''
-    return exec_code_all(lang, code, cwd)['stdout']
+    return exec_code_all(lang, code, cwd, args, **kwargs)['stdout']
 
 
-def exec_code_all(lang, code, cwd=None):
+def exec_code_all(lang, code, cwd=None, args=None, **kwargs):
     '''
     Pass in two strings, the first naming the executable language, aka -
     python2, python3, ruby, perl, lua, etc. the second string containing
     the code you wish to execute. All cmd artifacts (stdout, stderr, retcode, pid)
     will be returned.
 
+    All parameters from :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` except python_shell can be used.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' cmd.exec_code_all ruby 'puts "cheese"'
+        salt '*' cmd.exec_code_all ruby 'puts "cheese"' args='["arg1", "arg2"]' env='{"FOO": "bar"}'
     '''
     powershell = lang.lower().startswith("powershell")
 
@@ -2446,7 +2452,12 @@ def exec_code_all(lang, code, cwd=None):
     else:
         cmd = [lang, codefile]
 
-    ret = run_all(cmd, cwd=cwd, python_shell=False)
+    if isinstance(args, str):
+        cmd.append(args)
+    elif isinstance(args, list):
+        cmd += args
+
+    ret = run_all(cmd, cwd=cwd, python_shell=False, **kwargs)
     os.remove(codefile)
     return ret
 
