@@ -3949,7 +3949,7 @@ def save(name,
     ret['Size_Human'] = _size_fmt(ret['Size'])
 
     # Process push
-    if kwargs.get(push, False):
+    if kwargs.get('push', False):
         ret['Push'] = __salt__['cp.push'](path)
 
     return ret
