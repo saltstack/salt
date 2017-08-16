@@ -2071,13 +2071,17 @@ class State(object):
                         req_val = lreq[req_key]
                         comment += \
                             '{0}{1}: {2}\n'.format(' ' * 23, req_key, req_val)
-                running[tag] = {'changes': {},
-                                'result': False,
-                                'comment': comment,
-                                '__run_num__': self.__run_num,
-                                '__sls__': low['__sls__']}
+                if low.get('__prereq__'):
+                    run_dict = self.pre
+                else:
+                    run_dict = running
+                run_dict[tag] = {'changes': {},
+                                 'result': False,
+                                 'comment': comment,
+                                 '__run_num__': self.__run_num,
+                                 '__sls__': low['__sls__']}
                 self.__run_num += 1
-                self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
+                self.event(run_dict[tag], len(chunks), fire_event=low.get('fire_event'))
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
