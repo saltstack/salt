@@ -47,14 +47,16 @@ except ImportError:
     HAS_CSV = False
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 import salt.utils.itertools
+import salt.utils.odict
+import salt.utils.path
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import StringIO
 
@@ -120,7 +122,7 @@ def __virtual__():
     if not HAS_CSV:
         return False
     for util in utils:
-        if not salt.utils.which(util):
+        if not salt.utils.path.which(util):
             if not _find_pg_binary(util):
                 return (False, '{0} was not found'.format(util))
     return True
@@ -133,10 +135,10 @@ def _find_pg_binary(util):
     Helper function to locate various psql related binaries
     '''
     pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
-    util_bin = salt.utils.which(util)
+    util_bin = salt.utils.path.which(util)
     if not util_bin:
         if pg_bin_dir:
-            return salt.utils.which(os.path.join(pg_bin_dir, util))
+            return salt.utils.path.which(os.path.join(pg_bin_dir, util))
     else:
         return util_bin
 
@@ -171,7 +173,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
         password = __salt__['config.option']('postgres.pass')
     if password is not None:
         pgpassfile = salt.utils.files.mkstemp(text=True)
-        with salt.utils.fopen(pgpassfile, 'w') as fp_:
+        with salt.utils.files.fopen(pgpassfile, 'w') as fp_:
             fp_.write('{0}:{1}:*:{2}:{3}'.format(
                 'localhost' if not host or host.startswith('/') else host,
                 port if port else '*',
@@ -227,7 +229,7 @@ def _run_initdb(name,
 
     if password is not None:
         pgpassfile = salt.utils.files.mkstemp(text=True)
-        with salt.utils.fopen(pgpassfile, 'w') as fp_:
+        with salt.utils.files.fopen(pgpassfile, 'w') as fp_:
             fp_.write('{0}'.format(password))
             __salt__['file.chown'](pgpassfile, runas, '')
         cmd.extend([
@@ -1005,7 +1007,7 @@ def _maybe_encrypt_password(role,
         password = str(password)
     if encrypted and password and not password.startswith('md5'):
         password = "md5{0}".format(
-            hashlib.md5(salt.utils.to_bytes('{0}{1}'.format(password, role))).hexdigest())
+            hashlib.md5(salt.utils.stringutils.to_bytes('{0}{1}'.format(password, role))).hexdigest())
     return password
 
 
@@ -1954,7 +1956,7 @@ def schema_create(dbname, name, owner=None,
     '''
 
     # check if schema exists
-    if schema_exists(dbname, name,
+    if schema_exists(dbname, name, user=user,
                      db_user=db_user, db_password=db_password,
                      db_host=db_host, db_port=db_port):
         log.info('\'{0}\' already exists in \'{1}\''.format(name, dbname))
@@ -2009,7 +2011,7 @@ def schema_remove(dbname, name,
     '''
 
     # check if schema exists
-    if not schema_exists(dbname, name,
+    if not schema_exists(dbname, name, user=None,
                          db_user=db_user, db_password=db_password,
                          db_host=db_host, db_port=db_port):
         log.info('Schema \'{0}\' does not exist in \'{1}\''.format(name, dbname))
@@ -2023,7 +2025,7 @@ def schema_remove(dbname, name,
         maintenance_db=dbname,
         host=db_host, user=db_user, port=db_port, password=db_password)
 
-    if not schema_exists(dbname, name,
+    if not schema_exists(dbname, name, user,
                          db_user=db_user, db_password=db_password,
                          db_host=db_host, db_port=db_port):
         return True
@@ -2032,7 +2034,7 @@ def schema_remove(dbname, name,
         return False
 
 
-def schema_exists(dbname, name,
+def schema_exists(dbname, name, user=None,
                   db_user=None, db_password=None,
                   db_host=None, db_port=None):
     '''
@@ -2050,6 +2052,9 @@ def schema_exists(dbname, name,
     name
        Schema name we look for
 
+    user
+        The system user the operation should be performed on behalf of
+
     db_user
         database username if different from config or default
 
@@ -2064,14 +2069,14 @@ def schema_exists(dbname, name,
 
     '''
     return bool(
-        schema_get(dbname, name,
+        schema_get(dbname, name, user=user,
                    db_user=db_user,
                    db_host=db_host,
                    db_port=db_port,
                    db_password=db_password))
 
 
-def schema_get(dbname, name,
+def schema_get(dbname, name, user=None,
                db_user=None, db_password=None,
                db_host=None, db_port=None):
     '''
@@ -2089,6 +2094,9 @@ def schema_get(dbname, name,
     name
        Schema name we look for
 
+    user
+        The system user the operation should be performed on behalf of
+
     db_user
         database username if different from config or default
 
@@ -2101,7 +2109,7 @@ def schema_get(dbname, name,
     db_port
         Database port if different from config or default
     '''
-    all_schemas = schema_list(dbname,
+    all_schemas = schema_list(dbname, user=user,
                               db_user=db_user,
                               db_host=db_host,
                               db_port=db_port,
@@ -2113,7 +2121,7 @@ def schema_get(dbname, name,
         return False
 
 
-def schema_list(dbname,
+def schema_list(dbname, user=None,
                 db_user=None, db_password=None,
                 db_host=None, db_port=None):
     '''
@@ -2127,6 +2135,9 @@ def schema_list(dbname,
 
     dbname
         Database name we query on
+
+    user
+        The system user the operation should be performed on behalf of
 
     db_user
         database username if different from config or default
@@ -2152,7 +2163,7 @@ def schema_list(dbname,
         'LEFT JOIN pg_roles ON pg_roles.oid = pg_namespace.nspowner '
     ]))
 
-    rows = psql_query(query,
+    rows = psql_query(query, runas=user,
                       host=db_host,
                       user=db_user,
                       port=db_port,

@@ -45,7 +45,7 @@ import json
 
 # Import salt libs
 import salt.utils
-from salt.utils import simple_types_filter
+import salt.utils.files
 
 
 def save(name, filter=False):
@@ -78,9 +78,11 @@ def save(name, filter=False):
         fn_ = os.path.join(tgt_dir, name)
     if not os.path.isdir(tgt_dir):
         os.makedirs(tgt_dir)
-    with salt.utils.fopen(fn_, 'w+') as fp_:
+    with salt.utils.files.fopen(fn_, 'w+') as fp_:
         if filter is True:
-            fp_.write(json.dumps(simple_types_filter(__reg__)))
+            fp_.write(json.dumps(
+                salt.utils.simple_types_filter(__reg__))
+            )
         else:
             fp_.write(json.dumps(__reg__))
     return ret

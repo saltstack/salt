@@ -97,6 +97,7 @@ execution modules
     cytest
     daemontools
     data
+    datadog_api
     ddns
     deb_apache
     deb_postgres
@@ -197,6 +198,7 @@ execution modules
     keyboard
     keystone
     kmod
+    kubernetes
     launchctl
     layman
     ldap3
@@ -398,7 +400,6 @@ execution modules
     state
     status
     statuspage
-    stormpath
     supervisord
     suse_apache
     svn

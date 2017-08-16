@@ -11,6 +11,7 @@ import logging
 
 # Salt libs
 import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ last_state_extra = {'value': False, 'no_devices': False}
 
 
 def __virtual__():
-    which_result = salt.utils.which('adb')
+    which_result = salt.utils.path.which('adb')
     if which_result is None:
         return False
     else:

@@ -21,12 +21,12 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.payload
-import salt.utils
+import salt.utils.files
 import salt.cache.localfs as localfs
 from salt.exceptions import SaltCacheError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -62,7 +62,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
     def test_store_close_mkstemp_file_handle(self):
         '''
         Tests that the file descriptor that is opened by os.open during the mkstemp call
-        in localfs.store is closed before calling salt.utils.fopen on the filename.
+        in localfs.store is closed before calling salt.utils.files.fopen on the filename.
 
         This test mocks the call to mkstemp, but forces an OSError to be raised when the
         close() function is called on a file descriptor that doesn't exist.
@@ -79,7 +79,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         with patch('os.path.isdir', MagicMock(return_value=True)):
             with patch('tempfile.mkstemp', MagicMock(return_value=('one', 'two'))):
                 with patch('os.close', MagicMock(return_value=None)):
-                    with patch('salt.utils.fopen', MagicMock(side_effect=IOError)):
+                    with patch('salt.utils.files.fopen', MagicMock(side_effect=IOError)):
                         self.assertRaises(SaltCacheError, localfs.store, bank='', key='', data='', cachedir='')
 
     def test_store_success(self):
@@ -93,7 +93,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
 
         # Read in the contents of the key.p file and assert "payload data" was written
-        with salt.utils.fopen(tmp_dir + '/bank/key.p', 'rb') as fh_:
+        with salt.utils.files.fopen(tmp_dir + '/bank/key.p', 'rb') as fh_:
             for line in fh_:
                 self.assertIn(six.b('payload data'), line)
 
@@ -113,7 +113,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         file.
         '''
         with patch('os.path.isfile', MagicMock(return_value=True)):
-            with patch('salt.utils.fopen', MagicMock(side_effect=IOError)):
+            with patch('salt.utils.files.fopen', MagicMock(side_effect=IOError)):
                 self.assertRaises(SaltCacheError, localfs.fetch, bank='', key='', cachedir='')
 
     def test_fetch_success(self):

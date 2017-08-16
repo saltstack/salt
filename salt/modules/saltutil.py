@@ -50,6 +50,7 @@ import salt.utils
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
+import salt.utils.files
 import salt.utils.minion
 import salt.utils.process
 import salt.utils.url
@@ -106,7 +107,7 @@ def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
     # Dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
-        with salt.utils.fopen(mod_file, 'a+') as ofile:
+        with salt.utils.files.fopen(mod_file, 'a+') as ofile:
             ofile.write('')
     if form == 'grains' and \
        __opts__.get('grains_cache') and \
@@ -374,10 +375,10 @@ def refresh_grains(**kwargs):
 
         salt '*' saltutil.refresh_grains
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     _refresh_pillar = kwargs.pop('refresh_pillar', True)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
     # Modules and pillar need to be refreshed in case grains changes affected
     # them, and the module refresh process reloads the grains and assigns the
     # newly-reloaded grains to each execution module's __grains__ dunder.
@@ -1099,7 +1100,7 @@ def find_cached_job(jid):
         else:
             return 'Local jobs cache directory {0} not found'.format(job_dir)
     path = os.path.join(job_dir, 'return.p')
-    with salt.utils.fopen(path, 'rb') as fp_:
+    with salt.utils.files.fopen(path, 'rb') as fp_:
         buf = fp_.read()
         fp_.close()
         if buf:
@@ -1444,7 +1445,7 @@ def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=No
         kwarg = {}
     jid = kwargs.pop('__orchestration_jid__', jid)
     saltenv = kwargs.pop('__env__', saltenv)
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         kwarg.update(kwargs)
 

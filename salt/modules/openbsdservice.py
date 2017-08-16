@@ -12,16 +12,15 @@ The service module for OpenBSD
 # Import python libs
 from __future__ import absolute_import
 import os
-import re
 import fnmatch
 import logging
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -169,7 +168,7 @@ def _get_rc():
     try:
         # now read the system startup script /etc/rc
         # to know what are the system enabled daemons
-        with salt.utils.fopen('/etc/rc', 'r') as handle:
+        with salt.utils.files.fopen('/etc/rc', 'r') as handle:
             lines = handle.readlines()
     except IOError:
         log.error('Unable to read /etc/rc')

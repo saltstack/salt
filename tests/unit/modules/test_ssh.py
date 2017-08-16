@@ -15,7 +15,8 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
 import salt.modules.ssh as ssh
 from salt.exceptions import CommandExecutionError
 
@@ -93,7 +94,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         comment_line = '# this is a comment \n'
 
         # Write out the authorized key to a temporary file
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             temp_file = tempfile.NamedTemporaryFile(delete=False)
         else:
             temp_file = tempfile.NamedTemporaryFile(delete=False, mode='w+')
@@ -110,7 +111,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
                 ssh._replace_auth_key('foo', key, config=temp_file.name)
 
         # The previous authorized key should have been replaced by the simpler one
-        with salt.utils.fopen(temp_file.name) as _fh:
+        with salt.utils.files.fopen(temp_file.name) as _fh:
             file_txt = _fh.read()
             self.assertIn(enc, file_txt)
             self.assertIn(key, file_txt)
@@ -121,7 +122,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         enc = 'ecdsa-sha2-nistp256'
         key = 'abcxyz'
 
-        with salt.utils.fopen(temp_file.name, 'a') as _fh:
+        with salt.utils.files.fopen(temp_file.name, 'a') as _fh:
             _fh.write('{0} {1}'.format(enc, key))
 
         # Replace the simple key from before with the more complicated options + new email
@@ -135,7 +136,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
                 ssh._replace_auth_key('foo', key, enc=enc, comment=email, options=options, config=temp_file.name)
 
         # Assert that the new line was added as-is to the file
-        with salt.utils.fopen(temp_file.name) as _fh:
+        with salt.utils.files.fopen(temp_file.name) as _fh:
             file_txt = _fh.read()
             self.assertIn(enc, file_txt)
             self.assertIn(key, file_txt)

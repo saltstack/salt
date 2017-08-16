@@ -19,7 +19,7 @@ import logging
 
 # Salt imports
 from salt.modules import postgres
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

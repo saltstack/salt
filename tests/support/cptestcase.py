@@ -37,7 +37,7 @@ from tests.support.case import TestCase
 # Import 3rd-party libs
 # pylint: disable=import-error
 import cherrypy  # pylint: disable=3rd-party-module-not-gated
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO
 # pylint: enable=import-error
 

@@ -209,8 +209,10 @@ import pprint
 import yaml
 
 # Import Salt Libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.cloud
+import salt.utils.files
+import salt.utils.pycrypto
 import salt.client
 from salt.utils.openstack import nova
 try:
@@ -220,8 +222,6 @@ except ImportError as exc:
 
 # Import Salt Cloud Libs
 from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
-import salt.utils.cloud
-import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
 from salt.exceptions import (
@@ -651,7 +651,7 @@ def request_instance(vm_=None, call=None):
         kwargs['files'] = {}
         for src_path in files:
             if os.path.exists(files[src_path]):
-                with salt.utils.fopen(files[src_path], 'r') as fp_:
+                with salt.utils.files.fopen(files[src_path], 'r') as fp_:
                     kwargs['files'][src_path] = fp_.read()
             else:
                 kwargs['files'][src_path] = files[src_path]
@@ -661,7 +661,7 @@ def request_instance(vm_=None, call=None):
     )
     if userdata_file is not None:
         try:
-            with salt.utils.fopen(userdata_file, 'r') as fp_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fp_:
                 kwargs['userdata'] = salt.utils.cloud.userdata_template(
                     __opts__, vm_, fp_.read()
                 )
@@ -981,7 +981,7 @@ def create(vm_):
             )
         data = conn.server_show_libcloud(vm_['instance_id'])
         if vm_['key_filename'] is None and 'change_password' in __opts__ and __opts__['change_password'] is True:
-            vm_['password'] = sup.secure_password()
+            vm_['password'] = salt.utils.pycrypto.secure_password()
             conn.root_password(vm_['instance_id'], vm_['password'])
     else:
         # Put together all of the information required to request the instance,

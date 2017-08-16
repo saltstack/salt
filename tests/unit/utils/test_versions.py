@@ -18,7 +18,7 @@ from tests.support.unit import TestCase
 from salt.utils.versions import LooseVersion, StrictVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 if six.PY2:
     cmp_method = '__cmp__'

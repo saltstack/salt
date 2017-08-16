@@ -13,8 +13,8 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from tests.support.helpers import skip_if_not_root
 # Import salt libs
-from salt import minion
-from salt.utils import event
+import salt.minion as minion
+import salt.utils.event as event
 from salt.exceptions import SaltSystemExit
 import salt.syspaths
 import tornado

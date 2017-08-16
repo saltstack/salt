@@ -19,7 +19,7 @@ import fnmatch
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ __virtualname__ = 'service'
 
 # Import upstart module if needed
 HAS_UPSTART = False
-if salt.utils.which('initctl'):
+if salt.utils.path.which('initctl'):
     try:
         # Don't re-invent the wheel, import the helper functions from the
         # upstart module.

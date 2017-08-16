@@ -19,17 +19,19 @@ import re
 import subprocess
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
+import salt.utils.decorators.path
 import salt.utils.files
-import salt.utils.decorators as decorators
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
 )
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
@@ -41,7 +43,7 @@ if six.PY3:
 
 def __virtual__():
     # TODO: This could work on windows with some love
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The module cannot be loaded on windows.')
     return True
 
@@ -149,7 +151,7 @@ def _replace_auth_key(
 
     try:
         # open the file for both reading AND writing
-        with salt.utils.fopen(full, 'r') as _fh:
+        with salt.utils.files.fopen(full, 'r') as _fh:
             for line in _fh:
                 if line.startswith('#'):
                     # Commented Line
@@ -162,7 +164,7 @@ def _replace_auth_key(
                     lines.append(line)
             _fh.close()
             # Re-open the file writable after properly closing it
-            with salt.utils.fopen(full, 'w') as _fh:
+            with salt.utils.files.fopen(full, 'w') as _fh:
                 # Write out any changes
                 _fh.writelines(lines)
     except (IOError, OSError) as exc:
@@ -179,7 +181,7 @@ def _validate_keys(key_file, fingerprint_hash_type):
     linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
 
     try:
-        with salt.utils.fopen(key_file, 'r') as _fh:
+        with salt.utils.files.fopen(key_file, 'r') as _fh:
             for line in _fh:
                 if line.startswith('#'):
                     # Commented Line
@@ -338,7 +340,7 @@ def host_keys(keydir=None, private=True, certs=True):
             if m.group('pub'):
                 kname += m.group('pub')
             try:
-                with salt.utils.fopen(os.path.join(keydir, fn_), 'r') as _fh:
+                with salt.utils.files.fopen(os.path.join(keydir, fn_), 'r') as _fh:
                     # As of RFC 4716 "a key file is a text file, containing a
                     # sequence of lines", although some SSH implementations
                     # (e.g. OpenSSH) manage their own format(s).  Please see
@@ -568,7 +570,7 @@ def rm_auth_key(user,
         try:
             # Read every line in the file to find the right ssh key
             # and then write out the correct one. Open the file once
-            with salt.utils.fopen(full, 'r') as _fh:
+            with salt.utils.files.fopen(full, 'r') as _fh:
                 for line in _fh:
                     if line.startswith('#'):
                         # Commented Line
@@ -599,7 +601,7 @@ def rm_auth_key(user,
 
             # Let the context manager do the right thing here and then
             # re-open the file in write mode to save the changes out.
-            with salt.utils.fopen(full, 'w') as _fh:
+            with salt.utils.files.fopen(full, 'w') as _fh:
                 _fh.writelines(lines)
         except (IOError, OSError) as exc:
             log.warning('Could not read/write key file: {0}'.format(str(exc)))
@@ -734,7 +736,7 @@ def set_auth_key(
                 os.chown(dpath, uinfo['uid'], uinfo['gid'])
             os.chmod(dpath, 448)
             # If SELINUX is available run a restorecon on the file
-            rcon = salt.utils.which('restorecon')
+            rcon = salt.utils.path.which('restorecon')
             if rcon:
                 cmd = [rcon, dpath]
                 subprocess.call(cmd)
@@ -745,7 +747,7 @@ def set_auth_key(
             new_file = False
 
         try:
-            with salt.utils.fopen(fconfig, 'ab+') as _fh:
+            with salt.utils.files.fopen(fconfig, 'ab+') as _fh:
                 if new_file is False:
                     # Let's make sure we have a new line at the end of the file
                     _fh.seek(1024, 2)
@@ -764,7 +766,7 @@ def set_auth_key(
                 os.chown(fconfig, uinfo['uid'], uinfo['gid'])
             os.chmod(fconfig, 384)
             # If SELINUX is available run a restorecon on the file
-            rcon = salt.utils.which('restorecon')
+            rcon = salt.utils.path.which('restorecon')
             if rcon:
                 cmd = [rcon, fconfig]
                 subprocess.call(cmd)
@@ -791,7 +793,7 @@ def _parse_openssh_output(lines, fingerprint_hash_type=None):
                'fingerprint': fingerprint}
 
 
-@decorators.which('ssh-keygen')
+@salt.utils.decorators.path.which('ssh-keygen')
 def get_known_host(user,
                    hostname,
                    config=None,
@@ -824,7 +826,7 @@ def get_known_host(user,
     return known_hosts[0] if known_hosts else None
 
 
-@decorators.which('ssh-keyscan')
+@salt.utils.decorators.path.which('ssh-keyscan')
 def recv_known_host(hostname,
                     enc=None,
                     port=None,
@@ -1142,7 +1144,7 @@ def set_known_host(user=None,
 
     # write line to known_hosts file
     try:
-        with salt.utils.fopen(full, 'a') as ofile:
+        with salt.utils.files.fopen(full, 'a') as ofile:
             ofile.write(line)
     except (IOError, OSError) as exception:
         raise CommandExecutionError(
@@ -1230,7 +1232,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
 
             if os.path.exists(fn_):
                 try:
-                    with salt.utils.fopen(fn_, 'r') as _fh:
+                    with salt.utils.files.fopen(fn_, 'r') as _fh:
                         keys[u][keyname] = ''.join(_fh.readlines()).strip()
                 except (IOError, OSError):
                     pass
@@ -1243,7 +1245,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
     return _keys
 
 
-@decorators.which('ssh-keygen')
+@salt.utils.decorators.path.which('ssh-keygen')
 def hash_known_hosts(user=None, config=None):
     '''
 
@@ -1308,7 +1310,7 @@ def key_is_encrypted(key):
         salt '*' ssh.key_is_encrypted /root/id_rsa
     '''
     try:
-        with salt.utils.fopen(key, 'r') as fp_:
+        with salt.utils.files.fopen(key, 'r') as fp_:
             key_data = fp_.read()
     except (IOError, OSError) as exc:
         # Raise a CommandExecutionError

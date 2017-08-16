@@ -11,6 +11,7 @@ import re
 
 # Import Salt libs
 import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ def write_rtag(opts):
     rtag_file = rtag(opts)
     if not os.path.exists(rtag_file):
         try:
-            with salt.utils.fopen(rtag_file, 'w+'):
+            with salt.utils.files.fopen(rtag_file, 'w+'):
                 pass
         except OSError as exc:
             log.warning('Encountered error writing rtag: %s', exc.__str__())

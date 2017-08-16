@@ -8,7 +8,7 @@ Provide authentication using simple LDAP binds
 # Import python libs
 from __future__ import absolute_import
 import logging
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -280,8 +280,14 @@ def auth(username, password):
     '''
     Simple LDAP auth
     '''
-    if _bind(username, password, anonymous=_config('auth_by_group_membership_only', mandatory=False) and
-                                           _config('anonymous', mandatory=False)):
+    #If bind credentials are configured, use them instead of user's
+    if _config('binddn', mandatory=False) and _config('bindpw', mandatory=False):
+        bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
+    else:
+        bind = _bind(username, password, anonymous=_config('auth_by_group_membership_only', mandatory=False) and
+                                        _config('anonymous', mandatory=False))
+
+    if bind:
         log.debug('LDAP authentication successful')
         return True
     else:
@@ -306,8 +312,9 @@ def groups(username, **kwargs):
     '''
     group_list = []
 
-    bind = _bind(username, kwargs['password'],
-                 anonymous=_config('anonymous', mandatory=False))
+    # Perform un-authenticated bind to determine group membership
+    bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
+
     if bind:
         log.debug('ldap bind to determine group membership succeeded!')
 
@@ -381,7 +388,11 @@ def groups(username, **kwargs):
                         group_list.append(group.split(',')[0].split('=')[-1])
             log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
 
-            if not auth(username, kwargs['password']):
+            # Only test user auth on first call for job.
+            # 'show_jid' only exists on first payload so we can use that for the conditional.
+            if 'show_jid' in kwargs and not _bind(username, kwargs['password'],
+                                            anonymous=_config('auth_by_group_membership_only', mandatory=False) and
+                                            _config('anonymous', mandatory=False)):
                 log.error('LDAP username and password do not match')
                 return []
     else:

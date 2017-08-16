@@ -74,8 +74,9 @@ except ImportError:
     HAS_DEPENDENCIES = False
 # pylint: enable=import-error
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
+import salt.utils.platform
 import salt.utils.locales
 
 log = logging.getLogger(__name__)
@@ -85,7 +86,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows() and HAS_DEPENDENCIES:
+    if salt.utils.platform.is_windows() and HAS_DEPENDENCIES:
         salt.utils.warn_until(
             'Fluorine',
             'The \'win_update\' module is being deprecated and will be removed '
@@ -383,7 +384,7 @@ class PyWinUpdater(object):
             update_dict = {}
             for f in update_com_fields:
                 v = getattr(update, f)
-                if not any([isinstance(v, bool), isinstance(v, str)]):
+                if not any([isinstance(v, bool), isinstance(v, six.string_types)]):
                     # Fields that require special evaluation.
                     if f in simple_enums:
                         v = [x for x in v]

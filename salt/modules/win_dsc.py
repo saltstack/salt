@@ -17,13 +17,14 @@ the Minion.
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
 import json
 import os
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Set up logging
@@ -38,7 +39,7 @@ def __virtual__():
     Set the system module of the kernel is Windows
     '''
     # Verify Windows
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         log.debug('Module DSC: Only available on Windows systems')
         return False, 'Module DSC: Only available on Windows systems'
 

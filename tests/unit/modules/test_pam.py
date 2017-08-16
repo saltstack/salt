@@ -34,7 +34,7 @@ class PamTestCase(TestCase):
         '''
         Test if the parsing function works
         '''
-        with patch('salt.utils.fopen', mock_open(read_data=MOCK_FILE)):
+        with patch('salt.utils.files.fopen', mock_open(read_data=MOCK_FILE)):
             self.assertListEqual(pam.read_file('/etc/pam.d/login'),
                                  [{'arguments': [], 'control_flag': 'ok',
                                    'interface': 'ok', 'module': 'ignore'}])

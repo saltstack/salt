@@ -32,14 +32,16 @@ import salt.syspaths as syspaths
 import salt.version as version
 import salt.utils
 import salt.utils.args
-import salt.utils.xdg
+import salt.utils.files
 import salt.utils.jid
-from salt.utils import kinds
+import salt.utils.kinds as kinds
+import salt.utils.platform
+import salt.utils.xdg
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
 from salt.utils.verify import verify_files
 import salt.exceptions
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.yamldumper import SafeOrderedDumper
 
@@ -806,7 +808,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         # Log rotate options
         log_rotate_max_bytes = self.config.get('log_rotate_max_bytes', 0)
         log_rotate_backup_count = self.config.get('log_rotate_backup_count', 0)
-        if not salt.utils.is_windows():
+        if not salt.utils.platform.is_windows():
             # Not supported on platforms other than Windows.
             # Other platforms may use an external tool such as 'logrotate'
             if log_rotate_max_bytes != 0:
@@ -825,7 +827,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         self.config['log_rotate_backup_count'] = log_rotate_backup_count
 
     def setup_logfile_logger(self):
-        if salt.utils.is_windows() and self._setup_mp_logging_listener_:
+        if salt.utils.platform.is_windows() and self._setup_mp_logging_listener_:
             # On Windows when using a logging listener, all log file logging
             # will go through the logging listener.
             return
@@ -849,7 +851,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             log.set_logger_level(name, level)
 
     def __setup_extended_logging(self, *args):  # pylint: disable=unused-argument
-        if salt.utils.is_windows() and self._setup_mp_logging_listener_:
+        if salt.utils.platform.is_windows() and self._setup_mp_logging_listener_:
             # On Windows when using a logging listener, all extended logging
             # will go through the logging listener.
             return
@@ -866,7 +868,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             )
 
     def _setup_mp_logging_client(self, *args):  # pylint: disable=unused-argument
-        if salt.utils.is_windows() and self._setup_mp_logging_listener_:
+        if salt.utils.platform.is_windows() and self._setup_mp_logging_listener_:
             # On Windows, all logging including console and
             # log file logging will go through the multiprocessing
             # logging listener if it exists.
@@ -913,7 +915,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         if getattr(self.options, 'daemon', False) is True:
             return
 
-        if salt.utils.is_windows() and self._setup_mp_logging_listener_:
+        if salt.utils.platform.is_windows() and self._setup_mp_logging_listener_:
             # On Windows when using a logging listener, all console logging
             # will go through the logging listener.
             return
@@ -1007,7 +1009,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
 
         if self.check_pidfile():
             pid = self.get_pidfile()
-            if not salt.utils.is_windows():
+            if not salt.utils.platform.is_windows():
                 if self.check_pidfile() and self.is_daemonized(pid) and not os.getppid() == pid:
                     return True
             else:
@@ -1056,6 +1058,13 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             self, 'Target Options', 'Target selection options.'
         )
         self.add_option_group(group)
+        group.add_option(
+            '-H', '--hosts',
+            default=False,
+            action='store_true',
+            dest='list_hosts',
+            help='List all known hosts to currently visible or other specified rosters'
+        )
         group.add_option(
             '-E', '--pcre',
             default=False,
@@ -1339,7 +1348,7 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
         if self.options.output_file is not None and self.options.output_file_append is False:
             if os.path.isfile(self.options.output_file):
                 try:
-                    with salt.utils.fopen(self.options.output_file, 'w') as ofh:
+                    with salt.utils.files.fopen(self.options.output_file, 'w') as ofh:
                         # Make this a zero length filename instead of removing
                         # it. This way we keep the file permissions.
                         ofh.write('')
@@ -2479,7 +2488,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
         return keys_config
 
     def process_rotate_aes_key(self):
-        if hasattr(self.options, 'rotate_aes_key') and isinstance(self.options.rotate_aes_key, str):
+        if hasattr(self.options, 'rotate_aes_key') and isinstance(self.options.rotate_aes_key, six.string_types):
             if self.options.rotate_aes_key.lower() == 'true':
                 self.options.rotate_aes_key = True
             elif self.options.rotate_aes_key.lower() == 'false':
@@ -2781,6 +2790,12 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
             action='store_true',
             help=('Start the runner operation and immediately return control.')
         )
+        self.add_option(
+            '--skip-grains',
+            default=False,
+            action='store_true',
+            help=('Do not load grains.')
+        )
         group = self.output_options_group = optparse.OptionGroup(
             self, 'Output Options', 'Configure your preferred output format.'
         )
@@ -3035,6 +3050,14 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             action='store_true',
             help='Run command via sudo.'
+        )
+        auth_group.add_option(
+            '--skip-roster',
+            dest='ssh_skip_roster',
+            default=False,
+            action='store_true',
+            help='If hostname is not found in the roster, do not store the information'
+                 'into the default roster file (flat).'
         )
         self.add_option_group(auth_group)
 

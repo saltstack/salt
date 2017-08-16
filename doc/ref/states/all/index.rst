@@ -136,6 +136,7 @@ state modules
     keyboard
     keystone
     kmod
+    kubernetes
     layman
     ldap
     libcloud_dns
@@ -249,7 +250,6 @@ state modules
     stateconf
     status
     statuspage
-    stormpath_account
     supervisord
     svn
     sysctl

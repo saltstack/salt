@@ -12,9 +12,12 @@ from __future__ import absolute_import
 # Import python libs
 import errno
 import logging
+import re
+import tempfile
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -26,7 +29,7 @@ def __virtual__():
     '''
     Only load module if rsync binary is present
     '''
-    if salt.utils.which('rsync'):
+    if salt.utils.path.which('rsync'):
         return __virtualname__
     return (False, 'The rsync execution module cannot be loaded: '
             'the rsync binary is not in the path.')
@@ -69,7 +72,8 @@ def rsync(src,
           excludefrom=None,
           dryrun=False,
           rsh=None,
-          additional_opts=None):
+          additional_opts=None,
+          saltenv='base'):
     '''
     .. versionchanged:: 2016.3.0
         Return data now contains just the output of the rsync command, instead
@@ -122,6 +126,9 @@ def rsync(src,
     additional_opts
         Any additional rsync options, should be specified as a list.
 
+   saltenv
+           Specify a salt fileserver environment to be used.
+
     CLI Example:
 
     .. code-block:: bash
@@ -154,6 +161,38 @@ def rsync(src,
     if not src or not dst:
         raise SaltInvocationError('src and dst cannot be empty')
 
+    tmp_src = None
+    if src.startswith('salt://'):
+        _src = src
+        _path = re.sub('salt://', '', _src)
+        src_is_dir = False
+        if _path in __salt__['cp.list_master_dirs'](saltenv=saltenv):
+            src_is_dir = True
+
+        if src_is_dir:
+            tmp_src = tempfile.mkdtemp()
+            dir_src = __salt__['cp.get_dir'](_src,
+                                             tmp_src,
+                                             saltenv)
+            if dir_src:
+                src = tmp_src
+                # Ensure src ends in / so we
+                # get the contents not the tmpdir
+                # itself.
+                if not src.endswith('/'):
+                    src = '{0}/'.format(src)
+            else:
+                raise CommandExecutionError('{0} does not exist'.format(src))
+        else:
+            tmp_src = salt.utils.mkstemp()
+            file_src = __salt__['cp.get_file'](_src,
+                                               tmp_src,
+                                               saltenv)
+            if file_src:
+                src = tmp_src
+            else:
+                raise CommandExecutionError('{0} does not exist'.format(src))
+
     option = _check(delete,
                     force,
                     update,
@@ -172,6 +211,9 @@ def rsync(src,
         return __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
+    finally:
+        if tmp_src:
+            __salt__['file.remove'](tmp_src)
 
 
 def version():
@@ -221,7 +263,7 @@ def config(conf_path='/etc/rsyncd.conf'):
     '''
     ret = ''
     try:
-        with salt.utils.fopen(conf_path, 'r') as fp_:
+        with salt.utils.files.fopen(conf_path, 'r') as fp_:
             for line in fp_:
                 ret += line
     except IOError as exc:

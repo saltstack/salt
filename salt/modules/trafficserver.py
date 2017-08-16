@@ -15,6 +15,8 @@ import subprocess
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
+import salt.utils.stringutils
 
 __virtualname__ = 'trafficserver'
 
@@ -22,14 +24,14 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if salt.utils.which('traffic_ctl') or salt.utils.which('traffic_line'):
+    if salt.utils.path.which('traffic_ctl') or salt.utils.path.which('traffic_line'):
         return __virtualname__
     return (False, 'trafficserver execution module not loaded: '
             'neither traffic_ctl nor traffic_line was found.')
 
 
-_TRAFFICLINE = salt.utils.which('traffic_line')
-_TRAFFICCTL = salt.utils.which('traffic_ctl')
+_TRAFFICLINE = salt.utils.path.which('traffic_line')
+_TRAFFICCTL = salt.utils.path.which('traffic_ctl')
 
 
 def _traffic_ctl(*args):
@@ -57,7 +59,7 @@ def _subprocess(cmd):
 
     try:
         proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-        ret = salt.utils.to_str(proc.communicate()[0]).strip()
+        ret = salt.utils.stringutils.to_str(proc.communicate()[0]).strip()
         retcode = proc.wait()
 
         if ret:

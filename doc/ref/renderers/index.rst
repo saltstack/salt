@@ -146,8 +146,10 @@ Here is a simple YAML renderer example:
 
     import yaml
     from salt.utils.yamlloader import SaltYamlSafeLoader
+    from salt.ext import six
+
     def render(yaml_data, saltenv='', sls='', **kws):
-        if not isinstance(yaml_data, basestring):
+        if not isinstance(yaml_data, six.string_types):
             yaml_data = yaml_data.read()
         data = yaml.load(
             yaml_data,

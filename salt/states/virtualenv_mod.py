@@ -6,17 +6,19 @@ Setup of Python virtualenv sandboxes.
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
 import os
 
-# Import salt libs
+# Import Salt libs
 import salt.version
 import salt.utils
-
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
+# Import 3rd-party libs
 from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -134,7 +136,7 @@ def managed(name,
         ret['comment'] = 'Virtualenv was not detected on this system'
         return ret
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         venv_py = os.path.join(name, 'Scripts', 'python.exe')
     else:
         venv_py = os.path.join(name, 'bin', 'python')
