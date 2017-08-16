@@ -19,6 +19,17 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.twilio_notify as twilio_notify
 
+HAS_LIBS = False
+try:
+    import twilio
+    if twilio.__version__ > 5:
+        TWILIO_5 = False
+    else:
+        TWILIO_5 = True
+    HAS_LIBS = True
+except ImportError:
+    pass
+
 
 class MockTwilioRestException(Exception):
     '''
@@ -75,9 +86,13 @@ class MockTwilioRestClient(object):
     Mock TwilioRestClient class
     '''
     def __init__(self):
-        self.sms = MockSMS()
+        if TWILIO_5:
+            self.sms = MockSMS()
+        else:
+            self.messages = MockMessages()
 
 
+@skipIf(not HAS_LIBS, 'twilio.rest is not available')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TwilioNotifyTestCase(TestCase, LoaderModuleMockMixin):
     '''
