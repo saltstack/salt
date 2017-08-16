@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'kernelpkg'
 
 # Import functions from yumpkg
-_yum = salt.utils.namespaced_function(salt.modules.yumpkg._yum, globals())
+_yum = salt.utils.namespaced_function(salt.modules.yumpkg._yum, globals())  # pylint: disable=invalid-name, protected-access
 
 
 def __virtual__():
@@ -250,11 +250,11 @@ def _cmp_version(item1, item2):
     '''
     Compare function for package version sorting
     '''
-    v1 = _LooseVersion(item1)
-    v2 = _LooseVersion(item2)
+    vers1 = _LooseVersion(item1)
+    vers2 = _LooseVersion(item2)
 
-    if v1 < v2:
+    if vers1 < vers2:
         return -1
-    if v1 > v2:
+    if vers1 > vers2:
         return 1
     return 0
