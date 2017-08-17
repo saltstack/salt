@@ -2452,7 +2452,7 @@ def exec_code_all(lang, code, cwd=None, args=None, **kwargs):
     else:
         cmd = [lang, codefile]
 
-    if isinstance(args, str):
+    if isinstance(args, six.string_types):
         cmd.append(args)
     elif isinstance(args, list):
         cmd += args
