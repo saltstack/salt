@@ -15,7 +15,7 @@ import logging
 # Import Salt libs
 import salt.ext.six as six
 import salt.utils
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +43,6 @@ def present(name,
            'result': True,
            'changes': {},
            'comment': ['Job {0} is up to date.'.format(name)]}
-
 
     if __salt__['jenkins.job_exists'](name):
         _current_job_config = __salt__['jenkins.get_job_config'](name)
@@ -97,7 +96,6 @@ def absent(name,
            'result': True,
            'changes': {},
            'comment': []}
-
 
     if __salt__['jenkins.job_exists'](name):
         try:
