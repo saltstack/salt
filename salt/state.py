@@ -25,6 +25,7 @@ import traceback
 import re
 import time
 import random
+from urllib import quote
 
 # Import salt libs
 import salt.utils
@@ -148,6 +149,11 @@ def _gen_tag(low):
     '''
     return u'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
 
+def _clean_tag(tag):
+    '''
+      urllib safe quote the tag value to avoid invalid chars in the filename
+    '''
+    return quote(tag, safe='')
 
 def _l_tag(name, id_):
     low = {u'name': u'listen_{0}'.format(name),
@@ -1698,7 +1704,7 @@ class State(object):
                     trb)
             }
         troot = os.path.join(self.opts[u'cachedir'], self.jid)
-        tfile = os.path.join(troot, tag)
+        tfile = os.path.join(troot, _clean_tag(tag))
         if not os.path.isdir(troot):
             try:
                 os.makedirs(troot)
@@ -2052,7 +2058,7 @@ class State(object):
             proc = running[tag].get(u'proc')
             if proc:
                 if not proc.is_alive():
-                    ret_cache = os.path.join(self.opts[u'cachedir'], self.jid, tag)
+                    ret_cache = os.path.join(self.opts[u'cachedir'], self.jid, _clean_tag(tag))
                     if not os.path.isfile(ret_cache):
                         ret = {u'result': False,
                                u'comment': u'Parallel process failed to return',
