@@ -99,7 +99,6 @@ import time
 import re
 import traceback
 import yaml
-import ast
 
 log = logging.getLogger(__name__)
 
